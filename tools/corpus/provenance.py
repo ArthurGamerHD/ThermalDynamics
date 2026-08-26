@@ -29,6 +29,7 @@ The note grammar is parsed here and in `AuthoredWasteTests`, which is two reader
 cannot drift apart quietly.
 """
 import csv
+import hashlib
 import os
 import re
 import sys
@@ -67,6 +68,44 @@ def restatement(subtype, type_id):
     if type_id in TYPE_NOW:
         return TYPE_NOW[type_id] / TYPE_WAS[type_id]
     return 1.0
+
+
+def measured_current_definitions(composition):
+    """Whether the census beside `composition` was taken against the `Cubes.xml` on disk now.
+
+    **A restatement is only right for a dataset that predates the change**, and applying one to a
+    census that already measured the new value discounts it twice — which is what happened the day
+    `A13`'s census was re-taken with the oxygen generator already at 0.40. The dataset says which
+    file it saw, in the `provenance.txt` `CorpusRecord` writes beside it, so this is a lookup
+    rather than a judgement (`P1`).
+
+    Returns None when there is no provenance to read, which is every dataset taken before that file
+    was written — and for those the restatement is right, because they all predate the changes.
+    """
+    directory = os.path.dirname(os.path.abspath(composition))
+    path = os.path.join(directory, "provenance.txt")
+    if not os.path.exists(path):
+        return None
+
+    recorded = None
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            if line.startswith("Cubes.xml "):
+                recorded = line.split()[1]
+
+    if recorded is None:
+        return None
+
+    cubes = os.path.join(repo_root(), "Data", "Cubes.xml")
+    if not os.path.exists(cubes):
+        return None
+
+    digest = hashlib.sha256()
+    with open(cubes, "rb") as handle:
+        for block in iter(lambda: handle.read(65536), b""):
+            digest.update(block)
+
+    return digest.hexdigest()[:16] == recorded
 
 
 def classify(note):
@@ -136,8 +175,12 @@ def class_by_type(table):
     return by_type
 
 
-def heat(composition, table):
-    """Watts of full-load waste by provenance, as measured and restated."""
+def heat(composition, table, restate=True):
+    """Watts of full-load waste by provenance, as measured and restated.
+
+    `restate` is False for a census taken against the definitions that ship now — restating one of
+    those applies a correction twice.
+    """
     by_type = class_by_type(table)
     fallback = by_type.get("EnvironmentDefinition") or "invented"
 
@@ -150,7 +193,7 @@ def heat(composition, table):
             rows += 1
             measured[provenance] += watts
 
-            scale = restatement(row["subtype"], row["type_id"])
+            scale = restatement(row["subtype"], row["type_id"]) if restate else 1.0
             restated[provenance] += watts * scale
             if provenance == "invented":
                 unsourced[row["type_id"]] += watts * scale
@@ -222,7 +265,8 @@ def main(argv):
         if tally[name]:
             print(f"  {name:>12} {tally[name]:4d}  {tally[name] / total * 100:5.1f} %")
 
-    rows, measured, restated, unsourced = heat(argv[1], table)
+    current = measured_current_definitions(argv[1])
+    rows, measured, restated, unsourced = heat(argv[1], table, restate=current is not True)
     measured_total = sum(measured.values()) or 1.0
     restated_total = sum(restated.values()) or 1.0
 
@@ -241,10 +285,16 @@ def main(argv):
         print(f"  {type_id:>22} {watts / restated_total * 100:6.2f} %")
 
     print()
-    print("basis: full electrical load, every jump drive charging, no thrust. Restated puts the"
-          f" four drives at their derived fractions rather than the {DRIVE_WAS} a census taken"
-          " before 2026-08-23 used, and the oxygen generator at the 0.4 decided on"
-          " 2026-08-25 rather than the 0.6 every census on disk measured.")
+    if current is True:
+        print("basis: full electrical load, every jump drive charging, no thrust. This census"
+              " records the Cubes.xml on disk now, so nothing is restated and the two columns are"
+              " the same figure.")
+    else:
+        seen = "records an older Cubes.xml" if current is False else "records no provenance"
+        print("basis: full electrical load, every jump drive charging, no thrust. The dataset"
+              f" {seen}, so restated puts the four drives at their derived fractions rather than"
+              f" the {DRIVE_WAS} a census taken before 2026-08-23 used, and the oxygen generator"
+              " at the 0.4 decided on 2026-08-25 rather than the 0.6 it measured.")
     return 0
 
 
