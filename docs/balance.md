@@ -1046,6 +1046,54 @@ the hulls the new survey has reached says the model got cooler, so these rates a
 rather than a current reading. The **structure** — self index predicting runaway — is a property of
 the model rather than of the run.*
 
+### The runaway and the retrofit are the same block, and the lever follows from `P7`
+
+Two lines arrived at the jump drive from opposite ends and neither knew about the other.
+
+**From the cooling side**, above: a retrofit is *either unnecessary or impossible, with almost
+nothing in between* — 57.7 % of ships need one radiator or fewer and 19.2 % need more than sixteen —
+and the factor of 17.6 between p50 and p75 is the drive. **From the runaway side** (`C34`): a ship
+runs away if and only if it carries a block that cannot cool itself threefold, and the drive is that
+block on 2,254 ships.
+
+**Measured on real hulls, cooling does not currently answer either.** `retrofit` over 16 corpus
+ships under full electrical load in shadow:
+
+| fit | ships | no room | p10 | p50 | p90 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| bolted | 13 | 0 | −1.32 % | **−0.32 %** | 1.25 % |
+| plumbed | 4 | **9** | 0.03 % | 0.15 % | 4.32 % |
+
+A bolted fit takes **nothing** off the median hull and makes some *worse*; a plumbed one **cannot be
+installed at all on nine of thirteen**. So `G3` does not merely lack a measurement — the measurement
+it lacks looks like a failure. *(16 ships, a stride sample, one run — a direction rather than a
+population figure.)*
+
+**Which means the runaway is not a bug to nerf away.** Heat mattering is the point, and a vanilla
+ship that has never heard of this mod overheating under full load is the mod working. What is broken
+is that **the player has no answer** — and the answer is blocked by the same block.
+
+**The lever follows from `P7`, and it rules out three of the four.**
+
+* **Exposed surface ×3.3 — out.** The radiator, whose entire job is surface, uses **1.25**. A jump
+  drive more finned than the radiator is not a claim this mod can make.
+* **Emissivity ×3.3 — out, and for the same reason.** `emissivity` and `exposed-surface` are
+  measured on this page as *the same dial*, and the radiator's own emissivity is **0.35**. A drive at
+  0.66 is twice as radiative as the block built to radiate.
+* **Waste ÷3.3 — out on `P7`.** The drive's 0.2 is *derived from the game's own* `PowerEfficiency`
+  of 0.8. Overriding it says the game is wrong about its own block, which is the one thing this
+  repository does not get to say.
+* **Critical temperature ×1.35 — the honest one.** 689 K to **928 K**. It is the mildest move of the
+  four by a wide margin because the law is quartic, and — the reason it wins — **the game has no
+  block temperatures at all**. A rating is the mod's own invention end to end, so tuning it
+  contradicts nothing the game states. It is the only one of the four levers that is not an argument
+  with Space Engineers.
+
+**What would falsify it.** If the drive at 928 K does not move the population's runaway rate, the
+self index is a correlate rather than a cause. And if it moves the runaway rate but leaves the
+retrofit distribution as bimodal as it is now, then the drive was never what stood between a player
+and a working radiator, and the cooling blocks themselves are the row.
+
 ### What the mod's blocks cost to build
 
 [backlog.md](backlog.md) `B33`: eighteen definitions in `Cubes.xml` carry components, build times
