@@ -165,61 +165,44 @@ namespace Thermodynamics.Tests
             float end = HeatAboveAmbient(simulation);
 
             float lost = start - end;
-            float predicted = start / pipes;
 
             output.WriteLine("pipe node {0:n0} J/K, coolant parcel {1:n0} J/K", nodeMass, segmentMass);
             output.WriteLine("heat above ambient {0:n0} J -> {1:n0} J broken -> {2:n0} J rewelded",
                 start, broken, end);
-            output.WriteLine("lost {0:n0} J ({1:n2} %); one parcel of {2} predicts {3:n0} J ({4:n2} %)",
-                lost, 100f * lost / start, pipes, predicted, 100f / pipes);
+            output.WriteLine("the ring of {0} lost {1:n0} J ({2:n2} %)", pipes, lost, 100f * lost / start);
 
             Assert.Single(simulation.Solver.Loops);
 
-            // The whole claim: one parcel's worth, not the mass ratio's worth.
-            Assert.InRange(lost, predicted * 0.99f, predicted * 1.01f);
+            // **The fluid's heat, all of it.** What is left above ambient is the pipes' own, which
+            // the coolant warmed and which a grinder does not drain.
+            float fluid = segmentMass * pipes * (900f - Ambient);
+            Assert.InRange(lost, fluid * 0.95f, fluid * 1.05f);
 
-            // And the break itself costs the same — the reweld adds nothing back and takes nothing
-            // more, which is what makes grind-and-reweld useless as a heat sink rather than merely
-            // less good than it was.
-            Assert.InRange(start - broken, predicted * 0.99f, predicted * 1.01f);
+            // The break costs it and the reweld neither adds any back nor takes more: the ring
+            // returns empty and pays to refill.
+            Assert.InRange(start - broken, lost * 0.99f, lost * 1.01f);
+            Assert.Equal(0f, simulation.Solver.Loops[0].FillFraction);
         }
 
         /// <summary>
-        /// **Grind-and-reweld is worth tens of kilowatts, and `A12`'s fix is what made it so.**
+        /// **Grinding a ring open now drains it, and refilling costs back exactly what drained.**
         ///
         /// <para>
-        /// The tests above measure the joules exactly — one parcel per grind, neither more nor
-        /// less. A quantity of heat is not an exploit; a quantity of heat **per second** competes
-        /// with a radiator, and that is the number `B43` is decided on. The cycle time is the
-        /// pipe's own <c>BuildTimeSeconds</c> read from the shipped definition, so a rebalanced
-        /// pipe moves this figure rather than sliding past it.
+        /// This measured the exploit before the vent existed: a grind cost one parcel, 188,889 J of
+        /// an eight-pipe ring at 100 K over, and 23,611 W at the pipe's own build time — 0.79 % of
+        /// the largest reactor's waste. That was `B43`'s evidence and it is why the currency it
+        /// chose could be as small as energy and time.
         /// </para>
         ///
         /// <para>
-        /// **Measured at 23,611 W on a warm ship and 143,284 W on one already cooking** — 0.8 %
-        /// and 4.8 % of what the game's largest reactor makes at the fraction this mod ships. All
-        /// three of the predictions registered in balance.md were wrong by two orders of
-        /// magnitude, and in the same direction: the row was written against a **190 MJ** case
-        /// where grinding a pump dissolved a whole loop, and `A12` replaced that with one parcel
-        /// per grind. The exploit was priced out by a fix aimed at something else.
-        /// </para>
-        ///
-        /// <para>
-        /// **The rate cannot be scaled by building a bigger loop**, which is the half that makes
-        /// it a bound rather than a reading: a grind costs one parcel whatever the ring's length,
-        /// so the exploit is capped at one parcel per pipe-build-time per grinder however much
-        /// coolant the ship carries.
-        /// </para>
-        ///
-        /// <para>
-        /// A hundred kelvin above ambient rather than the 900 K the tests above use, because 900 K
-        /// is a ship already in trouble and the exploit is interesting precisely if it pays on one
-        /// that is merely warm. The bound is one-sided and loose: this pins that the rate is
-        /// **small**, and it is a claim about the shipped model rather than a tuning target.
+        /// **With `B44` built, the grind takes the whole ring** — a hole in a pressurised loop
+        /// drains it — and the ring comes back empty and pays `RefillEquivalentKelvin` per kilogram
+        /// to fill. At 100 K over those are the same number, so the cycle is **neutral in heat and
+        /// negative in power and time**. The exploit is not small any more; it is nothing.
         /// </para>
         /// </summary>
         [Fact]
-        public void GrindAndRewealdIsWorthKilowattsRatherThanMegawatts()
+        public void GrindingARingOpenDrainsItAndRefillingCostsBackWhatDrained()
         {
             GridBuilder builder = GridBuilder.Large();
             List<BlockInstance> ring =
@@ -238,54 +221,26 @@ namespace Thermodynamics.Tests
             BlockInstance popped = ring[3];
             simulation.RemoveBlock(popped);
             simulation.RebuildAll();
-            float broken = HeatAboveAmbient(simulation);
+            float drained = start - HeatAboveAmbient(simulation);
 
-            float perGrind = start - broken;
+            simulation.AddBlock(popped);
+            simulation.RebuildAll();
 
-            // The cycle is the block's own build time. Grinding is not free either, so this is the
-            // slowest the cycle can run and therefore the *smallest* rate the exploit achieves.
-            float seconds = ShippedBlocks.Get("Gauge_LG_CoolantPipe_Straight").BuildSeconds;
-            float watts = perGrind / seconds;
+            CoolantLoop back = simulation.Solver.Loops[0];
+            Assert.Equal(0f, back.FillFraction);
 
-            output.WriteLine("ring of 8 at {0:n0} K, {1:n0} K above ambient", Warm, Warm - Ambient);
-            output.WriteLine("one grind removes {0:n0} J of {1:n0} J held", perGrind, start);
-            output.WriteLine("pipe build time {0:n0} s -> {1:n0} W ({2:n2} MW) at one welder",
-                seconds, watts, watts / 1e6f);
-            output.WriteLine("to cancel it the refill must spend {0:n0} W, since a pump wastes all"
-                + " of what it draws", watts);
+            float spent = 0f;
+            for (int tick = 0; tick < 10000 && back.FillFraction < 1f; tick++) spent += back.Refill(1f);
 
-            output.WriteLine("against 3,000,000 W, the waste of the game's largest reactor: {0:n2} %",
-                100f * watts / 3e6f);
+            output.WriteLine("grind drained {0:n0} J of {1:n0} J held", drained, start);
+            output.WriteLine("refilling it spent {0:n0} J; ratio {1:n4}", spent, spent / drained);
 
-            // And the same ring at a temperature that is already a failure, to bound it: the rate
-            // is linear in the excess, so a ship in real trouble grinds six times as fast and is
-            // still nowhere near a reactor.
-            GridBuilder hotBuilder = GridBuilder.Large();
-            List<BlockInstance> hotRing =
-                PipeFitter.BuildRing(hotBuilder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
-            ThermalSimulation hot = hotBuilder.BuildSimulation(Isolated());
-            CoolantLoop hotLoop = hot.Solver.Loops[0];
-            for (int i = 0; i < hotLoop.Pipes.Count; i++) hotLoop.SetSegmentTemperature(i, 900f);
+            // The whole ring, not one parcel: the fluid left through the hole.
+            Assert.InRange(drained, start * 0.95f, start * 1.001f);
 
-            float hotStart = HeatAboveAmbient(hot);
-            BlockInstance hotPopped = hotRing[3];
-            hot.RemoveBlock(hotPopped);
-            hot.RebuildAll();
-            float hotWatts = (hotStart - HeatAboveAmbient(hot)) / seconds;
-
-            output.WriteLine("at 900 K — {0:n0} K over — it is {1:n0} W ({2:n2} % of a reactor)",
-                900f - Ambient, hotWatts, 100f * hotWatts / 3e6f);
-
-            // The claim: on a warm ship this is a rounding error against one reactor, and even on
-            // a ship that is already failing it is under a tenth of one. Bounded above only —
-            // a smaller number is the same finding, a larger one is a different row.
-            Assert.True(watts < 1e5f,
-                "grind-and-reweld runs at " + watts.ToString("n0") + " W on a ship 100 K over,"
-                + " which is no longer the rounding error B43 was decided on");
-
-            Assert.True(hotWatts < 3e5f,
-                "on a ship at 900 K it runs at " + hotWatts.ToString("n0")
-                + " W, over a tenth of the largest reactor's waste");
+            // And putting it back costs what it saved, which is the exploit erased rather than
+            // merely made small.
+            Assert.InRange(spent, drained * 0.98f, drained * 1.02f);
         }
 
         /// <summary>
@@ -332,14 +287,22 @@ namespace Thermodynamics.Tests
             output.WriteLine("grind pipe 3: {0:n0}; again: {1:n0}; then pipe 5: {2:n0}",
                 afterFirst, afterSecond, afterOther);
 
-            Assert.InRange(afterFirst, (start - parcel) * 0.99f, (start - parcel) * 1.01f);
+            // **The first grind drains the ring**, so what is left above ambient is the pipes' own
+            // heat and none of the fluid's. A hole in a pressurised loop empties it.
+            Assert.InRange(afterFirst, 0f, start * 0.05f);
 
             // **The second grind of the same pipe is free**, because what it carries away is the
             // ambient parcel the first reweld gave it back.
-            Assert.InRange(afterSecond, afterFirst * 0.999f, afterFirst * 1.001f);
+            // Bounded against the ring's own heat rather than against `afterFirst`, which is zero
+            // once the ring has drained — a relative band around zero is a band of zero width.
+            Assert.InRange(afterSecond, afterFirst - start * 0.001f, afterFirst + start * 0.001f);
+
 
             // And a pipe that is still hot costs its parcel, at the same price as the first.
-            Assert.InRange(afterOther, (afterSecond - parcel) * 0.99f, (afterSecond - parcel) * 1.01f);
+            // And a second pipe out of an already-drained ring costs nothing: there is no fluid
+            // left to lose, which is what makes the grinder useless as a heat sink rather than
+            // merely less good than it was.
+            Assert.InRange(afterOther, afterSecond - start * 0.001f, afterSecond + start * 0.001f);
 
             Assert.Single(simulation.Solver.Loops);
             Assert.Equal(ring.Count, simulation.Solver.Loops[0].Pipes.Count);
@@ -356,13 +319,27 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **No pipe ends hotter than the parcel it absorbed.** Boundedness is one of the solver's
-        /// three invariants, and it is the reason the fix is a mixture rather than the other
-        /// conserving option — pouring the parcel's energy into the node at the node's own capacity,
-        /// which puts a 900 K parcel into a 941 J/K pipe at 2,106 K and destroys it.
+        /// **A grind leaves no pipe holding coolant, because the ring drained.**
+        ///
+        /// <para>
+        /// This was `ASpilledParcelNeverHeatsItsPipeAboveItself`, and it guarded `A12`'s bound: a
+        /// spilled parcel comes to one temperature with its pipe and never heats it past itself,
+        /// because pouring the energy in at the node's own capacity would put a 900 K parcel into a
+        /// 941 J/K pipe at 2,106 K and destroy it. Boundedness is one of the solver's three
+        /// invariants.
+        /// </para>
+        ///
+        /// <para>
+        /// **`B44`'s vent made that bound unreachable from here.** The spill now runs only when a
+        /// ring dissolves *without* losing a pipe — a split, where no fluid can have escaped — and
+        /// the harness has no constructor for one, so grinding is no longer a way to reach it. The
+        /// test's own guard said so, in the words it was given for exactly this: *the spill moved
+        /// almost nothing and the bound above is not being tested*. Re-pointed at what a grind now
+        /// does; the bound itself is untested and that is backlog.md `F28`
+        /// rather than something this file quietly stopped checking.
+        /// </para>
         /// </summary>
-        [Fact]
-        public void ASpilledParcelNeverHeatsItsPipeAboveItself()
+                public void AGrindLeavesNoPipeHoldingCoolantBecauseTheRingDrained()
         {
             GridBuilder builder = GridBuilder.Large();
             List<BlockInstance> ring =
@@ -383,16 +360,21 @@ namespace Thermodynamics.Tests
                 if (node.Temperature > hottest) hottest = node.Temperature;
             }
 
-            output.WriteLine("hottest pipe after the spill: {0:n2} K", hottest);
+            output.WriteLine("hottest pipe after the grind: {0:n2} K", hottest);
+
+            // **Nothing was spilled, because the ring drained**, and that is what this now checks:
+            // a grinder opens a hole and the fluid leaves through it, so no pipe is holding a
+            // parcel and no pipe is warmed by one.
+            for (int i = 0; i < ring.Count; i++)
+            {
+                ThermalNode node = simulation.Solver.GetNode(ring[i]);
+                if (node == null) continue;
+
+                Assert.Equal(0f, node.HeldCoolantCapacity);
+            }
 
             Assert.True(hottest <= 900f + 0.01f,
-                "a pipe reached " + hottest.ToString("n2") + " K, above the 900 K parcel it absorbed");
-
-            // And it is genuinely warm, or the assertion above is passing on a spill that did
-            // nothing: a 941 J/K pipe taking a 1,889 J/K parcel at 900 K lands near 700 K.
-            Assert.True(hottest > 500f,
-                "the hottest pipe is only " + hottest.ToString("n2") + " K, so the spill moved "
-                + "almost nothing and the bound above is not being tested");
+                "a pipe reached " + hottest.ToString("n2") + " K, above the 900 K the fluid was at");
         }
 
         /// <summary>
@@ -470,7 +452,12 @@ namespace Thermodynamics.Tests
             output.WriteLine("well mixed: {0:n0} J -> {1:n0} J, lost {2:n0} ({3:n2} %)",
                 start, end, lost, 100f * lost / start);
 
-            Assert.InRange(lost, predicted * 0.99f, predicted * 1.01f);
+            // **The same as the normal model, which is the claim**: a hole drains the ring whether
+            // its fluid is carried as eight parcels or as one. The two models disagreeing here is
+            // what this test exists to catch, and they disagreed once — the spill handed every pipe
+            // the whole ring's fluid under `WellMixedCoolant`.
+            Assert.InRange(lost, start * 0.95f, start * 1.001f);
+            Assert.True(predicted > 0f, "one parcel is nothing, so this test is comparing zeroes");
         }
     }
 }

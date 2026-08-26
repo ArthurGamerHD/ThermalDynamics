@@ -387,6 +387,49 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **A ring a grinder opened vents, and comes back empty when the pipe is welded back.**
+        ///
+        /// backlog.md `B44`: a hole in a pressurised loop drains it, so the fluid's heat leaves
+        /// with the fluid rather than spilling into the pipes. The ring's signature is what carries
+        /// that across the rebuild — welding the pipe back returns the ring to the signature it
+        /// had, and to a fill of nothing, which it then pays to restore.
+        /// </summary>
+        [Fact]
+        public void GrindingAPipeVentsTheRingAndItComesBackEmpty()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            List<BlockInstance> ring =
+                PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
+
+            ThermalSimulation simulation = builder.BuildSimulation(Isolated());
+            CoolantLoop loop = simulation.Solver.Loops[0];
+            for (int i = 0; i < loop.ParcelCount; i++) loop.SetSegmentTemperature(i, 900f);
+
+            BlockInstance popped = ring[3];
+            simulation.RemoveBlock(popped);
+            simulation.RebuildAll();
+
+            Assert.Empty(simulation.Solver.Loops);
+
+            // No pipe is holding the ring's fluid: it drained out of the hole.
+            for (int i = 0; i < ring.Count; i++)
+            {
+                if (ring[i] == popped) continue;
+                ThermalNode node = simulation.Solver.GetNode(ring[i]);
+                if (node == null) continue;
+
+                Assert.Equal(0f, node.HeldCoolantCapacity);
+            }
+
+            simulation.AddBlock(popped);
+            simulation.RebuildAll();
+
+            Assert.Single(simulation.Solver.Loops);
+            output.WriteLine("rewelded ring is {0:p0} full", simulation.Solver.Loops[0].FillFraction);
+            Assert.Equal(0f, simulation.Solver.Loops[0].FillFraction);
+        }
+
+        /// <summary>
         /// Kilograms are what a refill is priced in, so the ring reports them: a full eight-pipe
         /// large-grid ring is eight parcels of the shipped 50 kg.
         /// </summary>

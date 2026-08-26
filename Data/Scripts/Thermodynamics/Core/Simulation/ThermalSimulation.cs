@@ -1032,6 +1032,12 @@ namespace Thermodynamics.Core
             // How full each ring is. **A ring with no record loads full**, which is both the
             // default and what it was in a world saved before coolant was a consumable — the
             // section is absent from every payload a released build has written (`W1`).
+            //
+            // Every ring is set, not only the ones with records: a full ring writes no record by
+            // design, so *absent* means full and a loop left at whatever the rebuild gave it would
+            // be reading the live grid rather than the save.
+            for (int l = 0; l < solver.Loops.Count; l++) solver.Loops[l].FillFraction = 1f;
+
             for (int i = 0; i < storedFills.Count; i++)
             {
                 for (int l = 0; l < solver.Loops.Count; l++)

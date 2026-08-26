@@ -873,6 +873,25 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Rings that were vented, by signature, waiting for the ring to be welded back.
+        ///
+        /// <para>
+        /// **It has to outlive the rebuild that emptied it**, which is the whole reason it is a
+        /// field. Grinding a pipe is one rebuild and welding it back is another, and the
+        /// `previousFill` a single rebuild carries is built from the loops that exist at its start
+        /// — at the reweld there are none, so a ring would come back full and the vent would have
+        /// cost nothing.
+        /// </para>
+        ///
+        /// <para>
+        /// An entry is taken out when the ring returns. One left behind is a ring nobody rebuilt,
+        /// at twelve bytes a signature, and grinding a loop open is not something a player does in
+        /// a hot path.
+        /// </para>
+        /// </summary>
+        private readonly Dictionary<long, float> ventedRings = new Dictionary<long, float>();
+
+        /// <summary>
         /// Moves the coolant of every loop with no successor into the pipes that were carrying it.
         /// A pipe destroyed with the ring takes no share, which is right: that coolant left with the
         /// block.
@@ -895,7 +914,8 @@ namespace Thermodynamics.Core
         /// one of the solver's three invariants and this path is not where it gets traded.
         /// </para>
         /// </summary>
-        private void SpillDissolvedLoops(List<CoolantLoop> newLoops)
+        private void SpillDissolvedLoops(List<CoolantLoop> newLoops,
+            Dictionary<long, float> previousFill)
         {
             if (loops.Count == 0) return;
 
@@ -926,6 +946,36 @@ namespace Thermodynamics.Core
                 // every pipe the whole ring's fluid.
                 int pipes = dying.Pipes.Count;
                 if (pipes <= 0) continue;
+
+                // **A ring a grinder opened vents; a ring that merely split does not.** The
+                // discriminator is whether the ring still has all its pipes: a block that left the
+                // grid no longer resolves to a node, and that is a hole in a pressurised loop. A
+                // split loses no fluid — backlog.md `B44` — so its coolant spills into its pipes as
+                // it always has.
+                // **Asked of the grid rather than of the node table**, because a node outlives the
+                // block for the length of a rebuild: `GetNode` still answered for a block that had
+                // just been ground out, so the first version of this vented nothing and every test
+                // that should have changed carried on passing.
+                bool lostAPipe = false;
+                for (int p = 0; p < pipes; p++)
+                {
+                    BlockInstance pipe = dying.Pipes[p];
+                    if (pipe.Cells.Length > 0 && grid.GetAtCell(pipe.Cells[0]) == pipe) continue;
+
+                    lostAPipe = true;
+                    break;
+                }
+
+                if (lostAPipe && dying.FillFraction > 0f)
+                {
+                    // The fluid drained out of the hole and took its heat with it. Nothing is
+                    // spilled into the pipes, and the ring's signature remembers that it is empty —
+                    // so welding the pipe back returns the ring to the signature it had, and to a
+                    // fill of nothing, which it then pays to restore.
+                    ventedRings[dying.Signature] = 0f;
+                    dying.FillFraction = 0f;
+                    continue;
+                }
 
                 float segmentMass = dying.ThermalMass / pipes;
                 if (segmentMass <= 0f) continue;
@@ -1041,9 +1091,18 @@ namespace Thermodynamics.Core
         public void SetLoops(List<CoolantLoop> newLoops)
         {
             Dictionary<long, float> previous = new Dictionary<long, float>();
+
+            // **How full a ring was, carried across the rebuild the same way its temperature is.**
+            // A ring is torn down and rebuilt whenever anything about the layout changes, and the
+            // signature is what makes a ring the same ring on the other side — so grinding a pipe
+            // out and welding it back returns the ring to the signature it had, and to the fill it
+            // had, which is what a vented ring needs to come back empty.
+            Dictionary<long, float> previousFill = new Dictionary<long, float>();
+
             for (int i = 0; i < loops.Count; i++)
             {
                 previous[loops[i].Signature] = loops[i].Temperature;
+                previousFill[loops[i].Signature] = loops[i].FillFraction;
             }
 
             // Pump settings are the player's, so they survive any rebuild the layout provokes. Keyed
@@ -1065,7 +1124,7 @@ namespace Thermodynamics.Core
             // loop and silently delete every joule its coolant was holding with it: 190 MJ in one
             // measured case, and a ship close to overheating could dump heat on demand by grinding
             // its own pump and rebuilding the ring cold.
-            SpillDissolvedLoops(newLoops);
+            SpillDissolvedLoops(newLoops, previousFill);
 
             loops.Clear();
             if (newLoops != null)
@@ -1077,6 +1136,19 @@ namespace Thermodynamics.Core
                     if (previous.TryGetValue(loop.Signature, out carried))
                     {
                         loop.Temperature = carried;
+                    }
+
+                    float carriedFill;
+                    if (previousFill.TryGetValue(loop.Signature, out carriedFill))
+                    {
+                        loop.FillFraction = carriedFill;
+                    }
+                    else if (ventedRings.TryGetValue(loop.Signature, out carriedFill))
+                    {
+                        // A ring welded back after being ground open. It returns as it was left:
+                        // empty, and paying to refill.
+                        loop.FillFraction = carriedFill;
+                        ventedRings.Remove(loop.Signature);
                     }
 
                     // Coolant must run on the same clock as the blocks it exchanges with, so the

@@ -496,6 +496,21 @@ power, no refill either**: a pump the grid could not supply fills by the share i
 is the rule every other draw in this mod follows. Measured on an empty eight-pipe large-grid ring,
 the pump draws **18,889 W** while filling and nothing when full.
 
+**What triggers it.** A ring that dissolves **having lost a pipe** vents: a grinder opened a hole in
+a pressurised loop and the fluid left through it, taking its heat rather than spilling into the
+pipes. A ring that dissolves with all its pipes still on the grid does not — that is a split, and no
+fluid can have escaped, which is why `A12`'s spill is still the right answer there. The ring's
+signature carries the empty state across the rebuild, so welding the pipe back returns the ring to
+the signature it had **and to a fill of nothing**, which it then pays to restore.
+
+> **Measured end to end**: an eight-pipe ring at 100 K over holds 1,511,111 J, a grind drains all of
+> it, and refilling spends 1,511,111 J — **a ratio of 1.0000**. Before the vent a grind cost one
+> parcel, 188,889 J, at 23,611 W. The exploit is not small now; it is nothing.
+>
+> **And `A12`'s bound lost its test to this.** A spilled parcel must never heat its pipe past
+> itself, and the only dissolve that still spills is one that loses no pipe, which the harness
+> cannot construct — [backlog.md](backlog.md) `F28`, recorded rather than quietly dropped.
+
 **Venting is instant and refilling is not, and that asymmetry is the mechanic.** An emergency dump
 buys relief now and is paid back gradually while the radiators work — useful once, useless on a
 timer. It is the only part of this with no derivation under it, so it is a setting and it says so.
