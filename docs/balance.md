@@ -264,8 +264,38 @@ be saved by a panel bolted beside it.
 
 **So `G3` cannot be met by retrofitting.** That is not a defeat — it is
 [document-of-intent.md](document-of-intent.md)'s stated position, *cooling designed in*, arriving as
-a measurement rather than as a preference. What a retrofit lab can still settle is the other half:
-whether a hull built around a loop does better than one that has one bolted into its gaps.
+a measurement rather than as a preference.
+
+#### And designed in, it works
+
+Every rig this repository owned had an **exposed** source, which is why nothing could see the
+difference: a panel bolted to a source standing in the open radiates wherever it is put. Bury the
+source in solid armour — which is how one is installed — and a bolted panel is buried with it.
+
+200 kW into the centre cell of a 7-cube of light armour, in shadow, **both fits carrying the same
+two panels** (`designed`):
+
+| Fit | Source settles | Saved | Panels | On the skin |
+| --- | ---: | ---: | ---: | ---: |
+| buried, bare | 375.4 K | — | 0 | 0 |
+| bolted, buried | 387.8 K | **−12.4 K** | 2 | 0 |
+| plumbed, to the skin | 307.9 K | **+67.5 K** | 2 | 2 |
+
+**A panel bolted to a buried source is worse than no panel at all.** It displaces armour that was
+conducting heat away and puts in its place a block whose one talent it cannot use, having no face on
+the sky. And a ring carrying that same heat out to the hull, with the same two panels on the outside
+of it, takes **18 % of the peak** off — twice the ceiling on everything that stays inside the grid,
+because it is the one fit that takes heat *off* the grid rather than moving it about.
+
+> **This is the whole mod in one table**, and it had never been measured. `blocks.md`'s *plumb it, do
+> not bolt it* is right — but for a reason no previous rig could show, and not the reason the page
+> gave: the loop's virtue is not that its joint carries more than a bolt joint, it is that the joint
+> can be somewhere else. `DesignedHullTests` pins the sign of both rows, and levels the panel count
+> between the arms so the comparison is about *where* the heat is put and nothing else (`P6`).
+
+It also says where the balance work goes. A retrofit is bounded at 9 % and a design is not, so the
+lever with headroom is whatever makes players build the loop — installability, and what the loop is
+worth once installed — rather than any dial on the fluid inside it.
 
 **A pump should be what makes this true.** Fluid-to-wall transfer is convective, so it depends on
 the flow, and nothing in the model expressed that until `C37`: the coefficient applied whole whether

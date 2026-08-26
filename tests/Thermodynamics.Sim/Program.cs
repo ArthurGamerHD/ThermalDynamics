@@ -140,6 +140,14 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "designed":
+                {
+                    float watts = float.Parse(Option(args, "--watts", "200000"),
+                        System.Globalization.CultureInfo.InvariantCulture);
+                    Console.Write(DesignedHullLab.Report(watts, OptionInt(args, "--panels", 4)));
+                    return 0;
+                }
+
                 case "coolers":
                     Console.Write(CoolingLadder.Report());
                     return 0;
