@@ -128,6 +128,19 @@ worker nodes; they idle out after ten to fifteen minutes and hold about 128 MB e
 Kill them if the machine is wanted. They are also why `heavy` closes its lock descriptor before
 running a command — a daemon that inherits it keeps the window held after the run has ended.
 
+**An hours-long walk is taken in slices, not in one hold.** Every corpus sweep resumes exactly — a
+blueprint is written to `done-<walk>.txt` only once every ship in it has been recorded (`O3`), so a
+killed slice loses the batch it was in and nothing else. On a machine three other projects are
+cycling through in three-to-six-minute windows, `heavy run --minutes 25` relaunched until the walk
+finishes is fair where a single eight-hour hold is not:
+
+```bash
+THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=out/survey-2026-08-25 \
+  heavy run --minutes 25 -- dotnet test --filter CorpusSurvey     # repeat until it completes
+```
+
+Do not delete the data directory between slices — that is what starts the walk over.
+
 **A killed build node is not a test failure, and it reads exactly like one.** Twice on 2026-08-25 a
 queued suite came back non-zero having run no tests at all:
 

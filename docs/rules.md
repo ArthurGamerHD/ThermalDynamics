@@ -1287,12 +1287,22 @@ Progress must be counted in bytes rather than files: the walk is largest-first, 
 9,981 is 5 % of the files and 50 % of the work. A kill pattern must not match the relaunch that
 has just started.
 
+**The resume is a record of finished blueprints, not a count** (corrected 2026-08-25). This rule
+carried a retirement condition saying it *currently* counted files — an interrupted batch re-emitted,
+the shipped dataset 50 duplicate rows — and that had already been fixed: `CorpusFixture` writes a
+path to `done-<walk>.txt` only once every ship in it has been recorded, so a path present there has
+nothing left to do. The 2026-08-21 dataset still carries its 50 rows and nothing collected since
+can, which is why `verdict.py` still drops duplicates and prints the count: it is a **guard** now
+rather than a workaround, and the count is also how a reader learns which kind of dataset they are
+holding.
+
+**A resumable sweep is what makes an hours-long walk fair on a shared machine** (`W5`). It can be
+taken in bounded windows — `heavy run --minutes 25`, relaunched — instead of one hold that starves
+three other projects for a working day, because a killed slice loses nothing but the batch it was
+in.
+
 *Applies to:* every corpus sweep.
 *Checked by:* — procedure.
-*Retires when:* the resume counts ships rather than files. It currently counts files while the
-writing is per ship, so an interrupted batch is re-emitted, the shipped dataset carries 50
-duplicate rows, and `verdict.py` drops them and prints the count. That workaround and the caveats
-on three pages retire together; [backlog.md](backlog.md) H2.
 *From:* the operations record, [balance.md](balance.md).
 
 #### O5 — A lab streams, and counts what it did not measure
@@ -1614,6 +1624,8 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Corrected `O3`'s retirement condition, which described a defect that had been fixed. It said the resume *currently* counts files and that a workaround and three pages' caveats retire with it, and cited a backlog row closed on 2026-08-22; the resume records finished blueprints and has since before this page was written. What `verdict.py` still does is a guard rather than a workaround, and the two pages that carry the 2026-08-21 dataset's 50 duplicate rows already scope them to it. Added what a resumable sweep is *for* on a shared machine, which is the half `W5` needed and did not have.
+
 | 2026-08-25 | `E5`'s check reads source comments as well as pages. The gap was demonstrated rather than argued: the panel grew from 36 ships to 50, every page was corrected, and `KnobSweep`'s own summary — the file a reader opens to find out what the sweep does — went on saying 36. Extending it found two more stale counts in comments. What it still cannot do is now written into the rule: it matches one phrasing, because the other phrasing in the tree is how a figure is correctly scoped to the run it came from. |
 
 | 2026-08-25 | Extended `W5` with how a contended run lies. A suite queued behind two other projects came back non-zero twice having run no tests — a reaped MSBuild worker, not a failure — and the log reads the same as a real one to anything grepping for a verdict. The reading instruction is now in the rule and the worked case is in [tests/README.md](../tests/README.md#running-heavy-work-on-a-shared-machine).
