@@ -51,6 +51,9 @@ is a finding rather than an excuse to move a threshold.
 | **G5** | **No death spiral.** A ship past critical that throttles to idle returns below critical in bounded time. | recovery time unbounded, or damage continues after the load stops | A player must be able to react to a warning. |
 | **G6** | **Affordable across the population.** Substep demand and step cost at p95/p99 of the corpus, not at the mean. | p99 substep demand exceeds what the shipped caps grant, **or p99 step work exceeds what the shipped element-visit allowance can do in real time** | The census hull is one point; the tail is what stutters. **Two notes it has earned.** Its marker is a *fidelity* marker, not a cost one — a demand above the cap is the cap doing its job, and the step gets cheaper rather than dearer; what the excess buys is approximation, which the verdict prices beside the failure. And the *step cost* half of its own sentence is now written down, above and below, having never been produced before (`C23`). |
 | **G7** | **A ship the game spawns survives arrival.** Every vanilla prefab, idle, in the environment its category spawns into, for five simulated minutes, loses no block. | any prefab loses a block | The stated compatibility floor. A mod that destroys the game's own cargo ships as they arrive is broken however good its physics is, and this is the one criterion measured on ships nobody chose to put in a corpus. |
+| **G9** | **Heat matters to most of the fleet.** Under sustained full electrical load, a large majority of uncooled vanilla ships reach a warning state. | fewer than ~70 % ever get warm | `G2` asks whether the mod does anything at all, at 20 %. This asks whether it is *present* for the player who did not go looking — a mod that bites a fifth of ships is a curiosity. **It is a feeling rather than a threshold and the number is a stake in the ground, not a measurement.** |
+| **G10** | **Activity is what moves it.** A hull's peak under load and under thrust is far above its peak at rest, and rest is quiet. | the load-to-idle ratio is near 1 on a large share of hulls, or idle is not quiet | Heat that drifts while nothing is happening is weather. Heat that answers what the player just did is a system they can steer, which is the whole of *the player figures it out*. |
+| **G11** | **The warning buys thinking time.** Between the first cue and the first block lost there is time to read the situation, decide, and push on if it is worth it. | the median ship gives its pilot less time than it takes to notice, or the first loss is unrecoverable | An alarm that demands an instant reaction trains a reflex rather than an understanding, and it makes heat a twitch mechanic. Pushing through has to stay a choice with a price, not a death. |
 | **G8** | **The significant event lands in the window, and the ship is usable again inside a session.** Under sustained full electrical load, the median time from load to the first block crossing critical falls in 120–300 simulated seconds — and from a full burn throttled to idle, the median hull finishes cooling within an hour. | the crossing median falls outside 120–300 s, or the recovery median exceeds 3,600 s | The mod's own stated balance target, which had never been a scored criterion. Both halves are one criterion because one clock governs both: the dial that puts the block in the window pushes the hull out of the session, and a route that satisfies either half alone is not a route. |
 
 **`G6`'s cost half, written down before it is scored** (`E11`, `E1`). The criterion has always
@@ -562,6 +565,42 @@ the same walk on the old reader, which is not a thing that exists.
 commits and — the thing that makes it one dataset — **identical `Cubes.xml`, `Loops.xml` and
 `Planets.xml` hashes across all four**. The coolant work those commits carry cannot reach a corpus
 ship: the filter admits only vanilla hulls and none of them has a loop.*
+
+### Where `G9`, `G10` and `G11` stand today
+
+All three are new, all three are feelings written as criteria, and **all three already have a
+reading** — from data on disk rather than from a run. Every figure below is the 8,132-ship survey of
+2026-08-21 unless it says otherwise, which is **before `C24` moved the pair and before `A13`**
+(`P1`), so each is provisional and the direction is given where a paired read is possible.
+
+| | criterion | reading | against |
+| --- | --- | --- | --- |
+| `G9` | heat matters to most of the fleet | **75.1 %** reach 400 K under load | ~70 % — **holds** |
+| `G10` | activity is what moves it | idle **178 K** → sunlit 247 → load **632** → burn **1,087** | ordering right — **holds** |
+| `G11` | the warning buys thinking time | **40 s** median from cue to first block lost, **18 s** at p10 | — **the one in doubt** |
+
+**`G9` holds and is not at risk from the retune.** Paired on the 963 hulls both surveys hold, the
+warm share moved **90.9 % → 91.5 %** and block loss came *down*, 78.4 % → 74.5 % — so `C24` made
+ships cooler without making heat stop mattering, which was the obvious way this could have broken.
+
+**`G10` holds, with a weak tail worth naming.** The load-to-idle ratio on the same hull is **2.84×**
+at the median and **1.19× at p10**: a tenth of the fleet barely notices what its pilot is doing. That
+tenth is where the criterion is nearest to failing and nothing has looked at what those hulls have in
+common.
+
+**`G11` is the one to work on, and it is not obviously met.** 40 seconds from cue to first loss is
+time to read a gauge; **18 seconds at p10 is not time to decide anything**. And the crossing itself
+arrives at a median of **9.0 s** under full load — the alarm is early relative to the loss, by about
+four times, which is the right shape — but the whole event is compressed into under a minute.
+Worse, the figures are from `out/corpus-2026-08-23-loss`, 798 ships, taken **before `C24`**, and
+nothing has re-measured them since the clock moved.
+
+**So the balance pass has a direction it did not have an hour ago**: heat already matters to three
+quarters of the fleet and already answers activity, and what it does not do is give the player time.
+The dial that governs the whole timescale is `HeatTimeScale`, which `C24` already moved from 225 to
+90 for a different reason — and `G8`'s 2–5 minute significance window is the other criterion pulling
+on the same number. **`G11` and `G8` are the same question asked at two scales**, and neither has
+been measured at the pair that ships.
 
 ### What flooring an over-budget grid does, written before it is measured
 

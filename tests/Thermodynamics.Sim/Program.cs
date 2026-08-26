@@ -78,6 +78,15 @@ namespace Thermodynamics.Sim
                     Console.Write(ReactorLab.Report());
                     return 0;
 
+                case "triage":
+                {
+                    int take;
+                    int.TryParse(ValueAfter(args, "--top") ?? "25", out take);
+                    Console.Write(BlockTriageLab.Report(
+                        ValueAfter(args, "--census") ?? "out/census-2026-08-25/composition.csv", take));
+                    return 0;
+                }
+
                 case "oxygen":
                     Console.Write(OxygenGeneratorLab.Report());
                     return 0;
@@ -1470,6 +1479,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  frequency               where substep cost bottoms out against Frequency");
             Console.WriteLine("  reactors                where a vanilla reactor settles, against its waste fraction");
             Console.WriteLine("  oxygen                  where a vanilla oxygen generator settles, against its waste fraction");
+            Console.WriteLine("  triage [--top N] [--census F]  which blocks a balance pass should look at, in order");
             Console.WriteLine("  basevariants [--ships N] [--type T] [--file F]  what the blocks a blueprint spells with no subtype are worth");
             Console.WriteLine("  coolers                 every block that could cool a reactor, stacked against one");
             Console.WriteLine("  conductance             what real units did to the mod's own pipes and radiators");
