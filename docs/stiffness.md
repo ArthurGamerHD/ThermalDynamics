@@ -790,6 +790,30 @@ which is what made them usable evidence. Against the new one they read past the 
 reason is the pace rather than the ships. Re-taking them needs a session on the new pair;
 `TheFieldObservationsAreFromAPaceThatNoLongerShips` says so and fails when a dump arrives.
 
+### What `A13` does to this population, written before the walk
+
+Every figure in this section was measured through a blueprint reader that built eleven kinds of
+vanilla block as an armour cube — [backlog.md](backlog.md) `A13`. A stiffness figure is a
+conductance over a capacity, and the corrected blocks differ from armour in **both**: a gravity
+generator is 8 tonnes where a light armour cube is 500 kg, a passage and a door carry different
+mount faces, and a piston base is now three cells rather than two. So this walk has to be re-run,
+and it costs three minutes rather than the survey's hours. What it should say goes here first
+(`E1`).
+
+| | prediction | falsified by |
+| --- | --- | --- |
+| the population | **8,101 ships**, four fewer than 8,105: seven hulls now rejected for holding an empty-subtype block on a grid size the game does not have it on, three admitted that the type-and-subtype pair now resolves | any other count |
+| the modes | `LitShare` stays within **0.01** of 0.4496 — a light or a camera sets the demand on 45 % of hulls, and none of the eleven corrected types is a light or a camera | a move of more than 0.01 |
+| the medians | `AirP50` and `VacuumP50` move by **under 5 %** each, because 0.53 % of blocks changed identity and a median is not a sum | a move of 5 % or more in either |
+| the tail | `AirMax` moves **more than the median does**, because the corrected blocks are heavy and well-connected and the maximum is one block on one hull | the maximum moving by less than the median |
+
+The medians prediction is the one with an argument rather than a measurement behind it, and the
+argument is that stiffness is a per-block property read at a percentile, where `A13`'s cost to the
+population was a **sum** over blocks and was therefore dominated by the few types that make
+megawatts. **If the medians move more than 5 % the reason will be that the corrected blocks are
+stiffer than armour rather than merely more numerous**, which is a different finding and worth
+having.
+
 ### The population had two modes and almost nothing between them, and `C24` closed the gap
 
 A median of 6.61 with a ninetieth percentile of 33.09 was not a long tail. It was two populations,
