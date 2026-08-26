@@ -349,7 +349,45 @@ namespace Thermodynamics.Core
         public float LinkConductance(int index)
         {
             if (index < 0 || index >= Links.Count) return 0f;
-            return Links[index].Conductance * fill;
+            return Links[index].Conductance * fill * StagnantFactor;
+        }
+
+        /// <summary>
+        /// What a link carries as a share of its flowing value, given whether the ring is
+        /// circulating: one while it flows, <see cref="LoopThermalProperties.StagnantTransferFraction"/>
+        /// while it does not.
+        ///
+        /// <para>
+        /// **Fluid-to-wall transfer is convective, so it depends on the flow.** A pumped ring is
+        /// forced convection and a stopped one is natural convection against the same wall, which
+        /// is the best part of an order of magnitude apart in any handbook. Nothing in the model
+        /// expressed that: <see cref="LoopThermalProperties.HeatTransferCoefficient"/> applied
+        /// whole whether or not anything was moving, so a pump earned its power only by evening the
+        /// ring out and never by making the ring conduct.
+        /// </para>
+        ///
+        /// <para>
+        /// **The field is older than this use and did nothing before it.** It was authored for the
+        /// segment-to-segment transport, which <see cref="Advect"/> already stops dead by returning
+        /// on zero flow — so as written it was a slider a player could move that multiplied nothing,
+        /// found by `LoopDialReachTests`. Its name, its range and what the menu promises are all
+        /// unchanged; it now has the leg it describes.
+        /// </para>
+        ///
+        /// <para>
+        /// It ships at 1, so a ring behaves exactly as it did until someone decides otherwise —
+        /// see balance.md, *The joint, not the panel*.
+        /// </para>
+        /// </summary>
+        public float StagnantFactor
+        {
+            get
+            {
+                if (FlowSegmentsPerSecond != 0f) return 1f;
+
+                float fraction = Properties.StagnantTransferFraction;
+                return fraction < 0f ? 0f : (fraction > 1f ? 1f : fraction);
+            }
         }
 
         /// <summary>

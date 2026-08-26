@@ -186,6 +186,52 @@ stayed at two panels; the corpus retrofit, bolting panels onto real hulls, moved
 never the limit. Transport is** — which is what `F27` found for bases from the other end, and what
 `blocks.md`'s *plumb it, do not bolt it* has been saying without a number on it.
 
+#### What the loop can be worth, and what it costs
+
+The last row above is the only one that moves the joint, so the dials under it are the ones with
+room. A sink face carries `h · A`, and on a large grid `160 × 6.25` is that 1,000 W/K exactly.
+Swept on the same source, the same panel and the same ring — **not applied, measured**:
+
+| The loop feeding one panel | Source K | Gain | Sink W/K | Drop across it | Substeps |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| shipped, `h` 160 | 441.3 K | 51.5 K | 1,000 | 117.2 K | 11.88 |
+| `h` 400 | 410.6 K | 82.2 K | 2,500 | 81.2 K | 12.68 |
+| `h` 1,000 | 386.0 K | 106.8 K | 6,250 | 52.9 K | 14.67 |
+| `h` 2,000 | 374.6 K | 118.2 K | 12,500 | 40.3 K | 17.99 |
+| `h` 1,000, 515 kg/pipe | 376.3 K | 116.5 K | 6,250 | 42.5 K | 14.67 |
+
+**The drop across the sink falls from 117 K to 40 K while the panel runs hotter**, which is the
+signature worth trusting: the loop is ceasing to be the resistance and the panel is being fed enough
+to work. 160 W/(m²·K) is a slow flow — the definition says so — and a pumped water-glycol ring is
+forced convection, which any handbook puts in the low thousands. The dial's own in-game slider
+already goes to 2,000.
+
+**The coolant mass is a transport term, not a buffer**, which is not obvious and is why it is in the
+table. A ring carries `ṁ·c_p` past a point, so the loop is two resistances in series — the sink face
+and the ring's carrying rate — and at the shipped `h` the sink binds so hard that quadrupling the
+coolant is worth 0.9 K. Fix the sink and the carrying rate becomes the limit: at `h` 1,000 the same
+change is worth **9.7 K**, and it costs the integrator nothing at all, because a segment's substep is
+sized from `SegmentConductance / SegmentThermalMass` and this moves only the denominator.
+
+It saturates by about 500 kg, and 515 kg is where the derivation lands independently: a bore one
+fifth of the cell across, down the middle of a 2.5 m cube, is 0.49 m³ of water-glycol.
+**`CoolantMassPerPipe` is a flat 50 kg with no grid size in it** — 3.2 kg/m³ in a large cell, which
+is a gas, against 400 kg/m³ in a small one, which is a liquid. That is the same defect
+`HeatTransferCoefficient` was already corrected for, and it is authored for the grid the mod is
+least often plumbed on.
+
+> **The cost column is honest and narrow.** +23 % substeps at `h` 1,000 is paid by the block the
+> sink touches, not by the fluid, so more coolant cannot buy it back. It also lands only on grids
+> that build a loop — the corpus is vanilla-only and carries none — so no population figure on this
+> page moves with these dials. That is the vanilla and modded lanes doing their job, and it is also
+> the reason `G3` has never been measured on a real hull.
+
+**A pump should be what makes this true.** Fluid-to-wall transfer is convective, so it depends on
+the flow, and nothing in the model expressed that until `C37`: the coefficient applied whole whether
+or not anything circulated. `LoopStagnantTransferFraction` now scales it, so a raised `h` can be the
+*pumped* number with today's 160 as the stopped one, and a pump earns its power by making the ring
+conduct rather than only by mixing it. It ships at 1 and nothing behaves differently yet.
+
 ### What a selective surface is worth
 
 A surface is not obliged to absorb what it emits, and a radiator is the one block where that matters

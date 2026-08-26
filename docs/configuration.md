@@ -791,7 +791,7 @@ Move one and it wins from then on, across every loop definition in the world.
 | `LoopSinkContactMultiplier` | 1.0 | Scales the coupling through a sink face into whatever is mounted against it. This is the dial that decides whether plumbing beats bolting. |
 | `LoopLargeGridFlowRate` | 10 m/s | How fast coolant moves on a large grid with one pump at full speed. Flow costs no substeps — carrying the fluid is a rotation of which parcel sits in which pipe, exact at any speed — so this is free to be set for feel. |
 | `LoopSmallGridFlowRate` | 10 m/s | The same for a small grid. Split from the large-grid figure because it is a balance dial rather than a constant. |
-| `LoopStagnantTransferFraction` | 1.0 | What a stopped ring still carries between neighbouring parcels, 0..1. 0 makes a pump failure total. |
+| `LoopStagnantTransferFraction` | 1.0 | What a stopped ring still carries across the fluid-to-wall joint, 0..1. Fluid-to-wall transfer is convective, so it depends on the flow: a pumped ring is forced convection and a stopped one is natural convection against the same wall. 0 makes a pump failure total. |
 | `WellMixedCoolant` | `false` | The cheap rung of coolant transport. Off — the default — is the realistic form: the fluid is a ring of parcels, so a stopped pump leaves the coolant cold at the radiator and hot at the reactor, and where a sink sits round the loop matters. On collapses the ring to one temperature, which is cheaper and makes a loop's layout stop mattering. **It existed in the solver and reached no world until 2026-08-24**: the model read it, the tests exercised it, and nothing a player could touch set it. |
 
 ## Planet climate
@@ -1303,6 +1303,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | Corrected what `LoopStagnantTransferFraction` does. It was described as scaling what a stopped ring carries between parcels, which `Advect` already reduces to nothing, and it reached no line of the simulation at all; it now scales the fluid-to-wall coupling, so a stopped ring conducts into its coolant more slowly than a pumped one. The default is unchanged at 1. |
 | 2026-08-25 | Added `LoopRefillEquivalentKelvin` and `LoopRefillKilogramsPerSecond`, the two dials of coolant being a consumable ([backlog.md](backlog.md) `B43`). The first is derived rather than chosen — it is the excess at which venting and refilling break even, because a pump wastes all of what it draws — and the second is the only figure in the feature that was picked, which both it and [thermal-model.md](thermal-model.md) say.
 
 | 2026-08-25 | **`FloorBlocksWhenOverBudget` stays off, decided on 294 ships rather than on one hull** ([backlog.md](backlog.md) `C30`). Against a rule fixed before the data — 0.03 K ships it on, 0.6 K keeps it off — the population p99 is **27.76 K**. Its safety half is perfect: no lost clock, nothing floored in the control, never stiffer. Its cost half is not, and no gate rescues it without gating it out of existence. The switch stays for a world that would rather have its clock. |

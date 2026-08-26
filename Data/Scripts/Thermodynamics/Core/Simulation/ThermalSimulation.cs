@@ -346,6 +346,14 @@ namespace Thermodynamics.Core
                 }
                 SimulatedSecondsRun += seconds;
 
+                // **The same call the frame-paced path makes**, because refilling advances with
+                // simulated time and this path is simulated time. It was on `Update` alone, so
+                // coolant came back in a session and never in a lab: every scenario, every
+                // benchmark and every test ran a mod where venting was free and permanent, which
+                // is the one lane a balance figure is read in. `LoopDialReachTests` found it by
+                // reporting both refill dials as reaching nothing.
+                RefillLoops(seconds);
+
                 solver.Step(seconds, state, demand);
 
                 IList<OverheatEvent> stepOverheats = solver.Overheats;

@@ -447,5 +447,108 @@ namespace Thermodynamics.Tests
             loop.FillFraction = 0.5f;
             Assert.Equal(4f * perPipe, loop.HeldKilograms);
         }
+
+        /// <summary>
+        /// **A vented ring refills while the simulation is stepped, and the pump pays for it.**
+        ///
+        /// <para>
+        /// The refill was written onto the frame-paced path alone. That path is the game; it is not
+        /// the lane any figure on balance.md is read in — every lab, benchmark and scenario advances
+        /// through <see cref="ThermalSimulation.StepExact"/>, and on that path a vented ring stayed
+        /// empty for ever and the pump was never charged. So the consumable worked in a session and
+        /// did not exist in a measurement, which is the worse half: the exploit `B43` was written to
+        /// close was still open in every number the mod is tuned against.
+        /// </para>
+        ///
+        /// <para>
+        /// Found by `LoopDialReachTests`, which reported both refill dials as reaching nothing at
+        /// all. This asserts the behaviour directly rather than through a sweep, because a sweep
+        /// says a dial is connected and this says what it is connected to.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void AVentedRingRefillsAcrossSteppedTimeAndThePumpPaysForIt()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3);
+            PipeFitter.BuildRing(builder, cells, 1);
+
+            ThermalSimulation simulation = builder.BuildSimulation(Isolated());
+            CoolantLoop loop = simulation.Solver.Loops[0];
+
+            Assert.True(loop.HasPump, "the ring needs a pump, because a ring without one never fills");
+
+            loop.Vent(293.15f);
+            Assert.Equal(0f, loop.FillFraction);
+
+            float wanted = loop.RefillDemandWatts;
+            Assert.True(wanted > 0f, "an empty ring with a pump should be asking for power");
+
+            simulation.StepExact(LabClock.Steps(40), Worlds.Shadow());
+
+            Assert.True(loop.FillFraction > 0f,
+                "a vented ring did not refill across stepped time, so the consumable is invisible"
+                + " to every lab that measures this mod");
+
+            float drawn = 0f;
+            for (int i = 0; i < loop.Pumps.Count; i++)
+            {
+                if (loop.Pumps[i].Block != null) drawn += loop.Pumps[i].Block.PowerConsumedWatts;
+            }
+
+            Assert.True(drawn > 0f,
+                "the ring refilled without the pump being charged for it, which is the exploit"
+                + " rather than the fix");
+        }
+
+        /// <summary>
+        /// **A stopped ring carries less across the fluid-to-wall joint than a flowing one**, by
+        /// <see cref="LoopThermalProperties.StagnantTransferFraction"/>.
+        ///
+        /// <para>
+        /// That field was authored, documented, clamped, given a slider in the in-game menu and
+        /// copied into the running properties, and no line of the simulation multiplied anything by
+        /// it — the mod's recurring defect, and one `LoopDialReachTests` now catches by enumeration.
+        /// It described the segment-to-segment transport, which <see cref="CoolantLoop.Advect"/>
+        /// already stops dead by returning on zero flow, so as written it could only ever be a
+        /// no-op. It now scales the leg where a flow dependence is real: fluid-to-wall transfer is
+        /// convective, and forced convection against a wall is most of an order of magnitude above
+        /// natural convection against the same wall.
+        /// </para>
+        ///
+        /// <para>
+        /// **It ships at 1**, so this asserts reach and direction and not a shipped balance figure.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void AStoppedRingCarriesLessAcrossTheWallThanAFlowingOne()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3), 1);
+
+            ThermalSimulation simulation = builder.BuildSimulation(Isolated());
+            CoolantLoop loop = simulation.Solver.Loops[0];
+
+            LoopThermalProperties properties = LoopThermalProperties.Default();
+            properties.StagnantTransferFraction = 0.25f;
+            simulation.LoopProperties = properties;
+            simulation.RebuildAll();
+            loop = simulation.Solver.Loops[0];
+
+            for (int i = 0; i < loop.Pumps.Count; i++) loop.Pumps[i].Enabled = true;
+            loop.RefreshFlow();
+            Assert.NotEqual(0f, loop.FlowSegmentsPerSecond);
+            Assert.Equal(1f, loop.StagnantFactor);
+            float flowing = loop.LinkConductance(0);
+
+            for (int i = 0; i < loop.Pumps.Count; i++) loop.Pumps[i].Enabled = false;
+            loop.RefreshFlow();
+            Assert.Equal(0f, loop.FlowSegmentsPerSecond);
+            Assert.Equal(0.25f, loop.StagnantFactor);
+            float stopped = loop.LinkConductance(0);
+
+            Assert.True(flowing > 0f, "a flowing ring carried nothing, so nothing below is measured");
+            Assert.Equal(flowing * 0.25f, stopped, 3);
+        }
     }
 }

@@ -496,6 +496,43 @@ power, no refill either**: a pump the grid could not supply fills by the share i
 is the rule every other draw in this mod follows. Measured on an empty eight-pipe large-grid ring,
 the pump draws **18,889 W** while filling and nothing when full.
 
+> **This paragraph described the intent and not the code, for as long as the feature has existed.**
+> The refill was called from the frame-paced update alone. That path is the game — but it is not the
+> lane any figure on [balance.md](balance.md) is read in: every lab, benchmark and scenario advances
+> through `StepExact`, and on that path a vented ring stayed empty for ever and the pump was never
+> charged. So the consumable worked in a session and did not exist in a measurement, which is the
+> worse half of the two, because the exploit `B43` was written to close was still open in every
+> number the mod is tuned against. Both paths call it now, and
+> `AVentedRingRefillsAcrossSteppedTimeAndThePumpPaysForIt` asserts the stepped one directly.
+> Found by `LoopDialReachTests`, which reported both refill dials as reaching nothing at all.
+
+#### A pump makes the ring conduct, not only circulate
+
+Fluid-to-wall transfer is convective, so it depends on the flow: a pumped ring is forced convection
+and a stopped one is natural convection against the same wall, which is most of an order of
+magnitude in any handbook. Nothing in the model expressed that. `HeatTransferCoefficient` applied
+whole whether or not anything was moving, so a pump earned its power by evening the ring out and
+never by making the ring conduct — and a ship whose pumps had all stopped lost its circulation and
+kept its coupling.
+
+`LoopStagnantTransferFraction` is the share that survives with nothing circulating, and it now
+scales every link the fluid has:
+
+```
+G_link = fill × StagnantTransferFraction^(flow == 0) × h · A
+```
+
+> **The field is older than this use and multiplied nothing before it.** It was authored for the
+> segment-to-segment transport, which `Advect` already stops dead by returning on zero flow, so as
+> written it could only ever be a no-op — a slider a player could move that did nothing, parsed from
+> XML, carried through settings, clamped, and read by no line of the simulation. `LoopDialReachTests`
+> enumerates the definition by reflection rather than reciting a list, which is what found it and
+> what will find the next one. Its name, its range and what the menu promises are unchanged.
+
+**It ships at 1**, so no ring behaves differently today. What it buys is a lever on the one leg the
+measurements say is binding — see [balance.md](balance.md), *The joint, not the panel* — and a
+reason for a pump to be switched on beyond mixing.
+
 **What triggers it.** A ring that dissolves **having lost a pipe** vents: a grinder opened a hole in
 a pressurised loop and the fluid left through it, taking its heat rather than spilling into the
 pipes. A ring that dissolves with all its pipes still on the grid does not — that is a split, and no
@@ -851,6 +888,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | Corrected *Coolant is a consumable*, which described the refill advancing with the step when the code advanced it with the frame alone — so the consumable worked in a session and was invisible to every lab, benchmark and test, which is the lane every figure on balance.md is read in. Added *A pump makes the ring conduct, not only circulate*: fluid-to-wall transfer is convective and so depends on the flow, and nothing expressed that until `LoopStagnantTransferFraction` was wired to the leg it names. Both found by `LoopDialReachTests`. |
 | 2026-08-25 | **A broken ring keeps its coolant's heat, and the two thirds it used to destroy were an accident of two capacities** ([backlog.md](backlog.md) `A12`). The spill mixed each parcel into its pipe at `(T_n·M_n + T_s·M_s) / (M_n + M_s)` and then left the node at `M_n`, so `M_s / (M_n + M_s)` of the ring's heat — **67.9 %** on a large grid, 941 J/K of pipe against 1,889 of parcel — landed nowhere. The pipe now takes the parcel's heat capacity along with its temperature and hands both back when a ring re-forms through it, so grinding a pipe out of an eight-pipe ring costs **one eighth**, which is the parcel that left inside the block, and splitting a ring costs nothing. **Predicted before it was run** and the prediction stands at three ring lengths. Two further defects came out of the same code and are fixed with it: under `WellMixedCoolant` the spill handed *every* pipe the whole ring's fluid, and `SegmentTemperature`/`SetSegmentTemperature` bounded a **pipe** index by the **parcel** count, so in that model every pipe after the first read and wrote nothing. |
 | 2026-08-25 | Said what the friction expression is: drag power, with `FrictionScale` standing in for `½ C_d`. The model computes what the air takes from a ship's energy and returns none of it to the ship's motion — a median 5.05 MW on the published population at `reentry`, which is 16.8 kN never applied. Whether it should be is [backlog.md](backlog.md) `K1`, and the coefficient is why it is not obvious. |
 | 2026-08-25 | Stated the wind factor's floor as present-tense evidence rather than as what it *used to be* (`R12`), and absorbed the measured consequence — a 2 MW hull settling 0.9 K hotter in a 40 m/s wind — from the twelve-line comment in `ThermalSolver` that had been carrying it. The comment names this section now. |
