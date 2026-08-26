@@ -783,6 +783,8 @@ Move one and it wins from then on, across every loop definition in the world.
 | Setting | Default | Effect |
 | --- | --- | --- |
 | `LoopCoolantMassPerPipe` | 50 kg | Coolant carried by one pipe block. More capacity for the same coupling: a heavier ring takes longer to saturate and longer to shed. |
+| `LoopRefillEquivalentKelvin` | 100 K | The excess a refill is priced at. Restoring a kilogram costs the heat that kilogram holds this far above ambient, and a pump wastes **all** of what it draws, so the energy lands back in the ship — which makes this **the excess at which venting and refilling exactly break even**. Above it a vent pays, below it costs. 100 K is where the glow starts. |
+| `LoopRefillKilogramsPerSecond` | 5 kg/s | How fast a vented ring comes back. Venting is instant and refilling is not, and that is what stops a dump being repeatable: a full eight-pipe large-grid ring is 80 s. The one figure here with no derivation under it. |
 | `LoopSpecificHeat` | 3400 J/(kg·K) | The coolant's specific heat. Water-glycol is about 3,400. |
 | `LoopHeatTransferCoefficient` | 160 | How well heat crosses between the fluid and the wall it touches, W/(m²·K). Convective, so there is no thickness in it. A few hundred is a slow liquid flow and a few thousand a fast one. |
 | `LoopPipeContactMultiplier` | 1.0 | Scales the coupling between the fluid and its own pipe. |
@@ -1301,6 +1303,8 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Added `LoopRefillEquivalentKelvin` and `LoopRefillKilogramsPerSecond`, the two dials of coolant being a consumable ([backlog.md](backlog.md) `B43`). The first is derived rather than chosen — it is the excess at which venting and refilling break even, because a pump wastes all of what it draws — and the second is the only figure in the feature that was picked, which both it and [thermal-model.md](thermal-model.md) say.
+
 | 2026-08-25 | **`FloorBlocksWhenOverBudget` stays off, decided on 294 ships rather than on one hull** ([backlog.md](backlog.md) `C30`). Against a rule fixed before the data — 0.03 K ships it on, 0.6 K keeps it off — the population p99 is **27.76 K**. Its safety half is perfect: no lost clock, nothing floored in the control, never stiffer. Its cost half is not, and no gate rescues it without gating it out of existence. The switch stays for a world that would rather have its clock. |
 | 2026-08-25 | Added `FloorBlocksWhenOverBudget` ([backlog.md](backlog.md) `C30`): when a grid cannot afford its demand, floor its stiffest blocks to what the allowance grants instead of shortening its step. Off by default. The measurement behind it is nine to thirty-seven kelvin of lost clock against the cap's own 0.024 K. |
 | 2026-08-25 | `MaxSubstepsPerBlock` stays off by default, decided on all 8,144 published blueprints rather than on one hull ([backlog.md](backlog.md) `C3`). The population p99 is 0.2820 K, under the figure that had kept it out; what decides it is that the error is charged per block and the throughput is collected per grid, so four fifths of the ships people publish would pay and collect nothing. |

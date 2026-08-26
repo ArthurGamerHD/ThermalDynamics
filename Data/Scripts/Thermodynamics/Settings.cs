@@ -286,6 +286,16 @@ namespace Thermodynamics
         [ProtoMember(85)] public float LoopCoolantMassPerPipe = 50f;
 
         /// <summary>
+        /// The excess a refill is priced at, K: restoring a kilogram costs the heat that kilogram
+        /// holds this far above ambient, so it is the excess at which venting and refilling exactly
+        /// break even. Above it dumping coolant pays, below it costs.
+        /// </summary>
+        [ProtoMember(131)] public float LoopRefillEquivalentKelvin = 100f;
+
+        /// <summary>How fast a vented ring refills, kg/s. Bounds the cycle whatever is aboard.</summary>
+        [ProtoMember(132)] public float LoopRefillKilogramsPerSecond = 5f;
+
+        /// <summary>
         /// How well heat crosses between the coolant and the wall it touches, W/(m²·K).
         ///
         /// **Replaces `LoopConductivity`, which was a 0…1 quality against a reference conductivity**
@@ -865,6 +875,7 @@ namespace Thermodynamics
                 "LoopLargeGridFlowRate", "LoopSmallGridFlowRate", "LoopCoolantMassPerPipe",
                 "LoopSpecificHeat", "LoopHeatTransferCoefficient", "LoopPipeContactMultiplier",
                 "LoopSinkContactMultiplier", "LoopStagnantTransferFraction",
+                "LoopRefillEquivalentKelvin", "LoopRefillKilogramsPerSecond",
 
                 "PlanetDayTemperature", "PlanetNightTemperature", "PlanetPoleTemperatureDrop",
                 "PlanetAmbientLapseRate", "PlanetAmbientLagSeconds", "PlanetConvectionCoefficient",
@@ -955,6 +966,8 @@ namespace Thermodynamics
                 case "TelemetryPlanetProbes": return TelemetryPlanetProbes;
 
                 case "LoopCoolantMassPerPipe": return LoopCoolantMassPerPipe;
+                case "LoopRefillEquivalentKelvin": return LoopRefillEquivalentKelvin;
+                case "LoopRefillKilogramsPerSecond": return LoopRefillKilogramsPerSecond;
                 case "LoopHeatTransferCoefficient": return LoopHeatTransferCoefficient;
                 case "LoopSpecificHeat": return LoopSpecificHeat;
                 case "LoopPipeContactMultiplier": return LoopPipeContactMultiplier;
@@ -1068,6 +1081,8 @@ namespace Thermodynamics
                 case "TelemetryPlanetProbes": TelemetryPlanetProbes = (int)value; return true;
 
                 case "LoopCoolantMassPerPipe": LoopCoolantMassPerPipe = value; return true;
+                case "LoopRefillEquivalentKelvin": LoopRefillEquivalentKelvin = value; return true;
+                case "LoopRefillKilogramsPerSecond": LoopRefillKilogramsPerSecond = value; return true;
                 case "LoopHeatTransferCoefficient": LoopHeatTransferCoefficient = value; return true;
                 case "LoopSpecificHeat": LoopSpecificHeat = value; return true;
                 case "LoopPipeContactMultiplier": LoopPipeContactMultiplier = value; return true;
