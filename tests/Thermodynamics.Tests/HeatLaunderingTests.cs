@@ -185,6 +185,110 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **Grind-and-reweld is worth tens of kilowatts, and `A12`'s fix is what made it so.**
+        ///
+        /// <para>
+        /// The tests above measure the joules exactly — one parcel per grind, neither more nor
+        /// less. A quantity of heat is not an exploit; a quantity of heat **per second** competes
+        /// with a radiator, and that is the number `B43` is decided on. The cycle time is the
+        /// pipe's own <c>BuildTimeSeconds</c> read from the shipped definition, so a rebalanced
+        /// pipe moves this figure rather than sliding past it.
+        /// </para>
+        ///
+        /// <para>
+        /// **Measured at 23,611 W on a warm ship and 143,284 W on one already cooking** — 0.8 %
+        /// and 4.8 % of what the game's largest reactor makes at the fraction this mod ships. All
+        /// three of the predictions registered in balance.md were wrong by two orders of
+        /// magnitude, and in the same direction: the row was written against a **190 MJ** case
+        /// where grinding a pump dissolved a whole loop, and `A12` replaced that with one parcel
+        /// per grind. The exploit was priced out by a fix aimed at something else.
+        /// </para>
+        ///
+        /// <para>
+        /// **The rate cannot be scaled by building a bigger loop**, which is the half that makes
+        /// it a bound rather than a reading: a grind costs one parcel whatever the ring's length,
+        /// so the exploit is capped at one parcel per pipe-build-time per grinder however much
+        /// coolant the ship carries.
+        /// </para>
+        ///
+        /// <para>
+        /// A hundred kelvin above ambient rather than the 900 K the tests above use, because 900 K
+        /// is a ship already in trouble and the exploit is interesting precisely if it pays on one
+        /// that is merely warm. The bound is one-sided and loose: this pins that the rate is
+        /// **small**, and it is a claim about the shipped model rather than a tuning target.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void GrindAndRewealdIsWorthKilowattsRatherThanMegawatts()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            List<BlockInstance> ring =
+                PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
+
+            Assert.Equal(8, ring.Count);
+
+            ThermalSimulation simulation = builder.BuildSimulation(Isolated());
+            CoolantLoop loop = simulation.Solver.Loops[0];
+
+            const float Warm = Ambient + 100f;
+            for (int i = 0; i < loop.Pipes.Count; i++) loop.SetSegmentTemperature(i, Warm);
+
+            float start = HeatAboveAmbient(simulation);
+
+            BlockInstance popped = ring[3];
+            simulation.RemoveBlock(popped);
+            simulation.RebuildAll();
+            float broken = HeatAboveAmbient(simulation);
+
+            float perGrind = start - broken;
+
+            // The cycle is the block's own build time. Grinding is not free either, so this is the
+            // slowest the cycle can run and therefore the *smallest* rate the exploit achieves.
+            float seconds = ShippedBlocks.Get("Gauge_LG_CoolantPipe_Straight").BuildSeconds;
+            float watts = perGrind / seconds;
+
+            output.WriteLine("ring of 8 at {0:n0} K, {1:n0} K above ambient", Warm, Warm - Ambient);
+            output.WriteLine("one grind removes {0:n0} J of {1:n0} J held", perGrind, start);
+            output.WriteLine("pipe build time {0:n0} s -> {1:n0} W ({2:n2} MW) at one welder",
+                seconds, watts, watts / 1e6f);
+            output.WriteLine("to cancel it the refill must spend {0:n0} W, since a pump wastes all"
+                + " of what it draws", watts);
+
+            output.WriteLine("against 3,000,000 W, the waste of the game's largest reactor: {0:n2} %",
+                100f * watts / 3e6f);
+
+            // And the same ring at a temperature that is already a failure, to bound it: the rate
+            // is linear in the excess, so a ship in real trouble grinds six times as fast and is
+            // still nowhere near a reactor.
+            GridBuilder hotBuilder = GridBuilder.Large();
+            List<BlockInstance> hotRing =
+                PipeFitter.BuildRing(hotBuilder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
+            ThermalSimulation hot = hotBuilder.BuildSimulation(Isolated());
+            CoolantLoop hotLoop = hot.Solver.Loops[0];
+            for (int i = 0; i < hotLoop.Pipes.Count; i++) hotLoop.SetSegmentTemperature(i, 900f);
+
+            float hotStart = HeatAboveAmbient(hot);
+            BlockInstance hotPopped = hotRing[3];
+            hot.RemoveBlock(hotPopped);
+            hot.RebuildAll();
+            float hotWatts = (hotStart - HeatAboveAmbient(hot)) / seconds;
+
+            output.WriteLine("at 900 K — {0:n0} K over — it is {1:n0} W ({2:n2} % of a reactor)",
+                900f - Ambient, hotWatts, 100f * hotWatts / 3e6f);
+
+            // The claim: on a warm ship this is a rounding error against one reactor, and even on
+            // a ship that is already failing it is under a tenth of one. Bounded above only —
+            // a smaller number is the same finding, a larger one is a different row.
+            Assert.True(watts < 1e5f,
+                "grind-and-reweld runs at " + watts.ToString("n0") + " W on a ship 100 K over,"
+                + " which is no longer the rounding error B43 was decided on");
+
+            Assert.True(hotWatts < 3e5f,
+                "on a ship at 900 K it runs at " + hotWatts.ToString("n0")
+                + " W, over a tenth of the largest reactor's waste");
+        }
+
+        /// <summary>
         /// **A grind costs the heat inside the block that left and nothing else** — so grinding the
         /// *same* pipe twice costs nothing the second time, and each fresh pipe costs one parcel.
         ///

@@ -960,6 +960,47 @@ heat *per second* competes with a radiator, and that is the comparison the decis
 `UpgradeModuleDefinition`, and what a player thinks of hauling ice — both are game-side and neither
 is a number. The rule above chooses a currency; it does not choose an interface.
 
+### What it did: the exploit was priced out by a fix aimed at something else
+
+**All three predictions fail, in the same direction and by two orders of magnitude.** Grinding one
+pipe out of a warm eight-pipe ring removes **188,889 J**, and at the pipe's own 8-second build time
+that is **23,611 W** — **0.79 %** of what the game's largest reactor makes at the fraction this mod
+ships. On a ship already at 900 K it is **143,284 W**, 4.78 %.
+
+| | prediction | outcome |
+| --- | --- | --- |
+| the size | over 1 MJ per grind | **fails at 0.19 MJ** |
+| the rate | over 3 MW at one welder | **fails at 0.024 MW** |
+| the currency | the cancelling power exceeds the median ship's installed power | **fails**: 23,611 W against a median **14,750,000 W**, which is 0.16 % of it |
+
+**The reason is `A12`, and it was a fix aimed at something else.** `B42` was written against a
+**190 MJ** case where grinding a *pump* dissolved a whole loop and dumped its heat. A ring now
+spills into its pipes and a pipe keeps the parcel it absorbed, so **a grind costs one parcel** —
+one eighth of an eight-pipe ring, and one fourteenth of a fourteen-pipe one. The exploit the row
+exists to price was priced out before the row was decided.
+
+**And it cannot be scaled**, which is what makes this a bound rather than a reading. A grind costs
+one parcel *whatever the ring's length*, so the rate is capped at one parcel per pipe-build-time per
+grinder however much coolant a ship carries. Building a bigger loop buys the exploit nothing; it
+only buys more heat that stays put.
+
+**The decision: route 3, energy and time.** The registered rule's second branch fires — the rate is
+far under what the mod's own cooling has to handle, and the power that cancels it is 23,611 W,
+which the median ship supplies six hundred times over. So the cost is a number of joules and a
+number of seconds, per pipe (`B44`), and no route needs a conveyor port, a component in a build
+list, or ice to haul.
+
+**What that leaves for the implementation.** The physics is already right and needs nothing new: a
+pump's waste fraction is **1** — *a circulator does no work that leaves the system* — so the energy
+a refill spends lands back in the ship as heat, and the exchange rate is self-limiting without a
+single authored threshold. Venting is still the smaller change `B44` describes, zeroing
+`HeldCoolantCapacity` for the pipes of a ring a grinder opened.
+
+> **This closes `B43`'s currency and not `B42`.** `B42` asks that mass ejection cost something; what
+> this says is that the *coolant* case is worth kilowatts rather than megawatts, so the cost can be
+> small. It says nothing about jettisoning a hot block that is not a pipe, which is the general case
+> and is still free.
+
 ### What the mod's blocks cost to build
 
 [backlog.md](backlog.md) `B33`: eighteen definitions in `Cubes.xml` carry components, build times
@@ -1721,6 +1762,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Decided `B43`'s currency: energy and time, because the exploit is worth 23,611 W.** All three registered predictions fail by two orders of magnitude and in the same direction. Grinding a pipe from a warm eight-pipe ring removes 188,889 J, which at the pipe's 8-second build time is **0.79 %** of the largest reactor's waste; on a ship at 900 K it is 4.78 %. The power that cancels it is 0.16 % of the median corpus ship's installed power. **`A12` priced the exploit out** — the row was written against a 190 MJ pump grind, and a grind now costs one parcel — and the rate cannot be scaled by building a bigger ring, since a grind costs one parcel whatever the length. So no component, no conveyor and no ice. |
 | 2026-08-25 | **Put the oxygen generator's population figures on the re-censused population**, replacing the 400-ship parse that stood in while the census was broken: **64.5 % of ships carry one — the sample had that exactly — and their median share is 14.4 %** rather than 10.4 %, with p90 at 80.8 %. The sample was representative of carriers and not of the middle of the distribution; balance-lab.md carries why. |
 | 2026-08-25 | **Corrected this page's oxygen-generator population figures in place, because the instrument behind them could not see the block** (`E10`). `Blueprints` built every empty-`SubtypeName` block as an armour cube, and the vanilla large oxygen generator is one of the thirteen definitions the game gives no subtype — so the census holds none of them and the *2,277 carriers, median 48.1 %* was measured over the ships carrying some other generator. Through the fixed resolver, on a 400-ship stride sample: **64.5 % of ships carry one and their median share is 10.4 %**, p90 61.4 %. *An oxygen generator is most of the heat there is on an ordinary ship* is withdrawn. The decision itself is untouched — it was made on the rig, which builds its blocks from the definitions and never went through the blueprint reader. The defect is `A13`. |
 | 2026-08-25 | **Decided `C21`'s last open invention on the rig, and it went the opposite way to `C28`: the oxygen generator's fraction is 0.40, sourced.** The registered rule's first clause fired on a finding nobody was looking for — at the 0.6 that shipped, two of the six vanilla generators are past their own critical temperature *bare* at the draw their own definition rates, which is a block that cannot be built rather than a balance choice. 0.40 is the top of the band electrolysis sources and the highest value where all six survive both rigs. **Two of four predictions fail.** A skin *cools* a small heat source where it cooks a reactor, so this page's *ceiling and floor* is corrected in place (`E10`); and the population half was asked of the fleet and answered by the ship — 0.38 % of a loaded fleet's waste, a **median 48.1 %** of the waste of the 2,277 ships that carry one, and 60.0 % of the 2,003 carriers with no jump drive (`E6`). So it is a balance change and not the correction the row was filed as. |
