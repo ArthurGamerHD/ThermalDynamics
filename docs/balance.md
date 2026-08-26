@@ -293,9 +293,52 @@ because it is the one fit that takes heat *off* the grid rather than moving it a
 > can be somewhere else. `DesignedHullTests` pins the sign of both rows, and levels the panel count
 > between the arms so the comparison is about *where* the heat is put and nothing else (`P6`).
 
-It also says where the balance work goes. A retrofit is bounded at 9 % and a design is not, so the
-lever with headroom is whatever makes players build the loop — installability, and what the loop is
-worth once installed — rather than any dial on the fluid inside it.
+#### What a jump drive costs in radiator, and why the shipped loop cannot pay it
+
+`C34` named the runaway blocks by *self index* — heat made over what their own skin sheds — and the
+jump drive leads the fleet at 9.9, settling at 1,211 K against a 689 K rating on 2,254 ships. The
+triage table's other column is the one that says whether anything can be done: a block's **index**,
+against every face radiating and a path to armour at ambient, is **0.27** for the jump drive and
+below one for all but one of 323 heat-making blocks. **So the runaways are coolable in principle**,
+and the question is what it costs.
+
+6.4 MW buried in the same 7-cube, in shadow, against a 689 K rating (`designed --sweep`):
+
+| Loop | Sink W/K | Gradient it forces | Source, 3 panels |
+| --- | ---: | ---: | ---: |
+| none | — | — | 2,047.8 K |
+| shipped, 1 sink face | 1,000 | **6,400 K** | 1,496.0 K |
+| shipped, 3 sink faces | 3,000 | 2,133 K | 1,386.0 K |
+| candidate, 1 sink face | 6,250 | 1,024 K | 1,163.8 K |
+| candidate, 3 sink faces | **18,750** | **341 K** | 979.3 K |
+
+**Watts over the pickup is the gradient the source is forced to sit at**, whatever is hung off the
+other end — and that single quantity decides whether a fit can work at all. At the shipped
+coefficient one sink face forces **6,400 K** on a 6.4 MW block, ten times its rating, so no amount of
+radiator can help and the panel column duly saturates: panels 2 to 8 are worth 100 K between them
+against the first panel's 506 K. **A 6.4 MW block is uncoolable as the mod ships, at any radiator
+count.** Three sink faces and the `C38` package together take that forced gradient to 341 K, below
+the rating, and only then do panels start earning again.
+
+> **This is the case for the package, and it is the opposite of the retrofit's.** On a fitted hull
+> `C38` was worth nothing, because the block had 1,457 W/K of hull to conduct into and the sink was a
+> rounding error beside it. On a buried source the sink is the *only* path there is, so the same
+> change is the difference between a block that cannot be cooled and one that can. Both measurements
+> are right; they are about different ships.
+
+**It still does not save the drive.** Run out to twelve skin panels the best arm reaches 807.7 K,
+with each panel worth less than the last — 59 K for the second, 11 K for the twelfth — as the limit
+moves once more, to what the ring can carry to panels far along it. What cooling design buys a jump
+drive is **2,047.8 K down to about 808 K**: not survival, but the difference between a block that is
+197 % over its rating and one that is 17 % over, which is the difference between losing it at once
+and taking slow damage a player can see coming and decide about.
+
+#### Where the balance work goes
+
+A retrofit is bounded at 9 % and a design is not, so the lever with headroom is whatever makes
+players build the loop — installability, and what the loop is worth once installed — rather than any
+dial on the fluid inside it. And the pickup is the term to watch: **sink faces × `h · A` against the
+watts**, because that ratio, not the radiator count, is what decides whether a block has an answer.
 
 **A pump should be what makes this true.** Fluid-to-wall transfer is convective, so it depends on
 the flow, and nothing in the model expressed that until `C37`: the coefficient applied whole whether

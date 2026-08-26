@@ -63,6 +63,14 @@ namespace Thermodynamics.Harness
             /// false, because the shipped radiator is ten cells and both arms offered it one.
             /// </summary>
             public string Note = "";
+
+            /// <summary>
+            /// W/K of every sink face the ring has onto the source. **The pickup, and on a buried
+            /// source it is the whole path**: an exposed block sheds through its own skin and a
+            /// buried one has only this. Watts over this is the gradient the source must sit at,
+            /// which is what decides whether a fit can work at all.
+            /// </summary>
+            public float SinkWattsPerKelvin;
         }
 
         private static ThermalSettings Settings()
@@ -109,10 +117,14 @@ namespace Thermodynamics.Harness
         /// through the armour to beyond the hull, so its far side is in open space. Cells outside
         /// the cube are what makes this arm different from the others.
         /// </summary>
-        private static List<Vector3I> Channel()
+        private static List<Vector3I> Channel(int panels)
         {
+            // Long enough that the cells outside the hull can carry the panels asked for. Each
+            // panel needs a straight run of its own out there, and a rectangle contributes about
+            // two outside cells per unit of extra length.
+            int beyond = 4 + panels;
             return PipeFitter.RectangleXZ(
-                new Vector3I(Centre.X - 1, Centre.Y, Centre.Z - 1), Side / 2 + 4, 3);
+                new Vector3I(Centre.X - 1, Centre.Y, Centre.Z - 1), Side / 2 + beyond, 3);
         }
 
         /// <summary>Whether a cell is inside the solid cube of hull.</summary>
@@ -162,9 +174,15 @@ namespace Thermodynamics.Harness
         }
 
         private static Row Measure(string fit, GridBuilder builder, BlockInstance source,
-            List<BlockInstance> radiators, float bare)
+            List<BlockInstance> radiators, float bare, LoopThermalProperties properties = null)
         {
             ThermalSimulation simulation = builder.BuildSimulation(Settings(), 293.15f);
+
+            if (properties != null)
+            {
+                simulation.LoopProperties = properties;
+                simulation.RebuildAll();
+            }
 
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
@@ -181,6 +199,23 @@ namespace Thermodynamics.Harness
                 if (nodes[i].Temperature > hottest) hottest = nodes[i].Temperature;
             }
 
+            float sink = 0f;
+            IList<CoolantLoop> loops = simulation.Solver.Loops;
+            if (loops != null)
+            {
+                for (int l = 0; l < loops.Count; l++)
+                {
+                    for (int i = 0; i < loops[l].Links.Count; i++)
+                    {
+                        int index = loops[l].Links[i].NodeIndex;
+                        if (index < 0 || index >= simulation.Solver.Nodes.Count) continue;
+                        if (simulation.Solver.Nodes[index].Block != source) continue;
+
+                        sink += loops[l].LinkConductance(i);
+                    }
+                }
+            }
+
             int onSkin = 0;
             for (int i = 0; i < radiators.Count; i++)
             {
@@ -195,6 +230,7 @@ namespace Thermodynamics.Harness
                 Radiators = radiators.Count,
                 RadiatorsOnTheSkin = onSkin,
                 HottestKelvin = hottest,
+                SinkWattsPerKelvin = sink,
             };
         }
 
@@ -278,21 +314,28 @@ namespace Thermodynamics.Harness
         /// A ring from the source out through the hull, with the panels on the outside end of it.
         /// **The only arm whose radiators see sky.**
         /// </summary>
-        private static Row Plumbed(float watts, int panels, float bare)
+        private static Row Plumbed(float watts, int panels, float bare, LoopThermalProperties properties = null,
+            bool everyFace = false)
         {
-            List<Vector3I> ring = Channel();
+            List<Vector3I> ring = Channel(panels);
 
             GridBuilder builder = Hull(ring);
             builder.Place(BalanceLab.Heater(), Centre);
             BlockInstance source = builder.Last;
             builder.Last.PowerConsumedWatts = watts;
 
-            // The sink onto the source. One face is all the source has to give.
+            // **The sinks onto the source, and how many is the question.** A rectangle laid past a
+            // one-cell source runs alongside three of its faces, not one; taking only the first is a
+            // choice, and it turns out to be the choice that decides whether the fit can work at
+            // all, because watts over the pickup is the gradient the source is forced to sit at.
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
             for (int i = 0; i < ring.Count; i++)
             {
                 Vector3I toSource = Centre - ring[i];
-                if (Face.IndexOf(toSource) >= 0) { sinks[i] = toSource; break; }
+                if (Face.IndexOf(toSource) < 0) continue;
+
+                sinks[i] = toSource;
+                if (!everyFace) break;
             }
 
             string note = sinks.Count == 0 ? "no ring cell touches the source" : "";
@@ -361,7 +404,7 @@ namespace Thermodynamics.Harness
                 };
             }
 
-            Row row = Measure("plumbed, to the skin", builder, source, radiators, bare);
+            Row row = Measure("plumbed, to the skin", builder, source, radiators, bare, properties);
             row.Note = note;
             return row;
         }
@@ -414,6 +457,81 @@ namespace Thermodynamics.Harness
             rows.Add(bolted);
             rows.Add(plumbed);
             return rows;
+        }
+
+        /// <summary>
+        /// **How much skin-plumbed radiator a given heat load needs to stay under a rating.**
+        ///
+        /// <para>
+        /// `C34` sorted the population by *self index* — heat made over what a block's own skin
+        /// sheds — and found the runaways are blocks above about three. What that number cannot say
+        /// is whether anything can be done about them, and the triage table's other column can: a
+        /// block's *index*, against every face radiating and a path to armour at ambient, is below
+        /// one for all but one of 323 heat-making blocks. **So the runaways are coolable in
+        /// principle and the question is what it costs**, which is this sweep. A jump drive wastes
+        /// 6.4 MW against a 689 K rating; this says how many panels that is.
+        /// </para>
+        ///
+        /// <para>
+        /// The source is a one-cell heater rather than the block itself, so the answer is about the
+        /// cooling path and not about the block's own skin (`P6`) — and it is conservative, since a
+        /// real drive is 27 cells of radiating surface this rig does not give it (`P2`).
+        /// </para>
+        /// </summary>
+        public static string Sweep(float watts, float criticalKelvin, int maxPanels)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.AppendLine("SKIN LADDER  (how much radiator a buried load needs, plumbed to the hull)");
+            sb.AppendLine();
+            sb.AppendLine("  " + (watts / 1000000f).ToString("n2") + " MW buried in a " + Side
+                + "-cube, shadow, against a " + criticalKelvin.ToString("n0") + " K rating");
+            sb.AppendLine();
+            sb.AppendLine("  loop                 panels   on the skin   sink W/K   needs K   source K   under");
+
+            float bare;
+            Bare(watts, out bare);
+            sb.AppendLine(string.Format("  {0,-19}  {1,6}   {2,11}   {3,8}   {4,7}   {5,8}   {6,5}",
+                "none", 0, 0, "-", "-", bare.ToString("n1"), bare < criticalKelvin ? "yes" : "no"));
+
+            for (int arm = 0; arm < 4; arm++)
+            {
+                bool candidate = (arm & 1) != 0;
+                bool everyFace = (arm & 2) != 0;
+
+                LoopThermalProperties properties = candidate ? LoopCandidate.For(2.5f) : null;
+                string label = (candidate ? "candidate" : "shipped")
+                    + (everyFace ? ", 3 faces" : ", 1 face");
+
+                for (int panels = 1; panels <= maxPanels; panels++)
+                {
+                    Row row = Plumbed(watts, panels, bare, properties, everyFace);
+
+                    // **Watts over the pickup is the gradient the source is forced to sit at.**
+                    // A fit whose `needs K` exceeds the rating cannot work however much radiator is
+                    // hung off the far end, and printing it is the difference between a null result
+                    // and an explained one (`O5`).
+                    string needs = row.SinkWattsPerKelvin > 0f
+                        ? (watts / row.SinkWattsPerKelvin).ToString("n0")
+                        : "-";
+
+                    sb.AppendLine(string.Format("  {0,-19}  {1,6}   {2,11}   {3,8}   {4,7}   {5,8}   {6,5}",
+                        label, panels, row.RadiatorsOnTheSkin,
+                        row.SinkWattsPerKelvin.ToString("n0"), needs,
+                        row.SourceKelvin.ToString("n1"),
+                        row.SourceKelvin < criticalKelvin ? "yes" : "no"));
+                }
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("  `sink W/K` is the pickup: every sink face the ring has onto the source.");
+            sb.AppendLine("  `needs K` is the watts over it - the gradient the source is forced to");
+            sb.AppendLine("  sit at whatever is hung off the other end. When that exceeds the rating,");
+            sb.AppendLine("  adding radiator cannot help, and the panel column shows it saturating.");
+            sb.AppendLine("  `candidate` is LoopCandidate: the C38 package, which does nothing for a");
+            sb.AppendLine("  retrofit and is measured here because a buried source has no other path.");
+
+            return sb.ToString();
         }
 
         public static string Report(float watts = 200000f, int panels = 4)

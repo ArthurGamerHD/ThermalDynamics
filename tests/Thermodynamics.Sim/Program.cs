@@ -144,6 +144,16 @@ namespace Thermodynamics.Sim
                 {
                     float watts = float.Parse(Option(args, "--watts", "200000"),
                         System.Globalization.CultureInfo.InvariantCulture);
+
+                    if (Has(args, "--sweep"))
+                    {
+                        float critical = float.Parse(Option(args, "--critical", "689"),
+                            System.Globalization.CultureInfo.InvariantCulture);
+                        Console.Write(DesignedHullLab.Sweep(watts, critical,
+                            OptionInt(args, "--panels", 8)));
+                        return 0;
+                    }
+
                     Console.Write(DesignedHullLab.Report(watts, OptionInt(args, "--panels", 4)));
                     return 0;
                 }
