@@ -566,6 +566,44 @@ commits and — the thing that makes it one dataset — **identical `Cubes.xml`,
 `Planets.xml` hashes across all four**. The coolant work those commits carry cannot reach a corpus
 ship: the filter admits only vanilla hulls and none of them has a loop.*
 
+### The runaway target, written before anything is dialled
+
+`C34` found that a ship runs away if and only if it carries a block that cannot cool itself by
+about threefold, and named the blocks. This is the target the per-block pass is worked against, and
+it goes here before a single fraction moves (`E1`).
+
+**The target: every block with real reach at a self index of 3 or below.** It is derived from the
+population rather than chosen — the runaway rate is 0.4 % under 1, **1.4 % from 1 to 3**, and
+**19.0 % from 3 to 10**, so 3 is where the cliff is and not a round number somebody liked. *Real
+reach* means a type the census says a fleet actually carries; a block nobody builds is triaged out
+rather than fixed.
+
+**Why the self index and not the index.** The index assumes every face bolted to armour *held at
+ambient* — an infinite sink reached by conduction — and the population says that sink does not
+exist: of the corpus ships carrying a jump drive, **909 have more than the armour area the index
+says is needed and all 909 still lose a block**, because block-to-block conductance is about
+112 W/K and moving megawatts even one block needs thousands of kelvin. So the index's own bound is
+unreachable in practice, and **the self index is the honest one**.
+
+**Four levers, and what each has to do.** `SelfIndex = watts / (ε · σ · A · (T⁴ − T_ambient⁴))`, so
+to divide it by *k*:
+
+| lever | what it must do | what it costs |
+| --- | --- | --- |
+| waste fraction | **÷ k** — linear | the drives' fractions are *derived* from the game's own `PowerEfficiency` (`C21`), so moving one is overriding a sourced number with an invention |
+| emissivity | **× k** — linear, and capped at 1 | a surface property; the drives sit well below 1, so there is room |
+| exposed surface | **× k** — linear | `ExposedSurfaceMultiplier` is already an admitted fudge, so this is cheap and honest |
+| critical temperature | **× k^¼** — quartic | derived from build cost, and the mildest of the four: threefold self index is 1.32× the rating |
+
+**The quartic is the finding.** Getting a jump drive from 9.9 to 3 needs its waste cut to a third,
+or its emissivity or area tripled — **or its rating raised by 1.32×**, from 689 K to 909 K. The last
+is the smallest move by far, and it is the one that says *this block is built to run hot* rather
+than *this block makes less heat than the game says it does*.
+
+**What would falsify the target.** If bringing the named blocks under 3 does not move the
+population's runaway rate, then the self index is a correlate rather than a cause and the whole
+approach is wrong. That is checkable on the retest set without a full walk.
+
 ### Where `G9`, `G10` and `G11` stand today
 
 All three are new, all three are feelings written as criteria, and **all three already have a

@@ -95,6 +95,15 @@ namespace Thermodynamics.Sim
                         return 0;
                     }
 
+                    string levers = ValueAfter(args, "--levers");
+                    if (levers != null)
+                    {
+                        float target;
+                        if (!float.TryParse(levers, out target)) target = 3f;
+                        Console.Write(BlockTriageLab.Levers(census, target, 0.001f));
+                        return 0;
+                    }
+
                     Console.Write(BlockTriageLab.Report(census, take));
                     return 0;
                 }

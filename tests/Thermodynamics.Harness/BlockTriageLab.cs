@@ -195,6 +195,76 @@ namespace Thermodynamics.Harness
             return fields.ToArray();
         }
 
+        /// <summary>
+        /// What each lever would have to do to bring one block to a target self index.
+        ///
+        /// <para>
+        /// `SelfIndex = watts / (e * sigma * A * (T^4 - Tambient^4))`, so dividing it by *k* means
+        /// dividing the watts by *k*, or multiplying the emissivity or the exposed area by *k* — or
+        /// **raising the rating by the fourth root of *k***, which is why the temperature lever is
+        /// always the mildest of the four and worth quoting first.
+        /// </para>
+        ///
+        /// <para>
+        /// Arithmetic on a definition, not a measurement: it says what would reach the target, and
+        /// nothing about whether the result is a block anybody wants. A rig says that.
+        /// </para>
+        /// </summary>
+        public static string Levers(string composition, float target, float minimumReach)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("LEVERS TO A SELF INDEX OF " + target.ToString("n1")
+                + "  (blocks a censused fleet actually carries)");
+            sb.AppendLine("  waste / emis / area   the factor that lever must move by; emissivity is capped at 1");
+            sb.AppendLine("  rating                the same as a temperature, which is the fourth root of it");
+            sb.AppendLine();
+            sb.AppendLine("block                                self   waste   emis   area   rating       to K"
+                + "   emis now");
+
+            int shown = 0;
+            foreach (Row row in Rank(composition))
+            {
+                if (row.SelfIndex <= target) continue;
+                if (row.FleetShare < minimumReach) continue;
+
+                float k = row.SelfIndex / target;
+                float rating = (float)Math.Pow(k, 0.25);
+
+                BlockHeatIndex.Reading reading = null;
+                foreach (BlockHeatIndex.Reading candidate in BlockHeatIndex.All())
+                {
+                    if (candidate.Subtype != row.Subtype) continue;
+                    reading = candidate;
+                    break;
+                }
+
+                float emissivity = reading == null ? 0f : reading.Emissivity;
+
+                sb.Append(row.Subtype.PadRight(34).Substring(0, 34));
+                sb.Append(row.SelfIndex.ToString("n1").PadLeft(7));
+                sb.Append(("/" + k.ToString("n1") + "x").PadLeft(8));
+                sb.Append(("x" + k.ToString("n1")).PadLeft(7));
+                sb.Append(("x" + k.ToString("n1")).PadLeft(7));
+                sb.Append(("x" + rating.ToString("n2")).PadLeft(9));
+                sb.Append((row.CriticalKelvin * rating).ToString("n0").PadLeft(11));
+                sb.Append(emissivity.ToString("n2").PadLeft(11));
+
+                // An emissivity that would have to go past 1 is not a lever at all, and saying so
+                // is the difference between four options and two.
+                if (emissivity > 0f && emissivity * k > 1f) sb.Append("   (emis impossible)");
+
+                sb.AppendLine();
+                shown++;
+            }
+
+            if (shown == 0)
+            {
+                sb.AppendLine("  nothing a fleet carries is above the target.");
+            }
+
+            return sb.ToString();
+        }
+
         /// <summary>The ranking as a table, for crossing against a population.</summary>
         public static string Csv(string composition)
         {
