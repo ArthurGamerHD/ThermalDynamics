@@ -394,6 +394,37 @@ pumps are off.
 > reached 807.7 K in the sweep that argued for this. The block goes from *no answer exists* to *an
 > answer exists and costs a lot of plumbing*, which is the difference the mod is about.
 
+#### The coolant mass is doing an undeclared job
+
+`CoolantMassPerPipe` is a flat 50 kg with no grid size in it — **3.2 kg/m³ in a 2.5 m cube, which is
+a gas, against 400 kg/m³ in a 0.5 m one, which is a liquid.** That is the same defect the coefficient
+was corrected for when it stopped being a conductivity divided by half a cell, and correcting it the
+same way means a fixed density with the mass following the cell: 33 kg/m³ is a bore a fifth of the cell across, filled with water-glycol, which
+gives 515 kg on a large grid and 4.1 kg on a small one.
+
+Measured on the same ring with one sink face on a 125 kW source:
+
+| | Coolant | Ring reaches | Substeps |
+| --- | ---: | ---: | ---: |
+| large grid, shipped | 50 kg | 715.5 K | 14.48 |
+| large grid, corrected | 515.6 kg | **387.0 K** | 14.48 |
+| small grid, shipped | 50 kg | 661.5 K | 2.37 |
+| small grid, corrected | 4.1 kg | **912.1 K** | 2.37 |
+
+**328 K gained on a large grid, 250 K lost on a small one, and nothing paid to the integrator
+either way.** So the flat figure is not a physical constant that happens to be wrong — it is doing a
+**balance** job undeclared, propping up small grids, and making the density honest takes that away
+along with the error. It cannot be tuned around either: the bore fraction that leaves a small grid
+where it is puts six tonnes of coolant in a 305 kg pipe block.
+
+**Not applied**, and the reason is that half of it is a regression on the grid size that is already
+the harder case. A small-grid cell face is 0.25 m² against 2.5 m², so its pickup is **25×** worse,
+while a small-grid block makes perhaps a tenth of what its large counterpart does — the arithmetic
+that decides everything else on this page is against small grids by about 2.5×, before any coolant
+charge. Propping that up with fluid mass fixes the wrong term: mass is transport and the shortfall is
+pickup. What this measurement says is that the two need deciding together, not that the density is
+wrong. `LoopCoolantMassTests` holds both halves so the decision keeps its evidence.
+
 #### Where the balance work goes
 
 A retrofit is bounded at 9 % and a design is not, so the lever with headroom is whatever makes
