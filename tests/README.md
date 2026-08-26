@@ -104,7 +104,7 @@ heavy log 20                                             # both sides of the las
 ```
 
 Exit **75** means the window was not free and *nothing ran* — try later rather than running
-unlocked. `~/.local/bin/HEAVY.md` is the tool's own page.
+unlocked. `~/.local/bin.md` is the tool's own page.
 
 | Hold the window | Do not |
 | --- | --- |
@@ -142,17 +142,28 @@ THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=out/survey-2026-08-25 \
 Do not delete the data directory between slices — that is what starts the walk over.
 
 **A slice shorter than one blueprint does no durable work.** A path is recorded only when it is
-finished, so a slice that is killed part-way through a hull loses that hull's work entirely. The
-corpus is walked **largest first**, so the early slices are the ones that need to be long: measured
-on 2026-08-25, the first 13 blueprints took 23 minutes between them and an 8-minute slice after
-them completed **none**. Twenty-five minutes is a floor for the first hour of a survey, not a
-default to shorten. It is also why progress is read in bytes — those 13 files are 0.16 % of the
-corpus by count and **4.06 % of it by size**:
+finished, so a slice killed part-way through a hull loses that hull's work entirely — and with 31
+workers in flight, a slice shorter than the batch loses all of them. Measured on 2026-08-25: the
+first 13 blueprints took 23 minutes between them, an 8-minute slice after them completed **none**,
+and a 22-minute slice completed **one**. Twenty-five minutes is a floor for the first hour of a
+survey, not a default to shorten.
+
+**Progress is read in bytes; a finishing time is not read from them.** Those 13 files are 0.16 % of
+the corpus by count and 4.06 % of it by size, and the second is the honest statement of *how far in*
+a walk is:
 
 ```bash
 for f in $(cat out/survey-2026-08-25/done-survey.txt); do stat -c%s "$f"; done |
-  paste -sd+ | bc            # against the corpus total, this is the only honest percentage
+  paste -sd+ | bc            # how far in, against the corpus total
 ```
+
+**Dividing that by elapsed time is not an estimate of the remainder**, and `pace.py` exists because
+that mistake abandoned a walk once already. The corpus is walked largest first, so the rate falls
+throughout every healthy run and is a property of the ordering rather than of the walk: on
+2026-08-25 the same survey ran at 56 MB/min over its first 13 hulls and under 3 MB/min over its
+fourteenth. **The estimate that means something is a finished walk of the same shape, times the
+ratio of work per ship** — `pace.py --reference`, and read its output on a walk that is over before
+trusting it on one that is not.
 
 **A killed build node is not a test failure, and it reads exactly like one.** Twice on 2026-08-25 a
 queued suite came back non-zero having run no tests at all:
