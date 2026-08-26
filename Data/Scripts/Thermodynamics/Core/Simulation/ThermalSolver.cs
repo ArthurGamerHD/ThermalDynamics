@@ -2443,7 +2443,8 @@ namespace Thermodynamics.Core
                     {
                         LoopLink probe = loop.Links[i];
                         if (probe.SegmentIndex < 0 || probe.SegmentIndex >= loop.PipeCount) continue;
-                        parcelConductanceTotal[loop.ParcelOf(probe.SegmentIndex)] += probe.Conductance;
+                        parcelConductanceTotal[loop.ParcelOf(probe.SegmentIndex)] +=
+                            loop.LinkConductance(i);
                     }
 
                     // The worst parcel sets the factor for the ring: a per-link factor would let a
@@ -2476,7 +2477,7 @@ namespace Thermodynamics.Core
                     // stops drawing, while the coolant at a radiator never learns the reactor is hot.
                     float difference = loop.SegmentTemperature(link.SegmentIndex)
                                      - nodeTemperatures[link.NodeIndex];
-                    float exchange = link.Conductance * difference;
+                    float exchange = loop.LinkConductance(i) * difference;
 
                     if (clamp)
                     {
@@ -3189,7 +3190,7 @@ namespace Thermodynamics.Core
                 int parcel = loop.ParcelOf(link.SegmentIndex);
                 if (parcel < 0 || parcel >= count) continue;
 
-                segmentConductanceScratch[parcel] += link.Conductance;
+                segmentConductanceScratch[parcel] += loop.LinkConductance(i);
             }
 
             float worst = 0f;
@@ -3224,7 +3225,7 @@ namespace Thermodynamics.Core
             {
                 CoolantLoop loop = loops[l];
                 float total = 0f;
-                for (int i = 0; i < loop.Links.Count; i++) total += loop.Links[i].Conductance;
+                for (int i = 0; i < loop.Links.Count; i++) total += loop.LinkConductance(i);
                 loopConductanceTotal[l] = total;
             }
 

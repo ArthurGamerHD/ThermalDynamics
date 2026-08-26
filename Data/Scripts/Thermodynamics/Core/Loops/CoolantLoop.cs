@@ -173,6 +173,76 @@ namespace Thermodynamics.Core
         public float SegmentThermalMass { get; private set; }
 
         /// <summary>
+        /// How full the ring is, 0 to 1. Coolant is a consumable: venting empties it and refilling
+        /// costs energy and time — thermal-model.md, *Coolant is a consumable*.
+        ///
+        /// <para>
+        /// **A part-full ring holds proportionally less and couples proportionally less**, and the
+        /// second half is what keeps it cheap. The integrator sizes a substep from
+        /// `SegmentConductance / SegmentThermalMass`, and scaling only the capacity would make a
+        /// 5 %-full loop twenty times stiffer on an element that already competes to be a grid's
+        /// worst. Scaling both leaves the ratio invariant at every level, and it is the physical
+        /// answer as well: half the fluid touching a wall carries half the heat through it.
+        /// </para>
+        ///
+        /// <para>
+        /// **A dry ring is still a ring.** It exists, holds nothing, transports nothing and can be
+        /// refilled. *The loop stops existing* is the shape this area has failed in twice, once at
+        /// 190 MJ through a ground pump, which is why zero is a level rather than a deletion.
+        /// </para>
+        /// </summary>
+        public float FillFraction
+        {
+            get { return fill; }
+            set
+            {
+                float clamped = value < 0f ? 0f : (value > 1f ? 1f : value);
+                if (clamped == fill) return;
+
+                fill = clamped;
+                RefreshThermalMass();
+            }
+        }
+
+        private float fill = 1f;
+
+        /// <summary>Kilograms of coolant a full ring holds. What a refill is priced against.</summary>
+        public float CapacityKilograms
+        {
+            get { return Properties.CoolantMassPerPipe * Math.Max(1, Pipes.Count); }
+        }
+
+        /// <summary>Kilograms it is currently holding.</summary>
+        public float HeldKilograms
+        {
+            get { return CapacityKilograms * fill; }
+        }
+
+        /// <summary>
+        /// The conductance of one link as the solver must use it: what the geometry gives, scaled
+        /// by how full the ring is.
+        ///
+        /// <para>
+        /// **Scaled here rather than baked into `Links`**, because refilling moves the fill every
+        /// tick and the links are built at topology time — folding it in would mean rebuilding the
+        /// grid's link graph to add a kilogram of water. The stored figure stays the geometry's;
+        /// this is the one every consumer reads.
+        /// </para>
+        ///
+        /// <para>
+        /// **Every consumer must read it**, and one that does not is a silent asymmetry rather than
+        /// a compile error: the capacity is scaled too, so a site left unscaled makes a part-full
+        /// ring stiffer than a full one instead of identical to it. `CoolantFillTests` asserts the
+        /// substep demand is invariant in fill, which is what actually catches that.
+        /// </para>
+        /// </summary>
+        public float LinkConductance(int index)
+        {
+            if (index < 0 || index >= Links.Count) return 0f;
+            return Links[index].Conductance * fill;
+        }
+
+        /// <summary>
         /// Coolant parcels the pumps are pushing past a point each second. Set by the host from the
         /// pumps in this ring; zero when nothing is circulating. Signed: negative runs the ring the
         /// other way, which works just as well.
@@ -303,7 +373,10 @@ namespace Thermodynamics.Core
         /// </summary>
         public void RefreshThermalMass()
         {
-            float perSegment = (Properties.SpecificHeat * Properties.CoolantMassPerPipe) / heatTimeScale;
+            // Scaled by the fill, along with every link's conductance, so the ratio the integrator
+            // sizes a substep from does not move — see FillFraction.
+            float perSegment =
+                (fill * Properties.SpecificHeat * Properties.CoolantMassPerPipe) / heatTimeScale;
             SegmentThermalMass = Math.Max(ThermalConstants.MinimumThermalMass, perSegment);
 
             // The well-mixed model is a ring carrying exactly one parcel. Expressing it that way rather
