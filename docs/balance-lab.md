@@ -430,6 +430,15 @@ the 400-ship stride sample it was priced on representative of the 8,142?
 | the population | the ship count is **unchanged**, because no ship in the sample changed side on the vanilla filter | any change in how many ships the census admits |
 | the type | `OxygenGenerator` appears with an empty-subtype row for the first time, and it is the **most common** generator in the file | the vanilla generator still absent, or outnumbered by `OxygenGeneratorSmall` |
 
+> **A fifth prediction, added before the run and after the first four** (`E11`). The same pass
+> found the other half of `A13` — three subtypes are claimed by two types, and every extended
+> piston in the corpus was built 1x2x1 where the game says 1x3x1 — so the re-census carries that
+> too. **Prediction: it moves the geometry columns and not the heat.** A piston's components,
+> power and thermal entry are identical between the two types, so `waste_full_w` cannot move;
+> `exposed_area_m2` and the block-cell counts can. Falsified by any change in a ship's full-load
+> waste that is attributable to a piston, and by `exposed_area_m2` not moving at all on the ships
+> that carry one, which would mean the size correction never reached the model.
+
 The cost band is wider than the sample's point estimate because a stride sample of 400 is 4.9 % of
 the population and the quantity is a sum over blocks, not a per-ship mean — a handful of large hulls
 carrying many gravity generators moves it. **If it lands outside the band the sample was not
