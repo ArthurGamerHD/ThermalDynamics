@@ -445,6 +445,17 @@ carrying many gravity generators moves it. **If it lands outside the band the sa
 representative**, and every figure priced on that sample — the ones now standing in `A13`'s row and
 on three pages — is a figure about 400 ships and has to say so (`P1`).
 
+**How it is scored.** `censusdiff.py` compares the two censuses per column and per block type and
+takes the bands above on the command line, so the verdict is computed rather than read off (`E5`):
+
+```bash
+python3 tools/corpus/censusdiff.py out/census-2026-08-21 out/census-2026-08-25 \
+    --expect waste_full_w=8:10 --expect ships=0:0
+```
+
+It reports the ships only one census holds rather than dropping them, because a comparison over the
+ships two datasets share prints a clean number when one of them lost half the population.
+
 **What this does not re-take.** The stepped walks: the survey's outcome rows, the air walk, the cap
 walk, the floor walk. Those are hours each and they are what `G1`, `G2`, `G5` and `G6` are scored
 on, so **`A13` is not closed by this run** — a corrected census tells the balance criteria nothing

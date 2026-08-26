@@ -18,6 +18,8 @@ each of these prints what it found and renders without the parts that are absent
 python3 tools/corpus/verdict.py out/corpus-2026-08-21     # the criteria, on the terminal
 python3 tools/corpus/cap.py out/cap-2026-08-25            # C3: what a per-block cap buys and costs
 python3 tools/corpus/reproduce.py out/cap-2026-08-24 out/cap-2026-08-25  # did a restart reproduce?
+python3 tools/corpus/censusdiff.py out/census-2026-08-21 out/census-2026-08-25 \
+    --expect waste_full_w=8:10 --expect ships=0:0            # A13: did the re-take do what was predicted?
 python3 tools/corpus/pace.py out/cap-2026-08-25/progress.txt \
     --reference out/air-corpus-2026-08-24/progress.txt \
     --outcomes  out/air-corpus-2026-08-24/outcomes.csv   # what a running walk will cost
@@ -451,6 +453,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Added `censusdiff.py` and `test_censusdiff.py`. `reproduce.py` asks whether two walks that saw the same ship wrote the same row; this asks the opposite question, for a census re-taken because something was *meant* to move — per column, per block type, and scored against bands given on the command line so a registered prediction is computed rather than read off by eye (`E5`). Ships only one side holds are reported rather than dropped, because a re-take that lost half the population would otherwise print a clean delta over the half it kept, and the tests cover that case rather than the subtraction. |
 | 2026-08-25 | `provenance.py` takes `--type <TypeId>` and reports that type's share of the waste of the ships that carry it, because the share it already printed was answering a different question. The oxygen generator is **0.38 %** of a loaded fleet's waste and a median **48.1 %** of the waste of the 2,277 census ships that carry one — a ratio of aggregates against an aggregate of ratios (`E6`), and only the second is about the player who built the block. The restatement table is now applied in one place and covers that type's 0.6 to 0.40. |
 | 2026-08-25 | Wrote down that a full sweep is rare by intent and that the smallest run which answers the question comes first, with the three levers and which is actually worth reaching for. The measured part is that **selection is the weakest of them**: cutting the floor walk's 294 ships to the 98 over 60,000 blocks — the only band where the floor's error exceeds 1 K — drops two thirds of the ships and 34 % of the work, because cost goes with blocks. Stopping early is the strong lever, since largest-first puts the informative hulls at the front. |
 | 2026-08-25 | Recorded the `pgrep` half of the pattern-matching trap beside the `pkill` half: a shell loop that waits on a walk by name contains the name, so it matches itself, never exits, and makes a later `pgrep` answer that the walk is still running after it has finished. |
