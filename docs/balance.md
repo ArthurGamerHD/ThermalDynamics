@@ -920,6 +920,46 @@ block**, because total hull area is irrelevant when the heat cannot travel: bloc
 conductance is about 112 W/K, so moving megawatts even one block needs thousands of kelvin. **Area
 has to be *near* the source to count.**
 
+### What refilling a coolant loop has to cost, written before it is measured
+
+[backlog.md](backlog.md) `B43` is a decision with three routes and no evidence under it: a conveyor
+port and ice, a coolant component eaten from the build list, or energy and time. `B44` already
+settled what is true of all three — an empty loop stays a loop, the cost is **per pipe** so the
+exchange rate does not depend on ring size, and fill is binary so a half-empty loop never presents
+a small capacity to the integrator. What is missing is the number that says which currency can
+carry it, and that number is **the rate the exploit runs at** (`E1`).
+
+**The question.** Grinding a pipe out of a live ring takes that pipe's coolant parcel out of the
+world, and rewelding it brings the block back at ambient. What is that worth per second of welding,
+and can an energy price cancel it?
+
+**Why the rate rather than the joules.** `HeatLaunderingTests` already measures the joules exactly —
+one parcel per grind, neither more nor less. A quantity of heat is not an exploit; a quantity of
+heat *per second* competes with a radiator, and that is the comparison the decision turns on.
+
+**Three predictions, each with what would falsify it.**
+
+| | prediction | falsified by |
+| --- | --- | --- |
+| the size | one grind of an eight-pipe large-grid ring at 100 K above ambient removes **over 1 MJ** | under 1 MJ |
+| the rate | at one welder — the pipe's own `BuildTimeSeconds` of 8 s — that is **over 3 MW**, which is what the game's largest reactor makes at the fraction this mod ships | under 3 MW |
+| the currency | the refill power needed to cancel it **exceeds the installed electrical power of the median corpus ship**, so route 3 cannot carry the cost on its own | a required power the median ship could supply |
+
+**The decision rule, fixed now.**
+
+* **If the rate is under what the mod's own cooling achieves**, the row is tidiness and the
+  smallest route wins — route 3, energy and time, no component and nothing to haul.
+* **If the rate is over it and the cancelling power is one a ship can spend**, route 3 still wins,
+  because it is the only route that needs no new block surface, and the physics is already right:
+  a pump's waste fraction is 1, so the energy spent refilling lands back in the ship as heat.
+* **If the cancelling power is one no ship can spend**, energy cannot be the currency at the rate
+  the exploit runs, and the cost has to be a material the player hauls — route 1, ice through an
+  inventory the pump attaches in code, exactly as it already attaches its power sink.
+
+**What this cannot settle.** Whether a conveyor port is the right shape for an
+`UpgradeModuleDefinition`, and what a player thinks of hauling ice — both are game-side and neither
+is a number. The rule above chooses a currency; it does not choose an interface.
+
 ### What the mod's blocks cost to build
 
 [backlog.md](backlog.md) `B33`: eighteen definitions in `Cubes.xml` carry components, build times
