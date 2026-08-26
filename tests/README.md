@@ -141,6 +141,19 @@ THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=out/survey-2026-08-25 \
 
 Do not delete the data directory between slices — that is what starts the walk over.
 
+**A slice shorter than one blueprint does no durable work.** A path is recorded only when it is
+finished, so a slice that is killed part-way through a hull loses that hull's work entirely. The
+corpus is walked **largest first**, so the early slices are the ones that need to be long: measured
+on 2026-08-25, the first 13 blueprints took 23 minutes between them and an 8-minute slice after
+them completed **none**. Twenty-five minutes is a floor for the first hour of a survey, not a
+default to shorten. It is also why progress is read in bytes — those 13 files are 0.16 % of the
+corpus by count and **4.06 % of it by size**:
+
+```bash
+for f in $(cat out/survey-2026-08-25/done-survey.txt); do stat -c%s "$f"; done |
+  paste -sd+ | bc            # against the corpus total, this is the only honest percentage
+```
+
 **A killed build node is not a test failure, and it reads exactly like one.** Twice on 2026-08-25 a
 queued suite came back non-zero having run no tests at all:
 
