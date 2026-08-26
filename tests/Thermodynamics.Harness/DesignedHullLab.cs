@@ -87,15 +87,25 @@ namespace Thermodynamics.Harness
         /// shape. Read from the definition rather than written down, because a hand-typed size is
         /// how the first version of this lab came to offer a ten-cell block a one-cell hole (`E5`).
         /// </summary>
-        private static Vector3I PanelSize
+        private static Vector3I PanelSize(bool large)
         {
-            get { return ShippedBlocks.Model("Gauge_LG_Radiator").Size; }
+            return Panel(large).Size;
+        }
+
+        /// <summary>
+        /// The shipped radiator for this cell size. **Both are 1x5x2 cells**, which is why one
+        /// pocket shape serves both arms at both sizes — and why a small-grid panel is a
+        /// twenty-fifth of the area rather than a fifth of the cells.
+        /// </summary>
+        private static BlockModel Panel(bool large)
+        {
+            return ShippedBlocks.Model(large ? "Gauge_LG_Radiator" : "Gauge_SG_Radiator");
         }
 
         /// <summary>Every cell a panel placed at <paramref name="origin"/> would occupy.</summary>
-        private static List<Vector3I> Footprint(Vector3I origin)
+        private static List<Vector3I> Footprint(bool large, Vector3I origin)
         {
-            Vector3I size = PanelSize;
+            Vector3I size = PanelSize(large);
             List<Vector3I> cells = new List<Vector3I>();
 
             for (int x = 0; x < size.X; x++)
@@ -150,9 +160,9 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>Solid armour everywhere in the cube except the cells the arm needs.</summary>
-        private static GridBuilder Hull(ICollection<Vector3I> reserved)
+        private static GridBuilder Hull(bool large, ICollection<Vector3I> reserved)
         {
-            GridBuilder builder = GridBuilder.Large();
+            GridBuilder builder = large ? GridBuilder.Large() : GridBuilder.Small();
             BlockModel armour = Catalog.LightArmor();
 
             for (int x = 0; x < Side; x++)
@@ -235,9 +245,9 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>The source, buried at the centre of a solid cube, and nothing else.</summary>
-        private static Row Bare(float watts, out float settled)
+        private static Row Bare(bool large, float watts, out float settled)
         {
-            GridBuilder builder = Hull(null);
+            GridBuilder builder = Hull(large, null);
             builder.Place(BalanceLab.Heater(), Centre);
             BlockInstance source = builder.Last;
             builder.Last.PowerConsumedWatts = watts;
@@ -252,9 +262,9 @@ namespace Thermodynamics.Harness
         /// answer and it is buried**: the panels are inside a solid hull, so whatever they can shed
         /// they have nowhere to shed it to.
         /// </summary>
-        private static Row Bolted(float watts, int panels, float bare)
+        private static Row Bolted(bool large, float watts, int panels, float bare)
         {
-            Vector3I size = PanelSize;
+            Vector3I size = PanelSize(large);
 
             // Pockets stacked along Z beside the source's +X face, each the panel's own shape, all
             // of them inside the cube. Centred on the source so the first one touches it.
@@ -268,7 +278,7 @@ namespace Thermodynamics.Harness
                     Centre.Y - (size.Y / 2),
                     Centre.Z - (size.Z / 2) + (i * size.Z));
 
-                List<Vector3I> cells = Footprint(origin);
+                List<Vector3I> cells = Footprint(large, origin);
 
                 bool fits = true;
                 for (int c = 0; c < cells.Count && fits; c++) fits = InHull(cells[c]);
@@ -278,12 +288,12 @@ namespace Thermodynamics.Harness
                 reserved.AddRange(cells);
             }
 
-            GridBuilder builder = Hull(reserved);
+            GridBuilder builder = Hull(large, reserved);
             builder.Place(BalanceLab.Heater(), Centre);
             BlockInstance source = builder.Last;
             builder.Last.PowerConsumedWatts = watts;
 
-            BlockModel radiator = ShippedBlocks.Model("Gauge_LG_Radiator");
+            BlockModel radiator = Panel(large);
             List<BlockInstance> radiators = new List<BlockInstance>();
             string note = "";
 
@@ -314,12 +324,12 @@ namespace Thermodynamics.Harness
         /// A ring from the source out through the hull, with the panels on the outside end of it.
         /// **The only arm whose radiators see sky.**
         /// </summary>
-        private static Row Plumbed(float watts, int panels, float bare, LoopThermalProperties properties = null,
-            bool everyFace = false)
+        private static Row Plumbed(bool large, float watts, int panels, float bare,
+            LoopThermalProperties properties = null, bool everyFace = false)
         {
             List<Vector3I> ring = Channel(panels);
 
-            GridBuilder builder = Hull(ring);
+            GridBuilder builder = Hull(large, ring);
             builder.Place(BalanceLab.Heater(), Centre);
             BlockInstance source = builder.Last;
             builder.Last.PowerConsumedWatts = watts;
@@ -340,8 +350,8 @@ namespace Thermodynamics.Harness
 
             string note = sinks.Count == 0 ? "no ring cell touches the source" : "";
 
-            BlockModel radiator = ShippedBlocks.Model("Gauge_LG_Radiator");
-            Vector3I size = PanelSize;
+            BlockModel radiator = Panel(large);
+            Vector3I size = PanelSize(large);
             List<BlockInstance> radiators = new List<BlockInstance>();
 
             // Panels hang off the ring cells that are outside the hull - the whole point of the arm
@@ -358,7 +368,7 @@ namespace Thermodynamics.Harness
                     Vector3I direction = Face.Offsets[f];
                     Vector3I origin = ring[i] + direction;
 
-                    List<Vector3I> footprint = Footprint(origin);
+                    List<Vector3I> footprint = Footprint(large, origin);
 
                     bool clear = true;
                     for (int c = 0; c < footprint.Count && clear; c++)
@@ -434,18 +444,29 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static List<Row> Run(float watts, int panels)
         {
-            float bare;
-            Row bareRow = Bare(watts, out bare);
+            return Run(watts, panels, true);
+        }
 
-            Row bolted = Bolted(watts, panels, bare);
-            Row plumbed = Plumbed(watts, panels, bare);
+        /// <summary>
+        /// The same three arms at a stated cell size. **Every cell index here is a count rather
+        /// than a length**, so the hull, the pocket and the ring are the same shape on both grids
+        /// and only the metres differ — which is what makes the two runs a comparison of cell size
+        /// and nothing else (`P6`).
+        /// </summary>
+        public static List<Row> Run(float watts, int panels, bool large)
+        {
+            float bare;
+            Row bareRow = Bare(large, watts, out bare);
+
+            Row bolted = Bolted(large, watts, panels, bare);
+            Row plumbed = Plumbed(large, watts, panels, bare);
 
             int fair = Math.Min(bolted.Radiators, plumbed.Radiators);
 
             if (fair > 0 && bolted.Radiators != plumbed.Radiators)
             {
-                if (bolted.Radiators > fair) bolted = Bolted(watts, fair, bare);
-                if (plumbed.Radiators > fair) plumbed = Plumbed(watts, fair, bare);
+                if (bolted.Radiators > fair) bolted = Bolted(large, watts, fair, bare);
+                if (plumbed.Radiators > fair) plumbed = Plumbed(large, watts, fair, bare);
 
                 string levelled = "levelled to " + fair + " panels, the most both fits had room for";
                 bolted.Note = string.IsNullOrEmpty(bolted.Note) ? levelled : bolted.Note;
@@ -480,17 +501,24 @@ namespace Thermodynamics.Harness
         /// </summary>
         public static string Sweep(float watts, float criticalKelvin, int maxPanels)
         {
+            return Sweep(watts, criticalKelvin, maxPanels, true);
+        }
+
+        /// <summary>The same ladder at a stated cell size.</summary>
+        public static string Sweep(float watts, float criticalKelvin, int maxPanels, bool large)
+        {
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("SKIN LADDER  (how much radiator a buried load needs, plumbed to the hull)");
             sb.AppendLine();
             sb.AppendLine("  " + (watts / 1000000f).ToString("n2") + " MW buried in a " + Side
-                + "-cube, shadow, against a " + criticalKelvin.ToString("n0") + " K rating");
+                + "-cube of " + (large ? "large" : "small") + " grid, shadow, against a "
+                + criticalKelvin.ToString("n0") + " K rating");
             sb.AppendLine();
             sb.AppendLine("  loop                 panels   on the skin   sink W/K   needs K   source K   under");
 
             float bare;
-            Bare(watts, out bare);
+            Bare(large, watts, out bare);
             sb.AppendLine(string.Format("  {0,-19}  {1,6}   {2,11}   {3,8}   {4,7}   {5,8}   {6,5}",
                 "none", 0, 0, "-", "-", bare.ToString("n1"), bare < criticalKelvin ? "yes" : "no"));
 
@@ -499,13 +527,15 @@ namespace Thermodynamics.Harness
                 bool candidate = (arm & 1) != 0;
                 bool everyFace = (arm & 2) != 0;
 
-                LoopThermalProperties properties = candidate ? LoopCandidate.For(2.5f) : null;
+                LoopThermalProperties properties = candidate
+                    ? LoopCandidate.For(large ? Catalog.LargeGridSize : Catalog.SmallGridSize)
+                    : null;
                 string label = (candidate ? "candidate" : "shipped")
                     + (everyFace ? ", 3 faces" : ", 1 face");
 
                 for (int panels = 1; panels <= maxPanels; panels++)
                 {
-                    Row row = Plumbed(watts, panels, bare, properties, everyFace);
+                    Row row = Plumbed(large, watts, panels, bare, properties, everyFace);
 
                     // **Watts over the pickup is the gradient the source is forced to sit at.**
                     // A fit whose `needs K` exceeds the rating cannot work however much radiator is
@@ -534,18 +564,19 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        public static string Report(float watts = 200000f, int panels = 4)
+        public static string Report(float watts = 200000f, int panels = 4, bool large = true)
         {
             StringBuilder sb = new StringBuilder();
 
-            sb.AppendLine("DESIGNED HULL  (a source buried in a " + Side + "-cube of light armour)");
+            sb.AppendLine("DESIGNED HULL  (a source buried in a " + Side + "-cube of "
+                + (large ? "large" : "small") + "-grid light armour)");
             sb.AppendLine();
             sb.AppendLine("  " + (watts / 1000f).ToString("n0") + " kW into the centre cell, shadow, "
                 + (Seconds / 3600f).ToString("n0") + " h to steady state");
             sb.AppendLine("  the arms differ in WHERE the heat is put, not in how fast it moves");
             sb.AppendLine();
 
-            List<Row> rows = Run(watts, panels);
+            List<Row> rows = Run(watts, panels, large);
             LastRows = rows;
 
             sb.AppendLine("  fit                    source K   saved K   hottest K   panels   on the skin");

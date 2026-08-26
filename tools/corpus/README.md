@@ -418,6 +418,20 @@ Seconds, on a census that already exists. A block that generates power is weight
 fraction and everything else by its consumer one, which is the difference between a hydrogen engine
 reading as sourced and as invented — six per cent of the corpus's waste heat.
 
+**`cellsize.py` asks which cell size is the harder one to cool**, which this repository had
+answered from the arithmetic of a cell face rather than from any ship. It splits a census `census.csv`
+by the `large` flag and reports every column that bears on it, with the hull path read *per kilowatt*
+— a small-grid ship's hottest block has 0.77× the conductance a large one's has and a tenth of the
+heat, so the raw column says *behind* about a term it is **19.75×** ahead on.
+
+```
+python3 tools/corpus/cellsize.py out/census-2026-08-25/census.csv
+```
+
+Seconds, on a census that already exists, and it adds nothing to the census's basis. `CellSizeLab`
+is the other half — per block, from the definitions — and [balance.md](../../docs/balance.md#what-a-small-cell-is-behind-on-and-what-it-is-not)
+holds the finding the two make together.
+
 ```
 python3 -m unittest discover -s tools/corpus -p 'test_*.py'
 ```
@@ -431,7 +445,9 @@ turned *three commits touched the harness and none was checked for behaviour* fr
 into a measurement. It reports rows only one side has rather than dropping them, because two
 datasets with nothing in common otherwise print a perfect reproduction.
 
-`test_scoring.py` pins that rule and the two thresholds `G8` is scored at, `test_provenance.py`
+`test_cellsize.py` pins the one thing a bug in `cellsize.py` could invert without a symptom — which
+cell size a column favours — on rows written to know the answer, including the hull-path column whose
+obvious reading is the wrong way round. `test_scoring.py` pins that rule and the two thresholds `G8` is scored at, `test_provenance.py`
 pins the four provenance counts against the ones `AuthoredWasteTests` pins, so the two readers of
 one grammar cannot drift apart quietly (`D3`), `test_pace.py` pins what a progress file can be
 asked — that a repeated final line is not a stall, that the ratio is taken over the files two walks
@@ -453,6 +469,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | Added [`cellsize.py`](cellsize.py) and `test_cellsize.py`: which cell size is the harder one to cool, split off a census rather than argued off a cell face. Every column favours small grids — 2.47× the exposed skin per kilowatt, a fifth as much of it buried, **19.75×** the hull path per watt for the hottest block — which is the opposite of what [balance.md](../../docs/balance.md) had written down and what `C43` was blocked on. The hull path is read per kilowatt because the raw column says the reverse, and the test is built around that one column. |
 | 2026-08-25 | `verdict.py` refuses to score a criterion its dataset is too coarse to state, and `scoring.resolves` is the rule. A criterion given as a share of the corpus needs a corpus that can tell its two sides apart: on the thirteen ships of a partial survey slice one ship is 7.7 %, so *nothing critical* and *one per cent critical* are the same reading, and `G1` came back `[HOLDS]`. It reads `[  ?  ]` now, with what the dataset would need. It is a resolution test rather than a confidence one and says so — a partial walk that passes it is still a partial walk. The 8,142-ship dataset is unaffected. |
 | 2026-08-25 | `panel.py`'s per-type rules key on `type_id` rather than on a substring of the subtype, and print each pool's size so an empty one is said rather than inferred (`E8`). No vanilla reactor's subtype contains the word *reactor*, so `reactor-heavy` had been choosing from 12 ships out of 5,728 — and the twelve were `LargePrototechReactor`, which the game types as a `HydrogenEngine` and which wastes 0.60 where that rule's own note says 0.01. Added `oxygen-heavy`; dropped the dead `thrust` share, since `thrust-heavy` reads the census's `thrust_n`. `test_panel.py` holds the mapping. `panel.csv` is unchanged until a survey is re-run against the corrected census. |
 | 2026-08-25 | `provenance.py` restates a census only when the census predates the change, read from the `provenance.txt` beside it rather than assumed. Every dataset on disk was older than the fractions that ship, so restating unconditionally was right until the day one was re-taken — and then it discounted the oxygen generator twice, on a census that had already measured 0.40. A dataset with no provenance still reads as older, which is what every dataset taken before that file existed is. |

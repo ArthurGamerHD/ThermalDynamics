@@ -394,36 +394,121 @@ pumps are off.
 > reached 807.7 K in the sweep that argued for this. The block goes from *no answer exists* to *an
 > answer exists and costs a lot of plumbing*, which is the difference the mod is about.
 
-#### The coolant mass is doing an undeclared job
+#### The coolant mass is doing an undeclared job, and the measurement that said so was wrong
 
 `CoolantMassPerPipe` is a flat 50 kg with no grid size in it — **3.2 kg/m³ in a 2.5 m cube, which is
-a gas, against 400 kg/m³ in a 0.5 m one, which is a liquid.** That is the same defect the coefficient
-was corrected for when it stopped being a conductivity divided by half a cell, and correcting it the
-same way means a fixed density with the mass following the cell: 33 kg/m³ is a bore a fifth of the cell across, filled with water-glycol, which
-gives 515 kg on a large grid and 4.1 kg on a small one.
+a gas, against 400 kg/m³ in a 0.5 m one, which is a liquid**, and on a small grid it is more fluid
+than the 32 kg pipe block carrying it weighs. That is the same defect the coefficient was corrected
+for when it stopped being a conductivity divided by half a cell, and correcting it the same way
+means a fixed density with the mass following the cell: 33 kg/m³ is a bore a fifth of the cell
+across, filled with water-glycol, which gives 515 kg on a large grid and 4.1 kg on a small one.
 
-Measured on the same ring with one sink face on a 125 kW source:
+**The four figures this section published for that correction were readings of a ramp.** They were
+taken on a ring with a 125 kW source, the environment disabled and nothing else — so the rig had a
+heat source and no sink of any kind, nothing settled, and every arm climbed linearly and forever.
+Read at step 400 they said 715.5 K and 387.0 K on a large grid and 661.5 K and 912.1 K on a small
+one. Read at step 25,600 the same arms say 26,836 K and 5,908 K. What that rig measured was the
+ratio of two heat capacities, which is exactly what coolant mass *is* — so the answer looked like
+physics and was a stopwatch reading, and it looked like a 328 K gain and a 250 K loss because more
+fluid warms more slowly (`P2`).
 
-| | Coolant | Ring reaches | Substeps |
+With the environment on the ring radiates and every arm settles by about step 1,600. Measured there,
+on the same rig:
+
+| | Coolant | Ring mean | Hottest segment | Swing | Substeps |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| large grid, shipped | 50 kg | 767.7 K | 836.6 K | 100.2 K | 14.51 |
+| large grid, corrected | 515.6 kg | **774.6 K** | **779.9 K** | **10.0 K** | 14.51 |
+| small grid, shipped | 50 kg | 1,551.9 K | 1,558.1 K | 7.7 K | 2.38 |
+| small grid, corrected | 4.1 kg | **1,552.7 K** | **1,630.6 K** | **94.6 K** | 2.38 |
+
+*Mean and swing at ten times the reference load, where a swing is large enough to read; the substep
+columns are at 125 kW. `LoopCoolantMassTests` holds all of it.*
+
+**Coolant mass buffers a ring; it does not decide where the ring runs.** At steady state the mean is
+set by what comes in against what radiates out, and a capacity that has finished charging is in
+neither — the mean moves 6.9 K on a large grid and 0.8 K on a small one. What moves is the *swing*
+between the sink face and the far side of the ring, and it moves the way a fixed density has to move
+it: a large pipe gains fluid and buffers ten times better, a small one loses fluid and buffers twelve
+times worse. That is the correction's real effect, and it is the half a player can see, because the
+hottest segment is the face a bolted block is coupled to.
+
+**So the objection that blocked it is gone.** It was *half of this is a regression on the grid size
+that is already the harder case*, and both halves of that are now measured false: the loss is 12.6 K
+at the reference load rather than 250 K, and the harder case is the next section.
+
+#### What a small cell is behind on, and what it is not
+
+This page argued, from the arithmetic of a cell face alone, that "the arithmetic that decides
+everything else on this page is against small grids by about 2.5×": a small cell face is 0.25 m²
+against 2.5 m², so the pickup is 25× worse, while a small-grid block makes perhaps a tenth of what
+its large counterpart does. **The first half is exact, the guess in the second half is very nearly
+right — the median paired block makes a *eleventh* — and the conclusion drawn from the two is wrong**,
+because every path heat takes off a block scales with a different power of the cell edge and the
+sentence quietly applied one of them to all of them.
+
+Measured per block over the eighty families the game ships at both sizes, from the definitions alone
+(`CellSizeLab`), as a handicap per watt where 1 is parity and above 1 is behind:
+
+| Term | Scales as | Small-grid handicap |
+| --- | --- | ---: |
+| a block's own radiating skin | `g²` | 2.12 |
+| the loop pickup, `h·A` over a sink face | `g²` | **2.28** |
+| conduction into the hull, `kA/L` | `g` | **0.41** |
+
+**The area terms are behind by about 2.2× and the conduction term is 2.5× ahead**, and conduction is
+the path the shipped mod actually uses: a block exports into the hull it is welded to, and the hull
+radiates. `tools/corpus/cellsize.py` reads the other half off the 8,137-ship census and says the same
+thing louder — every column favours the small grid.
+
+| Over 4,061 small-grid and 4,076 large-grid ships | small p50 | large p50 | small/large |
 | --- | ---: | ---: | ---: |
-| large grid, shipped | 50 kg | 715.5 K | 14.48 |
-| large grid, corrected | 515.6 kg | **387.0 K** | 14.48 |
-| small grid, shipped | 50 kg | 661.5 K | 2.37 |
-| small grid, corrected | 4.1 kg | **912.1 K** | 2.37 |
+| exposed area per kilowatt, m² | 7.94 | 3.21 | **2.47×** |
+| flux over that skin, W/m² | 124.5 | 283.1 | 0.44× |
+| share of blocks with no exposed face | 0.048 | 0.211 | 0.23× |
+| cells from the deepest heat source to air | 1 | 3 | 0.33× |
+| the hottest block's path to its hull, W/K per kW wasted | 18.76 | 0.95 | **19.75×** |
 
-**328 K gained on a large grid, 250 K lost on a small one, and nothing paid to the integrator
-either way.** So the flat figure is not a physical constant that happens to be wrong — it is doing a
-**balance** job undeclared, propping up small grids, and making the density honest takes that away
-along with the error. It cannot be tuned around either: the bore fraction that leaves a small grid
-where it is puts six tonnes of coolant in a 305 kg pipe block.
+*Basis: the census's own — full electrical load, every jump drive charging, no thrust, stores in
+reserve. Nothing restated.*
 
-**Not applied**, and the reason is that half of it is a regression on the grid size that is already
-the harder case. A small-grid cell face is 0.25 m² against 2.5 m², so its pickup is **25×** worse,
-while a small-grid block makes perhaps a tenth of what its large counterpart does — the arithmetic
-that decides everything else on this page is against small grids by about 2.5×, before any coolant
-charge. Propping that up with fluid mass fixes the wrong term: mass is transport and the shortfall is
-pickup. What this measurement says is that the two need deciding together, not that the density is
-wrong. `LoopCoolantMassTests` holds both halves so the decision keeps its evidence.
+**A small-grid ship carries two and a half times the skin per kilowatt, buries a fifth as much of its
+heat behind it, and gives its hottest block twenty times the path out per watt.** The last row is the
+one worth reading twice, and it is the trap the original sentence fell into: the raw conductance
+column says 0.77× and reads as *small grids behind*, because it is a ratio of two things that scale
+differently. Per watt it is the reverse by a factor of twenty.
+
+#### So small grids do not get their own pickup coefficient
+
+The handicap that survives is the pickup's, and `C42` fixed the test for whether it matters: watts
+over the pickup is the gradient a block is forced to sit at whatever is hung off the far end, and a
+gradient past its own rating is a block no radiator count can reach.
+
+| Sink faces | Small-grid families with no answer | Large-grid |
+| ---: | ---: | ---: |
+| 1 | 9 | 3 |
+| 2 | 5 | 0 |
+| **3** | **1** | **0** |
+
+Three is what a routed rectangle gives past a one-cell source — `C42`'s figure, and not a proposal to
+loosen anything, since a pipe carries at most two sink faces and a pump none. **At that face count 79
+of the 80 paired families have a cooling answer on a small grid exactly where they have one on a
+large grid.** The exception is the small prototech jump drive, whose large twin is this page's
+standing example of a block that survives only as slow damage.
+
+**Buying that one block costs a ×5.63 coefficient on every small-grid loop in the game**, against a
+median block that needs ×2.28 — so it overshoots parity by two and a half times for everything else.
+And the handicap is not a grid-size effect to begin with: it runs from **0.83 to 25** across the
+paired families, because it tracks how much less heat the game's authors gave each small variant. The
+small reactor is already *better* off than the large one; the small battery is eight times worse. A
+grid-size dial cannot fix a per-block spread.
+
+> **The one rung here that is honest physics is worth nothing, and is refused on that.** Fluid-to-wall
+> transfer goes as `Nu·k/D`, and under Dittus-Boelter at the flow the mod ships that is `h ∝ D^-0.2`;
+> a small-grid bore is a fifth of a large one, so its coefficient is `5^0.2` = **1.38× larger for the
+> same fluid**. Applied, it takes the families with no answer at one sink face from nine to eight and
+> changes no verdict at three. Unobservable fidelity is cost (`P14`), so it is priced here and not
+> built. `CellSizeTests` holds the derivation and the count.
 
 #### Where the balance work goes
 
@@ -2151,6 +2236,8 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | **The correction that blocked `C43` was measured on a rig with no sink.** *The coolant mass is doing an undeclared job* published four temperatures off a ring with a 125 kW source and the environment disabled — nothing settled, every arm climbed linearly, and at step 25,600 the same arms read 26,836 K and 5,908 K rather than the 715.5 K and 387.0 K printed at step 400. It measured a ratio of heat capacities and looked like a temperature. Re-taken with the ring radiating, the density correction moves the **mean** 6.9 K on a large grid and 0.8 K on a small one and the **swing** 100.2 K → 10.0 K and 7.7 K → 94.6 K: coolant mass buffers a ring, it does not decide where the ring runs. `LoopCoolantMassTests` now asserts the rig settles before reading anything off it. |
+| 2026-08-26 | **Small grids are not the harder case, and this page had said they were on arithmetic rather than on evidence.** Per block over the eighty families the game ships at both sizes, a small variant is 2.12× behind on its own skin and 2.28× behind on the loop pickup and **2.5× ahead on conduction into the hull**; over the 8,137-ship census every column favours it, including **19.75×** the hull path per watt for the hottest block. Added *What a small cell is behind on, and what it is not* and *So small grids do not get their own pickup coefficient*: at three sink faces 79 of 80 families match large-grid answerability, closing the last one costs ×5.63 against a median need of ×2.28, and the handicap runs 0.83 to 25 because it tracks the game's per-block waste authoring rather than the cell. `CellSizeLab`, `CellSizeTests` and `tools/corpus/cellsize.py`. |
 | 2026-08-26 | **Raised the coolant's pumped coefficient to 1,000 W/(m²·K) and made 160 the stopped value** (`C42`). The pickup — sink faces times `h · A` — is the only thing deciding whether a buried block has an answer, the face count is fixed by design, and at 160 a 6.4 MW jump drive was forced 6,400 K above its surroundings against a 689 K rating: no answer at any radiator count, on the block carrying 65.5 % of a loaded fleet's heat. A sink face now carries **6,250 W/K**, the forced gradient is **1,024 K**, and `StagnantTransferFraction` 0.16 keeps a stopped ring at exactly the 160 it always had, so nothing anywhere is worse. The corpus retrofit does not move (p50 2.43 % to 2.44 %), because `C40` bounds every internal path at 9 % — what changed is what a deliberate plumbing job can build. Re-measured the ring table, the bolt-to-sink ratio and every published sink figure. |
 | 2026-08-26 | **Authored the radiator's emissivity at 0.85 and measured what it did not fix.** The block was a selective surface with only its low half; `What a selective surface is worth` had carried the missing half as an open decision for two passes and it is now taken, on fidelity grounds its own definition already stated. It multiplies the panel's radiating power by 2.43 and is worth a third more cooling per panel — and **0.1 %** to the median corpus hull. Added [The joint, not the panel](#the-joint-not-the-panel): a large radiator sheds 1.56 MW at 600 K through a joint carrying 2,336 W/K, and every surface dial in the sensitivity table leaves the ~174 kW crossing that joint within a tenth of where it was, while feeding the same panel from a coolant loop is worth 51.5 K. Re-measured the armour comparison and the ladder against the new panel; the saturation point is unchanged at two panels, which is the finding. |
 | 2026-08-26 | Added `triage`, which ranks every heat-making block by severity times reach — the block index says whether a block is wrong and a census says whether being wrong matters, and the two had never been put together. Re-read the index while doing it: **one** block is impossible and **70** cannot cool themselves, where this page said four and 72 (`E10`). Three goals were also turned into criteria with a reading each — `G9`, `G10` and `G11` on [balance-lab.md](balance-lab.md) — and the one in doubt is `G11`, the time a warning buys.

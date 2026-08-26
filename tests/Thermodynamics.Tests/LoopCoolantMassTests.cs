@@ -8,21 +8,37 @@ using Xunit.Abstractions;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// **What correcting the coolant's grid-size defect would do, which is not one thing.**
+    /// **What correcting the coolant's grid-size defect does, measured on a rig that has somewhere
+    /// to put the heat.**
     ///
     /// <para>
     /// `CoolantMassPerPipe` is a flat 50 kg with no grid size in it: **3.2 kg/m³ in a 2.5 m cube,
-    /// which is a gas, against 400 kg/m³ in a 0.5 m one, which is a liquid**. That is the same
-    /// defect <see cref="LoopThermalProperties.HeatTransferCoefficient"/> was corrected for when it
-    /// stopped being a conductivity divided by half a cell, and correcting it the same way — a fixed
+    /// which is a gas, against 400 kg/m³ in a 0.5 m one, which is a liquid** — and on a small grid
+    /// it is more fluid than the 32 kg pipe block carrying it weighs. That is the same defect
+    /// <see cref="LoopThermalProperties.HeatTransferCoefficient"/> was corrected for when it stopped
+    /// being a conductivity divided by half a cell, and correcting it the same way — a fixed
     /// density, the mass following the cell — is what <see cref="LoopCandidate"/> proposes. It is
     /// `C43`.
     /// </para>
     ///
     /// <para>
-    /// **It is not shipped, because it is a large gain and a large loss rather than a correction.**
-    /// These measure both halves, so the decision is made against numbers rather than against the
-    /// tidiness of the physics. See balance.md, *The coolant mass is doing an undeclared job*.
+    /// **The first version of this class ran the rig with the environment disabled**, so the ring
+    /// had a 125 kW source and no sink of any kind. Nothing settled: every arm climbed linearly and
+    /// forever, and the four figures it published — 715.5 K and 387.0 K on a large grid, 661.5 K and
+    /// 912.1 K on a small one — were that ramp read at step 400. At step 25,600 the same arms read
+    /// 26,836 K and 5,908 K. **What it measured was the ratio of two heat capacities**, which is
+    /// exactly what coolant mass is, so the answer looked like physics and was a stopwatch reading
+    /// (`P2`: what the instrument could not see is part of the result — here it could not see an
+    /// equilibrium, because there was none).
+    /// </para>
+    ///
+    /// <para>
+    /// With the environment on, the ring radiates and every arm settles by about step 1,600. The
+    /// correction is then **worth 7 K to a large grid's mean and 1 K to a small one's**, costs no
+    /// substeps either way, and what it actually moves is the ring's temperature *swing*: 100 K
+    /// becomes 10 K on a large grid and 8 K becomes 95 K on a small one. Coolant mass buffers a
+    /// ring; it does not decide where the ring runs. See balance.md, *The coolant mass is doing an
+    /// undeclared job*.
     /// </para>
     /// </summary>
     public class LoopCoolantMassTests
@@ -34,10 +50,28 @@ namespace Thermodynamics.Tests
             this.output = output;
         }
 
-        private static ThermalSettings Isolated()
+        /// <summary>
+        /// Steps at which every arm of this rig has settled, established by
+        /// <see cref="TheRigReachesASteadyStateAndSaysSo"/> rather than assumed.
+        /// </summary>
+        private const int SettledSteps = 6400;
+
+        /// <summary>
+        /// The load the headline figures are quoted at. A reactor's worth of waste into one sink
+        /// face, which is the rig `C42` measured the pickup on.
+        /// </summary>
+        private const float ReferenceWatts = 125000f;
+
+        /// <summary>
+        /// **The environment is on**, which is the whole difference between this and the version
+        /// that published a ramp. Solar, friction and damage are off so that the only path out of
+        /// the ring is its own radiating skin; the substep and visit caps are off so that a cost
+        /// reading is the demand rather than the allowance.
+        /// </summary>
+        private static ThermalSettings Radiating()
         {
             ThermalSettings settings = new ThermalSettings();
-            settings.EnableEnvironment = false;
+            settings.EnableEnvironment = true;
             settings.EnableSolarHeat = false;
             settings.EnableFriction = false;
             settings.EnableDamage = false;
@@ -46,12 +80,27 @@ namespace Thermodynamics.Tests
             return settings.Derive();
         }
 
+        private class Reading
+        {
+            /// <summary>The hottest segment of the ring, which is what a bolted block sees.</summary>
+            public float Hottest;
+
+            /// <summary>The whole ring's temperature: where the fluid runs, on average.</summary>
+            public float Mean;
+
+            /// <summary>Hottest minus coldest — how far the fluid swings around that mean.</summary>
+            public float Spread;
+
+            public float Substeps;
+            public float MassPerPipe;
+        }
+
         /// <summary>
-        /// A ring with one sink face on a 125 kW source, run to something like steady state, and
-        /// what the fluid reached. Same rig at both grid sizes and under both charges (`P6`).
+        /// A five-by-five ring with one sink face onto a source, at one cell size and under one
+        /// coolant charge. Same rig on both grids and under both charges, so nothing but the
+        /// subject differs (`P6`).
         /// </summary>
-        private void Ring(bool large, bool corrected, out float hottest, out float substeps,
-            out float massPerPipe)
+        private Reading Ring(bool large, bool corrected, float watts, int steps)
         {
             GridBuilder builder = large ? GridBuilder.Large() : GridBuilder.Small();
 
@@ -59,9 +108,9 @@ namespace Thermodynamics.Tests
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
             sinks[1] = Vector3I.Down;
             PipeFitter.BuildRing(builder, cells, 5, sinks);
-            builder.Place(Catalog.Reactor(), cells[1] + Vector3I.Down).Wasting(125000f);
+            builder.Place(Catalog.Reactor(), cells[1] + Vector3I.Down).Wasting(watts);
 
-            ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
+            ThermalSimulation simulation = builder.BuildSimulation(Radiating(), 300f);
 
             if (corrected)
             {
@@ -69,68 +118,180 @@ namespace Thermodynamics.Tests
                 simulation.RebuildAll();
             }
 
+            simulation.StepExact(LabClock.Steps(steps), Worlds.Shadow());
+
             CoolantLoop loop = simulation.Solver.Loops[0];
-            simulation.StepExact(LabClock.Steps(400), Worlds.Shadow());
+            Reading reading = new Reading
+            {
+                Hottest = loop.HottestSegment,
+                Mean = loop.Temperature,
+                Spread = loop.HottestSegment - loop.ColdestSegment,
+                Substeps = simulation.Solver.RequiredSubsteps(0.25f),
+                MassPerPipe = loop.Properties.CoolantMassPerPipe,
+            };
 
-            hottest = loop.HottestSegment;
-            substeps = simulation.Solver.RequiredSubsteps(0.25f);
-            massPerPipe = loop.Properties.CoolantMassPerPipe;
+            output.WriteLine(
+                "{0,-6} {1,-10} {2,9:n0} W  {3,6} steps  {4,8:n1} kg/pipe   hottest {5,8:n1} K"
+                + "   mean {6,8:n1} K   spread {7,7:n1} K   substeps {8,6:n2}",
+                large ? "large" : "small", corrected ? "corrected" : "shipped", watts, steps,
+                reading.MassPerPipe, reading.Hottest, reading.Mean, reading.Spread,
+                reading.Substeps);
 
-            output.WriteLine("{0,-6} {1,-10} {2,8:n1} kg/pipe   hottest {3,7:n1} K   substeps {4,6:n2}",
-                large ? "large" : "small", corrected ? "corrected" : "shipped",
-                massPerPipe, hottest, substeps);
+            return reading;
         }
 
         /// <summary>
-        /// **The correction is a large gain on a large grid and a large loss on a small one**, which
-        /// is why it is not a correction anybody can just apply. A flat charge per pipe is stingy in
-        /// a 2.5 m cell and generous in a 0.5 m one, so making the density honest moves the two grid
-        /// sizes in opposite directions.
+        /// **The check that would have caught the first version of this class, and the reason every
+        /// figure below is quoted at a steady state rather than at a step count.**
+        ///
+        /// <para>
+        /// A temperature read off a rig that never settles is a reading of how fast it is climbing,
+        /// and the arm with more thermal mass climbs more slowly whatever else is true — so such a
+        /// rig reports a capacity ratio and looks like it reported a temperature. This doubles the
+        /// run and asserts the answer stops moving, on every arm, which is the only evidence that
+        /// a stop criterion is a criterion rather than a time limit (`P1`, `M1`).
+        /// </para>
         /// </summary>
         [Fact]
-        public void TheDensityCorrectionHelpsLargeGridsAndHurtsSmallOnes()
+        public void TheRigReachesASteadyStateAndSaysSo()
         {
-            float largeBefore, largeAfter, smallBefore, smallAfter, ignored, mass;
+            foreach (bool large in new[] { true, false })
+            {
+                foreach (bool corrected in new[] { false, true })
+                {
+                    float settled = Ring(large, corrected, ReferenceWatts, SettledSteps).Hottest;
+                    float doubled = Ring(large, corrected, ReferenceWatts, SettledSteps * 2).Hottest;
 
-            Ring(true, false, out largeBefore, out ignored, out mass);
-            Ring(true, true, out largeAfter, out ignored, out mass);
-            Ring(false, false, out smallBefore, out ignored, out mass);
-            Ring(false, true, out smallAfter, out ignored, out mass);
-
-            Assert.True(largeAfter < largeBefore - 100f,
-                "a large-grid ring reached " + largeAfter.ToString("n1") + " K corrected against "
-                + largeBefore.ToString("n1") + " K shipped; the correction was expected to be worth"
-                + " a great deal there, and if it is not then balance.md needs re-reading");
-
-            Assert.True(smallAfter > smallBefore + 100f,
-                "a small-grid ring reached " + smallAfter.ToString("n1") + " K corrected against "
-                + smallBefore.ToString("n1") + " K shipped; the loss is half the reason this is not"
-                + " applied, and a correction that stopped costing anything would change the"
-                + " decision");
+                    Assert.True(Absolute(doubled - settled) < 1f,
+                        (large ? "large" : "small") + " " + (corrected ? "corrected" : "shipped")
+                        + " read " + settled.ToString("n1") + " K at " + SettledSteps
+                        + " steps and " + doubled.ToString("n1") + " K at twice that; a rig still"
+                        + " climbing reports how fast it is climbing, which is the defect that"
+                        + " produced this class's first four published figures");
+                }
+            }
         }
 
         /// <summary>
-        /// **And it costs the integrator nothing either way**, which is the half that makes it worth
-        /// keeping on the table. Coolant mass is the *denominator* of a segment's substep — the
+        /// **The correction barely moves where the fluid runs**, which is the finding that unblocked
+        /// it. At steady state the mean is set by what comes in and what radiates out, and coolant
+        /// mass is in neither: it is a capacity, and a capacity that has finished charging does not
+        /// appear in an energy balance.
+        ///
+        /// <para>
+        /// Seven kelvin on a large grid and one on a small one, against the 328 K gain and 250 K
+        /// loss this class used to publish. **The blocking objection to `C43` was the size of that
+        /// loss**, and the loss is not there.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheDensityCorrectionLeavesTheMeanWhereItWas()
+        {
+            foreach (bool large in new[] { true, false })
+            {
+                Reading shipped = Ring(large, false, ReferenceWatts, SettledSteps);
+                Reading corrected = Ring(large, true, ReferenceWatts, SettledSteps);
+
+                float moved = Absolute(corrected.Mean - shipped.Mean);
+
+                Assert.True(moved < 20f,
+                    "on a " + (large ? "large" : "small") + " grid the correction moved the ring's"
+                    + " mean by " + moved.ToString("n1") + " K, from " + shipped.Mean.ToString("n1")
+                    + " to " + corrected.Mean.ToString("n1") + "; it is applied on the finding that"
+                    + " it does not, so a move this size means the finding needs re-reading rather"
+                    + " than the threshold");
+            }
+        }
+
+        /// <summary>
+        /// **What it does move is the swing**, and in the direction a fixed density has to move it:
+        /// a large pipe gains fluid and buffers better, a small one loses fluid and buffers worse.
+        ///
+        /// <para>
+        /// This is the correction's real effect and the one worth keeping a test on. It is also the
+        /// half a player can see: the hottest segment is what a bolted block is coupled to, so a
+        /// ring that swings 95 K presents its source a hotter face than one that swings 8 K, even
+        /// though the two rings hold the same average heat.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheDensityCorrectionMovesTheSwingRatherThanTheMean()
+        {
+            // Read at ten times the reference load, because a swing is proportional to the heat
+            // being carried and at 125 kW both figures are within a few kelvin of each other.
+            const float Watts = 1250000f;
+
+            Reading largeShipped = Ring(true, false, Watts, SettledSteps);
+            Reading largeCorrected = Ring(true, true, Watts, SettledSteps);
+
+            Assert.True(largeCorrected.Spread < largeShipped.Spread * 0.5f,
+                "a large-grid ring swung " + largeCorrected.Spread.ToString("n1")
+                + " K corrected against " + largeShipped.Spread.ToString("n1")
+                + " K shipped; ten times the fluid was expected to buffer the ring, and if it does"
+                + " not then the correction is not doing what balance.md says it does");
+
+            Reading smallShipped = Ring(false, false, Watts, SettledSteps);
+            Reading smallCorrected = Ring(false, true, Watts, SettledSteps);
+
+            Assert.True(smallCorrected.Spread > smallShipped.Spread * 2f,
+                "a small-grid ring swung " + smallCorrected.Spread.ToString("n1")
+                + " K corrected against " + smallShipped.Spread.ToString("n1")
+                + " K shipped; a twelfth of the fluid was expected to buffer it worse, and this is"
+                + " the half of the correction that costs a small grid something");
+        }
+
+        /// <summary>
+        /// **And it costs the integrator nothing either way**, which was true on the ramp and is
+        /// still true settled. Coolant mass is the *denominator* of a segment's substep — the
         /// conductance is untouched — so more of it can only make a ring cheaper to integrate, and
         /// in this rig the demand is set by something else entirely and does not move at all.
         /// </summary>
         [Fact]
         public void TheDensityCorrectionCostsNoSubsteps()
         {
-            float ignored, mass, before, after;
+            foreach (bool large in new[] { true, false })
+            {
+                Reading shipped = Ring(large, false, ReferenceWatts, SettledSteps);
+                Reading corrected = Ring(large, true, ReferenceWatts, SettledSteps);
 
-            Ring(true, false, out ignored, out before, out mass);
-            Ring(true, true, out ignored, out after, out mass);
-            Assert.True(after <= before + 0.01f,
-                "a large-grid ring demanded " + after + " substeps corrected against " + before);
+                Assert.True(corrected.Substeps <= shipped.Substeps + 0.01f,
+                    "a " + (large ? "large" : "small") + "-grid ring demanded "
+                    + corrected.Substeps.ToString("n2") + " substeps corrected against "
+                    + shipped.Substeps.ToString("n2")
+                    + "; less coolant is a stiffer parcel, so this is the assertion that would"
+                    + " catch the correction becoming expensive on small grids");
+            }
+        }
 
-            Ring(false, false, out ignored, out before, out mass);
-            Ring(false, true, out ignored, out after, out mass);
-            Assert.True(after <= before + 0.01f,
-                "a small-grid ring demanded " + after + " substeps corrected against " + before
-                + "; less coolant is a stiffer parcel, so this is the assertion that would catch"
-                + " the correction becoming expensive on small grids");
+        /// <summary>
+        /// **A flat charge puts more fluid in a small pipe than the pipe weighs**, which is the
+        /// fidelity half of the case and needs no rig at all. `Gauge_SG_CoolantPipe_Straight` is a
+        /// 32 kg block and the shipped charge is 50 kg of water-glycol inside it.
+        /// </summary>
+        [Fact]
+        public void TheFlatChargeOutweighsTheSmallPipeCarryingIt()
+        {
+            float pipe = ShippedBlocks.Model("Gauge_SG_CoolantPipe_Straight").Mass;
+            float flat = LoopThermalProperties.Default().CoolantMassPerPipe;
+            float corrected = LoopCandidate.For(Catalog.SmallGridSize).CoolantMassPerPipe;
+
+            output.WriteLine("small pipe {0:n0} kg, flat charge {1:n0} kg, corrected {2:n1} kg",
+                pipe, flat, corrected);
+
+            Assert.True(flat > pipe,
+                "the flat charge is " + flat.ToString("n0") + " kg against a " + pipe.ToString("n0")
+                + " kg pipe, which is the claim this test exists to pin; if the pipe's mass moved,"
+                + " balance.md's argument moved with it");
+
+            Assert.True(corrected < pipe,
+                "the corrected charge is " + corrected.ToString("n1") + " kg in a "
+                + pipe.ToString("n0") + " kg pipe, and a correction that still overfilled the block"
+                + " would not be a correction");
+        }
+
+        private static float Absolute(float value)
+        {
+            return value < 0f ? -value : value;
         }
     }
 }
