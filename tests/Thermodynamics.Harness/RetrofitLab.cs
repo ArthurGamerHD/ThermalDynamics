@@ -111,8 +111,16 @@ namespace Thermodynamics.Harness
             public int PlumbedPipes;
             public float PlumbedK;
 
+            /// <summary>
+            /// The same ring, on the same hull, with <see cref="LoopCandidate"/> applied — the only
+            /// arm where the loop can carry what the panel can shed. Everything else is held: same
+            /// ship, same hot block, same pipes, same panels (`P6`).
+            /// </summary>
+            public float TransportK;
+
             public float BoltedSaved { get { return BareK - BoltedK; } }
             public float PlumbedSaved { get { return BareK - PlumbedK; } }
+            public float TransportSaved { get { return BareK - TransportK; } }
         }
 
         private static ThermalSettings Settings()
@@ -345,6 +353,7 @@ namespace Thermodynamics.Harness
                 HottestBlock = hottest == null ? "" : hottest.Block.Name,
                 BoltedK = bareK,
                 PlumbedK = bareK,
+                TransportK = bareK,
             };
 
             if (hottest == null) return row;
@@ -372,6 +381,15 @@ namespace Thermodynamics.Harness
                 ShipAssembly plumbed = ship.Build(settings);
                 ThermalNode after;
                 row.PlumbedK = Load(plumbed, out after);
+
+                // **The same ring again, with the loop able to carry heat.** `G3` asks whether
+                // cooling works, and every measurement of it so far has been taken on a loop whose
+                // sink face carries 1,000 W/K against a panel that can shed a megawatt and a half.
+                // This is the arm that separates *cooling does not work* from *this loop cannot
+                // move enough*, which are different findings with different fixes.
+                ShipAssembly carried = ship.Build(settings);
+                LoopCandidate.Apply(carried);
+                row.TransportK = Load(carried, out after);
             }
 
             return row;
@@ -428,6 +446,7 @@ namespace Thermodynamics.Harness
 
             List<float> bolted = new List<float>();
             List<float> plumbed = new List<float>();
+            List<float> carried = new List<float>();
             int noRoomBolted = 0, noRoomPlumbed = 0, measured = 0, cold = 0;
 
             for (int i = 0; i < rows.Count; i++)
@@ -444,11 +463,16 @@ namespace Thermodynamics.Harness
                 else bolted.Add(100f * row.BoltedSaved / row.BareK);
 
                 if (row.PlumbedPipes == 0) noRoomPlumbed++;
-                else plumbed.Add(100f * row.PlumbedSaved / row.BareK);
+                else
+                {
+                    plumbed.Add(100f * row.PlumbedSaved / row.BareK);
+                    carried.Add(100f * row.TransportSaved / row.BareK);
+                }
             }
 
             bolted.Sort();
             plumbed.Sort();
+            carried.Sort();
 
             sb.Append("  ").Append(measured.ToString("n0")).Append(" ships measured in ")
                 .Append(clock.Elapsed.TotalSeconds.ToString("n0")).Append(" s, ")
@@ -460,11 +484,17 @@ namespace Thermodynamics.Harness
             sb.AppendLine("  fit            ships   no room     p10     p50     p90     max   (% of peak taken off)");
             Band(sb, "bolted", bolted, noRoomBolted);
             Band(sb, "plumbed", plumbed, noRoomPlumbed);
+            Band(sb, "carried", carried, noRoomPlumbed);
 
             sb.AppendLine();
             sb.AppendLine("  A fit that takes single-figure percentages off a ship that is burning is");
             sb.AppendLine("  not a lever a player has. `no room` is the other half of the answer: cooling");
             sb.AppendLine("  that cannot be installed without demolishing the hull is not cooling either.");
+            sb.AppendLine();
+            sb.AppendLine("  `carried` is the plumbed hull again with LoopCandidate applied: the same");
+            sb.AppendLine("  ring, the same panels, a fluid that can move what they can shed. It is a");
+            sb.AppendLine("  proposal and is not what ships. The gap between it and `plumbed` is the");
+            sb.AppendLine("  part of G3 that is a number rather than a design.");
 
             return sb.ToString();
         }
@@ -544,7 +574,7 @@ namespace Thermodynamics.Harness
         public static string Csv(IList<Row> rows)
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("ship,large,blocks,bare_k,hottest_block,bolted_n,bolted_k,plumbed_pipes,plumbed_k");
+            sb.AppendLine("ship,large,blocks,bare_k,hottest_block,bolted_n,bolted_k,plumbed_pipes,plumbed_k,transport_k");
 
             for (int i = 0; i < rows.Count; i++)
             {
@@ -558,7 +588,8 @@ namespace Thermodynamics.Harness
                 sb.Append(row.BoltedPlaced).Append(',');
                 sb.Append(Cell(row.BoltedK)).Append(',');
                 sb.Append(row.PlumbedPipes).Append(',');
-                sb.AppendLine(Cell(row.PlumbedK));
+                sb.Append(Cell(row.PlumbedK)).Append(',');
+                sb.AppendLine(Cell(row.TransportK));
             }
 
             return sb.ToString();
