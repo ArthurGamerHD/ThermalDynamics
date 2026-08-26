@@ -206,10 +206,20 @@ namespace Thermodynamics.Core
 
         private float fill = 1f;
 
+        /// <summary>
+        /// Kilograms one pipe of this ring carries. **The cell size is the ring's own parcel
+        /// length**, which the builder sets from the grid, so a small-grid ring charges itself from
+        /// the same density as a large-grid one rather than from a flat figure that suits neither.
+        /// </summary>
+        public float MassPerPipe
+        {
+            get { return Properties.MassPerPipe(ParcelLengthMetres); }
+        }
+
         /// <summary>Kilograms of coolant a full ring holds. What a refill is priced against.</summary>
         public float CapacityKilograms
         {
-            get { return Properties.CoolantMassPerPipe * Math.Max(1, Pipes.Count); }
+            get { return MassPerPipe * Math.Max(1, Pipes.Count); }
         }
 
         /// <summary>Kilograms it is currently holding.</summary>
@@ -524,7 +534,7 @@ namespace Thermodynamics.Core
             // Scaled by the fill, along with every link's conductance, so the ratio the integrator
             // sizes a substep from does not move — see FillFraction.
             float perSegment =
-                (fill * Properties.SpecificHeat * Properties.CoolantMassPerPipe) / heatTimeScale;
+                (fill * Properties.SpecificHeat * MassPerPipe) / heatTimeScale;
             SegmentThermalMass = Math.Max(ThermalConstants.MinimumThermalMass, perSegment);
 
             // The well-mixed model is a ring carrying exactly one parcel. Expressing it that way rather

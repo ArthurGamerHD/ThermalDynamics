@@ -270,7 +270,7 @@ namespace Thermodynamics.Tests
         ///
         /// <para>
         /// Fluid-to-wall transfer in a pipe goes as `Nu·k/D`, and under Dittus-Boelter with the flow
-        /// held at the rate the mod ships, `h ∝ D^-0.2`. `LoopCandidate`'s bore is a fifth of the
+        /// held at the rate the mod ships, `h ∝ D^-0.2`. The loop's bore is a fifth of the
         /// cell, so a small-grid bore is a fifth of a large one and its coefficient is `5^0.2` —
         /// **1.38× — larger for the same fluid**. That is a real grid-size dependence with a
         /// derivation under it, and it is not the 2.28 the median block needs.

@@ -439,7 +439,7 @@ namespace Thermodynamics.Tests
             CoolantLoop loop;
             Ring(out loop);
 
-            float perPipe = loop.Properties.CoolantMassPerPipe;
+            float perPipe = loop.MassPerPipe;
 
             Assert.Equal(8f * perPipe, loop.CapacityKilograms);
             Assert.Equal(8f * perPipe, loop.HeldKilograms);

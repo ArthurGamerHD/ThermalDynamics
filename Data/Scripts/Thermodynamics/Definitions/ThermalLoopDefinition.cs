@@ -18,6 +18,7 @@ namespace Thermodynamics
         // per-pipe charge — ten times the fluid it asked for. An unrecognised name falls to the field
         // default below instead, which is the safe outcome.
         private static readonly MyStringId CoolantMassPerPipeId = MyStringId.GetOrCompute("CoolantMassPerPipe");
+        private static readonly MyStringId CoolantDensityId = MyStringId.GetOrCompute("CoolantKilogramsPerCubicMetre");
         private static readonly MyStringId LargeGridFlowRateId = MyStringId.GetOrCompute("LargeGridFlowRate");
         private static readonly MyStringId SmallGridFlowRateId = MyStringId.GetOrCompute("SmallGridFlowRate");
         private static readonly MyStringId StagnantTransferId = MyStringId.GetOrCompute("StagnantTransferFraction");
@@ -45,13 +46,31 @@ namespace Thermodynamics
         public static readonly MyDefinitionId DefaultLoopDefinitionId = new MyDefinitionId(typeof(MyObjectBuilder_EnvironmentDefinition), Settings.DefaultLoopSubtypeId);
 
         /// <summary>
-        /// Coolant per pipe block, kg. Defaults live on the fields rather than in a factory: an
-        /// element added to the group after a world's Loops.xml was written is absent from that file,
-        /// and a reader that finds nothing leaves the field alone. Zero here would clamp to 1 kg and
-        /// silently give that world almost no coolant.
+        /// A flat coolant mass per pipe block, kg, or **zero to charge from
+        /// <see cref="CoolantKilogramsPerCubicMetre"/> and the cell**, which is what ships.
+        ///
+        /// <para>
+        /// Defaults live on the fields rather than in a factory: an element added to the group after
+        /// a world's Loops.xml was written is absent from that file, and a reader that finds nothing
+        /// leaves the field alone. **Zero is now a value rather than an accident** — it used to
+        /// clamp to 1 kg and silently give that world almost no coolant, and it now means the
+        /// density, which is the answer a file that says nothing should get.
+        /// </para>
         /// </summary>
         [ProtoMember(1)]
-        public float CoolantMassPerPipe = 50f;
+        public float CoolantMassPerPipe;
+
+        /// <summary>
+        /// Coolant per cubic metre of the cell a pipe occupies, kg/m³, and what a ring charges from
+        /// unless <see cref="CoolantMassPerPipe"/> states a flat mass instead.
+        ///
+        /// **The per-pipe name is kept rather than repurposed** (`P15`): a third-party `Loops.xml`
+        /// stating 50 there means fifty kilograms in a pipe, and reading it as a density would give
+        /// a large-grid ring sixteen times the fluid it asked for. Silence on both means this
+        /// default, which is what ships. See balance.md, `C43`.
+        /// </summary>
+        [ProtoMember(35)]
+        public float CoolantKilogramsPerCubicMetre = 33f;
 
         /// <summary>
         /// Thermal conductivity of the coolant, W/(m K). Reference values:
@@ -109,6 +128,9 @@ namespace Thermodynamics
                 || lookup.TryGetDouble(defId, GroupId, LegacyMassPerPipeId, out dvalue))
                 def.CoolantMassPerPipe = (float)dvalue;
 
+            if (lookup.TryGetDouble(defId, GroupId, CoolantDensityId, out dvalue))
+                def.CoolantKilogramsPerCubicMetre = (float)dvalue;
+
             if (lookup.TryGetDouble(defId, GroupId, HeatTransferId, out dvalue))
                 def.HeatTransferCoefficient = (float)dvalue;
 
@@ -158,7 +180,9 @@ namespace Thermodynamics
                 def.StagnantTransferFraction = (float)dvalue;
 
 
-            def.CoolantMassPerPipe = Math.Max(1, def.CoolantMassPerPipe);
+            // Zero is how a file says "use the density"; only a negative one is nonsense.
+            def.CoolantMassPerPipe = Math.Max(0, def.CoolantMassPerPipe);
+            def.CoolantKilogramsPerCubicMetre = Math.Max(0, def.CoolantKilogramsPerCubicMetre);
 
             def.LargeGridFlowRate = Math.Max(0, def.LargeGridFlowRate);
             def.SmallGridFlowRate = Math.Max(0, def.SmallGridFlowRate);

@@ -414,8 +414,28 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(settings.Derive(), 293.15f);
             CoolantLoop loop = simulation.Solver.Loops[0];
 
-            // Long enough for the fluid to stop warming and start simply carrying.
-            simulation.StepExact(30000, Worlds.Shadow());
+            // **Stepped until the fluid stops warming, rather than for a fixed count.** Balance is
+            // the condition this test is about, and how long it takes to reach is a property of the
+            // coolant's own mass — `C43` gave a large-grid pipe ten times the fluid it used to
+            // carry, and a fixed 30,000 steps stopped reading a ring that had not arrived. A run
+            // length that has to be re-tuned every time a capacity moves is a stop criterion that
+            // is really a time limit (`M1`).
+            const int Chunk = 10000;
+            const int Bound = 600000;
+
+            int stepped = 0;
+            while (stepped < Bound)
+            {
+                simulation.StepExact(Chunk, Worlds.Shadow());
+                stepped += Chunk;
+
+                if (loop.LastWattsAbsorbed > 1000f
+                    && Math.Abs(loop.LastNetWatts) < loop.LastWattsAbsorbed * 0.1f) break;
+            }
+
+            Assert.True(stepped < Bound,
+                "the loop had not reached balance after " + stepped + " steps: net "
+                + loop.LastNetWatts + " W against " + loop.LastWattsAbsorbed + " W absorbed");
 
             Assert.True(loop.LastWattsAbsorbed > 1000f,
                 "the loop reports drawing only " + loop.LastWattsAbsorbed + " W off a 200 kW reactor");

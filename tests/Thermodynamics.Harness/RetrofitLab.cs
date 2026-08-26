@@ -112,9 +112,10 @@ namespace Thermodynamics.Harness
             public float PlumbedK;
 
             /// <summary>
-            /// The same ring, on the same hull, with <see cref="LoopCandidate"/> applied — the only
-            /// arm where the loop can carry what the panel can shed. Everything else is held: same
-            /// ship, same hot block, same pipes, same panels (`P6`).
+            /// The same ring, on the same hull, with <see cref="LoopBefore"/> applied — the loop as
+            /// it stood before `C42` and `C43`, so this arm is what the shipped one replaced rather
+            /// than a proposal. Everything else is held: same ship, same hot block, same pipes, same
+            /// panels (`P6`).
             /// </summary>
             public float TransportK;
 
@@ -561,13 +562,13 @@ namespace Thermodynamics.Harness
                 row.HotBlockWattsPerKelvin = ConductanceOutOf(plumbed, hot);
                 row.AboveHullKelvin = AboveMedian(plumbed, hot);
 
-                // **The same ring again, with the loop able to carry heat.** `G3` asks whether
-                // cooling works, and every measurement of it so far has been taken on a loop whose
-                // sink face carries 1,000 W/K against a panel that can shed a megawatt and a half.
-                // This is the arm that separates *cooling does not work* from *this loop cannot
-                // move enough*, which are different findings with different fixes.
+                // **The same ring again, on the loop the shipped one replaced.** `G3` asks whether
+                // cooling works, and it was measured for a long time on a loop whose sink face
+                // carried 160 W/K against a panel that can shed a megawatt and a half. This is the
+                // arm that separates *cooling does not work* from *that loop could not move
+                // enough*, which are different findings with different fixes.
                 ShipAssembly carried = ship.Build(settings);
-                LoopCandidate.Apply(carried);
+                LoopBefore.Apply(carried);
                 row.TransportK = Load(carried, out after);
 
                 bool carriedFlowing;
@@ -744,10 +745,11 @@ namespace Thermodynamics.Harness
             sb.AppendLine("  block and there is nowhere inside the grid left to put the heat.");
 
             sb.AppendLine();
-            sb.AppendLine("  `carried` is the plumbed hull again with LoopCandidate applied: the same");
-            sb.AppendLine("  ring, the same panels, a fluid that can move what they can shed. It is a");
-            sb.AppendLine("  proposal and is not what ships. The gap between it and `plumbed` is the");
-            sb.AppendLine("  part of G3 that is a number rather than a design.");
+            sb.AppendLine("  `carried` is the plumbed hull again on the loop this mod shipped before");
+            sb.AppendLine("  C42 and C43: the same ring, the same panels, a fluid that could not move");
+            sb.AppendLine("  what they can shed. The gap between it and `plumbed` is what closing the");
+            sb.AppendLine("  transport line bought, and is the part of G3 that is a number rather");
+            sb.AppendLine("  than a design.");
 
             return sb.ToString();
         }

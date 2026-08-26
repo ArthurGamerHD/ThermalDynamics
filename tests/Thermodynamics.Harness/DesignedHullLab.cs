@@ -524,13 +524,13 @@ namespace Thermodynamics.Harness
 
             for (int arm = 0; arm < 4; arm++)
             {
-                bool candidate = (arm & 1) != 0;
+                bool before = (arm & 1) != 0;
                 bool everyFace = (arm & 2) != 0;
 
-                LoopThermalProperties properties = candidate
-                    ? LoopCandidate.For(large ? Catalog.LargeGridSize : Catalog.SmallGridSize)
+                LoopThermalProperties properties = before
+                    ? LoopBefore.For(large ? Catalog.LargeGridSize : Catalog.SmallGridSize)
                     : null;
-                string label = (candidate ? "candidate" : "shipped")
+                string label = (before ? "before C42/C43" : "shipped")
                     + (everyFace ? ", 3 faces" : ", 1 face");
 
                 for (int panels = 1; panels <= maxPanels; panels++)
@@ -558,8 +558,10 @@ namespace Thermodynamics.Harness
             sb.AppendLine("  `needs K` is the watts over it - the gradient the source is forced to");
             sb.AppendLine("  sit at whatever is hung off the other end. When that exceeds the rating,");
             sb.AppendLine("  adding radiator cannot help, and the panel column shows it saturating.");
-            sb.AppendLine("  `candidate` is LoopCandidate: the C38 package, which does nothing for a");
-            sb.AppendLine("  retrofit and is measured here because a buried source has no other path.");
+            sb.AppendLine("  `before C42/C43` is the loop as it was: a coefficient of 160 applied");
+            sb.AppendLine("  whether or not anything circulated, and a flat 50 kg of coolant a pipe.");
+            sb.AppendLine("  It does nothing for a retrofit and is measured here because a buried");
+            sb.AppendLine("  source has no other path.");
 
             return sb.ToString();
         }

@@ -17,8 +17,8 @@ namespace Thermodynamics.Tests
     /// it is more fluid than the 32 kg pipe block carrying it weighs. That is the same defect
     /// <see cref="LoopThermalProperties.HeatTransferCoefficient"/> was corrected for when it stopped
     /// being a conductivity divided by half a cell, and correcting it the same way — a fixed
-    /// density, the mass following the cell — is what <see cref="LoopCandidate"/> proposes. It is
-    /// `C43`.
+    /// density, the mass following the cell — is what ships since `C43`.
+    /// <see cref="LoopBefore"/> holds the flat charge it replaced.
     /// </para>
     ///
     /// <para>
@@ -96,11 +96,24 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// The shipped fluid with nothing changed but the coolant charge, put back to the flat 50 kg
+        /// a pipe carried before `C43`. **Only the charge**: <see cref="LoopBefore"/> also holds the
+        /// pickup coefficient and the stopped share that `C42` moved, and applying all three would
+        /// make this a measurement of the package rather than of the mass (`P6`).
+        /// </summary>
+        private static LoopThermalProperties Flat()
+        {
+            LoopThermalProperties properties = LoopThermalProperties.Default();
+            properties.CoolantMassPerPipe = LoopBefore.FlatKilogramsPerPipe;
+            return properties.Clamp();
+        }
+
+        /// <summary>
         /// A five-by-five ring with one sink face onto a source, at one cell size and under one
         /// coolant charge. Same rig on both grids and under both charges, so nothing but the
         /// subject differs (`P6`).
         /// </summary>
-        private Reading Ring(bool large, bool corrected, float watts, int steps)
+        private Reading Ring(bool large, bool flat, float watts, int steps)
         {
             GridBuilder builder = large ? GridBuilder.Large() : GridBuilder.Small();
 
@@ -112,9 +125,9 @@ namespace Thermodynamics.Tests
 
             ThermalSimulation simulation = builder.BuildSimulation(Radiating(), 300f);
 
-            if (corrected)
+            if (flat)
             {
-                simulation.LoopProperties = LoopCandidate.For(simulation.Grid.GridSize);
+                simulation.LoopProperties = Flat();
                 simulation.RebuildAll();
             }
 
@@ -127,13 +140,13 @@ namespace Thermodynamics.Tests
                 Mean = loop.Temperature,
                 Spread = loop.HottestSegment - loop.ColdestSegment,
                 Substeps = simulation.Solver.RequiredSubsteps(0.25f),
-                MassPerPipe = loop.Properties.CoolantMassPerPipe,
+                MassPerPipe = loop.MassPerPipe,
             };
 
             output.WriteLine(
                 "{0,-6} {1,-10} {2,9:n0} W  {3,6} steps  {4,8:n1} kg/pipe   hottest {5,8:n1} K"
                 + "   mean {6,8:n1} K   spread {7,7:n1} K   substeps {8,6:n2}",
-                large ? "large" : "small", corrected ? "corrected" : "shipped", watts, steps,
+                large ? "large" : "small", flat ? "flat 50 kg" : "shipped", watts, steps,
                 reading.MassPerPipe, reading.Hottest, reading.Mean, reading.Spread,
                 reading.Substeps);
 
@@ -157,13 +170,13 @@ namespace Thermodynamics.Tests
         {
             foreach (bool large in new[] { true, false })
             {
-                foreach (bool corrected in new[] { false, true })
+                foreach (bool flat in new[] { false, true })
                 {
-                    float settled = Ring(large, corrected, ReferenceWatts, SettledSteps).Hottest;
-                    float doubled = Ring(large, corrected, ReferenceWatts, SettledSteps * 2).Hottest;
+                    float settled = Ring(large, flat, ReferenceWatts, SettledSteps).Hottest;
+                    float doubled = Ring(large, flat, ReferenceWatts, SettledSteps * 2).Hottest;
 
                     Assert.True(Absolute(doubled - settled) < 1f,
-                        (large ? "large" : "small") + " " + (corrected ? "corrected" : "shipped")
+                        (large ? "large" : "small") + " " + (flat ? "flat" : "shipped")
                         + " read " + settled.ToString("n1") + " K at " + SettledSteps
                         + " steps and " + doubled.ToString("n1") + " K at twice that; a rig still"
                         + " climbing reports how fast it is climbing, which is the defect that"
@@ -189,15 +202,15 @@ namespace Thermodynamics.Tests
         {
             foreach (bool large in new[] { true, false })
             {
+                Reading flat = Ring(large, true, ReferenceWatts, SettledSteps);
                 Reading shipped = Ring(large, false, ReferenceWatts, SettledSteps);
-                Reading corrected = Ring(large, true, ReferenceWatts, SettledSteps);
 
-                float moved = Absolute(corrected.Mean - shipped.Mean);
+                float moved = Absolute(shipped.Mean - flat.Mean);
 
                 Assert.True(moved < 20f,
                     "on a " + (large ? "large" : "small") + " grid the correction moved the ring's"
-                    + " mean by " + moved.ToString("n1") + " K, from " + shipped.Mean.ToString("n1")
-                    + " to " + corrected.Mean.ToString("n1") + "; it is applied on the finding that"
+                    + " mean by " + moved.ToString("n1") + " K, from " + flat.Mean.ToString("n1")
+                    + " to " + shipped.Mean.ToString("n1") + "; it was applied on the finding that"
                     + " it does not, so a move this size means the finding needs re-reading rather"
                     + " than the threshold");
             }
@@ -221,23 +234,23 @@ namespace Thermodynamics.Tests
             // being carried and at 125 kW both figures are within a few kelvin of each other.
             const float Watts = 1250000f;
 
+            Reading largeFlat = Ring(true, true, Watts, SettledSteps);
             Reading largeShipped = Ring(true, false, Watts, SettledSteps);
-            Reading largeCorrected = Ring(true, true, Watts, SettledSteps);
 
-            Assert.True(largeCorrected.Spread < largeShipped.Spread * 0.5f,
-                "a large-grid ring swung " + largeCorrected.Spread.ToString("n1")
-                + " K corrected against " + largeShipped.Spread.ToString("n1")
-                + " K shipped; ten times the fluid was expected to buffer the ring, and if it does"
-                + " not then the correction is not doing what balance.md says it does");
+            Assert.True(largeShipped.Spread < largeFlat.Spread * 0.5f,
+                "a large-grid ring swings " + largeShipped.Spread.ToString("n1")
+                + " K as it ships against " + largeFlat.Spread.ToString("n1")
+                + " K on the flat charge; ten times the fluid was expected to buffer the ring, and"
+                + " if it does not then the correction is not doing what balance.md says it does");
 
+            Reading smallFlat = Ring(false, true, Watts, SettledSteps);
             Reading smallShipped = Ring(false, false, Watts, SettledSteps);
-            Reading smallCorrected = Ring(false, true, Watts, SettledSteps);
 
-            Assert.True(smallCorrected.Spread > smallShipped.Spread * 2f,
-                "a small-grid ring swung " + smallCorrected.Spread.ToString("n1")
-                + " K corrected against " + smallShipped.Spread.ToString("n1")
-                + " K shipped; a twelfth of the fluid was expected to buffer it worse, and this is"
-                + " the half of the correction that costs a small grid something");
+            Assert.True(smallShipped.Spread > smallFlat.Spread * 2f,
+                "a small-grid ring swings " + smallShipped.Spread.ToString("n1")
+                + " K as it ships against " + smallFlat.Spread.ToString("n1")
+                + " K on the flat charge; a twelfth of the fluid was expected to buffer it worse,"
+                + " and this is the half of the correction that costs a small grid something");
         }
 
         /// <summary>
@@ -251,13 +264,13 @@ namespace Thermodynamics.Tests
         {
             foreach (bool large in new[] { true, false })
             {
+                Reading flat = Ring(large, true, ReferenceWatts, SettledSteps);
                 Reading shipped = Ring(large, false, ReferenceWatts, SettledSteps);
-                Reading corrected = Ring(large, true, ReferenceWatts, SettledSteps);
 
-                Assert.True(corrected.Substeps <= shipped.Substeps + 0.01f,
-                    "a " + (large ? "large" : "small") + "-grid ring demanded "
-                    + corrected.Substeps.ToString("n2") + " substeps corrected against "
-                    + shipped.Substeps.ToString("n2")
+                Assert.True(shipped.Substeps <= flat.Substeps + 0.01f,
+                    "a " + (large ? "large" : "small") + "-grid ring demands "
+                    + shipped.Substeps.ToString("n2") + " substeps as it ships against "
+                    + flat.Substeps.ToString("n2") + " on the flat charge"
                     + "; less coolant is a stiffer parcel, so this is the assertion that would"
                     + " catch the correction becoming expensive on small grids");
             }
@@ -272,8 +285,8 @@ namespace Thermodynamics.Tests
         public void TheFlatChargeOutweighsTheSmallPipeCarryingIt()
         {
             float pipe = ShippedBlocks.Model("Gauge_SG_CoolantPipe_Straight").Mass;
-            float flat = LoopThermalProperties.Default().CoolantMassPerPipe;
-            float corrected = LoopCandidate.For(Catalog.SmallGridSize).CoolantMassPerPipe;
+            float flat = LoopBefore.FlatKilogramsPerPipe;
+            float corrected = LoopThermalProperties.Default().MassPerPipe(Catalog.SmallGridSize);
 
             output.WriteLine("small pipe {0:n0} kg, flat charge {1:n0} kg, corrected {2:n1} kg",
                 pipe, flat, corrected);

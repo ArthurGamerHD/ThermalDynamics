@@ -38,7 +38,7 @@ namespace Thermodynamics
         /// Incremented whenever the file's shape changes. A file at a different version is replaced
         /// with defaults rather than partially applied.
         /// </summary>
-        public const int CurrentVersion = 6;
+        public const int CurrentVersion = 7;
 
         public static Settings Instance;
 
@@ -282,8 +282,25 @@ namespace Thermodynamics
         // Loops.xml as world settings. A value still equal to the shipped one is left alone rather
         // than written over the definition; move one and it wins from then on.
 
-        /// <summary>Coolant carried by one pipe block, kg. More is more capacity for the same coupling.</summary>
-        [ProtoMember(85)] public float LoopCoolantMassPerPipe = 50f;
+        /// <summary>
+        /// Coolant per cubic metre of the cell a pipe occupies, kg/m³ — the charge a ring is filled
+        /// from, and the reason a small-grid pipe no longer carries more fluid than it weighs.
+        /// </summary>
+        [ProtoMember(133)] public float LoopCoolantKilogramsPerCubicMetre = 33f;
+
+        /// <summary>
+        /// A flat coolant mass per pipe block, kg, or **zero to charge from
+        /// <see cref="LoopCoolantKilogramsPerCubicMetre"/> and the cell**, which is what ships.
+        ///
+        /// <para>
+        /// **The name is kept rather than repurposed** (`P15`): a world that moved this dial moved
+        /// kilograms in a pipe, and reading the same number as a density would give it sixteen times
+        /// the fluid on a large grid. It shipped at 50 until `C43`; a config still carrying that is
+        /// replaced wholesale rather than reinterpreted, because <see cref="CurrentVersion"/> moved
+        /// with it.
+        /// </para>
+        /// </summary>
+        [ProtoMember(85)] public float LoopCoolantMassPerPipe = 0f;
 
         /// <summary>
         /// The excess a refill is priced at, K: restoring a kilogram costs the heat that kilogram
@@ -887,6 +904,7 @@ namespace Thermodynamics
                 "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes",
 
                 "LoopLargeGridFlowRate", "LoopSmallGridFlowRate", "LoopCoolantMassPerPipe",
+                "LoopCoolantKilogramsPerCubicMetre",
                 "LoopSpecificHeat", "LoopHeatTransferCoefficient", "LoopPipeContactMultiplier",
                 "LoopSinkContactMultiplier", "LoopStagnantTransferFraction",
                 "LoopRefillEquivalentKelvin", "LoopRefillKilogramsPerSecond",
@@ -980,6 +998,7 @@ namespace Thermodynamics
                 case "TelemetryPlanetProbes": return TelemetryPlanetProbes;
 
                 case "LoopCoolantMassPerPipe": return LoopCoolantMassPerPipe;
+                case "LoopCoolantKilogramsPerCubicMetre": return LoopCoolantKilogramsPerCubicMetre;
                 case "LoopRefillEquivalentKelvin": return LoopRefillEquivalentKelvin;
                 case "LoopRefillKilogramsPerSecond": return LoopRefillKilogramsPerSecond;
                 case "LoopHeatTransferCoefficient": return LoopHeatTransferCoefficient;
@@ -1095,6 +1114,8 @@ namespace Thermodynamics
                 case "TelemetryPlanetProbes": TelemetryPlanetProbes = (int)value; return true;
 
                 case "LoopCoolantMassPerPipe": LoopCoolantMassPerPipe = value; return true;
+                case "LoopCoolantKilogramsPerCubicMetre":
+                    LoopCoolantKilogramsPerCubicMetre = value; return true;
                 case "LoopRefillEquivalentKelvin": LoopRefillEquivalentKelvin = value; return true;
                 case "LoopRefillKilogramsPerSecond": LoopRefillKilogramsPerSecond = value; return true;
                 case "LoopHeatTransferCoefficient": LoopHeatTransferCoefficient = value; return true;

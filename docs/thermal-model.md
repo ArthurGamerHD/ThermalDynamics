@@ -446,9 +446,14 @@ before it is built (`E1`). Three parts, and only the third is anybody's opinion.
 less**, because both the parcel capacity and every link's conductance scale with it:
 
 ```
-SegmentThermalMass = fill × SpecificHeat × CoolantMassPerPipe / HeatTimeScale
+SegmentThermalMass = fill × SpecificHeat × MassPerPipe(cell) / HeatTimeScale
 G_pipe, G_plate    = fill × (as above)
 ```
+
+where `MassPerPipe(cell)` is `CoolantKilogramsPerCubicMetre × cell³` — a density times the volume of
+the cell the pipe occupies, so a 2.5 m pipe carries 515.6 kg and a 0.5 m one 4.1 kg — or a flat
+`CoolantMassPerPipe` where a definition or a world states one. It was a flat 50 kg at both sizes
+until `C43`, which is a gas in a large cell and outweighs the pipe block in a small one.
 
 **The point of scaling both is that their ratio is what the integrator sizes a substep from**, and
 the ratio is therefore invariant in fill:
@@ -474,8 +479,8 @@ The energy to restore one kilogram is the heat that kilogram holds at a stated e
 J/kg = SpecificHeat × LoopRefillEquivalentKelvin / HeatTimeScale
 ```
 
-At the shipped 3,400 J/(kg·K), 100 K and 90, that is **3,778 J/kg** — so one pipe's 50 kg parcel
-costs **188,889 J** to restore. **That is exactly what venting it removes at 100 K above ambient**,
+At the shipped 3,400 J/(kg·K), 100 K and 90, that is **3,778 J/kg** — so a 50 kg parcel costs
+**188,889 J** to restore. **That is exactly what venting it removes at 100 K above ambient**,
 measured at 188,889 J in `GrindAndRewealdIsWorthKilowattsRatherThanMegawatts`. So a vent-and-refill
 cycle at 100 K over is **exactly neutral in heat** and loses on power and time, which is the exploit
 benefit erased by construction rather than by a number picked to be large enough.
@@ -889,6 +894,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | A segment's thermal mass takes `MassPerPipe(cell)` — a density times the volume of the cell the pipe occupies — rather than a flat mass at both grid sizes. `C43`. |
 | 2026-08-26 | Corrected *Coolant is a consumable*, which described the refill advancing with the step when the code advanced it with the frame alone — so the consumable worked in a session and was invisible to every lab, benchmark and test, which is the lane every figure on balance.md is read in. Added *A pump makes the ring conduct, not only circulate*: fluid-to-wall transfer is convective and so depends on the flow, and nothing expressed that until `LoopStagnantTransferFraction` was wired to the leg it names. Both found by `LoopDialReachTests`. |
 | 2026-08-25 | **A broken ring keeps its coolant's heat, and the two thirds it used to destroy were an accident of two capacities** ([backlog.md](backlog.md) `A12`). The spill mixed each parcel into its pipe at `(T_n·M_n + T_s·M_s) / (M_n + M_s)` and then left the node at `M_n`, so `M_s / (M_n + M_s)` of the ring's heat — **67.9 %** on a large grid, 941 J/K of pipe against 1,889 of parcel — landed nowhere. The pipe now takes the parcel's heat capacity along with its temperature and hands both back when a ring re-forms through it, so grinding a pipe out of an eight-pipe ring costs **one eighth**, which is the parcel that left inside the block, and splitting a ring costs nothing. **Predicted before it was run** and the prediction stands at three ring lengths. Two further defects came out of the same code and are fixed with it: under `WellMixedCoolant` the spill handed *every* pipe the whole ring's fluid, and `SegmentTemperature`/`SetSegmentTemperature` bounded a **pipe** index by the **parcel** count, so in that model every pipe after the first read and wrote nothing. |
 | 2026-08-25 | Said what the friction expression is: drag power, with `FrictionScale` standing in for `½ C_d`. The model computes what the air takes from a ship's energy and returns none of it to the ship's motion — a median 5.05 MW on the published population at `reentry`, which is 16.8 kN never applied. Whether it should be is [backlog.md](backlog.md) `K1`, and the coefficient is why it is not obvious. |

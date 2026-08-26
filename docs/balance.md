@@ -220,11 +220,12 @@ change is worth **9.7 K**, and it costs the integrator nothing at all, because a
 sized from `SegmentConductance / SegmentThermalMass` and this moves only the denominator.
 
 It saturates by about 500 kg, and 515 kg is where the derivation lands independently: a bore one
-fifth of the cell across, down the middle of a 2.5 m cube, is 0.49 m³ of water-glycol.
-**`CoolantMassPerPipe` is a flat 50 kg with no grid size in it** — 3.2 kg/m³ in a large cell, which
-is a gas, against 400 kg/m³ in a small one, which is a liquid. That is the same defect
-`HeatTransferCoefficient` was already corrected for, and it is authored for the grid the mod is
-least often plumbed on.
+fifth of the cell across, down the middle of a 2.5 m cube, is 0.49 m³ of water-glycol. **It shipped
+as a flat 50 kg with no grid size in it** — 3.2 kg/m³ in a large cell, which is a gas, against
+400 kg/m³ in a small one, which is a liquid — and `C43` replaced that with a density of 33 kg/m³, the
+same correction `HeatTransferCoefficient` had already had. `CoolantKilogramsPerCubicMetre` is the
+dial; `CoolantMassPerPipe` is still read and still means kilograms in a pipe, for a file that states
+one.
 
 > **The cost column is honest and narrow.** +23 % substeps at `h` 1,000 is paid by the block the
 > sink touches, not by the fluid, so more coolant cannot buy it back. It also lands only on grids
@@ -396,12 +397,14 @@ pumps are off.
 
 #### The coolant mass is doing an undeclared job, and the measurement that said so was wrong
 
-`CoolantMassPerPipe` is a flat 50 kg with no grid size in it — **3.2 kg/m³ in a 2.5 m cube, which is
-a gas, against 400 kg/m³ in a 0.5 m one, which is a liquid**, and on a small grid it is more fluid
-than the 32 kg pipe block carrying it weighs. That is the same defect the coefficient was corrected
-for when it stopped being a conductivity divided by half a cell, and correcting it the same way
-means a fixed density with the mass following the cell: 33 kg/m³ is a bore a fifth of the cell
-across, filled with water-glycol, which gives 515 kg on a large grid and 4.1 kg on a small one.
+The coolant charge shipped as a flat 50 kg a pipe with no grid size in it — **3.2 kg/m³ in a 2.5 m
+cube, which is a gas, against 400 kg/m³ in a 0.5 m one, which is a liquid**, and on a small grid it
+is more fluid than the 32 kg pipe block carrying it weighs. That is the same defect the coefficient
+was corrected for when it stopped being a conductivity divided by half a cell, and correcting it the
+same way means a fixed density with the mass following the cell: 33 kg/m³ is a bore a fifth of the
+cell across, filled with water-glycol, which gives 515.6 kg on a large grid and 4.1 kg on a small
+one. **That is `CoolantKilogramsPerCubicMetre`, and it ships**; `CoolantMassPerPipe` is still read
+and still means kilograms in a pipe, for a file or a world that states one (`P15`).
 
 **The four figures this section published for that correction were readings of a ramp.** They were
 taken on a ring with a 125 kW source, the environment disabled and nothing else — so the rig had a
@@ -417,10 +420,10 @@ on the same rig:
 
 | | Coolant | Ring mean | Hottest segment | Swing | Substeps |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| large grid, shipped | 50 kg | 767.7 K | 836.6 K | 100.2 K | 14.51 |
-| large grid, corrected | 515.6 kg | **774.6 K** | **779.9 K** | **10.0 K** | 14.51 |
-| small grid, shipped | 50 kg | 1,551.9 K | 1,558.1 K | 7.7 K | 2.38 |
-| small grid, corrected | 4.1 kg | **1,552.7 K** | **1,630.6 K** | **94.6 K** | 2.38 |
+| large grid, the flat charge | 50 kg | 767.7 K | 836.6 K | 100.2 K | 14.51 |
+| large grid, **as it ships** | 515.6 kg | **774.6 K** | **779.9 K** | **10.0 K** | 14.51 |
+| small grid, the flat charge | 50 kg | 1,551.9 K | 1,558.1 K | 7.7 K | 2.38 |
+| small grid, **as it ships** | 4.1 kg | **1,552.7 K** | **1,630.6 K** | **94.6 K** | 2.38 |
 
 *Mean and swing at ten times the reference load, where a swing is large enough to read; the substep
 columns are at 125 kW. `LoopCoolantMassTests` holds all of it.*
@@ -433,9 +436,10 @@ it: a large pipe gains fluid and buffers ten times better, a small one loses flu
 times worse. That is the correction's real effect, and it is the half a player can see, because the
 hottest segment is the face a bolted block is coupled to.
 
-**So the objection that blocked it is gone.** It was *half of this is a regression on the grid size
-that is already the harder case*, and both halves of that are now measured false: the loss is 12.6 K
-at the reference load rather than 250 K, and the harder case is the next section.
+**So the objection that blocked it is gone, and it is applied.** The objection was *half of this is a
+regression on the grid size that is already the harder case*, and both halves of that are measured
+false: the loss is 12.6 K at the reference load rather than 250 K, and the harder case is the next
+section.
 
 #### What a small cell is behind on, and what it is not
 
@@ -2236,6 +2240,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | **The coolant density is applied** (`C43`). `CoolantKilogramsPerCubicMetre` is 33 kg/m³ — 515.6 kg a pipe on a large grid, 4.1 kg on a small one — and `CoolantMassPerPipe` stays as a flat-mass override defaulting to zero, so nothing that states a per-pipe mass is reinterpreted (`P15`). It moves a settled ring's mean by 6.9 K and 0.8 K, costs no substeps, and rights the swing between the sink face and the far side of the loop. `LoopCandidate` becomes `LoopBefore`: all three of its dials have shipped, and a candidate identical to the default is a lab arm that reports its own package as worthless. |
 | 2026-08-26 | **The correction that blocked `C43` was measured on a rig with no sink.** *The coolant mass is doing an undeclared job* published four temperatures off a ring with a 125 kW source and the environment disabled — nothing settled, every arm climbed linearly, and at step 25,600 the same arms read 26,836 K and 5,908 K rather than the 715.5 K and 387.0 K printed at step 400. It measured a ratio of heat capacities and looked like a temperature. Re-taken with the ring radiating, the density correction moves the **mean** 6.9 K on a large grid and 0.8 K on a small one and the **swing** 100.2 K → 10.0 K and 7.7 K → 94.6 K: coolant mass buffers a ring, it does not decide where the ring runs. `LoopCoolantMassTests` now asserts the rig settles before reading anything off it. |
 | 2026-08-26 | **Small grids are not the harder case, and this page had said they were on arithmetic rather than on evidence.** Per block over the eighty families the game ships at both sizes, a small variant is 2.12× behind on its own skin and 2.28× behind on the loop pickup and **2.5× ahead on conduction into the hull**; over the 8,137-ship census every column favours it, including **19.75×** the hull path per watt for the hottest block. Added *What a small cell is behind on, and what it is not* and *So small grids do not get their own pickup coefficient*: at three sink faces 79 of 80 families match large-grid answerability, closing the last one costs ×5.63 against a median need of ×2.28, and the handicap runs 0.83 to 25 because it tracks the game's per-block waste authoring rather than the cell. `CellSizeLab`, `CellSizeTests` and `tools/corpus/cellsize.py`. |
 | 2026-08-26 | **Raised the coolant's pumped coefficient to 1,000 W/(m²·K) and made 160 the stopped value** (`C42`). The pickup — sink faces times `h · A` — is the only thing deciding whether a buried block has an answer, the face count is fixed by design, and at 160 a 6.4 MW jump drive was forced 6,400 K above its surroundings against a 689 K rating: no answer at any radiator count, on the block carrying 65.5 % of a loaded fleet's heat. A sink face now carries **6,250 W/K**, the forced gradient is **1,024 K**, and `StagnantTransferFraction` 0.16 keeps a stopped ring at exactly the 160 it always had, so nothing anywhere is worse. The corpus retrofit does not move (p50 2.43 % to 2.44 %), because `C40` bounds every internal path at 9 % — what changed is what a deliberate plumbing job can build. Re-measured the ring table, the bolt-to-sink ratio and every published sink figure. |

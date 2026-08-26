@@ -10,13 +10,22 @@
 			<ModExtensions>
 				<Group Name="ThermalLoopProperties">
 					<!--
-						kg of coolant in each pipe block, so a ring's charge scales with its length.
-						Per pipe rather than per loop: a fixed charge per loop divided the same fluid
-						into smaller parcels as a ring grew, which made every parcel stiffer to
-						integrate and made a longer ring couple harder to the grid while holding no
-						more coolant. 50 kg matches the old 500 kg figure at a ten-pipe ring.
+						kg of coolant per cubic metre of the cell a pipe occupies, so a ring's charge
+						scales with its length AND with the grid it is built on. Per pipe rather than
+						per loop: a fixed charge per loop divided the same fluid into smaller parcels
+						as a ring grew, which made every parcel stiffer to integrate and made a longer
+						ring couple harder to the grid while holding no more coolant.
+
+						A density rather than a flat mass, because a flat mass has no grid size in it.
+						This was 50 kg a pipe until C43: 3.2 kg/m3 in a 2.5 m cube, which is a gas,
+						against 400 kg/m3 in a 0.5 m one, which is a liquid and outweighs the 32 kg
+						pipe block carrying it. 33 kg/m3 is a bore a fifth of the cell across filled
+						with water-glycol - 515.6 kg a pipe on a large grid, 4.1 kg on a small one.
+
+						CoolantMassPerPipe is still read and still means kilograms in a pipe. State it
+						instead of this to pin a flat charge; state neither and this default applies.
 					-->
-					<Decimal Name="CoolantMassPerPipe" Value ="50" />
+					<Decimal Name="CoolantKilogramsPerCubicMetre" Value ="33" />
 					<!--
 						W/(m2 K): how well heat crosses between the fluid and the wall it touches,
 						WHILE THE RING IS CIRCULATING. Convective, so there is no thickness in it -

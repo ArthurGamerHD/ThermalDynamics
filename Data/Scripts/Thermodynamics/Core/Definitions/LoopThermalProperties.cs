@@ -9,11 +9,65 @@ namespace Thermodynamics.Core
     public class LoopThermalProperties
     {
         /// <summary>
-        /// Coolant mass carried by each pipe block in the ring, kg; the loop's total is this times its
-        /// length. Per pipe rather than per loop, so segment capacity and contact area scale together
-        /// and a longer ring is a bigger buffer rather than a free cooling multiplier.
+        /// Coolant per cubic metre of the cell a pipe occupies, kg/m³ — **the charge, and the one a
+        /// ring uses unless something states a flat mass instead.**
+        ///
+        /// <para>
+        /// Per pipe rather than per loop, so segment capacity and contact area scale together and a
+        /// longer ring is a bigger buffer rather than a free cooling multiplier. A *density* rather
+        /// than a mass, because a flat mass has no grid size in it: the 50 kg this shipped until
+        /// `C43` is 3.2 kg/m³ in a 2.5 m cube, which is a gas, against 400 kg/m³ in a 0.5 m one,
+        /// which is a liquid and outweighs the 32 kg pipe block carrying it. That is the same defect
+        /// <see cref="HeatTransferCoefficient"/> was corrected for when it stopped being a
+        /// conductivity divided by half a cell.
+        /// </para>
+        ///
+        /// <para>
+        /// 33 kg/m³ is a bore one fifth of the cell across running down the middle of it, filled
+        /// with water-glycol at 1,050 kg/m³: `π/4 × (0.2g)² × g × 1050 / g³`. That is 515.6 kg a pipe
+        /// on a large grid and 4.1 kg on a small one.
+        /// </para>
+        ///
+        /// <para>
+        /// **What it changes is the swing, not the mean.** At steady state a ring's temperature is
+        /// set by what comes in against what radiates out and a charged capacity is in neither: the
+        /// correction moved a rig's mean 6.9 K on a large grid and 0.8 K on a small one, and moved
+        /// the spread between the sink face and the far side of the ring from 100.2 K to 10.0 K and
+        /// from 7.7 K to 94.6 K. See balance.md, *The coolant mass is doing an undeclared job*.
+        /// </para>
         /// </summary>
-        public float CoolantMassPerPipe = 50f;
+        public float CoolantKilogramsPerCubicMetre = 33f;
+
+        /// <summary>
+        /// A flat coolant mass per pipe block, kg, or **zero to derive it from
+        /// <see cref="CoolantKilogramsPerCubicMetre"/> and the cell** — which is what ships.
+        ///
+        /// <para>
+        /// **Kept as an override rather than repurposed** (`P15`). It was the charge until `C43`,
+        /// and the name is stated in `Loops.xml`, in a world's settings and in any third-party loop
+        /// definition — so a file that states a flat 50 still gets a flat 50, and only silence means
+        /// the density. Reading a stated per-pipe mass as a density would hand a large-grid ring
+        /// fifty kilograms per cubic metre: sixteen times the fluid it asked for.
+        /// </para>
+        /// </summary>
+        public float CoolantMassPerPipe = 0f;
+
+        /// <summary>
+        /// Coolant one pipe block carries on a grid of this cell size, kg. The flat mass where one
+        /// is stated, and the density times the cell's volume otherwise.
+        /// </summary>
+        public float MassPerPipe(float cellSizeMetres)
+        {
+            if (CoolantMassPerPipe > 0f) return CoolantMassPerPipe;
+
+            // A ring always knows its cell — the builder takes it from the grid — so this is
+            // defensive. It falls to the large grid rather than to the threshold between the two,
+            // because the threshold is a *comparison* value and is not a cell size anything has.
+            if (cellSizeMetres <= 0f) cellSizeMetres = LargeGridCellMetres;
+
+            return Math.Max(ThermalConstants.MinimumThermalMass,
+                CoolantKilogramsPerCubicMetre * cellSizeMetres * cellSizeMetres * cellSizeMetres);
+        }
 
         /// <summary>
         /// How well heat crosses between the fluid and the wall it touches, W/(m²·K).
@@ -116,6 +170,9 @@ namespace Thermodynamics.Core
         /// <summary>Cell sizes below this count as small grid. Between SE's 0.5 m and 2.5 m.</summary>
         public const float LargeGridCellThresholdMetres = 1f;
 
+        /// <summary>Space Engineers' large cell edge, m. The fallback where a caller states none.</summary>
+        public const float LargeGridCellMetres = 2.5f;
+
         /// <summary>
         /// Fraction of full transfer that survives with no circulation at all, 0..1.
         ///
@@ -131,7 +188,10 @@ namespace Thermodynamics.Core
 
         public LoopThermalProperties Clamp()
         {
-            CoolantMassPerPipe = Math.Max(1f, CoolantMassPerPipe);
+            // Zero is the value that means "derive from the density", so it is not clamped
+            // away; a negative one would be, and is the only thing this line now catches.
+            CoolantMassPerPipe = Math.Max(0f, CoolantMassPerPipe);
+            CoolantKilogramsPerCubicMetre = Math.Max(0f, CoolantKilogramsPerCubicMetre);
             RefillEquivalentKelvin = Math.Max(0f, RefillEquivalentKelvin);
             RefillKilogramsPerSecond = Math.Max(0f, RefillKilogramsPerSecond);
             LargeGridFlowRate = Math.Max(0f, LargeGridFlowRate);

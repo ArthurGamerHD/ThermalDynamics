@@ -389,6 +389,7 @@ namespace Thermodynamics
             if (definition == null) return properties.Clamp();
 
             properties.CoolantMassPerPipe = definition.CoolantMassPerPipe;
+            properties.CoolantKilogramsPerCubicMetre = definition.CoolantKilogramsPerCubicMetre;
             properties.HeatTransferCoefficient = definition.HeatTransferCoefficient;
             properties.SpecificHeat = definition.SpecificHeat;
             properties.PipeContactMultiplier = definition.PipeContactMultiplier;
@@ -454,6 +455,10 @@ namespace Thermodynamics
 
             if (Moved(world.LoopCoolantMassPerPipe, shipped.LoopCoolantMassPerPipe))
                 properties.CoolantMassPerPipe = world.LoopCoolantMassPerPipe;
+
+            if (Moved(world.LoopCoolantKilogramsPerCubicMetre,
+                shipped.LoopCoolantKilogramsPerCubicMetre))
+                properties.CoolantKilogramsPerCubicMetre = world.LoopCoolantKilogramsPerCubicMetre;
 
             if (Moved(world.LoopRefillEquivalentKelvin, shipped.LoopRefillEquivalentKelvin))
                 properties.RefillEquivalentKelvin = world.LoopRefillEquivalentKelvin;
