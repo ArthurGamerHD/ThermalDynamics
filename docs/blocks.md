@@ -35,7 +35,14 @@ derived in [thermal-model.md](thermal-model.md#coolant-loops); the short version
 under a per cent of what the ring carries, where a heat pump pays a third.
 
 *Sink faces* are the sides that transfer heat between the coolant and the block pressed against
-them. A pipe with no sinks is plumbing only. Plumbing is declared per subtype in
+them. A pipe with no sinks is plumbing only.
+
+> **Sink faces are deliberately few, and that is a design constraint rather than an oversight.** A
+> pipe carries at most two, a pump carries none, and a plain pipe is plumbing. The loop is meant to
+> be a thing you route and commit space to, not a coating you wrap a hot block in until it stops
+> being a problem — so *add more sink faces* is not a balance lever, and the pickup is raised or
+> lowered through the coolant's own coefficient instead. See balance.md, *What a jump drive costs in
+> radiator*, where the difference decides whether a 6.4 MW block has an answer at all. Plumbing is declared per subtype in
 [ThermalCoolantShapes.cs](../Data/Scripts/Thermodynamics/Game/ThermalCoolantShapes.cs) as a
 `CoolantShape`: two link ports, any number of sink ports, and whether the block is a pump. **A new
 pipe subtype must be added there.** Ports carry the cell they sit on as well as their direction, so

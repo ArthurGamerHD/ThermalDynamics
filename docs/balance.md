@@ -333,12 +333,35 @@ drive is **2,047.8 K down to about 808 K**: not survival, but the difference bet
 197 % over its rating and one that is 17 % over, which is the difference between losing it at once
 and taking slow damage a player can see coming and decide about.
 
+> **The face count is not a lever, by design.** A pipe carries at most two sink faces, a pump none,
+> and the loop is meant to be routed and paid for in space rather than wrapped around a hot block
+> until it stops being one — see [blocks.md](blocks.md#coolant-pipes). The three-face row above is
+> what a ring already gives you for free when a rectangle runs past a one-cell source; it is a
+> measurement of the geometry, not a proposal to loosen it. **So the pickup has exactly one dial,
+> the coolant's coefficient**, and the table says what that dial decides.
+
+Taking the constraint as fixed and reading the same arithmetic the other way — what a realistic run
+of one to four sink faces can carry against a 6.4 MW block rated 689 K:
+
+| Sink faces | Shipped, W/K | Forces | Candidate, W/K | Forces |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 1,000 | 6,400 K | 6,250 | 1,024 K |
+| 2 | 2,000 | 3,200 K | 12,500 | 512 K |
+| 3 | 3,000 | 2,133 K | 18,750 | 341 K |
+| 4 | 4,000 | 1,600 K | 25,000 | 256 K |
+
+**At the shipped coefficient no realistic plumbing brings a 6.4 MW block under its rating** — four
+sink faces still force 1,600 K against 689 K, and wrapping a one-cell source in all six it
+geometrically has only reaches 1,067 K. Under the candidate, two faces are enough for the pickup to
+stop being what binds. That is the whole decision in one table.
+
 #### Where the balance work goes
 
 A retrofit is bounded at 9 % and a design is not, so the lever with headroom is whatever makes
-players build the loop — installability, and what the loop is worth once installed — rather than any
-dial on the fluid inside it. And the pickup is the term to watch: **sink faces × `h · A` against the
-watts**, because that ratio, not the radiator count, is what decides whether a block has an answer.
+players build the loop — installability, and what it is worth once built — rather than any dial on
+the fluid's *transport*. But the fluid's **coefficient** is a different matter: with the face count
+fixed by design, it is the only thing that sets the pickup, and the pickup is what decides whether a
+block has an answer at all.
 
 **A pump should be what makes this true.** Fluid-to-wall transfer is convective, so it depends on
 the flow, and nothing in the model expressed that until `C37`: the coefficient applied whole whether
