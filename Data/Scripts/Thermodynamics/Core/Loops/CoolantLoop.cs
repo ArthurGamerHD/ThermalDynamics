@@ -236,6 +236,24 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// What refilling is asking for right now, W — the rate times the price, or zero when the
+        /// ring is full.
+        ///
+        /// **This is what a pump adds to its power request**, so the grid's distributor decides
+        /// whether the ship can afford to refill, and the heat arrives through the pump's own
+        /// `ConsumerWasteEnergy` with no second path. A ring with no pump asks for nothing and
+        /// therefore never refills, which is the right answer: something has to drive the fluid in.
+        /// </summary>
+        public float RefillDemandWatts
+        {
+            get
+            {
+                if (fill >= 1f || !HasPump) return 0f;
+                return Properties.RefillKilogramsPerSecond * RefillJoulesPerKilogram;
+            }
+        }
+
+        /// <summary>
         /// Puts <paramref name="deltaSeconds"/> of refilling into the ring and returns the watts it
         /// drew doing so — zero when the ring is already full.
         ///
@@ -254,12 +272,26 @@ namespace Thermodynamics.Core
         /// </summary>
         public float Refill(float deltaSeconds)
         {
-            if (deltaSeconds <= 0f || fill >= 1f) return 0f;
+            return Refill(deltaSeconds, 1f);
+        }
+
+        /// <summary>
+        /// The same, at the share of its request the grid actually supplied. **No power, no
+        /// fill**: a ship that cannot afford the refill does not get it, and gets no heat from it
+        /// either, which is the same rule every other draw in this mod follows.
+        /// </summary>
+        public float Refill(float deltaSeconds, float availableFraction)
+        {
+            if (deltaSeconds <= 0f || fill >= 1f || !HasPump) return 0f;
+
+            float available = availableFraction < 0f ? 0f
+                : (availableFraction > 1f ? 1f : availableFraction);
+            if (available <= 0f) return 0f;
 
             float capacity = CapacityKilograms;
             if (capacity <= 0f) return 0f;
 
-            float wanted = Properties.RefillKilogramsPerSecond * deltaSeconds;
+            float wanted = Properties.RefillKilogramsPerSecond * available * deltaSeconds;
             float room = (1f - fill) * capacity;
             float added = wanted < room ? wanted : room;
             if (added <= 0f) return 0f;

@@ -488,6 +488,14 @@ treats as the point a block is worth telling the player about.
 comes back, so the cycle cannot be run faster than the fill however many grinders are on the ship.
 At the shipped rate the pump draws `J/kg × kg/s` while filling and nothing when full.
 
+**What drives it.** A ring short of full advertises `RefillDemandWatts`, the pump adds it to what
+it asks the grid for, and the fill advances with the *step* rather than with the frame — coolant is
+a simulated quantity and a frame is not simulated time. **No pump, no refill**: something has to
+drive the fluid in, and a pumpless ring is a loop that holds coolant and circulates none. **No
+power, no refill either**: a pump the grid could not supply fills by the share it was given, which
+is the rule every other draw in this mod follows. Measured on an empty eight-pipe large-grid ring,
+the pump draws **18,889 W** while filling and nothing when full.
+
 **Venting is instant and refilling is not, and that asymmetry is the mechanic.** An emergency dump
 buys relief now and is paid back gradually while the radiators work — useful once, useless on a
 timer. It is the only part of this with no derivation under it, so it is a setting and it says so.

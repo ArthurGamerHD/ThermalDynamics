@@ -308,6 +308,85 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **A ring refills as the simulation steps, and the pump is charged for it** — so the
+        /// heat arrives through the pump's own `ConsumerWasteEnergy` of 1 rather than through a
+        /// second path invented for this feature.
+        /// </summary>
+        [Fact]
+        public void SteppingARingRefillsItAndChargesThePump()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
+
+            ThermalSimulation simulation = builder.BuildSimulation(Isolated());
+            CoolantLoop loop = simulation.Solver.Loops[0];
+
+            Assert.True(loop.HasPump, "the ring has no pump, so nothing can drive a refill");
+
+            loop.FillFraction = 0f;
+            Assert.True(loop.RefillDemandWatts > 0f, "an empty ring is asking for nothing");
+
+            BlockInstance pumpBlock = loop.Pumps[0].Block;
+            float before = pumpBlock.PowerConsumedWatts;
+
+            for (int i = 0; i < 20; i++) simulation.Update(1f, default(EnvironmentSample));
+
+            output.WriteLine("after 20 s: fill {0:p1}, pump draw {1:n0} W (was {2:n0})",
+                loop.FillFraction, pumpBlock.PowerConsumedWatts, before);
+
+            Assert.True(loop.FillFraction > 0f, "stepping the simulation refilled nothing");
+            Assert.True(pumpBlock.PowerConsumedWatts > before,
+                "the pump was not charged for the refill, so the heat never arrives");
+        }
+
+        /// <summary>
+        /// **A ring with no pump never refills.** Something has to drive the fluid in, and a
+        /// pumpless ring is a loop that holds coolant and circulates none.
+        /// </summary>
+        [Fact]
+        public void ARingWithNoPumpAsksForNothingAndNeverRefills()
+        {
+            CoolantLoop loop;
+            Ring(out loop);
+
+            // A pumpless ring, made by taking the pump back off: `BuildRing` chooses one when it is
+            // not told otherwise, which is the right default for every other test here.
+            loop.Pumps.Clear();
+            loop.HasPump = false;
+
+            loop.FillFraction = 0f;
+
+            Assert.False(loop.HasPump);
+            Assert.Equal(0f, loop.RefillDemandWatts);
+            Assert.Equal(0f, loop.Refill(10f));
+            Assert.Equal(0f, loop.FillFraction);
+        }
+
+        /// <summary>
+        /// **No power, no fill.** A pump the grid could not supply refills by the share it was
+        /// given, which is the rule every other draw in this mod follows.
+        /// </summary>
+        [Fact]
+        public void AnUnderSuppliedPumpRefillsByTheShareItWasGiven()
+        {
+            CoolantLoop loop;
+            Ring(out loop);
+
+            loop.FillFraction = 0f;
+            float full = loop.Refill(1f, 1f);
+
+            loop.FillFraction = 0f;
+            float half = loop.Refill(1f, 0.5f);
+
+            loop.FillFraction = 0f;
+            Assert.Equal(0f, loop.Refill(1f, 0f));
+            Assert.Equal(0f, loop.FillFraction);
+
+            output.WriteLine("full supply {0:n0} W, half {1:n0} W", full, half);
+            Assert.InRange(half, full * 0.49f, full * 0.51f);
+        }
+
+        /// <summary>
         /// Kilograms are what a refill is priced in, so the ring reports them: a full eight-pipe
         /// large-grid ring is eight parcels of the shipped 50 kg.
         /// </summary>

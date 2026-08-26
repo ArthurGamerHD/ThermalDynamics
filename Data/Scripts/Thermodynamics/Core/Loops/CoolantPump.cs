@@ -38,6 +38,15 @@ namespace Thermodynamics.Core
         public float LastPowerWatts;
 
         /// <summary>
+        /// What this pump was charged for refilling on the last step, W.
+        ///
+        /// Kept so the charge can be taken off before the next one is added: a refill runs for
+        /// many steps, and adding to the block's drawn power without removing the previous
+        /// addition would bill it once per step for as long as it ran.
+        /// </summary>
+        public float LastRefillWatts;
+
+        /// <summary>
         /// This pump's share of the ring's flow, signed by <see cref="Direction"/>: speed times what
         /// the grid supplied. A demand rather than a flow — <see cref="CoolantLoop.RefreshFlow"/> sums
         /// these and takes the square root — so opposed pumps subtract.

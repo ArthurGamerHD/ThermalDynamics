@@ -805,6 +805,12 @@ namespace Thermodynamics.Core
                 }
                 SimulatedSecondsRun += seconds;
 
+                // **Refilling advances with the step, not with the frame**, because the coolant
+                // is a simulated quantity and a frame is not simulated time. A ring with no pump
+                // asks for nothing and never fills — something has to drive the fluid in — and a
+                // pump that was not supplied fills by the share it was.
+                RefillLoops(seconds);
+
                 if (!solver.BeginStep(seconds, state, demand)) return;
 
                 overheats.Clear();
@@ -844,6 +850,48 @@ namespace Thermodynamics.Core
             // The next step starts on the following frame, so a completion never pulls a second
             // step in behind it. This is what bounds a frame's cost.
             CollectStepOutput();
+        }
+
+        /// <summary>
+        /// Puts one step of refilling into every ring that is short, and charges the pump for it.
+        ///
+        /// <para>
+        /// **The watts go onto the pump block's drawn power**, which is the only path this needs:
+        /// a pump's `ConsumerWasteEnergy` is 1, so the existing waste-heat model turns all of it
+        /// into heat where the pump stands. That is what makes venting and refilling neutral at
+        /// the priced excess rather than a free heat sink — see thermal-model.md, *Coolant is a
+        /// consumable*.
+        /// </para>
+        ///
+        /// <para>
+        /// **The previous step's charge is taken off before this one is added**, so a refill that
+        /// runs for a hundred steps does not bill the pump a hundred times over. The pump's own
+        /// draw, which the host sets, is left alone either way.
+        /// </para>
+        /// </summary>
+        private void RefillLoops(float seconds)
+        {
+            IList<CoolantLoop> all = solver.Loops;
+
+            for (int i = 0; i < all.Count; i++)
+            {
+                CoolantLoop loop = all[i];
+                if (loop.Pumps.Count == 0) continue;
+
+                CoolantPump pump = loop.Pumps[0];
+                if (pump.Block == null) continue;
+
+                float watts = loop.Refill(seconds, pump.PowerAvailable);
+
+                if (watts == pump.LastRefillWatts) continue;
+
+                pump.Block.PowerConsumedWatts =
+                    Math.Max(0f, pump.Block.PowerConsumedWatts - pump.LastRefillWatts) + watts;
+                pump.LastRefillWatts = watts;
+
+                ThermalNode node = solver.GetNode(pump.Block);
+                if (node != null) node.RefreshHeatGeneration();
+            }
         }
 
         private void CollectStepOutput()
