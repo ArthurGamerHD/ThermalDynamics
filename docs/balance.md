@@ -591,22 +591,22 @@ about the player who built the block (`E6`). That much is the finding and it sta
 > generator is one of thirteen definitions the game gives no subtype — so **not one of them exists
 > anywhere in the census**, and the 2,277 "carriers" were the ships carrying a small-grid or DLC
 > generator instead. That is `A13`, fixed the same day and pinned by
-> `ABlockWithNoSubtypeNameIsItsOwnTypesBaseVariantRatherThanArmour`. Re-read through the corrected
-> resolver, over a 400-ship stride sample of the corpus: **258 of 400 ships carry a generator —
-> 64.5 %, not 28.5 %** — and their median share is **10.4 %**, with p75 at 27.0 %, p90 at **61.4 %**
-> and p99 at 98.8 %. The basis is not the census's and the difference runs one way: this parse
-> charges a generator at its full rating and a *reactor* at its full rating too, where the census
-> charges a producer only for the load it covers, so the denominator is larger and **10.4 % is a
-> lower bound**. The claim that first stood here — *on an ordinary ship with no drive, an oxygen
-> generator is most of the heat there is* — is **withdrawn**: it is most of the heat on the top
-> tenth and a tenth of it in the middle.
+> `ABlockWithNoSubtypeNameIsItsOwnTypesBaseVariantRatherThanArmour`. **The corpus was re-censused
+> the same day** — 8,137 ships, taken twice and reproducing — and on the population: **5,184 of
+> 8,032 ships carry a generator, 64.5 %, not 28.5 %**, and their median share is **14.4 %**, p75
+> **43.4 %**, p90 **80.8 %**, p99 95.6 %. The 400-ship stride sample this was first corrected to
+> agreed on the carrier share to the decimal and put the median at 10.4 %, a third low; the sample
+> figures are superseded rather than wrong, and balance-lab.md records why a sample of 400 missed
+> it. The claim that first stood here — *on an ordinary ship with no drive, an oxygen generator is
+> most of the heat there is* — is **withdrawn**: it is most of the heat for the top tenth and a
+> seventh of it in the middle.
 
 So this is a balance change rather than the correction the row was filed as, and it is smaller than
-the first reading of it said: **a third off a block that is a tenth of the median carrier's
-full-load waste and more than half of the top tenth's**. `dotnet run --project Thermodynamics.Sim --
-basevariants --ships 400 --type OxygenGenerator` recomputes it, and
-`python3 tools/corpus/provenance.py <composition.csv> --type OxygenGenerator` reads the census —
-which, until it is re-run, cannot see this type's largest member.
+the first reading of it said: **a third off a block that is a seventh of the median carrier's
+full-load waste and four fifths of the top tenth's**.
+`python3 tools/corpus/provenance.py out/census-2026-08-25/composition.csv --type OxygenGenerator`
+computes it, and `Thermodynamics.Sim -- basevariants --ships 400 --type OxygenGenerator` is the
+parse that answered it before the census was re-taken.
 
 **The registration's reason for not running a walk was wrong, and it is left standing above.** It
 argued that a type carrying 0.38 % of a fleet's waste cannot be worth hours of the machine when a
@@ -1681,6 +1681,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | **Put the oxygen generator's population figures on the re-censused population**, replacing the 400-ship parse that stood in while the census was broken: **64.5 % of ships carry one — the sample had that exactly — and their median share is 14.4 %** rather than 10.4 %, with p90 at 80.8 %. The sample was representative of carriers and not of the middle of the distribution; balance-lab.md carries why. |
 | 2026-08-25 | **Corrected this page's oxygen-generator population figures in place, because the instrument behind them could not see the block** (`E10`). `Blueprints` built every empty-`SubtypeName` block as an armour cube, and the vanilla large oxygen generator is one of the thirteen definitions the game gives no subtype — so the census holds none of them and the *2,277 carriers, median 48.1 %* was measured over the ships carrying some other generator. Through the fixed resolver, on a 400-ship stride sample: **64.5 % of ships carry one and their median share is 10.4 %**, p90 61.4 %. *An oxygen generator is most of the heat there is on an ordinary ship* is withdrawn. The decision itself is untouched — it was made on the rig, which builds its blocks from the definitions and never went through the blueprint reader. The defect is `A13`. |
 | 2026-08-25 | **Decided `C21`'s last open invention on the rig, and it went the opposite way to `C28`: the oxygen generator's fraction is 0.40, sourced.** The registered rule's first clause fired on a finding nobody was looking for — at the 0.6 that shipped, two of the six vanilla generators are past their own critical temperature *bare* at the draw their own definition rates, which is a block that cannot be built rather than a balance choice. 0.40 is the top of the band electrolysis sources and the highest value where all six survive both rigs. **Two of four predictions fail.** A skin *cools* a small heat source where it cooks a reactor, so this page's *ceiling and floor* is corrected in place (`E10`); and the population half was asked of the fleet and answered by the ship — 0.38 % of a loaded fleet's waste, a **median 48.1 %** of the waste of the 2,277 ships that carry one, and 60.0 % of the 2,003 carriers with no jump drive (`E6`). So it is a balance change and not the correction the row was filed as. |
 | 2026-08-25 | **Registered the criterion for `C21`'s last open invention before measuring it**, in [Oxygen generator waste heat](#oxygen-generator-waste-heat-written-before-it-is-measured) (`E1`, `E11`). An oxygen generator wastes 0.6 of what it draws where electrolysis sources 0.20-0.40, which is the largest gap in `Cubes.xml`. The rule settles both halves — whether to move and where to — against the two precedents that point opposite ways, `C21`'s computer third that moved and `C28`'s reactor that did not, and four predictions carry the numbers that falsify them. Nothing has been run. |

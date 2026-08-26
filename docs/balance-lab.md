@@ -461,6 +461,69 @@ walk, the floor walk. Those are hours each and they are what `G1`, `G2`, `G5` an
 on, so **`A13` is not closed by this run** — a corrected census tells the balance criteria nothing
 until the walks are re-run against it.
 
+
+### What it did: A13 is worth twice what the sample said, and two predictions failed on the instrument rather than on the population
+
+`CorpusCensus` re-ran in **2 m 1 s** over 8,137 ships and 120,992 block rows, and was taken twice —
+the second run reproduces the first on every column of every ship, which is a determinism check
+this got for free by having to be repeated.
+
+**The headline: `A13` is worth 15.76 % of what the population makes, not the 8.89 % the sample
+said.** Summed over exactly the rows a base variant writes, the eleven block kinds the reader used
+to build as armour carry **14,532,166,957 W** against a population that makes 92,217,649,681 W
+without them. The 400-ship stride sample understated it by nearly half, which is the reading its
+registration specified in advance: *if it lands outside the band the sample was not representative,
+and every figure priced on that sample is a figure about 400 ships and has to say so* (`P1`). Where
+the watts are:
+
+| type | watts it adds | ships carrying one |
+| --- | ---: | ---: |
+| `GravityGenerator` | 6,974,791,556 | 2,973 |
+| `OxygenGenerator` | 6,242,800,000 | 5,184 |
+| `AirVent` | 1,312,250,000 | 4,636 |
+| `OxygenTank` | 2,325,400 | 5,094 |
+
+The other nine — the doors, the passage, the ladder, the turrets and the guns — add mass and
+geometry and no heat at all, which is why the sample and the population disagree so much: the
+sample's 400 ships carried a representative share of *blocks* and an unrepresentative share of
+**gravity generators**, and a gravity generator is 6.9 GW on its own.
+
+**The five predictions, scored.**
+
+| | prediction | outcome |
+| --- | --- | --- |
+| the cost | full-load waste rises 8–10 % | **fails at 41.14 %, and the instrument is what failed** — see below |
+| the reach | 60–75 % of ships hold a corrected block | **not scorable from a census.** `composition.csv` records heat-making blocks only, and nine of the eleven make none. 46.5 % of ships carry a base variant *that makes heat*; the sample's 68.8 % for all kinds is still the only figure for the question as written (`P2`) |
+| the population | the ship count is unchanged | **fails, 8,141 → 8,137**, and correctly — see below |
+| the type | `OxygenGenerator` appears for the first time and is the most common generator | **holds, emphatically**: **31,214** instances against 5,421 of every other generator combined, six to one |
+| the piston | it moves the geometry columns and not the heat | **holds on the half a census can see** — block, grid and joint counts are identical to the row, and the geometry columns moved — but the move cannot be attributed to the piston rather than to the doors and passages beside it, so this is *consistent with* rather than *evidence for* |
+
+**The cost prediction failed because the comparison did not hold everything but the subject equal
+(`P6`), and that is my error rather than the population's.** The two censuses are four days apart
+and four definition changes apart: the jump drives moved from 0.15 to their derived 0.2 and 0.1 on
+2026-08-23, twenty-seven computer and screen fractions moved from 0.9 to 1.0 on the 24th, the
+oxygen generator moved from 0.6 to 0.40 today, and `C24` moved the clock. The 41.14 % is the sum of
+all of it — the drives alone are +16.0 GW of the +31.1 GW — and **a census-to-census diff cannot
+isolate a reader fix.** What can is the composition, which names the rows a base variant writes;
+that is the 15.76 % above, and it is the figure to quote.
+
+**The ship count moved by four and both directions are the fix working.** Seven ships left and
+three arrived. The seven hold a block the game does not have: a `Door` with an empty subtype on a
+**small** grid, a small-grid `GravityGenerator` — the game's empty-subtype door and gravity
+generator are large-grid only. Those used to become a small armour cube, so the hull passed the
+vanilla filter carrying a block nothing could identify, and was measured as though it were vanilla.
+They are now rejected, which is what the filter is for. The three that arrived were being rejected
+for a block the pair now resolves. **Net −4 of 8,141, 0.05 %, and it is a `J3` cost worth having.**
+
+**What this changes for `C21`.** The oxygen generator's per-ship share was published from the
+sample as a median 10.4 % over 64.5 % of ships. On the population it is a median **14.4 %** over
+**64.5 %** of ships — the carrier share is exact and the median was understated by a third. p75 is
+43.4 %, p90 **80.8 %**. The decision does not move: it was taken on the rig.
+
+*Population: the 8,137-ship census of 2026-08-25, 120,992 block rows, taken at commit `b255a43`
+with the definition hashes recorded beside it — the first dataset in this repository that records
+its own build, because the file that does it had never been written (`A13`'s own change log).*
+
 ### What flooring an over-budget grid does, written before it is measured
 
 `CorpusFloorWalk` is built and **has produced nothing**. The question, the statistic, the decision
@@ -1268,7 +1331,10 @@ is an enclosing hull, and the corpus has hulls.
 
 | Date | Change |
 | --- | --- |
-| 2026-08-25 | **Every dataset this page reports on was taken through a reader that built eleven kinds of vanilla block as armour** ([backlog.md](backlog.md) `A13`). The game gives thirteen definitions no `SubtypeId`; the blueprint reader turned all of them into a plain armour cube, so every oxygen generator, air vent, oxygen tank, gravity generator, door, hangar door, passage, ladder and large turret in every walk drew no power and made no heat. The reader is fixed and nothing here has been re-measured. Priced by parse on a 400-ship stride sample: **275 of 400 ships** change, and the sample's full-load waste rises **8.89 %** on this page's own basis — full electrical, no thrust, stores in reserve — and **no ship changes side on the vanilla filter**, so the fix moves what a walk measures rather than which hulls it measures. Until a re-run, **a figure on this page about anything but armour is a lower bound**. |
+| 2026-08-25 | **Re-took the census, and `A13` is worth twice what the sample said.** 8,137 ships in 2 m 1 s, run twice and reproducing on every column. Summed over the rows a base variant writes, the eleven block kinds the reader built as armour carry **15.76 %** of what the population makes without them, against the 400-ship sample's 8.89 % — the sample carried a representative share of blocks and an unrepresentative share of gravity generators, and a gravity generator is 6.9 GW on its own. **Two of five predictions fail and one of the failures is the instrument**: a census-to-census diff spans four days and four definition changes, so its 41.14 % is the sum of the drives' 0.15 → 0.2, the computer fractions' 0.9 → 1.0, the oxygen generator's 0.6 → 0.40 and `C24`'s clock, and cannot isolate a reader fix (`P6`). The ship count moved by four — seven hulls rejected for holding an empty-subtype door or gravity generator on a small grid, which the game has only on large, and three admitted that the type-and-subtype pair now resolves — and both directions are the fix working (`J3`). The reach prediction is not scorable from a census at all: `composition.csv` holds heat-making blocks only, and nine of the eleven make none (`P2`). |
+| 2026-08-25 | **Every dataset this page reports on was taken through a reader that built eleven kinds of vanilla block as armour** ([backlog.md](backlog.md) `A13`). The game gives thirteen definitions no `SubtypeId`; the blueprint reader turned all of them into a plain armour cube, so every oxygen generator, air vent, oxygen tank, gravity generator, door, hangar door, passage, ladder and large turret in every walk drew no power and made no heat. The reader is fixed and nothing here has been re-measured. Priced by parse on a 400-ship stride sample: **275 of 400 ships** change, and the sample's full-load waste rises **8.89 %** on this page's own basis — full electrical, no thrust, stores in reserve — and **no ship changes side on the vanilla filter**, so the fix moves what a walk measures rather than which hulls it measures. Until a re-run, **a figure on this page about anything but armour is a lower bound**.
+*The census half of that re-run happened the same day and is the entry above; the stepped walks
+have not.* |
 | 2026-08-25 | **Measured `C30`'s comparison: a shortened step against a floored one, on one hull at one allowance.** At the shipped 4,000,000 a 64,463-block hull in flight keeps **36.2 % of real time** — a slow clock standing at **36.98 K**, past the last rung the price ladder measured — and a cap of 6 takes its demand from 27.49 to 6.00, inside the granted 10, so it keeps **100 %**. Against the cap's own **0.024 K**. Three orders of magnitude, and not a close call. |
 | 2026-08-25 | **Decided `C3`: `MaxSubstepsPerBlock` stays 0.** The p99 landed in the judgement band at 0.2820 K, and the rule reserved that band on the condition it would not be decided by the cap rescuing a criterion — it does rescue one, and that is set aside. What decides it is who pays: the error is per block and the benefit is per grid, so four fifths of the population is charged in full and collects nothing. `G6`'s cost half therefore stays failing, and its route is named rather than left open — a cap that engages when a grid is over its allowance, which is `C30`. |
 | 2026-08-25 | **`CorpusCapWalk` finished: 8,144 blueprints, four scenarios, two arms, 3 h 51 m, and three of its four registered predictions hold.** The identity is exact on all 32,576 pairs, the benefit lands at **2,180,352** inside the 1.7–2.9 M projected and takes `G6`'s cost half from 1.82× the allowance to 0.55×, and the reach is **5.83 %** inside the 3–10 % band. The cost prediction fails on its second half: p99 **0.2820 K** as predicted, max **48.22 K** against the 10 predicted, on giants and not on censored runs. **The finding nobody predicted is the shape of the trade**: stiffness is per block and the allowance is per grid, so the cap re-masses 7.4 % of the blocks on the smallest hulls and 3.1 % on the largest while no hull under 5,000 blocks is over the allowance at all — 80 % of the corpus pays in full and collects nothing. |
