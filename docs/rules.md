@@ -519,6 +519,13 @@ excuse to move a threshold.
 that arose this morning; a criterion may not.
 *Checked by:* reported by `tools/corpus/verdict.py`, which evaluates the criteria as written and
 names the ones a dataset cannot answer instead of skipping them. It prints; it does not fail.
+**A dataset too coarse to state a criterion cannot answer it either**, and since 2026-08-25 it says
+so: a criterion given as a share of the corpus needs a corpus that can tell its two sides apart, so
+on thirteen ships — where one ship is 7.7 % — *nothing critical* and *one per cent critical* are the
+same reading and `G1` is unanswered rather than holding. `scoring.resolves` is the rule and it
+follows from the threshold each criterion already states rather than from a floor typed anywhere.
+It is a resolution test and not a confidence one: a partial walk that passes it is still a partial
+walk (`P1`).
 *From:* [balance-lab.md](balance-lab.md).
 
 #### E10 — Correct a published finding in place
@@ -1624,6 +1631,8 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | `E1`'s check now refuses a criterion its dataset cannot resolve. A partial survey slice of thirteen ships reported `G1` as *holding* — one ship is 7.7 % of it and the criterion turns on 1 %, so both sides of the line read the same. The rule is derived from each criterion's own threshold rather than being a sample-size floor somebody chose, and it is stated as a resolution test so that passing it is not mistaken for a population. Found by leaving a partial dataset on disk and pointing the scorer at it.
+
 | 2026-08-25 | Corrected `O3`'s retirement condition, which described a defect that had been fixed. It said the resume *currently* counts files and that a workaround and three pages' caveats retire with it, and cited a backlog row closed on 2026-08-22; the resume records finished blueprints and has since before this page was written. What `verdict.py` still does is a guard rather than a workaround, and the two pages that carry the 2026-08-21 dataset's 50 duplicate rows already scope them to it. Added what a resumable sweep is *for* on a shared machine, which is the half `W5` needed and did not have.
 
 | 2026-08-25 | `E5`'s check reads source comments as well as pages. The gap was demonstrated rather than argued: the panel grew from 36 ships to 50, every page was corrected, and `KnobSweep`'s own summary — the file a reader opens to find out what the sweep does — went on saying 36. Extending it found two more stale counts in comments. What it still cannot do is now written into the rule: it matches one phrasing, because the other phrasing in the tree is how a figure is correctly scoped to the run it came from. |

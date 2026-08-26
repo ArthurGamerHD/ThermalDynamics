@@ -375,6 +375,44 @@ class PerBlockCap(unittest.TestCase):
         self.assertIsNone(scoring.delta_peak(None, 300.0))
         self.assertIsNone(scoring.delta_peak(300.0, None))
 
+class ACriterionNeedsADatasetFineEnoughToStateIt(unittest.TestCase):
+    """`resolves` is the guard on a partial walk being read as a population.
+
+    A criterion stated as a share of the corpus needs a corpus that can tell its two sides apart.
+    On thirteen ships one ship is 7.7 %, so *nothing critical* and *one per cent critical* are the
+    same reading and `G1` has not been answered — it has been asked of a dataset that cannot
+    distinguish the answers. The partial survey of 2026-08-25 read `[HOLDS]` on exactly that until
+    this existed.
+    """
+
+    def test_one_row_finer_than_the_threshold_resolves_it(self):
+        self.assertTrue(scoring.resolves(100, 1.0))
+        self.assertTrue(scoring.resolves(101, 1.0))
+        self.assertTrue(scoring.resolves(5, 20.0))
+
+    def test_one_row_coarser_than_the_threshold_does_not(self):
+        self.assertFalse(scoring.resolves(13, 1.0))
+        self.assertFalse(scoring.resolves(99, 1.0))
+        self.assertFalse(scoring.resolves(4, 20.0))
+
+    def test_an_empty_dataset_resolves_nothing(self):
+        self.assertFalse(scoring.resolves(0, 1.0))
+        self.assertFalse(scoring.resolves(13, 0.0))
+
+    def test_the_note_says_what_the_dataset_would_need(self):
+        note = scoring.too_coarse(13, 1.0, "idle runs")
+
+        self.assertIn("13 idle runs", note)
+        self.assertIn("7.7 %", note)
+        self.assertIn("It needs 100", note)
+
+    def test_the_note_rounds_the_requirement_up(self):
+        # 3 % needs 34 rows, not 33: at 33 one row is 3.03 % and still coarser than the line.
+        self.assertIn("It needs 34", scoring.too_coarse(10, 3.0, "runs"))
+        self.assertTrue(scoring.resolves(34, 3.0))
+        self.assertFalse(scoring.resolves(33, 3.0))
+
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -464,3 +464,31 @@ def at_rest(control_peak_rate):
         return None
 
     return abs(control_peak_rate) < SETTLE_RATE_KELVIN_PER_SECOND
+
+
+def resolves(runs, threshold_percent):
+    """Whether `runs` rows can answer a criterion that turns on `threshold_percent` of them.
+
+    **A criterion stated as a share of the corpus needs a corpus fine enough to state it.** `G1`
+    fails above about 1 % of ships critical at idle; on thirteen ships one ship is 7.7 %, so *zero
+    critical* and *one per cent critical* are the same reading and the criterion has not been
+    answered — it has been asked of a dataset that cannot distinguish its two sides. This is the
+    rule rather than a floor typed here, because a floor would be another opinion and this follows
+    from the threshold each criterion already states.
+
+    It is a resolution test, not a confidence one: it says the dataset can tell the two sides of
+    the line apart, and says nothing about sampling error. A partial walk that passes this is still
+    a partial walk (`P1`).
+    """
+    if not runs or threshold_percent <= 0:
+        return False
+    return runs * threshold_percent / 100.0 >= 1.0
+
+
+def too_coarse(runs, threshold_percent, what):
+    """The `measured:` line for a criterion its dataset cannot resolve."""
+    each = 100.0 / runs if runs else 0.0
+    needed = int(-(-100.0 // threshold_percent))
+    return (f"{runs:,} {what} cannot answer this: one is {each:.1f} % of the dataset and the "
+            f"criterion turns on {threshold_percent:g} %, so both sides of the line read the same. "
+            f"It needs {needed:,}.")

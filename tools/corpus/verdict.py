@@ -238,8 +238,10 @@ if idle:
     critical = sum(1 for r in idle if number(r, "over_critical") and number(r, "over_critical") > 0)
     share = pct(critical, len(idle))
     record("G1 idle critical share", round(share, 4), "%")
-    verdict("G1", "Idle is safe.", share <= 1.0,
-            f"{critical} of {len(idle)} idle runs had a block over critical ({share:.2f} %)",
+    verdict("G1", "Idle is safe.",
+            share <= 1.0 if scoring.resolves(len(idle), 1.0) else None,
+            f"{critical} of {len(idle)} idle runs had a block over critical ({share:.2f} %)"
+            if scoring.resolves(len(idle), 1.0) else scoring.too_coarse(len(idle), 1.0, "idle runs"),
             "more than ~1 % of the corpus goes critical at idle")
 else:
     verdict("G1", "Idle is safe.", None,
@@ -253,9 +255,11 @@ if loaded:
                if number(r, "peak_k") is not None and number(r, "peak_k") >= WARM_KELVIN)
     share = pct(warm, len(loaded))
     record("G2 warm share", round(share, 3), "%")
-    verdict("G2", "Load bites.", share >= 20.0,
+    verdict("G2", "Load bites.",
+            share >= 20.0 if scoring.resolves(len(loaded), 20.0) else None,
             f"{warm} of {len(loaded)} reached {WARM_KELVIN:.0f} K under full electrical load "
-            f"({share:.1f} %)",
+            f"({share:.1f} %)"
+            if scoring.resolves(len(loaded), 20.0) else scoring.too_coarse(len(loaded), 20.0, "loaded runs"),
             "fewer than ~20 % ever get warm")
 else:
     verdict("G2", "Load bites.", None,
@@ -269,8 +273,10 @@ if recovery:
     returned = sum(1 for r in recovery
                    if number(r, "over_critical") == 0)
     record("G5 recovered share", round(pct(returned, len(recovery)), 3), "%")
-    verdict("G5", "No death spiral.", pct(returned, len(recovery)) > 95.0,
-            f"{returned} of {len(recovery)} recovered below critical after throttling to idle",
+    verdict("G5", "No death spiral.",
+            pct(returned, len(recovery)) > 95.0 if scoring.resolves(len(recovery), 5.0) else None,
+            f"{returned} of {len(recovery)} recovered below critical after throttling to idle"
+            if scoring.resolves(len(recovery), 5.0) else scoring.too_coarse(len(recovery), 5.0, "recovery runs"),
             "recovery time unbounded, or damage continues after the load stops")
 else:
     verdict("G5", "No death spiral.", None,
