@@ -226,6 +226,47 @@ least often plumbed on.
 > page moves with these dials. That is the vanilla and modded lanes doing their job, and it is also
 > the reason `G3` has never been measured on a real hull.
 
+#### The bound that closes this line
+
+Measured on the hulls rather than the bench, the package is worth **nothing**: `carried` and
+`plumbed` come back identical at every quantile, while the instrument says it applied exactly as
+designed — worst sink 40 W/K to **250 W/K**, every ring circulating. The bench said the sink face
+binds. On a ship it does not, and the reason is one number:
+
+| On a plumbed hull, at the hottest block | |
+| --- | ---: |
+| already sheds into the hull it is welded to | **1,457 W/K** |
+| the shipped loop adds | 40 W/K |
+| the candidate adds | 250 W/K |
+| stands above the median block on its own grid | **39.2 K** |
+
+**A block on a finished ship is already welded to a hull that conducts.** The reference rig has no
+hull — its source is isolated, so the loop is the only path it has and improving that path is worth
+65 K. A real hot block has 1,457 W/K of alternatives before any cooling is fitted, so a sink face is
+a 3 % change to its conductance at the shipped figure and a 17 % change under the candidate, against
+a background that was already carrying the heat away.
+
+**And the heat has nowhere to go.** The hot block stands 39.2 K above the median block on its own
+grid, so equalising it with its own hull — which is the most that *any* path moving heat inside the
+grid can ever achieve — is worth **9.13 % of the peak**. The plumbed ring gets 2.43 % of that bound.
+
+> **The bound is the finding, not the shortfall.** A perfect internal path is still single figures.
+> It does not matter how much the loop is improved, because the ship is nearly as hot as the block
+> and there is nowhere inside the grid left to put the heat. That is why three independent levers
+> this session — the panel's emissivity, the fluid's coupling, the coolant's mass — all measured
+> large on a bench and nothing on a hull. **They are all internal, and internal is bounded at 9 %.**
+
+What is not bounded that way is **area to the sky**, which is the only thing that takes heat off the
+grid entirely — and the bolted arm, which adds exactly that, is the only one that ever reaches 7.9 %.
+Even that is single figures, because these ships make far more heat than any bolt-on can shed: it is
+`C34`'s finding from the fitting end, where a block that cannot cool itself threefold is not going to
+be saved by a panel bolted beside it.
+
+**So `G3` cannot be met by retrofitting.** That is not a defeat — it is
+[document-of-intent.md](document-of-intent.md)'s stated position, *cooling designed in*, arriving as
+a measurement rather than as a preference. What a retrofit lab can still settle is the other half:
+whether a hull built around a loop does better than one that has one bolted into its gaps.
+
 **A pump should be what makes this true.** Fluid-to-wall transfer is convective, so it depends on
 the flow, and nothing in the model expressed that until `C37`: the coefficient applied whole whether
 or not anything circulated. `LoopStagnantTransferFraction` now scales it, so a raised `h` can be the

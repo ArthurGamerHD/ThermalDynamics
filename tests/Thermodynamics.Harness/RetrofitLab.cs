@@ -128,6 +128,25 @@ namespace Thermodynamics.Harness
             public float LoopSinkWattsPerKelvin;
             public float CarriedSinkWattsPerKelvin;
 
+            /// <summary>
+            /// W/K out of the hot block through every link it has, on the plumbed hull. **The
+            /// denominator the sink coupling has to be read against**: a hot block on a finished
+            /// ship is welded to a hull that conducts, and a cooling path only matters in
+            /// proportion to what was already leaving that way. The reference bench has no hull, so
+            /// its source has nothing else to conduct into and the loop is the whole answer there.
+            /// </summary>
+            public float HotBlockWattsPerKelvin;
+
+            /// <summary>
+            /// How far the hot block stands above the median block on its own grid, K. **This is
+            /// what decides whether cooling one block is a coherent idea at all.** A block far above
+            /// its neighbours is a hot spot, and moving its heat somewhere else on the ship helps. A
+            /// block sitting near the ship's own temperature is not a hot spot: the whole hull is
+            /// hot, every internal path is already carrying, and the only thing that can help is
+            /// area to the sky.
+            /// </summary>
+            public float AboveHullKelvin;
+
             public float BoltedSaved { get { return BareK - BoltedK; } }
             public float PlumbedSaved { get { return BareK - PlumbedK; } }
             public float TransportSaved { get { return BareK - TransportK; } }
@@ -416,6 +435,58 @@ namespace Thermodynamics.Harness
             return fed;
         }
 
+        /// <summary>
+        /// W/K out of whatever block sits at <paramref name="cell"/>, through every link it has.
+        /// Zero where no grid on the ship holds that cell.
+        /// </summary>
+        private static float ConductanceOutOf(ShipAssembly assembly, Vector3I cell)
+        {
+            for (int s = 0; s < assembly.Simulations.Count; s++)
+            {
+                ThermalSimulation simulation = assembly.Simulations[s];
+
+                BlockInstance block = simulation.Grid.GetAtCell(cell);
+                if (block == null) continue;
+
+                ThermalNode node = simulation.Solver.GetNode(block);
+                if (node == null) continue;
+
+                IList<ThermalNode> nodes = simulation.Solver.Nodes;
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    if (nodes[i] == node) return simulation.Solver.NodeConductanceTotal(i);
+                }
+            }
+
+            return 0f;
+        }
+
+        /// <summary>
+        /// How far the block at <paramref name="cell"/> stands above the median node on its grid, K.
+        /// </summary>
+        private static float AboveMedian(ShipAssembly assembly, Vector3I cell)
+        {
+            for (int s = 0; s < assembly.Simulations.Count; s++)
+            {
+                ThermalSimulation simulation = assembly.Simulations[s];
+
+                BlockInstance block = simulation.Grid.GetAtCell(cell);
+                if (block == null) continue;
+
+                ThermalNode node = simulation.Solver.GetNode(block);
+                if (node == null) continue;
+
+                IList<ThermalNode> nodes = simulation.Solver.Nodes;
+                List<float> temperatures = new List<float>(nodes.Count);
+                for (int i = 0; i < nodes.Count; i++) temperatures.Add(nodes[i].Temperature);
+
+                temperatures.Sort();
+                return node.Temperature - At(temperatures, 0.5);
+            }
+
+            return 0f;
+        }
+
         /// <summary>Straight cells with no sink asked for, which is what a pump can be seated on.</summary>
         private static int CountStraightWithoutSink(List<Vector3I> ring, Dictionary<int, Vector3I> sinks)
         {
@@ -487,6 +558,8 @@ namespace Thermodynamics.Harness
                 bool flowing;
                 row.LoopSinkWattsPerKelvin = WorstSink(plumbed, out flowing);
                 row.LoopFlowing = flowing;
+                row.HotBlockWattsPerKelvin = ConductanceOutOf(plumbed, hot);
+                row.AboveHullKelvin = AboveMedian(plumbed, hot);
 
                 // **The same ring again, with the loop able to carry heat.** `G3` asks whether
                 // cooling works, and every measurement of it so far has been taken on a loop whose
@@ -589,6 +662,9 @@ namespace Thermodynamics.Harness
             List<float> carried = new List<float>();
             int noRoomBolted = 0, noRoomPlumbed = 0, measured = 0, cold = 0, flowingLoops = 0;
             float sinkPlumbed = 0f, sinkCarried = 0f;
+            List<float> hotConductances = new List<float>();
+            List<float> aboveHulls = new List<float>();
+            List<float> ceilings = new List<float>();
 
             for (int i = 0; i < rows.Count; i++)
             {
@@ -612,12 +688,26 @@ namespace Thermodynamics.Harness
                     if (row.LoopFlowing) flowingLoops++;
                     if (row.LoopSinkWattsPerKelvin > sinkPlumbed) sinkPlumbed = row.LoopSinkWattsPerKelvin;
                     if (row.CarriedSinkWattsPerKelvin > sinkCarried) sinkCarried = row.CarriedSinkWattsPerKelvin;
+                    hotConductances.Add(row.HotBlockWattsPerKelvin);
+                    aboveHulls.Add(row.AboveHullKelvin);
+
+                    // **The bound on every internal path there is.** Equalising the hot block with
+                    // its own hull is the most that moving heat around the grid can achieve; past
+                    // that there is nowhere left inside to put it. Expressed against the peak so it
+                    // reads against the same column the fits are scored in.
+                    if (row.BareK > 0f) ceilings.Add(100f * row.AboveHullKelvin / row.BareK);
                 }
             }
 
             bolted.Sort();
             plumbed.Sort();
             carried.Sort();
+            hotConductances.Sort();
+            aboveHulls.Sort();
+            float hotConductance = At(hotConductances, 0.5);
+            float aboveHull = At(aboveHulls, 0.5);
+            ceilings.Sort();
+            float ceiling = At(ceilings, 0.5);
 
             sb.Append("  ").Append(measured.ToString("n0")).Append(" ships measured in ")
                 .Append(clock.Elapsed.TotalSeconds.ToString("n0")).Append(" s, ")
@@ -640,6 +730,18 @@ namespace Thermodynamics.Harness
                 .Append(flowingLoops).AppendLine(" had a ring that was circulating");
             sb.Append("  worst sink coupling: plumbed ").Append(sinkPlumbed.ToString("n0"))
                 .Append(" W/K, carried ").Append(sinkCarried.ToString("n0")).AppendLine(" W/K");
+            sb.Append("  the hot block already sheds ").Append(hotConductance.ToString("n0"))
+                .AppendLine(" W/K into the hull it is welded to (median)");
+            sb.Append("  and stands ").Append(aboveHull.ToString("n1"))
+                .AppendLine(" K above the median block on its own grid (median)");
+            sb.AppendLine();
+            sb.Append("  so a path that moves heat INSIDE the grid can win at most ")
+                .Append(ceiling.ToString("n2")).AppendLine(" % of the peak,");
+            sb.Append("  and the plumbed ring wins ").Append(At(plumbed, 0.5).ToString("n2"))
+                .AppendLine(" % of the peak, about a quarter of that bound.");
+            sb.AppendLine("  The bound is the finding rather than the shortfall: a perfect internal");
+            sb.AppendLine("  path is still single figures, because the hull is nearly as hot as the");
+            sb.AppendLine("  block and there is nowhere inside the grid left to put the heat.");
 
             sb.AppendLine();
             sb.AppendLine("  `carried` is the plumbed hull again with LoopCandidate applied: the same");
