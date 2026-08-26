@@ -31,6 +31,27 @@ namespace Thermodynamics.Core
     }
 
     /// <summary>
+    /// How full one ring's coolant is, keyed by the same signature <see cref="StoredLoop"/> uses.
+    ///
+    /// **A section of its own rather than a field on `StoredLoop`**, because `W1` says the format
+    /// grows by adding a section: a build that predates coolant being a consumable reads the four
+    /// sections it knows and skips this one, where a widened record would have made every older
+    /// build reject the payload. A ring saved by such a build simply loads full, which is what it
+    /// was.
+    /// </summary>
+    public struct StoredLoopFill
+    {
+        public long Signature;
+        public float Fill;
+
+        public StoredLoopFill(long signature, float fill)
+        {
+            Signature = signature;
+            Fill = fill;
+        }
+    }
+
+    /// <summary>
     /// One pipe's held coolant, keyed by its cell: the real J/K it absorbed when its ring was
     /// broken, before <see cref="Thermodynamics.Core.ThermalSettings.HeatTimeScale"/>.
     ///
@@ -79,6 +100,7 @@ namespace Thermodynamics.Core
         private const byte SectionLoops = 2;
         private const byte SectionRooms = 3;
         private const byte SectionHeldCoolant = 4;
+        private const byte SectionLoopFill = 5;
 
         private const int LegacyRecordSize = 6;
         private const int LegacyLoopRecordSize = 3;
@@ -108,10 +130,22 @@ namespace Thermodynamics.Core
         public static string Encode(IList<StoredTemperature> blocks, IList<StoredLoop> loops,
             IList<StoredRoom> rooms, IList<StoredHeldCoolant> held)
         {
+            return Encode(blocks, loops, rooms, held, null);
+        }
+
+        /// <summary>
+        /// The same, with how full each ring's coolant is — a fifth section, on the rule `W1`
+        /// states: a build that predates it skips what it does not know, and a ring it saved loads
+        /// full, which is what it was.
+        /// </summary>
+        public static string Encode(IList<StoredTemperature> blocks, IList<StoredLoop> loops,
+            IList<StoredRoom> rooms, IList<StoredHeldCoolant> held, IList<StoredLoopFill> fills)
+        {
             int blockCount = blocks == null ? 0 : blocks.Count;
             int loopCount = loops == null ? 0 : loops.Count;
             int roomCount = rooms == null ? 0 : rooms.Count;
             int heldCount = held == null ? 0 : held.Count;
+            int fillCount = fills == null ? 0 : fills.Count;
 
             int size = 1
                 + (1 + Int32Size + (blockCount * RecordSize))
@@ -124,6 +158,10 @@ namespace Thermodynamics.Core
             // The same rule, and it earns more here: a pipe holds coolant only between a ring
             // breaking and being rebuilt, so on almost every grid ever saved this section is absent.
             if (heldCount > 0) size += 1 + Int32Size + (heldCount * RecordSize);
+
+            // And once more: a ring that is full is the overwhelming case, and a full ring needs no
+            // record — the fill only has to survive a save while it is short of full.
+            if (fillCount > 0) size += 1 + Int32Size + (fillCount * RecordSize);
 
             byte[] bytes = new byte[size];
             int at = 0;
@@ -175,6 +213,19 @@ namespace Thermodynamics.Core
                 }
             }
 
+            if (fillCount > 0)
+            {
+                bytes[at++] = SectionLoopFill;
+                WriteInt32(bytes, ref at, fillCount);
+
+                for (int i = 0; i < fillCount; i++)
+                {
+                    StoredLoopFill entry = fills[i];
+                    WriteInt64(bytes, ref at, entry.Signature);
+                    WriteSingle(bytes, ref at, entry.Fill);
+                }
+            }
+
             return Convert.ToBase64String(bytes);
         }
 
@@ -204,10 +255,22 @@ namespace Thermodynamics.Core
         public static bool TryDecode(string data, List<StoredTemperature> blocks, List<StoredLoop> loops,
             List<StoredRoom> rooms, List<StoredHeldCoolant> held)
         {
+            return TryDecode(data, blocks, loops, rooms, held, null);
+        }
+
+        /// <summary>
+        /// The same, including how full each ring is. A payload written before coolant was a
+        /// consumable leaves <paramref name="fills"/> empty, and a ring with no record loads full —
+        /// which is what it was in the world that saved it.
+        /// </summary>
+        public static bool TryDecode(string data, List<StoredTemperature> blocks, List<StoredLoop> loops,
+            List<StoredRoom> rooms, List<StoredHeldCoolant> held, List<StoredLoopFill> fills)
+        {
             if (blocks != null) blocks.Clear();
             if (loops != null) loops.Clear();
             if (rooms != null) rooms.Clear();
             if (held != null) held.Clear();
+            if (fills != null) fills.Clear();
 
             if (string.IsNullOrEmpty(data)) return false;
 
@@ -225,14 +288,15 @@ namespace Thermodynamics.Core
 
             if (bytes[0] == Version2Marker)
             {
-                return TryDecodeVersion2(bytes, blocks, loops, rooms, held);
+                return TryDecodeVersion2(bytes, blocks, loops, rooms, held, fills);
             }
 
             return TryDecodeLegacyBlocks(bytes, blocks);
         }
 
         private static bool TryDecodeVersion2(byte[] bytes, List<StoredTemperature> blocks,
-            List<StoredLoop> loops, List<StoredRoom> rooms, List<StoredHeldCoolant> held)
+            List<StoredLoop> loops, List<StoredRoom> rooms, List<StoredHeldCoolant> held,
+            List<StoredLoopFill> fills)
         {
             // Every read is bounds checked up front rather than caught afterwards: the in-game
             // script compiler's whitelist prohibits IndexOutOfRangeException, so a truncated payload
@@ -270,6 +334,10 @@ namespace Thermodynamics.Core
                     else if (section == SectionHeldCoolant)
                     {
                         if (held != null) held.Add(new StoredHeldCoolant(GridMath.FromKey(key), temperature));
+                    }
+                    else if (section == SectionLoopFill)
+                    {
+                        if (fills != null) fills.Add(new StoredLoopFill(key, temperature));
                     }
                 }
             }

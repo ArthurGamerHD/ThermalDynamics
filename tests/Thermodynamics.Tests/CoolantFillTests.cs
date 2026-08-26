@@ -269,6 +269,45 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **A part-full ring survives a save, and a payload that predates the feature loads full.**
+        ///
+        /// The second half is `W1`: the format grows by adding a section, so a build that has never
+        /// heard of coolant being a consumable writes no fill records and a ring restored from one
+        /// is full — which is exactly what it was in that world.
+        /// </summary>
+        [Fact]
+        public void AFillSurvivesASaveAndAPayloadWithoutOneLoadsFull()
+        {
+            CoolantLoop loop;
+            ThermalSimulation simulation = Ring(out loop);
+
+            loop.FillFraction = 0.375f;
+            string saved = simulation.Save();
+
+            CoolantLoop reloaded;
+            ThermalSimulation second = Ring(out reloaded);
+            second.RebuildAll();
+            second.Load(saved);
+
+            output.WriteLine("saved {0:n3}, restored {1:n3}", 0.375f, second.Solver.Loops[0].FillFraction);
+            Assert.InRange(second.Solver.Loops[0].FillFraction, 0.374f, 0.376f);
+
+            // A full ring writes no record at all, and a ring restored from a payload without one
+            // is full rather than empty.
+            CoolantLoop fullLoop;
+            ThermalSimulation full = Ring(out fullLoop);
+            string withoutFills = full.Save();
+
+            CoolantLoop third;
+            ThermalSimulation loaded = Ring(out third);
+            third.FillFraction = 0.1f;
+            loaded.RebuildAll();
+            loaded.Load(withoutFills);
+
+            Assert.Equal(1f, loaded.Solver.Loops[0].FillFraction);
+        }
+
+        /// <summary>
         /// Kilograms are what a refill is priced in, so the ring reports them: a full eight-pipe
         /// large-grid ring is eight parcels of the shipped 50 kg.
         /// </summary>
