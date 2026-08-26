@@ -492,6 +492,7 @@ namespace Thermodynamics.Harness
             }
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -552,8 +553,11 @@ namespace Thermodynamics.Harness
                     + "  (" + N(scaler, 2) + ")", Variant(shipped, t => t.ExposedSurfaceMultiplier = scaler), baseline));
             }
 
-            // The other surface dial the definitions already carry.
-            rows.Add(Row("Emissivity", "0.35 -> 0.80", Variant(shipped, t => t.Emissivity = 0.80f), baseline));
+            // The other surface dial the definitions already carry. Swept to 1.0, the ceiling a
+            // surface cannot pass, and labelled from what actually ships - a hand-typed "0.35 ->"
+            // survived the block being re-authored at 0.85 and read as a loss (`E5`).
+            rows.Add(Row("Emissivity", N(shipped.Thermal.Emissivity, 2) + " -> 1.00",
+                Variant(shipped, t => t.Emissivity = 1f), baseline));
 
             // Conduction, three ways. These are the ones the definitions cannot currently express.
             rows.Add(Row("mount faces", "2/6 -> 6/6", MountEverywhere(shipped), baseline));
@@ -563,7 +567,17 @@ namespace Thermodynamics.Harness
             // The other way to feed a panel, and the reason this table matters. A bolt joint and a
             // coolant sink face are two different couplings to the same panel, and the definitions
             // already carry a dial for one of them.
-            rows.Add(CoolantFed(baseline));
+            rows.Add(CoolantFed(baseline, 0f));
+
+            // **The dial under the sink face.** A sink carries `h · A`, and on a large grid that is
+            // `160 × 6.25 = 1,000 W/K` exactly - so the one number deciding whether a loop can move
+            // a source's heat is the fluid's convective coefficient. Swept to the ceiling the
+            // settings menu already offers, because the rows above say every surface dial leaves
+            // the joint where it found it and this is the only leg left.
+            foreach (float coefficient in new float[] { 400f, 1000f, 2000f })
+            {
+                rows.Add(CoolantFed(baseline, coefficient));
+            }
 
             return rows;
         }
@@ -572,7 +586,10 @@ namespace Thermodynamics.Harness
         /// The same panel on the same load, reached through a coolant sink face instead of a bolt
         /// joint. Everything else is held: same source, same watts, same panel.
         /// </summary>
-        private static SensitivityRow CoolantFed(float baseline)
+        /// <param name="coefficient">
+        /// Fluid-to-wall convective coefficient, W/(m² K); zero leaves the shipped value alone.
+        /// </param>
+        private static SensitivityRow CoolantFed(float baseline, float coefficient)
         {
             GridBuilder builder = GridBuilder.Large();
 
@@ -597,6 +614,15 @@ namespace Thermodynamics.Harness
             PipeFitter.BuildRing(builder, ring, -1, sinks);
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+
+            if (coefficient > 0f)
+            {
+                LoopThermalProperties properties = LoopThermalProperties.Default();
+                properties.HeatTransferCoefficient = coefficient;
+                simulation.LoopProperties = properties;
+                simulation.RebuildAll();
+            }
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -619,7 +645,9 @@ namespace Thermodynamics.Harness
             return new SensitivityRow
             {
                 Dial = "coolant sink",
-                Change = "fed by a loop, not bolted",
+                Change = coefficient > 0f
+                    ? "loop, h = " + N(coefficient, 0) + " W/(m2 K)"
+                    : "fed by a loop, not bolted",
                 SettledKelvin = sourceKelvin,
                 KelvinVersusShipped = baseline - sourceKelvin,
                 PanelKelvin = panelKelvin,
@@ -738,6 +766,7 @@ namespace Thermodynamics.Harness
             BlockInstance placed = builder.Last;
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -851,6 +880,7 @@ namespace Thermodynamics.Harness
             List<BlockInstance> pipes = PipeFitter.BuildRing(builder, ring, -1, sinks);
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);

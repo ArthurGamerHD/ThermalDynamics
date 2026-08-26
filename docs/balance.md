@@ -143,26 +143,48 @@ Against a slab of ordinary light armour of the same shape, in the same position,
 | Fit | Count | Settles | Saved | Mass | K per tonne |
 | --- | --- | --- | --- | --- | --- |
 | bare source | 0 | 783.2 K | — | — | — |
-| radiators | 1 | 554.6 K | 228.6 K | 600 kg | 381.0 |
-| radiators | 8 | 491.0 K | 292.1 K | 4,800 kg | 60.9 |
+| radiators | 1 | 492.8 K | 290.4 K | 600 kg | 484.0 |
+| radiators | 2 | 463.5 K | 319.7 K | 1,200 kg | 266.4 |
+| radiators | 8 | 442.3 K | 340.9 K | 4,800 kg | 71.0 |
 | armour slab | 1 | 710.9 K | 72.3 K | 5,000 kg | 14.5 |
 | armour slab | 8 | 690.9 K | 92.3 K | 40,000 kg | 2.3 |
 
-Three times the cooling for an eighth of the mass — about **26× better per tonne**, pinned by
-`TheRadiatorBeatsTheArmourItDisplaces`. The second radiator is worth 34 K and the eighth is worth
-8 K: one joint feeds them all, and how much that joint carries is what decides where the stack
+Four times the cooling for an eighth of the mass — about **33× better per tonne**, pinned by
+`TheRadiatorBeatsTheArmourItDisplaces`. The second radiator is worth 29 K and the eighth is worth
+5 K: one joint feeds them all, and how much that joint carries is what decides where the stack
 saturates.
 
-> **Re-measured 2026-08-24 at `C24`'s pair**, and the whole table moved because the joint did. At
-> the pace the conversion calibrated to, one radiator took 42.9 K off this source and eight took
-> 46.6 K — 48× better per tonne than armour, and saturated by the second panel. A bolt joint is
-> solid conduction, so four times the pace lets four times as much reach the panel: the first one is
-> worth five times what it was, the stack keeps paying to the eighth, and armour gained with it,
-> which is why the margin per tonne narrowed while every figure in the column grew.
+> **This table has moved twice, both times because the panel changed and not the ladder.** At
+> `C24`'s conduction pace the first panel was worth 228.6 K; the pace went to 9.6 and it became
+> 290.4 K at `C36`'s emissivity. The column that has never moved is the shape: the second panel is
+> worth an eighth of the first and the eighth is worth a fiftieth, at every setting either dial has
+> been read at. That is the finding — see below.
 
-**Past a certain load the radiator turns negative.** At 2 MW into one cell, bolting panels on makes
-the source 33 K *hotter*, because they cover faces that were radiating and cannot carry away what
-they blocked.
+**Past a certain load the radiator turns negative.** At 2 MW into one cell the panels still help —
+130 K for the first — but the *armour* goes negative, costing 8.4 K, because it covers faces that
+were radiating and cannot carry away what it blocked.
+
+#### The joint, not the panel
+
+`balance`'s block table sheds a large radiator at **1,561,621 W** at 600 K and carries **2,336 W/K**
+across its mounts. Those pair as `shed/reach = 6.7`: across a 100 K gradient the panel can throw
+away nearly seven times what the joint it is bolted through can deliver to it. Everything else on
+this page follows from that ratio:
+
+| Change to one panel on a 200 kW source | Source K | Gain | Through the joint |
+| --- | ---: | ---: | ---: |
+| as built | 492.8 K | — | 173,872 W |
+| emissivity 0.85 → 1.00 | 482.0 K | 10.8 K | 176,080 W |
+| fake surface ×8 | 373.3 K | 119.5 K | 191,392 W |
+| mount on 6 faces, not 2 | 492.8 K | 0.0 K | 173,872 W |
+| fed by a coolant loop, not bolted | 441.3 K | 51.5 K | — |
+
+The joint carries about 174 kW and no surface dial moves it by a tenth. `C36` multiplied the
+radiator's emitting power by 2.43 and the first rung of the ladder rose while the saturation point
+stayed at two panels; the corpus retrofit, bolting panels onto real hulls, moved the median ship
+**0.1 %** for the same change. Two labs and a population all report the same wall. **Emission was
+never the limit. Transport is** — which is what `F27` found for bases from the other end, and what
+`blocks.md`'s *plumb it, do not bolt it* has been saying without a number on it.
 
 ### What a selective surface is worth
 
@@ -170,7 +192,7 @@ A surface is not obliged to absorb what it emits, and a radiator is the one bloc
 most: its job is to emit in the infrared without collecting in the visible. Real ones are finished
 for exactly that — a second-surface mirror runs `α ≈ 0.08` against `ε ≈ 0.8`, white paint about 0.2
 against 0.9. The mod's radiator was authored at `ε 0.35` with no absorptivity, so it absorbed a
-third of the sunlight that landed on it.
+third of the sunlight that landed on it. Both halves are now authored: `α 0.10`, `ε 0.85`.
 
 Measured on a source under eight radiators, 75 kW of heat, sun across the stack against the same rig
 in shadow — `dotnet run --project tests/Thermodynamics.Sim -- bench surface`:
@@ -183,9 +205,11 @@ in shadow — `dotnet run --project tests/Thermodynamics.Sim -- bench surface`:
 | emissive only | 0.80 | *follows* | 353.7 K | 310.8 K | 42.8 K |
 
 **The selective finish is worth 10.9 K in sunlight and exactly nothing in shadow**, which is what
-says the rig is measuring the surface rather than the geometry. It is authored on both radiators:
-emissivity is untouched, so the block emits precisely what it emitted and stops absorbing sunlight a
-real one would not.
+says the rig is measuring the surface rather than the geometry. It is authored on both radiators, so
+the block stops absorbing sunlight a real one would not.
+
+> The table's `shipped, now` row was taken when only the absorptivity had been authored. The
+> shipped block is the `second-surface mirror` row to within the 0.05 between them.
 
 **The last row is the one worth reading twice.** Raising emissivity alone — making the radiator a
 better *emitter*, which is the obvious improvement — buys 8.2 K in shadow and **1.9 K in sunlight**,
@@ -193,10 +217,25 @@ because a better emitter that is also a better absorber gives almost all of it b
 penalty rises from 36.5 K to 42.8 K. The two changes are complementary rather than additive, and
 doing only the obvious one is nearly worthless where a radiator is most often used.
 
-**What is not authored is the emissivity.** 0.35 is low for a radiator and 0.8 is what a real one
-reaches; the table says that is worth 8.2 K in shadow and 9.4 K in sun on top of the finish. That is
-a balance change to the mod's own block rather than a fidelity correction, so it stays a decision
-with a number on it. `SelectiveSurfaceTests` pins both halves.
+**The emissivity is now authored too, at `C36`.** It was the last line of this section for two
+passes — *0.35 is low for a radiator and 0.8 is what a real one reaches* — held back as a balance
+change rather than a fidelity correction. It is both, and the fidelity half decided it: a selective
+surface is low-α **and** high-ε, the definition already named the two finishes it is modelled on,
+and it had taken the absorptivity from them while leaving emissivity at a number nearer bare
+aluminium. The block was emitting 41 % of what its own stated finish emits. It ships at **0.85**.
+
+What it bought, measured rather than argued:
+
+| Where | Before | After |
+| --- | ---: | ---: |
+| one panel on the 200 kW source | 228.6 K saved | 290.4 K saved |
+| one panel on the ladder's reactor | 20.9 K saved | 27.6 K saved |
+| thirty-two panels on that reactor | 25.6 K | 31.0 K |
+| corpus hulls, bolted retrofit, p50 | −0.32 % | −0.20 % |
+
+A third more cooling per panel on a synthetic source, and a tenth of a per cent on a real hull. That
+gap is the finding, not the gain — see *The joint, not the panel* above. `SelectiveSurfaceTests`
+pins both halves.
 
 ### The heat pump
 
@@ -1855,6 +1894,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | **Authored the radiator's emissivity at 0.85 and measured what it did not fix.** The block was a selective surface with only its low half; `What a selective surface is worth` had carried the missing half as an open decision for two passes and it is now taken, on fidelity grounds its own definition already stated. It multiplies the panel's radiating power by 2.43 and is worth a third more cooling per panel — and **0.1 %** to the median corpus hull. Added [The joint, not the panel](#the-joint-not-the-panel): a large radiator sheds 1.56 MW at 600 K through a joint carrying 2,336 W/K, and every surface dial in the sensitivity table leaves the ~174 kW crossing that joint within a tenth of where it was, while feeding the same panel from a coolant loop is worth 51.5 K. Re-measured the armour comparison and the ladder against the new panel; the saturation point is unchanged at two panels, which is the finding. |
 | 2026-08-26 | Added `triage`, which ranks every heat-making block by severity times reach — the block index says whether a block is wrong and a census says whether being wrong matters, and the two had never been put together. Re-read the index while doing it: **one** block is impossible and **70** cannot cool themselves, where this page said four and 72 (`E10`). Three goals were also turned into criteria with a reading each — `G9`, `G10` and `G11` on [balance-lab.md](balance-lab.md) — and the one in doubt is `G11`, the time a warning buys.
 
 | 2026-08-25 | **Decided `B43`'s currency: energy and time, because the exploit is worth 23,611 W.** All three registered predictions fail by two orders of magnitude and in the same direction. Grinding a pipe from a warm eight-pipe ring removes 188,889 J, which at the pipe's 8-second build time is **0.79 %** of the largest reactor's waste; on a ship at 900 K it is 4.78 %. The power that cancels it is 0.16 % of the median corpus ship's installed power. **`A12` priced the exploit out** — the row was written against a 190 MJ pump grind, and a grind now costs one parcel — and the rate cannot be scaled by building a bigger ring, since a grind costs one parcel whatever the length. So no component, no conveyor and no ice. |
