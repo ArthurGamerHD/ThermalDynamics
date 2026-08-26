@@ -27,7 +27,7 @@ python3 tools/corpus/verdict.py out/corpus-2026-08-21          # the population 
 ## The three findings
 
 1. **A coolant sink face is the stiffest way to move heat into a panel, and nothing else is
-   close.** A bolt joint carries 167 W/K; a sink face carries 1,000 W/K. Every surface property of
+   close.** A bolt joint carries 167 W/K; a sink face carries 6,250 W/K. Every surface property of
    the radiator put together is worth a quarter of what plumbing it is worth. **The radiator is not
    a block you bolt to a hot thing — it is a block you plumb.**
 2. **Nothing in the game solves a reactor by being bolted to it**, and two common blocks make it
@@ -188,9 +188,15 @@ never the limit. Transport is** — which is what `F27` found for bases from the
 
 #### What the loop can be worth, and what it costs
 
+> **This section is how the decision was reached, and its *shipped* column is now history.** It
+> sweeps upward from `h` 160, which was the coefficient when it was written; `C42` shipped 1,000
+> while the pump runs, with 160 kept as the stopped value. The sweep is left as it was taken because
+> the argument is the shape of it — see *What a jump drive costs in radiator* below for what
+> decided it, and the change log for what moved.
+
 The last row above is the only one that moves the joint, so the dials under it are the ones with
-room. A sink face carries `h · A`, and on a large grid `160 × 6.25` is that 1,000 W/K exactly.
-Swept on the same source, the same panel and the same ring — **not applied, measured**:
+room. A sink face carries `h · A`, and on a large grid `160 × 6.25` was that 1,000 W/K exactly.
+Swept on the same source, the same panel and the same ring:
 
 | The loop feeding one panel | Source K | Gain | Sink W/K | Drop across it | Substeps |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -350,10 +356,43 @@ of one to four sink faces can carry against a 6.4 MW block rated 689 K:
 | 3 | 3,000 | 2,133 K | 18,750 | 341 K |
 | 4 | 4,000 | 1,600 K | 25,000 | 256 K |
 
-**At the shipped coefficient no realistic plumbing brings a 6.4 MW block under its rating** — four
-sink faces still force 1,600 K against 689 K, and wrapping a one-cell source in all six it
-geometrically has only reaches 1,067 K. Under the candidate, two faces are enough for the pickup to
-stop being what binds. That is the whole decision in one table.
+**At `h` 160 no realistic plumbing brought a 6.4 MW block under its rating** — four sink faces still
+forced 1,600 K against 689 K, and wrapping a one-cell source in all six it geometrically has only
+reached 1,067 K. At 1,000, two faces are enough for the pickup to stop being what binds.
+
+#### What was decided, and what it cost
+
+**`h` is now 1,000 while the ring circulates and `StagnantTransferFraction` is 0.16, so a stopped
+ring carries `1000 × 0.16 = 160` — exactly what every ring in this mod carried before.** The pair is
+pinned as a product by `AStoppedRingCarriesWhatEveryRingCarriedBeforeTheRetune`, because moving one
+without the other silently makes a stopped ring better or worse than it has ever been.
+
+It was decided on one argument. The pickup has a single dial, since the sink-face count is fixed by
+design; watts over the pickup is the gradient a buried source is forced to sit at whatever is hung
+off the far end; and at 160 that gradient was **ten times the rating** of the block carrying 65.5 %
+of a loaded fleet's heat on 2,254 published ships. A block with no answer at any radiator count is a
+permanent runaway, and avoiding runaways is what the mod is for — so the shipped value contradicted
+the goal, and the design thesis `C41` measured could not actually be built.
+
+Measured after the change, on the same rigs:
+
+| | Before | After |
+| --- | ---: | ---: |
+| sink face, large grid | 1,000 W/K | **6,250 W/K** |
+| gradient forced on 6.4 MW, one face | 6,400 K | **1,024 K** |
+| that block under four skin panels | 1,480.7 K | **1,285.8 K** |
+| a stopped ring, any grid | 160 W/(m²·K) | **160 W/(m²·K)** |
+| corpus retrofit, plumbed p50 | 2.43 % | **2.44 %** |
+| 500 kW block, 28-pipe ring | 740.9 K | **588.3 K** |
+
+**The population did not move**, which is the point rather than a disappointment: `C40` bounded every
+internal path at 9 % of a hull's peak, and a retrofit is an internal path. What changed is what a
+player who plumbs deliberately can build — and, at the other end, nothing at all for a ship whose
+pumps are off.
+
+> **What it does not do is save the drive.** 1,024 K is still above 689 K, and twelve skin panels
+> reached 807.7 K in the sweep that argued for this. The block goes from *no answer exists* to *an
+> answer exists and costs a lot of plumbing*, which is the difference the mod is about.
 
 #### Where the balance work goes
 
@@ -441,14 +480,18 @@ A 500 kW block with one sink face, rings of rising size:
 
 | Pipes | Coupling | Settles |
 | --- | --- | --- |
-| 8 | 9,000 W/K | 857.2 K |
-| 12 | 13,000 W/K | 811.6 K |
-| 20 | 21,000 W/K | 768.5 K |
-| 28 | 29,000 W/K | 740.9 K |
+| 8 | 56,250 W/K | 727.1 K |
+| 12 | 81,250 W/K | 673.0 K |
+| 20 | 131,250 W/K | 622.1 K |
+| 28 | 181,250 W/K | 588.3 K |
 
-Each pipe adds 1,000 W/K of its own and the fluid mass does not grow, so **a longer ring is strictly
+Each pipe adds 6,250 W/K of its own and the fluid mass does not grow, so **a longer ring is strictly
 better**. Pinned by `LongerRingsDeliverColderBlocks` and
 `LongerRingsCoupleHarderAndCarryTheSameFluid`.
+
+> **Re-measured at `C42`**, which multiplied the pumped coefficient by 6.25 and took the whole table
+> with it: the same rings were 9,000 to 29,000 W/K settling at 857.2 K down to 740.9 K. The shape is
+> unchanged and it is the shape the claim rests on.
 
 ### What the real-unit conversion moved
 
@@ -2077,6 +2120,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | **Raised the coolant's pumped coefficient to 1,000 W/(m²·K) and made 160 the stopped value** (`C42`). The pickup — sink faces times `h · A` — is the only thing deciding whether a buried block has an answer, the face count is fixed by design, and at 160 a 6.4 MW jump drive was forced 6,400 K above its surroundings against a 689 K rating: no answer at any radiator count, on the block carrying 65.5 % of a loaded fleet's heat. A sink face now carries **6,250 W/K**, the forced gradient is **1,024 K**, and `StagnantTransferFraction` 0.16 keeps a stopped ring at exactly the 160 it always had, so nothing anywhere is worse. The corpus retrofit does not move (p50 2.43 % to 2.44 %), because `C40` bounds every internal path at 9 % — what changed is what a deliberate plumbing job can build. Re-measured the ring table, the bolt-to-sink ratio and every published sink figure. |
 | 2026-08-26 | **Authored the radiator's emissivity at 0.85 and measured what it did not fix.** The block was a selective surface with only its low half; `What a selective surface is worth` had carried the missing half as an open decision for two passes and it is now taken, on fidelity grounds its own definition already stated. It multiplies the panel's radiating power by 2.43 and is worth a third more cooling per panel — and **0.1 %** to the median corpus hull. Added [The joint, not the panel](#the-joint-not-the-panel): a large radiator sheds 1.56 MW at 600 K through a joint carrying 2,336 W/K, and every surface dial in the sensitivity table leaves the ~174 kW crossing that joint within a tenth of where it was, while feeding the same panel from a coolant loop is worth 51.5 K. Re-measured the armour comparison and the ladder against the new panel; the saturation point is unchanged at two panels, which is the finding. |
 | 2026-08-26 | Added `triage`, which ranks every heat-making block by severity times reach — the block index says whether a block is wrong and a census says whether being wrong matters, and the two had never been put together. Re-read the index while doing it: **one** block is impossible and **70** cannot cool themselves, where this page said four and 72 (`E10`). Three goals were also turned into criteria with a reading each — `G9`, `G10` and `G11` on [balance-lab.md](balance-lab.md) — and the one in doubt is `G11`, the time a warning buys.
 

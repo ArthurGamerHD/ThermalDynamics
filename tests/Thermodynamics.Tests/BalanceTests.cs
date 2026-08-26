@@ -339,7 +339,7 @@ namespace Thermodynamics.Tests
         /// everything the definitions could do to the panel's surface. Measured now, plumbing is
         /// worth 73.5 K, doubling the area 48.7 K and lifting emissivity to 0.8 57.7 K — but
         /// quadrupling the area is worth 94.1 K and eight times is worth 135.3 K, so the sweep's
-        /// top rungs have passed it. `TheBoltJointConductsAsHardAsASinkFace` pins the mechanism.
+        /// top rungs have passed it. `ASinkFaceConductsSeveralTimesHarderThanABoltJoint` pins the mechanism.
         /// </para>
         ///
         /// <para>
@@ -386,34 +386,43 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **A bolt joint now conducts as hard as a sink face, and that is the mechanism behind
-        /// every guidance figure `C24` moved.**
+        /// **A sink face carries about five times a bolt joint, which is the design statement this
+        /// mod's guidance rests on — restored, after two changes took it away and gave it back.**
         ///
         /// <para>
-        /// The sink face is a fluid against a wall — a convection coefficient times an area, which
-        /// no clock or conduction pace touches. A bolt joint is solid conduction, so it is
-        /// multiplied by `ConductionScale`, and at the 9.6 that ships it carries more W/K than the
-        /// sink does. The mod's own design statement — a sink face at 1,000 W/K against a bolt
-        /// joint's 167 — was written at a pace where the ratio was six to one.
+        /// The sink face is a fluid against a wall: a convection coefficient times an area, which no
+        /// clock or conduction pace touches. A bolt joint is solid conduction, multiplied by
+        /// `ConductionScale`. The mod's own statement — a sink face at 1,000 W/K against a bolt
+        /// joint's 167 — was written where that ratio was **six to one**.
         /// </para>
         ///
         /// <para>
-        /// Pinned rather than fixed. Whether the loop's coupling should be paced with conduction is
-        /// a balance decision with its own evidence to collect, and it is
-        /// backlog.md `C25`; what this test refuses is for the ratio to
-        /// move again without anybody noticing.
+        /// `C24` took `ConductionScale` to 9.6 and the bolt joint to 1,168 W/K, which made the two
+        /// **equal** and cost the guidance its rate argument; `C25` kept the pace anyway, on the
+        /// grounds that pacing a fluid with solid conduction would put a coefficient no fluid has
+        /// into the model, and rested the guidance on *reach* instead — a joint carries heat one
+        /// block and a ring carries it wherever the ring goes.
+        /// </para>
+        ///
+        /// <para>
+        /// **`C42` gave the ratio back, and not by pacing the fluid.** The pumped coefficient went
+        /// to 1,000 W/(m²·K) because a pumped water-glycol ring is forced convection and 160 was the
+        /// stagnant end of the range — a fidelity argument, decided by the pickup being the only
+        /// thing that says whether a big block can be cooled at all. A sink face is now 6,250 W/K
+        /// against the bolt joint's 1,168: **5.4 to one**, which is where the statement started.
+        /// The guidance still rests on reach, and now the rate agrees with it.
         /// </para>
         /// </summary>
         [Fact]
-        public void TheBoltJointConductsAsHardAsASinkFace()
+        public void ASinkFaceConductsSeveralTimesHarderThanABoltJoint()
         {
             List<BalanceLab.SensitivityRow> rows = BalanceLab.Sensitivity();
 
             BalanceLab.SensitivityRow bolted = rows.First(r => r.Dial == "(shipped)");
             BalanceLab.SensitivityRow coolant = rows.First(r => r.Dial == "coolant sink");
 
-            // Measured 2026-08-24: 1,168 W/K bolted against 1,000 W/K plumbed.
-            Assert.InRange(bolted.JointWattsPerKelvin / coolant.JointWattsPerKelvin, 0.8f, 1.5f);
+            // Measured 2026-08-26: 6,250 W/K plumbed against 1,168 W/K bolted.
+            Assert.InRange(coolant.JointWattsPerKelvin / bolted.JointWattsPerKelvin, 3f, 8f);
 
             // And the joint is solid conduction, which is why: it is the pace that moved it, not
             // the block. At the 2.4 the conversion calibrated to it carried a quarter of this.

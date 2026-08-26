@@ -106,7 +106,8 @@ what the transfer physically is — and no conduction pace touches it, because i
 a wall rather than a solid against a solid (`C20`). This paragraph said it was still the older 0…1
 quality against a 200 W/(m·K) reference until 2026-08-24, and pointed at a page that already said
 otherwise. One consequence is deliberate and is `C25`: a bolt joint carries 1,168 W/K where a sink
-face carries 1,000, so in this world a steel bolt out-couples a water-cooled plate face for face.
+face carried 1,000 before `C42` raised the pumped coefficient to 6,250, so a steel bolt used to
+out-couple a water-cooled plate face for face and no longer does.
 See [definitions.md](definitions.md#conductivity-is-in-real-wmk) and
 [blocks.md](blocks.md).
 

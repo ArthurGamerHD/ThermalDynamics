@@ -14,6 +14,14 @@ namespace Thermodynamics.Harness
     /// </para>
     ///
     /// <para>
+    /// **Two thirds of it shipped at `C42` and this is the third that did not.** The pumped
+    /// coefficient and the stopped share are now the mod's own defaults, because the pickup is the
+    /// only thing that decides whether a big block has an answer and at 160 it had none. What
+    /// remains a proposal is the coolant's mass, which is a transport term rather than a pickup one:
+    /// it changes how much of the ring's length is usable, not whether the heat gets in.
+    /// </para>
+    ///
+    /// <para>
     /// **It is not what ships.** Nothing here is applied to `Cubes.xml`, `Loops.xml` or the shipped
     /// defaults; a lab asks for it explicitly. See balance.md, *What the loop can be worth, and what
     /// it costs*.
@@ -21,20 +29,6 @@ namespace Thermodynamics.Harness
     /// </summary>
     public static class LoopCandidate
     {
-        /// <summary>
-        /// Fluid-to-wall coefficient while the ring is circulating, W/(m² K). Forced convection of
-        /// a water-glycol mix in a pipe is a few hundred to a few thousand; the shipped 160 is the
-        /// stagnant end of that range, on a loop the mod gives a pump.
-        /// </summary>
-        public const float PumpedCoefficient = 1000f;
-
-        /// <summary>
-        /// What survives with nothing circulating, as a share. **Chosen so a stopped ring is exactly
-        /// what ships today**: `1000 × 0.16 = 160`. Nothing anywhere gets worse under this package;
-        /// what changes is that running the pump now buys something.
-        /// </summary>
-        public const float StoppedShare = 0.16f;
-
         /// <summary>
         /// Coolant per cubic metre of the cell a pipe occupies, kg/m³.
         ///
@@ -63,8 +57,6 @@ namespace Thermodynamics.Harness
         {
             LoopThermalProperties properties = LoopThermalProperties.Default();
 
-            properties.HeatTransferCoefficient = PumpedCoefficient;
-            properties.StagnantTransferFraction = StoppedShare;
             properties.CoolantMassPerPipe = KilogramsPerCubicMetre * gridSize * gridSize * gridSize;
 
             return properties.Clamp();

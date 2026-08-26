@@ -33,7 +33,7 @@ namespace Thermodynamics.Core
         /// thousand; 160 is a slow flow, which is what a ring driven by one pump is.
         /// </para>
         /// </summary>
-        public float HeatTransferCoefficient = 160f;
+        public float HeatTransferCoefficient = 1000f;
 
         /// <summary>
         /// Specific heat capacity of the coolant, real J/(kg K). Water-glycol is about 3400, against
@@ -122,7 +122,7 @@ namespace Thermodynamics.Core
         /// Not zero: a stagnant pipe still conducts into the fluid touching it, it just cannot carry
         /// that heat anywhere. Only the transport between segments stops dead.
         /// </summary>
-        public float StagnantTransferFraction = 1f;
+        public float StagnantTransferFraction = 0.16f;
 
         public static LoopThermalProperties Default()
         {

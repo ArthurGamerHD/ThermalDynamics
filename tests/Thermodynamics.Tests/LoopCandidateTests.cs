@@ -44,28 +44,31 @@ namespace Thermodynamics.Tests
         {
             LoopThermalProperties shipped = LoopThermalProperties.Default();
 
-            Assert.NotEqual(LoopCandidate.PumpedCoefficient, shipped.HeatTransferCoefficient);
-            Assert.NotEqual(LoopCandidate.StoppedShare, shipped.StagnantTransferFraction);
-
             LoopThermalProperties large = LoopCandidate.For(2.5f);
             Assert.NotEqual(large.CoolantMassPerPipe, shipped.CoolantMassPerPipe);
         }
 
         /// <summary>
-        /// **A stopped ring under the candidate carries exactly what a stopped ring carries today.**
-        /// That is the whole reason the stopped share is 0.16 rather than something rounder: the
-        /// package must not make any situation worse, so what it changes is that running the pump
-        /// buys something, not that stopping it costs something it did not cost before.
+        /// **A stopped ring carries exactly what every ring in this mod carried before `C42`.**
+        ///
+        /// <para>
+        /// This is the safety property of that change and the reason the stopped share is 0.16
+        /// rather than something rounder: `1000 × 0.16 = 160`, which is what the coefficient was.
+        /// **So nothing anywhere is worse than it was**, and what the pair bought is that running
+        /// the pump makes the ring conduct rather than only mixing it. A retune that moves one of
+        /// the two without the other silently makes a stopped ring better or worse than it has ever
+        /// been, which is a balance change nobody asked for, so the product is pinned rather than
+        /// either number.
+        /// </para>
         /// </summary>
         [Fact]
-        public void AStoppedRingUnderTheCandidateMatchesWhatShipsToday()
+        public void AStoppedRingCarriesWhatEveryRingCarriedBeforeTheRetune()
         {
-            LoopThermalProperties candidate = LoopCandidate.For(2.5f);
             LoopThermalProperties shipped = LoopThermalProperties.Default();
 
-            float stopped = candidate.HeatTransferCoefficient * candidate.StagnantTransferFraction;
+            float stopped = shipped.HeatTransferCoefficient * shipped.StagnantTransferFraction;
 
-            Assert.Equal(shipped.HeatTransferCoefficient, stopped, 1);
+            Assert.Equal(160f, stopped, 1);
         }
 
         /// <summary>
@@ -99,34 +102,41 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **It reaches a ring**: the same pipes carry more under the candidate than under what
-        /// ships, while circulating. Reach and direction only — the size of the gain is balance.md's
-        /// to state and this must survive it moving.
+        /// **It reaches a ring**: the same pipes hold more coolant under the candidate, which is the
+        /// term it acts on. Coolant mass is a *transport* quantity rather than a pickup one — a ring
+        /// carries `ṁ·c_p` past a point — so it moves what the ring can deliver to panels far along
+        /// it and leaves the sink face exactly where it was.
+        ///
+        /// <para>
+        /// Reach and direction only. The size belongs to balance.md and must be free to move.
+        /// </para>
         /// </summary>
         [Fact]
-        public void ThePumpedRingCarriesMoreUnderTheCandidate()
+        public void TheRingHoldsMoreCoolantUnderTheCandidate()
         {
             GridBuilder builder = GridBuilder.Large();
             PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3), 1);
 
             ThermalSimulation simulation = builder.BuildSimulation(Isolated());
             CoolantLoop shipped = simulation.Solver.Loops[0];
-            for (int i = 0; i < shipped.Pumps.Count; i++) shipped.Pumps[i].Enabled = true;
-            shipped.RefreshFlow();
-            float before = shipped.LinkConductance(0);
+
+            float before = shipped.CapacityKilograms;
+            float sinkBefore = shipped.LinkConductance(0);
 
             simulation.LoopProperties = LoopCandidate.For(simulation.Grid.GridSize);
             simulation.RebuildAll();
 
             CoolantLoop candidate = simulation.Solver.Loops[0];
-            for (int i = 0; i < candidate.Pumps.Count; i++) candidate.Pumps[i].Enabled = true;
-            candidate.RefreshFlow();
-            float after = candidate.LinkConductance(0);
+            float after = candidate.CapacityKilograms;
 
-            Assert.True(before > 0f, "the shipped ring carried nothing, so nothing here is measured");
+            Assert.True(before > 0f, "the shipped ring held nothing, so nothing here is measured");
             Assert.True(after > before,
-                "a pumped ring under the candidate carried " + after + " W/K against the shipped "
-                + before + ", so the package the retrofit lab measures reaches no fluid");
+                "the ring held " + after.ToString("n0") + " kg under the candidate against the"
+                + " shipped " + before.ToString("n0") + " kg, so the package reaches no fluid");
+
+            // And it is not secretly a pickup change, which is what ships now.
+            Assert.Equal(sinkBefore, candidate.LinkConductance(0), 1);
         }
+
     }
 }

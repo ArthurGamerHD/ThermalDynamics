@@ -1983,7 +1983,11 @@ namespace Thermodynamics.Harness
         {
             StringBuilder report = new StringBuilder();
             ScenarioRunner last = null;
-            float[] megawatts = new float[] { 0.5f, 2f, 8f };
+            // **The knee moves with the plant, so the ladder has to reach past wherever it is.**
+            // 8 MW was past it until `C42` multiplied the pumped coupling by 6.25 and the heaviest
+            // rung started holding at 450 C with nothing over critical - a scenario quietly
+            // demonstrating the opposite of its own claim. 32 MW is past the knee the plant has now.
+            float[] megawatts = new float[] { 0.5f, 2f, 32f };
 
             for (int i = 0; i < megawatts.Length; i++)
             {

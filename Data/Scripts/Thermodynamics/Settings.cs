@@ -304,7 +304,7 @@ namespace Thermodynamics
         /// quality out of 86 and is migrated rather than silently reinterpreted as a coefficient of
         /// one.
         /// </summary>
-        [ProtoMember(125)] public float LoopHeatTransferCoefficient = 160f;
+        [ProtoMember(125)] public float LoopHeatTransferCoefficient = 1000f;
 
         /// <summary>
         /// **Retired.** The 0…1 quality this used to be, kept so a world saved with it moved can be
@@ -329,7 +329,7 @@ namespace Thermodynamics
         [ProtoMember(91)] public float LoopSmallGridFlowRate = 10f;
 
         /// <summary>What a stopped ring still carries between neighbouring parcels, 0..1.</summary>
-        [ProtoMember(92)] public float LoopStagnantTransferFraction = 1f;
+        [ProtoMember(92)] public float LoopStagnantTransferFraction = 0.16f;
 
         // ---- planet climate ----------------------------------------------------------------
         //
@@ -581,8 +581,22 @@ namespace Thermodynamics
             LegacyLoopConductivity = -1f;
         }
 
-        /// <summary>What the old quality of one came to on a large grid, W/(m²·K).</summary>
-        private const float ShippedLoopCoefficient = 160f;
+        /// <summary>
+        /// What a legacy quality of one now means, W/(m²·K) — which is the shipped coefficient
+        /// rather than a frozen number.
+        ///
+        /// <para>
+        /// **A quality of one meant *the default*, so it has to keep meaning the default.** It was
+        /// 160 when the dial was converted, and `C42` moved the shipped value to 1,000 because at
+        /// 160 the pickup forced a 6.4 MW block to sit 6,400 K above its surroundings and no
+        /// realistic plumbing could cool it. Leaving this at 160 would migrate every world saved
+        /// before the conversion onto a coefficient that is no longer the default and that this
+        /// repository has measured as unable to cool the block carrying two thirds of a fleet's
+        /// heat — preserving a defect in the name of preserving a setting. A world that moved the
+        /// old dial still gets the same *relative* change, which is what the migration promised.
+        /// </para>
+        /// </summary>
+        private const float ShippedLoopCoefficient = 1000f;
 
         private void Clamp()
         {

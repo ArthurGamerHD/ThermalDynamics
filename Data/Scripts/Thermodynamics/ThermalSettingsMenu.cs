@@ -108,10 +108,10 @@ namespace Thermodynamics
             { "LoopRefillKilogramsPerSecond", new Entry(Systems, "Refill rate", "How fast a vented coolant loop comes back, kg/s. Venting is instant and refilling is not: this is what stops a dump being repeatable.", 0f, 200f) },
             { "LoopCoolantMassPerPipe", new Entry(Systems, "Coolant per pipe", "Coolant carried by one pipe block, kg. More is more capacity for the same coupling, so a ring holds heat more steadily and asks less of the integrator.", 1f, 400f) },
             { "LoopSpecificHeat", new Entry(Systems, "Coolant specific heat", "J/(kg K). Water-glycol is about 3400, which is what the shipped fluid is.", 100f, 6000f) },
-            { "LoopHeatTransferCoefficient", new Entry(Systems, "Coolant heat transfer", "How well heat crosses between the fluid and the wall it touches, W/(m2 K). Convective, so there is no thickness in it: a few hundred is a slow liquid flow and a few thousand is a fast one.", 0f, 2000f) },
+            { "LoopHeatTransferCoefficient", new Entry(Systems, "Coolant heat transfer", "How well heat crosses between the fluid and the wall it touches while the pump is running, W/(m2 K). Convective, so there is no thickness in it: a few hundred is a slow liquid flow and a few thousand is a fast one. This is the dial that decides whether a big block can be cooled at all.", 0f, 2000f) },
             { "LoopPipeContactMultiplier", new Entry(Systems, "Pipe contact", "Scales the coupling between the fluid and its own pipe.", 0f, 5f) },
             { "LoopSinkContactMultiplier", new Entry(Systems, "Sink contact", "Scales the coupling through a sink face into whatever is mounted against it. The stiffest path in the mod: a bolt joint carries 167 W/K and a sink face 1,000.", 0f, 5f) },
-            { "LoopStagnantTransferFraction", new Entry(Systems, "Stagnant transfer", "What a stopped ring still carries between neighbouring parcels, 0..1. A ring with no pump is a heat buffer rather than a conductor.", 0f, 1f) },
+            { "LoopStagnantTransferFraction", new Entry(Systems, "Stagnant transfer", "What a stopped ring still carries across the fluid-to-wall joint, as a share of the coefficient above. A stopped pump is natural convection rather than forced. 0 makes a pump failure total.", 0f, 1f) },
 
             // From Planets.xml, same argument.
             { "PlanetDayTemperature", new Entry(Environment, "Day temperature", "Air temperature at the equator at noon, K.", 100f, 400f) },

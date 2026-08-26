@@ -140,7 +140,7 @@ surface area scaler, so it radiates faster than any armour block of comparable m
 of light armour of the same shape on the same load it is about 26× better per tonne, which is what
 earns it its place.
 
-**Plumb it; do not bolt it.** A coolant sink face couples to the panel at about 1,000 W/K, and on
+**Plumb it; do not bolt it.** A coolant sink face couples to the panel at about 6,250 W/K, and on
 the same load plumbing a panel rather than bolting it is worth **73.5 K** — more than doubling its
 area, and more than any surface property a definition would reach for first. What a loop buys is
 *reach*: a joint carries heat one block, and a ring carries it wherever the ring goes.
@@ -151,7 +151,8 @@ area, and more than any surface property a definition would reach for first. Wha
 > little harder. **So a steel bolt out-couples a water-cooled plate, face for face, and that is
 > kept** (`C25`, decided 2026-08-24). It is a statement about this world's conduction pace rather
 > than about steel and water: solid conduction runs at 9.6× real materials because `G8`'s
-> significance window was bought with it, while the loop's coupling is 160 W/(m²·K), which is what
+> significance window was bought with it, while the loop's coupling is a heat transfer coefficient in
+> W/(m²·K) — 1,000 while the pump runs and 160 while it does not, since `C42` — which is what
 > the transfer physically is. Pacing the fluid with `ConductionScale` too would put a coefficient no
 > fluid has into the model and give the game back the second conduction pace `C20` removed — and it
 > was measured during `C12`: it recovers a coolant sink from 73.3 K to 108.2 K against the best

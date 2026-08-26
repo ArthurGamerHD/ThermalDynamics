@@ -1521,6 +1521,8 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  triage [--top N] [--census F]  which blocks a balance pass should look at, in order");
             Console.WriteLine("  basevariants [--ships N] [--type T] [--file F]  what the blocks a blueprint spells with no subtype are worth");
             Console.WriteLine("  coolers                 every block that could cool a reactor, stacked against one");
+            Console.WriteLine("  designed                a source buried in armour: bolted panels against a loop to the skin");
+            Console.WriteLine("                          --sweep --watts --critical --panels for the pickup ladder");
             Console.WriteLine("  conductance             what real units did to the mod's own pipes and radiators");
             Console.WriteLine("  blocks                  every block in the game, derived from its build components");
             Console.WriteLine("  corpus [--path <dir>]   real ships read from blueprints, and what they are made of");

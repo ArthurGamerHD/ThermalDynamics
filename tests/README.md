@@ -123,6 +123,19 @@ failures that are about the machine. If you must run the suite unlocked, exclude
 dotnet test --filter "FullyQualifiedName!~LoadTests"
 ```
 
+**Build the test project, not the solution, before `--no-build`.** `dotnet build` from the repo root
+leaves `Thermodynamics.Tests.dll` stale — measured at **25 minutes** behind the sources in one case,
+with `-m:1 --no-incremental` and no error printed. A `dotnet test --no-build` then reports the
+*previous* edit's results, which reads as a test that mysteriously still fails after being fixed, or
+worse, one that passes after being broken. It cost three false readings in a single session. Build
+`tests/Thermodynamics.Tests` by name, and if a result looks impossible, check the DLL's timestamp
+before believing it:
+
+```bash
+dotnet build tests/Thermodynamics.Tests -v q --nologo
+ls -la --time-style=+%H:%M:%S .build/Thermodynamics.Tests/bin/Debug/net9.0/Thermodynamics.Tests.dll
+```
+
 **Clean up after a build.** `dotnet build-server shutdown` does *not* reap the `nodeReuse` MSBuild
 worker nodes; they idle out after ten to fifteen minutes and hold about 128 MB each until they do.
 Kill them if the machine is wanted. They are also why `heavy` closes its lock descriptor before

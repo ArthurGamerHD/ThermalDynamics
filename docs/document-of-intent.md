@@ -603,7 +603,7 @@ is the pattern worth keeping: a target that is not a criterion is a target nothi
 | --- | --- | --- |
 | **G1** | **Idle is safe.** A ship at rest in the environment it was built for does not overheat. | **Holds, and it holds in air too.** 0.22 % go critical at idle in vacuum against a ~1 % gate — and **0.02 %** across the 2026-08-24 air walk, which the corpus had never been asked, because air cools. |
 | **G2** | **Load bites.** Under sustained full power a meaningful share of uncooled ships reach a warning state. | **Holds.** 65.5% of ships carrying no jump drive reach 400 K under full electrical load, against a ~20% gate. |
-| **G3** | **Cooling works.** Fitting radiators or a loop moves the outcome. | **Answered.** Plumbing works — a sink face carries 1,000 W/K against a bolt joint's 167 — and bolting makes more ships worse than better. It fits on 15% of *finished* hulls, which is a fact about retrofits rather than about the mechanic, now that cooling is stated as designed in. |
+| **G3** | **Cooling works.** Fitting radiators or a loop moves the outcome. | **Answered.** Plumbing works — a sink face carries 6,250 W/K against a bolt joint's 167 — and bolting makes more ships worse than better. It fits on 15% of *finished* hulls, which is a fact about retrofits rather than about the mechanic, now that cooling is stated as designed in. |
 | **G4** | **Design decides, not size.** Outcome follows what a builder controls. | **Holds, strongly.** Peak correlates +0.89 with worst local W/m² under load against +0.49 with block count. |
 | **G5** | **No death spiral.** A ship past critical that throttles to idle returns below critical in bounded time. | **Holds as written.** Its stated reason does not — see below. |
 | **G6** | **Affordable across the population**, at p95/p99 rather than at the mean. | **The demand half passes with room; the cost half fails in air, and its figures are withdrawn pending a re-walk.** *Demand*: corpus p99 **34.8 substeps against 64 granted** over the 32,575 runs of the 2026-08-24 air walk, where the panel had read 115 % of the cap before `C24` and 55 % after it. *Cost*: `F11` walked the corpus in air and the criterion failed in three of the four worlds, holding only in vacuum, with **2.73 % of published hulls past the element-visit allowance** in at least one air scenario — the smallest at 28,781 blocks. **Every step-work number this repository has published is withdrawn**, because the unit is `links + 4 × nodes` and the scorer was handed the *joint* count in place of the link count, so it was evaluating the node half alone — 1.51× low on a census hull. That makes the air figure worse rather than better and moves no verdict; the corrected measurement is the paired walk under `C3`. See [balance-lab.md](balance-lab.md), [backlog.md](backlog.md) `F11`, `C3`, `C23`, `C27`. |
@@ -630,7 +630,7 @@ shape.
 ### Cooling is designed in — and a vanilla ship still has to survive
 
 **The intent is that players design cooling in.** A hull that was laid out with heat in mind is the
-ship the mod is for, and that is why the sink face carries 1,000 W/K against a bolt joint's 167.
+ship the mod is for, and that is why the sink face carries 6,250 W/K against a bolt joint's 167.
 
 **It must not follow from that that a vanilla design is unusable.** This game has been out a long
 time, and two cases are load-bearing:

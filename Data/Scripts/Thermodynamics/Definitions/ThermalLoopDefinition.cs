@@ -59,7 +59,7 @@ namespace Thermodynamics
         /// </summary>
         [ProtoMember(5)]
         /// <summary>Fluid-to-wall heat transfer coefficient, W/(m²·K). See thermal-model.md, Coolant loops.</summary>
-        public float HeatTransferCoefficient = 160f;
+        public float HeatTransferCoefficient = 1000f;
 
         /// <summary>
         /// Specific heat capacity of the coolant, J/(kg K). Reference values:
@@ -84,7 +84,7 @@ namespace Thermodynamics
 
         /// <summary>Share of transfer that survives with no circulation, 0..1.</summary>
         [ProtoMember(30)]
-        public float StagnantTransferFraction = 1f;
+        public float StagnantTransferFraction = 0.16f;
 
         public static ThermalLoopDefinition GetDefinition(MyDefinitionId defId)
         {
