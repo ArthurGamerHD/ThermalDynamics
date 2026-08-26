@@ -82,8 +82,20 @@ namespace Thermodynamics.Sim
                 {
                     int take;
                     int.TryParse(ValueAfter(args, "--top") ?? "25", out take);
-                    Console.Write(BlockTriageLab.Report(
-                        ValueAfter(args, "--census") ?? "out/census-2026-08-25/composition.csv", take));
+                    string census = ValueAfter(args, "--census")
+                        ?? "out/census-2026-08-25/composition.csv";
+
+                    string triageCsv = ValueAfter(args, "--csv");
+                    if (triageCsv != null)
+                    {
+                        Directory.CreateDirectory(triageCsv);
+                        string file = Path.Combine(triageCsv, "triage.csv");
+                        File.WriteAllText(file, BlockTriageLab.Csv(census));
+                        Console.WriteLine("wrote " + file);
+                        return 0;
+                    }
+
+                    Console.Write(BlockTriageLab.Report(census, take));
                     return 0;
                 }
 

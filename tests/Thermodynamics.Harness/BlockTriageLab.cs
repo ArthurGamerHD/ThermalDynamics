@@ -195,6 +195,30 @@ namespace Thermodynamics.Harness
             return fields.ToArray();
         }
 
+        /// <summary>The ranking as a table, for crossing against a population.</summary>
+        public static string Csv(string composition)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("subtype,type_id,large,watts,index,self_index,settles_k,critical_k,fleet_share,carriers");
+
+            foreach (Row row in Rank(composition))
+            {
+                sb.Append('"').Append(row.Subtype).Append("\",");
+                sb.Append('"').Append(row.TypeId).Append("\",");
+                sb.Append(row.Large ? "1," : "0,");
+                sb.Append(row.Watts.ToString("r")).Append(',');
+                sb.Append(row.Index.ToString("r")).Append(',');
+                sb.Append(row.SelfIndex.ToString("r")).Append(',');
+                sb.Append(row.EquilibriumKelvin.ToString("r")).Append(',');
+                sb.Append(row.CriticalKelvin.ToString("r")).Append(',');
+                sb.Append(row.FleetShare.ToString("r")).Append(',');
+                sb.Append(row.Carriers.ToString());
+                sb.AppendLine();
+            }
+
+            return sb.ToString();
+        }
+
         public static string Report(string composition, int take)
         {
             List<Row> rows = Rank(composition);

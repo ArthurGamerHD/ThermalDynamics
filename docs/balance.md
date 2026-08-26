@@ -1001,6 +1001,51 @@ single authored threshold. Venting is still the smaller change `B44` describes, 
 > small. It says nothing about jettisoning a hot block that is not a pipe, which is the general case
 > and is still free.
 
+### What actually runs away, and the one number that predicts it
+
+**Runaway is the failure that matters**, and it turns out to be predictable from a definition alone.
+Crossing the block index against the 2026-08-21 population, 7,994 ships, by the **worst self index**
+any block on the ship carries — heat made over what that block's own skin can shed at its rating:
+
+| worst self index on the ship | ships | peak over 1,500 K | never recovers |
+| --- | ---: | ---: | ---: |
+| under 1 — cools itself | 1,338 | **0.4 %** | 1.3 % |
+| 1 – 3 | 1,627 | **1.4 %** | 0.5 % |
+| 3 – 10 | 4,230 | **19.0 %** | 3.9 % |
+| over 10 | 799 | **64.2 %** | 6.4 % |
+
+**A ship runs away if and only if it carries a block that cannot cool itself by a factor of about
+three.** Below that the rate is one per cent and indistinguishable from nothing; above ten it is two
+ships in three. The index is computed from the definition with no simulation at all, so **this is a
+runaway predictor that costs nothing to evaluate** and can be read before a ship is ever built.
+
+**And it names the blocks.** Of everything with a self index over 3 that real fleets actually carry:
+
+| block | self | settles bare | its rating | share of fleet heat | ships |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `SmallPrototechJumpDrive` | 23.6 | 1,892 K | 862 K | 65.5 % | 2,254 |
+| `LargeJumpDrive` | 9.9 | 1,211 K | 689 K | 65.5 % | 2,254 |
+| `LargePrototechReactor` | 46.0 | 3,033 K | 1,166 K | 5.8 % | 1,361 |
+| `LargeHydrogenEngine` | 10.7 | 1,541 K | 856 K | 5.8 % | 1,361 |
+
+**So the runaway problem is the jump drive and the hydrogen engine, and almost nothing else.** Both
+are on thousands of published ships, both settle hundreds of kelvin past their own rating with every
+face on open space, and between them they are three quarters of a loaded fleet's waste heat. This
+page already said the drive *lives or dies on the hull taking the rest, and the hull never does* —
+what is new is that the same sentence, applied across the population, accounts for essentially every
+runaway in it.
+
+> **The clock is the wrong dial for this.** `HeatTimeScale` sets how fast a block reaches where it
+> is going and changes nothing about where that is: a self index above one is a steady state above
+> critical, and slowing the approach buys time without changing the destination. The clock is `G8`'s
+> and `G11`'s dial. **Runaway is a definition problem** — watts made, area, emissivity, and the
+> temperature the block is rated to — and it is fixed per block or not at all.
+
+*Population: the 8,132-ship survey of 2026-08-21, which predates `C24` and `A13`; the paired read on
+the hulls the new survey has reached says the model got cooler, so these rates are an upper bound
+rather than a current reading. The **structure** — self index predicting runaway — is a property of
+the model rather than of the run.*
+
 ### What the mod's blocks cost to build
 
 [backlog.md](backlog.md) `B33`: eighteen definitions in `Cubes.xml` carry components, build times
