@@ -433,6 +433,66 @@ Radiators are ordinary blocks with high emissivity and a surface-area multiplier
 into space by pressing a sink face against one: the panel takes the loop's heat by conduction and
 sheds it by radiation from its exposed faces.
 
+
+#### Coolant is a consumable: level, energy and fill rate
+
+[backlog.md](backlog.md) `B43` decided the currency — **joules and seconds, per pipe, with nothing
+to haul** — and `B44` fixed the constraints. This is the design that follows from both, written
+before it is built (`E1`). Three parts, and only the third is anybody's opinion.
+
+**1. A loop has a coolant level, and the level costs the integrator nothing.** `FillFraction` runs
+0 to 1 per ring. A part-full ring holds proportionally less coolant **and couples proportionally
+less**, because both the parcel capacity and every link's conductance scale with it:
+
+```
+SegmentThermalMass = fill × SpecificHeat × CoolantMassPerPipe / HeatTimeScale
+G_pipe, G_plate    = fill × (as above)
+```
+
+**The point of scaling both is that their ratio is what the integrator sizes a substep from**, and
+the ratio is therefore invariant in fill:
+
+```
+demand = SegmentConductance / SegmentThermalMass          — unchanged at any level
+```
+
+That is `B44`'s stiffness cliff removed rather than avoided. Scaling capacity alone would make a
+5 %-full loop **twenty times stiffer** on an element that already competes to be a grid's worst,
+against a cap of 64. It is also the physical answer: half the fluid touching a wall carries half the
+heat through it. **A dry ring is still a ring** — it exists, holds nothing, transports nothing, and
+can be refilled, which is the state `B44` requires and the shape this area has failed in twice.
+
+**2. Refilling costs energy, and the amount is derived rather than chosen.** The pump draws it, and
+a pump's `ConsumerWasteEnergy` is **1** — *a circulator does no work that leaves the system* — so
+every joule spent refilling lands back in the ship as heat. That is what makes the exchange rate
+self-limiting without a single authored threshold, and it is why `B43` chose this currency.
+
+The energy to restore one kilogram is the heat that kilogram holds at a stated excess:
+
+```
+J/kg = SpecificHeat × LoopRefillEquivalentKelvin / HeatTimeScale
+```
+
+At the shipped 3,400 J/(kg·K), 100 K and 90, that is **3,778 J/kg** — so one pipe's 50 kg parcel
+costs **188,889 J** to restore. **That is exactly what venting it removes at 100 K above ambient**,
+measured at 188,889 J in `GrindAndRewealdIsWorthKilowattsRatherThanMegawatts`. So a vent-and-refill
+cycle at 100 K over is **exactly neutral in heat** and loses on power and time, which is the exploit
+benefit erased by construction rather than by a number picked to be large enough.
+
+Above that excess venting still pays and below it costs, which is the behaviour to want: **dumping
+coolant is worth doing when the coolant is genuinely hot and worthless as a pump**. 100 K is not
+chosen here either — it is where `ThermalGlow` starts, the same excess this repository already
+treats as the point a block is worth telling the player about.
+
+**3. A fill rate, and this one is a choice.** `LoopRefillKilogramsPerSecond` bounds how fast a ring
+comes back, so the cycle cannot be run faster than the fill however many grinders are on the ship.
+At the shipped rate the pump draws `J/kg × kg/s` while filling and nothing when full.
+
+**Venting is instant and refilling is not, and that asymmetry is the mechanic.** An emergency dump
+buys relief now and is paid back gradually while the radiators work — useful once, useless on a
+timer. It is the only part of this with no derivation under it, so it is a setting and it says so.
+
+
 ### Heat pumps
 
 Every other mechanism here moves heat down a gradient. A heat pump moves it up one, and pays an

@@ -593,6 +593,19 @@ the index below says where to look, and `EveryTestClassSaysWhatItIsFor` fails wh
 without saying. This table is checked by `EveryTestClassIsInTheIndex`, so a suite cannot be added
 and left off it.
 
+**The vanilla lane and the modded lane are separate, and keeping them so is what makes both
+usable.** Everything measured on the corpus is measured on hulls built out of the *game's* blocks —
+the filter rejects a ship with anything it cannot resolve, which is what makes a population figure a
+statement about Space Engineers rather than about this mod. Everything about the mod's own blocks —
+radiators, pipes, pumps, heat pumps, coolant — is measured in synthetic rigs, because no published
+ship carries one. `RetrofitLab` is the deliberate bridge and says so: it fits the mod's blocks into
+the cells a real hull left free.
+
+The practical consequence is worth stating, because it is not obvious and it is load-bearing: **a
+change to the mod's own blocks cannot move a corpus figure**, so a modded feature can be built while
+a vanilla walk is running, and a vanilla walk cannot be invalidated by one. The reverse does not
+hold — `A13` was a change to how *vanilla* blocks are read, and it moved the population by 15.76 %.
+
 | Subject | Suites |
 | --- | --- |
 | **Block geometry and the grid model** | `FaceTests` `BoxGeometryTests` `GridMathTests` `CellBitsetTests` `BlockOrientationTests` `BlockInstanceTests` `GridModelTests` `BlockSurfaceBuilderTests` `Se2LatticeTests` `ShapeTests` |
