@@ -99,6 +99,17 @@ namespace Thermodynamics.Harness
             /// </summary>
             public int UnknownBlocks;
 
+            /// <summary>
+            /// Blocks whose type and subtype named no definition, and which were resolved on the
+            /// subtype alone.
+            ///
+            /// **Not an error and not nothing.** It is how a modded block that reuses a vanilla
+            /// subtype under its own type still builds, and it is the only place the old
+            /// subtype-keyed behaviour survives — so a walk that finds a lot of them is a walk
+            /// resolving blocks by a key that is not an identity (`P1`).
+            /// </summary>
+            public int AmbiguousBlocks;
+
             public List<string> UnknownSubtypes = new List<string>();
 
             public bool IsVanilla
@@ -417,6 +428,33 @@ namespace Thermodynamics.Harness
             return ships;
         }
 
+        /// <summary>
+        /// Read one file and return the ship **whether or not it would be kept**, so the counters
+        /// of a discarded ship can be seen.
+        ///
+        /// <see cref="Read"/> drops a ship whose grids all came back empty, which is the right
+        /// behaviour and makes the reason invisible: the counts that say *why* live on the object
+        /// that was thrown away. This is for a person holding one blueprint and asking what
+        /// happened to it, and is not on any measurement path.
+        /// </summary>
+        public static Ship Probe(string path)
+        {
+            Ship ship = new Ship { Path = path, WorkshopId = WorkshopIdOf(path) };
+
+            XDocument document = Load(path);
+            if (document == null) return ship;
+
+            Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
+
+            foreach (XElement grid in document.Descendants("CubeGrid"))
+            {
+                Grid part = ReadGrid(grid, definitions, ship);
+                if (part != null && part.Blocks > 0) ship.Grids.Add(part);
+            }
+
+            return ship;
+        }
+
         private static long WorkshopIdOf(string path)
         {
             string folder = Path.GetFileName(Path.GetDirectoryName(path) ?? "");
@@ -466,9 +504,25 @@ namespace Thermodynamics.Harness
                         definitions.TryGetValue(named, out definition);
                     }
                 }
-                else if (!definitions.TryGetValue(subtype, out definition))
+                else
                 {
-                    definition = null;
+                    // **The pair first, because a subtype is not an identity.** Three of the game's
+                    // subtypes are claimed by two types each, and `LargePistonBase` belongs to both
+                    // `PistonBase` and `ExtendedPistonBase` — same components, same power, sizes
+                    // 1x2x1 and 1x3x1 — so resolving on the subtype alone built every extended
+                    // piston a cell short. See GameBlocks.ByTypeAndSubtype.
+                    string typeId = TypeOf(block);
+                    if (typeId == null
+                        || !GameBlocks.ByTypeAndSubtype().TryGetValue(
+                            GameBlocks.TypeAndSubtypeKey(typeId, subtype), out definition))
+                    {
+                        // **The fallback is for modded blocks and is counted, not silent.** A mod
+                        // may name a subtype the game holds under another type; refusing those
+                        // would change which ships the corpus admits, which is a bigger error than
+                        // the one being fixed. `AmbiguousBlocks` is what says how often it happens.
+                        definition = null;
+                        if (definitions.TryGetValue(subtype, out definition)) ship.AmbiguousBlocks++;
+                    }
                 }
 
                 // A blueprint's grid size and a definition's must agree, or a small-grid ship would
@@ -643,13 +697,17 @@ namespace Thermodynamics.Harness
 
         public static BlockModel Model(GameBlocks.Definition definition)
         {
-            // **Keyed on the model name rather than the subtype**, because thirteen definitions
-            // share the empty subtype and a cache keyed on it hands an air vent whichever of the
-            // thirteen was built first.
+            // **Keyed on the pair, because neither half is an identity on its own.** Thirteen
+            // definitions share the empty subtype, so a cache keyed on subtype hands an air vent
+            // whichever of the thirteen was built first; and three subtypes are claimed by two
+            // types, so a cache keyed on the model *name* hands an `ExtendedPistonBase` the
+            // `PistonBase` model — same name, and a size of 1x2x1 against 1x3x1, which puts a
+            // block in a cell that is already occupied.
+            string key = GameBlocks.TypeAndSubtypeKey(definition.TypeId, definition.SubtypeId);
             string name = GameBlocks.ModelName(definition);
 
             BlockModel model;
-            if (Models.TryGetValue(name, out model)) return model;
+            if (Models.TryGetValue(key, out model)) return model;
 
             BlockThermalProperties thermal = ShippedBlocks.DeriveWithFunction(
                 definition.Components, definition.TypeId, definition.PowerEfficiency);
@@ -699,7 +757,7 @@ namespace Thermodynamics.Harness
                 }
             }
 
-            return Models.GetOrAdd(name, model);
+            return Models.GetOrAdd(key, model);
         }
 
         private static Vector3I ParseCell(XElement element)

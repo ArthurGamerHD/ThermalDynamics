@@ -70,6 +70,12 @@ namespace Thermodynamics.Harness
             /// <summary>Ships carrying at least one corrected block.</summary>
             public int ShipsAffected;
 
+            /// <summary>
+            /// Blocks resolved on their subtype alone because type and subtype named nothing —
+            /// the one place the pre-`A13` behaviour survives, counted so it cannot be silent.
+            /// </summary>
+            public int BlocksAmbiguous;
+
             /// <summary>Full-load waste the sample makes now, watts.</summary>
             public float WasteWatts;
 
@@ -131,6 +137,7 @@ namespace Thermodynamics.Harness
                 foreach (Blueprints.Ship ship in ships)
                 {
                     reading.ShipsRead++;
+                    reading.BlocksAmbiguous += ship.AmbiguousBlocks;
                     if (!ship.IsVanilla) reading.ShipsRejected++;
                     bool affected = false;
 
@@ -322,6 +329,8 @@ namespace Thermodynamics.Harness
                 + reading.FilesUnread.ToString("n0") + " files would not parse");
             sb.AppendLine(reading.ShipsRejected.ToString("n0")
                 + " ships hold a block that resolves to nothing, so the corpus filter rejects them");
+            sb.AppendLine(reading.BlocksAmbiguous.ToString("n0")
+                + " blocks named a type and subtype no definition has, and fell back to the subtype");
             sb.AppendLine("corrected " + reading.BlocksCorrected.ToString("n0") + " blocks on "
                 + reading.ShipsAffected.ToString("n0") + " ships");
             sb.AppendLine();

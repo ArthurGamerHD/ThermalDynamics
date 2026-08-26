@@ -128,6 +128,41 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **A subtype is not an identity either, and one collision is a block players build.**
+        ///
+        /// <para>
+        /// Three of the game's subtypes are claimed by two types each. `LargePistonBase` belongs to
+        /// both `PistonBase` and `ExtendedPistonBase` — identical components, power and thermal
+        /// entry, and sizes **1x2x1 against 1x3x1** — so a reader keyed on the subtype built every
+        /// extended piston a cell short, with the exposed area and links of a block a third
+        /// smaller. In a sixty-blueprint sample every piston base in the corpus was an
+        /// `ExtendedPistonBase`, so the entry that lost is the one players use.
+        /// </para>
+        ///
+        /// <para>
+        /// The check is size, because size is the whole of the difference — and reading both in
+        /// one process is the point rather than an accident. The shared `BlockModel` cache was
+        /// keyed on the model's *name*, which these two also share, so the first one read decided
+        /// what the second one was. A 1x3x1 handed out for a 1x2x1 puts a block in an occupied
+        /// cell, and the grid that loses the collision loses its blocks silently.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ASubtypeClaimedByTwoTypesResolvesByTheTypeTheBlueprintStates()
+        {
+            if (!GameBlocks.IsInstalled) return;
+
+            string extended = WriteBlueprint(Typed("ExtendedPistonBase", "LargePistonBase", 0, 0, 0));
+            string plain = WriteBlueprint(Typed("PistonBase", "LargePistonBase", 0, 0, 0));
+
+            BlockModel extendedModel = Blueprints.Read(extended)[0].Grids[0].Builder.Placed[0].Model;
+            BlockModel plainModel = Blueprints.Read(plain)[0].Grids[0].Builder.Placed[0].Model;
+
+            Assert.Equal(3, extendedModel.Size.Y);
+            Assert.Equal(2, plainModel.Size.Y);
+        }
+
+        /// <summary>
         /// **No base variant's type id is also some other block's subtype**, which is the one
         /// assumption <c>GameBlocks.ByModelName</c> rests on and the one the game could break
         /// without telling anyone.

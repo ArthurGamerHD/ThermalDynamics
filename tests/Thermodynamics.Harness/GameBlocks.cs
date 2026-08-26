@@ -613,6 +613,59 @@ namespace Thermodynamics.Harness
 
         private static Dictionary<string, Definition> _byModelName;
 
+        /// <summary>
+        /// Definitions keyed by the pair the game itself keys on, type and subtype.
+        ///
+        /// <para>
+        /// **<see cref="BySubtype"/> says a subtype can appear under more than one type and that
+        /// first wins, "which matches the order the game loads them in". Nobody had checked what
+        /// that costs.** Three subtypes are claimed by two types each, and one of them is a block
+        /// players actually build: `LargePistonBase` and `SmallPistonBase` belong to both
+        /// `PistonBase` and `ExtendedPistonBase`. The two are identical in components, power and
+        /// thermal entry and differ in **size** — 1x2x1 against 1x3x1 — so a subtype-keyed lookup
+        /// builds every extended piston a cell short, with the exposed area and the link topology
+        /// of a block one third smaller. In a sixty-blueprint sample every piston base was an
+        /// `ExtendedPistonBase`, so the losing entry is the one players use.
+        /// </para>
+        ///
+        /// <para>
+        /// A blueprint states the type on every block element, so the pair is always available for
+        /// a corpus ship. It is a separate index rather than a replacement because a *modded* block
+        /// may name a subtype the game has under a different type, and refusing those would change
+        /// which ships the corpus admits — see <c>Blueprints.ReadGrid</c>, which tries the pair and
+        /// then falls back, counting the fallbacks so the ambiguity is visible rather than silent.
+        /// </para>
+        /// </summary>
+        public static Dictionary<string, Definition> ByTypeAndSubtype()
+        {
+            lock (CacheLock)
+            {
+                if (_byTypeAndSubtype != null) return _byTypeAndSubtype;
+
+                Dictionary<string, Definition> map =
+                    new Dictionary<string, Definition>(StringComparer.Ordinal);
+
+                foreach (Definition block in All())
+                {
+                    string key = TypeAndSubtypeKey(block.TypeId, block.SubtypeId);
+                    if (!map.ContainsKey(key)) map[key] = block;
+                }
+
+                _byTypeAndSubtype = map;
+                return map;
+            }
+        }
+
+        /// <summary>The key <see cref="ByTypeAndSubtype"/> is read with.</summary>
+        public static string TypeAndSubtypeKey(string typeId, string subtypeId)
+        {
+            string type = typeId ?? "";
+            if (type.StartsWith("MyObjectBuilder_")) type = type.Substring("MyObjectBuilder_".Length);
+            return type + "/" + (subtypeId ?? "");
+        }
+
+        private static Dictionary<string, Definition> _byTypeAndSubtype;
+
         /// <summary>Definitions grouped by type id, in the order the files list them.</summary>
         public static Dictionary<string, List<Definition>> ByType()
         {

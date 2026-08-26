@@ -86,6 +86,20 @@ namespace Thermodynamics.Sim
                 {
                     int take;
                     int.TryParse(ValueAfter(args, "--ships") ?? "500", out take);
+
+                    // One named file, parsed with the reader's own counters visible even when the
+                    // ship is discarded — which is the state a dropped ship is in.
+                    string one_file = ValueAfter(args, "--file");
+                    if (one_file != null)
+                    {
+                        Blueprints.Ship probe = Blueprints.Probe(one_file);
+                        Console.WriteLine("grids " + probe.Grids.Count + "  blocks " + probe.Blocks
+                            + "  unknown " + probe.UnknownBlocks
+                            + "  ambiguous " + probe.AmbiguousBlocks
+                            + "  unresolved: " + string.Join(" ", probe.UnknownSubtypes.ToArray()));
+                        return 0;
+                    }
+
                     System.Collections.Generic.List<string> sample =
                         BaseVariantLab.Sample(ValueAfter(args, "--path"), take);
 
@@ -1456,7 +1470,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  frequency               where substep cost bottoms out against Frequency");
             Console.WriteLine("  reactors                where a vanilla reactor settles, against its waste fraction");
             Console.WriteLine("  oxygen                  where a vanilla oxygen generator settles, against its waste fraction");
-            Console.WriteLine("  basevariants [--ships N]  what the blocks a blueprint spells with no subtype are worth");
+            Console.WriteLine("  basevariants [--ships N] [--type T] [--file F]  what the blocks a blueprint spells with no subtype are worth");
             Console.WriteLine("  coolers                 every block that could cool a reactor, stacked against one");
             Console.WriteLine("  conductance             what real units did to the mod's own pipes and radiators");
             Console.WriteLine("  blocks                  every block in the game, derived from its build components");
