@@ -735,7 +735,7 @@ against 75.9 % at 1. `CensusFidelityTests` holds it there.
 
 **The reference moved from the dump to the corpus, and it had to.** The constants in `Census.Field`
 are two ships from two vanished sessions, measured at a pair the mod no longer runs; the corpus is
-8,105 blueprints and can be walked again in three minutes whenever a default changes. Where a test
+8,098 ships and can be walked again in six minutes whenever a default changes. Where a test
 still reads the dump it says which pace each side was taken at (`P6`).
 
 **Shape and the adapter, both already known.** Bounding-box fill, exposed fraction and diameter
@@ -752,7 +752,7 @@ else was true of them is unrecorded — so the same measurement was taken in the
 workshop corpus, where every input is visible and the run repeats in four minutes:
 
 ```bash
-dotnet run --project Thermodynamics.Sim -- stiffness            # 8,105 ships, ~3 min
+dotnet run --project Thermodynamics.Sim -- stiffness            # 8,098 ships, ~6 min
 dotnet run --project Thermodynamics.Sim -- stiffness --csv out/ # one row per ship
 ```
 
@@ -814,6 +814,34 @@ megawatts. **If the medians move more than 5 % the reason will be that the corre
 stiffer than armour rather than merely more numerous**, which is a different finding and worth
 having.
 
+### What it did: the heat moved a sixth and the stiffness did not move at all
+
+Walked in **352 s** over **8,098** ships. Every headline percentile came back **identical to the
+digit** — air p50 7.90, p90 18.42, max 22.41; vacuum p50 7.40, max 13.35 — and the constants in
+`Census.Corpus` moved only in their last place.
+
+| | prediction | outcome |
+| --- | --- | --- |
+| the population | 8,101 ships | **fails at 8,098.** The walk now reports **7 modded** where it reported none, which is exactly the seven `A13` rejects; the three the *census* gained were never excluded from this walk, so they cannot be gained here. The prediction merged two filters' bookkeeping |
+| the modes | `LitShare` within 0.01 of 0.4496 | **holds** at **0.4474**, a move of 0.0022 |
+| the medians | air and vacuum p50 move under 5 % | **holds**, and not marginally: **0.00 %** on both |
+| the tail | the maximum moves more than the median | **fails**, degenerately — both moved by nothing |
+
+**The failure that matters is the tail's, and it is the finding.** The prediction assumed the
+corrected blocks were heavy *and well-connected*, so they would show up at the top of the
+distribution. They are heavy and they are therefore **soft**: a substep demand is a conductance
+over a capacity, and a gravity generator is eight tonnes of capacity against light armour's five
+hundred kilograms. It makes megawatts and demands almost nothing. What sets a hull's demand is
+still a `SmallLight` on 33.9 % of ships and an armour cube on 31.3 %, and none of the eleven
+corrected types appears anywhere in that table.
+
+**So the same fix is worth 15.76 % of the population's heat and 0.00 % of its stiffness**, because
+[heat is a sum over blocks and stiffness is a maximum over them](balance-lab.md). That is worth
+holding on to when the next dataset has to be re-taken: **a block-identity error reaches a total and
+need not reach an extreme**, and which of the two a page is quoting decides whether it has to be
+re-measured at all. The stepped walks are still open (`A13`) and they are scored on peaks, which
+this says something about and does not settle.
+
 ### The population had two modes and almost nothing between them, and `C24` closed the gap
 
 A median of 6.61 with a ninetieth percentile of 33.09 was not a long tail. It was two populations,
@@ -844,7 +872,7 @@ between them rather than outside them.
 
 **`C24` put it outside the population and finding out why is `C26`.** At the pair that ships the
 hull asked for **36.75** substeps against a corpus running 6.20 to 22.41 — 1.64 times the stiffest
-of 8,105 real ships — and at a per-block cap of 8 it floored 6.91 % of its own blocks against a real
+of 8,098 real ships — and at a per-block cap of 8 it floored 6.91 % of its own blocks against a real
 population's 0.92 %. The retune did not cause that; it made it visible, because a buried block's
 demand is all conduction and quadrupled with the pace while a real ship's exposed one is mostly
 convection and fell with the clock.
@@ -1044,6 +1072,7 @@ conductivity 50 is conduction-stiff, and a material definition would fix them ou
 | 2026-08-24 | **Decided `C14`: the census hull is typical in stiffness and extreme in heat, on purpose.** The section above framed that as an open question — a worst case or a typical ship — and the two are properties rather than answers. A cost figure has to describe what a server pays, which is why `C26` put the hull in the population's trough; a temperature figure has to be a ceiling, which is why it stays at the 96th percentile for heat. The rule that follows is about quoting: a temperature taken on this hull is an upper bound, and every approximation accepted on such a figure — `C19`'s 0.028 K, `MaxSubstepsPerBlock 6`'s 0.607 K — is safer under that reading rather than shakier. |
 | 2026-08-24 | **Re-ran both per-block cap sweeps at the pair and hull that now ship, and what the cap is worth inverted.** In vacuum the hull demands 7.35 substeps rather than 22.97, so no cap above six binds and a cap of 6 buys nothing; in thick air at 200 m/s it demands 24.97 rather than 34.44 and a cap of 6 buys 3.1× for **0.028 K** on the worst-placed block against the 0.607 K that made it a switch. That is the same size as the ceiling breach `C19` accepted, so the number separating the two mechanisms is gone — [backlog.md](backlog.md) `C3`. |
 | 2026-08-24 | **Refreshed the census tiers against the blocks they were measured from, which closes [backlog.md](backlog.md) `C26`.** Every tier was a solid cube mounting on all six faces, and `SmallLight` declares one mount point while the three shaped-armour bands declare three, four and five — so the hull's lightest band carried six joints where the block it stands for carries one. The hull demanded 36.75 substeps in air against a population running 6.20 to 22.41 and now demands **12.71**, its stiffest block has four exposed faces against a real 3.46, and its air ratio is 1.97 against a population median of 1.07. Blocks are also laid out the way the game makes a player lay them out: every one bolted to something, and the lightest band on the surface. |
+| 2026-08-25 | **Walked the corpus again after `A13`, and the stiffness did not move.** 8,098 ships in 352 s — seven fewer, and the seven are the hulls that hold an empty-subtype `Door` or `GravityGenerator` on a small grid, which the game has only on large and which used to resolve to a small armour cube. Every headline percentile is identical to the digit and the constants move only in their last place, against the same fix being worth **15.76 %** of the population's full-load heat. A demand is a conductance over a capacity, so the corrected blocks — a gravity generator is eight tonnes — are exactly the blocks that make heat and demand nothing. Two of four registered predictions hold; the tail prediction fails and is where the finding is. |
 | 2026-08-24 | **Walked the corpus again at `C24`'s pair, and the population changed shape rather than scale.** 8,105 ships in 190 s: the two modes closed from 5.9× apart to 2.3×, half the population now sits between them where six per cent did, and air has stopped making much difference to *stiffness* anywhere — the median hull's stiffest block is 1.07 times stiffer in air where it was 2.34. The census hull went the other way and is now stiffer than every ship in the corpus, flooring 6.91 % of its own blocks at the shipped cap against a real 0.92 % ([backlog.md](backlog.md) `C26`). The two field observations cannot be placed against any of it: they were taken in sessions at the pair before. |
 | 2026-08-24 | **Bounded the coupled paths and measured their ladders**, which closes [backlog.md](backlog.md) `A10`. The pairwise clamp is half the bound a lumped mass needs — a parcel carries a link to every pipe on it, a room's air one to every surface, and the node on the other end of a sink face is pulled on by both the fluid and its neighbours. The per-node relaxation now applies to both coupled passes, which makes a substep a convex combination of the temperatures around a node. On the fixture where the plumbing sets the demand, 9.7× over-subscribed: **1.3e25 K before, 1,799 K after**; a thin room refused one substep of thirty went from 3,839 K of spread to inside the 300 K it started at. The block ladder is unmoved to three decimals. `bench ceiling` grew `--fixture census|plumbed|pressurised|rings`, because the ladder had been a block ladder for as long as it had existed and said so nowhere. |
 | 2026-08-24 | Recorded that the refusal ladder is a *block* ladder. The coolant path has no overshoot clamp and on a hull carrying nothing stiffer is what sets the demand, so refusing it is orderly to about 4.5× and reaches 1.7e11 K at 9× — a cliff where the block path has a slope ([backlog.md](backlog.md) `A10`). |

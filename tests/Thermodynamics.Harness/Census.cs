@@ -190,7 +190,7 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// The same quantities over **8,105 real workshop blueprints**, taken by <c>StiffnessLab</c>
+        /// The same quantities over **8,098 real workshop blueprints**, taken by <c>StiffnessLab</c>
         /// where <see cref="Field"/> is two ships from two vanished sessions. Quoted for a
         /// quarter-second step — <c>Frequency 4</c>, the basis <see cref="Field"/> used — in still
         /// sea-level air at noon, which is a *lower* bound.
@@ -216,16 +216,33 @@ namespace Thermodynamics.Harness
         /// hull, which is the environment term and is untouched; both say that at four times the
         /// conduction pace what sets a block's substep demand is its neighbours.
         /// </para>
+        /// <para>
+        /// **Re-walked 2026-08-25 after `A13`, and the interesting number is the one that did not
+        /// move.** The blueprint reader had been building eleven kinds of vanilla block as an
+        /// armour cube; corrected, the population's full-load *heat* rose **15.76 %** and its
+        /// stiffness rose by nothing at all — `AirP50`, `AirP90`, `AirMax` and every vacuum
+        /// percentile came back identical to the digit, and the constants below move only in their
+        /// last place. **Heat is a sum over blocks and stiffness is a maximum over them**, and the
+        /// corrected blocks are heavy: a gravity generator is eight tonnes of capacity, so it makes
+        /// megawatts and demands almost no substeps. What sets a hull's demand is still a
+        /// `SmallLight` or an armour cube, on 45 % and 31 % of ships. So a block-identity error can
+        /// be worth a sixth of a population's heat and nothing whatever to its cost.
+        /// </para>
         /// </summary>
         public static class Corpus
         {
-            /// <summary>Ships measured, of 8,144 blueprints; 39 are over the 64 MB reader cap.</summary>
-            public const int Ships = 8105;
+            /// <summary>
+            /// Ships measured, of 8,144 blueprints; 39 are over the 64 MB reader cap and **7 are
+            /// modded**, where none were before `A13`. Those seven hold an empty-subtype `Door` or
+            /// `GravityGenerator` on a small grid, which the game has only on large; they used to
+            /// resolve to a small armour cube and be walked as vanilla.
+            /// </summary>
+            public const int Ships = 8098;
 
             // In air. Was 4.26 / 6.61 / 33.09 / 34.45 before C24; the top of the distribution came
             // down with the clock while the bottom of it went up with the conduction pace, which is
             // the two modes closing.
-            public const float AirP10 = 6.20f;
+            public const float AirP10 = 6.22f;
             public const float AirP50 = 7.90f;
             public const float AirP90 = 18.42f;
             public const float AirMax = 22.41f;
@@ -235,7 +252,7 @@ namespace Thermodynamics.Harness
             /// barely softer at all. Was 4.79 / 6.34 / 8.64.
             /// </summary>
             public const float VacuumP50 = 7.40f;
-            public const float VacuumP90 = 10.01f;
+            public const float VacuumP90 = 10.03f;
             public const float VacuumMax = 13.35f;
 
             /// <summary>
@@ -251,11 +268,11 @@ namespace Thermodynamics.Harness
             /// this repository that refuse to quote one are the ones to re-read.
             /// </summary>
             public const float LitP50 = 16.83f;
-            public const float StructuralP50 = 7.23f;
-            public const float LitShare = 0.4496f;
+            public const float StructuralP50 = 7.25f;
+            public const float LitShare = 0.4474f;
 
             /// <summary>Share of ships between the two modes, 8 to 28 substeps. Was about 0.06.</summary>
-            public const float BetweenTheModes = 0.492f;
+            public const float BetweenTheModes = 0.491f;
 
             /// <summary>
             /// How much stiffer air makes the block that sets a hull's air peak: **the same block's**
@@ -318,10 +335,10 @@ namespace Thermodynamics.Harness
             /// tests that compare the two now say so rather than pretending to a like-for-like.
             /// </para>
             /// </summary>
-            public const float FlooredAtCap8 = 0.0092f;
-            public const float FlooredAtCap4 = 0.2322f;
-            public const float FlooredAtCap2 = 0.4033f;
-            public const float FlooredAtCap1 = 0.7589f;
+            public const float FlooredAtCap8 = 0.0087f;
+            public const float FlooredAtCap4 = 0.2318f;
+            public const float FlooredAtCap2 = 0.4022f;
+            public const float FlooredAtCap1 = 0.7529f;
         }
 
         private static BlockModel[] models;
@@ -481,7 +498,7 @@ namespace Thermodynamics.Harness
         /// Moves the lightest tier onto the hull's surface, swapping it with whatever was there.
         ///
         /// <para>
-        /// **A real ship's stiffest block is one somebody could see.** Measured over 8,105 workshop
+        /// **A real ship's stiffest block is one somebody could see.** Measured over 8,098 workshop
         /// hulls, the block that sets a ship's substep demand in air has **3.46 exposed faces** on
         /// average and a light sets it on 45 % of them — a light hangs off a hull. The census hull
         /// deals its tiers out by a hash of a block's position in the layout, so its light fittings
