@@ -118,6 +118,16 @@ namespace Thermodynamics.Harness
             /// </summary>
             public float TransportK;
 
+            /// <summary>
+            /// What the plumbed ring is actually doing, so a null result can be read. A package
+            /// that raises the pumped coefficient and lowers the stopped share is *exactly*
+            /// neutral on a ring that is not circulating, and a lab that reports only kelvin
+            /// cannot tell that apart from the package being worthless (`O5`).
+            /// </summary>
+            public bool LoopFlowing;
+            public float LoopSinkWattsPerKelvin;
+            public float CarriedSinkWattsPerKelvin;
+
             public float BoltedSaved { get { return BareK - BoltedK; } }
             public float PlumbedSaved { get { return BareK - PlumbedK; } }
             public float TransportSaved { get { return BareK - TransportK; } }
@@ -285,6 +295,17 @@ namespace Thermodynamics.Harness
 
                         if (sinks.Count == 0) continue;
 
+                        // **The panels go on the ring, and this line used to lie.** The comment
+                        // under it said *radiators beside the ring, so the heat the loop collects
+                        // has somewhere to go* and the call was `Bolt(builder, hot, radiator)`,
+                        // which puts them round the hot block. No sink face pointed at a panel, so
+                        // the loop picked heat up and discharged it through pipe skin alone - and
+                        // the arm that exists to test *plumb it, do not bolt it* was measuring a
+                        // coolant ring bolted to a reactor. It is why raising the fluid's coupling
+                        // 6.25× moved the median hull by nothing: the pickup improved and the
+                        // discharge did not.
+                        int fed = FeedPanels(builder, ring, sinks, radiator);
+
                         try
                         {
                             PipeFitter.BuildRing(builder, ring, -1, sinks);
@@ -294,9 +315,10 @@ namespace Thermodynamics.Harness
                             continue;
                         }
 
-                        // Radiators wherever there is still room beside the ring, so the heat the
-                        // loop collects has somewhere to go rather than circulating.
+                        // Whatever else will fit near the hot block, as the bolted arm does, so the
+                        // two arms differ by the loop rather than by the number of panels.
                         Bolt(builder, hot, radiator);
+
                         return ring.Count;
                     }
                 }
@@ -333,6 +355,86 @@ namespace Thermodynamics.Harness
                 case 1: return PipeFitter.RectangleXY(origin, 3, 3);
                 default: return PipeFitter.RectangleYZ(origin, 3, 3);
             }
+        }
+
+
+        /// <summary>
+        /// Puts radiators against the ring and gives the ring sink faces onto them, so the loop has
+        /// somewhere to discharge. Returns how many it fed.
+        ///
+        /// <para>
+        /// **A ring with a pickup and no discharge is a heat buffer, not a cooling system.** A sink
+        /// face carries `h · A` and a bolt joint carries solid conduction; feeding a panel through
+        /// the first is the entire claim `blocks.md` makes for loops, and the plumbed arm was not
+        /// testing it.
+        /// </para>
+        ///
+        /// <para>
+        /// One straight cell is always left without a sink, because the pump needs a straight run
+        /// that is not a sink cell and `PipeFitter` refuses a ring that cannot seat one — refusing
+        /// is right, and this is what keeps it from having to.
+        /// </para>
+        /// </summary>
+        private static int FeedPanels(GridBuilder builder, List<Vector3I> ring,
+            Dictionary<int, Vector3I> sinks, BlockModel radiator)
+        {
+            int fed = 0;
+            int straightLeft = CountStraightWithoutSink(ring, sinks);
+
+            for (int i = 0; i < ring.Count && fed < MaxBlocks; i++)
+            {
+                if (sinks.ContainsKey(i)) continue;
+
+                bool straight = IsStraight(ring, i);
+                if (straight && straightLeft <= 1) continue;
+
+                for (int f = 0; f < Face.Count; f++)
+                {
+                    Vector3I direction = Face.Offsets[f];
+                    Vector3I at = ring[i] + direction;
+
+                    if (builder.Grid.IsOccupied(at)) continue;
+                    if (ring.Contains(at)) continue;
+
+                    try
+                    {
+                        builder.Place(radiator, at);
+                    }
+                    catch (Exception)
+                    {
+                        // A multi-cell panel whose other cells are taken. Try another face.
+                        continue;
+                    }
+
+                    sinks[i] = direction;
+                    fed++;
+                    if (straight) straightLeft--;
+                    break;
+                }
+            }
+
+            return fed;
+        }
+
+        /// <summary>Straight cells with no sink asked for, which is what a pump can be seated on.</summary>
+        private static int CountStraightWithoutSink(List<Vector3I> ring, Dictionary<int, Vector3I> sinks)
+        {
+            int count = 0;
+            for (int i = 0; i < ring.Count; i++)
+            {
+                if (!sinks.ContainsKey(i) && IsStraight(ring, i)) count++;
+            }
+            return count;
+        }
+
+        /// <summary>Whether a ring cell is a straight run rather than a corner.</summary>
+        private static bool IsStraight(List<Vector3I> ring, int index)
+        {
+            Vector3I cell = ring[index];
+            Vector3I previous = ring[(index - 1 + ring.Count) % ring.Count];
+            Vector3I next = ring[(index + 1) % ring.Count];
+
+            return (previous - cell) == -(next - cell);
         }
 
         /// <summary>One ship: as built, then bolted, then plumbed.</summary>
@@ -382,6 +484,10 @@ namespace Thermodynamics.Harness
                 ThermalNode after;
                 row.PlumbedK = Load(plumbed, out after);
 
+                bool flowing;
+                row.LoopSinkWattsPerKelvin = WorstSink(plumbed, out flowing);
+                row.LoopFlowing = flowing;
+
                 // **The same ring again, with the loop able to carry heat.** `G3` asks whether
                 // cooling works, and every measurement of it so far has been taken on a loop whose
                 // sink face carries 1,000 W/K against a panel that can shed a megawatt and a half.
@@ -390,9 +496,43 @@ namespace Thermodynamics.Harness
                 ShipAssembly carried = ship.Build(settings);
                 LoopCandidate.Apply(carried);
                 row.TransportK = Load(carried, out after);
+
+                bool carriedFlowing;
+                row.CarriedSinkWattsPerKelvin = WorstSink(carried, out carriedFlowing);
             }
 
             return row;
+        }
+
+        /// <summary>
+        /// The strongest coupling any loop on the ship has, W/K, and whether anything is
+        /// circulating. This is the quantity the whole `carried` arm turns on: a sink face carries
+        /// `h · A`, so if this does not move between the two arms then neither can the kelvin.
+        /// </summary>
+        private static float WorstSink(ShipAssembly assembly, out bool flowing)
+        {
+            float worst = 0f;
+            flowing = false;
+
+            for (int s = 0; s < assembly.Simulations.Count; s++)
+            {
+                IList<CoolantLoop> loops = assembly.Simulations[s].Solver.Loops;
+                if (loops == null) continue;
+
+                for (int l = 0; l < loops.Count; l++)
+                {
+                    CoolantLoop loop = loops[l];
+                    if (loop.FlowSegmentsPerSecond != 0f) flowing = true;
+
+                    for (int i = 0; i < loop.Links.Count; i++)
+                    {
+                        float carried = loop.LinkConductance(i);
+                        if (carried > worst) worst = carried;
+                    }
+                }
+            }
+
+            return worst;
         }
 
         public static List<Row> Run(IList<Blueprints.Ship> ships, LabMode mode = LabMode.Parallel)
@@ -447,7 +587,8 @@ namespace Thermodynamics.Harness
             List<float> bolted = new List<float>();
             List<float> plumbed = new List<float>();
             List<float> carried = new List<float>();
-            int noRoomBolted = 0, noRoomPlumbed = 0, measured = 0, cold = 0;
+            int noRoomBolted = 0, noRoomPlumbed = 0, measured = 0, cold = 0, flowingLoops = 0;
+            float sinkPlumbed = 0f, sinkCarried = 0f;
 
             for (int i = 0; i < rows.Count; i++)
             {
@@ -467,6 +608,10 @@ namespace Thermodynamics.Harness
                 {
                     plumbed.Add(100f * row.PlumbedSaved / row.BareK);
                     carried.Add(100f * row.TransportSaved / row.BareK);
+
+                    if (row.LoopFlowing) flowingLoops++;
+                    if (row.LoopSinkWattsPerKelvin > sinkPlumbed) sinkPlumbed = row.LoopSinkWattsPerKelvin;
+                    if (row.CarriedSinkWattsPerKelvin > sinkCarried) sinkCarried = row.CarriedSinkWattsPerKelvin;
                 }
             }
 
@@ -490,6 +635,12 @@ namespace Thermodynamics.Harness
             sb.AppendLine("  A fit that takes single-figure percentages off a ship that is burning is");
             sb.AppendLine("  not a lever a player has. `no room` is the other half of the answer: cooling");
             sb.AppendLine("  that cannot be installed without demolishing the hull is not cooling either.");
+            sb.AppendLine();
+            sb.Append("  of the ").Append(plumbed.Count).Append(" plumbed hulls, ")
+                .Append(flowingLoops).AppendLine(" had a ring that was circulating");
+            sb.Append("  worst sink coupling: plumbed ").Append(sinkPlumbed.ToString("n0"))
+                .Append(" W/K, carried ").Append(sinkCarried.ToString("n0")).AppendLine(" W/K");
+
             sb.AppendLine();
             sb.AppendLine("  `carried` is the plumbed hull again with LoopCandidate applied: the same");
             sb.AppendLine("  ring, the same panels, a fluid that can move what they can shed. It is a");
