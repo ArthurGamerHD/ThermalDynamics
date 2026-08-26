@@ -524,6 +524,45 @@ sample as a median 10.4 % over 64.5 % of ships. On the population it is a median
 with the definition hashes recorded beside it — the first dataset in this repository that records
 its own build, because the file that does it had never been written (`A13`'s own change log).*
 
+### What the survey's first 60 % says, and what it cannot
+
+The `A13` re-survey is still running. What it holds is **not a sample of the population**: the walk
+is largest-first, so its 698 finished hulls are the corpus's 698 *biggest* — 8.6 % of it by count
+and **60 % of it by bytes**. Every absolute figure below is a statement about giants (`P1`).
+
+**Scored on that set, two criteria fail.** `G1` holds at 0.43 % critical at idle and `G2` at 92.5 %
+warm under load; **`G5` fails at 88.8 % recovered** against the 95 % it asks, and `G6`'s cost half
+fails hard — step work p99 **16,243,373** element visits against 4,000,000 granted, on 277 of 3,480
+runs.
+
+**Paired against the same hulls in the 2026-08-21 survey, the size bias cancels, and every one of
+them moved the right way:**
+
+| on the same 698 hulls | 2026-08-21 | now |
+| --- | ---: | ---: |
+| idle runs over critical | 8 | **3** |
+| full-electrical runs over critical | 566 | **539** |
+| full-electrical peak, p50 | 1,607 K | **1,190 K** |
+| recovery runs over critical | 135 | **78** |
+| `G5` recovered | 80.7 % | **88.8 %** |
+
+So **`G5`'s failure here is not new and not a regression — it is an improvement that has not gone
+far enough.** These hulls have always failed it; the current model recovers eight points more of
+them than the baseline did. And because `G5` held at ~100 % on the *whole* 2026-08-21 population,
+what this really says is that **the population figure was carried by the small hulls all along** and
+nobody had looked at the giants separately.
+
+**What it cannot say, and neither can the finished walk.** The comparison is paired but it is not
+attributable: four days and four changes separate the two datasets — `C24`'s conduction and clock,
+the drive fractions, the twenty-seven computer fractions, and `A13` — so this is *the model as it
+stands against the model as it stood*, not what any one of them did (`P6`). Isolating `A13` needs
+the same walk on the old reader, which is not a thing that exists.
+
+*Basis: `out/survey-2026-08-25`, assembled across four slices whose `provenance.txt` records four
+commits and — the thing that makes it one dataset — **identical `Cubes.xml`, `Loops.xml` and
+`Planets.xml` hashes across all four**. The coolant work those commits carry cannot reach a corpus
+ship: the filter admits only vanilla hulls and none of them has a loop.*
+
 ### What flooring an over-budget grid does, written before it is measured
 
 `CorpusFloorWalk` is built and **has produced nothing**. The question, the statistic, the decision
