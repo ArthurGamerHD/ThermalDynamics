@@ -145,6 +145,130 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **The whole of `B43`'s answer, in one assertion: venting and refilling at the break-even
+        /// excess is neutral in heat.**
+        ///
+        /// <para>
+        /// The heat a vent removes is the fluid's excess times its capacity. The energy a refill
+        /// spends is the heat that same fluid holds at `RefillEquivalentKelvin` — and a pump's
+        /// `ConsumerWasteEnergy` is 1, so every joule of it lands back in the ship. At exactly that
+        /// excess the two are the same number and the cycle gains nothing, which is the exploit
+        /// benefit erased by construction rather than by a threshold chosen to be large enough.
+        /// </para>
+        ///
+        /// <para>
+        /// **188,889 J is not a coincidence** — it is what
+        /// `GrindAndRewealdIsWorthKilowattsRatherThanMegawatts` measured a grind of one parcel to
+        /// remove at 100 K over, taken from the other side of the same arithmetic.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void VentingAndRefillingAtTheBreakEvenExcessIsNeutralInHeat()
+        {
+            CoolantLoop loop;
+            Ring(out loop);
+
+            const float Ambient = 293.15f;
+            float excess = loop.Properties.RefillEquivalentKelvin;
+
+            for (int i = 0; i < loop.ParcelCount; i++)
+            {
+                loop.SetSegmentTemperature(i, Ambient + excess);
+            }
+
+            float removed = loop.Vent(Ambient);
+
+            // Refill it all the way back, however many ticks that takes, summing what it spent.
+            float spent = 0f;
+            for (int tick = 0; tick < 10000 && loop.FillFraction < 1f; tick++)
+            {
+                spent += loop.Refill(1f) * 1f;
+            }
+
+            output.WriteLine("vent removed {0:n0} J; refill spent {1:n0} J; ratio {2:n4}",
+                removed, spent, spent / removed);
+            output.WriteLine("one parcel of {0} is {1:n0} J", loop.ParcelCount, removed / loop.ParcelCount);
+
+            Assert.Equal(1f, loop.FillFraction);
+            Assert.True(removed > 0f, "the vent removed nothing, so this compares two zeroes");
+
+            // Neutral: what came out is what goes back in as heat.
+            Assert.InRange(spent, removed * 0.99f, removed * 1.01f);
+        }
+
+        /// <summary>
+        /// Above the break-even excess venting still pays, and below it costs. That asymmetry is
+        /// what keeps the emergency dump useful while making the cycle worthless.
+        /// </summary>
+        [Theory]
+        [InlineData(300f, true)]
+        [InlineData(30f, false)]
+        public void VentingPaysOnlyWhenTheCoolantIsHotterThanTheRefillIsPricedAt(
+            float excess, bool shouldPay)
+        {
+            CoolantLoop loop;
+            Ring(out loop);
+
+            const float Ambient = 293.15f;
+            for (int i = 0; i < loop.ParcelCount; i++) loop.SetSegmentTemperature(i, Ambient + excess);
+
+            float removed = loop.Vent(Ambient);
+
+            float spent = 0f;
+            for (int tick = 0; tick < 10000 && loop.FillFraction < 1f; tick++) spent += loop.Refill(1f);
+
+            output.WriteLine("{0:n0} K over: removed {1:n0} J, spent {2:n0} J, net {3:n0} J",
+                excess, removed, spent, removed - spent);
+
+            Assert.Equal(shouldPay, removed > spent);
+        }
+
+        /// <summary>
+        /// The fill rate bounds the cycle: a ring comes back at the rate it comes back at, however
+        /// hard anybody works. It is the only figure in this feature that was chosen rather than
+        /// derived, so it is the one worth pinning against a change nobody meant.
+        /// </summary>
+        [Fact]
+        public void ARingRefillsAtTheRateAndNoFaster()
+        {
+            CoolantLoop loop;
+            Ring(out loop);
+
+            loop.FillFraction = 0f;
+
+            float perSecond = loop.Properties.RefillKilogramsPerSecond;
+            loop.Refill(1f);
+
+            output.WriteLine("after 1 s: {0:n1} kg of {1:n0}", loop.HeldKilograms, loop.CapacityKilograms);
+            Assert.InRange(loop.HeldKilograms, perSecond * 0.99f, perSecond * 1.01f);
+
+            // And it stops at full rather than overshooting, so the last tick of a refill is priced
+            // for what it actually moved.
+            float drawn = 0f;
+            for (int tick = 0; tick < 10000 && loop.FillFraction < 1f; tick++) drawn += loop.Refill(1f);
+
+            Assert.Equal(1f, loop.FillFraction);
+            Assert.Equal(0f, loop.Refill(1f));
+            Assert.True(drawn > 0f);
+        }
+
+        /// <summary>
+        /// A dry ring vents nothing, so a second grinder pass costs a player nothing and gains them
+        /// nothing — the same shape as grinding the same pipe twice.
+        /// </summary>
+        [Fact]
+        public void VentingATwiceEmptiedRingRemovesNothingTheSecondTime()
+        {
+            CoolantLoop loop;
+            Ring(out loop);
+
+            for (int i = 0; i < loop.ParcelCount; i++) loop.SetSegmentTemperature(i, 900f);
+
+            Assert.True(loop.Vent(293.15f) > 0f);
+            Assert.Equal(0f, loop.Vent(293.15f));
+        }
+
+        /// <summary>
         /// Kilograms are what a refill is priced in, so the ring reports them: a full eight-pipe
         /// large-grid ring is eight parcels of the shipped 50 kg.
         /// </summary>

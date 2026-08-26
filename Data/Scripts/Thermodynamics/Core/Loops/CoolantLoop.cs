@@ -219,6 +219,84 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Energy to restore one kilogram of coolant, J. The heat that kilogram holds at
+        /// <see cref="LoopThermalProperties.RefillEquivalentKelvin"/> above ambient.
+        ///
+        /// **Divided by the clock for the same reason a parcel's capacity is.** The heat a vent
+        /// removes is `capacity × excess` and the capacity the solver carries is already scaled, so
+        /// a refill priced in unscaled joules would cost `HeatTimeScale` times what the vent saved.
+        /// The two have to be in the same currency or the exchange rate is a factor of ninety out.
+        /// </summary>
+        public float RefillJoulesPerKilogram
+        {
+            get
+            {
+                return (Properties.SpecificHeat * Properties.RefillEquivalentKelvin) / heatTimeScale;
+            }
+        }
+
+        /// <summary>
+        /// Puts <paramref name="deltaSeconds"/> of refilling into the ring and returns the watts it
+        /// drew doing so — zero when the ring is already full.
+        ///
+        /// <para>
+        /// **The watts are the caller's to spend**, because what makes this cost anything is the
+        /// pump's own waste fraction of 1: the host adds them to the pump block's drawn power and
+        /// the existing heat path turns all of it into heat where the pump stands. Nothing new
+        /// generates heat here, which is why the exchange rate needs no authored threshold.
+        /// </para>
+        ///
+        /// <para>
+        /// Returns watts rather than joules so a caller can hand it to a power model that thinks in
+        /// watts, and so a partial step — the last one of a refill, which restores less than a full
+        /// tick's worth — is priced for what it actually moved.
+        /// </para>
+        /// </summary>
+        public float Refill(float deltaSeconds)
+        {
+            if (deltaSeconds <= 0f || fill >= 1f) return 0f;
+
+            float capacity = CapacityKilograms;
+            if (capacity <= 0f) return 0f;
+
+            float wanted = Properties.RefillKilogramsPerSecond * deltaSeconds;
+            float room = (1f - fill) * capacity;
+            float added = wanted < room ? wanted : room;
+            if (added <= 0f) return 0f;
+
+            FillFraction = fill + added / capacity;
+
+            return (added * RefillJoulesPerKilogram) / deltaSeconds;
+        }
+
+        /// <summary>
+        /// Empties the ring and returns the heat that left with the fluid, J.
+        ///
+        /// <para>
+        /// **The heat is what the fluid was carrying above ambient**, which is exactly what a refill
+        /// at the same excess costs to put back. That is the whole of `B43`'s answer: venting at
+        /// <see cref="LoopThermalProperties.RefillEquivalentKelvin"/> is neutral, above it pays, and
+        /// below it costs.
+        /// </para>
+        ///
+        /// <para>
+        /// The ring survives. It holds nothing and transports nothing until it is refilled, which is
+        /// what backlog.md `B44` requires: *the loop stops existing* is the shape this area has
+        /// failed in twice.
+        /// </para>
+        /// </summary>
+        public float Vent(float ambientKelvin)
+        {
+            if (fill <= 0f) return 0f;
+
+            float excess = Temperature - ambientKelvin;
+            float heat = excess > 0f ? excess * ThermalMass : 0f;
+
+            FillFraction = 0f;
+            return heat;
+        }
+
+        /// <summary>
         /// The conductance of one link as the solver must use it: what the geometry gives, scaled
         /// by how full the ring is.
         ///

@@ -47,6 +47,42 @@ namespace Thermodynamics.Core
         /// <summary>Contact area scaler between the fluid and the pipe block it runs through.</summary>
         public float PipeContactMultiplier = 1f;
 
+        /// <summary>
+        /// The excess a refill is priced at, K. Energy to restore one kilogram is
+        /// `SpecificHeat × this / HeatTimeScale` — the heat that kilogram holds at this many kelvin
+        /// above ambient.
+        ///
+        /// <para>
+        /// **So this is the excess at which venting and refilling exactly break even**, and the
+        /// number is derived rather than picked: a pump's `ConsumerWasteEnergy` is 1, so every joule
+        /// spent refilling lands back in the ship as heat, and charging the parcel's own heat makes
+        /// the cycle neutral by construction. Above this excess dumping coolant still pays and below
+        /// it costs, which is the behaviour to want — worth doing when the coolant is genuinely hot,
+        /// worthless as a pump.
+        /// </para>
+        ///
+        /// <para>
+        /// 100 K because that is where `ThermalGlow` starts: the excess this mod already treats as
+        /// the point a block is worth telling the player about. See thermal-model.md, *Coolant is a
+        /// consumable*, and backlog.md `B43`.
+        /// </para>
+        /// </summary>
+        public float RefillEquivalentKelvin = 100f;
+
+        /// <summary>
+        /// How fast a ring refills, kg/s. Bounds the cycle: however many grinders are aboard, the
+        /// coolant comes back at this rate and no faster.
+        ///
+        /// <para>
+        /// **The one figure here with no derivation under it, and it says so.** Venting is instant
+        /// and refilling is not, and that asymmetry is the mechanic — an emergency dump buys relief
+        /// now and pays it back while the radiators work. 5 kg/s refills a full eight-pipe large-grid
+        /// ring in 80 s, inside the 2–5 minute window `G8` asks a significant thermal event to land
+        /// in, and it is 2.5 % of the 200 kg/s a large-grid pump circulates.
+        /// </para>
+        /// </summary>
+        public float RefillKilogramsPerSecond = 5f;
+
         /// <summary>Contact area scaler between the fluid and a block on a sink face.</summary>
         public float SinkContactMultiplier = 1f;
 
@@ -96,6 +132,8 @@ namespace Thermodynamics.Core
         public LoopThermalProperties Clamp()
         {
             CoolantMassPerPipe = Math.Max(1f, CoolantMassPerPipe);
+            RefillEquivalentKelvin = Math.Max(0f, RefillEquivalentKelvin);
+            RefillKilogramsPerSecond = Math.Max(0f, RefillKilogramsPerSecond);
             LargeGridFlowRate = Math.Max(0f, LargeGridFlowRate);
             SmallGridFlowRate = Math.Max(0f, SmallGridFlowRate);
             StagnantTransferFraction = Math.Max(0f, Math.Min(1f, StagnantTransferFraction));
