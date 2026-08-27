@@ -900,10 +900,142 @@ the block count, six faces each — and only fewer cells can move it now.
 
 ---
 
+# Pass 3 — 2026-08-27
+
+Started from `a81ee0b`, the tip pass 2 left. Its first act is the same as pass 2's: fix the
+instrument, because pass 2 ended owing an explanation for a figure it could not account for.
+
+## Pass 3, iterations
+
+| # | Subject | Verdict | Where |
+| ---: | --- | --- | --- |
+| 1 | The stage lab settles between stages and reports what each allocated | **kept** — and `C4` is asserted now | [Iteration 1](#pass-3-iteration-1--the-stage-lab-settles-between-stages) |
+| 2 | The flood reads a cell's own sealing byte once, not once a face | *measuring* | [Iteration 2](#pass-3-iteration-2--the-flood-reads-a-cells-sealing-byte-once) |
+| 3 | A room-membership bit in front of the search `IsExternal` makes | *measuring* | [Iteration 3](#pass-3-iteration-3--a-room-membership-bit-in-front-of-the-search) |
+| 4 | A pair's touching face is found once, and the link list is sized | *measuring* | [Iteration 4](#pass-3-iteration-4--one-touching-face-per-pair-and-a-sized-link-list) |
+| 5 | One box index for both of the sets `IsExternal` reads | *measuring* | [Iteration 5](#pass-3-iteration-5--one-box-index-for-both-sets) |
+| 6 | A neighbour's key is the cell's key plus a constant | **kept** — surfaces 0.51 | [Iteration 6](#pass-3-iteration-6--a-neighbours-key-is-the-cells-key-plus-a-constant) |
+| 7 | A block carries its grid slot, and a dictionary goes | *measuring* | [Iteration 7](#pass-3-iteration-7--a-block-carries-its-grid-slot) |
+| 8 | The flood's frontier is a ring buffer kept between passes | *measuring* | [Iteration 8](#pass-3-iteration-8--a-retained-ring-frontier) |
+| 9 | The neighbour walk reports the face it found a neighbour across | *measuring* | [Iteration 9](#pass-3-iteration-9--the-walk-reports-the-face-it-found) |
+
+## Pass 3, iteration 1 — the stage lab settles between stages
+
+Pass 2 ended owing an explanation: at 126,731 blocks the surface stage read 8.4 ms at its start and
+13.3 at its tip, in both rounds, and nothing in that pass touched the surface map. The cause is the
+instrument. `place` constructs a block instance and a grid entry per block, fifteen repeats over —
+two million objects — so every stage the list ran after it measured a different heap.
+
+The lab collects twice between stages now, and reports **what one execution of each stage
+allocated**, which is the column that makes such a row explainable rather than odd. The figure is
+also a check: a settled step of a census hull must allocate under four kilobytes, which is `C4` —
+*nothing allocates on the stepping path* — asserted rather than read off a benchmark. For a rule
+whose correct value is zero, a report was never a check.
+
+*Measured alone, the surface stage reads 7.1 ms at 126,731 blocks on the pass-2 tip against the
+8.4 ms that pass recorded, and its own spread across rounds on that code is 7.1 to 13.5 ms — so the
+row pass 2 could not explain was the instrument's, and this is the correction (`E10`).*
+
+## Pass 3, iteration 2 — the flood reads a cell's sealing byte once
+
+`Reaches` re-read `sealing[index]` — the same byte for all six faces of the cell it was asked about —
+on every face, and took the neighbour as an out-parameter the caller had already built. The byte is
+read once per cell now, the sealing test that can reject without touching the box runs first, and the
+interior flood asks `IsStructureAt` with the index it already holds. Faces in the same order, so a
+room's cells arrive in the same order, so its air links and the sum over them are bit for bit what
+they were — which is the constraint every change to this flood is under.
+
+## Pass 3, iteration 3 — a room-membership bit in front of the search
+
+Exposure asks `IsExternal` once per unsealed face of every block, and `IsExternal` answered by binary
+searching every room cell on the grid — about twenty dependent loads through 1.5 million keys at half
+a million blocks — to learn what is nearly always *in no room at all*. A bit per bounding cell
+answers that outright; the search stays for callers that want the room's index. The check was written
+first, passes against the old code, and was proven to fail on an inverted membership test.
+
+## Pass 3, iteration 4 — one touching face per pair, and a sized link list
+
+The link builder tested for a touching face and then called `CountContactFaces`, which found it
+again: a million redundant box overlaps at half a million blocks, on the full rebuild and the
+incremental one alike. And the link list was doubled into from empty, which on a million links is
+several million struct copies of pure growth; it is sized at two a block first.
+
+## Pass 3, iteration 5 — one box index for both sets
+
+The solid set and the room-membership set cover the same box, so a cell has one index in both, and
+`IsExternal` was deriving it twice — three subtractions, six compares and two multiplies, per
+unsealed face, per block.
+
+## Pass 3, iteration 6 — a neighbour's key is the cell's key plus a constant
+
+**A key is a sum of the components rather than a packing of bit fields**, so it is linear:
+`Key(v + d) == Key(v) + Key(d)`, across zero and across a negative component alike. The surface
+rebuild converted a cell to a key seven times per cell and back once; it snapshots keys and self
+states now, adds a per-face constant for each neighbour, and writes each cell's derived half exactly
+once rather than asking the dictionary for what it had just put there.
+
+**What it was worth.** `bench stages --stages surfaces`, alone and first, before against after,
+cores proven different, two rounds, fastest kept:
+
+| blocks | surfaces, before | after | ratio |
+| ---: | ---: | ---: | ---: |
+| 126,731 | 7.14 ms | **7.11 ms** | 1.00 |
+| 505,566 | 52.32 ms | **26.50 ms** | **0.51** |
+
+At the small rung the stage fits in cache either way and the probes are not what it pays for; at the
+large one it halves. The *before* leg also swings 52 to 80 ms between rounds where the after leg
+reads 26.5 twice — the dictionary path is the sensitive one, which is the same fact from the other
+side.
+
+## Pass 3, iteration 7 — a block carries its grid slot
+
+`GridModel` held a second dictionary, from block key to list slot, beside its cell index: an insert
+per block at load, a probe per removal, and about thirty bytes a block, to answer what the block can
+hold in four. The block carries it now on the same terms as `NodeIndex` — a hint the grid verifies
+before use — and `GetByKey` reads the cell index, which answers the same question because a block's
+key is the key of a cell it occupies.
+
+## Pass 3, iteration 8 — a retained ring frontier
+
+A pass enqueues every air cell of the bounding volume — 6.6 million at half a million blocks — into
+a `Queue` grown from empty, so about twenty reallocations and thirteen million struct copies went on
+growth every pass, having already been that large the pass before. The frontier is an array-backed
+ring the mapper keeps. What a retained buffer risks is a pass reading what the last one left, so that
+is the pin: the same hull mapped after a flood over a box forty cells larger in every direction
+publishes the same map.
+
+## Pass 3, iteration 9 — the walk reports the face it found
+
+The neighbour walk iterates faces to find neighbours and threw the face away, so the link builder
+asked `ContactFace` to work it out again from two boxes. It reports it now, through an overload
+rather than a change to `IBlockAdjacency` — a port an adapter outside this repository implements
+(`W2`) — and a host supplying its own adjacency still gets the worked-out face.
+
+## Pass 3 — what is designed and not built
+
+**A span flood.** The room pass is what is left, and its cost is the flood: every air cell of a box
+fourteen times the block count, six faces each. Counted on this hull (a structural count, not a
+timing): at 505,566 blocks the external air is **5,103,739 cells in 60,681 maximal x-runs — 84 cells
+a run** — and the room air is 1,503,815 cells in 22,445 runs. A flood that enqueued *runs* rather
+than cells would push about eighty thousand entries where this one pushes six and a half million,
+and could mark whole words of the visited set at a time.
+
+**What stops it being this pass's work is bit-identity, and it is worth writing down.** A span flood
+reaches a room's cells in a different order; `BuildRoomLinks` walks a room's cells to build its air
+links, and `AccumulateRoomAir` sums over those links in order — so a different cell order is a
+different sum order and a different last bit on a temperature. Landing it means first making the air
+links canonical (sorting them by node index), which is itself a change that moves the last bits once
+and needs the byte-identical scenario baselines re-recorded in its own commit. That is a designed
+change with a measured prize, and it belongs to a pass that can start with it rather than reach it
+ninth.
+
+---
+
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Opened pass 3, whose first iteration explains the figure pass 2 could not: the instrument, not the surface map. |
 | 2026-08-27 | Closed pass 2: ten iterations, six kept, three dropped with their measurements, one the pass summary. World load at a million blocks 3.17 → 2.21 s. |
 | 2026-08-26 | Opened pass 2 on the page, with its start figures taken by the instrument the pass begins by putting in the tree. |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
