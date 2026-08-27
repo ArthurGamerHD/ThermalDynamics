@@ -572,9 +572,10 @@ same ordering and the same shape with the surface and link rows inside their own
 | 3 | A one-cell block's exposure is one state and six tests | **kept** — exposure 0.65 | [Iteration 3](#pass-2-iteration-3--a-one-cell-blocks-exposure-is-one-cell-state-and-six-face-tests) |
 | 4 | The interior scan skips visited cells a word at a time | **kept** — room-map ticks to converge 0.54–0.62 | [Iteration 4](#pass-2-iteration-4--the-interior-scan-skips-visited-cells-a-word-at-a-time) |
 | 5 | The environment pass reads one row per node | **dropped** — 0.99 at a 1 % floor | [Iteration 5](#pass-2-iteration-5--the-environment-pass-reads-one-row-per-node) |
-| 6 | A one-cell block is built without walking its cells | *measuring* | [Iteration 6](#pass-2-iteration-6--a-one-cell-block-is-built-without-walking-its-cells) |
+| 6 | A one-cell block is built without walking its cells | **kept** — place 0.64–0.83 | [Iteration 6](#pass-2-iteration-6--a-one-cell-block-is-built-without-walking-its-cells) |
 | 7 | The flood's box test is one compare on the axis that moved | **dropped** — slower, 1.25–1.30 | [Iteration 7](#pass-2-iteration-7--the-floods-box-test-is-one-compare-on-the-axis-that-moved) |
 | 8 | The freeze walks a bitset in key order instead of sorting | *measuring* | [Iteration 8](#pass-2-iteration-8--the-freeze-walks-a-bitset-in-key-order-instead-of-sorting) |
+| 9 | A block's two surface layers share one array unless it is a door | *measuring* | [Iteration 9](#pass-2-iteration-9--a-blocks-two-surface-layers-share-one-array-unless-it-is-a-door) |
 
 ## Pass 2, iteration 1 — the stage instrument lives in the tree
 
@@ -730,6 +731,18 @@ returned as it is, since a rotation permutes faces. The cell walk stays as a pub
 block, a partly mounted one, and a door shut and open — the uniform short cut is taken by the first
 and cannot be by the second, so both sides of it are on the fixture.
 
+**What it was worth.** `bench stages --stages place,register`, before against after, cores proven
+different, interleaved, two rounds, fastest kept; register is the control, since nothing in this
+change touches it:
+
+| blocks | place, before | after | ratio | register (control), before → after |
+| ---: | ---: | ---: | ---: | ---: |
+| 126,731 | 23.31 ms | **14.84 ms** | 0.64 | 7.08 → 5.83 / 7.34 ms |
+| 505,566 | 109.59 ms | **90.84 ms** | 0.83 | 26.49 → 24.02 ms |
+
+What is left of placing a block at the large rung is the grid's own index — three dictionary
+operations a block — and the block's allocations, which iteration 9 takes one of.
+
 ## Pass 2, iteration 7 — the flood's box test is one compare on the axis that moved
 
 **What was found.** Every flood step tested each of six neighbours against all six edges of the box
@@ -776,6 +789,27 @@ trusted**: the freeze verifies the keys strictly increase and falls back to sort
 recording that it did, and `RoomMapFreezeTests` asserts the fallback is never taken on a hull with
 tens of rooms. The bitset walk is pinned at word edges against the cells that were added, in key
 order. The bitset is retained per map at an eighth of a byte a bounding cell.
+
+**As first written it was slower, and the pairing said so.** The walk derived each room cell's
+coordinates from its index by two long divisions and found each set bit by shifting one at a
+time — 1.2 million cells' worth of both — which cost more than the sort it replaced: rooms 252 →
+320 ms and the publish tick 80 → 155 ms at 505,566 blocks, in all four pairs. The walk is per word
+now: one coordinate derivation per sixty-four cells, an increment with row and plane wraps per set
+bit, and a de Bruijn multiply to find each bit without a loop (the game's framework and whitelist
+offer no intrinsic for it). The finder is pinned at every position. The corrected figures follow.
+
+## Pass 2, iteration 9 — a block's two surface layers share one array unless it is a door
+
+**What was found.** A `BlockInstance` holds its live surface bits and its structural ones in two
+arrays, and the two differ only on a door that stands open. Every other block — and every door
+while shut — allocated the same bits twice: a third of a block's surface allocations, on the load
+path and on every paste.
+
+**What changed.** The two are one array whenever they cannot differ; a refresh still allocates
+afresh, so `ThermalSimulation.RefreshBlock`'s old references remain the snapshot it compares
+against. Nothing writes into either array after construction — checked by reading every reader of
+`SelfSurfaces` and `StructuralSurfaces`. `BlockInstanceOneCellTests` pins when the layers share,
+when they do not, and that a door opening leaves the structural layer where it was.
 
 , with its start figures taken by the instrument the pass begins by putting in the tree. |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
