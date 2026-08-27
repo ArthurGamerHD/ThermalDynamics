@@ -65,7 +65,7 @@ namespace Thermodynamics.Core
         /// side to join to. A shut airtight hangar door is a room of one cell, which merges with the
         /// regions either side when it opens.
         /// </summary>
-        private readonly HashSet<Vector3I> doorCells = new HashSet<Vector3I>(Vector3I.Comparer);
+        private readonly HashSet<long> doorCells = new HashSet<long>();
 
         private RoomMap working;
         private RoomMap published = RoomMap.AllExternal;
@@ -598,7 +598,7 @@ namespace Thermodynamics.Core
         /// </summary>
         private bool IsDoorCell(Vector3I cell)
         {
-            return doorCells.Count > 0 && doorCells.Contains(cell);
+            return doorCells.Count > 0 && doorCells.Contains(GridMath.Key(cell));
         }
 
         private void CollectDoorCells()
@@ -615,7 +615,7 @@ namespace Thermodynamics.Core
                 Vector3I[] cells = doors[d].Cells;
                 for (int i = 0; i < cells.Length; i++)
                 {
-                    doorCells.Add(cells[i]);
+                    doorCells.Add(GridMath.Key(cells[i]));
                 }
             }
         }

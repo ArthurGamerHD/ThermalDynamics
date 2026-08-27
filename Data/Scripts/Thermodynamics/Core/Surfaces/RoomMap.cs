@@ -37,7 +37,7 @@ namespace Thermodynamics.Core
         /// because every add is behind a visited bitset. See memory.md, 4.
         /// </summary>
         private readonly List<List<Vector3I>> rooms = new List<List<Vector3I>>();
-        private Dictionary<Vector3I, int> roomIndexByCell = new Dictionary<Vector3I, int>(Vector3I.Comparer);
+        private Dictionary<long, int> roomIndexByCell = new Dictionary<long, int>();
 
         /// <summary>
         /// The same answer as <see cref="roomIndexByCell"/>, as two sorted arrays, once a pass has
@@ -185,13 +185,13 @@ namespace Thermodynamics.Core
         /// </summary>
         private int RoomAt(Vector3I cell)
         {
+            long key = GridMath.Key(cell);
+
             if (frozenKeys == null)
             {
                 int index;
-                return roomIndexByCell.TryGetValue(cell, out index) ? index : -1;
+                return roomIndexByCell.TryGetValue(key, out index) ? index : -1;
             }
-
-            long key = GridMath.Key(cell);
 
             int low = 0;
             int high = frozenCount - 1;
@@ -220,9 +220,9 @@ namespace Thermodynamics.Core
             frozenRooms = new int[frozenCount];
 
             int at = 0;
-            foreach (KeyValuePair<Vector3I, int> entry in roomIndexByCell)
+            foreach (KeyValuePair<long, int> entry in roomIndexByCell)
             {
-                frozenKeys[at] = GridMath.Key(entry.Key);
+                frozenKeys[at] = entry.Key;
                 frozenRooms[at] = entry.Value;
                 at++;
             }
@@ -234,7 +234,7 @@ namespace Thermodynamics.Core
             // freezing into arrays beside them would *add* twelve bytes a cell rather than trade
             // thirty-one for them. `TrimExcess` would do it and does not exist on .NET Framework
             // 4.8, which is what the game compiles against (`C3`).
-            roomIndexByCell = new Dictionary<Vector3I, int>(Vector3I.Comparer);
+            roomIndexByCell = new Dictionary<long, int>();
         }
 
         /// <summary>
@@ -321,7 +321,7 @@ namespace Thermodynamics.Core
             frozenCount = 0;
 
             rooms[roomIndex].Add(cell);
-            roomIndexByCell[cell] = roomIndex;
+            roomIndexByCell[GridMath.Key(cell)] = roomIndex;
         }
 
         internal void AddPortal(RoomPortal portal)
@@ -420,8 +420,8 @@ namespace Thermodynamics.Core
                 }
 
                 rooms.RemoveAt(i);
-                List<Vector3I> affected = new List<Vector3I>();
-                foreach (KeyValuePair<Vector3I, int> entry in roomIndexByCell)
+                List<long> affected = new List<long>();
+                foreach (KeyValuePair<long, int> entry in roomIndexByCell)
                 {
                     if (entry.Value > i) affected.Add(entry.Key);
                 }
