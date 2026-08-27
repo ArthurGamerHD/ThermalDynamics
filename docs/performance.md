@@ -53,7 +53,7 @@ which is what makes the ratios readable when the absolutes are not.
 | ---: | --- | --- | --- | --- |
 | 1 | 2026-08-26 | The harness measured unoptimised code | **kept** — every configuration now compiles optimised | [Iteration 1](#iteration-1--the-harness-measured-unoptimised-code) |
 | 2 | 2026-08-26 | The ladder's `build` column measured the hull generator | **kept** — generator 9× cheaper, and outside the clock | [Iteration 2](#iteration-2--the-ladders-build-column-measured-the-hull-generator) |
-| 3 | 2026-08-26 | An orientation is a signed permutation | *measuring* | [Iteration 3](#iteration-3--an-orientation-is-a-signed-permutation) |
+| 3 | 2026-08-26 | An orientation is a signed permutation | **kept** — block construction halved at every size | [Iteration 3](#iteration-3--an-orientation-is-a-signed-permutation) |
 
 ## Iteration 1 — the harness measured unoptimised code
 
@@ -188,8 +188,20 @@ separately that every legal orientation rotates and unrotates to where it starte
 from a degenerate matrix could not agree its way through. `FleetParallelTests` records why the three
 static tables may be shared by grids on different threads: built once, never written after.
 
-**What it was worth.** *Measured by `bench load`, which times block construction inside its clock;
-the figures land below when the window frees.*
+**What it was worth.** `bench load` is the one instrument here that constructs blocks inside its
+clock — a heavy-armour hull placed block by block, registered, then rebuilt — and its `adding
+blocks` figure is the block construction and registration; `RebuildAll` is the control, since it
+constructs no block. Before and after, optimised, one held window, each twice, fastest kept:
+
+| blocks | adding blocks, before | after | ratio | `RebuildAll`, before → after |
+| ---: | ---: | ---: | ---: | ---: |
+| 126,731 | 310 ms | **176 ms** | 0.57 | 999 → 989 ms |
+| 1,000,294 | 1,779 ms | **862 ms** | 0.48 | 9,672 → 9,629 ms |
+
+Half of the cost of placing a block was building matrices to rotate a one-cell block at the
+identity. The control moved by less than its own repeat-to-repeat spread (±3 %). A world load at a
+million blocks is 11.2 s on this machine and the block half of it is now under a second; the ten
+seconds left are `RebuildAll`, which is where iteration 4 goes.
 
 ---
 
