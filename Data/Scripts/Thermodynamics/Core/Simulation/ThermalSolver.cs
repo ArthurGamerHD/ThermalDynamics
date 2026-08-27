@@ -733,64 +733,6 @@ namespace Thermodynamics.Core
             return GetNode(grid.GetAtCell(cell));
         }
 
-        /// <summary>Per-face index steps for the occupancy set, settled once a rebuild.</summary>
-        private readonly long[] linkFaceSteps = new long[Face.Count];
-
-        /// <summary>
-        /// Set false to find every block's neighbours through the block table, as the general walk
-        /// does, instead of through a row indexed by cell.
-        ///
-        /// Test hook: <c>LinkWalkTests</c> builds the same grid both ways and compares the link
-        /// list entry for entry, **including the order it is built in** — which is what the
-        /// conduction pass sums over, so a different order is a different last bit on every
-        /// temperature.
-        /// </summary>
-        public bool InlineOneCellLinkWalk = true;
-
-        /// <summary>
-        /// The node owning each cell of the occupancy box, or −1 where no node does.
-        ///
-        /// <para>
-        /// **This is the whole of what a full rebuild spends its time on, in one array.** Ablation
-        /// puts about four fifths of the link build in the block table
-        /// (performance.md, Pass 6, Iteration 4): a hash, a bucket and an entry, each a chance to
-        /// miss, on a dictionary holding half a million entries. Indexed by cell instead, the same
-        /// question is one load — and the walk already holds the cell's index, because the
-        /// occupancy bit it tests first is indexed the same way.
-        /// </para>
-        ///
-        /// <para>
-        /// **It is large and it is transient.** A hull's bounding box is about fourteen times its
-        /// block count, so this is 29 MB at half a million blocks, allocated for the rebuild and
-        /// dropped after it — which is why it is built here rather than kept, and why only a full
-        /// rebuild builds it. Iteration 2 tried the small version of this idea, a row indexed by
-        /// the cell's *rank* among occupied cells at three megabytes, and the popcount a rank costs
-        /// made it slower than the hash it replaced.
-        /// </para>
-        /// </summary>
-        private int[] BuildNodeAtCell(CellBitset occupied)
-        {
-            if (!InlineOneCellLinkWalk || occupied == null || occupied.Capacity <= 0) return null;
-
-            long cells = occupied.Capacity;
-            if (cells > int.MaxValue) return null;
-
-            int[] row = new int[cells];
-            for (int i = 0; i < row.Length; i++) row[i] = -1;
-
-            for (int i = 0; i < nodes.Count; i++)
-            {
-                Vector3I[] blockCells = nodes[i].Block.Cells;
-                for (int c = 0; c < blockCells.Length; c++)
-                {
-                    long at = occupied.IndexOf(blockCells[c]);
-                    if (at >= 0 && at < row.Length) row[at] = i;
-                }
-            }
-
-            return row;
-        }
-
         /// <summary>
         /// Brings the conduction graph up to date, incrementally when only blocks have been placed
         /// and by full rebuild otherwise. No-op when the graph already matches the layout.
@@ -858,54 +800,9 @@ namespace Thermodynamics.Core
             // placement. See GridModel.GetNeighbours.
             CellBitset occupied = walked != null ? walked.Occupancy() : null;
 
-            // Fixed for the whole rebuild, so read once rather than once a face a block.
-            long[] indexStep = linkFaceSteps;
-            if (occupied != null)
-            {
-                for (int face = 0; face < Face.Count; face++) indexStep[face] = occupied.IndexStep(face);
-            }
-
-            int[] nodeAtCell = BuildNodeAtCell(occupied);
-
             for (int i = 0; i < nodes.Count; i++)
             {
                 ThermalNode a = nodes[i];
-
-                // **The common block, looked up rather than hashed.** Four fifths of this stage is
-                // the block table (performance.md, Pass 6, Iteration 4), and a one-cell block's six
-                // candidates are its own cell's index stepped by a constant — so the row below
-                // answers each of them in one load, with no hash, no bucket and no popcount. Same
-                // faces in the same order as the general walk, so the links come out in the order
-                // they always did.
-                if (nodeAtCell != null && a.Block.CellCount == 1)
-                {
-                    long ownSlot = occupied.IndexOf(a.Block.Min);
-
-                    for (int face = 0; face < Face.Count; face++)
-                    {
-                        long at = ownSlot + indexStep[face];
-                        if (at < 0 || at >= nodeAtCell.Length) continue;
-
-                        int other = nodeAtCell[at];
-                        if (other <= i) continue;
-
-                        ThermalNode b = nodes[other];
-
-                        int touching = ConductionBuilder.CountContactFaces(a.Block, b.Block, face);
-                        if (touching <= 0) continue;
-
-                        float g = ConductionBuilder.Conductance(
-                            grid.GridSize, a.Block, b.Block, touching, Face.Axis(face));
-                        if (g <= 0f) continue;
-
-                        links.Add(new ThermalLink(a.Index, b.Index, g, touching));
-                        ChainLink(links.Count - 1);
-                        a.LinkCount++;
-                        b.LinkCount++;
-                    }
-
-                    continue;
-                }
 
                 neighbourScratch.Clear();
                 neighbourFaces.Clear();
