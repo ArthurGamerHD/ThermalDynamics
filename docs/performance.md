@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Pass 5, iterations 4 and 5: `bench stepfloor` answers `D1`'s open question — **conduction is its own floor**, faster than a loop doing its memory accesses and no arithmetic. And the idea that came out of it, putting buried nodes through the exposed path, measured **1.30** and was dropped: the branch is predictable and what it skips is three row reads, not just arithmetic. |
 | 2026-08-27 | Pass 5, iteration 3: the grid's own heat gain is summed once a step rather than once a substep — the environment stage **0.68** at 505,566 blocks, bit-identical, with both controls at 1.00. A probe had measured the loop's two accumulators at 35 % of the stage between them. |
 | 2026-08-27 | Pass 5, iteration 2: **iteration 1's split was wrong and is corrected in place** — measured over twenty steps rather than one, conduction is 38 % of a step and the environment read 35 %, with the row fill a twentieth of it. And node reordering, the obvious idea for conduction, is refused before building: 97.8 % of links already span fewer than 1,024 node indices. |
 | 2026-08-27 | Opened pass 5 on the stage no pass has moved, and its first iteration says why: **the environment pass is 46 % of a step and conduction is 33 %**, at 2.5 ns a node against 0.9 ns a link. Two earlier passes reverted layout changes aimed at the cheaper half. |
@@ -1600,6 +1601,8 @@ and reverted it.
 | 1 | A step is measured by its parts | **kept** — the instrument; its first reading was wrong and iteration 2 says why | [Iteration 1](#pass-5-iteration-1--a-step-is-measured-by-its-parts) |
 | 2 | The split corrected, and the obvious idea refused | **kept** — conduction 38 %, environment 35 %, apply 20 %; and node reordering is not worth doing | [Iteration 2](#pass-5-iteration-2--the-split-corrected-and-the-obvious-idea-refused) |
 | 3 | The grid's own heat gain is summed once a step, not once a substep | **kept** — environment **0.68** at 505k, bit-identical | [Iteration 3](#pass-5-iteration-3--the-grids-own-heat-gain-is-summed-once-a-step) |
+| 4 | What a substep's passes cost touching memory and computing nothing | **kept** — the instrument, and `D1`'s open question answered | [Iteration 4](#pass-5-iteration-4--what-a-substeps-passes-cost-computing-nothing) |
+| 5 | A buried node takes the exposed path | **dropped** — 1.30, and the reason is worth more than the change would have been | [Iteration 5](#pass-5-iteration-5--a-buried-node-takes-the-exposed-path-dropped) |
 
 ## Pass 5, iteration 1 — a step is measured by its parts
 
@@ -1702,6 +1705,57 @@ At half a million blocks the controls read 1.00 and 1.00, which is what says the
 and not the window. The other accumulator stays: it is a function of temperature and cannot be
 hoisted, and breaking its dependency with partial sums would change a published figure's last bits
 to buy about four per cent of a step — which is not a trade this project makes for that price.
+
+## Pass 5, iteration 4 — what a substep's passes cost computing nothing
+
+[backlog.md](backlog.md) `D1` asks whether what is left of a step is near the memory-bandwidth
+floor and records it as an **open question** — because the last time it was answered, two passes
+were reaching through the node objects instead of the flat rows, so the answer was about something
+that no longer exists. `bench stepfloor` answers it by measurement: the same rows, at the same
+sizes, walked in the same pattern, doing the least arithmetic that still forces every load and store
+to happen. The link indices are a real grid's, because the whole question for conduction is where
+its gathers land and a synthetic index stream would answer about itself.
+
+| pass | floor | measured | over floor | what the floor moves |
+| --- | ---: | ---: | ---: | --- |
+| environment | 0.81 ns | 1.84 ns | **2.26×** | four rows in, one out |
+| apply | 0.81 ns | 1.08 ns | **1.32×** | temperature in and out, watts, mass, critical |
+| conduction | 1.26 ns | 1.07 ns | **0.85×** | two index rows, a conductance row, two gathers, two scatters |
+
+**Conduction is its own floor, and the 0.85 is not a paradox.** The real loop is *faster* than a
+loop that does its loads and stores and no arithmetic, because it skips the pair whose ends agree
+before touching either. There is no arithmetic in it to remove: one subtract and one multiply
+against six memory accesses. Whatever a step's remaining cost is, it is not conduction's
+instructions — which is the answer `D1` was owed, and it is the opposite of what two passes assumed
+when they rearranged that loop's data.
+
+**The environment read is where headroom shows**, at more than twice what merely touching its rows
+costs. That is what iteration 5 went after.
+
+## Pass 5, iteration 5 — a buried node takes the exposed path *(dropped)*
+
+Half a hull is buried — **49 % of nodes are exposed at 126,731 blocks** — so
+`nodeExposedFaces[i] <= 0`, asked once per node per substep, looked like a coin toss no processor
+could predict. And it looked unnecessary: a buried node's radiation coefficient is zero, because
+that is emissivity times *exposed area*, and its convection row is zeroed when the rows are filled,
+so putting one through the exposed arithmetic yields the same watts. The check confirmed that much —
+the same grid run both ways agreed on every temperature and both published figures, to the bit, in
+atmosphere and in vacuum.
+
+**It is 1.30**, at 126,731 and at 505,566 blocks, in both rounds, with conduction and apply flat as
+controls. Thirty per cent worse, and the change was correct.
+
+Both reasons were in the code before the measurement was taken, which is the part worth keeping:
+
+- **The branch is predictable.** Buried and exposed nodes come in runs, because one is the inside of
+  a hull and the other is its surface. A 50/50 split is not a 50/50 *branch*.
+- **The path it skips is not only arithmetic.** A buried node reads two rows; an exposed one reads
+  five. Making them take the same path made half the grid read three rows it did not need — and the
+  floor measured in iteration 4 says a row read is 0.16 ns a node, which is most of what this cost.
+
+So the environment read's 2.26× over floor is not slack waiting to be taken: a good part of it is
+*the branch doing its job*, and the floor loop — which reads every row for every node — is measuring
+a pass this one is deliberately not.
 
 ---
 
