@@ -104,7 +104,7 @@ heavy log 20                                             # both sides of the las
 ```
 
 Exit **75** means the window was not free and *nothing ran* — try later rather than running
-unlocked. `~/.local/bin.md` is the tool's own page.
+unlocked. `~/.local/bin/HEAVY.md` is the tool's own page.
 
 | Hold the window | Do not |
 | --- | --- |

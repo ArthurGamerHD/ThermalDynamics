@@ -1031,8 +1031,19 @@ flight unless the row says otherwise.
 | 7 | `c18e3e4` | 85.8 ms | 0.057 ms | 1.095 ms | 3.490 ms | 3.496 ms | 1.616 ms | 2.02 |
 | 8 | *(the 2026-08-22 pass)* | 84.0 ms | 0.075 ms | 1.085 ms | 3.461 ms | 3.510 ms | 1.636 ms | 2.02 |
 | 11 | *(the profiles pass)* | 105.9 ms | 0.123 ms | 2.134 ms | 6.719 ms | 6.583 ms | 3.093 ms | 2.09 |
+| 12 | *(the performance pass)* | 83.1 ms | 0.131 ms | 1.143 ms | 5.373 ms | 5.301 ms | 3.010 ms | — |
 
 Row 2 changed no shipped code, so its solver figures are row 1's.
+
+**Row 12 is the first row on this table taken on an optimised build, and nothing else on it is**
+(`M13`). It is not readable against its neighbours at all: the same commit measured both ways is
+3.4× apart. What it *is* readable against is the pass's own starting commit, measured in the same
+window on the same build — 286.2 ms calibration, 1.194 and 5.381 ms on the ladder, 5.431 ms with
+every feature on, 3.137 ms for isolated convection — which is to say **the pass moved no step
+figure**, by design: nothing in it touched the substep loop, and the columns above are its control.
+What the pass moved is the world load and the build, and those are in
+[performance.md](performance.md#what-the-pass-moved). The environment-pass column is left blank
+because that figure comes from `bench elements`, which this pass did not re-run.
 
 **Row 11's step columns doubled on purpose and its cost did not move.** `Frequency` went from eight
 steps a second to four, so a step covers twice as long and demands twice the substeps — 21.96 to
@@ -1128,6 +1139,7 @@ several times its neighbours' should be re-taken rather than explained.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | Recorded row 12 in both tables, from the 2026-08-26 performance pass, and marked it as the first solver row taken on an optimised build — which makes it unreadable against every row above it and readable only against the pass's own start (`M7`, `M13`). The pass moved no step figure and was not meant to: it is a load-path pass, and [performance.md](performance.md) carries what it did move. |
 | 2026-08-26 | The ladder's `build` column and the calibration row time the simulation's build alone. From `C26` both had the census generator's bolt search inside the clock — 1.0 s of a 1.1 s "build" at 32,800 blocks — so the calibration figure every cross-machine comparison divides by was mostly the generator. The key is unchanged because the column always meant the mod's build; the committed baseline's `build` rows predate `C26` and are the right scope. |
 | 2026-08-26 | **Every figure on this page before this date was measured on an unoptimised build.** The test tree set no `<Optimize>`, so the Debug assemblies `dotnet run` produces told the JIT to compile without optimising. Measured on one commit in one window: a step is 3.4× dearer unoptimised, and the ratio is not uniform — the row fill is 5× and the cost of being measured 7.7× — so every *share* of a step quoted here was taken on an instrument that exaggerated stores through fields. The tree compiles optimised in every configuration now; the figures on this page are left as they were taken and the committed baseline is not re-recorded, because its keys have not changed (`M6`). Argued on [performance.md](performance.md#iteration-1--the-harness-measured-unoptimised-code). |
 | 2026-08-24 | **Closed `A11`, and the suite corrected half of it within the hour.** `bench stagger` timed a fixed eight rounds at every fleet size, which is 32 grid-steps at four grids and 512 at sixty-four — two windows an order of magnitude apart, then divided by each other (`P6`). The window is 512 grid-steps at every rung now; the largest is unchanged, so no published figure moves. The *penalty* claim refuses a reading past a 30 % noise floor rather than failing, which is `M5` applied to a test. **The *lump* claim needed something else**: its failure mode is a steady cache bias against the larger working set, which a floor computed from repeat-to-repeat spread cannot see, and it failed at a 6 % floor an hour after the gate went in. It is held on the solver's work counters now — 38,633 element visits a grid-step at four grids and at sixty-four, identical on any machine — with the milliseconds printed beside it. |
