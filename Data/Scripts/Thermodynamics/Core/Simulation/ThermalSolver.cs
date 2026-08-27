@@ -766,9 +766,15 @@ namespace Thermodynamics.Core
         ///
         /// <para>
         /// The walk emits in ascending `NodeA` already, so this only has to order each run of equal
-        /// `NodeA` by `NodeB` — runs of six at most for a one-cell block. A walk that does not
-        /// group by `NodeA` needs a counting pass in front of this, which is the next iteration's
-        /// business.
+        /// `NodeA` by `NodeB` — runs of six at most for a one-cell block.
+        /// </para>
+        ///
+        /// <para>
+        /// **It chains as it goes.** A reorder invalidates every node's link chain, so the chains
+        /// are rebuilt here rather than in a pass of their own: a link can be chained the moment
+        /// its place is settled, and a second walk over a million sixteen-byte entries is a walk
+        /// the work does not need. Chain order is not an answer — the one walk over a chain sorts
+        /// what it collects — so this only has to be complete.
         /// </para>
         /// </summary>
         private void CanonicaliseLinks()
@@ -798,22 +804,10 @@ namespace Thermodynamics.Core
                     links[j + 1] = moving;
                 }
 
+                for (int i = from; i < to; i++) ChainLink(i);
+
                 from = to;
             }
-        }
-
-        /// <summary>
-        /// Rebuilds every node's link chain from the list, which a reorder invalidates. Chain order
-        /// itself is not an answer — the one walk over a chain sorts what it collects — so this only
-        /// has to be complete, not to be in any particular sequence.
-        /// </summary>
-        private void RechainAllLinks()
-        {
-            EnsureNodeChainCapacity(nodes.Count);
-            EnsureLinkChainCapacity(links.Count);
-            ResetLinkChains();
-
-            for (int link = 0; link < links.Count; link++) ChainLink(link);
         }
 
         /// <summary>
@@ -918,8 +912,15 @@ namespace Thermodynamics.Core
                 }
             }
 
+            // Ordering and chaining are one walk: the sort visits every link to place it, and a
+            // link can be chained the moment its place is settled. Two passes over a million
+            // sixteen-byte entries is one pass more than the work needs.
+            EnsureNodeChainCapacity(nodes.Count);
+            EnsureLinkChainCapacity(links.Count);
+            ResetLinkChains();
+
             if (CanonicalLinkOrder) CanonicaliseLinks();
-            RechainAllLinks();
+            else for (int link = 0; link < links.Count; link++) ChainLink(link);
 
             Work.LinksBuilt += links.Count;
 
