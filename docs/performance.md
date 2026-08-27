@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Pass 7 opened by removing the obstacle `D3b` named — the link list's order is a function of the graph now, at a cost of 1.02 — and then measured the change it unblocked at **1.23**, and 1.16 with the empty box skipped. The sort it needs costs nothing; the walk does, because a hull fills a fourteenth of its box and a cell-indexed row is bigger than the table it replaces. |
 | 2026-08-27 | **Closed pass 6 with no change kept.** Five bit-identical rewrites of the link build's neighbour lookup — by rank, by dense row, twice by removing the code around it, and once by halving the number of lookups — measured between 0.91 and 1.40, and the last of them explains the rest: the stage is bound by touching grid-sized memory once per neighbour, and every scheme keeps one such touch. Walking blocks in cell order would fix it and is refused here for moving every temperature's last bit. |
 | 2026-08-27 | Opened pass 6 on the load path's largest stage. Its first iteration splits the link build by ablation: **nine tenths of it is finding neighbours**, at fifty nanoseconds a dictionary probe, and every per-pair operation together is the other tenth. |
 | 2026-08-27 | **Closed pass 5**: the settled step is **0.86** and the link build **0.84** at 505,566 blocks, with three untouched stages at 1.00, 0.99 and 1.03 as controls. The step had never moved in four passes; what moved it was measuring where its time went. `D1`'s open question is answered — conduction is at its floor. |
@@ -1988,6 +1989,87 @@ pass 4's iteration 4 unblocked and pass 4's iteration 7 built.
 link build all walk a grid asking about neighbouring cells, and all four have now had a
 cache-shaped optimisation applied to them. What is left in each is the irreducible part: one
 unpredictable touch per element per pass.
+
+## Pass 7, iterations
+
+Pass 6 ended with a change designed and refused: **walking blocks in the box's own index order**,
+which makes every neighbour lookup sequential and would take the link build to near the 12 % its
+arithmetic costs. It was refused because it emits links in a different order and the conduction pass
+sums over that order, so it moves the last bit of every temperature. `backlog.md` `D3b` recorded it
+as wanting a pass that *opens* by removing that obstacle — the shape pass 4 used for the span flood.
+
+**This is that pass, and the designed change does not work.**
+
+| # | Subject | Verdict | Where |
+| ---: | --- | --- | --- |
+| 1 | The link list's order is the graph's, not the walk's | **kept** — 1.02 at 505k, and the property is worth it | [Iteration 1](#pass-7-iteration-1--the-link-lists-order-is-the-graphs) |
+| 2 | The links are built by walking cells | **dropped** — 1.23 | [Iterations 2 to 4](#pass-7-iterations-2-to-4--the-designed-change-measured) |
+| 3 | What the sort the cell walk needs actually costs | **kept** — the ablation that rules it out | [Iterations 2 to 4](#pass-7-iterations-2-to-4--the-designed-change-measured) |
+| 4 | The cell walk skips the empty thirteen fourteenths | **dropped** — 1.16 | [Iterations 2 to 4](#pass-7-iterations-2-to-4--the-designed-change-measured) |
+| 5 | What the two passes together establish | the conclusion below | [Iteration 5](#pass-7--what-sixteen-iterations-on-one-stage-establish) |
+
+## Pass 7, iteration 1 — the link list's order is the graph's
+
+The conduction pass accumulates watts by running down `linkA`/`linkB` in order, and a sum of floats
+depends on its order — so **the sequence a rebuild emitted links in was part of the answer**. Any
+change to how neighbours are found moved the last bit of every temperature on every grid, which is
+why pass 6 had to hold five separate optimisations to the exact emission order, and why the sixth
+was refused outright.
+
+Sorted by lower node then higher, the order is a function of the graph. A rebuild may find the same
+links in any sequence and the result is the same to the bit. The walk emits in ascending `NodeA`
+already, so this only orders each run of equal `NodeA` by `NodeB` — six at most for a one-cell block.
+Chains are rebuilt from the sorted list; chain order is not an answer, because the one walk over a
+chain sorts what it collects.
+
+**It moves the bits once and nothing was pinned to them**: 2,047 tests pass. It costs **1.02** at
+505,566 blocks and 0.99 at 126,731. `CanonicalLinkOrderTests` checks that the list comes out sorted,
+that sorting is a permutation of the same graph, and — the check that matters — that **the walk's
+own order is not already sorted**, because a canonicalisation that reorders nothing would buy no
+freedom at all. It departs from sorted at the first link.
+
+## Pass 7, iterations 2 to 4 — the designed change, measured
+
+| | 126,731 | 505,566 |
+| --- | ---: | ---: |
+| 2 — links built by walking cells in index order | 1.18 | **1.23** |
+| 4 — the same, skipping empty words 64 cells at a time | 1.30 | **1.16** |
+| 3 — the counting sort it needs, ablated away | 0.97 | 1.07 |
+
+**The sort is not the reason.** Removing it entirely costs nothing measurable, so the walk itself is
+what is slow — which was worth establishing, because "it needs a sort" was the obvious suspect and
+would have been the wrong thing to optimise.
+
+**The reason is one number: a hull fills about a fourteenth of its own bounding box.** Any structure
+indexed by *cell* is fourteen times sparser than one indexed by *block*, so the row this walk reads
+is **29 MB where the dictionary it replaces is about 20** — and a random touch of a bigger array is
+not cheaper for being an array rather than a hash. Iteration 4 fixed the *iteration count*, skipping
+thirteen cells in fourteen a word at a time, and did not fix the memory: still 1.16.
+
+## Pass 7 — what sixteen iterations on one stage establish
+
+Six schemes have now been measured on the link build's neighbour lookup:
+
+| | what it changed | result |
+| --- | --- | ---: |
+| pass 6, it. 2 | a rank over a 3 MB row instead of the hash | 1.40 |
+| pass 6, it. 3 | the lists around the lookup, and a shared emit body | 1.16 |
+| pass 6, it. 5 | the lists around the lookup only | unresolved |
+| pass 6, it. 6 | a 29 MB row indexed by cell instead of the hash | 1.24 / 1.00 |
+| pass 6, it. 7 | **half as many lookups** | 1.13 / 1.03 |
+| pass 7, it. 2/4 | **the lookups made sequential** | 1.23 / 1.16 |
+
+**The stage is bound by touching grid-sized memory once per neighbour, and the grid's memory is too
+sparse to lay out by cell.** Making the touch cheaper does not work, because a hash probe, a rank, a
+dense-row load and a byte written to a mark array cost the same at this size. Making the touches
+fewer does not work, because the bookkeeping that saves one is itself one. Making them sequential
+does not work, because sequential over a box that is fourteen fourteenths empty moves more memory
+than random over a table that is not.
+
+That is a floor, not a run of failures — and `D1`'s answer for the step has the same shape: **what
+is left in both is not instructions, it is the size and the sparsity of the thing being walked.**
+The remaining lever in either case is to walk less of it, which is chunking and activity tracking
+for the step and, for the load path, a grid representation the mod does not own.
 
 ---
 
