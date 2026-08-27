@@ -59,9 +59,9 @@ which is what makes the ratios readable when the absolutes are not.
 | # | Date | Subject | Verdict | Where |
 | ---: | --- | --- | --- | --- |
 | 1 | 2026-08-26 | The harness measured unoptimised code | **kept** — every configuration now compiles optimised | [Iteration 1](#iteration-1--the-harness-measured-unoptimised-code) |
-| 2 | 2026-08-26 | The ladder's `build` column measured the hull generator | **kept** — generator 9× cheaper, and outside the clock | [Iteration 2](#iteration-2--the-ladders-build-column-measured-the-hull-generator) |
+| 2 | 2026-08-26 | The ladder's `build` column measured the hull generator | **kept** — generator 15–17× cheaper, and outside the clock | [Iteration 2](#iteration-2--the-ladders-build-column-measured-the-hull-generator) |
 | 3 | 2026-08-26 | An orientation is a signed permutation | **kept** — block construction halved at every size | [Iteration 3](#iteration-3--an-orientation-is-a-signed-permutation) |
-| 4 | 2026-08-26 | The room mapper reads a snapshot of the sealing | **kept** — the room map 3× cheaper at half a million blocks | [Iteration 4](#iteration-4--the-room-mapper-reads-a-snapshot-of-the-sealing) |
+| 4 | 2026-08-26 | The room mapper reads a snapshot of the sealing | **kept** — the room map 2.3× cheaper at half a million blocks | [Iteration 4](#iteration-4--the-room-mapper-reads-a-snapshot-of-the-sealing) |
 | 5 | 2026-08-26 | The surface map's two layers in one dictionary | **kept** — the surface map 2× cheaper | [Iteration 5](#iteration-5--the-surface-maps-two-layers-in-one-dictionary) |
 | 6 | 2026-08-26 | One row per link in the conduction loop | **dropped** — ±1.2 % at a 1 % floor, sign changing | [Iteration 6](#iteration-6--one-row-per-link-in-the-conduction-loop-tried-and-dropped) |
 | 7 | 2026-08-26 | The room map's solid set is a bitset | **kept** — exposure 2× cheaper | [Iteration 7](#iteration-7--the-room-maps-solid-set-is-a-bitset-over-the-search-box) |
@@ -247,9 +247,13 @@ asserts it found rooms and portals first (`E8`).
 
 | blocks | bounding cells | rooms, before | rooms, after | ratio | build, before → after | links, exposure (control) |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 32,800 | 328,640 | 35 / 43 ms | **28 / 28 ms** | 0.65 | 130 → 165 ms | 15 / 10 → 18 / 19 ms |
-| 126,731 | 1,499,616 | 271 / 328 ms | **176 / 185 ms** | 0.54 | 592 → 525 ms | 92 / 81 → 101 / 82 ms |
-| 505,566 | 6,838,104 | 2,065 / 2,874 ms | **893 / 913 ms** | 0.31 | 3,917 → 2,328 ms | 370 / 329 → 399 / 334 ms |
+| 32,800 | 328,640 | 35 / 43 ms | **28 / 28 ms** | 0.80 | 130 → 165 ms | 15 / 10 → 18 / 19 ms |
+| 126,731 | 1,499,616 | 271 / 328 ms | **176 / 185 ms** | 0.65 | 592 → 525 ms | 92 / 81 → 101 / 82 ms |
+| 505,566 | 6,838,104 | 2,065 / 2,874 ms | **893 / 913 ms** | 0.43 | 3,917 → 2,328 ms | 370 / 329 → 399 / 334 ms |
+
+> **The ratio column is fastest against fastest, and it read 0.65 / 0.54 / 0.31 for a few minutes
+> after this section was written** — the fastest *after* divided by the slowest *before*, which is
+> the arithmetic `M4` exists to prevent and which flatters every row. Corrected in place (`E10`).
 
 The fastest of the two is the figure; the pairs are printed because the *before* rows at 505k
 disagree with each other by 40 %, which is the dictionary path's own sensitivity to the state of the
