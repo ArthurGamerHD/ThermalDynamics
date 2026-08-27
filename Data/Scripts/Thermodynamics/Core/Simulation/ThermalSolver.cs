@@ -734,6 +734,201 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Set false to find every block's neighbours by asking the block table about each of its
+        /// faces, instead of walking the grid's occupied cells in the box's own index order.
+        ///
+        /// Test hook: <c>CellOrderLinkTests</c>, which builds the same grid both ways and compares
+        /// the graph edge for edge.
+        /// </summary>
+        public bool CellOrderLinkWalk = true;
+
+        /// <summary>
+        /// Builds every link by walking the occupied cells of the grid in the order the box indexes
+        /// them, rather than by asking the block table where each block's neighbours are.
+        ///
+        /// <para>
+        /// **This is the change the previous pass measured five ways and refused.** That pass
+        /// established that the link build is bound by one unpredictable touch of grid-sized memory
+        /// per neighbour, and that no cheaper structure fixes it, because the cost is the
+        /// randomness rather than the hash (backlog.md `D3b`). Walking cells in index order removes
+        /// the randomness instead: for a cell at index <c>i</c> its neighbour across +X is at
+        /// <c>i + 1</c>, across +Y at <c>i + sizeX</c> and across +Z at <c>i + sizeX·sizeY</c>, so
+        /// the three lookups are three ascending scans a prefetcher can follow.
+        /// </para>
+        ///
+        /// <para>
+        /// It emits links in cell order rather than in node order, which is why it needed iteration
+        /// 1 first: the list is sorted afterwards, so what a walk produces is a set and not a
+        /// sequence.
+        /// </para>
+        ///
+        /// <para>
+        /// **Three faces, not six.** Every adjacency is across some face, and exactly one of the
+        /// two cells has it as a positive one — so each pair is met once and there is nothing to
+        /// discard. **Two multi-cell blocks are left alone here**: they can touch across several
+        /// cell pairs and would make several links out of one adjacency, so they are done afterwards
+        /// by the walk that deduplicates. A block's own cells meet each other constantly and are
+        /// skipped by the same test.
+        /// </para>
+        /// </summary>
+        /// <returns>False when the box is unusable, in which case the caller keeps the old walk.</returns>
+        private bool BuildLinksInCellOrder(GridModel walked, CellBitset occupied)
+        {
+            long capacity = occupied.Capacity;
+            if (capacity <= 0 || capacity > int.MaxValue) return false;
+
+            if (linkCellNode.Length < capacity) linkCellNode = new int[capacity];
+            int[] cellNode = linkCellNode;
+
+            for (int i = 0; i < capacity; i++) cellNode[i] = -1;
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                Vector3I[] cells = nodes[i].Block.Cells;
+                for (int c = 0; c < cells.Length; c++)
+                {
+                    long at = occupied.IndexOf(cells[c]);
+                    if (at >= 0 && at < capacity) cellNode[at] = i;
+                }
+            }
+
+            // The three faces whose offset points up an axis, and what they add to a cell's index.
+            int faces = 0;
+            for (int face = 0; face < Face.Count; face++)
+            {
+                Vector3I offset = Face.Offsets[face];
+                if (offset.X + offset.Y + offset.Z <= 0) continue;
+
+                linkPositiveFace[faces] = face;
+                linkPositiveStep[faces] = occupied.IndexStep(face);
+                faces++;
+            }
+
+            float gridSize = grid.GridSize;
+
+            for (int i = 0; i < capacity; i++)
+            {
+                int a = cellNode[i];
+                if (a < 0) continue;
+
+                for (int p = 0; p < faces; p++)
+                {
+                    long at = i + linkPositiveStep[p];
+                    if (at < 0 || at >= capacity) continue;
+
+                    int b = cellNode[at];
+
+                    // Nothing there, or another cell of the same block.
+                    if (b < 0 || b == a) continue;
+
+                    ThermalNode nodeA = nodes[a];
+                    ThermalNode nodeB = nodes[b];
+
+                    // One adjacency, several touching cell pairs: left to the deduplicating walk.
+                    if (nodeA.Block.CellCount > 1 && nodeB.Block.CellCount > 1) continue;
+
+                    int face = linkPositiveFace[p];
+                    ThermalNode low = nodeA;
+                    ThermalNode high = nodeB;
+
+                    if (b < a)
+                    {
+                        low = nodeB;
+                        high = nodeA;
+                        face = Face.Opposite(face);
+                    }
+
+                    int contacts = ConductionBuilder.CountContactFaces(low.Block, high.Block, face);
+                    if (contacts <= 0) continue;
+
+                    float conductance = ConductionBuilder.Conductance(
+                        gridSize, low.Block, high.Block, contacts, Face.Axis(face));
+                    if (conductance <= 0f) continue;
+
+                    links.Add(new ThermalLink(low.Index, high.Index, conductance, contacts));
+                    low.LinkCount++;
+                    high.LinkCount++;
+                }
+            }
+
+            // What the cell walk left: pairs of multi-cell blocks, which touch across more than one
+            // cell pair and so have to be found once per *block* pair rather than once per cell.
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                ThermalNode a = nodes[i];
+                if (a.Block.CellCount == 1) continue;
+
+                neighbourScratch.Clear();
+                neighbourFaces.Clear();
+                walked.GetNeighbours(a.Block, neighbourScratch, neighbourFaces, occupied);
+
+                for (int n = 0; n < neighbourScratch.Count; n++)
+                {
+                    ThermalNode b = GetNode(neighbourScratch[n]);
+                    if (b == null || b.Index <= i) continue;
+                    if (b.Block.CellCount == 1) continue;
+
+                    int face = neighbourFaces.Count == neighbourScratch.Count
+                        ? neighbourFaces[n]
+                        : ConductionBuilder.ContactFace(a.Block, b.Block);
+                    if (face < 0) continue;
+
+                    int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block, face);
+                    if (contacts <= 0) continue;
+
+                    float conductance = ConductionBuilder.Conductance(
+                        gridSize, a.Block, b.Block, contacts, Face.Axis(face));
+                    if (conductance <= 0f) continue;
+
+                    links.Add(new ThermalLink(a.Index, b.Index, conductance, contacts));
+                    a.LinkCount++;
+                    b.LinkCount++;
+                }
+            }
+
+            return true;
+        }
+
+        private int[] linkCellNode = new int[0];
+        private readonly int[] linkPositiveFace = new int[3];
+        private readonly long[] linkPositiveStep = new long[3];
+        private int[] linkSortCounts = new int[0];
+        private ThermalLink[] linkSortScratch = new ThermalLink[0];
+
+        /// <summary>
+        /// Orders the whole list by lower node then higher, for a walk that did not emit it grouped
+        /// by node. A counting pass by <c>NodeA</c> puts each node's links together — one pass to
+        /// count, one to place — and then <see cref="CanonicaliseLinks"/> orders within each run.
+        /// </summary>
+        private void SortLinksByEnds()
+        {
+            int count = links.Count;
+            if (count < 2)
+            {
+                CanonicaliseLinks();
+                return;
+            }
+
+            int slots = nodes.Count + 1;
+            if (linkSortCounts.Length < slots) linkSortCounts = new int[slots];
+            Array.Clear(linkSortCounts, 0, slots);
+
+            for (int i = 0; i < count; i++) linkSortCounts[links[i].NodeA + 1]++;
+            for (int i = 1; i < slots; i++) linkSortCounts[i] += linkSortCounts[i - 1];
+
+            if (linkSortScratch.Length < count) linkSortScratch = new ThermalLink[count];
+            for (int i = 0; i < count; i++)
+            {
+                ThermalLink link = links[i];
+                linkSortScratch[linkSortCounts[link.NodeA]++] = link;
+            }
+
+            for (int i = 0; i < count; i++) links[i] = linkSortScratch[i];
+
+            CanonicaliseLinks();
+        }
+
+        /// <summary>
         /// Set false to leave the link list in the order the walk emitted it, which is what a
         /// rebuild did before the order was made a function of the graph.
         ///
@@ -883,7 +1078,10 @@ namespace Thermodynamics.Core
             // placement. See GridModel.GetNeighbours.
             CellBitset occupied = walked != null ? walked.Occupancy() : null;
 
-            for (int i = 0; i < nodes.Count; i++)
+            bool byCell = CellOrderLinkWalk && walked != null && occupied != null
+                && BuildLinksInCellOrder(walked, occupied);
+
+            for (int i = 0; !byCell && i < nodes.Count; i++)
             {
                 ThermalNode a = nodes[i];
 
@@ -918,7 +1116,14 @@ namespace Thermodynamics.Core
                 }
             }
 
-            if (CanonicalLinkOrder) CanonicaliseLinks();
+            if (CanonicalLinkOrder)
+            {
+                // The cell walk emits in cell order, so the whole list needs ordering rather than
+                // each node's run of it. Everything downstream sees the same list either way.
+                if (byCell) SortLinksByEnds();
+                else CanonicaliseLinks();
+            }
+
             RechainAllLinks();
 
             Work.LinksBuilt += links.Count;
