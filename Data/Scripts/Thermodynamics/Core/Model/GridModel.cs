@@ -345,10 +345,13 @@ namespace Thermodynamics.Core
             // See performance.md, Pass 2, Iteration 2.
             if (block.CellCount == 1)
             {
-                Vector3I cell = block.Min;
+                // And a neighbour's key is this cell's key plus a per-face constant, so the six
+                // candidates cost one conversion rather than six.
+                // See performance.md, Pass 3, Iteration 6 and Pass 4, Iteration 10.
+                long key = GridMath.Key(block.Min);
                 for (int face = 0; face < Face.Count; face++)
                 {
-                    BlockInstance other = GetAtCell(cell + Face.Offsets[face]);
+                    BlockInstance other = GetAtKey(key + GridMath.KeyByFace[face]);
                     if (other == null || other == block) continue;
                     results.Add(other);
                     if (faces != null) faces.Add(face);
@@ -398,7 +401,7 @@ namespace Thermodynamics.Core
                         cell = BoxGeometry.WithComponent(cell, u, a);
                         cell = BoxGeometry.WithComponent(cell, v, b);
 
-                        BlockInstance other = GetAtCell(cell + offset);
+                        BlockInstance other = GetAtKey(GridMath.Key(cell) + GridMath.KeyByFace[face]);
                         if (other == null || other == block) continue;
                         if (results.Contains(other)) continue;
 
