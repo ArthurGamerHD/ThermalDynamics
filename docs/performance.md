@@ -917,7 +917,8 @@ instrument, because pass 2 ended owing an explanation for a figure it could not 
 | 6 | A neighbour's key is the cell's key plus a constant | **kept** — surfaces 0.51 | [Iteration 6](#pass-3-iteration-6--a-neighbours-key-is-the-cells-key-plus-a-constant) |
 | 7 | A block carries its grid slot, and a dictionary goes | *measuring* | [Iteration 7](#pass-3-iteration-7--a-block-carries-its-grid-slot) |
 | 8 | The flood's frontier is a ring buffer kept between passes | *measuring* | [Iteration 8](#pass-3-iteration-8--a-retained-ring-frontier) |
-| 9 | The neighbour walk reports the face it found a neighbour across | *measuring* | [Iteration 9](#pass-3-iteration-9--the-walk-reports-the-face-it-found) |
+| 9 | The neighbour walk reports the face it found a neighbour across | **kept** — links 0.80 | [Iteration 9](#pass-3-iteration-9--the-walk-reports-the-face-it-found) |
+| 10 | The allocation counter is per thread, not per process | **kept** — the check was wrong in the one place it mattered | [Iteration 10](#pass-3-iteration-10--the-allocation-counter-is-per-thread) |
 
 ## Pass 3, iteration 1 — the stage lab settles between stages
 
@@ -1010,6 +1011,44 @@ The neighbour walk iterates faces to find neighbours and threw the face away, so
 asked `ContactFace` to work it out again from two boxes. It reports it now, through an overload
 rather than a change to `IBlockAdjacency` — a port an adapter outside this repository implements
 (`W2`) — and a host supplying its own adjacency still gets the worked-out face.
+
+## Pass 3, iteration 10 — the allocation counter is per thread
+
+`C4`'s new assertion — a settled step allocates nothing — **passed alone and failed in the suite**,
+reading half a megabyte. `GC.GetTotalAllocatedBytes` counts the whole process, and the suite runs
+eight classes at once, so the stage's delta collected whatever the other seven allocated meanwhile.
+`GC.GetAllocatedBytesForCurrentThread` is the figure the lab wanted. A check that is right in
+isolation and wrong under the conditions it will actually run in is the worst shape available, and
+it is worth recording that the suite caught it within an hour of the check being written.
+
+## Pass 3 — what the pass moved, and the one thing it moved the wrong way
+
+Start (`a81ee0b`) against tip, both built the same way, interleaved in one window, four rounds at
+505,566 blocks, fastest kept. **The solver stage is the control** — nothing in this pass touches the
+substep loop — and it reads 90.8 ms against 89.6, flat within 1.5 %, which is what says the rest of
+the column can be read.
+
+| stage, 505,566 blocks | start | tip | ratio |
+| --- | ---: | ---: | ---: |
+| surfaces | 55.4 ms | **27.5 ms** | **0.50** |
+| place | 67.3 ms | **52.0 ms** | 0.77 |
+| links | 105.4 ms | **84.4 ms** | 0.80 |
+| exposure | 49.4 ms | **46.5 ms** | 0.94 |
+| register | 17.6 ms | 18.7 ms | 1.06 |
+| **rooms** | **192.9 ms** | **207.2 ms** | **1.07** |
+| a settled step (control) | 90.8 ms | 89.6 ms | 0.99 |
+| **Memory, 126,731 blocks** | | | |
+| `GridModel` indexes | 77 B/block | **43 B/block** | 0.56 |
+| `BlockInstance` | 208 B/block | 216 B/block | 1.04 |
+| retained | 765 B/block | **739 B/block** | 0.97 |
+| **Worst tick after a placement, 505,566 blocks** | 69.6 ms | **49.4 ms** | 0.71 |
+
+**The room pass is slower and that is this pass's finding, not its footnote.** Four changes aimed at
+it and the stage came out seven per cent worse, on a control that did not move. The suspect is
+iteration 3: a membership bit that makes *exposure* cheaper is set 1.5 million times *inside the
+room pass*, so a saving of 2.9 ms in exposure was bought with something like 14 ms in rooms. It is
+being attributed by measuring the stage at each of the pass's commits rather than by reasoning, and
+the change stands or falls on that reading.
 
 ## Pass 3 — what is designed and not built
 
