@@ -186,6 +186,12 @@ namespace Thermodynamics.Tests
                 { "Thermodynamics.Core.ReferenceMaterials.SodaLimeGlass", "value constant" },
                 { "Thermodynamics.Core.WeatherResponse.Calm", "value constant" },
 
+                // Built once by the static constructor from the matrix path and never written
+                // after: the same signed permutation for every grid on every thread.
+                { "Thermodynamics.Core.BlockOrientation.rotatedAxes", "table built once, never written after" },
+                { "Thermodynamics.Core.BlockOrientation.rotatedFaces", "table built once, never written after" },
+                { "Thermodynamics.Core.BlockOrientation.legal", "table built once, never written after" },
+
                 // The lock the mutable pair below is taken under, which is shared on purpose.
                 { "Thermodynamics.Core.ThermalValidation.Lock", "the lock itself" },
 
