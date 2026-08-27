@@ -397,17 +397,25 @@ because a mixture is at one temperature and splitting it at that temperature con
 term by term.
 
 Both halves are needed and neither alone works. Taking the mixed temperature without the mass
-destroys `M_s / (M_n + M_s)` of the ring's heat — 67.9 % on a large-grid ring, where a pipe node
-holds 941 J/K against its parcel's 1,889 — which is the accident this replaced. Taking the mass
-without the temperature is the same energy at the wrong place. Pouring the parcel's energy into the
-node at its own capacity would conserve it and put a 900 K parcel's heat into a 941 J/K pipe as
-2,106 K, destroying the pipe: energy conserved by breaking boundedness, which is not a trade this
-solver makes anywhere else.
+destroys `M_s / (M_n + M_s)` of the ring's heat, which is the accident this replaced. Taking the
+mass without the temperature is the same energy at the wrong place. Pouring the parcel's energy into
+the node at its own capacity would conserve it and destroy the pipe: energy conserved by breaking
+boundedness, which is not a trade this solver makes anywhere else.
+
+**Both of those get worse as the fluid gets heavier, and `C43` made it ten times heavier.** A
+large-grid pipe node holds 941 J/K on the solver's clock; its parcel held 1,889 at the flat 50 kg
+charge and holds **19,479** at the density that ships. So the temperature-only spill destroyed
+67.9 % of a ring's heat then and would destroy **95.4 %** now, and the unbounded pour put a 900 K
+parcel into that pipe at 2,106 K then and at **12,854 K** now. The two figures this page carried
+were measured before the correction and are kept beside the current ones rather than replaced,
+because the ratio moving by an order of magnitude is the point: **a bound is worth what the thing
+it bounds is worth, and that is not a constant.**
 
 **What this predicts, written before it was run.** On the eight-pipe large-grid ring
 `HeatLaunderingTests` builds, with every parcel at 900 K and every pipe at ambient, popping one pipe
 and rewelding it must lose **one eighth** of the ring's heat above ambient — the parcel that left
-with the block — against the 67.9 % the mixed-temperature-only spill lost, and the loss must be
+with the block — against the 67.9 % the mixed-temperature-only spill lost at the coolant mass of the
+day, and the loss must be
 within a per cent of `1/N` for any ring length `N`. Breaking a ring into two rings, where no block
 leaves, must lose **nothing**. No pipe may end hotter than the parcel it absorbed. These are the
 falsifiers: a figure that is not `1/N`, a split that loses heat, or a pipe above its parcel.
@@ -918,6 +926,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | *Coolant loops* carried a pipe parcel at 1,889 J/K, which is what it held at the flat 50 kg charge; `C43`'s density makes it **19,479**. The two figures that ratio decides move with it — the temperature-only spill destroyed 67.9 % of a ring's heat and would now destroy **95.4 %**, and the unbounded pour reached 2,106 K and now reaches **12,854 K**. Both are stated beside the old ones rather than replacing them, because a bound is worth what the thing it bounds is worth. |
 | 2026-08-26 | **The refill's watts are inside what the pump asks the grid for**, which *Coolant is a consumable* had said since the feature existed and the code had never done ([backlog.md](backlog.md) `B44`). They were billed to the block's drawn power — which is what makes them heat — and never requested, so a ship with no power to spare refilled anyway; and a pump *switched off* asked for nothing at all, which a sink reports as full supply, so a ring whose pumps were off refilled at full rate and free. `HasDrivingPump` gates the loop side and the demand is inside `DemandMegawatts` and the sink's ceiling on the block side. |
 | 2026-08-26 | **`A12`'s boundedness bound is under test again, and the case that reaches it is the coolant mechanism being switched off** ([backlog.md](backlog.md) `F28`). Not a split — the shipped pipes have two ports, so no block a player can add opens a closed ring, which is why the split falsifier was withdrawn and why looking for one again found nothing. The 698.19 K on this page was read off a grind before `B44` made a broken ring vent and before `C43` changed the coolant's capacity; on the constructor that works it is 872.0 K against 900 K of fluid, where the unbounded form reaches 12,854 K. |
 | 2026-08-26 | A segment's thermal mass takes `MassPerPipe(cell)` — a density times the volume of the cell the pipe occupies — rather than a flat mass at both grid sizes. `C43`. |

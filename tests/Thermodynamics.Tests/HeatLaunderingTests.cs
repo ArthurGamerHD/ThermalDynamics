@@ -481,6 +481,20 @@ namespace Thermodynamics.Tests
                 "the unbounded form would have reached only " + unbounded.ToString("n0")
                 + " K, which is not far enough above the fluid for this test to be guarding"
                 + " anything — the parcel and the node have stopped differing in capacity");
+
+            // **The other figure the same ratio decides**, and the reason both are printed: taking
+            // the mixed temperature without the parcel's mass destroys this share of a ring's heat.
+            // thermal-model.md quotes it, and it moved from 67.9 % to 95.4 % when `C43` gave a
+            // large-grid pipe ten times the fluid — so it is a figure about the coolant charge
+            // rather than about the solver, and it moves whenever the charge does.
+            float destroyed = parcelCapacity / (parcelCapacity + pipeCapacity);
+            output.WriteLine("a temperature-only spill would destroy {0:p1} of the ring's heat",
+                destroyed);
+
+            Assert.True(destroyed > 0.9f,
+                "a temperature-only spill would destroy " + destroyed.ToString("p1")
+                + " of the ring's heat; thermal-model.md's Coolant loops says 95.4 %, and a figure"
+                + " this far from it means the coolant charge moved and the page has not");
         }
 
         /// <summary>
