@@ -107,7 +107,7 @@ reason. See [testing the reduction](#testing-the-reduction).
 
 | # | Principle | Rules |
 | --- | --- | --- |
-| **P1** | **A figure carries its scope.** A number without its population, its basis and its clock is not a number; a sample stands for a population only by a written rule — and a duration carries the machine it was taken on. | `E2` `E3` `E6` `M10` `M11` `J3` `W5` |
+| **P1** | **A figure carries its scope.** A number without its population, its basis and its clock is not a number; a sample stands for a population only by a written rule — and a duration carries the machine it was taken on, and the build it was taken from. | `E2` `E3` `E6` `M10` `M11` `M13` `J3` `W5` |
 | **P2** | **What the instrument could not see is part of the result.** Censoring, the noise floor, an unfinished sweep, a check that judged nothing, a discarded exception and a place nobody looked are the same failure: reading a blind spot as a value. | `E4` `E8` `E9` `M4` `M5` `M12` `D4` `D9` |
 | **P3** | **The claim is fixed before the data and corrected in place after.** A criterion that can move once the numbers are in is not a criterion; a finding that is corrected somewhere other than where it was published is not corrected. | `E1` `E10` `E11` `M9` `D5` `R12` |
 | **P4** | **Nothing is its own oracle.** A test that asks the model the same question twice agrees with whatever the model does; a harness fault looks exactly like physics. | `E7` `D1` `D7` `D8` |
@@ -263,6 +263,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **M9** | A scenario's conclusion is pinned so it cannot invert | absolute | P3 | `ScenarioClaimTests` |
 | **M10** | Specimens are chosen by coverage, and every pick names its rule | absolute | P1 | `panel.csv` carries the rule |
 | **M11** | The synthetic ship is refreshed against the field | absolute | P1 | `CensusFidelityTests` |
+| **M13** | A timing is taken on the build that ships | absolute | P1 | `OptimisedBuildTests` |
 | **D1** | Disbelieve a plausible number | absolute | P4 | `ScreeningTests` `LabInvariantTests` |
 | **D2** | Hunt for what is built, documented and reached by nothing | absolute | P5 | `SimCommandTests` `DocumentationTests` |
 | **D3** | Where one thing exists twice, a test compares the two | absolute | P5 | `BothParsersKnowTheSamePropertyNames` |
@@ -315,8 +316,8 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **J2** | *Light, isolated, tested, open* | low value | — | absorbed into `C4` `C5` `C7` `R9` |
 | **J3** | The corpus filters are strict, and their cost is recorded | conditional | P1 | `BlueprintTests` |
 
-Seventy-three rows: **sixty-three absolute, seven conditional, three low value.** The last three are
-retired as rules and kept only so a citation to them does not dangle, so seventy of these are
+Seventy-four rows: **sixty-four absolute, seven conditional, three low value.** The last three are
+retired as rules and kept only so a citation to them does not dangle, so seventy-one of these are
 rules a change can be measured against. Eighteen of them are unchecked and say so, and three more
 are *reported* rather than checked, which is weaker and is written as such.
 
@@ -369,6 +370,31 @@ to thirty, which made every scale figure about six times too cheap.
 *Applies to:* `Census` and `Census.Field`.
 *Checked by:* `CensusFidelityTests`.
 *From:* [benchmarks.md](benchmarks.md#keeping-it-honest), [tests/README.md](../tests/README.md).
+
+#### M13 — A timing is taken on the build that ships
+
+**Every project the harness times compiles optimised, in every configuration, and a check reads the
+attribute off the built assembly.**
+
+`dotnet run` and `dotnet test` build `Debug`, and a Debug assembly carries
+`DebuggableAttribute(DisableOptimizations)`, which the JIT obeys: no register allocation across
+statements, no bounds-check elimination, no inlining. Nothing set `<Optimize>` under `tests/`, so
+**every millisecond this repository published before 2026-08-26 was measured on code the game never
+runs** — a step 3.4× dearer than the same commit optimised.
+
+**It is not a constant, which is why it is a rule and not a footnote.** A uniform factor would leave
+every ratio intact, and a benchmark exists for ratios. Measured on one commit in one window, the row
+fill is 5× and the cost of being measured 7.7× where the clamped conduction loop is 2.6×: the
+instrument exaggerated exactly the work — a store through a field, a load hoisted out of a loop —
+that an optimisation pass spends its time on. Every *share of a step* on
+[benchmarks.md](benchmarks.md) taken before that date is a share of the wrong step.
+
+*Applies to:* every project under `tests/`, and any future harness that reports a duration.
+*Checked by:* `OptimisedBuildTests`, which reads `DebuggableAttribute` off the built core, harness
+and test assemblies. It was proven against an unoptimised `--no-incremental` build before it was
+believed — an incremental build ignores a `-p:Optimize=false` on the command line, so the first
+attempt to break it passed.
+*From:* [performance.md](performance.md#iteration-1--the-harness-measured-unoptimised-code).
 
 #### W5 — A measurement holds the machine
 
@@ -1699,6 +1725,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | **Added `M13` — a timing is taken on the build that ships — after finding that no timing ever had been.** Nothing under `tests/` set `<Optimize>`, and every command this repository runs builds `Debug`, which tells the JIT not to optimise. A step is 3.4× dearer that way and the factor is not uniform — 5× on the row fill, 7.7× on the diagnostics surcharge, 2.6× on the clamped conduction loop — so the *shares* this repository published were wrong as well as the absolutes, and they were wrong in favour of exactly the work an optimisation pass looks at. It lands under `P1` because it is the same failure as a duration quoted without its machine: the figure's stated scope was untrue. Unchecked rules: eighteen, unchanged — `M13` arrived with `OptimisedBuildTests`. |
 | 2026-08-26 | `R4` and `R5` were both *judgement* and are checked now, by `ShippedIdentityTests`. They are the two things here that editing back does not undo: regenerating `modinfo.sbmi` publishes the mod as a new workshop item and leaves every subscriber on the old one, and moving a folder under `Models/` costs a re-export of every block that names a path in it. The model pin is a digest of the sorted **set** of paths, because a file added is a normal day and a file moved is the failure. Unchecked rules: twenty-one down to eighteen. |
 | 2026-08-26 | `E4` has a check, having been unchecked since it was written. `verdict.py` counts the corpus's blueprints and prints `*** PARTIAL: n of m ***` above everything else — the 2026-08-25 survey reads 46.2 % — and says the population is *unknown* where the corpus is not on the machine rather than assuming a dataset is whole. It is *reported* rather than enforced, and the index says so. |
 | 2026-08-26 | `R8` gained its fifth place: the bridge from the world's settings to the solver's. A field on `ThermalSettings` the bridge does not copy satisfies every other clause of the rule and is still left at its default in every world, and the suite cannot see it because a test builds the solver's copy directly. Checked in both directions now. |

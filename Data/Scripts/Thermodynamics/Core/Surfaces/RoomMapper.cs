@@ -77,6 +77,21 @@ namespace Thermodynamics.Core
         private Vector3I searchMaxExclusive;
         private Vector3I scanCursor;
 
+        /// <summary>
+        /// Where <see cref="scanCursor"/> sits in the snapshot and the visited bitset, which share one
+        /// box and one ordering.
+        ///
+        /// <para>
+        /// **The scan order is the index order**, exactly: the cursor advances x fastest, then y, then
+        /// z, and the index is <c>((z * sizeY) + y) * sizeX + x</c> — so a step of one cell is a step
+        /// of one index, wraps included. The interior scan walks every cell of a bounding volume
+        /// fourteen times the block count, so deriving the index from the coordinates there was three
+        /// subtractions, six compares and a multiply per cell, twice over. It is an increment.
+        /// See performance.md, Iteration 10.
+        /// </para>
+        /// </summary>
+        private long scanIndex;
+
         private Vector3I pendingMin;
         private Vector3I pendingMaxExclusive;
         private bool hasPendingBounds;
@@ -249,7 +264,7 @@ namespace Thermodynamics.Core
                     if (frontier.Count == 0)
                     {
                         phase = Phase.Interior;
-                        scanCursor = searchMin;
+                        BeginInteriorScan();
                         continue;
                     }
                     StepExternal();
@@ -308,7 +323,7 @@ namespace Thermodynamics.Core
                 searchMaxExclusive.Z <= searchMin.Z)
             {
                 phase = Phase.Interior;
-                scanCursor = searchMin;
+                BeginInteriorScan();
                 return;
             }
 
@@ -523,19 +538,33 @@ namespace Thermodynamics.Core
                 if (spent >= budget) return ScanResult.BudgetSpent;
 
                 Vector3I cell = scanCursor;
+                long index = scanIndex;
                 AdvanceCursor();
 
                 spent++;
                 Work.RoomCellsVisited++;
 
-                if (visited.Contains(cell)) continue;
-
-                visited.Add(cell);
-
-                if (IsStructure(cell))
+                if (snapshotLive)
                 {
-                    working.AddSolid(cell);
-                    continue;
+                    if (visited.ContainsIndex(index)) continue;
+                    visited.AddIndex(index);
+
+                    if (IsStructureAt(index, cell))
+                    {
+                        working.AddSolid(cell);
+                        continue;
+                    }
+                }
+                else
+                {
+                    if (visited.Contains(cell)) continue;
+                    visited.Add(cell);
+
+                    if (IsStructure(cell))
+                    {
+                        working.AddSolid(cell);
+                        continue;
+                    }
                 }
 
                 currentRoom = working.BeginRoom();
@@ -549,7 +578,27 @@ namespace Thermodynamics.Core
         private bool IsStructure(Vector3I cell)
         {
             if (!IsFullySealed(cell)) return false;
-            return !doorCells.Contains(cell);
+            return !IsDoorCell(cell);
+        }
+
+        /// <summary>The same, for a caller that already holds the cell's index in the snapshot.</summary>
+        private bool IsStructureAt(long index, Vector3I cell)
+        {
+            if (index < 0 || (sealing[index] & CellSurface.SelfAirtightMask) != CellSurface.SelfAirtightMask)
+            {
+                return false;
+            }
+
+            return !IsDoorCell(cell);
+        }
+
+        /// <summary>
+        /// Whether a cell belongs to a door. The count is tested first because most grids have no
+        /// door at all, and this is asked of every sealed cell in the bounding volume.
+        /// </summary>
+        private bool IsDoorCell(Vector3I cell)
+        {
+            return doorCells.Count > 0 && doorCells.Contains(cell);
         }
 
         private void CollectDoorCells()
@@ -574,8 +623,19 @@ namespace Thermodynamics.Core
         /// <summary>Doors seen by the pass currently running.</summary>
         private readonly HashSet<BlockInstance> passDoors = new HashSet<BlockInstance>();
 
+        /// <summary>Points the interior scan at the first cell of the box, with its index.</summary>
+        private void BeginInteriorScan()
+        {
+            scanCursor = searchMin;
+            scanIndex = 0;
+        }
+
         private void AdvanceCursor()
         {
+            // One cell is one index whichever way the cursor wraps, which is the whole reason the
+            // index is carried rather than derived. See scanIndex.
+            scanIndex++;
+
             scanCursor.X++;
             if (scanCursor.X < searchMaxExclusive.X) return;
 

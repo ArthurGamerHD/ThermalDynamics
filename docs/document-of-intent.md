@@ -1275,7 +1275,7 @@ environment sample, and results out — and nothing else.
 
 The remaining distance is storage rather than mathematics. The geometry, the conduction graph and
 the integrator already work from integer AABBs and cost the same whatever a block's volume;
-`GridModel.blocksByCell`, `SurfaceMap.states` and `BlockInstance.Cells` are still one entry per
+`GridModel.blocksByCell`, `SurfaceMap`'s cell table and `BlockInstance.Cells` are still one entry per
 occupied cell, which is what a 0.25 m lattice cannot afford. See
 [scale-design.md](scale-design.md#cell-centric--boundary-centric).
 

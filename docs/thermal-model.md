@@ -675,16 +675,19 @@ rectangles are. `BlockInstance` rotates them into grid space when a block is pla
 
 ### Two layers
 
-`SurfaceMap` keeps every cell twice.
+`SurfaceMap` answers about every cell twice, from one entry: the live state in the low half of a
+`long` and the structural one in the high half.
 
 | Layer | Doors read as | Asked by |
 | --- | --- | --- |
 | Live | whatever they are doing | exposure — an open doorway does radiate |
 | Structural | shut | the room mapper — a door swinging must not change the shape of the ship |
 
-Both are written from the same block in the same call, so they stay in step. **This split is what
-makes a door cheap:** rooms are a property of how the ship is *built*, so cycling a door does not
-invalidate them.
+Both are written from the same block in the same call, so they stay in step — and since 2026-08-26
+in the same *entry*, which is what makes them impossible to write independently
+([performance.md](performance.md#iteration-5--the-surface-maps-two-layers-in-one-dictionary)).
+**This split is what makes a door cheap:** rooms are a property of how the ship is *built*, so
+cycling a door does not invalidate them.
 
 ### Exposure
 
@@ -932,6 +935,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | The two surface layers are one packed entry per cell rather than two dictionaries. Nothing about the model changes — the same two answers, written in the same call — and it is here because this page is where the split is described. |
 | 2026-08-26 | *Coolant is a consumable* restated at the charge that ships: a large-grid parcel costs **1,947,916 J** to restore rather than 188,889, and an eight-pipe ring holds **15,583,328 J** at 100 K over rather than 1,511,111. The neutrality is unchanged and cannot change — both sides are the same fluid at the same excess — which is now said, because the numbers moving without the conclusion moving is what makes the identity worth stating. |
 | 2026-08-26 | *Coolant loops* carried a pipe parcel at 1,889 J/K, which is what it held at the flat 50 kg charge; `C43`'s density makes it **19,479**. The two figures that ratio decides move with it — the temperature-only spill destroyed 67.9 % of a ring's heat and would now destroy **95.4 %**, and the unbounded pour reached 2,106 K and now reaches **12,854 K**. Both are stated beside the old ones rather than replacing them, because a bound is worth what the thing it bounds is worth. |
 | 2026-08-26 | **The refill's watts are inside what the pump asks the grid for**, which *Coolant is a consumable* had said since the feature existed and the code had never done ([backlog.md](backlog.md) `B44`). They were billed to the block's drawn power — which is what makes them heat — and never requested, so a ship with no power to spare refilled anyway; and a pump *switched off* asked for nothing at all, which a sink reports as full supply, so a ring whose pumps were off refilled at full rate and free. `HasDrivingPump` gates the loop side and the demand is inside `DemandMegawatts` and the sink's ceiling on the block side. |

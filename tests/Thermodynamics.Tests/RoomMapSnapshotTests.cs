@@ -94,6 +94,41 @@ namespace Thermodynamics.Tests
             }
         }
 
+        /// <summary>
+        /// The claim the interior scan's index rests on, tested where it is made rather than through
+        /// the map: walking a box x fastest, then y, then z, the index advances by exactly one at
+        /// every step — including the two wraps, which is the case an off-by-one would survive on a
+        /// box one row deep.
+        /// </summary>
+        [Theory]
+        [InlineData(3, 4, 5)]
+        [InlineData(1, 7, 2)]
+        [InlineData(9, 1, 1)]
+        public void WalkingABoxInScanOrderAdvancesTheIndexByOne(int sizeX, int sizeY, int sizeZ)
+        {
+            Vector3I min = new Vector3I(-3, 11, -7);
+            Vector3I maxExclusive = min + new Vector3I(sizeX, sizeY, sizeZ);
+
+            CellBitset box = new CellBitset();
+            box.Reset(min, maxExclusive);
+
+            long expected = 0;
+            int wraps = 0;
+            for (int z = min.Z; z < maxExclusive.Z; z++)
+            for (int y = min.Y; y < maxExclusive.Y; y++)
+            for (int x = min.X; x < maxExclusive.X; x++)
+            {
+                Vector3I cell = new Vector3I(x, y, z);
+                Assert.True(expected == box.IndexOf(cell),
+                    cell + " is index " + box.IndexOf(cell) + " and the scan is at " + expected);
+                if (x == min.X && expected > 0) wraps++;
+                expected++;
+            }
+
+            Assert.Equal((long)sizeX * sizeY * sizeZ, expected);
+            Assert.True(sizeY * sizeZ == 1 || wraps > 0, "the box has no wrap in it, so the wrapping case is untested");
+        }
+
         [Fact]
         public void AShellWithADoorMapsToTheSameRoomsAndPortals()
         {

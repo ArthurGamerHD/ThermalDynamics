@@ -56,15 +56,24 @@ the benchmarks build **now**, which also carries 1e.
 | Structure | armour hull, before | armour hull, after 1a–1d | census hull, today | Scales with |
 | --- | ---: | ---: | ---: | --- |
 | `BlockInstance` | 456 | 240 | **240** | blocks, and their **cells** |
-| `GridModel` indexes | 122 | 122 | **86** | blocks, and their **cells** |
-| `SurfaceMap` | 69 | 69 | **68** | **cells** |
-| Solver | 537 | 468 | **501** | nodes and links |
-| `RoomMap` retained | 1,126 | 32 | **128** | structure, and cells **in rooms** |
-| **Total retained** | **2,311** | **932** | **1,023** | |
-| **Total peak** | **3,309** | **960** | **1,179** | |
+| `GridModel` indexes | 122 | 122 | **87** | blocks, and their **cells** |
+| `SurfaceMap` | 69 | 69 | **44** | **cells** |
+| Solver | 537 | 468 | **377** | nodes and links |
+| `RoomMap` retained | 1,126 | 32 | **68** | structure, and cells **in rooms** |
+| **Total retained** | **2,311** | **932** | **817** | |
+| **Total peak** | **3,309** | **960** | **1,018** | |
 
 In megabytes at that size: 279 MB retained and 400 MB peak became 113 MB and 116 MB on the armour
-hull, and are **126 MB and 145 MB** on the census hull.
+hull, and are **99 MB and 123 MB** on the census hull.
+
+> **The third column was re-taken on 2026-08-26** and three of its rows moved, all from the
+> performance pass ([performance.md](performance.md)): the surface map holds both its layers in one
+> packed entry rather than two dictionaries (69 → **44**), and the room map's solid cells are a
+> bitset over the search box rather than a hash set (128 → **68**). The peak fell from 1,179 to
+> **1,018** even though the mapper now also retains a **sealing byte per cell of the bounding box**
+> — 1.5 MB here — because the hash set it replaced cost more than the two dense buffers together.
+> The figures are exact and repeat to the byte: this table is an accounting of measured
+> `GC.GetTotalMemory` deltas, not a timing.
 
 > **The third column is not a regression, and reading it as one wasted an afternoon.** The
 > benchmark hull changed: it used to be heavy armour with a grating in eight, and it is now a
@@ -260,7 +269,7 @@ and dropped when they are switched off, costs a null check on a path that alread
 
 Everything above is a fraction of a fixed per-block cost. This one is a multiplier.
 
-`GridModel.blocksByCell`, `SurfaceMap.states` and `BlockInstance.Cells` hold one entry per occupied
+`GridModel.blocksByCell`, `SurfaceMap`'s cell table and `BlockInstance.Cells` hold one entry per occupied
 *cell*. On SE1 that is one entry per block and the rows above are the whole cost. On SE2's 0.25 m
 lattice a 5 m block occupies 8,000 cells, so those three rows alone would cost roughly **half a
 megabyte for one block**.
@@ -308,6 +317,7 @@ counted per cell, which is §8 and §9.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | Re-took the census-hull column: retained **817 B/block** and peak **1,018**, from 1,023 and 1,179. The surface map is 44 B/block from 68 (both layers in one packed entry) and the room map 68 from 128 (a bitset rather than a hash set of solid cells); the mapper keeps a sealing byte per bounding cell it did not before and the peak still fell. The benchmark's own row labels said *two dictionaries* and *a visited set*, and now say what is there. |
 | 2026-08-26 | The room mapper holds one byte per cell of its search box between passes — the structural sealing snapshot the flood fill reads instead of the surface map's dictionaries: 6.8 MB at 505k blocks, 14 MB at a million, about 14 B a block. Bought a 3× cheaper room map ([performance.md](performance.md#iteration-4--the-room-mapper-reads-a-snapshot-of-the-sealing)). |
 | 2026-08-25 | Added the *Looking for* table this page's own conventions ask for. It carried the same pointers in prose, which is the shape a reader has to read rather than scan. |
 | 2026-08-23 | **§4 is finished**: the room map's cell dictionary is frozen into sorted arrays when a pass completes, 31 → 12 bytes a cell. The room map falls from 107 to **72 bytes a block** on a 20,000-block ship and the retained set from 1,000 to 966. [backlog.md](backlog.md) `E3`. |
