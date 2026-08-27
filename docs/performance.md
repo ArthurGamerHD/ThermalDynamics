@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Pass 4, iteration 3: the room map answers from a rank over the set it already fills, so the sorted key and room arrays and the radix sort are gone. Exposure 0.45, rooms 0.89, and the pass's allocation is a tenth of what it was when the pass opened. |
 | 2026-08-27 | Pass 4, iteration 2: the room cells are one store, hinted from the pass before. Half the remaining allocation, the worst pass a tenth quicker, the best unmoved — and the same commit reading 30 % apart in two windows. |
 | 2026-08-27 | Opened pass 4 on the figure pass 3 ended with: the room pass allocated 253 MB per execution. Its first iteration removed 149 MB of that, and a quarter of the stage. |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
@@ -1107,6 +1108,7 @@ table carries an allocation column for that reason.
 | ---: | --- | --- | --- |
 | 1 | The room map's cell-to-room dictionary is gone, not merely rebuilt | **kept** — rooms 0.75, and 149 MB of the 253 with it | [Iteration 1](#pass-4-iteration-1--the-room-maps-cell-to-room-dictionary-is-gone) |
 | 2 | Every room's cells in one store, sized from the pass before | **kept** — another 50 MB, and the worst pass 0.89; the best did not move | [Iteration 2](#pass-4-iteration-2--every-rooms-cells-in-one-store) |
+| 3 | The map answers from a rank, so the sorted arrays and the sort go | **kept** — exposure **0.45**, rooms 0.89, another 28 MB | [Iteration 3](#pass-4-iteration-3--the-room-map-answers-from-a-rank) |
 
 ## Pass 4, iteration 1 — the room map's cell-to-room dictionary is gone
 
@@ -1195,6 +1197,56 @@ same instrument, thirty per cent apart. Both pairings are interleaved and both r
 agree, so both ratios stand; what does not stand is any comparison of an absolute figure in one
 table with an absolute figure in another. That is what `M7` means by measuring a pass against its own
 start, and this is the clearest example of it the project has produced.
+
+## Pass 4, iteration 3 — the room map answers from a rank
+
+The published map held a sorted `long[]` of cell keys and a parallel `int[]` of rooms, and sorted
+them — 1.5 million keys, by radix, on the tick that publishes the map. Twelve bytes a cell to hold
+twelve bytes of answer, and a query that is a binary search: about twenty dependent loads through
+twelve megabytes.
+
+**None of that is needed, because the pass already fills a set that knows the answer's shape.**
+`roomCells` is one bit per cell of the search box, marking the cells that are in rooms — the set
+`IsExternal` asks first. It knows *which* cells are in rooms and, being indexed by the box's own
+ordering, it already **orders** them. What it does not say is which member a given cell is. Ranking
+it does: a prefix count of set bits per 64-cell word, four bytes a word, built in one pass over a
+sixty-fourth of the box. Then
+
+- the room of a cell is `roomByRank[rank(cell)]` — **four bytes a cell**, no keys held at all;
+- a query is two loads and a popcount, with no search and no comparison anywhere;
+- publishing is one walk over the set's words and one over the room cells. **There is no sort.**
+
+`BitOperations.PopCount` is not on the script whitelist, so the popcount is written out as the usual
+SWAR halving. The rank index is put away by any change to the set it describes, because a rank read
+from a stale prefix is a plausible number that indexes the wrong thing.
+
+**What it was worth.** `bench stages --stages rooms,exposure,solver`. Exposure cannot be the control
+here — it is the biggest reader of this lookup — so **the solver stage is**, and it reads 1.01.
+
+| stage, 505,566 blocks | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| **exposure** | 38.20 ms | **17.06 ms** | **0.45** |
+| rooms | 149.04 ms | **132.33 ms** | **0.89** |
+| a settled step (control) | 80.10 ms | 80.73 ms | 1.01 |
+| **allocated, one room pass** | 54,616 KB | **25,670 KB** | **0.47** |
+| **at 126,731 blocks** | | | |
+| exposure | 10.19 ms | **6.33 ms** | **0.62** |
+| rooms | 33.67 ms | **31.74 ms** | 0.94 |
+| a settled step (control) | 17.51 ms | 17.16 ms | 0.98 |
+| allocated, one room pass | 10,026 KB | **4,768 KB** | 0.48 |
+
+**Exposure more than halved, and that is where the reading is.** Pass 3's iteration 3 put a
+membership *bit* in front of this search precisely because the search was expensive; what is left
+after that bit are the cells that really are in rooms, and every one of them was still paying twenty
+dependent loads. At half a million blocks that was more than half of the exposure refresh. The room
+pass's own 0.89 is the sort no longer happening on the publish tick.
+
+**And the ledger is closed on this pass's opening figure.** The room pass allocated **253 MB** per
+execution when pass 4 began and allocates **25 MB** now — a tenth — in three changes that each
+removed a structure rather than tuning one: a dictionary nothing read, per-room lists that could be
+one hinted store, and sorted keys that a rank makes unnecessary. What remains is the cell store at
+twelve bytes a cell and the room-by-rank at four, both of which the map is holding *because they are
+its answer*, not as working space.
 
 ---
 

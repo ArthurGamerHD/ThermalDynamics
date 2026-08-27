@@ -88,7 +88,7 @@ The current model is **cell-centric**. Every one of these is keyed by `Vector3I`
 | `GridModel.blocksByCell` | one per occupied cell | 8 000 |
 | `SurfaceMap`'s cell table | one per occupied cell | 8 000 |
 | `BlockInstance.gridCells[]` + `gridSurfaces[]` | one per occupied cell | 8 000 × 16 B |
-| `RoomMap.solid` / `roomIndexByCell` | one per cell in the bounding volume | grows as the cube of ship size |
+| `RoomMap.solid` / `RoomMap.roomCells` | one **bit** per cell in the bounding volume | grows as the cube of ship size |
 | `SurfaceMap.GetExposedFaces` | iterates cells × 6 faces | 48 000 iterations |
 | `GridModel.Neighbours` | iterates cells × 6 faces, with `List.Contains` | 48 000 iterations |
 
