@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Opened pass 6 on the load path's largest stage. Its first iteration splits the link build by ablation: **nine tenths of it is finding neighbours**, at fifty nanoseconds a dictionary probe, and every per-pair operation together is the other tenth. |
 | 2026-08-27 | **Closed pass 5**: the settled step is **0.86** and the link build **0.84** at 505,566 blocks, with three untouched stages at 1.00, 0.99 and 1.03 as controls. The step had never moved in four passes; what moved it was measuring where its time went. `D1`'s open question is answered — conduction is at its floor. |
 | 2026-08-27 | Pass 5, iteration 6: the link build consults the occupancy bit before the block table — links **0.88** at 505,566 blocks and 0.76 at 126,731, both controls flat. |
 | 2026-08-27 | Pass 5, iterations 4 and 5: `bench stepfloor` answers `D1`'s open question — **conduction is its own floor**, faster than a loop doing its memory accesses and no arithmetic. And the idea that came out of it, putting buried nodes through the exposed path, measured **1.30** and was dropped: the branch is predictable and what it skips is three row reads, not just arithmetic. |
@@ -1864,6 +1865,46 @@ the only stage with visible headroom, and iteration 5 established that a good pa
 branch doing its job. **What is left is not instructions: it is three passes over the grid, twenty-
 eight times a step.** Fewer substeps or fewer nodes is the next order of magnitude, and both are
 `D1`'s structural work rather than a performance pass's.
+
+## Pass 6, iterations
+
+Pass 5 ended by saying a step is at its floor and that what is left of it needs `D1`'s structural
+work rather than a performance pass's. That leaves **the link build as the largest thing on the load
+path** — 111 ms at 505,566 blocks — and it is the strangest figure in the lab: **116 nanoseconds a
+link to build what conduction then walks at 1.0**.
+
+| # | Subject | Verdict | Where |
+| ---: | --- | --- | --- |
+| 1 | Which half of the link build is the link build | **kept** — nine tenths of it is finding neighbours | [Iteration 1](#pass-6-iteration-1--which-half-of-the-link-build-is-the-link-build) |
+
+## Pass 6, iteration 1 — which half of the link build is the link build
+
+The stage has two halves: **finding** each block's neighbours, and **processing** each pair it finds
+— the node lookup, the contact count, the conductance, the list append, the adjacency chaining.
+Pass 5's history says guessing which is expensive costs two reverted iterations, and this loop is
+220 ns a block, which is too short to timestamp inside without distorting it.
+
+So it was split by **ablation**: a probe build with the entire per-pair body removed, leaving only
+the neighbour walk, measured against the real thing in one window with the room pass as control.
+
+| | before | probe (walk only) | ratio |
+| --- | ---: | ---: | ---: |
+| links, 505,566 blocks | 97.05 ms | 88.23 ms | **0.91** |
+| links, 126,731 blocks | 26.81 ms | 22.95 ms | 0.86 |
+| rooms (control) | 70.00 ms | 69.52 ms | 0.99 |
+
+**Removing every pair operation saves a tenth of the stage.** Everything else — three divisions for
+the conductance, a box overlap and a rounding for the contact count, two chain writes per link — is
+9 % of it together. The other 90 % is `GetNeighbours`: **192 nanoseconds a block just to find what
+is next to it.**
+
+That figure is itself the diagnosis. A block has six candidate cells; a bit test rules out the three
+in eight that are empty (pass 5, iteration 6), leaving 3.77 probes into `blocksByCell` — so **about
+fifty nanoseconds a probe**. A dictionary lookup that costs fifty nanoseconds is missing cache
+roughly twice: once on the bucket and once on the entry, in a table that holds half a million
+entries and cannot fit anywhere near the processor.
+
+**The pair work is not the target and the arithmetic is not the target. The lookup is.**
 
 ---
 
