@@ -44,6 +44,30 @@ namespace Thermodynamics.Core
         private Vector3I max = Vector3I.MinValue;
         private bool boundsDirty;
 
+        /// <summary>
+        /// One bit per cell of the padded bounding box, set where a block stands. Built on demand
+        /// and thrown away whenever the grid changes, which <see cref="version"/> tracks.
+        ///
+        /// <para>
+        /// **What it is for is the probes that find nothing.** A caller walking the six faces of
+        /// every cell of every room — the air rebuild, the room-side exposure refresh — asks
+        /// `blocksByCell` about 1.6 million faces on a 126,731-block hull and **8.5 %** of them hold
+        /// a block. The other 91.5 % are a hash and a bucket chase to be told "nothing", against a
+        /// bit test here. See performance.md, Pass 4, Iteration 6.
+        /// </para>
+        ///
+        /// <para>
+        /// Building it costs one bit-set per occupied cell, once per change to the grid, which is
+        /// once per room-mapping pass in practice — against nine million probes saved on the hull
+        /// above. It is not maintained incrementally: a placement invalidates it and the next
+        /// caller pays for the rebuild, so a load that places half a million blocks builds it once
+        /// at the end rather than half a million times on the way.
+        /// </para>
+        /// </summary>
+        private readonly CellBitset occupied = new CellBitset();
+        private int occupancyVersion = -1;
+        private int version;
+
         public GridModel(float gridSize)
         {
             // ArgumentOutOfRangeException is not on the in-game script compiler's whitelist.
@@ -98,9 +122,37 @@ namespace Thermodynamics.Core
             return blocksByCell.TryGetValue(GridMath.Key(cell), out block) ? block : null;
         }
 
+        /// <summary>
+        /// Where the blocks are, as one bit a cell over the padded bounding box, current as of this
+        /// call. See <see cref="occupied"/> for why it exists and what it costs.
+        ///
+        /// <para>
+        /// The box is padded by one so that every neighbour of every cell a block occupies is
+        /// inside it, which is what lets a caller step <see cref="CellBitset.IndexStep"/> from cell
+        /// to neighbour without a bounds test.
+        /// </para>
+        /// </summary>
+        public CellBitset Occupancy()
+        {
+            if (occupancyVersion == version) return occupied;
+
+            occupied.Reset(Min - Vector3I.One, Max + new Vector3I(2, 2, 2));
+
+            for (int i = 0; i < blocks.Count; i++)
+            {
+                Vector3I[] cells = blocks[i].Cells;
+                for (int c = 0; c < cells.Length; c++) occupied.Add(cells[c]);
+            }
+
+            occupancyVersion = version;
+            return occupied;
+        }
+
         public BlockInstance Add(BlockInstance block)
         {
             if (block == null) throw new ArgumentNullException("block");
+
+            version++;
 
             Vector3I[] cells = block.Cells;
             for (int i = 0; i < cells.Length; i++)
@@ -140,6 +192,8 @@ namespace Thermodynamics.Core
         public bool Remove(BlockInstance block)
         {
             if (block == null || !Holds(block)) return false;
+
+            version++;
 
             Vector3I[] cells = block.Cells;
             for (int i = 0; i < cells.Length; i++)
@@ -205,8 +259,25 @@ namespace Thermodynamics.Core
 
         public BlockInstance GetAtCell(Vector3I cell)
         {
+            return GetAtKey(GridMath.Key(cell));
+        }
+
+        /// <summary>
+        /// The block occupying the cell with this key, or null. The same question as
+        /// <see cref="GetAtCell"/> for a caller that already holds the key — and since a key is a
+        /// *sum* of the components, a caller walking the six neighbours of a cell holds all six
+        /// keys the moment it holds one: `key + GridMath.KeyByFace[face]`. That is one addition a
+        /// face where converting the neighbouring cell is two multiplies and three adds.
+        ///
+        /// <para>
+        /// Not to be confused with <see cref="GetByKey"/>, which answers only for a block's
+        /// *lowest* cell and so returns null for the other cells of a multi-cell block.
+        /// </para>
+        /// </summary>
+        public BlockInstance GetAtKey(long key)
+        {
             BlockInstance block;
-            return blocksByCell.TryGetValue(GridMath.Key(cell), out block) ? block : null;
+            return blocksByCell.TryGetValue(key, out block) ? block : null;
         }
 
         /// <summary>The block with this position key, or null when the grid does not carry it.</summary>
@@ -274,10 +345,13 @@ namespace Thermodynamics.Core
             // See performance.md, Pass 2, Iteration 2.
             if (block.CellCount == 1)
             {
-                Vector3I cell = block.Min;
+                // And a neighbour's key is this cell's key plus a per-face constant, so the six
+                // candidates cost one conversion rather than six.
+                // See performance.md, Pass 3, Iteration 6 and Pass 4, Iteration 10.
+                long key = GridMath.Key(block.Min);
                 for (int face = 0; face < Face.Count; face++)
                 {
-                    BlockInstance other = GetAtCell(cell + Face.Offsets[face]);
+                    BlockInstance other = GetAtKey(key + GridMath.KeyByFace[face]);
                     if (other == null || other == block) continue;
                     results.Add(other);
                     if (faces != null) faces.Add(face);
@@ -327,7 +401,7 @@ namespace Thermodynamics.Core
                         cell = BoxGeometry.WithComponent(cell, u, a);
                         cell = BoxGeometry.WithComponent(cell, v, b);
 
-                        BlockInstance other = GetAtCell(cell + offset);
+                        BlockInstance other = GetAtKey(GridMath.Key(cell) + GridMath.KeyByFace[face]);
                         if (other == null || other == block) continue;
                         if (results.Contains(other)) continue;
 

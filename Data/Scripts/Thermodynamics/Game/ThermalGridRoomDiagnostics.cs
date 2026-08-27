@@ -245,12 +245,11 @@ namespace Thermodynamics
         /// </summary>
         private void ScanRoomVerdicts(RoomMap map)
         {
-            IList<List<Vector3I>> rooms = map.Rooms;
             IList<RoomAirNode> air = Simulation.RoomAir;
 
-            for (int i = 0; i < rooms.Count; i++)
+            for (int i = 0; i < map.RoomCount; i++)
             {
-                HashSet<Vector3I> cells = AsSet(rooms[i]);
+                HashSet<Vector3I> cells = AsSet(map.CellsOf(i));
 
                 RoomVerdict verdict = new RoomVerdict();
                 verdict.Vented = map.IsVented(i);
@@ -282,7 +281,7 @@ namespace Thermodynamics
         /// </summary>
         private readonly HashSet<Vector3I> roomCellScratch = new HashSet<Vector3I>(Vector3I.Comparer);
 
-        private HashSet<Vector3I> AsSet(List<Vector3I> cells)
+        private HashSet<Vector3I> AsSet(RoomMap.RoomCells cells)
         {
             roomCellScratch.Clear();
             for (int i = 0; i < cells.Count; i++) roomCellScratch.Add(cells[i]);

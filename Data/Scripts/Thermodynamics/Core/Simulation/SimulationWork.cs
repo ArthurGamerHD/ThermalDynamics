@@ -32,6 +32,14 @@ namespace Thermodynamics.Core
         public long RoomAirRebuilds;
         public long RoomAirRoomVisits;
 
+        /// <summary>
+        /// Faces the air rebuild asked the grid about, and the ones that found a block. The two
+        /// together are what says whether that loop is bound by the answers it uses or by the ones
+        /// it discards. See performance.md, Pass 4, Iteration 6.
+        /// </summary>
+        public long RoomAirFaceProbes;
+        public long RoomAirFaceHits;
+
         /// <summary>Coolant loop searches, and cells they scanned.</summary>
         public long LoopSearches;
         public long LoopSearchCells;
@@ -88,6 +96,8 @@ namespace Thermodynamics.Core
             ConductanceRecomputes = 0;
             RoomAirRebuilds = 0;
             RoomAirRoomVisits = 0;
+            RoomAirFaceProbes = 0;
+            RoomAirFaceHits = 0;
             LoopSearches = 0;
             LoopSearchCells = 0;
             HeatPumpRebuilds = 0;
@@ -117,6 +127,8 @@ namespace Thermodynamics.Core
             copy.ConductanceRecomputes = ConductanceRecomputes;
             copy.RoomAirRebuilds = RoomAirRebuilds;
             copy.RoomAirRoomVisits = RoomAirRoomVisits;
+            copy.RoomAirFaceProbes = RoomAirFaceProbes;
+            copy.RoomAirFaceHits = RoomAirFaceHits;
             copy.LoopSearches = LoopSearches;
             copy.LoopSearchCells = LoopSearchCells;
             copy.HeatPumpRebuilds = HeatPumpRebuilds;

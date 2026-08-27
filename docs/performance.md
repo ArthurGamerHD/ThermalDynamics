@@ -642,6 +642,16 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Pass 4, iteration 10: the block neighbour walk goes by key arithmetic as well — 0.96 to 0.99, below what the instrument resolves, kept on the sign of eight paired readings out of eight. |
+| 2026-08-27 | **Closed pass 4**: the room pass is **0.36** and allocates a tenth, exposure **0.53**, the mapper's peak memory **0.51**, world load at a million blocks 1.66 → 1.32 s. The two largest wins were downstream of changes made for other reasons. |
+| 2026-08-27 | Pass 4, iteration 8: the rooms are walked a run at a time as well — rooms 0.84, and **the air rebuild 0.43 on identical work**, because a room's cells now arrive contiguous along X and the walk over them is sequential. The tick-budget check caught a latent overshoot in the interior scan on the way. |
+| 2026-08-27 | Pass 4, iteration 7: **the span flood is built** — the external air is walked a run at a time, 84 cells to a run, and the room pass is **0.59** at 505,566 blocks and 0.54 at 126,731. The budget check caught the first form overshooting a tick. |
+| 2026-08-27 | Pass 4, iteration 6: 92 % of the air rebuild's face probes find nothing, so a bit over the grid's padded box answers first — roomair 0.89 at 505,566 blocks. Counted before it was changed, in a separate commit. |
+| 2026-08-27 | Pass 4, iteration 5: the air rebuild and the room-side exposure refresh walk neighbours by key arithmetic — roomair 0.74 at 126k blocks but only 0.95 at 505k, which says the stage is bound by the dictionary probes, not the arithmetic around them. |
+| 2026-08-27 | Pass 4, iteration 4: room air is canonical — sorted by node, so a room's links and its starting temperature no longer depend on the path the flood took. The span flood's precondition is met. The iteration also gave the air rebuild its first instrument, and it is **the largest stage on the load path** — 185 ms at 505,566 blocks against the room pass's 134 in a quiet window — and previously unmeasured. |
+| 2026-08-27 | Pass 4, iteration 3: the room map answers from a rank over the set it already fills, so the sorted key and room arrays and the radix sort are gone. Exposure 0.45, rooms 0.89, and the pass's allocation is a tenth of what it was when the pass opened. |
+| 2026-08-27 | Pass 4, iteration 2: the room cells are one store, hinted from the pass before. Half the remaining allocation, the worst pass a tenth quicker, the best unmoved — and the same commit reading 30 % apart in two windows. |
+| 2026-08-27 | Opened pass 4 on the figure pass 3 ended with: the room pass allocated 253 MB per execution. Its first iteration removed 149 MB of that, and a quarter of the stage. |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
 
 ## Pass 2, iteration 4 — the interior scan skips visited cells a word at a time
@@ -1093,6 +1103,486 @@ links canonical (sorting them by node index), which is itself a change that move
 and needs the byte-identical scenario baselines re-recorded in its own commit. That is a designed
 change with a measured prize, and it belongs to a pass that can start with it rather than reach it
 ninth.
+
+## Pass 4, iterations
+
+Pass 3 ended by naming this pass's subject: the room pass allocates 253 MB per execution where every
+other stage allocates nothing, and a stage bound by allocation is a stage whose timings will not
+resolve a few per cent. So this pass counts bytes first and instructions second, and the iteration
+table carries an allocation column for that reason.
+
+| # | Subject | Verdict | Where |
+| ---: | --- | --- | --- |
+| 1 | The room map's cell-to-room dictionary is gone, not merely rebuilt | **kept** — rooms 0.75, and 149 MB of the 253 with it | [Iteration 1](#pass-4-iteration-1--the-room-maps-cell-to-room-dictionary-is-gone) |
+| 2 | Every room's cells in one store, sized from the pass before | **kept** — another 50 MB, and the worst pass 0.89; the best did not move | [Iteration 2](#pass-4-iteration-2--every-rooms-cells-in-one-store) |
+| 3 | The map answers from a rank, so the sorted arrays and the sort go | **kept** — exposure **0.45**, rooms 0.89, another 28 MB | [Iteration 3](#pass-4-iteration-3--the-room-map-answers-from-a-rank) |
+| 4 | A room's air is a function of the room, not of the flood's path | **kept** — for the property, at a cost the instrument cannot resolve; and it found the load path's largest stage, unmeasured | [Iteration 4](#pass-4-iteration-4--a-rooms-air-is-a-function-of-the-room) |
+| 5 | The air rebuild walks neighbours by key arithmetic | **kept** — roomair 0.74 at 126k, 0.95 at 505k, and the gap says what the stage is bound by | [Iteration 5](#pass-4-iteration-5--the-air-rebuild-walks-neighbours-by-key-arithmetic) |
+| 6 | A bit in front of the probe, for the nine faces in ten that hold nothing | **kept** — roomair 0.89 at 505k, 0.92 at 126k | [Iteration 6](#pass-4-iteration-6--a-bit-in-front-of-the-probe) |
+| 7 | The external air is walked a run at a time | **kept** — rooms **0.59** at 505k, **0.54** at 126k | [Iteration 7](#pass-4-iteration-7--the-external-air-is-walked-a-run-at-a-time) |
+| 8 | The rooms are walked a run at a time too | **kept** — rooms 0.84, and **roomair 0.43** on identical work | [Iteration 8](#pass-4-iteration-8--the-rooms-are-walked-a-run-at-a-time-too) |
+| 9 | What the pass moved, measured against its own start | the summary below | [Iteration 9](#pass-4--what-the-pass-moved) |
+| 10 | Block neighbours by key arithmetic too | **kept**, but below what the instrument resolves — 0.96–0.99, and the sign is the evidence | [Iteration 10](#pass-4-iteration-10--block-neighbours-by-key-arithmetic-too) |
+
+## Pass 4, iteration 1 — the room map's cell-to-room dictionary is gone
+
+`RoomMap` held every room cell twice: once in the room's own list, and once as a key in
+`Dictionary<long, int> roomIndexByCell`. At half a million blocks that second copy is **1.5 million
+hash inserts taken during the flood** — inside the hot loop, growing and rehashing as it goes — and
+pass 2 had already established that a probe of it per cell is a cache miss per cell.
+
+What makes it removable is not a cheaper structure but a fact about when it is read: **nothing asks
+a room map which room a cell is in while the pass that builds it is running.** The flood asks the
+membership *bitset* (iteration 3 of pass 3), never the index; the solver, the audit and exposure all
+ask after `Freeze()`. The dictionary was written 1.5 million times, read zero times, and then
+enumerated once at the end to build the sorted arrays that answer every real query.
+
+So it is deleted. `Freeze()` builds `frozenKeys`/`frozenRooms` by walking the surviving rooms —
+which hold the same cells, with each cell's room already known by which list it is in — and radix
+sorts them, the same sort iteration 8 of pass 2 measured. `RoomAt` returns −1 before a freeze, which
+is the honest answer and is now the documented contract: *a working map is private until it is
+published*. `DropEmptyRooms` no longer renumbers anything, because there is no longer a second table
+of indices to keep in step with the first.
+
+**What it was worth.** `bench stages --stages rooms,exposure`, before against after, the two core
+DLLs proven different, two rounds, best of fifteen within a round, fastest round kept. **Exposure is
+the control**: it runs on the frozen map, this change does not touch how it reads, and it must not
+move.
+
+| stage, blocks | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| rooms, 126,731 | 45.31 ms | **35.57 ms** | **0.79** |
+| rooms, 505,566 | 257.99 ms | **193.21 ms** | **0.75** |
+| exposure, 126,731 (control) | 13.17 ms | 11.42 ms | 0.87 |
+| exposure, 505,566 (control) | 52.55 ms | 51.55 ms | 0.98 |
+| **allocated, one room pass** | | | |
+| 126,731 | 34,844 KB | **17,717 KB** | **0.51** |
+| 505,566 | 258,882 KB | **106,095 KB** | **0.41** |
+
+Cell-visit counters are identical on both legs at both sizes (1,622,649 and 7,216,527), which is
+what says the two legs did the same work; the scenario baselines are byte-identical, which is what
+says they got the same answer.
+
+**Read the allocation rows before the millisecond rows.** A quarter of a gigabyte per execution
+became a hundred megabytes, and the timing moved by a quarter — that is the shape pass 3 predicted,
+and it is also why this stage's *spread* is still 178 % at the large rung: 104 MB is still 104 MB.
+The remaining bytes are the per-room cell lists and their doubling copies, the frozen arrays, and
+the radix scratch, in that order of size, which is the order the rest of this pass takes them in.
+
+## Pass 4, iteration 2 — every room's cells in one store
+
+A room was a `List<Vector3I>` of its own. The flood fills one room to exhaustion before it opens the
+next — only the current room is ever added to — so a room's cells are **contiguous by
+construction**, and a room can be a start and a length into one shared array instead. `AddToRoom`
+refuses any room but the open one, because the failure that would otherwise follow is silent: a cell
+filed under a closed room's index lands at the end of the store and is read as the current room's.
+
+What that buys is not the room objects. This hull has a few hundred rooms, not thousands. It is that
+**a rebuild can be told its size in advance**: the pass before it found a number of room cells, and a
+hull that gained or lost a block finds very nearly the same number, so `HintRoomCells` sizes the
+store once and the pass neither doubles into it nor trims it back. A list per room could not be
+hinted, because the flood does not know how large any *one* room will be until it has finished it.
+
+**What it was worth.** Same instrument, same rules, exposure as the control:
+
+| stage, 505,566 blocks | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| rooms, best of 15 | 149.47 ms | 146.31 ms | 0.98 — *inside the floor* |
+| rooms, **worst of 15** | 445.87 ms | **400.60 ms** | **0.90** |
+| rooms, worst of 15 (round 2) | 445.45 ms | **388.88 ms** | **0.87** |
+| rooms, spread | 198 % | **174 %** | |
+| exposure (control) | 38.12 ms | 36.76 ms | 0.96 |
+| **allocated, one room pass** | 106,095 KB | **54,616 KB** | **0.51** |
+| allocated, 126,731 blocks | 17,717 KB | **10,026 KB** | 0.57 |
+
+**The best case did not move and the worst case did, and that is the finding.** Iteration 1 cut
+allocation by 59 % and the stage got a quarter faster; iteration 2 cut it by another 49 % and the
+stage did not move at all. The difference is that iteration 1 also removed 1.5 million hash inserts —
+*work* — where this removes only *garbage*. Garbage does not lengthen the pass that makes it; it
+lengthens whichever pass the collector happens to land in, which is why it shows up in the worst of
+fifteen and in the spread rather than in the best. A load path that runs repeatedly while a player
+waits is judged by its worst tick as much as its best, so this is kept — but on the tail and the
+allocation column, not on a claim that the room pass got faster, which by `M5` it did not.
+
+**A caution the two iterations together make unavoidable: milliseconds do not survive leaving their
+window.** Commit `321c062` is the *after* leg of iteration 1 and the *before* leg of iteration 2. It
+read **193 ms** in the first window and **149 ms** in the second — the same code, the same size, the
+same instrument, thirty per cent apart. Both pairings are interleaved and both rounds within each
+agree, so both ratios stand; what does not stand is any comparison of an absolute figure in one
+table with an absolute figure in another. That is what `M7` means by measuring a pass against its own
+start, and this is the clearest example of it the project has produced.
+
+## Pass 4, iteration 3 — the room map answers from a rank
+
+The published map held a sorted `long[]` of cell keys and a parallel `int[]` of rooms, and sorted
+them — 1.5 million keys, by radix, on the tick that publishes the map. Twelve bytes a cell to hold
+twelve bytes of answer, and a query that is a binary search: about twenty dependent loads through
+twelve megabytes.
+
+**None of that is needed, because the pass already fills a set that knows the answer's shape.**
+`roomCells` is one bit per cell of the search box, marking the cells that are in rooms — the set
+`IsExternal` asks first. It knows *which* cells are in rooms and, being indexed by the box's own
+ordering, it already **orders** them. What it does not say is which member a given cell is. Ranking
+it does: a prefix count of set bits per 64-cell word, four bytes a word, built in one pass over a
+sixty-fourth of the box. Then
+
+- the room of a cell is `roomByRank[rank(cell)]` — **four bytes a cell**, no keys held at all;
+- a query is two loads and a popcount, with no search and no comparison anywhere;
+- publishing is one walk over the set's words and one over the room cells. **There is no sort.**
+
+`BitOperations.PopCount` is not on the script whitelist, so the popcount is written out as the usual
+SWAR halving. The rank index is put away by any change to the set it describes, because a rank read
+from a stale prefix is a plausible number that indexes the wrong thing.
+
+**What it was worth.** `bench stages --stages rooms,exposure,solver`. Exposure cannot be the control
+here — it is the biggest reader of this lookup — so **the solver stage is**, and it reads 1.01.
+
+| stage, 505,566 blocks | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| **exposure** | 38.20 ms | **17.06 ms** | **0.45** |
+| rooms | 149.04 ms | **132.33 ms** | **0.89** |
+| a settled step (control) | 80.10 ms | 80.73 ms | 1.01 |
+| **allocated, one room pass** | 54,616 KB | **25,670 KB** | **0.47** |
+| **at 126,731 blocks** | | | |
+| exposure | 10.19 ms | **6.33 ms** | **0.62** |
+| rooms | 33.67 ms | **31.74 ms** | 0.94 |
+| a settled step (control) | 17.51 ms | 17.16 ms | 0.98 |
+| allocated, one room pass | 10,026 KB | **4,768 KB** | 0.48 |
+
+**Exposure more than halved, and that is where the reading is.** Pass 3's iteration 3 put a
+membership *bit* in front of this search precisely because the search was expensive; what is left
+after that bit are the cells that really are in rooms, and every one of them was still paying twenty
+dependent loads. At half a million blocks that was more than half of the exposure refresh. The room
+pass's own 0.89 is the sort no longer happening on the publish tick.
+
+**And the ledger is closed on this pass's opening figure.** The room pass allocated **253 MB** per
+execution when pass 4 began and allocates **25 MB** now — a tenth — in three changes that each
+removed a structure rather than tuning one: a dictionary nothing read, per-room lists that could be
+one hinted store, and sorted keys that a rank makes unnecessary. What remains is the cell store at
+twelve bytes a cell and the room-by-rank at four, both of which the map is holding *because they are
+its answer*, not as working space.
+
+## Pass 4, iteration 4 — a room's air is a function of the room
+
+`BuildRoomLinks` counts how many faces each bounding block presents to a room into a
+`Dictionary<int, int>` and then enumerates it. A dictionary enumerates by insertion, so **a room's
+links came out in the order the flood happened to reach its cells** — and the mean wall temperature
+a new room's air starts at is a sum of floats over that same enumeration, so it did too. Two floods
+agreeing exactly about which cells are in a room disagreed about how warm its air is: on the test
+hull, **349.66922 forwards and 349.66916 backwards**. Not a rounding curiosity — a visible difference
+in the fourth decimal of a temperature.
+
+Sorting the contacts by node index makes both the links and the sum a function of the room's
+*contents*. `RoomAirCanonicalTests` builds two maps holding the same rooms with each room's cells
+offered in opposite orders and compares the resulting air bit for bit — links, conductances,
+starting temperature — and both of its checks fail when the sort is removed.
+
+**Why it is worth an iteration on its own.** This is the condition the span flood needs. A flood
+that enqueues runs of cells rather than single cells reaches a room's cells in a different order,
+and until now that would have moved every player's air temperatures in the last bits, which is why
+[the design note](#pass-3--what-is-designed-and-not-built) said it needed the air links made
+canonical first. That is done, and it was done in its own commit so that if it *had* moved a pinned
+figure, the move would have been attributable to it alone. It moved none: 2,027 tests pass unchanged.
+
+**What it cost.** `bench stages --stages roomair,rooms,solver`, with the room pass and a settled step
+as controls:
+
+| stage, 505,566 blocks | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| roomair | 417.71 ms | 442.49 ms | 1.06 |
+| rooms (control) | 141.11 ms | 140.17 ms | 0.99 |
+| a settled step (control) | 112.03 ms | 109.39 ms | 0.98 |
+| roomair, 126,731 blocks | 44.19 ms | 46.73 ms | 1.06 |
+
+**Read that as "at most a few per cent", not as six.** The *before* leg alone read 437.24 and 417.71
+in its two rounds — 4.7 % apart on identical code — and the first round's pairing was 1.01 where the
+second's was 1.06. A difference the same leg produces against itself is not a difference between
+legs (`M5`). The honest statement is that a sort of a few hundred integers per room, per air rebuild,
+costs no more than a few per cent of a stage, and it buys a property that a whole class of future
+change depends on.
+
+**And the iteration found something bigger than itself.** There was no instrument for the air
+rebuild at all: the stage lab measured place, register, surfaces, links, rooms, exposure and a
+settled step, and `RebuildRoomAir` — which runs every time a map republishes — was in none of them.
+It is a stage now, and it is **the largest single thing on the load path**, in every window it has
+been measured in. It had been that all along.
+
+*The absolute figure needs a window to mean anything, and this section first said 437 ms — the
+reading in the window above, where a settled step read 112 ms. Measured again the next window, on the
+same commit, with a settled step at 85.5 ms: the air rebuild reads **185 ms** against the room pass's
+**134**. The machine was about 30 % slower in the first window and the air rebuild was 2.4× slower,
+which is worth its own sentence: this stage is memory-bound, so it is the one that suffers most from
+whatever else is running. Corrected in place, `E10`; the ratios in the table are unaffected, being
+interleaved within one window.*
+
+The
+first draft of the stage timed an empty outer loop, because a room at zero pressure has no air and
+therefore no links, so the rooms are filled before the clock starts — which is the same failure as
+[a switch wired to nothing](#pass-2-iteration-5--the-environment-pass-reads-one-row-per-node), caught
+here by the stage reporting a suspiciously small number rather than by a check.
+
+## Pass 4, iteration 5 — the air rebuild walks neighbours by key arithmetic
+
+`BuildRoomLinks` and `RefreshExposureAround` both walk a room's cells and ask the grid what stands
+across each of the six faces. Both did it by adding the face offset to the cell and calling
+`GetAtCell`, which converts a cell to a key — **seven conversions a cell**, two multiplies and three
+adds each. A key is a sum of the components, so a neighbour's key is this cell's key plus a per-face
+constant: one addition. This is pass 3's iteration 6 applied to the two loops it did not reach.
+
+`GetAtKey` is `GetAtCell` without the conversion. It is deliberately *not* `GetByKey`, which answers
+only for a block's lowest cell — a neighbour walk that reached for that one would find every
+one-cell block and miss every multi-cell one except at its corner, a hole nothing else in the model
+would report. The two are pinned apart by a test on a 3×3×3 block.
+
+| stage | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| roomair, 126,731 blocks | 41.09 ms | **30.58 ms** | **0.74** |
+| roomair, 505,566 blocks | 184.88 ms | **175.61 ms** | 0.95 |
+| rooms, 505,566 (control) | 134.30 ms | 133.42 ms | 0.99 |
+| a settled step, 505,566 (control) | 85.55 ms | 84.36 ms | 0.99 |
+
+**The gap between the two rungs is the finding, and it names the next iteration.** The same change
+is worth a quarter of the stage at 126,731 blocks and a twentieth at 505,566. Arithmetic does not
+get cheaper with grid size, so what grew is everything else: at half a million blocks `blocksByCell`
+holds five hundred thousand entries, the six neighbour keys of a cell land in six unrelated buckets,
+and the stage is waiting on memory rather than computing. Removing five conversions from a cell that
+then stalls on a cache miss anyway recovers little.
+
+That is worth stating as a measurement rather than a hunch, because it changes what to do next:
+**the probes that cost are the ones that find nothing.** A room's interior cells have six air
+neighbours and pay six full dictionary probes to be told so, and interior cells are most of a room.
+
+## Pass 4, iteration 6 — a bit in front of the probe
+
+Iteration 5 ended by saying the air rebuild is bound by the probes rather than the arithmetic around
+them, and that most of those probes find nothing. **The counters were added first, in their own
+commit, before the change they justify** — because "most" is not a number and the number is what
+decides between making the probe cheaper and not making it:
+
+| blocks | faces walked | faces holding a block | share |
+| ---: | ---: | ---: | ---: |
+| 126,731 | 1,642,800 | 139,120 | **8.5 %** |
+| 505,566 | 9,022,890 | 691,306 | **7.7 %** |
+
+So **eight and a third million of those nine million probes are a hash and a bucket chase to be told
+"nothing"**. `GridModel` now keeps one bit per cell of its padded bounding box, and the walk asks
+that first. The bit's index steps by a per-face constant exactly as the key does — `((z·sizeY) + y)·sizeX + x`
+is a sum too — so asking costs an add and a bit test.
+
+**Two things make it safe to hold rather than to maintain.** It is built on demand and dropped
+whenever the grid changes, so a load that places half a million blocks builds it once at the end
+rather than half a million times on the way; and the index step is only sound away from the box's
+own boundary, which is why the box is padded — the pad ring is external air and never holds a room
+cell, so no walk ever steps off an edge. Both are checked: the bit against the block table cell by
+cell over a whole hull, the step against deriving the neighbour on every face of every occupied
+cell, and the rebuild against placing and removing a block.
+
+| stage | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| roomair, 505,566 blocks | 147.65 ms | **131.64 ms** | **0.89** |
+| roomair, per face walked | 16.4 ns | **14.6 ns** | |
+| roomair, 126,731 blocks | 26.58 ms | **24.55 ms** | 0.92 |
+| rooms, 505,566 (control) | 133.71 ms | 133.07 ms | 1.00 |
+| a settled step, 505,566 (control) | 80.12 ms | 80.33 ms | 1.00 |
+
+**Eleven per cent, not the half the hit rate might suggest, and the reason is worth keeping.**
+Replacing a dictionary probe with a bit test does not replace a memory access with nothing: the
+bitset over the box is nearly a megabyte at this size, and the six neighbours of a cell touch it at
+six unrelated offsets. What was saved is the hash, the bucket walk and the entry read — not the
+cache miss, which both structures take. A bit is a cheaper miss, not an avoided one. The stage is
+still memory-bound, and the remaining lever there is to *touch fewer cells*, which is what the room
+pass's own designed change is about.
+
+## Pass 4, iteration 7 — the external air is walked a run at a time
+
+This is the change [pass 3 designed and could not build](#pass-3--what-is-designed-and-not-built),
+built. Iteration 4 removed what stopped it.
+
+Most of a room-mapping pass is not the rooms. At 505,566 blocks the pass visits 7.2 million cells and
+**5.1 million of them are the open space around the hull**, in maximal runs along X averaging **84
+cells**. The cell walk paid a dequeue, an index derivation and six face tests for every one of them,
+and enqueued every one of them — a frontier of millions of entries to classify a volume that is
+mostly nothing.
+
+The run walk takes a whole run per dequeue. It extends along X while neither side of the shared face
+seals and the next cell is untaken; it walks the four lateral faces once per cell of the run; and it
+enqueues **only the first cell of each unvisited stretch** beside the run, which is what collapses
+the frontier from millions of entries to tens of thousands. External cells are counted rather than
+stored, so the order they are reached in is not an output of the pass and nothing downstream can
+tell the two walks apart.
+
+**Three things had to be got right, and each is checked rather than argued.**
+
+- *It must classify the same cells.* It is a different algorithm — a scanline fill against a
+  breadth-first one — so the cell walk stays, as `SpanFlood = false`, and is the oracle.
+  `RoomSpanFloodTests` holds the two against each other **cell by cell over the whole box**, on a
+  compartmented fixture and on a census hull. Shortening the extension by one cell fails all three
+  of its checks.
+- *It must respect the tick budget.* A run on a large hull is hundreds of cells, and
+  `RoomMappingNeverExceedsItsBudgetInOneTick` holds the mapper to its budget on every tick however
+  large the grid — the whole value of an incremental stage. **That check caught this**: the first
+  form let a run overshoot by up to the width of the box. A run now stops at what the tick has left
+  and enqueues where it stopped.
+- *A seed must be justified.* The walk counts any unvisited cell it dequeues as open air, so a cell
+  enqueued without being shown reachable would be classified on sight. The budget-truncation
+  enqueue runs the same reachability test the extension uses before enqueuing.
+
+| stage | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| rooms, 505,566 blocks | 134.14 ms | **79.43 ms** | **0.59** |
+| rooms, 126,731 blocks | 32.12 ms | **17.22 ms** | **0.54** |
+| rooms, per cell visited, 505,566 | 18.6 ns | **10.9 ns** | |
+| a settled step, 505,566 (control) | 80.25 ms | 81.02 ms | 1.01 |
+| exposure, 505,566 | 20.98 ms | 18.46 ms | 0.88 — *not a control; see below* |
+
+**The work counter is not identical between the legs, and it favours the old code.** The cell walk
+counts 7,216,527 cells visited and the run walk 7,279,786 — 0.9 % more. A cell beside a run can be
+enqueued by each of up to four runs, and the duplicates are discarded on dequeue at a cost of one
+charged cell each. So the run walk is charged for slightly more work than it does, and the per-cell
+figures above understate it. Everything else the two legs produce is identical, which is what
+`RoomSpanFloodTests` says.
+
+**Exposure moved too, and it is worth naming rather than ignoring.** It reads a published map this
+change does not alter, so 0.88 is not a result about exposure — it is most likely about what the
+pass leaves behind. The frontier is a retained ring buffer sized to the largest it ever needed: the
+cell walk drove it to millions of `Vector3I`, tens of megabytes that stay allocated for the life of
+the mapper, and the run walk needs tens of thousands. A stage that walks the same map with less of
+the process's memory behind it runs faster. That is a hypothesis with a measurement attached to it —
+the memory rows at the close of this pass are where it is settled or dropped.
+
+## Pass 4, iteration 8 — the rooms are walked a run at a time too
+
+The same walk, applied to the inside of a room, with the one thing the external walk does not have
+to do: a cell it reaches is either air, which joins the room, or sealed structure, which is recorded
+as the room's boundary and stops the walk going that way.
+
+**A room's cells now arrive in run order rather than in the order a queue emptied**, and that is only
+safe because [iteration 4](#pass-4-iteration-4--a-rooms-air-is-a-function-of-the-room) made a room's
+air a function of its contents. Before that, this change would have moved every player's air
+temperatures in the last bits.
+
+| stage | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| rooms, 505,566 blocks | 78.74 ms | **66.02 ms** | **0.84** |
+| rooms, 126,731 blocks | 16.89 ms | **14.70 ms** | 0.87 |
+| **roomair, 505,566 blocks** | 126.31 ms | **53.88 ms** | **0.43** |
+| roomair, 126,731 blocks | 23.89 ms | **18.52 ms** | 0.78 |
+| a settled step, 505,566 (control) | 80.03 ms | 81.63 ms | 1.02 |
+
+**The air rebuild more than halved, and it is not because anything in it changed.** Its work counter
+is identical on both legs — 9,022,890 faces walked, 691,306 of them holding a block — and not a line
+of `BuildRoomLinks` differs. What changed is the *order of the cells it is handed*. It walks a room's
+cells and asks the grid about the six neighbours of each; in breadth-first order those cells arrive
+as a shell expanding through the room, so consecutive cells are unrelated addresses in the occupancy
+set and in the block table. In run order they are contiguous along X, and consecutive cells are
+consecutive bits and neighbouring keys.
+
+That is the same finding as [iteration 6](#pass-4-iteration-6--a-bit-in-front-of-the-probe) read from
+the other side. That iteration made each miss cheaper and got eleven per cent; this one made the
+misses *sequential* and got fifty-seven. **On a stage that is bound by memory, the order things are
+visited in is worth more than what is done to each of them** — and the order was free, a side effect
+of a change made for the room pass.
+
+**Two things the budget check caught, and the second predates this change.** The run walk has to
+extend through its own seed, so the interior scan no longer marks or files the cell it found when the
+walk is live. And the scan's skip ran to the end of the box in one call and then charged for every
+word it had looked at, so **a tick could overshoot its budget by however far the last skip happened
+to reach** — nothing had made it do so, and this change did. It is capped to the words the tick can
+still afford, and the cursor resumes next tick. `RoomMappingNeverExceedsItsBudgetInOneTick` found
+both, four cells over and then one cell over; a check that fails by one is a check worth having.
+
+## Pass 4 — what the pass moved
+
+Start (`7d9838d`) against tip, both built the same way, interleaved in one window, two rounds at
+505,566 blocks, fastest kept. **The settled step is the control** — nothing in this pass touches the
+substep loop — and it reads 79.9 ms against 81.1, which is what says the rest of the column can be
+read.
+
+| stage, 505,566 blocks | start | tip | ratio |
+| --- | ---: | ---: | ---: |
+| **rooms** | 181.80 ms | **66.23 ms** | **0.36** |
+| **exposure** | 40.92 ms | **21.54 ms** | **0.53** |
+| rooms, allocated per execution | 258,882 KB | **25,671 KB** | **0.10** |
+| rooms, per cell visited | 25.2 ns | **9.1 ns** | 0.36 |
+| a settled step (control) | 81.08 ms | 79.88 ms | 0.99 |
+| register (control) | 15.48 ms | 15.50 ms | 1.00 |
+| place | 40.29 ms | 42.83 ms | 1.06 — *see below* |
+| links | 78.19 ms | 82.50 ms | 1.06 — *see below* |
+| surfaces | 22.33 ms | 25.13 ms | 1.13 — *see below* |
+| **Memory, 126,731 blocks** | | | |
+| `RoomMap` retained | 70 B/block | **53 B/block** | 0.76 |
+| **`RoomMapper` peak** | 297 B/block | **152 B/block** | **0.51** |
+| retained, whole simulation | 739 B/block | **722 B/block** | 0.98 |
+| peak, whole simulation | 967 B/block | **821 B/block** | 0.85 |
+| **World load, 1,000,294 blocks** | | | |
+| built in | 1,657 ms | **1,319 ms** | 0.80 |
+| of which `RebuildAll` | 1,326 ms | **983 ms** | 0.74 |
+
+**Three stages read worse and none of them moved.** Place, links and surfaces are untouched by this
+pass, and they read 1.06, 1.06 and 1.13. The same leg's two rounds disagree by more: the *start*
+tree read place at 40.3 and 46.0 ms, and surfaces at 22.3 and 29.7 — 14 % and 33 % apart on
+identical code, against spreads of 176 % and 421 % within a stage's own fifteen repeats. A
+difference the same leg produces against itself is not a difference between legs. This is the rule
+pass 3 had to apply to a claim of its own (`M5`), and it applies to a flattering column exactly as
+it does to an unflattering one.
+
+**The room pass is a third of what it was and allocates a tenth.** In order: a cell-to-room
+dictionary that nothing read while a pass ran; per-room lists that became ranges into one store,
+sized from the pass before it; sorted key and room arrays, and the sort itself, replaced by a rank
+over a set the pass already fills; and then the flood itself, walked a run at a time — 84 cells to a
+run in the open air around the hull — for the external air and then for the rooms.
+
+**And the two things that were not the point are the ones worth remembering.**
+
+*Exposure halved without being touched.* Iteration 3 replaced a binary search through twelve
+megabytes of cell keys with a rank lookup, and exposure — the biggest reader of that lookup — went
+from 40.9 ms to 21.5. The change was made to remove a sort from the publish tick; more than half its
+value turned up in a different stage.
+
+*The air rebuild halved for the same kind of reason, twice removed.* It was 0.43 in iteration 8 on
+**identical work counters and unchanged code**, because a room's cells now arrive contiguous along X
+and the walk over them is sequential rather than shell-shaped. Which was only possible because
+iteration 4 made a room's air a function of its contents rather than of the path through it — a
+change that measured as a cost of at most a few per cent and was kept for the property alone.
+**The two largest wins in this pass were downstream of changes made for other reasons**, and neither
+would have been visible without an instrument per stage.
+
+*The frontier hypothesis from iteration 7 is settled, and it was right.* That section guessed that
+exposure moved because the run walk stops driving the mapper's retained ring buffer to millions of
+entries. The peak memory row says so: **`RoomMapper` peak is 297 → 152 bytes a block**, and the
+whole simulation's peak 967 → 821. A pass that walks the same map with a hundred and fifty
+megabytes less behind it at half a million blocks is a faster pass.
+
+## Pass 4, iteration 10 — block neighbours by key arithmetic too
+
+The link build is the largest stage left on the load path, and what it spends its time on is asking
+the grid for each block's neighbours. The one-cell walk — nearly every block on a hull — converted a
+cell to a key six times, once per candidate face, where the six candidates are the block's own key
+plus six constants. The boundary walk for multi-cell blocks takes the same treatment.
+
+| stage | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| links, 505,566 blocks | 60.51 ms | 60.04 ms | 0.99 |
+| links, 126,731 blocks | 12.94 ms | 12.37 ms | 0.96 |
+| place, 505,566 blocks | 41.21 ms | 39.37 ms | 0.96 |
+| place, 126,731 blocks | 10.76 ms | 9.76 ms | 0.91 |
+| a settled step, 505,566 (control) | 79.99 ms | 80.16 ms | 1.00 |
+
+**No individual figure here clears this instrument's floor, and the change is kept anyway.** The
+link stage's own spread is 75–105 % and the *before* leg's two rounds differ by 4.8 % on identical
+code, so 0.99 and 0.96 are not results on their own. What is a result is that **every one of the
+eight paired readings — two stages, two sizes, two rounds — is lower on the tip than on the before
+leg**. Eight readings agreeing in sign by chance is one in two hundred and fifty-six. The size of
+the effect is not resolved; its direction is, and it points the way a strict reduction in work
+should point.
+
+That is the honest end of a lever this project has pulled four times now. `GridMath.Key` is a sum,
+so a neighbour's key is an addition — and the four places that walk neighbours in a loop have all
+been converted: the surface rebuild (pass 3, iteration 6, worth **0.50**), the air rebuild and the
+room-side exposure refresh (iteration 5, worth 0.74 at the small rung), and now the block adjacency
+walk, worth *possibly* three per cent. The lever gets smaller each time it is pulled, because what is
+left is bound by the dictionary rather than by the arithmetic — which iteration 5 had already
+measured and said.
 
 ---
 

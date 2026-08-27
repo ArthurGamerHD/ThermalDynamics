@@ -174,10 +174,9 @@ namespace Thermodynamics.Core
         /// </summary>
         private static void CollectRoomSizes(RoomMap map, List<int> sizes, int limit)
         {
-            IList<List<Vector3I>> rooms = map.Rooms;
-            for (int i = 0; i < rooms.Count; i++)
+            for (int i = 0; i < map.RoomCount; i++)
             {
-                sizes.Add(rooms[i].Count);
+                sizes.Add(map.CellsInRoom(i));
             }
 
             sizes.Sort();

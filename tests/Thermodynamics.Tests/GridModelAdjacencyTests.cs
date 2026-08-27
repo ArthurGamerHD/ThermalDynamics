@@ -141,5 +141,56 @@ namespace Thermodynamics.Tests
 
             AssertSame(builder.Grid, "mixed grid");
         }
+
+        /// <summary>
+        /// **`GetAtKey` is `GetAtCell` without the conversion; `GetByKey` is a different question.**
+        ///
+        /// <para>
+        /// Both take a key, and one of them answers only for a block's *lowest* cell. A caller
+        /// walking a cell's six neighbours by key arithmetic — which is why `GetAtKey` exists —
+        /// that reached for `GetByKey` instead would find every one-cell block and miss every
+        /// multi-cell one except where its lowest corner happened to be, which is a hole nothing
+        /// else in the model would report.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void GetAtKeyAnswersForEveryCellOfABlockAndGetByKeyOnlyForItsLowest()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Place(Catalog.LightArmorCube(3), new Vector3I(0, 0, 0));
+            builder.Place(Catalog.LightArmor(), new Vector3I(5, 0, 0));
+
+            GridModel grid = builder.Grid;
+
+            int interior = 0;
+            for (int z = 0; z < 3; z++)
+            {
+                for (int y = 0; y < 3; y++)
+                {
+                    for (int x = 0; x < 3; x++)
+                    {
+                        Vector3I cell = new Vector3I(x, y, z);
+                        long key = GridMath.Key(cell);
+
+                        // The cell answers the same way however the caller spells the question.
+                        Assert.Same(grid.GetAtCell(cell), grid.GetAtKey(key));
+                        Assert.NotNull(grid.GetAtKey(key));
+
+                        if (x == 0 && y == 0 && z == 0) continue;
+
+                        // ...and the lowest-cell question says no to all but one of them.
+                        Assert.Null(grid.GetByKey(key));
+                        interior++;
+                    }
+                }
+            }
+
+            Assert.Equal(26, interior);
+            Assert.NotNull(grid.GetByKey(GridMath.Key(new Vector3I(0, 0, 0))));
+
+            // An empty cell is empty by every spelling.
+            Assert.Null(grid.GetAtKey(GridMath.Key(new Vector3I(4, 0, 0))));
+            Assert.Null(grid.GetAtCell(new Vector3I(4, 0, 0)));
+        }
     }
 }

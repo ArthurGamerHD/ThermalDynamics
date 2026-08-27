@@ -1030,7 +1030,9 @@ namespace Thermodynamics.Harness
             rows.Add(Row("RoomMap retained", afterRooms - afterSolver, volume, blocks,
                 "stored: " + map.SolidCellCount.ToString("n0") + " solid + "
                 + map.RoomCellCount.ToString("n0") + " cells in " + map.RoomCount.ToString("n0")
-                + " rooms; counted, not stored: " + map.ExternalCellCount.ToString("n0") + " external"));
+                + " rooms (" + (map.RoomCellCapacity - map.RoomCellCount).ToString("n0")
+                + " cells of slack); counted, not stored: "
+                + map.ExternalCellCount.ToString("n0") + " external"));
             rows.Add(Row("RoomMapper peak", peak - afterSolver, volume, blocks,
                 "high-water mark while a pass runs — a visited bit and a sealing byte per cell of the box"));
 

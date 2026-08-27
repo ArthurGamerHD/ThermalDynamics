@@ -2527,11 +2527,11 @@ namespace Thermodynamics.Harness
             int pressurised = 0;
             if (roomAir)
             {
-                IList<List<Vector3I>> rooms = simulation.Rooms.Map.Rooms;
-                for (int i = 0; i < rooms.Count; i++)
+                RoomMap rooms = simulation.Rooms.Map;
+                for (int i = 0; i < rooms.RoomCount; i++)
                 {
-                    if (rooms[i].Count == 0) continue;
-                    if (simulation.SetRoomPressure(rooms[i][0], 1f)) pressurised++;
+                    if (rooms.CellsInRoom(i) == 0) continue;
+                    if (simulation.SetRoomPressure(rooms.CellsOf(i)[0], 1f)) pressurised++;
                 }
             }
 

@@ -1344,21 +1344,33 @@ namespace Thermodynamics.Core
             if (affected == null) affected = new HashSet<BlockInstance>();
             affected.Clear();
 
+            CellBitset occupied = grid.Occupancy();
+
             for (int r = 0; r < roomIndices.Count; r++)
             {
                 int index = roomIndices[r];
-                if (index < 0 || index >= rooms.Rooms.Count) continue;
+                if (index < 0 || index >= rooms.RoomCount) continue;
 
-                foreach (Vector3I cell in rooms.Rooms[index])
+                foreach (Vector3I cell in rooms.CellsOf(index))
                 {
+                    // One conversion a cell rather than seven: a neighbour's key is this cell's
+                    // key plus a per-face constant. See performance.md, Pass 3, Iteration 6.
+                    long key = GridMath.Key(cell);
+                    long slot = occupied.IndexOf(cell);
+
                     for (int face = 0; face < Face.Count; face++)
                     {
-                        BlockInstance block = grid.GetAtCell(cell + Face.Offsets[face]);
+                        // A bit says whether to ask at all. See performance.md, Pass 4, Iteration 6.
+                        if (!occupied.ContainsIndex(slot + occupied.IndexStep(face))) continue;
+
+                        BlockInstance block = grid.GetAtKey(key + GridMath.KeyByFace[face]);
                         if (block != null) affected.Add(block);
                     }
 
                     // The cell itself may hold a block, such as a door standing in the room.
-                    BlockInstance occupant = grid.GetAtCell(cell);
+                    if (!occupied.ContainsIndex(slot)) continue;
+
+                    BlockInstance occupant = grid.GetAtKey(key);
                     if (occupant != null) affected.Add(occupant);
                 }
             }
@@ -1392,6 +1404,13 @@ namespace Thermodynamics.Core
         private readonly Dictionary<int, int> roomContactScratch = new Dictionary<int, int>();
 
         /// <summary>
+        /// The nodes in <see cref="roomContactScratch"/>, sorted, so a room's links and the mean it
+        /// takes over them are built in an order that does not depend on how the flood reached the
+        /// room's cells. See performance.md, Pass 4, Iteration 4.
+        /// </summary>
+        private readonly List<int> roomContactOrder = new List<int>();
+
+        /// <summary>
         /// Rebuilds the air masses of every sealed room from a room map, matching on each room's
         /// lowest cell so a room whose shape did not change keeps its air. See thermal-model.md,
         /// Room air.
@@ -1399,7 +1418,7 @@ namespace Thermodynamics.Core
         public void RebuildRoomAir(RoomMap rooms)
         {
             Work.RoomAirRebuilds++;
-            if (rooms != null) Work.RoomAirRoomVisits += rooms.Rooms.Count;
+            if (rooms != null) Work.RoomAirRoomVisits += rooms.RoomCount;
 
             rememberedAir.Clear();
             for (int i = 0; i < roomAir.Count; i++)
@@ -1413,11 +1432,11 @@ namespace Thermodynamics.Core
             {
                 float cellVolume = grid.GridSize * grid.GridSize * grid.GridSize;
 
-                for (int r = 0; r < rooms.Rooms.Count; r++)
+                for (int r = 0; r < rooms.RoomCount; r++)
                 {
                     if (rooms.IsVented(r)) continue;
 
-                    List<Vector3I> cells = rooms.Rooms[r];
+                    RoomMap.RoomCells cells = rooms.CellsOf(r);
                     if (cells.Count == 0) continue;
 
                     RoomAirNode air = new RoomAirNode();
@@ -1460,16 +1479,29 @@ namespace Thermodynamics.Core
         {
             air.Links.Clear();
             if (!air.HasAir) return;
-            if (air.RoomIndex < 0 || air.RoomIndex >= rooms.Rooms.Count) return;
+            if (air.RoomIndex < 0 || air.RoomIndex >= rooms.RoomCount) return;
 
             roomContactScratch.Clear();
 
-            foreach (Vector3I cell in rooms.Rooms[air.RoomIndex])
+            CellBitset occupied = grid.Occupancy();
+
+            foreach (Vector3I cell in rooms.CellsOf(air.RoomIndex))
             {
+                long key = GridMath.Key(cell);
+                long slot = occupied.IndexOf(cell);
+
+                Work.RoomAirFaceProbes += Face.Count;
+
                 for (int face = 0; face < Face.Count; face++)
                 {
-                    BlockInstance block = grid.GetAtCell(cell + Face.Offsets[face]);
+                    // Nine faces in ten hold nothing, and a bit says so without a hash and a
+                    // bucket chase. See performance.md, Pass 4, Iteration 6.
+                    if (!occupied.ContainsIndex(slot + occupied.IndexStep(face))) continue;
+
+                    BlockInstance block = grid.GetAtKey(key + GridMath.KeyByFace[face]);
                     if (block == null) continue;
+
+                    Work.RoomAirFaceHits++;
 
                     ThermalNode node = GetNode(block);
                     if (node == null) continue;
@@ -1480,19 +1512,36 @@ namespace Thermodynamics.Core
                 }
             }
 
+            // **In node order, not in the order the room's cells happened to arrive.** A dictionary
+            // enumerates by insertion, so the links of a room — and the sum below, which is a sum of
+            // floats and therefore depends on its order — were a function of the path the flood took
+            // through that room. Sorting the contacts makes both a function of the room's *contents*
+            // instead, which is what lets the flood be rewritten without moving anybody's last bit.
+            roomContactOrder.Clear();
+            foreach (KeyValuePair<int, int> contact in roomContactScratch)
+            {
+                roomContactOrder.Add(contact.Key);
+            }
+            roomContactOrder.Sort();
+
             float surfaceSum = 0f;
             int surfaceCount = 0;
 
-            foreach (KeyValuePair<int, int> contact in roomContactScratch)
+            for (int i = 0; i < roomContactOrder.Count; i++)
             {
-                surfaceSum += nodes[contact.Key].Temperature;
+                int node = roomContactOrder[i];
+                surfaceSum += nodes[node].Temperature;
                 surfaceCount++;
 
-                float area = contact.Value * nodes[contact.Key].CellFaceArea;
+                float area = roomContactScratch[node] * nodes[node].CellFaceArea;
                 float conductance = settings.RoomConvectionCoefficient * area;
+
+                // A room whose convection is switched off still has walls, and their mean is still
+                // where its air starts; it simply has no links. So the sum counts every contact and
+                // the list takes only the ones that conduct.
                 if (conductance <= 0f) continue;
 
-                air.Links.Add(new RoomLink(contact.Key, conductance));
+                air.Links.Add(new RoomLink(node, conductance));
             }
 
             // Air appearing in a room for the first time starts at the mean temperature of the
@@ -1534,7 +1583,7 @@ namespace Thermodynamics.Core
             return restored;
         }
 
-        private static Vector3I LowestCell(List<Vector3I> cells)
+        private static Vector3I LowestCell(RoomMap.RoomCells cells)
         {
             bool first = true;
             Vector3I lowest = Vector3I.Zero;

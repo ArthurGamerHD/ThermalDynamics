@@ -60,6 +60,12 @@ namespace Thermodynamics.Harness
                 get { return BestMs <= 0d ? 0d : 100d * (WorstMs - BestMs) / BestMs; }
             }
 
+            /// <summary>
+            /// Anything the stage wants to say about its own work beyond the count — the share of
+            /// the air rebuild's probes that found a block, for instance. Blank for most stages.
+            /// </summary>
+            public string Note = "";
+
             /// <summary>Nanoseconds per unit of work, which is the figure that transfers between sizes.</summary>
             public double NsPerWork
             {
@@ -67,7 +73,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        public static readonly string[] Stages = { "place", "register", "surfaces", "links", "rooms", "exposure", "solver" };
+        public static readonly string[] Stages = { "place", "register", "surfaces", "links", "rooms", "exposure", "roomair", "solver" };
 
         public static List<Row> Run(string shape, int blocks, IList<string> stages, Action<string> log = null)
         {
@@ -109,6 +115,7 @@ namespace Thermodynamics.Harness
                 case "links": return Links(builder);
                 case "rooms": return Rooms(builder);
                 case "exposure": return Exposure(builder);
+                case "roomair": return RoomAir(builder);
                 case "solver": return Solver(builder);
                 default: throw new ArgumentException("Unknown stage: " + stage);
             }
@@ -296,6 +303,65 @@ namespace Thermodynamics.Harness
             return row;
         }
 
+        /// <summary>
+        /// Rebuilding every room's air from a published map: one air node a room, and one link per
+        /// block bounding it, found by walking the room's cells and asking the grid what is across
+        /// each face.
+        ///
+        /// <para>
+        /// **The rooms have to be filled or this stage measures nothing.** A room at zero pressure
+        /// has no air and therefore no links, so an unpressurised hull runs the outer loop and
+        /// returns — which is what the first draft of this timed. The fill happens once, before the
+        /// clock, and every repeat afterwards finds it again through the remembered air.
+        /// </para>
+        /// </summary>
+        private static Row RoomAir(GridBuilder builder)
+        {
+            ThermalSimulation simulation = Registered(builder);
+            simulation.Surfaces.Rebuild(simulation.Grid);
+            simulation.Rooms.RequestRestart(simulation.Grid);
+            simulation.Rooms.RunToCompletion();
+
+            RoomMap map = simulation.Rooms.Map;
+            simulation.Solver.RebuildRoomAir(map);
+
+            int filled = 0;
+            for (int r = 0; r < map.RoomCount; r++)
+            {
+                if (map.CellsInRoom(r) == 0) continue;
+                if (simulation.Solver.SetRoomPressure(map, map.CellsOf(r)[0], 1f)) filled++;
+            }
+
+            if (filled == 0)
+            {
+                throw new InvalidOperationException(
+                    "no room took air on a hull with " + map.RoomCount
+                    + " rooms, so this stage would time an outer loop and nothing else");
+            }
+
+            Row row = NewRow("roomair", simulation, "face probes");
+            int repeats = Math.Max(1, Repeats);
+
+            for (int r = 0; r < repeats; r++)
+            {
+                long before = simulation.Work.RoomAirFaceProbes;
+                long hitsBefore = simulation.Work.RoomAirFaceHits;
+                long allocated = r == repeats - 1 ? Allocated() : 0;
+                Stopwatch watch = Stopwatch.StartNew();
+                simulation.Solver.RebuildRoomAir(map);
+                watch.Stop();
+                if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
+                Take(row, watch.Elapsed.TotalMilliseconds);
+                Work(row, simulation.Work.RoomAirFaceProbes - before, r);
+
+                // What share of those probes found anything, which is the number that says whether
+                // to make the probe cheaper or to stop making it.
+                if (r == 0) row.Note = (simulation.Work.RoomAirFaceHits - hitsBefore).ToString("n0") + " hit";
+            }
+
+            return row;
+        }
+
         private static Row Exposure(GridBuilder builder)
         {
             ThermalSimulation simulation = Registered(builder);
@@ -357,14 +423,14 @@ namespace Thermodynamics.Harness
         public static string Table(IList<Row> rows)
         {
             StringBuilder text = new StringBuilder();
-            text.AppendLine("  stage        blocks       best ms      worst ms   spread          work  unit              ns/unit      alloc KB");
+            text.AppendLine("  stage        blocks       best ms      worst ms   spread          work  unit              ns/unit      alloc KB  note");
             for (int i = 0; i < rows.Count; i++)
             {
                 Row row = rows[i];
                 text.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                    "  {0,-10} {1,9:n0}  {2,12:n3}  {3,12:n3}  {4,6:n0}%  {5,12:n0}  {6,-16}  {7,8:n1}  {8,12:n0}",
+                    "  {0,-10} {1,9:n0}  {2,12:n3}  {3,12:n3}  {4,6:n0}%  {5,12:n0}  {6,-16}  {7,8:n1}  {8,12:n0}  {9}",
                     row.Stage, row.Blocks, row.BestMs, row.WorstMs, row.SpreadPercent,
-                    row.Work, row.WorkUnit, row.NsPerWork, row.AllocatedBytes / 1024));
+                    row.Work, row.WorkUnit, row.NsPerWork, row.AllocatedBytes / 1024, row.Note));
             }
             return text.ToString();
         }

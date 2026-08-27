@@ -47,6 +47,11 @@ namespace Thermodynamics.Tests
 
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             simulation.Rooms.SnapshotSealing = snapshot;
+
+            // The subject here is the sealing snapshot, and only that. The run walk is live only
+            // with a snapshot, so leaving it on would vary two things at once and this comparison
+            // is order-sensitive (`P6`). `RoomSpanFloodTests` is where the walk is judged.
+            simulation.Rooms.SpanFlood = false;
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
             simulation.RebuildAll();
             return simulation;
@@ -58,6 +63,11 @@ namespace Thermodynamics.Tests
             builder.PlaceCensus(LoadShapes.Build("ship", 8000));
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             simulation.Rooms.SnapshotSealing = snapshot;
+
+            // The subject here is the sealing snapshot, and only that. The run walk is live only
+            // with a snapshot, so leaving it on would vary two things at once and this comparison
+            // is order-sensitive (`P6`). `RoomSpanFloodTests` is where the walk is judged.
+            simulation.Rooms.SpanFlood = false;
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
             simulation.RebuildAll();
             return simulation;
@@ -73,12 +83,12 @@ namespace Thermodynamics.Tests
 
             for (int r = 0; r < expected.RoomCount; r++)
             {
-                List<Vector3I> a = expected.Rooms[r];
-                List<Vector3I> b = actual.Rooms[r];
-                Assert.True(a.Count == b.Count, what + ": room " + r + " has " + b.Count + " cells by snapshot and " + a.Count + " by dictionary");
+                RoomMap.RoomCells a = expected.CellsOf(r);
+                RoomMap.RoomCells b = actual.CellsOf(r);
+                Assert.True(a.Count == b.Count, what + ": room " + r + " has " + b.Count + " cells by snapshot and " + a.Count + " by rescan");
                 for (int i = 0; i < a.Count; i++)
                 {
-                    Assert.True(a[i] == b[i], what + ": room " + r + " cell " + i + " is " + b[i] + " by snapshot and " + a[i] + " by dictionary");
+                    Assert.True(a[i] == b[i], what + ": room " + r + " cell " + i + " is " + b[i] + " by snapshot and " + a[i] + " by rescan");
                 }
                 Assert.Equal(expected.IsVented(r), actual.IsVented(r));
             }
@@ -260,10 +270,10 @@ namespace Thermodynamics.Tests
             int pressurised = 0;
             foreach (ThermalSimulation simulation in new[] { byDictionary, bySnapshot })
             {
-                IList<List<Vector3I>> rooms = simulation.Rooms.Map.Rooms;
-                for (int r = 0; r < rooms.Count; r++)
+                RoomMap rooms = simulation.Rooms.Map;
+                for (int r = 0; r < rooms.RoomCount; r++)
                 {
-                    if (simulation.SetRoomPressure(rooms[r][0], 1f)) pressurised++;
+                    if (simulation.SetRoomPressure(rooms.CellsOf(r)[0], 1f)) pressurised++;
                 }
                 LoadBenchmarks.SeedSpread(simulation);
                 Thermodynamics.Harness.Census.DriveCensus(simulation);
