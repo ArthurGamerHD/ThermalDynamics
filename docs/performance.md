@@ -568,7 +568,8 @@ same ordering and the same shape with the surface and link rows inside their own
 | # | Subject | Verdict | Where |
 | ---: | --- | --- | --- |
 | 1 | The stage instrument lives in the tree | **kept** — `bench stages`, `StageLabTests` | [Iteration 1](#pass-2-iteration-1--the-stage-instrument-lives-in-the-tree) |
-| 2 | A one-cell block's neighbours are six probes | *measuring* | [Iteration 2](#pass-2-iteration-2--a-one-cell-blocks-neighbours-are-six-probes) |
+| 2 | A one-cell block's neighbours are six probes | **kept** — links 0.77–0.88 | [Iteration 2](#pass-2-iteration-2--a-one-cell-blocks-neighbours-are-six-probes) |
+| 3 | A one-cell block's exposure is one state and six tests | *measuring* | [Iteration 3](#pass-2-iteration-3--a-one-cell-blocks-exposure-is-one-cell-state-and-six-face-tests) |
 
 ## Pass 2, iteration 1 — the stage instrument lives in the tree
 
@@ -596,6 +597,31 @@ Same faces in the same order, so the link list — and with it the order the con
 accumulates in — is unchanged. `GridModelAdjacencyTests` holds the two paths to the same neighbours
 in the same order over every block of a census hull and of a grid that mixes unit blocks with bars
 and a cube, so both shapes the dedupe exists for are on the fixture.
+
+**What it was worth.** `bench stages --stages links`, the commit before against the tip, the two
+cores proven different first, interleaved, two rounds, fastest kept:
+
+| blocks | links, before | after | ratio |
+| ---: | ---: | ---: | ---: |
+| 126,731 | 47.96 ms | **36.80 ms** | 0.77 |
+| 505,566 | 192.53 ms | **169.78 ms** | 0.88 |
+
+The same direction in all four pairs, and the link count identical on both sides. Less at the
+large rung, where the probes' cache misses are a larger share of the query and the arithmetic
+around them a smaller one.
+
+## Pass 2, iteration 3 — a one-cell block's exposure is one cell state and six face tests
+
+**What was found.** The exposure refresh is the same shape as the neighbour query one stage later:
+for every block, every cell of every face of its box, through the same per-axis switches, asking
+the surface map for the cell's state on each face. For a one-cell block that is one state read six
+times and six face tests.
+
+**What changed.** The one-cell path reads the state once and asks the same two questions per face
+in the same order — is this face sealed from the other side, does the space beyond reach the
+outside — and hands every larger block to the boundary walk, kept as
+`GetExposedFacesWalkingTheBoundary`. `ExposureFastPathTests` holds the two to the same count on
+every face of every block of a mapped census hull and of the mixed grid.
 
 
 
