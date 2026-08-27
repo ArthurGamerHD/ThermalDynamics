@@ -29,6 +29,30 @@ namespace Thermodynamics.Core
         private readonly CellBitset visited = new CellBitset();
 
         /// <summary>
+        /// The structural self-airtight bits of every cell in the search box, one byte a cell,
+        /// copied out of the surface map when a pass begins. A pass tests two faces per neighbour
+        /// per cell over the whole bounding volume — fourteen times the block count on a hull — and
+        /// each test was two dictionary probes; here it is two array reads. The copy is exact
+        /// because a sealing change requests a restart, so a pass never reads a surface map that
+        /// has moved under it. Retained between passes and regrown only when the box outgrows it.
+        /// See performance.md, Iteration 4.
+        /// </summary>
+        private byte[] sealing = new byte[0];
+        private int sealingSizeX;
+        private int sealingSizeY;
+        private int sealingSizeZ;
+
+        /// <summary>
+        /// Set false to answer every sealing question from the surface map's dictionaries, as the
+        /// pass did before the snapshot. Test hook: <c>RoomMapSnapshotTests</c> runs the same grid
+        /// both ways and compares the published maps cell for cell.
+        /// </summary>
+        public bool SnapshotSealing = true;
+
+        /// <summary>Whether the pass in flight is reading the snapshot rather than the map.</summary>
+        private bool snapshotLive;
+
+        /// <summary>
         /// Cells belonging to a door. Never classified as solid structure even when they seal on all
         /// six faces: a door is an openable volume, and a portal needs a region on the door's own
         /// side to join to. A shut airtight hangar door is a room of one cell, which merges with the
@@ -270,6 +294,7 @@ namespace Thermodynamics.Core
             frontier.Clear();
             visited.Reset(searchMin, searchMaxExclusive);
             CollectDoorCells();
+            TakeSealingSnapshot();
 
             if (searchMaxExclusive.X <= searchMin.X ||
                 searchMaxExclusive.Y <= searchMin.Y ||
@@ -288,6 +313,68 @@ namespace Thermodynamics.Core
             phase = Phase.External;
         }
 
+        private void TakeSealingSnapshot()
+        {
+            snapshotLive = SnapshotSealing;
+            if (!snapshotLive) return;
+
+            sealingSizeX = Math.Max(0, searchMaxExclusive.X - searchMin.X);
+            sealingSizeY = Math.Max(0, searchMaxExclusive.Y - searchMin.Y);
+            sealingSizeZ = Math.Max(0, searchMaxExclusive.Z - searchMin.Z);
+
+            long cells = (long)sealingSizeX * sealingSizeY * sealingSizeZ;
+            if (cells > int.MaxValue)
+            {
+                // A box this large is a fault elsewhere; the dictionary path still answers it.
+                snapshotLive = false;
+                return;
+            }
+
+            if (sealing.Length < cells) sealing = new byte[cells];
+            else Array.Clear(sealing, 0, (int)cells);
+
+            surfaces.CopyStructuralSealing(searchMin, searchMaxExclusive, sealing);
+        }
+
+        /// <summary>Index into <see cref="sealing"/>, or -1 outside the box.</summary>
+        private long SealingIndex(Vector3I cell)
+        {
+            int x = cell.X - searchMin.X;
+            if (x < 0 || x >= sealingSizeX) return -1;
+
+            int y = cell.Y - searchMin.Y;
+            if (y < 0 || y >= sealingSizeY) return -1;
+
+            int z = cell.Z - searchMin.Z;
+            if (z < 0 || z >= sealingSizeZ) return -1;
+
+            return (((long)z * sealingSizeY) + y) * sealingSizeX + x;
+        }
+
+        /// <summary>
+        /// <see cref="SurfaceMap.IsFaceSealedStructurally"/>, answered from the snapshot when one is
+        /// live: either side's own airtight bit across the shared face seals it.
+        /// </summary>
+        private bool IsFaceSealed(Vector3I cell, int face, Vector3I neighbour)
+        {
+            if (!snapshotLive) return surfaces.IsFaceSealedStructurally(cell, face);
+
+            long here = SealingIndex(cell);
+            if (here >= 0 && (sealing[here] & (1 << face)) != 0) return true;
+
+            long there = SealingIndex(neighbour);
+            return there >= 0 && (sealing[there] & (1 << Face.Opposite(face))) != 0;
+        }
+
+        /// <summary><see cref="SurfaceMap.IsFullySealedStructurally"/>, from the snapshot when one is live.</summary>
+        private bool IsFullySealed(Vector3I cell)
+        {
+            if (!snapshotLive) return surfaces.IsFullySealedStructurally(cell);
+
+            long index = SealingIndex(cell);
+            return index >= 0 && (sealing[index] & CellSurface.SelfAirtightMask) == CellSurface.SelfAirtightMask;
+        }
+
         private void StepExternal()
         {
             Vector3I cell = frontier.Dequeue();
@@ -298,7 +385,7 @@ namespace Thermodynamics.Core
 
                 if (!GridMath.Contains(searchMin, searchMaxExclusive, neighbour)) continue;
                 if (visited.Contains(neighbour)) continue;
-                if (surfaces.IsFaceSealedStructurally(cell, face)) continue;
+                if (IsFaceSealed(cell, face, neighbour)) continue;
 
                 visited.Add(neighbour);
                 working.AddExternal(neighbour);
@@ -318,7 +405,7 @@ namespace Thermodynamics.Core
 
                 if (!GridMath.Contains(searchMin, searchMaxExclusive, neighbour)) continue;
                 if (visited.Contains(neighbour)) continue;
-                if (surfaces.IsFaceSealedStructurally(cell, face)) continue;
+                if (IsFaceSealed(cell, face, neighbour)) continue;
 
                 visited.Add(neighbour);
                 if (IsStructure(neighbour))
@@ -385,7 +472,7 @@ namespace Thermodynamics.Core
         /// <summary>True when a cell is solid structure: sealed on every face and not part of a door.</summary>
         private bool IsStructure(Vector3I cell)
         {
-            if (!surfaces.IsFullySealedStructurally(cell)) return false;
+            if (!IsFullySealed(cell)) return false;
             return !doorCells.Contains(cell);
         }
 
