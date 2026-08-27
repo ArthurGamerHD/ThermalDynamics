@@ -155,9 +155,7 @@ namespace Thermodynamics.Core
                 linkNextA[link] = linkNextA[last];
                 linkNextB[link] = linkNextB[last];
 
-                linkA[link] = linkA[last];
-                linkB[link] = linkB[last];
-                linkConductance[link] = linkConductance[last];
+                linkRows[link] = linkRows[last];
                 if (last < linkMassFactor.Length) linkMassFactor[link] = linkMassFactor[last];
 
                 RetargetLink(moved.NodeA, last, link);
@@ -265,13 +263,13 @@ namespace Thermodynamics.Core
                 {
                     next = linkNextA[link];
                     entry.NodeA = to;
-                    linkA[link] = to;
+                    linkRows[link].A = to;
                 }
                 else
                 {
                     next = linkNextB[link];
                     entry.NodeB = to;
-                    linkB[link] = to;
+                    linkRows[link].B = to;
                 }
 
                 links[link] = entry;

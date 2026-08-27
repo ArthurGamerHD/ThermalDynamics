@@ -209,13 +209,21 @@ namespace Thermodynamics.Core
         /// </summary>
         private int linkMassFactorFrom;
 
-        // The conduction loop mirrored into flat arrays. This is the innermost loop in the mod —
-        // a large grid visits every link several hundred thousand times per simulated second —
-        // and indexing List<ThermalLink> copies the whole struct to use three of its fields.
-        // ContactFaces is diagnostic only and stays in the list.
-        private int[] linkA = new int[0];
-        private int[] linkB = new int[0];
-        private float[] linkConductance = new float[0];
+        /// <summary>
+        /// The three fields of a link the conduction loop reads, in one row: the innermost loop in
+        /// the mod visits every link several hundred thousand times a simulated second, and one
+        /// array of rows is one stream and one bounds check where three parallel arrays were three
+        /// of each. <c>ContactFaces</c> is diagnostic only and stays in the list.
+        /// See performance.md, Iteration 6.
+        /// </summary>
+        private struct LinkRow
+        {
+            public int A;
+            public int B;
+            public float Conductance;
+        }
+
+        private LinkRow[] linkRows = new LinkRow[0];
 
         /// <summary>Per-face weights of the sun and the airflow, resolved once per step.</summary>
         private readonly float[] sunWeights = new float[Face.Count];
@@ -765,20 +773,17 @@ namespace Thermodynamics.Core
         /// </summary>
         private void SyncLinkArrays()
         {
-            if (linkA.Length < links.Count)
+            if (linkRows.Length < links.Count)
             {
-                int size = Math.Max(16, links.Count * 2);
-                Array.Resize(ref linkA, size);
-                Array.Resize(ref linkB, size);
-                Array.Resize(ref linkConductance, size);
+                Array.Resize(ref linkRows, Math.Max(16, links.Count * 2));
             }
 
             for (int i = syncedLinks; i < links.Count; i++)
             {
                 ThermalLink link = links[i];
-                linkA[i] = link.NodeA;
-                linkB[i] = link.NodeB;
-                linkConductance[i] = link.Conductance;
+                linkRows[i].A = link.NodeA;
+                linkRows[i].B = link.NodeB;
+                linkRows[i].Conductance = link.Conductance;
             }
 
             syncedLinks = links.Count;
@@ -1837,12 +1842,12 @@ namespace Thermodynamics.Core
             }
 
             int linkCount = links.Count;
-            if (linkCount > linkConductance.Length) linkCount = linkConductance.Length;
+            if (linkCount > linkRows.Length) linkCount = linkRows.Length;
             if (linkCount > linkMassFactor.Length) linkCount = linkMassFactor.Length;
 
             for (int i = 0; i < linkCount; i++)
             {
-                if (h * linkConductance[i] >= ClampBindingMargin * linkMassFactor[i]) return true;
+                if (h * linkRows[i].Conductance >= ClampBindingMargin * linkMassFactor[i]) return true;
             }
 
             // The two lumped masses, on their own terms. A node's total covers the links a loop or
@@ -2447,9 +2452,7 @@ namespace Thermodynamics.Core
             // Hoisted so the loop reads locals rather than fields and the array lengths are
             // visibly loop-invariant.
             if (to > links.Count) to = links.Count;
-            int[] fromIndex = linkA;
-            int[] toIndex = linkB;
-            float[] conductance = linkConductance;
+            LinkRow[] rows = linkRows;
             float[] massFactor = linkMassFactor;
             float[] temperatures = nodeTemperatures;
             float[] watts = nodeWatts;
@@ -2457,14 +2460,14 @@ namespace Thermodynamics.Core
 
             for (int i = from; i < to; i++)
             {
-                int a = fromIndex[i];
-                int b = toIndex[i];
+                int a = rows[i].A;
+                int b = rows[i].B;
 
                 float difference = temperatures[b] - temperatures[a];
                 if (difference == 0f) continue;
 
                 // One conductance applied equally and oppositely: what leaves A enters B.
-                float exchange = conductance[i] * difference;
+                float exchange = rows[i].Conductance * difference;
 
                 if (clamp)
                 {
