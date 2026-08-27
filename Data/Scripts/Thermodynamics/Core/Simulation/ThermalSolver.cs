@@ -70,16 +70,37 @@ namespace Thermodynamics.Core
         // Node state the substep loop reads, copied out of the node objects once per step rather
         // than dereferenced once per node per substep.
         private float[] nodeThermalMass = new float[0];
-        private float[] nodeRadiation = new float[0];
+        /// <summary>
+        /// What the environment pass reads per node every substep, in one row: the exposed face
+        /// count that decides the branch, the radiation coefficient, the convection row and the
+        /// source row. Four parallel arrays were four streams and four bounds checks a node beside
+        /// the temperature it reads and the watts it writes; one array of rows is one of each.
+        /// The fill writes the last two once a step. See performance.md, Pass 2, Iteration 5.
+        /// </summary>
+        private struct EnvironmentRow
+        {
+            /// <summary>Exposed cell faces; zero means buried, and the pass writes only the source.</summary>
+            public int ExposedFaces;
+
+            /// <summary>Emissivity × Stefan–Boltzmann × exposed area.</summary>
+            public float Radiation;
+
+            /// <summary>−h × area × wind factor, fixed for a step; zero when not convecting.</summary>
+            public float Convection;
+
+            /// <summary>Waste heat, solar and friction summed: everything a node gains that does not depend on its own temperature.</summary>
+            public float Source;
+        }
+
+        private EnvironmentRow[] nodeEnvironment = new EnvironmentRow[0];
         private float[] nodeGeneration = new float[0];
         private float[] nodeExposedArea = new float[0];
         /// <summary>
         /// Each node's solar absorptivity — what it takes *in* from the sun and from point
-        /// sources. Emission is <see cref="nodeRadiation"/>, which carries the emissivity, and the
+        /// sources. Emission is the radiation coefficient in <see cref="nodeEnvironment"/>, which carries the emissivity, and the
         /// two are different numbers on a selective surface. See BlockThermalProperties.
         /// </summary>
         private float[] nodeAbsorptivity = new float[0];
-        private int[] nodeExposedFaces = new int[0];
 
         /// <summary>
         /// Each node's critical temperature, or zero where the block has none. Mirrored because the
@@ -103,17 +124,12 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Per-node environment terms fixed for a whole step, filled by its first substep and read
         /// by the rest. Bit-identical to recomputing; <c>PrecomputedEnvironmentTests</c> asserts it.
-        /// See benchmarks.md, The row fill reads each face weight once.
+        /// The solar and friction rows are diagnostics; the convection and source rows the pass
+        /// reads live in <see cref="nodeEnvironment"/>. See benchmarks.md, The row fill reads each
+        /// face weight once.
         /// </summary>
         private float[] nodeSolarRow = new float[0];
         private float[] nodeFrictionRow = new float[0];
-        private float[] nodeConvectionRow = new float[0];
-
-        /// <summary>
-        /// Waste heat, solar and friction summed: everything a node gains that does not depend on
-        /// its own temperature. One row rather than three, because the pass streams arrays.
-        /// </summary>
-        private float[] nodeSourceRow = new float[0];
 
         /// <summary>
         /// False when the rows above must be recomputed rather than read.
@@ -1784,7 +1800,7 @@ namespace Thermodynamics.Core
                 if (nodeThermalMass[i] != node.ThermalMass) linkMassFactorFrom = 0;
 
                 nodeThermalMass[i] = node.ThermalMass;
-                nodeRadiation[i] = node.RadiationCoefficient;
+                nodeEnvironment[i].Radiation = node.RadiationCoefficient;
                 nodeGeneration[i] = node.HeatGenerationWatts;
                 nodeExposedArea[i] = node.ExposedArea;
                 nodeAbsorptivity[i] = node.Thermal.EffectiveSolarAbsorptivity;
@@ -1795,7 +1811,7 @@ namespace Thermodynamics.Core
                 }
 
                 int total = node.TotalExposedFaces;
-                nodeExposedFaces[i] = total;
+                nodeEnvironment[i].ExposedFaces = total;
 
                 int b = i * Face.Count;
                 if (total <= 0)
@@ -2059,6 +2075,8 @@ namespace Thermodynamics.Core
             // on a grid granted the substeps it asked for.
             bool fillRelaxation = fill && ConductionClampLive;
 
+            EnvironmentRow[] rows = nodeEnvironment;
+
             for (int i = from; i < to; i++)
             {
                 // Folded into this loop rather than given a pass of its own: this loop already
@@ -2066,17 +2084,17 @@ namespace Thermodynamics.Core
                 // it.
                 if (fillRelaxation) nodeRelaxation[i] = RelaxationFactor(i, h);
 
-                if (nodeExposedFaces[i] <= 0)
+                if (rows[i].ExposedFaces <= 0)
                 {
                     if (fill)
                     {
                         nodeSolarRow[i] = 0f;
                         nodeFrictionRow[i] = 0f;
-                        nodeConvectionRow[i] = 0f;
-                        nodeSourceRow[i] = generating ? nodeGeneration[i] : 0f;
+                        rows[i].Convection = 0f;
+                        rows[i].Source = generating ? nodeGeneration[i] : 0f;
                     }
 
-                    float buried = nodeSourceRow[i];
+                    float buried = rows[i].Source;
                     nodeWatts[i] = buried;
                     heatGainAccumulator += buried;
                     if (diagnostics) ClearEnvironmentDiagnostics(i);
@@ -2095,10 +2113,10 @@ namespace Thermodynamics.Core
                     // The node's six face weights, read once and shared by both sums below.
                     //
                     // They used to be read twice, because the two sums are two calls with a row
-                    // store between them and nothing can share loads across that: nodeFaceWeights,
-                    // nodeConvectionRow and nodeSolarRow are all float[] fields, so a compiler
-                    // cannot prove a store to one is not a store to another and has to assume the
-                    // weights moved. Hoisting them here says they did not.
+                    // store between them and nothing can share loads across that: nodeFaceWeights
+                    // and nodeSolarRow are float[] fields and the environment rows another array, so
+                    // a compiler cannot prove a store to one is not a store to another and has to
+                    // assume the weights moved. Hoisting them here says they did not.
                     int b = i * Face.Count;
                     float f0 = nodeFaceWeights[b];
                     float f1 = nodeFaceWeights[b + 1];
@@ -2122,7 +2140,7 @@ namespace Thermodynamics.Core
                     // Geometry and wind, not temperature. See thermal-model.md, Convection.
                     float windFactor = windy ? 1f + wind : 1f;
 
-                    nodeConvectionRow[i] = convecting
+                    rows[i].Convection = convecting
                         ? -env.ConvectionCoefficient * area * windFactor
                         : 0f;
 
@@ -2145,10 +2163,10 @@ namespace Thermodynamics.Core
                     float friction = frictionEnabled ? frictionScale * area * wind : 0f;
                     nodeFrictionRow[i] = friction;
 
-                    nodeSourceRow[i] = (generating ? nodeGeneration[i] : 0f) + solar + friction;
+                    rows[i].Source = (generating ? nodeGeneration[i] : 0f) + solar + friction;
                 }
 
-                float source = nodeSourceRow[i];
+                float source = rows[i].Source;
                 float watts = source;
 
                 if (environmentEnabled)
@@ -2157,13 +2175,13 @@ namespace Thermodynamics.Core
                     if (radiating)
                     {
                         float squared = temperature * temperature;
-                        radiation = -nodeRadiation[i] * ((squared * squared) - env.AmbientTemperaturePow4);
+                        radiation = -rows[i].Radiation * ((squared * squared) - env.AmbientTemperaturePow4);
                     }
 
                     float convection = 0f;
                     if (convecting)
                     {
-                        convection = nodeConvectionRow[i] * (temperature - env.AmbientTemperature);
+                        convection = rows[i].Convection * (temperature - env.AmbientTemperature);
                     }
 
                     radiationWatts = radiationShare * radiation;
@@ -2233,7 +2251,7 @@ namespace Thermodynamics.Core
 
                 for (int i = 0; i < nodes.Count; i++)
                 {
-                    if (nodeExposedFaces[i] <= 0) continue;
+                    if (nodeEnvironment[i].ExposedFaces <= 0) continue;
 
                     float watts = source.Irradiance * nodeAbsorptivity[i]
                         * Weighted(i, sourceWeights) * nodeExposedArea[i];
@@ -2871,13 +2889,13 @@ namespace Thermodynamics.Core
             // under-estimating it costs stability.
             float rate = nodeConductanceTotal[i];
 
-            if (!terms.Exposed || nodeExposedFaces[i] <= 0) return rate;
+            if (!terms.Exposed || nodeEnvironment[i].ExposedFaces <= 0) return rate;
 
             // Linearised environment coupling: d(radiated watts)/dT = 4 e s A T^3
             if (terms.Radiating)
             {
                 float t = nodeTemperatures[i];
-                rate += 4f * nodeRadiation[i] * t * t * t;
+                rate += 4f * nodeEnvironment[i].Radiation * t * t * t;
             }
 
             return rate + (terms.Convection * nodeExposedArea[i]);
@@ -3448,17 +3466,14 @@ namespace Thermodynamics.Core
                 resyncAll = true;
                 sunLitDirty = true;
                 nodeThermalMass = new float[size];
-                nodeRadiation = new float[size];
+                nodeEnvironment = new EnvironmentRow[size];
                 nodeGeneration = new float[size];
                 nodeExposedArea = new float[size];
                 nodeAbsorptivity = new float[size];
                 nodeCritical = new float[size];
-                nodeExposedFaces = new int[size];
                 nodeRelaxation = new float[size];
                 nodeSolarRow = new float[size];
                 nodeFrictionRow = new float[size];
-                nodeConvectionRow = new float[size];
-                nodeSourceRow = new float[size];
                 nodeOverheatDamage = new float[size];
                 nodeOverheatPeak = new float[size];
                 environmentRowsValid = false;
