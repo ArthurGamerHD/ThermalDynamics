@@ -60,6 +60,12 @@ namespace Thermodynamics.Harness
                 get { return BestMs <= 0d ? 0d : 100d * (WorstMs - BestMs) / BestMs; }
             }
 
+            /// <summary>
+            /// Anything the stage wants to say about its own work beyond the count — the share of
+            /// the air rebuild's probes that found a block, for instance. Blank for most stages.
+            /// </summary>
+            public string Note = "";
+
             /// <summary>Nanoseconds per unit of work, which is the figure that transfers between sizes.</summary>
             public double NsPerWork
             {
@@ -333,18 +339,24 @@ namespace Thermodynamics.Harness
                     + " rooms, so this stage would time an outer loop and nothing else");
             }
 
-            Row row = NewRow("roomair", simulation, "room cells");
+            Row row = NewRow("roomair", simulation, "face probes");
             int repeats = Math.Max(1, Repeats);
 
             for (int r = 0; r < repeats; r++)
             {
+                long before = simulation.Work.RoomAirFaceProbes;
+                long hitsBefore = simulation.Work.RoomAirFaceHits;
                 long allocated = r == repeats - 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Solver.RebuildRoomAir(map);
                 watch.Stop();
                 if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
-                Work(row, map.RoomCellCount, r);
+                Work(row, simulation.Work.RoomAirFaceProbes - before, r);
+
+                // What share of those probes found anything, which is the number that says whether
+                // to make the probe cheaper or to stop making it.
+                if (r == 0) row.Note = (simulation.Work.RoomAirFaceHits - hitsBefore).ToString("n0") + " hit";
             }
 
             return row;
@@ -411,14 +423,14 @@ namespace Thermodynamics.Harness
         public static string Table(IList<Row> rows)
         {
             StringBuilder text = new StringBuilder();
-            text.AppendLine("  stage        blocks       best ms      worst ms   spread          work  unit              ns/unit      alloc KB");
+            text.AppendLine("  stage        blocks       best ms      worst ms   spread          work  unit              ns/unit      alloc KB  note");
             for (int i = 0; i < rows.Count; i++)
             {
                 Row row = rows[i];
                 text.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                    "  {0,-10} {1,9:n0}  {2,12:n3}  {3,12:n3}  {4,6:n0}%  {5,12:n0}  {6,-16}  {7,8:n1}  {8,12:n0}",
+                    "  {0,-10} {1,9:n0}  {2,12:n3}  {3,12:n3}  {4,6:n0}%  {5,12:n0}  {6,-16}  {7,8:n1}  {8,12:n0}  {9}",
                     row.Stage, row.Blocks, row.BestMs, row.WorstMs, row.SpreadPercent,
-                    row.Work, row.WorkUnit, row.NsPerWork, row.AllocatedBytes / 1024));
+                    row.Work, row.WorkUnit, row.NsPerWork, row.AllocatedBytes / 1024, row.Note));
             }
             return text.ToString();
         }
