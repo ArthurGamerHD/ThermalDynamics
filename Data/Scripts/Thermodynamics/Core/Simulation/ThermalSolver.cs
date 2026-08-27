@@ -733,6 +733,39 @@ namespace Thermodynamics.Core
             return GetNode(grid.GetAtCell(cell));
         }
 
+        /// <summary>Per-face index steps for the occupancy set, settled once a rebuild.</summary>
+        private readonly long[] linkFaceSteps = new long[Face.Count];
+
+        /// <summary>
+        /// Set false to find every block's neighbours through the general walk, lists and all,
+        /// instead of settling a one-cell block's six candidates in place.
+        ///
+        /// Test hook: <c>LinkWalkTests</c> builds the same grid both ways and compares the link
+        /// list entry for entry, **including the order it is built in** — which is what the
+        /// conduction pass sums over, so a different order is a different last bit on every
+        /// temperature.
+        /// </summary>
+        public bool InlineOneCellLinkWalk = true;
+
+        /// <summary>
+        /// Makes the link between a pair a walk has settled on, if the pair conducts. Shared by the
+        /// one-cell walk and the general one, so that what a link *is* is stated once.
+        /// </summary>
+        private void EmitLink(ThermalNode a, ThermalNode b, int face)
+        {
+            int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block, face);
+            if (contacts <= 0) return;
+
+            float conductance = ConductionBuilder.Conductance(
+                grid.GridSize, a.Block, b.Block, contacts, Face.Axis(face));
+            if (conductance <= 0f) return;
+
+            links.Add(new ThermalLink(a.Index, b.Index, conductance, contacts));
+            ChainLink(links.Count - 1);
+            a.LinkCount++;
+            b.LinkCount++;
+        }
+
         /// <summary>
         /// Brings the conduction graph up to date, incrementally when only blocks have been placed
         /// and by full rebuild otherwise. No-op when the graph already matches the layout.
@@ -800,9 +833,46 @@ namespace Thermodynamics.Core
             // placement. See GridModel.GetNeighbours.
             CellBitset occupied = walked != null ? walked.Occupancy() : null;
 
+            // Fixed for the whole rebuild, so read once rather than once a face a block: what to
+            // add to a cell's key, and to its index in the occupancy set, to reach each neighbour.
+            long[] keyStep = GridMath.KeyByFace;
+            long[] indexStep = linkFaceSteps;
+            if (occupied != null)
+            {
+                for (int face = 0; face < Face.Count; face++) indexStep[face] = occupied.IndexStep(face);
+            }
+
             for (int i = 0; i < nodes.Count; i++)
             {
                 ThermalNode a = nodes[i];
+
+                // **The common block, walked without the lists.** A one-cell block's six candidates
+                // are its own cell stepped by a constant, so the general walk's two lists — the
+                // neighbours and the face each was found across — are built and read back for
+                // nothing. The pair is settled here instead, in the same face order, so the links
+                // come out in the order they always did.
+                // See performance.md, Pass 6, Iteration 3.
+                if (InlineOneCellLinkWalk && occupied != null && walked != null && a.Block.CellCount == 1)
+                {
+                    Vector3I cell = a.Block.Min;
+                    long key = GridMath.Key(cell);
+                    long slot = occupied.IndexOf(cell);
+
+                    for (int face = 0; face < Face.Count; face++)
+                    {
+                        if (!occupied.ContainsIndex(slot + indexStep[face])) continue;
+
+                        BlockInstance other = walked.GetAtKey(key + keyStep[face]);
+                        if (other == null) continue;
+
+                        ThermalNode b = GetNode(other);
+                        if (b == null || b.Index <= i) continue;
+
+                        EmitLink(a, b, face);
+                    }
+
+                    continue;
+                }
 
                 neighbourScratch.Clear();
                 neighbourFaces.Clear();
@@ -822,17 +892,7 @@ namespace Thermodynamics.Core
                         : ConductionBuilder.ContactFace(a.Block, b.Block);
                     if (face < 0) continue;
 
-                    int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block, face);
-                    if (contacts <= 0) continue;
-
-                    float conductance = ConductionBuilder.Conductance(
-                        grid.GridSize, a.Block, b.Block, contacts, Face.Axis(face));
-                    if (conductance <= 0f) continue;
-
-                    links.Add(new ThermalLink(a.Index, b.Index, conductance, contacts));
-                    ChainLink(links.Count - 1);
-                    a.LinkCount++;
-                    b.LinkCount++;
+                    EmitLink(a, b, face);
                 }
             }
 
