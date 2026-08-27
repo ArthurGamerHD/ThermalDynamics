@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Pass 5, iteration 6: the link build consults the occupancy bit before the block table — links **0.88** at 505,566 blocks and 0.76 at 126,731, both controls flat. |
 | 2026-08-27 | Pass 5, iterations 4 and 5: `bench stepfloor` answers `D1`'s open question — **conduction is its own floor**, faster than a loop doing its memory accesses and no arithmetic. And the idea that came out of it, putting buried nodes through the exposed path, measured **1.30** and was dropped: the branch is predictable and what it skips is three row reads, not just arithmetic. |
 | 2026-08-27 | Pass 5, iteration 3: the grid's own heat gain is summed once a step rather than once a substep — the environment stage **0.68** at 505,566 blocks, bit-identical, with both controls at 1.00. A probe had measured the loop's two accumulators at 35 % of the stage between them. |
 | 2026-08-27 | Pass 5, iteration 2: **iteration 1's split was wrong and is corrected in place** — measured over twenty steps rather than one, conduction is 38 % of a step and the environment read 35 %, with the row fill a twentieth of it. And node reordering, the obvious idea for conduction, is refused before building: 97.8 % of links already span fewer than 1,024 node indices. |
@@ -1603,6 +1604,7 @@ and reverted it.
 | 3 | The grid's own heat gain is summed once a step, not once a substep | **kept** — environment **0.68** at 505k, bit-identical | [Iteration 3](#pass-5-iteration-3--the-grids-own-heat-gain-is-summed-once-a-step) |
 | 4 | What a substep's passes cost touching memory and computing nothing | **kept** — the instrument, and `D1`'s open question answered | [Iteration 4](#pass-5-iteration-4--what-a-substeps-passes-cost-computing-nothing) |
 | 5 | A buried node takes the exposed path | **dropped** — 1.30, and the reason is worth more than the change would have been | [Iteration 5](#pass-5-iteration-5--a-buried-node-takes-the-exposed-path-dropped) |
+| 6 | A bit in front of the link build's probes | **kept** — links **0.88** at 505k, 0.76 at 126k | [Iteration 6](#pass-5-iteration-6--a-bit-in-front-of-the-link-builds-probes) |
 
 ## Pass 5, iteration 1 — a step is measured by its parts
 
@@ -1756,6 +1758,33 @@ Both reasons were in the code before the measurement was taken, which is the par
 So the environment read's 2.26× over floor is not slack waiting to be taken: a good part of it is
 *the branch doing its job*, and the floor loop — which reads every row for every node — is measuring
 a pass this one is deliberately not.
+
+## Pass 5, iteration 6 — a bit in front of the link build's probes
+
+With the step at its floor, the largest thing left on the load path is the link build. It asks the
+block table what stands across each of a block's six faces, and **three of those eight candidate
+cells in eight hold nothing**: a hull carries 3.77 neighbours a block, so 2.2 of every 6 probes are
+a hash and a bucket chase to be told so — 1.1 million of them at half a million blocks.
+
+The grid already keeps one bit a cell, built in pass 4 for the air rebuild. The full rebuild takes
+it once and hands it down.
+
+**Only the full rebuild may ask.** The set is dropped whenever the grid changes, so a caller that
+asked for it *per placement* would rebuild it per placement and turn a load into quadratic work. The
+incremental path — the one a placement takes — does not ask, and the overload that consults the set
+is separate from the one that does not, so nothing can drift into using it by accident.
+
+| stage | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| links, 505,566 blocks | 74.63 ms | **65.72 ms** | **0.88** |
+| links, 126,731 blocks | 18.10 ms | **13.80 ms** | **0.76** |
+| place, 505,566 (control) | 47.56 ms | 48.10 ms | 1.01 |
+| a settled step, 505,566 (control) | 73.29 ms | 73.48 ms | 1.00 |
+
+*One thing the ratio does not include: the set has to be built, and the stage's best-of-fifteen
+excludes that because only the first of the fifteen rebuilds pays for it. At half a million blocks
+that build is about half a million bit-sets, once. On a real load it is paid once for both this and
+the air rebuild, which is why it is worth having at all rather than worth having twice.*
 
 ---
 
