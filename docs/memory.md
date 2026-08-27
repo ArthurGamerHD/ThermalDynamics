@@ -227,7 +227,9 @@ most worlds. Both are a cost measurement rather than a packing job (`D7`).
 
 ### 4. Rooms as one cell array with per-room ranges — **done**
 
-Room cells are held twice: once per room, and once in `Dictionary<Vector3I, int> roomIndexByCell`.
+Room cells are held **once**: per room, in the lists the flood fills. They were held twice until
+2026-08-27 — the second copy was `roomIndexByCell`, a dictionary from cell to room — and the
+paragraphs below are the record of how each half went.
 
 The per-room half is done. Those were `HashSet<Vector3I>` and are now `List<Vector3I>`, trimmed
 when the pass completes, because **nothing ever asked a room whether it contained a cell** — that
@@ -239,7 +241,15 @@ The one caller that did search a room is the room *diagnostic*, which asks wheth
 onto a compartment. It builds a set for one room at a time and reuses it, so the cost is bounded by
 the largest compartment during a scan rather than by every compartment for the life of the grid.
 
-**And `roomIndexByCell` is done too, by freezing rather than by merging.** It cost about 31 bytes
+**And `roomIndexByCell` is gone outright, in two steps.** First by freezing rather than by merging,
+which is the paragraph below and was where it stood until 2026-08-27; then by deleting it, once it
+was noticed that **nothing read it while a pass ran** — a working map is private until it is
+published — so the frozen arrays could be built from the room lists, which hold the same cells with
+their room already known. What that removed was not only the bytes below but 1.5 million hash
+inserts *inside* the flood at half a million blocks
+([performance.md](performance.md#pass-4-iteration-1--the-room-maps-cell-to-room-dictionary-is-gone)).
+The freezing paragraph stands as written, because the sorted arrays it describes are what the map
+still answers from: It cost about 31 bytes
 for every cell in a room. A map is written once — a flood adds cells one at a time, which a sorted
 array cannot — and then read for the life of the grid, so the dictionary is what a *running* pass
 writes into and is replaced when the pass completes by a sorted `long[]` of cell keys and a parallel
@@ -318,6 +328,7 @@ counted per cell, which is §8 and §9.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | §4 said room cells are held twice. They are held once: the cell-to-room dictionary is gone, not merely replaced at publish — nothing read it while a pass ran, so the frozen arrays are built from the room lists instead. |
 | 2026-08-27 | `GridModel`'s indexes are 43 B/block from 77: the dictionary from block key to list slot is gone, because a block can carry its slot the way it already carries its node index ([performance.md](performance.md#pass-3-iteration-7--a-block-carries-its-grid-slot)). `BlockInstance` is 216 from 208, the four bytes of that slot and its padding. Retained 739, peak 967. **And a figure this page has never carried is now measured**: a room-mapping pass *allocates* 253 MB at 505,566 blocks — per-room cell lists, the cell-to-room dictionary, the frozen arrays and the radix scratch — against nothing at all for the link build, the exposure refresh and a settled step. Retained memory is what this page is about; that transient is what makes the room pass the one stage whose timings will not resolve. |
 | 2026-08-27 | `BlockInstance` is 208 B/block from 240: a block's live and structural surface arrays are one array unless it is a door standing open ([performance.md](performance.md#pass-2-iteration-9--a-blocks-two-surface-layers-share-one-array-unless-it-is-a-door)). Retained 765, peak 993. |
 | 2026-08-26 | Re-took the census-hull column: retained **797 B/block** and peak **999**, from 1,023 and 1,179. The surface map is 35 B/block from 68 (both layers in one packed entry, keyed on a `long`), the grid index 77 from 87 (the same key) and the room map 68 from 128 (a bitset rather than a hash set of solid cells); the mapper keeps a sealing byte per bounding cell it did not before and the peak still fell. The benchmark's own row labels said *two dictionaries* and *a visited set*, and now say what is there. |
