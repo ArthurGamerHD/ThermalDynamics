@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Opened pass 4 on the figure pass 3 ended with: the room pass allocated 253 MB per execution. Its first iteration removed 149 MB of that, and a quarter of the stage. |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
 
 ## Pass 2, iteration 4 — the interior scan skips visited cells a word at a time
@@ -1093,6 +1094,62 @@ links canonical (sorting them by node index), which is itself a change that move
 and needs the byte-identical scenario baselines re-recorded in its own commit. That is a designed
 change with a measured prize, and it belongs to a pass that can start with it rather than reach it
 ninth.
+
+## Pass 4, iterations
+
+Pass 3 ended by naming this pass's subject: the room pass allocates 253 MB per execution where every
+other stage allocates nothing, and a stage bound by allocation is a stage whose timings will not
+resolve a few per cent. So this pass counts bytes first and instructions second, and the iteration
+table carries an allocation column for that reason.
+
+| # | Subject | Verdict | Where |
+| ---: | --- | --- | --- |
+| 1 | The room map's cell-to-room dictionary is gone, not merely rebuilt | **kept** — rooms 0.75, and 149 MB of the 253 with it | [Iteration 1](#pass-4-iteration-1--the-room-maps-cell-to-room-dictionary-is-gone) |
+
+## Pass 4, iteration 1 — the room map's cell-to-room dictionary is gone
+
+`RoomMap` held every room cell twice: once in the room's own list, and once as a key in
+`Dictionary<long, int> roomIndexByCell`. At half a million blocks that second copy is **1.5 million
+hash inserts taken during the flood** — inside the hot loop, growing and rehashing as it goes — and
+pass 2 had already established that a probe of it per cell is a cache miss per cell.
+
+What makes it removable is not a cheaper structure but a fact about when it is read: **nothing asks
+a room map which room a cell is in while the pass that builds it is running.** The flood asks the
+membership *bitset* (iteration 3 of pass 3), never the index; the solver, the audit and exposure all
+ask after `Freeze()`. The dictionary was written 1.5 million times, read zero times, and then
+enumerated once at the end to build the sorted arrays that answer every real query.
+
+So it is deleted. `Freeze()` builds `frozenKeys`/`frozenRooms` by walking the surviving rooms —
+which hold the same cells, with each cell's room already known by which list it is in — and radix
+sorts them, the same sort iteration 8 of pass 2 measured. `RoomAt` returns −1 before a freeze, which
+is the honest answer and is now the documented contract: *a working map is private until it is
+published*. `DropEmptyRooms` no longer renumbers anything, because there is no longer a second table
+of indices to keep in step with the first.
+
+**What it was worth.** `bench stages --stages rooms,exposure`, before against after, the two core
+DLLs proven different, two rounds, best of fifteen within a round, fastest round kept. **Exposure is
+the control**: it runs on the frozen map, this change does not touch how it reads, and it must not
+move.
+
+| stage, blocks | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| rooms, 126,731 | 45.31 ms | **35.57 ms** | **0.79** |
+| rooms, 505,566 | 257.99 ms | **193.21 ms** | **0.75** |
+| exposure, 126,731 (control) | 13.17 ms | 11.42 ms | 0.87 |
+| exposure, 505,566 (control) | 52.55 ms | 51.55 ms | 0.98 |
+| **allocated, one room pass** | | | |
+| 126,731 | 34,844 KB | **17,717 KB** | **0.51** |
+| 505,566 | 258,882 KB | **106,095 KB** | **0.41** |
+
+Cell-visit counters are identical on both legs at both sizes (1,622,649 and 7,216,527), which is
+what says the two legs did the same work; the scenario baselines are byte-identical, which is what
+says they got the same answer.
+
+**Read the allocation rows before the millisecond rows.** A quarter of a gigabyte per execution
+became a hundred megabytes, and the timing moved by a quarter — that is the shape pass 3 predicted,
+and it is also why this stage's *spread* is still 178 % at the large rung: 104 MB is still 104 MB.
+The remaining bytes are the per-room cell lists and their doubling copies, the frozen arrays, and
+the radix scratch, in that order of size, which is the order the rest of this pass takes them in.
 
 ---
 
