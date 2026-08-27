@@ -80,7 +80,7 @@ changed category**, which is the useful result: the boundary was right and its s
 not. The consequence is still what makes a rule worth writing down — it is the
 [one observation](#the-one-observation) above — it is simply not what separates these two piles.
 
-**A rule is not low value merely because nothing checks it.** Twenty-one of the seventy rules
+**A rule is not low value merely because nothing checks it.** Eighteen of the seventy rules
 that are still rules are unchecked and say so, and two more are *reported* rather than checked,
 which is weaker and is written as such. Restructuring `Models/` is caught by nothing and costs a
 re-export of every block model; a promote-level check gated on a forgeable field is caught by
@@ -292,8 +292,8 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **R1** | *The repository is the mod folder* | low value | P11 | absorbed into P11 |
 | **R2** | Build output and the corpus live outside it | absolute | P11 | `Directory.Build.props` |
 | **R3** | No credential is written into the tree | absolute | P11 | `CredentialScanTests` |
-| **R4** | `Models/` is not restructured | absolute | P12 | — |
-| **R5** | The workshop identity files are not regenerated | absolute | P15 | — |
+| **R4** | `Models/` is not restructured | absolute | P12 | `TheModelTreeKeepsItsShape` |
+| **R5** | The workshop identity files are not regenerated | absolute | P15 | `ShippedIdentityTests` |
 | **R6** | Vendored code is replaced, never edited | absolute | P12 | — |
 | **R7** | Every document is indexed, and every link resolves | absolute | P5 | `DocumentationTests` |
 | **R8** | Every setting is documented, wired, and read by something | absolute | P5 | `ConfigurationDocTests` `SettingsWiringTests` |
@@ -317,8 +317,8 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 
 Seventy-three rows: **sixty-three absolute, seven conditional, three low value.** The last three are
 retired as rules and kept only so a citation to them does not dangle, so seventy of these are
-rules a change can be measured against. Twenty-one of them are unchecked and say so, and two more are
-*reported* rather than checked, which is weaker and is written as such.
+rules a change can be measured against. Eighteen of them are unchecked and say so, and three more
+are *reported* rather than checked, which is weaker and is written as such.
 
 ---
 
@@ -1313,7 +1313,9 @@ Moving or renaming a folder under `Models/` silently breaks LOD switching in gam
 fix is re-exporting the models — which needs the source scene, not this repository.
 
 *Applies to:* `Models/` and everything under it.
-*Checked by:* — nothing; both `note.txt` files say so and that is all.
+*Checked by:* `ShippedIdentityTests.TheModelTreeKeepsItsShape`, which pins a digest of the sorted
+set of model paths — a **set** rather than a count, because a file added is a normal day and a file
+*moved* is the failure, and only the set tells those apart. Both `note.txt` files say so as well.
 *From:* [development.md](development.md).
 
 #### R6 — Vendored code is replaced, never edited
@@ -1500,7 +1502,9 @@ the mod API's keys and signatures.
 every subscriber stays on the old one.**
 
 *Applies to:* `modinfo.sbmi`, `metadata.mod`.
-*Checked by:* — judgement.
+*Checked by:* `ShippedIdentityTests`, which pins the workshop id and the owner and asserts the
+second file is still there. Changing the pinned id is the deliberate act, and it is one line in a
+diff.
 *From:* [development.md](development.md).
 
 ## Conditional
@@ -1695,6 +1699,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | `R4` and `R5` were both *judgement* and are checked now, by `ShippedIdentityTests`. They are the two things here that editing back does not undo: regenerating `modinfo.sbmi` publishes the mod as a new workshop item and leaves every subscriber on the old one, and moving a folder under `Models/` costs a re-export of every block that names a path in it. The model pin is a digest of the sorted **set** of paths, because a file added is a normal day and a file moved is the failure. Unchecked rules: twenty-one down to eighteen. |
 | 2026-08-26 | `E4` has a check, having been unchecked since it was written. `verdict.py` counts the corpus's blueprints and prints `*** PARTIAL: n of m ***` above everything else — the 2026-08-25 survey reads 46.2 % — and says the population is *unknown* where the corpus is not on the machine rather than assuming a dataset is whole. It is *reported* rather than enforced, and the index says so. |
 | 2026-08-26 | `R8` gained its fifth place: the bridge from the world's settings to the solver's. A field on `ThermalSettings` the bridge does not copy satisfies every other clause of the rule and is still left at its default in every world, and the suite cannot see it because a test builds the solver's copy directly. Checked in both directions now. |
 | 2026-08-26 | Added `M12` and `R17`, both from defects found the same day, and both under a principle that already existed — which is the fifteen still holding. **`M12` — a settled figure proves it settled**: `LoopCoolantMassTests` ran a ring with a source and no sink of any kind, so every arm climbed for ever and the four temperatures this repository published for the coolant density were that ramp read at step 400. Doubling the run is the whole check. **`R17` — every dial is asserted to move an outcome, not only to be read**: `R8`'s *read by something* is a grep, and `LoopStagnantTransferFraction` satisfied it while nothing multiplied by it. Four reflection-driven reach tests now enumerate every field on every properties class the simulation reads. |
