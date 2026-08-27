@@ -44,12 +44,58 @@ namespace Thermodynamics.Tests
             Assert.True(oneCell > 0, what + ": no one-cell block, so the short path never ran");
         }
 
+        /// <summary>
+        /// The face the walk reports for a neighbour is the face `ConductionBuilder.ContactFace`
+        /// works out from the two boxes — which is what lets the link builder take the walk's
+        /// answer instead of asking. A box touches another on at most one face, so there is one
+        /// right answer; this holds them equal for every neighbour of every block of a census hull
+        /// and of the mixed grid, on both the one-cell path and the boundary walk.
+        /// </summary>
         [Fact]
-        public void ACensusHullAnswersTheSameNeighboursByBothPaths()
+        public void TheWalkReportsTheFaceContactFaceWouldFind()
+        {
+            int compared = 0;
+            int multiCell = 0;
+
+            foreach (GridModel grid in new[] { CensusGrid(), MixedGrid() })
+            {
+                List<BlockInstance> neighbours = new List<BlockInstance>();
+                List<int> faces = new List<int>();
+
+                for (int b = 0; b < grid.Blocks.Count; b++)
+                {
+                    BlockInstance block = grid.Blocks[b];
+                    neighbours.Clear(); faces.Clear();
+                    grid.GetNeighbours(block, neighbours, faces);
+
+                    Assert.Equal(neighbours.Count, faces.Count);
+                    for (int i = 0; i < neighbours.Count; i++)
+                    {
+                        int expected = ConductionBuilder.ContactFace(block, neighbours[i]);
+                        Assert.True(expected == faces[i],
+                            block + " meets " + neighbours[i] + " across " + Face.Name(faces[i])
+                            + " by the walk and " + Face.Name(expected) + " by the boxes");
+                        compared++;
+                    }
+                    if (block.CellCount > 1) multiCell++;
+                }
+            }
+
+            Assert.True(compared > 0, "no neighbour was compared");
+            Assert.True(multiCell > 0, "no multi-cell block across either fixture, so the boundary walk's face was never checked");
+        }
+
+        private static GridModel CensusGrid()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", 2000));
-            AssertSame(builder.Grid, "census hull");
+            return builder.Grid;
+        }
+
+        [Fact]
+        public void ACensusHullAnswersTheSameNeighboursByBothPaths()
+        {
+            AssertSame(CensusGrid(), "census hull");
         }
 
         /// <summary>
@@ -57,8 +103,13 @@ namespace Thermodynamics.Tests
         /// several faces and a multi-cell block has many one-cell neighbours on one face — both of
         /// the shapes the deduplication exists for, on the side of the query that skips it.
         /// </summary>
-        [Fact]
-        public void AMixedGridAnswersTheSameNeighboursByBothPaths()
+        private static GridModel MixedGrid()
+        {
+            GridBuilder builder = MixedBuilder();
+            return builder.Grid;
+        }
+
+        private static GridBuilder MixedBuilder()
         {
             GridBuilder builder = GridBuilder.Large();
             BlockModel unit = Catalog.LightArmor();
@@ -75,6 +126,14 @@ namespace Thermodynamics.Tests
                 builder.Place(unit, new Vector3I(x, 3, z));
             }
             for (int y = 0; y < 3; y++) builder.Place(unit, new Vector3I(-1, y, 1));
+
+            return builder;
+        }
+
+        [Fact]
+        public void AMixedGridAnswersTheSameNeighboursByBothPaths()
+        {
+            GridBuilder builder = MixedBuilder();
 
             int multi = 0;
             for (int b = 0; b < builder.Grid.Blocks.Count; b++) if (builder.Grid.Blocks[b].CellCount > 1) multi++;

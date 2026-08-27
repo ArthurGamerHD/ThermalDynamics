@@ -251,6 +251,19 @@ namespace Thermodynamics.Core
         /// </summary>
         public void GetNeighbours(BlockInstance block, List<BlockInstance> results)
         {
+            GetNeighbours(block, results, null);
+        }
+
+        /// <summary>
+        /// The same query, also reporting the grid-space face of <paramref name="block"/> each
+        /// neighbour was found across — which the walk knows, and which the link builder otherwise
+        /// asks <c>ConductionBuilder.ContactFace</c> to work out again from two boxes. A box touches
+        /// another on at most one face, so the two answers are the same one;
+        /// `GridModelAdjacencyTests` holds them together. Pass null to ignore the faces.
+        /// See performance.md, Pass 3, Iteration 9.
+        /// </summary>
+        public void GetNeighbours(BlockInstance block, List<BlockInstance> results, List<int> faces)
+        {
             if (block == null || results == null) return;
 
             // A one-cell block — nearly every block on a hull — has six candidate cells, one per
@@ -267,11 +280,12 @@ namespace Thermodynamics.Core
                     BlockInstance other = GetAtCell(cell + Face.Offsets[face]);
                     if (other == null || other == block) continue;
                     results.Add(other);
+                    if (faces != null) faces.Add(face);
                 }
                 return;
             }
 
-            GetNeighboursWalkingTheBoundary(block, results);
+            GetNeighboursWalkingTheBoundary(block, results, faces);
         }
 
         /// <summary>
@@ -280,6 +294,12 @@ namespace Thermodynamics.Core
         /// can hold the one-cell path to it.
         /// </summary>
         public void GetNeighboursWalkingTheBoundary(BlockInstance block, List<BlockInstance> results)
+        {
+            GetNeighboursWalkingTheBoundary(block, results, null);
+        }
+
+        /// <summary>The boundary walk, also reporting the face each neighbour was found across.</summary>
+        public void GetNeighboursWalkingTheBoundary(BlockInstance block, List<BlockInstance> results, List<int> faces)
         {
             if (block == null || results == null) return;
 
@@ -309,7 +329,10 @@ namespace Thermodynamics.Core
 
                         BlockInstance other = GetAtCell(cell + offset);
                         if (other == null || other == block) continue;
-                        if (!results.Contains(other)) results.Add(other);
+                        if (results.Contains(other)) continue;
+
+                        results.Add(other);
+                        if (faces != null) faces.Add(face);
                     }
                 }
             }

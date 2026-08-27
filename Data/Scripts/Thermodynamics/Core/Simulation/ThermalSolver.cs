@@ -301,6 +301,12 @@ namespace Thermodynamics.Core
         private readonly int[] exposureScratch = new int[Face.Count];
         private readonly List<BlockInstance> neighbourScratch = new List<BlockInstance>();
 
+        /// <summary>
+        /// The face each scratch neighbour was found across, when the adjacency is this grid's own
+        /// walk and can say. Empty when it cannot, and the builder works the face out instead.
+        /// </summary>
+        private readonly List<int> neighbourFaces = new List<int>();
+
         private IBlockAdjacency adjacency;
 
         /// <summary>
@@ -723,12 +729,18 @@ namespace Thermodynamics.Core
 
             IBlockAdjacency adjacency = Adjacency;
 
+            // The grid's own walk reports which face each neighbour was found across; any other
+            // adjacency answers only with the neighbours, and the face is worked out per pair.
+            GridModel walked = adjacency as GridModel;
+
             for (int i = 0; i < nodes.Count; i++)
             {
                 ThermalNode a = nodes[i];
 
                 neighbourScratch.Clear();
-                adjacency.GetNeighbours(a.Block, neighbourScratch);
+                neighbourFaces.Clear();
+                if (walked != null) walked.GetNeighbours(a.Block, neighbourScratch, neighbourFaces);
+                else adjacency.GetNeighbours(a.Block, neighbourScratch);
 
                 for (int n = 0; n < neighbourScratch.Count; n++)
                 {
@@ -738,7 +750,9 @@ namespace Thermodynamics.Core
                     // Visit each pair once.
                     if (b.Index <= a.Index) continue;
 
-                    int face = ConductionBuilder.ContactFace(a.Block, b.Block);
+                    int face = neighbourFaces.Count == neighbourScratch.Count
+                        ? neighbourFaces[n]
+                        : ConductionBuilder.ContactFace(a.Block, b.Block);
                     if (face < 0) continue;
 
                     int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block, face);
@@ -805,6 +819,10 @@ namespace Thermodynamics.Core
             bool buffersGrew = EnsureBuffers();
 
             IBlockAdjacency adjacency = Adjacency;
+
+            // The grid's own walk reports which face each neighbour was found across; any other
+            // adjacency answers only with the neighbours, and the face is worked out per pair.
+            GridModel walked = adjacency as GridModel;
             int firstNewLink = links.Count;
 
             for (int p = 0; p < pendingLinkNodes.Count; p++)
@@ -815,7 +833,9 @@ namespace Thermodynamics.Core
                 if (a.Index < 0 || a.Index >= nodes.Count || nodes[a.Index] != a) continue;
 
                 neighbourScratch.Clear();
-                adjacency.GetNeighbours(a.Block, neighbourScratch);
+                neighbourFaces.Clear();
+                if (walked != null) walked.GetNeighbours(a.Block, neighbourScratch, neighbourFaces);
+                else adjacency.GetNeighbours(a.Block, neighbourScratch);
 
                 for (int n = 0; n < neighbourScratch.Count; n++)
                 {
@@ -827,7 +847,9 @@ namespace Thermodynamics.Core
                     // pending, so its links are never skipped here.
                     if (b.PendingLinks && b.Index <= a.Index) continue;
 
-                    int face = ConductionBuilder.ContactFace(a.Block, b.Block);
+                    int face = neighbourFaces.Count == neighbourScratch.Count
+                        ? neighbourFaces[n]
+                        : ConductionBuilder.ContactFace(a.Block, b.Block);
                     if (face < 0) continue;
 
                     int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block, face);
