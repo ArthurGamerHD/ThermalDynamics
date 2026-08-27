@@ -676,5 +676,25 @@ world waits on a stale exposure map after a block is placed ([backlog.md](backlo
 the same reason: the first tick of the remap does more of the scan. The milliseconds per pass are
 the ladder's and are read for direction only; the stage instrument's figure is below.
 
+## Pass 2, iteration 5 — the environment pass reads one row per node
+
+**What was tried.** The pass read four parallel arrays per node every substep — exposed faces,
+the radiation coefficient, the convection row and the source row — beside the temperature it reads
+and the watts it writes. One `EnvironmentRow` struct per node puts the four in one array: one
+stream and one bounds check where there were four of each, with the fill writing the last two
+fields once a step. Same arithmetic in the same order, so the five bit-identity suites and the
+byte-identical scenarios pass unchanged. The first pass's iteration 6 tried the same layout on the
+*link* side and measured nothing; the node side is the gather the loop actually pays for, which is
+why it is worth asking again. Judged on `bench stages --stages solver`, the settled step alone.
+
 , with its start figures taken by the instrument the pass begins by putting in the tree. |
+| 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-26 | Opened pass 2 on the page, with its start figures taken by the instrument the pass begins by putting in the tree. |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
