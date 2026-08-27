@@ -47,6 +47,11 @@ namespace Thermodynamics.Tests
 
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             simulation.Rooms.SnapshotSealing = snapshot;
+
+            // The subject here is the sealing snapshot, and only that. The run walk is live only
+            // with a snapshot, so leaving it on would vary two things at once and this comparison
+            // is order-sensitive (`P6`). `RoomSpanFloodTests` is where the walk is judged.
+            simulation.Rooms.SpanFlood = false;
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
             simulation.RebuildAll();
             return simulation;
@@ -58,6 +63,11 @@ namespace Thermodynamics.Tests
             builder.PlaceCensus(LoadShapes.Build("ship", 8000));
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             simulation.Rooms.SnapshotSealing = snapshot;
+
+            // The subject here is the sealing snapshot, and only that. The run walk is live only
+            // with a snapshot, so leaving it on would vary two things at once and this comparison
+            // is order-sensitive (`P6`). `RoomSpanFloodTests` is where the walk is judged.
+            simulation.Rooms.SpanFlood = false;
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
             simulation.RebuildAll();
             return simulation;

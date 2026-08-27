@@ -329,6 +329,14 @@ namespace Thermodynamics.Core
                 {
                     if (frontierCount > 0)
                     {
+                        if (RunWalkLive)
+                        {
+                            int cells = StepInteriorRun(cellBudget - spent);
+                            spent += cells;
+                            Work.RoomCellsVisited += cells;
+                            continue;
+                        }
+
                         StepInterior();
                         spent++;
                         Work.RoomCellsVisited++;
@@ -604,6 +612,126 @@ namespace Thermodynamics.Core
             return length;
         }
 
+        /// <summary>
+        /// The same walk for the inside of a room, and it has one thing to do that the external one
+        /// does not: a cell it reaches is either air, which joins the room, or sealed structure,
+        /// which is recorded as the room's boundary and stops the walk going further that way.
+        ///
+        /// <para>
+        /// **A room's cells now arrive in run order rather than in the order a queue emptied.** That
+        /// is only safe because iteration 4 made a room's air a function of its contents rather than
+        /// of the path through it; before that, this change would have moved every player's air
+        /// temperatures in the last bits.
+        /// </para>
+        /// </summary>
+        /// <param name="most">Cells this run may take, being what is left of the tick's budget.</param>
+        private int StepInteriorRun(int most)
+        {
+            Vector3I seed = FrontierDequeue();
+
+            long index = SealingIndex(seed);
+            if (index < 0 || visited.ContainsIndex(index)) return 1;
+
+            if (most < 1) most = 1;
+            int taken = 1;
+
+            int low = seed.X;
+            long lowIndex = index;
+            while (taken < most && ReachesLow(low, lowIndex))
+            {
+                taken++;
+                if (TakeIfStructure(lowIndex - 1, new Vector3I(low - 1, seed.Y, seed.Z))) break;
+                low--;
+                lowIndex--;
+            }
+
+            if (taken >= most && ReachesLow(low, lowIndex))
+            {
+                FrontierEnqueue(new Vector3I(low - 1, seed.Y, seed.Z));
+            }
+
+            int high = seed.X;
+            long highIndex = index;
+            while (taken < most && ReachesHigh(high, highIndex))
+            {
+                taken++;
+                if (TakeIfStructure(highIndex + 1, new Vector3I(high + 1, seed.Y, seed.Z))) break;
+                high++;
+                highIndex++;
+            }
+
+            if (taken >= most && ReachesHigh(high, highIndex))
+            {
+                FrontierEnqueue(new Vector3I(high + 1, seed.Y, seed.Z));
+            }
+
+            for (long i = lowIndex; i <= highIndex; i++)
+            {
+                visited.AddIndex(i);
+                working.AddToRoom(currentRoom, new Vector3I(low + (int)(i - lowIndex), seed.Y, seed.Z));
+            }
+
+            for (int f = 0; f < LateralFaces.Length; f++)
+            {
+                int face = LateralFaces[f];
+                Vector3I offset = Face.Offsets[face];
+
+                int y = seed.Y + offset.Y;
+                if (y < searchMin.Y || y >= searchMaxExclusive.Y) continue;
+
+                int z = seed.Z + offset.Z;
+                if (z < searchMin.Z || z >= searchMaxExclusive.Z) continue;
+
+                long delta = faceDelta[face];
+                int opposite = Face.Opposite(face);
+                bool inStretch = false;
+
+                for (long i = lowIndex; i <= highIndex; i++)
+                {
+                    long neighbour = i + delta;
+
+                    if ((sealing[i] & (1 << face)) != 0
+                        || visited.ContainsIndex(neighbour)
+                        || (sealing[neighbour] & (1 << opposite)) != 0)
+                    {
+                        inStretch = false;
+                        continue;
+                    }
+
+                    int x = low + (int)(i - lowIndex);
+                    Vector3I cell = new Vector3I(x, y, z);
+
+                    // Structure bounding the room: recorded here and not walked into, so it also
+                    // breaks the stretch beside it.
+                    if (TakeIfStructure(neighbour, cell))
+                    {
+                        inStretch = false;
+                        continue;
+                    }
+
+                    if (inStretch) continue;
+
+                    inStretch = true;
+                    FrontierEnqueue(cell);
+                }
+            }
+
+            return taken;
+        }
+
+        /// <summary>
+        /// Records a cell as sealed structure if that is what it is, and says so. Marks it visited
+        /// either way it is structure, because a boundary cell is classified once and never walked.
+        /// </summary>
+        private bool TakeIfStructure(long index, Vector3I cell)
+        {
+            if (!IsStructureAt(index, cell)) return false;
+
+            visited.AddIndex(index);
+            working.AddSolid(cell);
+            return true;
+        }
+
         /// <summary>Whether the run may extend one cell further down X from here.</summary>
         private bool ReachesLow(int x, long index)
         {
@@ -795,10 +923,30 @@ namespace Thermodynamics.Core
                     // scan's job is mostly to skip. The bitset does that a word at a time, and the
                     // charge is per word looked at rather than per cell skipped: still cell by cell
                     // where cells are unvisited, and never more than one unit per sixty-four.
+                    // **The skip stops at what the tick has left.** A word looked at is a unit
+                    // charged, and the skip used to run to the end of the box in one call and then
+                    // charge for all of it — so a tick could overshoot its budget by however far
+                    // the last skip happened to reach. It is capped to the sixty-four cells a
+                    // remaining unit buys, and the cursor resumes next tick.
+                    // The window ends where the last word this tick can afford ends, so the skip
+                    // examines at most as many words as there are units left — the word holding the
+                    // end is examined too, which an end of `scanIndex + units * 64` would make one
+                    // too many.
+                    long window = ((scanIndex >> 6) + (budget - spent)) << 6;
+                    if (window > sealingCells) window = sealingCells;
+
                     int examined;
-                    long next = visited.NextClearIndex(scanIndex, sealingCells, out examined);
+                    long next = visited.NextClearIndex(scanIndex, window, out examined);
                     spent += examined;
                     Work.RoomCellsVisited += examined;
+
+                    if (next >= window && window < sealingCells)
+                    {
+                        // The window closed before an unvisited cell turned up. Move to where it
+                        // closed and let the next tick carry on from there.
+                        MoveScanTo(next);
+                        return ScanResult.BudgetSpent;
+                    }
 
                     if (next > scanIndex) MoveScanTo(next);
                     if (scanCursor.Z >= searchMaxExclusive.Z) return ScanResult.Exhausted;
@@ -812,13 +960,16 @@ namespace Thermodynamics.Core
                 {
                     // The cell at `index` is unvisited by construction of the skip above, so the
                     // charge for it was the word that found it.
-                    visited.AddIndex(index);
-
                     if (IsStructureAt(index, cell))
                     {
+                        visited.AddIndex(index);
                         working.AddSolid(cell);
                         continue;
                     }
+
+                    // A run walk takes its own seed: it has to extend *through* it, so it cannot
+                    // be marked or filed here. The cell walk marks at the enqueue, as before.
+                    if (!RunWalkLive) visited.AddIndex(index);
                 }
                 else
                 {
@@ -836,7 +987,7 @@ namespace Thermodynamics.Core
                 }
 
                 currentRoom = working.BeginRoom();
-                working.AddToRoom(currentRoom, cell);
+                if (!RunWalkLive) working.AddToRoom(currentRoom, cell);
                 FrontierEnqueue(cell);
                 return ScanResult.Found;
             }
