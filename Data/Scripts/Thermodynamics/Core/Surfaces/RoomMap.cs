@@ -33,11 +33,24 @@ namespace Thermodynamics.Core
         private readonly CellBitset solid = new CellBitset();
         /// <summary>
         /// The cells of each room, in the order the flood reached them. Lists rather than sets:
-        /// containment goes to <see cref="roomIndexByCell"/>, and the flood cannot offer a cell twice
-        /// because every add is behind a visited bitset. See memory.md, 4.
+        /// containment goes to the frozen lookup these are the source of, and the flood cannot offer
+        /// a cell twice because every add is behind a visited bitset. See memory.md, 4.
         /// </summary>
         private readonly List<List<Vector3I>> rooms = new List<List<Vector3I>>();
-        private Dictionary<long, int> roomIndexByCell = new Dictionary<long, int>();
+        /// <summary>
+        /// Cells across every room, counted rather than held.
+        ///
+        /// <para>
+        /// **The cell-to-room dictionary is gone.** It was written once per room cell during the
+        /// flood, read by nobody while the pass ran — a working map is private until it is
+        /// published — and enumerated once at the end to build the frozen arrays, which
+        /// <see cref="Rooms"/> can supply directly since it holds the same cells with their room
+        /// already known. At half a million blocks that was 1.5 million hash inserts and something
+        /// like ninety megabytes of the two hundred and fifty the pass allocated.
+        /// See performance.md, Pass 4, Iteration 1.
+        /// </para>
+        /// </summary>
+        private int roomCellCount;
 
         /// <summary>
         /// Whether each cell of the search box belongs to some room, one bit each — the question
@@ -57,8 +70,8 @@ namespace Thermodynamics.Core
 
 
         /// <summary>
-        /// The same answer as <see cref="roomIndexByCell"/>, as two sorted arrays, once a pass has
-        /// completed. Null while one is running.
+        /// Which room each cell belongs to, as two sorted arrays, once a pass has completed. Null
+        /// while one is running, when nothing outside the pass can ask.
         ///
         /// <para>
         /// **A map is written once and then read for the life of the grid**, and a dictionary keyed
@@ -117,7 +130,7 @@ namespace Thermodynamics.Core
         /// <summary>Cells belonging to some enclosed room, across every room.</summary>
         public int RoomCellCount
         {
-            get { return frozenKeys != null ? frozenCount : roomIndexByCell.Count; }
+            get { return frozenKeys != null ? frozenCount : roomCellCount; }
         }
 
         /// <summary>
@@ -203,13 +216,11 @@ namespace Thermodynamics.Core
         /// </summary>
         private int RoomAt(Vector3I cell)
         {
-            long key = GridMath.Key(cell);
+            // Only a published map answers this, and publishing freezes: a pass in flight has no
+            // lookup to consult because nothing outside it can ask.
+            if (frozenKeys == null) return -1;
 
-            if (frozenKeys == null)
-            {
-                int index;
-                return roomIndexByCell.TryGetValue(key, out index) ? index : -1;
-            }
+            long key = GridMath.Key(cell);
 
             int low = 0;
             int high = frozenCount - 1;
@@ -233,16 +244,22 @@ namespace Thermodynamics.Core
         /// </summary>
         private void Freeze()
         {
-            frozenCount = roomIndexByCell.Count;
+            frozenCount = roomCellCount;
             frozenKeys = new long[frozenCount];
             frozenRooms = new int[frozenCount];
 
+            // From the rooms themselves, which hold every cell with its room already known — and
+            // after any empty room has been dropped, so the numbering here is the surviving one.
             int at = 0;
-            foreach (KeyValuePair<long, int> entry in roomIndexByCell)
+            for (int r = 0; r < rooms.Count; r++)
             {
-                frozenKeys[at] = entry.Key;
-                frozenRooms[at] = entry.Value;
-                at++;
+                List<Vector3I> cells = rooms[r];
+                for (int i = 0; i < cells.Count && at < frozenCount; i++)
+                {
+                    frozenKeys[at] = GridMath.Key(cells[i]);
+                    frozenRooms[at] = r;
+                    at++;
+                }
             }
 
             // Sorted together: the keys are the search order and the rooms ride along with them.
@@ -252,12 +269,6 @@ namespace Thermodynamics.Core
             // box's first, so the offset from it is a non-negative number a few passes of eleven
             // bits cover, and the passes skip themselves where every offset's digit is zero.
             RadixSortByKey(frozenKeys, frozenRooms, frozenCount, GridMath.Key(searchMin));
-
-            // Replaced rather than cleared: `Clear` keeps a dictionary's buckets and entries, so
-            // freezing into arrays beside them would *add* twelve bytes a cell rather than trade
-            // thirty-one for them. `TrimExcess` would do it and does not exist on .NET Framework
-            // 4.8, which is what the game compiles against (`C3`).
-            roomIndexByCell = new Dictionary<long, int>();
         }
 
         /// <summary>
@@ -353,7 +364,7 @@ namespace Thermodynamics.Core
 
             rooms[roomIndex].Add(cell);
             roomCells.Add(cell);
-            roomIndexByCell[GridMath.Key(cell)] = roomIndex;
+            roomCellCount++;
         }
 
         internal void AddPortal(RoomPortal portal)
@@ -525,20 +536,13 @@ namespace Thermodynamics.Core
                     continue;
                 }
 
+                // Nothing to renumber: the freeze below reads the surviving list, so a dropped
+                // room takes its own index out of the numbering by being gone.
                 rooms.RemoveAt(i);
-                List<long> affected = new List<long>();
-                foreach (KeyValuePair<long, int> entry in roomIndexByCell)
-                {
-                    if (entry.Value > i) affected.Add(entry.Key);
-                }
-                for (int a = 0; a < affected.Count; a++)
-                {
-                    roomIndexByCell[affected[a]] = roomIndexByCell[affected[a]] - 1;
-                }
             }
 
-            // The map is written once and read for the life of the grid, so this is where the
-            // dictionary stops earning its bytes.
+            // The map is written once and read for the life of the grid, so this is where its
+            // lookup is built — from the rooms, in one pass, ordered by radix.
             Freeze();
         }
     }
