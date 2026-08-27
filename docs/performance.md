@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Pass 4, iteration 2: the room cells are one store, hinted from the pass before. Half the remaining allocation, the worst pass a tenth quicker, the best unmoved — and the same commit reading 30 % apart in two windows. |
 | 2026-08-27 | Opened pass 4 on the figure pass 3 ended with: the room pass allocated 253 MB per execution. Its first iteration removed 149 MB of that, and a quarter of the stage. |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
 
@@ -1105,6 +1106,7 @@ table carries an allocation column for that reason.
 | # | Subject | Verdict | Where |
 | ---: | --- | --- | --- |
 | 1 | The room map's cell-to-room dictionary is gone, not merely rebuilt | **kept** — rooms 0.75, and 149 MB of the 253 with it | [Iteration 1](#pass-4-iteration-1--the-room-maps-cell-to-room-dictionary-is-gone) |
+| 2 | Every room's cells in one store, sized from the pass before | **kept** — another 50 MB, and the worst pass 0.89; the best did not move | [Iteration 2](#pass-4-iteration-2--every-rooms-cells-in-one-store) |
 
 ## Pass 4, iteration 1 — the room map's cell-to-room dictionary is gone
 
@@ -1150,6 +1152,49 @@ became a hundred megabytes, and the timing moved by a quarter — that is the sh
 and it is also why this stage's *spread* is still 178 % at the large rung: 104 MB is still 104 MB.
 The remaining bytes are the per-room cell lists and their doubling copies, the frozen arrays, and
 the radix scratch, in that order of size, which is the order the rest of this pass takes them in.
+
+## Pass 4, iteration 2 — every room's cells in one store
+
+A room was a `List<Vector3I>` of its own. The flood fills one room to exhaustion before it opens the
+next — only the current room is ever added to — so a room's cells are **contiguous by
+construction**, and a room can be a start and a length into one shared array instead. `AddToRoom`
+refuses any room but the open one, because the failure that would otherwise follow is silent: a cell
+filed under a closed room's index lands at the end of the store and is read as the current room's.
+
+What that buys is not the room objects. This hull has a few hundred rooms, not thousands. It is that
+**a rebuild can be told its size in advance**: the pass before it found a number of room cells, and a
+hull that gained or lost a block finds very nearly the same number, so `HintRoomCells` sizes the
+store once and the pass neither doubles into it nor trims it back. A list per room could not be
+hinted, because the flood does not know how large any *one* room will be until it has finished it.
+
+**What it was worth.** Same instrument, same rules, exposure as the control:
+
+| stage, 505,566 blocks | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| rooms, best of 15 | 149.47 ms | 146.31 ms | 0.98 — *inside the floor* |
+| rooms, **worst of 15** | 445.87 ms | **400.60 ms** | **0.90** |
+| rooms, worst of 15 (round 2) | 445.45 ms | **388.88 ms** | **0.87** |
+| rooms, spread | 198 % | **174 %** | |
+| exposure (control) | 38.12 ms | 36.76 ms | 0.96 |
+| **allocated, one room pass** | 106,095 KB | **54,616 KB** | **0.51** |
+| allocated, 126,731 blocks | 17,717 KB | **10,026 KB** | 0.57 |
+
+**The best case did not move and the worst case did, and that is the finding.** Iteration 1 cut
+allocation by 59 % and the stage got a quarter faster; iteration 2 cut it by another 49 % and the
+stage did not move at all. The difference is that iteration 1 also removed 1.5 million hash inserts —
+*work* — where this removes only *garbage*. Garbage does not lengthen the pass that makes it; it
+lengthens whichever pass the collector happens to land in, which is why it shows up in the worst of
+fifteen and in the spread rather than in the best. A load path that runs repeatedly while a player
+waits is judged by its worst tick as much as its best, so this is kept — but on the tail and the
+allocation column, not on a claim that the room pass got faster, which by `M5` it did not.
+
+**A caution the two iterations together make unavoidable: milliseconds do not survive leaving their
+window.** Commit `321c062` is the *after* leg of iteration 1 and the *before* leg of iteration 2. It
+read **193 ms** in the first window and **149 ms** in the second — the same code, the same size, the
+same instrument, thirty per cent apart. Both pairings are interleaved and both rounds within each
+agree, so both ratios stand; what does not stand is any comparison of an absolute figure in one
+table with an absolute figure in another. That is what `M7` means by measuring a pass against its own
+start, and this is the clearest example of it the project has produced.
 
 ---
 

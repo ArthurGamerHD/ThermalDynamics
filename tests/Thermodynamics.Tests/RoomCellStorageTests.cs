@@ -203,10 +203,14 @@ namespace Thermodynamics.Tests
         /// that the second pass allocates two stores less than the first — passes with the hint
         /// deleted, because the first pass also sizes the mapper's one-time buffers and those alone
         /// exceed two stores. It judged nothing, which is how it was found (`E8`). Measured on this
-        /// hull instead: hinted, a rebuild allocates **47 bytes a cell**; with the hint removed,
-        /// **68.5**. The parts a hinted pass must pay for are the store, the frozen key and room
-        /// arrays and the radix scratch — about 44 bytes a cell — and an unhinted one adds a whole
-        /// store of doubling and trim copies on top. The bar sits between the two.
+        /// hull instead: hinted, a rebuild allocates **23.6 bytes a cell**; with the hint removed,
+        /// **45.1**. What a hinted pass must pay for is the cell store at twelve bytes a cell, the
+        /// room-by-rank array at four, and the sets over the box; an unhinted one adds a whole
+        /// store of doubling and trim copies on top of that. The bar sits between the two.
+        ///
+        /// **Recalibrate this when the pass's structure changes.** It was 56 when the map published
+        /// sorted key and room arrays and sorted them with scratch; those are gone
+        /// (performance.md, Pass 4, Iteration 3) and 56 no longer separated the two cases.
         /// </summary>
         [Fact]
         public void TheMapperSizesARebuildFromThePassBeforeIt()
@@ -228,11 +232,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(cells, map.RoomCellCount);
             Assert.Equal(map.RoomCellCount, map.RoomCellCapacity);
 
-            long bound = cells * 56L;
+            long bound = cells * 34L;
             Assert.True(second < bound,
                 "the rebuild allocated " + second.ToString("n0") + " bytes for "
                 + cells.ToString("n0") + " room cells — " + (second / (double)cells).ToString("n1")
-                + " a cell, against a bar of 56 — so it grew into its store and trimmed it back"
+                + " a cell, against a bar of 34 — so it grew into its store and trimmed it back"
                 + " rather than being sized from the pass before it (the first pass, buffers and"
                 + " all, allocated " + first.ToString("n0") + ")");
         }

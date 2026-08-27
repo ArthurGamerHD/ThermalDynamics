@@ -90,30 +90,34 @@ namespace Thermodynamics.Core
 
 
         /// <summary>
-        /// Which room each cell belongs to, as two sorted arrays, once a pass has completed. Null
-        /// while one is running, when nothing outside the pass can ask.
+        /// Which room each room cell belongs to, once a pass has completed: one entry per member of
+        /// <see cref="roomCells"/>, in the box's index order, read through that set's rank index.
         ///
         /// <para>
-        /// **A map is written once and then read for the life of the grid**, and a dictionary keyed
-        /// on `Vector3I` costs about 31 bytes a cell to hold twelve bytes of answer — 8.7 MB at
-        /// 126,000 blocks and 47 at half a million, which is the row that still climbs with grid
-        /// size (backlog.md `E3`). Frozen into a sorted `long[]` of
-        /// cell keys and a parallel `int[]` of rooms, the same answer is twelve bytes a cell and a
-        /// binary search over contiguous memory rather than a hash and a bucket chase.
+        /// **A map is written once and then read for the life of the grid.** The first form of this
+        /// was a `Dictionary&lt;Vector3I, int&gt;` at about 31 bytes a cell to hold twelve bytes of
+        /// answer. The second was a sorted `long[]` of keys and a parallel `int[]` of rooms —
+        /// twelve bytes a cell and a binary search, which is twenty dependent loads through twelve
+        /// megabytes at half a million blocks, and which had to be *sorted* on the tick a player is
+        /// waiting on.
         /// </para>
         ///
         /// <para>
-        /// They are built at the freeze rather than as the flood goes, because a flood adds cells
-        /// one at a time and a sorted array cannot — and because nothing outside the pass may ask a
-        /// map that is still being written. The room cells the freeze reads are the same cells the
-        /// solver reads afterwards, so this is a sort of what is already held, not a second copy of
-        /// it kept in step.
+        /// This is the third and it is neither. The membership set already knows which cells are in
+        /// rooms and already orders them; ranking it says *which* member a cell is, so the room can
+        /// be an array lookup at that rank. Four bytes a cell, no keys held at all, no sort, and a
+        /// query that is two loads and a popcount rather than a search.
+        /// See performance.md, Pass 4, Iteration 3.
         /// </para>
         /// </summary>
-        private long[] frozenKeys;
-        private int[] frozenRooms;
-        private int frozenCount;
+        private int[] roomByRank = EmptyRanges;
 
+        /// <summary>
+        /// Whether a pass has completed and published its answers. A working map is private: it
+        /// returns "no room" to every query until it is frozen, because a half-filled flood has no
+        /// answer that will still be true when it finishes.
+        /// </summary>
+        private bool frozen;
 
         private readonly List<RoomPortal> portals = new List<RoomPortal>();
 
@@ -165,7 +169,7 @@ namespace Thermodynamics.Core
         /// <summary>Cells belonging to some enclosed room, across every room.</summary>
         public int RoomCellCount
         {
-            get { return frozenKeys != null ? frozenCount : roomCellCount; }
+            get { return roomCellCount; }
         }
 
         /// <summary>
@@ -323,60 +327,56 @@ namespace Thermodynamics.Core
         /// </summary>
         private int RoomAt(Vector3I cell)
         {
-            // Only a published map answers this, and publishing freezes: a pass in flight has no
-            // lookup to consult because nothing outside it can ask.
-            if (frozenKeys == null) return -1;
-
-            long key = GridMath.Key(cell);
-
-            int low = 0;
-            int high = frozenCount - 1;
-
-            while (low <= high)
-            {
-                int middle = low + ((high - low) >> 1);
-                long found = frozenKeys[middle];
-
-                if (found == key) return frozenRooms[middle];
-                if (found < key) low = middle + 1;
-                else high = middle - 1;
-            }
-
-            return -1;
+            return RoomAtIndex(roomCells.IndexOf(cell));
         }
 
         /// <summary>
-        /// Builds the sorted arrays that answer <see cref="RoomAt"/>, from the rooms themselves.
-        /// Called once, when a pass completes and the map stops being written to.
+        /// The same answer for a cell whose box index the caller already has, which
+        /// <see cref="IsExternal"/> does — the solid set and the room set cover the same box, so
+        /// one index serves both.
+        /// </summary>
+        private int RoomAtIndex(long index)
+        {
+            // Only a published map answers this: a pass in flight has no ranks built, because
+            // nothing outside it can ask and its own flood asks the bits rather than the ranks.
+            if (!frozen) return -1;
+            if (!roomCells.ContainsIndex(index)) return -1;
+
+            int rank = roomCells.RankOfIndex(index);
+            if (rank < 0 || rank >= roomCellCount) return -1;
+
+            return roomByRank[rank];
+        }
+
+        /// <summary>
+        /// Builds the answer <see cref="RoomAt"/> reads, from the rooms themselves. Called once,
+        /// when a pass completes and the map stops being written to.
+        ///
+        /// <para>
+        /// Two walks and no comparisons: one over the membership set's words to rank them — a
+        /// sixty-fourth of the box — and one over the room cells to write each one's room at its
+        /// rank. Where this used to sort 1.5 million keys on the tick that publishes the map, it
+        /// now touches each room cell once, in the order the rooms hold them.
+        /// </para>
         /// </summary>
         private void Freeze()
         {
-            frozenCount = roomCellCount;
-            frozenKeys = new long[frozenCount];
-            frozenRooms = new int[frozenCount];
+            roomCells.BuildRanks();
 
-            // From the rooms themselves, which hold every cell with its room already known — and
-            // after any empty room has been dropped, so the numbering here is the surviving one.
-            int at = 0;
+            if (roomByRank.Length < roomCellCount) roomByRank = new int[roomCellCount];
+
             for (int r = 0; r < roomCount; r++)
             {
                 int start = roomStarts[r];
                 int end = start + roomLengths[r];
-                for (int i = start; i < end && at < frozenCount; i++)
+                for (int i = start; i < end; i++)
                 {
-                    frozenKeys[at] = GridMath.Key(roomCellStore[i]);
-                    frozenRooms[at] = r;
-                    at++;
+                    int rank = roomCells.RankOfIndex(roomCells.IndexOf(roomCellStore[i]));
+                    if (rank >= 0 && rank < roomCellCount) roomByRank[rank] = r;
                 }
             }
 
-            // Sorted together: the keys are the search order and the rooms ride along with them.
-            // A radix sort rather than the framework's comparison sort, because this is the one
-            // call in a pass that cannot be budgeted and it lands on the tick a player is already
-            // waiting on: 1.2 million keys at half a million blocks. Every key is at or above the
-            // box's first, so the offset from it is a non-negative number a few passes of eleven
-            // bits cover, and the passes skip themselves where every offset's digit is zero.
-            RadixSortByKey(frozenKeys, frozenRooms, frozenCount, GridMath.Key(searchMin));
+            frozen = true;
         }
 
         /// <summary>
@@ -395,7 +395,7 @@ namespace Thermodynamics.Core
             // The common answer, in one bit rather than in a search: a cell in no room is outside.
             if (!roomCells.ContainsIndex(index)) return true;
 
-            int room = RoomAt(cell);
+            int room = RoomAtIndex(index);
             if (room < 0) return true;
 
             // A room standing open through a door holds no air, so what faces it faces outdoors. The
@@ -488,12 +488,11 @@ namespace Thermodynamics.Core
 
         internal void AddToRoom(int roomIndex, Vector3I cell)
         {
-            // A pass that resumed after a freeze would be answering queries from arrays that no
-            // longer match its cells. It cannot happen — a map is filled once — and dropping them
-            // is cheaper than finding out.
-            frozenKeys = null;
-            frozenRooms = null;
-            frozenCount = 0;
+            // A pass that resumed after a freeze would be answering queries from ranks that no
+            // longer match its cells. It cannot happen — a map is filled once — and saying so is
+            // cheaper than finding out. (The set drops its own ranks on the add below; this is the
+            // half that stops the map answering from them.)
+            frozen = false;
 
             // Contiguity is the whole design: a room owns a range, so only the room the flood is
             // currently filling can grow. Refusing here is how that stays true, because the failure
@@ -522,80 +521,6 @@ namespace Thermodynamics.Core
         internal void AddPortal(RoomPortal portal)
         {
             portals.Add(portal);
-        }
-
-        /// <summary>Digit width of the radix sort; 2,048 buckets, so a million keys sort in a handful of passes.</summary>
-        private const int RadixBits = 11;
-        private const int RadixBuckets = 1 << RadixBits;
-
-        /// <summary>
-        /// Sorts <paramref name="keys"/> ascending, carrying <paramref name="rooms"/> with them, by
-        /// least-significant-digit radix on <c>key − origin</c>. Exact and stable, and the same
-        /// order the comparison sort produced, which `RoomMapFreezeTests` holds against
-        /// `Array.Sort` on random keys. Scratch is two arrays of the same length, dropped after.
-        /// See performance.md, Pass 2, Iteration 8.
-        /// </summary>
-        public static void RadixSortByKey(long[] keys, int[] rooms, int count, long origin)
-        {
-            if (count < 2) return;
-
-            long largest = 0;
-            for (int i = 0; i < count; i++)
-            {
-                long offset = keys[i] - origin;
-                if (offset < 0)
-                {
-                    // A key below the origin cannot happen for a cell inside the box; if it ever
-                    // does, the comparison sort is still correct and this is the one place to say so.
-                    Array.Sort(keys, rooms, 0, count);
-                    return;
-                }
-                if (offset > largest) largest = offset;
-            }
-
-            long[] keysScratch = new long[count];
-            int[] roomsScratch = new int[count];
-            int[] counts = new int[RadixBuckets];
-
-            long[] fromKeys = keys;
-            int[] fromRooms = rooms;
-            long[] toKeys = keysScratch;
-            int[] toRooms = roomsScratch;
-
-            for (int shift = 0; shift < 64 && (largest >> shift) != 0; shift += RadixBits)
-            {
-                Array.Clear(counts, 0, RadixBuckets);
-                for (int i = 0; i < count; i++)
-                {
-                    counts[(int)(((fromKeys[i] - origin) >> shift) & (RadixBuckets - 1))]++;
-                }
-
-                int running = 0;
-                for (int b = 0; b < RadixBuckets; b++)
-                {
-                    int c = counts[b];
-                    counts[b] = running;
-                    running += c;
-                }
-
-                for (int i = 0; i < count; i++)
-                {
-                    int bucket = (int)(((fromKeys[i] - origin) >> shift) & (RadixBuckets - 1));
-                    int to = counts[bucket]++;
-                    toKeys[to] = fromKeys[i];
-                    toRooms[to] = fromRooms[i];
-                }
-
-                long[] k = fromKeys; fromKeys = toKeys; toKeys = k;
-                int[] r = fromRooms; fromRooms = toRooms; toRooms = r;
-            }
-
-            // An odd number of passes leaves the result in the scratch arrays.
-            if (!ReferenceEquals(fromKeys, keys))
-            {
-                Array.Copy(fromKeys, keys, count);
-                Array.Copy(fromRooms, rooms, count);
-            }
         }
 
         /// <summary>
@@ -701,7 +626,7 @@ namespace Thermodynamics.Core
             }
 
             // The map is written once and read for the life of the grid, so this is where its
-            // lookup is built — from the rooms, in one pass, ordered by radix.
+            // lookup is built — from the rooms, in one pass over each.
             Freeze();
         }
     }

@@ -168,6 +168,7 @@ namespace Thermodynamics.Tests
 
                 // Empty arrays: zero length, so there is nothing to share. They exist so an unfilled
                 // room map hands out windows onto something rather than onto null.
+                { "Thermodynamics.Core.CellBitset.EmptyPrefix", "empty array" },
                 { "Thermodynamics.Core.RoomMap.EmptyCells", "empty array" },
                 { "Thermodynamics.Core.RoomMap.EmptyRanges", "empty array" },
 
