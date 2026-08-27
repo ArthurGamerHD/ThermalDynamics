@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Pass 4, iteration 8: the rooms are walked a run at a time as well — rooms 0.84, and **the air rebuild 0.43 on identical work**, because a room's cells now arrive contiguous along X and the walk over them is sequential. The tick-budget check caught a latent overshoot in the interior scan on the way. |
 | 2026-08-27 | Pass 4, iteration 7: **the span flood is built** — the external air is walked a run at a time, 84 cells to a run, and the room pass is **0.59** at 505,566 blocks and 0.54 at 126,731. The budget check caught the first form overshooting a tick. |
 | 2026-08-27 | Pass 4, iteration 6: 92 % of the air rebuild's face probes find nothing, so a bit over the grid's padded box answers first — roomair 0.89 at 505,566 blocks. Counted before it was changed, in a separate commit. |
 | 2026-08-27 | Pass 4, iteration 5: the air rebuild and the room-side exposure refresh walk neighbours by key arithmetic — roomair 0.74 at 126k blocks but only 0.95 at 505k, which says the stage is bound by the dictionary probes, not the arithmetic around them. |
@@ -1117,6 +1118,7 @@ table carries an allocation column for that reason.
 | 5 | The air rebuild walks neighbours by key arithmetic | **kept** — roomair 0.74 at 126k, 0.95 at 505k, and the gap says what the stage is bound by | [Iteration 5](#pass-4-iteration-5--the-air-rebuild-walks-neighbours-by-key-arithmetic) |
 | 6 | A bit in front of the probe, for the nine faces in ten that hold nothing | **kept** — roomair 0.89 at 505k, 0.92 at 126k | [Iteration 6](#pass-4-iteration-6--a-bit-in-front-of-the-probe) |
 | 7 | The external air is walked a run at a time | **kept** — rooms **0.59** at 505k, **0.54** at 126k | [Iteration 7](#pass-4-iteration-7--the-external-air-is-walked-a-run-at-a-time) |
+| 8 | The rooms are walked a run at a time too | **kept** — rooms 0.84, and **roomair 0.43** on identical work | [Iteration 8](#pass-4-iteration-8--the-rooms-are-walked-a-run-at-a-time-too) |
 
 ## Pass 4, iteration 1 — the room map's cell-to-room dictionary is gone
 
@@ -1443,6 +1445,47 @@ cell walk drove it to millions of `Vector3I`, tens of megabytes that stay alloca
 the mapper, and the run walk needs tens of thousands. A stage that walks the same map with less of
 the process's memory behind it runs faster. That is a hypothesis with a measurement attached to it —
 the memory rows at the close of this pass are where it is settled or dropped.
+
+## Pass 4, iteration 8 — the rooms are walked a run at a time too
+
+The same walk, applied to the inside of a room, with the one thing the external walk does not have
+to do: a cell it reaches is either air, which joins the room, or sealed structure, which is recorded
+as the room's boundary and stops the walk going that way.
+
+**A room's cells now arrive in run order rather than in the order a queue emptied**, and that is only
+safe because [iteration 4](#pass-4-iteration-4--a-rooms-air-is-a-function-of-the-room) made a room's
+air a function of its contents. Before that, this change would have moved every player's air
+temperatures in the last bits.
+
+| stage | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| rooms, 505,566 blocks | 78.74 ms | **66.02 ms** | **0.84** |
+| rooms, 126,731 blocks | 16.89 ms | **14.70 ms** | 0.87 |
+| **roomair, 505,566 blocks** | 126.31 ms | **53.88 ms** | **0.43** |
+| roomair, 126,731 blocks | 23.89 ms | **18.52 ms** | 0.78 |
+| a settled step, 505,566 (control) | 80.03 ms | 81.63 ms | 1.02 |
+
+**The air rebuild more than halved, and it is not because anything in it changed.** Its work counter
+is identical on both legs — 9,022,890 faces walked, 691,306 of them holding a block — and not a line
+of `BuildRoomLinks` differs. What changed is the *order of the cells it is handed*. It walks a room's
+cells and asks the grid about the six neighbours of each; in breadth-first order those cells arrive
+as a shell expanding through the room, so consecutive cells are unrelated addresses in the occupancy
+set and in the block table. In run order they are contiguous along X, and consecutive cells are
+consecutive bits and neighbouring keys.
+
+That is the same finding as [iteration 6](#pass-4-iteration-6--a-bit-in-front-of-the-probe) read from
+the other side. That iteration made each miss cheaper and got eleven per cent; this one made the
+misses *sequential* and got fifty-seven. **On a stage that is bound by memory, the order things are
+visited in is worth more than what is done to each of them** — and the order was free, a side effect
+of a change made for the room pass.
+
+**Two things the budget check caught, and the second predates this change.** The run walk has to
+extend through its own seed, so the interior scan no longer marks or files the cell it found when the
+walk is live. And the scan's skip ran to the end of the box in one call and then charged for every
+word it had looked at, so **a tick could overshoot its budget by however far the last skip happened
+to reach** — nothing had made it do so, and this change did. It is capped to the words the tick can
+still afford, and the cursor resumes next tick. `RoomMappingNeverExceedsItsBudgetInOneTick` found
+both, four cells over and then one cell over; a check that fails by one is a check worth having.
 
 ---
 
