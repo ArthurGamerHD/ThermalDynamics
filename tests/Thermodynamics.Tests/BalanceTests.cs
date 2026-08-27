@@ -465,10 +465,10 @@ namespace Thermodynamics.Tests
         /// A longer ring couples harder, and the block it cools ends up colder for it.
         ///
         /// **The only thing that asserts this**, and blocks.md's build advice is written from it.
-        /// It used to say it restated `LongerRingsCoupleHarderAndCarryTheSameFluid`, which stopped
-        /// existing at some point and took its half of the claim with it — the coupling column is
-        /// checked here, as the ordering, and nowhere else. The name also carried a claim that is
-        /// no longer true: the charge is per *pipe*, so a longer ring does not carry the same fluid.
+        /// It used to say it restated a second test, which stopped existing at some point and took
+        /// its half of the claim with it — the coupling column is checked here, as the ordering, and
+        /// nowhere else. That name also carried a claim that is no longer true: it said a longer
+        /// ring carries the same fluid, and the charge has been per *pipe* since.
         /// </summary>
         [Fact]
         public void LongerRingsDeliverColderBlocks()

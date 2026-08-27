@@ -1436,6 +1436,93 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **Every page that says a claim is pinned names something that exists.**
+        ///
+        /// <para>
+        /// rules.md's *Checked by* fields are covered by
+        /// <see cref="EveryCheckCitedByTheRulesPageResolves"/>, and that is one page. Every other
+        /// page cites its evidence in prose — *Pinned by `X`*, *Checked by `X`*, *measured by `X`* —
+        /// and until this existed nothing read those.
+        /// </para>
+        ///
+        /// <para>
+        /// **It was written after one went dead unnoticed.** blocks.md's build advice on ring length
+        /// ended with a *Pinned by* naming a test that had stopped existing, and the paragraph above
+        /// it was three model changes out of date — which is the shape: a citation dies when the test
+        /// it names is rewritten, and the prose it was holding up stays exactly where it was.
+        /// <see cref="NoPageNamesATestThatHasBeenRenamed"/> did not catch it, because it only reports
+        /// a name whose first three camel words match a live one and the rename changed the third.
+        ///
+        /// <para>
+        /// **The dead name is not written here on purpose.** A citation resolves if the code
+        /// mentions it anywhere twice, so spelling it in this comment would have made the very
+        /// citation this test exists for resolve — which it did, on the first attempt to prove the
+        /// check catches it.
+        /// </para>
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryClaimAPageSaysIsPinnedNamesSomethingThatExists()
+        {
+            HashSet<string> live = LiveCases();
+            string code = CodeText();
+
+            Assert.True(live.Count > 500,
+                "only " + live.Count + " live test names were found, so this test is not reading"
+                + " the suite and would pass on a citation to nothing");
+
+            // The phrase, then everything up to the end of its paragraph: a citation is often a
+            // sentence of its own on the line after the claim it supports.
+            Regex citation = new Regex(
+                "\\b(?:[Pp]inned|[Cc]hecked|[Aa]sserted|[Mm]easured) by(.{0,400}?)"
+                + "(?:\\r?\\n\\r?\\n|\\z)",
+                RegexOptions.Singleline);
+
+            // An identifier written the way this repository writes a test name. A rule or backlog
+            // id — `C43`, `E1` — is a letter and digits and is not one.
+            Regex identifier = new Regex(@"^[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*$");
+
+            List<string> unresolved = new List<string>();
+            int cited = 0;
+
+            foreach (string file in MarkdownFiles())
+            {
+                if (Relative(file) == "docs/rules.md") continue;      // its own, stricter check
+
+                foreach (Match match in citation.Matches(File.ReadAllText(file)))
+                {
+                    foreach (Match name in Regex.Matches(match.Groups[1].Value, @"`([^`\r\n]+)`"))
+                    {
+                        string cite = name.Groups[1].Value;
+                        if (!identifier.IsMatch(cite)) continue;
+
+                        cited++;
+                        if (live.Contains(cite)) continue;
+
+                        // A type or member the code refers to somewhere other than where it is
+                        // declared — a lab, a harness class, a shipped method.
+                        if (Regex.Matches(code, @"\b" + Regex.Escape(cite) + @"\b").Count > 1) continue;
+
+                        unresolved.Add(Relative(file) + ": " + cite);
+                    }
+                }
+            }
+
+            // Twenty-six outside rules.md when this was written. The floor is what says the parse
+            // still works: a regex that stopped matching would report every page as clean.
+            Assert.True(cited >= 15,
+                "only " + cited + " pinned-by citations were read across the tree, so this test is"
+                + " parsing them wrongly and would pass on a page citing nothing");
+
+            unresolved.Sort(StringComparer.Ordinal);
+            Assert.True(unresolved.Count == 0,
+                "claims a page says are pinned, naming something that does not exist:\n  "
+                + string.Join("\n  ", unresolved.ToArray())
+                + "\nA citation dies when the test it names is rewritten, and the prose it was"
+                + " holding up stays where it was — check the paragraph as well as the name.");
+        }
+
+        /// <summary>
         /// Every check the rules page cites resolves to something that runs (`R11`): a live test case,
         /// a class holding one, a member the code refers to somewhere other than its own declaration,
         /// or a file that exists. **"Referred to somewhere" is not "reached at run time"** — a helper
