@@ -149,6 +149,27 @@ namespace Thermodynamics.Core
         public bool HoistHeatGainTotal = true;
 
         /// <summary>
+        /// Set false to test every node's exposure inside the environment loop instead of letting a
+        /// buried node take the same path an exposed one takes.
+        ///
+        /// <para>
+        /// **The branch was the expensive part, not the arithmetic it skipped.** Half the nodes of
+        /// a hull are buried — 49 % are exposed at 126,731 blocks — so `nodeExposedFaces[i] &lt;= 0`
+        /// is a coin toss the processor cannot predict, taken once per node per substep. A buried
+        /// node's radiation coefficient is zero (it is emissivity times *exposed area*) and its
+        /// convection row is zeroed when the rows are filled, so putting it through the exposed
+        /// arithmetic yields the same watts, and the branch can go.
+        /// </para>
+        ///
+        /// <para>
+        /// Test hook: <c>BranchlessEnvironmentTests</c> runs the same grid both ways and compares
+        /// every temperature and both published watts figures bit for bit.
+        /// See performance.md, Pass 5, Iteration 5.
+        /// </para>
+        /// </summary>
+        public bool BranchlessEnvironment = true;
+
+        /// <summary>
         /// Fraction of each node face the sun reaches, six per node, 0..1. All ones when
         /// self-shadowing is off, so the cheap path costs nothing extra.
         ///
@@ -2201,6 +2222,19 @@ namespace Thermodynamics.Core
             // for the whole step, so both paths compute the same values.
             bool fill = !environmentRowsValid || !PrecomputeEnvironment;
 
+            // A substep that only reads the rows has nothing to say about exposure, and asking
+            // costs more than the arithmetic it would skip. See BranchlessEnvironment.
+            if (!fill && BranchlessEnvironment)
+            {
+                // The two switches are independent: a run with the hoist off re-sums the rows
+                // here, exactly as the general pass would. Reading them as one is how the first
+                // form of this reported a grid heating itself by nothing at all.
+                bool resumming = !HoistHeatGainTotal;
+                AccumulateEnvironmentFromRows(ref env, ref plan, h, from, to, resumming);
+                if (to >= nodes.Count) SettleHeatGainRowTotal(resumming);
+                return;
+            }
+
             // Computed for every node, exposed or buried, because the clamped conduction loop
             // reads it — and for none of them when that loop is not clamping, which is every step
             // on a grid granted the substeps it asked for.
@@ -2371,6 +2405,106 @@ namespace Thermodynamics.Core
             if (to >= nodes.Count) SettleHeatGainRowTotal(summingRows);
             if (fill && to >= nodes.Count) Work.EnvironmentRowFills++;
             if (PrecomputeEnvironment && to >= nodes.Count) environmentRowsValid = true;
+        }
+
+        /// <summary>
+        /// The environment pass for a substep whose rows are already filled, which is every substep
+        /// of a step but the first.
+        ///
+        /// <para>
+        /// **One straight loop over every node, exposed or not.** It is the same arithmetic the
+        /// general pass does for an exposed node, and a buried node reaches the same answer through
+        /// it: its radiation coefficient is zero because that is emissivity times exposed area, and
+        /// its convection row was zeroed when the rows were filled, so both terms come out zero and
+        /// its watts are its own source row, which is what the general pass writes for it.
+        /// </para>
+        /// </summary>
+        /// <param name="summingRows">
+        /// Whether to re-sum the grid's own heat gain, which only a run with
+        /// <see cref="HoistHeatGainTotal"/> switched off does.
+        /// </param>
+        private void AccumulateEnvironmentFromRows(ref EnvironmentState env, ref EnvironmentPlan plan,
+            float h, int from, int to, bool summingRows)
+        {
+            bool diagnostics = plan.Diagnostics;
+            bool environmentEnabled = plan.EnvironmentEnabled;
+            bool radiating = plan.Radiating;
+            bool convecting = plan.Convecting;
+            bool clampRelaxation = settings.ClampEnvironmentOvershoot && h > 0f;
+
+            float inverseH = h > 0f ? 1f / h : 0f;
+            float radiationShare = plan.RadiationShare;
+            float ambient = env.AmbientTemperature;
+            float ambientPow4 = env.AmbientTemperaturePow4;
+            float atmosphere = env.AtmosphereFactor;
+
+            // Hoisted so the loop reads locals and the array lengths are visibly loop-invariant.
+            float[] temperatures = nodeTemperatures;
+            float[] sourceRow = nodeSourceRow;
+            float[] radiationRow = nodeRadiation;
+            float[] convectionRow = nodeConvectionRow;
+            float[] mass = nodeThermalMass;
+            float[] watts = nodeWatts;
+
+            for (int i = from; i < to; i++)
+            {
+                float temperature = temperatures[i];
+                float source = sourceRow[i];
+                float total = source;
+
+                float radiationWatts = 0f;
+                float convectionWatts = 0f;
+
+                if (environmentEnabled)
+                {
+                    float radiation = 0f;
+                    if (radiating)
+                    {
+                        float squared = temperature * temperature;
+                        radiation = -radiationRow[i] * ((squared * squared) - ambientPow4);
+                    }
+
+                    float convection = 0f;
+                    if (convecting)
+                    {
+                        convection = convectionRow[i] * (temperature - ambient);
+                    }
+
+                    radiationWatts = radiationShare * radiation;
+                    convectionWatts = atmosphere * convection;
+
+                    float relaxation = radiationWatts + convectionWatts;
+
+                    if (clampRelaxation)
+                    {
+                        float capped = ClampRelaxation(relaxation,
+                            (ambient - temperature) * mass[i] * inverseH);
+
+                        if (capped != relaxation)
+                        {
+                            float scale = relaxation == 0f ? 0f : capped / relaxation;
+                            radiationWatts *= scale;
+                            convectionWatts *= scale;
+                            relaxation = capped;
+                        }
+                    }
+
+                    total += relaxation;
+                }
+
+                watts[i] = total;
+                environmentWattsAccumulator += radiationWatts + convectionWatts;
+                if (summingRows) heatGainAccumulator += source;
+
+                if (!diagnostics) continue;
+
+                ThermalNode node = nodes[i];
+                node.LastRadiationWatts = radiationWatts;
+                node.LastConvectionWatts = convectionWatts;
+                node.LastSolarWatts = nodeSolarRow[i];
+                node.LastFrictionWatts = nodeFrictionRow[i];
+                node.LastHeatSourceWatts = 0f;
+            }
         }
 
         private void AccumulateHeatSources(ref EnvironmentState env, bool diagnostics)
