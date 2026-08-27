@@ -137,10 +137,38 @@ namespace Thermodynamics.Core
                 }
             }
 
-            List<long> keys = new List<long>(cells.Keys);
-            for (int i = 0; i < keys.Count; i++)
+            // Snapshotted as keys *and* self states, so the derived half of every cell is computed
+            // from the array rather than by asking the dictionary for what was just put in it, and
+            // written back exactly once. A neighbour's key is this cell's plus a constant
+            // (`GridMath.KeyByFace`), so no cell is converted to a key or back inside the loop.
+            int count = cells.Count;
+            long[] keys = new long[count];
+            long[] selves = new long[count];
+            int at = 0;
+            foreach (KeyValuePair<long, long> entry in cells)
             {
-                RefreshCell(GridMath.FromKey(keys[i]));
+                keys[at] = entry.Key;
+                selves[at] = entry.Value;
+                at++;
+            }
+
+            long[] byFace = GridMath.KeyByFace;
+            for (int i = 0; i < count; i++)
+            {
+                long key = keys[i];
+                int live = CellSurface.SelfOnly(Live(selves[i]));
+                int structural = CellSurface.SelfOnly(Structural(selves[i]));
+
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    long neighbour;
+                    if (!cells.TryGetValue(key + byFace[face], out neighbour)) continue;
+
+                    live |= CellSurface.NeighbourContribution(Live(neighbour), face);
+                    structural |= CellSurface.NeighbourContribution(Structural(neighbour), face);
+                }
+
+                cells[key] = Pack(live, structural);
             }
         }
 
@@ -154,10 +182,11 @@ namespace Thermodynamics.Core
             int live = CellSurface.SelfOnly(Live(packed));
             int structural = CellSurface.SelfOnly(Structural(packed));
 
+            long[] byFace = GridMath.KeyByFace;
             for (int face = 0; face < Face.Count; face++)
             {
                 long neighbour;
-                if (cells.TryGetValue(KeyOf(cell + Face.Offsets[face]), out neighbour))
+                if (cells.TryGetValue(key + byFace[face], out neighbour))
                 {
                     live |= CellSurface.NeighbourContribution(Live(neighbour), face);
                     structural |= CellSurface.NeighbourContribution(Structural(neighbour), face);

@@ -192,6 +192,9 @@ namespace Thermodynamics.Tests
                 { "Thermodynamics.Core.BlockOrientation.rotatedFaces", "table built once, never written after" },
                 { "Thermodynamics.Core.BlockOrientation.legal", "table built once, never written after" },
 
+                // Built once from Face.Offsets: what a key changes by along each face.
+                { "Thermodynamics.Core.GridMath.KeyByFace", "table built once, never written after" },
+
                 // The lock the mutable pair below is taken under, which is shared on purpose.
                 { "Thermodynamics.Core.ThermalValidation.Lock", "the lock itself" },
 
