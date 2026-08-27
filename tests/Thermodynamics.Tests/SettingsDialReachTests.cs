@@ -36,6 +36,7 @@ namespace Thermodynamics.Tests
     /// telemetry stride — and those are not on <see cref="ThermalSettings"/> to begin with.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class SettingsDialReachTests
     {
         private readonly ITestOutputHelper output;

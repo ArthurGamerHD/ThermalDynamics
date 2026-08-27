@@ -26,6 +26,7 @@ namespace Thermodynamics.Tests
     /// <c>Cubes.xml</c> before anything is run.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class ModHardwareRetestTests
     {
         /// <summary>

@@ -267,6 +267,7 @@ namespace Thermodynamics.Tests
     /// with it. ScenarioClaimTests checks the conclusions; this checks they were reached at all.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class ScenarioTests
     {
         [Theory]

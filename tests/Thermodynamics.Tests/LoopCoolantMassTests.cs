@@ -41,6 +41,7 @@ namespace Thermodynamics.Tests
     /// undeclared job*.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class LoopCoolantMassTests
     {
         private readonly ITestOutputHelper output;

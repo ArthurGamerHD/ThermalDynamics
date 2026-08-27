@@ -15,6 +15,7 @@ namespace Thermodynamics.Tests
     /// that claim to account, because if it is wrong the setting is not a time scale, it is a
     /// silent rebalance.
     /// </summary>
+    [Trait("speed", "slow")]
     public class HeatTimeScaleTests
     {
         private static ThermalSettings Settings(float scale, int frequency = 4)
