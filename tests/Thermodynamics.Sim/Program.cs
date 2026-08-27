@@ -1051,6 +1051,49 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "stepfloor":
+                {
+                    int floorBlocks = size > 0 ? size : 125000;
+
+                    Console.WriteLine();
+                    Console.WriteLine("== step floor, " + shape + " " + floorBlocks.ToString("n0") + " blocks ==");
+                    Console.WriteLine("  What each pass of a substep would cost doing no arithmetic:");
+                    Console.WriteLine("  the same rows, the same sizes, the grid's own link indices.");
+                    Console.WriteLine();
+
+                    List<StageLab.Row> measured = StageLab.StepPhases(shape, floorBlocks,
+                        message => Console.Error.WriteLine("  " + message));
+                    List<StepFloorLab.Row> floorRows = StepFloorLab.Run(shape, floorBlocks);
+
+                    Console.WriteLine(StepFloorLab.Table(floorRows, measured));
+                    return 0;
+                }
+
+                case "stepphases":
+                {
+                    int phaseBlocks = size > 0 ? size : 125000;
+
+                    Console.WriteLine();
+                    Console.WriteLine("== step phases, " + shape + " " + phaseBlocks.ToString("n0") + " blocks ==");
+                    Console.WriteLine("  Each stage inside one settled step on its own clock, best of "
+                        + StageLab.Repeats + ".");
+                    Console.WriteLine("  The visits column is what the solver charges that stage;"
+                        + " it must repeat exactly or the lab says so.");
+                    Console.WriteLine();
+
+                    List<StageLab.Row> phaseRows = StageLab.StepPhases(shape, phaseBlocks,
+                        message => Console.Error.WriteLine("  " + message));
+
+                    Console.WriteLine(StageLab.Table(phaseRows));
+
+                    string phaseOut = csvDirectory ?? "out";
+                    Directory.CreateDirectory(phaseOut);
+                    string phasePath = Path.Combine(phaseOut, "stepphases.csv");
+                    File.WriteAllText(phasePath, StageLab.Csv(phaseRows));
+                    Console.WriteLine("csv -> " + phasePath);
+                    return 0;
+                }
+
                 case "stages":
                 {
                     int stageBlocks = size > 0 ? size : 125000;
@@ -1599,6 +1642,8 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
             Console.WriteLine("  bench stages            one stage of a grid's life on its own clock, best of fifteen; --stages a,b");
+            Console.WriteLine("  bench stepphases        where a step's own time goes: environment, conduction, coupled, apply, publish");
+            Console.WriteLine("  bench stepfloor         what those passes would cost touching the same memory and computing nothing");
             Console.WriteLine("  bench smallgrids        what one grid costs before any of its blocks do");
             Console.WriteLine("  bench wattsclear        what zeroing the watts row costs, up a size ladder");
             Console.WriteLine("  bench rowfill           what the first substep of a step pays over a later one");

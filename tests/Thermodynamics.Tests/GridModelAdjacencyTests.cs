@@ -143,6 +143,57 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **The bit in front of the block table hides no neighbour.** The link build consults the
+        /// occupancy set before probing, because three of a block's six candidate cells in eight
+        /// hold nothing — so the walk must return the same blocks across the same faces in the same
+        /// order whether it is given the set or not. A filter that dropped a real neighbour would
+        /// remove a conduction link, which nothing else in the model would report.
+        /// </summary>
+        [Fact]
+        public void TheOccupancyFilteredWalkFindsExactlyWhatThePlainWalkFinds()
+        {
+            ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(), 4000);
+            GridModel grid = simulation.Grid;
+            CellBitset occupied = grid.Occupancy();
+
+            List<BlockInstance> plain = new List<BlockInstance>();
+            List<int> plainFaces = new List<int>();
+            List<BlockInstance> filtered = new List<BlockInstance>();
+            List<int> filteredFaces = new List<int>();
+
+            IList<BlockInstance> blocks = grid.Blocks;
+            int judged = 0;
+            int neighbours = 0;
+
+            for (int b = 0; b < blocks.Count; b++)
+            {
+                plain.Clear();
+                plainFaces.Clear();
+                filtered.Clear();
+                filteredFaces.Clear();
+
+                grid.GetNeighbours(blocks[b], plain, plainFaces, null);
+                grid.GetNeighbours(blocks[b], filtered, filteredFaces, occupied);
+
+                Assert.True(plain.Count == filtered.Count,
+                    "block " + b + " has " + plain.Count + " neighbours unfiltered and "
+                    + filtered.Count + " filtered");
+
+                for (int n = 0; n < plain.Count; n++)
+                {
+                    Assert.Same(plain[n], filtered[n]);
+                    Assert.Equal(plainFaces[n], filteredFaces[n]);
+                }
+
+                neighbours += plain.Count;
+                judged++;
+            }
+
+            Assert.True(judged > 3000, "only " + judged + " blocks were walked");
+            Assert.True(neighbours > judged * 2, "the hull averages fewer than two neighbours a block");
+        }
+
+        /// <summary>
         /// **`GetAtKey` is `GetAtCell` without the conversion; `GetByKey` is a different question.**
         ///
         /// <para>

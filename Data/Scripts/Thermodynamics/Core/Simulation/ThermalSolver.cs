@@ -124,10 +124,14 @@ namespace Thermodynamics.Core
         /// </summary>
         private bool environmentRowsValid;
 
-        /// <summary>Forces the per-step environment rows to be recomputed on the next pass.</summary>
+        /// <summary>
+        /// Forces the per-step environment rows to be recomputed on the next pass — and with them
+        /// the heat-gain total taken from those rows, which is only a step's own if the rows are.
+        /// </summary>
         private void InvalidateEnvironmentRows()
         {
             environmentRowsValid = false;
+            heatGainRowTotalValid = false;
         }
 
         /// <summary>
@@ -136,6 +140,13 @@ namespace Thermodynamics.Core
         /// ways and compares the results bit for bit.
         /// </summary>
         public bool PrecomputeEnvironment = true;
+
+        /// <summary>
+        /// Set false to re-sum the grid's own heat gain on every substep instead of once a step.
+        /// Test hook: <c>HeatGainHoistTests</c> runs the same grid both ways and compares the
+        /// figure and every temperature bit for bit.
+        /// </summary>
+        public bool HoistHeatGainTotal = true;
 
         /// <summary>
         /// Fraction of each node face the sun reaches, six per node, 0..1. All ones when
@@ -259,6 +270,29 @@ namespace Thermodynamics.Core
         private float heatGainAccumulator;
 
         /// <summary>
+        /// The heat a grid puts into itself from its own rows — waste heat, solar gain, friction —
+        /// summed once for the step rather than once a substep.
+        ///
+        /// <para>
+        /// **It cannot change between the substeps of one step.** Those three are read out of
+        /// `nodeSourceRow`, which is filled on the first substep and read by the rest, so summing
+        /// it twenty-four times computes the same float twenty-four times. Once is enough, and the
+        /// sum is over the same values in the same order, so the figure is unchanged to the bit.
+        /// </para>
+        ///
+        /// <para>
+        /// It is worth its own field because the add was not free: a running float sum is a
+        /// dependency the loop carries from one node to the next, and the two accumulators in that
+        /// loop measured **35 %** of the environment stage between them.
+        /// See performance.md, Pass 5, Iteration 3.
+        /// </para>
+        /// </summary>
+        private float heatGainRowTotal;
+
+        /// <summary>Whether <see cref="heatGainRowTotal"/> belongs to the step now running.</summary>
+        private bool heatGainRowTotalValid;
+
+        /// <summary>
         /// Starts a substep's heat totals. Called from both stepping paths: the direct one, which
         /// runs a whole substep in a call, and the spread one, which cuts each substep into
         /// budgeted slices across frames. Publishing from only one of them is how the first
@@ -269,6 +303,33 @@ namespace Thermodynamics.Core
         {
             environmentWattsAccumulator = 0f;
             heatGainAccumulator = 0f;
+        }
+
+        /// <summary>
+        /// Settles what the rows contributed to this substep's heat gain, once the whole grid has
+        /// been covered and before the point sources are added — which is exactly where a substep
+        /// that re-summed them would have got to, so what follows adds onto the same total in the
+        /// same order.
+        ///
+        /// <para>
+        /// A substep that summed the rows files the total; one that did not adds the filed one.
+        /// **It is settled here rather than primed at the top of the substep** because the plan is
+        /// resolved after that point and can invalidate the rows — the sun moving refreshes the
+        /// shadow map — and a substep primed with a total it then re-sums counts it twice. Which is
+        /// what the first form of this did, and what `HeatGainHoistTests` reported as a doubled
+        /// figure on the first step it took.
+        /// </para>
+        /// </summary>
+        private void SettleHeatGainRowTotal(bool summed)
+        {
+            if (summed)
+            {
+                heatGainRowTotal = heatGainAccumulator;
+                heatGainRowTotalValid = true;
+                return;
+            }
+
+            heatGainAccumulator += heatGainRowTotal;
         }
 
         /// <summary>
@@ -733,13 +794,19 @@ namespace Thermodynamics.Core
             // adjacency answers only with the neighbours, and the face is worked out per pair.
             GridModel walked = adjacency as GridModel;
 
+            // Taken once, for the whole rebuild: a bit in front of the block table, for the three
+            // candidate cells in eight that hold nothing. Only a full rebuild may ask — the set is
+            // dropped whenever the grid changes, so asking per placement would rebuild it per
+            // placement. See GridModel.GetNeighbours.
+            CellBitset occupied = walked != null ? walked.Occupancy() : null;
+
             for (int i = 0; i < nodes.Count; i++)
             {
                 ThermalNode a = nodes[i];
 
                 neighbourScratch.Clear();
                 neighbourFaces.Clear();
-                if (walked != null) walked.GetNeighbours(a.Block, neighbourScratch, neighbourFaces);
+                if (walked != null) walked.GetNeighbours(a.Block, neighbourScratch, neighbourFaces, occupied);
                 else adjacency.GetNeighbours(a.Block, neighbourScratch);
 
                 for (int n = 0; n < neighbourScratch.Count; n++)
@@ -1401,12 +1468,26 @@ namespace Thermodynamics.Core
         private readonly Dictionary<Vector3I, RoomAirNode> rememberedAir =
             new Dictionary<Vector3I, RoomAirNode>(Vector3I.Comparer);
 
-        private readonly Dictionary<int, int> roomContactScratch = new Dictionary<int, int>();
+        /// <summary>
+        /// Faces each bounding node presents to the room being built, counted in a row indexed by
+        /// node rather than in a hash table.
+        ///
+        /// <para>
+        /// The count is per node and node indices are dense from zero, so a hash was buying nothing
+        /// a subscript does not: at half a million blocks an air rebuild finds **691,306** faces
+        /// holding a block, and each one was a lookup and a store into a dictionary. The row is
+        /// reused across rooms and across rebuilds, and only the entries a room touched are put
+        /// back to zero — <see cref="roomContactOrder"/> is the list of exactly those.
+        /// See performance.md, Pass 5, Iteration 7.
+        /// </para>
+        /// </summary>
+        private int[] roomContactFaces = new int[0];
 
         /// <summary>
-        /// The nodes in <see cref="roomContactScratch"/>, sorted, so a room's links and the mean it
-        /// takes over them are built in an order that does not depend on how the flood reached the
-        /// room's cells. See performance.md, Pass 4, Iteration 4.
+        /// The nodes bounding the room being built, sorted, so a room's links and the mean it takes
+        /// over them are built in an order that does not depend on how the flood reached the room's
+        /// cells. Also the list of entries of <see cref="roomContactFaces"/> to clear afterwards.
+        /// See performance.md, Pass 4, Iteration 4.
         /// </summary>
         private readonly List<int> roomContactOrder = new List<int>();
 
@@ -1481,7 +1562,8 @@ namespace Thermodynamics.Core
             if (!air.HasAir) return;
             if (air.RoomIndex < 0 || air.RoomIndex >= rooms.RoomCount) return;
 
-            roomContactScratch.Clear();
+            if (roomContactFaces.Length < nodes.Count) roomContactFaces = new int[nodes.Count];
+            roomContactOrder.Clear();
 
             CellBitset occupied = grid.Occupancy();
 
@@ -1506,22 +1588,20 @@ namespace Thermodynamics.Core
                     ThermalNode node = GetNode(block);
                     if (node == null) continue;
 
-                    int faces;
-                    roomContactScratch.TryGetValue(node.Index, out faces);
-                    roomContactScratch[node.Index] = faces + 1;
+                    // First face this node presents to the room puts it on the list; the rest only
+                    // count. The list is what makes the row cheap to clear again.
+                    int index = node.Index;
+                    if (roomContactFaces[index] == 0) roomContactOrder.Add(index);
+                    roomContactFaces[index]++;
                 }
             }
 
-            // **In node order, not in the order the room's cells happened to arrive.** A dictionary
-            // enumerates by insertion, so the links of a room — and the sum below, which is a sum of
-            // floats and therefore depends on its order — were a function of the path the flood took
-            // through that room. Sorting the contacts makes both a function of the room's *contents*
-            // instead, which is what lets the flood be rewritten without moving anybody's last bit.
-            roomContactOrder.Clear();
-            foreach (KeyValuePair<int, int> contact in roomContactScratch)
-            {
-                roomContactOrder.Add(contact.Key);
-            }
+            // **In node order, not in the order the room's cells happened to arrive.** The nodes
+            // are listed as the walk first meets them, so the links of a room — and the sum below,
+            // which is a sum of floats and therefore depends on its order — would otherwise be a
+            // function of the path the flood took through that room. Sorting makes both a function
+            // of the room's *contents*, which is what lets the flood be rewritten without moving
+            // anybody's last bit.
             roomContactOrder.Sort();
 
             float surfaceSum = 0f;
@@ -1533,7 +1613,7 @@ namespace Thermodynamics.Core
                 surfaceSum += nodes[node].Temperature;
                 surfaceCount++;
 
-                float area = roomContactScratch[node] * nodes[node].CellFaceArea;
+                float area = roomContactFaces[node] * nodes[node].CellFaceArea;
                 float conductance = settings.RoomConvectionCoefficient * area;
 
                 // A room whose convection is switched off still has walls, and their mean is still
@@ -1543,6 +1623,10 @@ namespace Thermodynamics.Core
 
                 air.Links.Add(new RoomLink(node, conductance));
             }
+
+            // The row goes back to zero for the next room, at the cost of the entries this one
+            // used rather than of the grid.
+            for (int i = 0; i < roomContactOrder.Count; i++) roomContactFaces[roomContactOrder[i]] = 0;
 
             // Air appearing in a room for the first time starts at the mean temperature of the
             // walls bounding it.
@@ -2065,7 +2149,7 @@ namespace Thermodynamics.Core
                 ResolveDirection(ref sun, sunWeights);
 
                 // The one input to the precomputed rows that can change part way through a step.
-                if (RefreshSunShadow(ref sun)) environmentRowsValid = false;
+                if (RefreshSunShadow(ref sun)) InvalidateEnvironmentRows();
             }
 
             return plan;
@@ -2090,16 +2174,22 @@ namespace Thermodynamics.Core
                     }
                 }
 
+                // The sum is only taken while the rows are being established; after that it is
+                // the same sum of the same values, and `heatGainRowTotal` carries it.
+                bool summing = !HoistHeatGainTotal || !heatGainRowTotalValid;
+
                 if (plan.Generating)
                 {
                     float generated = 0f;
+
                     for (int i = from; i < to; i++)
                     {
                         float generation = nodeGeneration[i];
                         nodeWatts[i] = generation;
-                        generated += generation;
+                        if (summing) generated += generation;
                     }
-                    heatGainAccumulator += generated;
+
+                    if (summing) heatGainAccumulator += generated;
                 }
                 else
                 {
@@ -2112,6 +2202,7 @@ namespace Thermodynamics.Core
                     for (int i = from; i < to; i++) ClearEnvironmentDiagnostics(i);
                 }
 
+                if (to >= nodes.Count && plan.Generating) SettleHeatGainRowTotal(summing);
                 if (PrecomputeEnvironment && to >= nodes.Count) environmentRowsValid = true;
                 return;
             }
@@ -2138,6 +2229,10 @@ namespace Thermodynamics.Core
             // on a grid granted the substeps it asked for.
             bool fillRelaxation = fill && ConductionClampLive;
 
+            // The rows are summed into the step's heat-gain total on the substep that fills them,
+            // and read from it by every substep after.
+            bool summingRows = !HoistHeatGainTotal || !heatGainRowTotalValid;
+
             for (int i = from; i < to; i++)
             {
                 // Folded into this loop rather than given a pass of its own: this loop already
@@ -2157,7 +2252,7 @@ namespace Thermodynamics.Core
 
                     float buried = nodeSourceRow[i];
                     nodeWatts[i] = buried;
-                    heatGainAccumulator += buried;
+                    if (summingRows) heatGainAccumulator += buried;
                     if (diagnostics) ClearEnvironmentDiagnostics(i);
                     continue;
                 }
@@ -2280,7 +2375,7 @@ namespace Thermodynamics.Core
                 // environment half is signed, so a grid absorbing more than it sheds reads
                 // positive and the venting figure derived from it reads zero.
                 environmentWattsAccumulator += radiationWatts + convectionWatts;
-                heatGainAccumulator += source;
+                if (summingRows) heatGainAccumulator += source;
 
                 if (!diagnostics) continue;
 
@@ -2296,6 +2391,7 @@ namespace Thermodynamics.Core
             // partly filled row must not be read by a later substep. Counted here rather than at
             // the top of the loop for the same reason — a fill that spans three frames is one
             // fill, not three.
+            if (to >= nodes.Count) SettleHeatGainRowTotal(summingRows);
             if (fill && to >= nodes.Count) Work.EnvironmentRowFills++;
             if (PrecomputeEnvironment && to >= nodes.Count) environmentRowsValid = true;
         }
@@ -2811,6 +2907,14 @@ namespace Thermodynamics.Core
                 nodeTemperatures[i] = updated;
 
                 if (!damageEnabled) continue;
+
+                // **Nothing on the grid can be over its own critical temperature below this**, so
+                // the ordinary case does not read the critical row at all — one stream fewer of the
+                // five this loop walks, on every node of every substep. The bound is the lowest
+                // positive critical the grid carries, which the cue machinery already keeps; a node
+                // whose own critical is at or above it is skipped by the test below exactly as it
+                // was. See performance.md, Pass 5, Iteration 8.
+                if (updated <= lowestCritical) continue;
 
                 // Only an overheating node dereferences its definition, so the ordinary case
                 // stays within the flat arrays — including the test itself, which is what decides
@@ -3540,7 +3644,7 @@ namespace Thermodynamics.Core
                 nodeSourceRow = new float[size];
                 nodeOverheatDamage = new float[size];
                 nodeOverheatPeak = new float[size];
-                environmentRowsValid = false;
+                InvalidateEnvironmentRows();
                 nodeFaceWeights = new float[size * Face.Count];
                 nodeSunLit = new float[size * Face.Count];
             }

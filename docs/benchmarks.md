@@ -1015,6 +1015,7 @@ report can be recovered for any row here by reading that file at the row's commi
 | — | | `131fc12..b146255` | | | **Many commits recorded no row.** The retune, the coolant consumable, the reach tests, the corpus reader fix and the rules pass all landed between rows 11 and 12. |
 | 12 | 2026-08-26 | *(the performance pass, tip)* | 2,001 | **1 m 22 s** | +478 across those commits and this pass's own suites. Taken on the optimised build in a held window on a machine two other projects were using; the fast lane is 4 s over 1,582 after the lane refresh, from 37 s before it. The rows above were taken on unoptimised builds, so this duration is not comparable to theirs ([performance.md](performance.md#iteration-1--the-harness-measured-unoptimised-code)). |
 | 13 | 2026-08-27 | *(the second performance pass, tip)* | 2,016 | **1 m 21 s** | +15: `StageLabTests`, `GridModelAdjacencyTests`, `ExposureFastPathTests`, `BlockInstanceOneCellTests` and the radix and scan pins in `RoomMapFreezeTests` and `RoomMapSnapshotTests`. No solver row: the pass moved no step figure, by design, and the stage instrument (`bench stages`) is where its figures live ([performance.md](performance.md#pass-2-iteration-10--what-the-pass-moved)). |
+| 15 | 2026-08-27 | *(the fifth performance pass, tip)* | 2,044 | **1 m 14 s** | +10: `StepPhaseLabTests` and `LinkSpanProbe` for the new step instruments, `HeatGainHoistTests` for the hoisted sum, and the occupancy-filtered walk, twice-built room air and lowest-critical bound pins added to `GridModelAdjacencyTests`, `RoomAirCanonicalTests` and `OverheatEventTests`. `BranchlessEnvironmentTests` came and went with the change it checked. **A solver row below**, for the first time since row 11: this pass moved the step. |
 | 14 | 2026-08-27 | *(the fourth performance pass, tip)* | 2,034 | **1 m 14 s** | **+18 since row 13, across the third and fourth performance passes** — the third took no row of its own, which is why this one spans two. The fourth's own suites are `RoomAirCanonicalTests`, `RoomSpanFloodTests` and `GridOccupancyTests`, the rank pins in `CellBitsetTests`, and the store, hint and contiguity pins in `RoomCellStorageTests`; against them, five radix-sort cases went when the sort did. No solver row: this pass moved no step figure, by design, and its figures live in the stage instrument ([performance.md](performance.md#pass-4--what-the-pass-moved)). |
 
 ### The solver
@@ -1034,6 +1035,7 @@ flight unless the row says otherwise.
 | 8 | *(the 2026-08-22 pass)* | 84.0 ms | 0.075 ms | 1.085 ms | 3.461 ms | 3.510 ms | 1.636 ms | 2.02 |
 | 11 | *(the profiles pass)* | 105.9 ms | 0.123 ms | 2.134 ms | 6.719 ms | 6.583 ms | 3.093 ms | 2.09 |
 | 12 | *(the performance pass)* | 83.1 ms | 0.131 ms | 1.143 ms | 5.373 ms | 5.301 ms | 3.010 ms | — |
+| 15 | *(the fifth performance pass)* | 59.8 ms | 0.071 ms | 1.026 ms | 4.561 ms | — | 2.424 ms | — |
 
 Row 2 changed no shipped code, so its solver figures are row 1's.
 
@@ -1046,6 +1048,16 @@ figure**, by design: nothing in it touched the substep loop, and the columns abo
 What the pass moved is the world load and the build, and those are in
 [performance.md](performance.md#what-the-pass-moved). The environment-pass column is left blank
 because that figure comes from `bench elements`, which this pass did not re-run.
+
+**Row 15 is the first row on this table where a step actually moved.** Rows 13 and 14 took no solver
+row because their passes moved no step figure; the fifth pass moved it, and this is where a step
+figure lives. Against row 12 — the only other optimised row — the ladder reads 1.026 against 1.143
+at 8,000 blocks and 4.561 against 5.373 at 32,000. **Read those as corroboration, not as the
+result**: the two rows are two windows on a shared machine, and the pass's own figure is the
+interleaved one, **0.86** at 505,566 blocks with three untouched stages as controls
+([performance.md](performance.md#pass-5--what-the-pass-moved)). *Every feature on* is blank because
+that case is not in `bench report`'s output any more, and the environment column for the same reason
+as row 12's.
 
 **Row 11's step columns doubled on purpose and its cost did not move.** `Frequency` went from eight
 steps a second to four, so a step covers twice as long and demands twice the substeps — 21.96 to

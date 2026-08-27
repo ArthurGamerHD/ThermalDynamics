@@ -166,6 +166,9 @@ namespace Thermodynamics.Tests
                 { "Thermodynamics.Core.ThermalSolver+SubstepProfile.DemandEdges", "read-only table" },
                 { "Thermodynamics.Core.ThermalSolver+SubstepProfile.ProjectedCaps", "read-only table" },
 
+                // The names of a step's own stages, for a lab to label its rows with.
+                { "Thermodynamics.Core.ThermalSolver+StepPhaseProfile.Names", "read-only table" },
+
                 // Empty arrays: zero length, so there is nothing to share. They exist so an unfilled
                 // room map hands out windows onto something rather than onto null.
                 { "Thermodynamics.Core.CellBitset.EmptyPrefix", "empty array" },
