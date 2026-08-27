@@ -192,6 +192,46 @@ namespace Thermodynamics.Tests
             Assert.Equal(37L, bits.NextClearIndex(0, 200, out examined));
         }
 
+        /// <summary>
+        /// The frontier is a ring buffer the mapper keeps between passes, so a pass must be
+        /// unaffected by what the last one left in it — in its contents, its head position and its
+        /// size. The same grid is mapped twice by one mapper with a flood over a box forty cells
+        /// larger in every direction in between, which is what grows and wraps the ring; the two
+        /// maps must agree cell for cell.
+        ///
+        /// <para>
+        /// One simulation throughout, because a mapper floods against the surface map of the
+        /// simulation that owns it: pointing it at another grid's bounds compares two different
+        /// questions, which is how the first version of this test failed.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void APassIsUnaffectedByWhatTheLastOneLeftInTheFrontier()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.PlaceCensus(LoadShapes.Build("ship", 2000));
+            ThermalSimulation simulation = builder.BuildSimulation(Hulls.Uncapped(), 293.15f);
+
+            RoomMap first = simulation.Rooms.Map;
+            Assert.True(first.RoomCount > 0, "the hull mapped no rooms");
+            Assert.Equal(0, simulation.Rooms.PendingCells);
+
+            // A far larger box over the same grid: every extra cell is air the flood walks, which
+            // is what makes the ring grow past what the ordinary pass needs and wrap around it.
+            Vector3I pad = new Vector3I(40, 40, 40);
+            simulation.Rooms.RequestRestart(simulation.Grid.Min - pad, simulation.Grid.Max + pad);
+            Assert.True(simulation.Rooms.RunToCompletion());
+            Assert.True(simulation.Rooms.Map.ExternalCellCount > first.ExternalCellCount * 4,
+                "the wide pass flooded " + simulation.Rooms.Map.ExternalCellCount
+                + " external cells against the ordinary pass's " + first.ExternalCellCount
+                + ", so the frontier was never grown");
+
+            simulation.Rooms.RequestRestart(simulation.Grid);
+            Assert.True(simulation.Rooms.RunToCompletion());
+
+            AssertSameMap(first, simulation.Rooms.Map, "after a wider pass");
+        }
+
         [Fact]
         public void AShellWithADoorMapsToTheSameRoomsAndPortals()
         {
