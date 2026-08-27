@@ -384,7 +384,7 @@ began at 4.4. Links are the next largest term and were not touched.
 
 **What was found.** The suite's own duration is a number no test inside it can read, which is why
 [tests/README.md](../tests/README.md#the-two-lanes-and-the-rule-that-sorts-them) says the lane rule
-rots. Timed for this pass's iteration log: the whole suite **1 m 31 s** over 1,998 cases on the
+rots. Timed for this pass's iteration log: the whole suite **1 m 22 s** over 2,001 cases on the
 optimised build, from 2 m 34 s over 1,884 — and the fast lane **37 s**, where the page said 4.
 Per class, from the runner's own log: `DesignedHullTests` 35 s of test time on its own, and ten
 more classes past two seconds — `DialReachTests` 11.8 s, `ModHardwareRetestTests`,
@@ -465,7 +465,7 @@ of the mod, so building both legs the same way is what leaves the code changes o
 | peak | 1,086 B/block | **1,018 B/block** | 0.94 |
 | **The suite** | | | |
 | fast lane | 37 s | **4 s** | 0.11 |
-| whole suite | — | 1 m 31 s | — |
+| whole suite | 2 m 34 s, 1,884 cases | **1 m 22 s, 2,001 cases** | — |
 
 **The build ladder's ratio is not all mod code**, and the table would mislead without saying so:
 most of the 8,000-block rung is iteration 2 taking the census generator out of the clock, which is
