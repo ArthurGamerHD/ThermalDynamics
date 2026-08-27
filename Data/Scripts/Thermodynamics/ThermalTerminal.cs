@@ -389,6 +389,29 @@ namespace Thermodynamics
             Row("Transfer");
             Text.Append((loop.LastWattsAbsorbed / 1000f).ToString("n1")).Append(" kW in  ")
                 .Append((loop.LastWattsRejected / 1000f).ToString("n1")).Append(" kW out\n");
+
+            // **A ring that is not full is a ring that is not cooling properly**, and until this
+            // line nothing said so: the level, the refill and the power it is drawing to refill
+            // were all invisible to the player whose ship had just vented. A full ring says
+            // nothing, because a line that is always there is a line nobody reads.
+            if (loop.FillFraction >= 1f) return;
+
+            Row("Coolant level");
+            Text.Append((loop.FillFraction * 100f).ToString("n0")).Append("%  ")
+                .Append(loop.HeldKilograms.ToString("n0")).Append(" of ")
+                .Append(loop.CapacityKilograms.ToString("n0")).Append(" kg\n");
+
+            Row("Refill");
+            float refill = loop.RefillDemandWatts;
+            if (refill <= 0f)
+            {
+                // The two reasons a ring that is not full is not refilling, and they are the
+                // player's to fix. Naming them costs a line and saves a ship.
+                Text.Append(loop.HasPump ? "pump off\n" : "no pump\n");
+                return;
+            }
+
+            Text.Append((refill / 1000f).ToString("n1")).Append(" kW\n");
         }
 
         /// <summary>Air node of a room this block bounds, or null when it bounds none.</summary>

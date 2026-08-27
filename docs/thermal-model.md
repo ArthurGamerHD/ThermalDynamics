@@ -503,11 +503,23 @@ At the shipped rate the pump draws `J/kg × kg/s` while filling and nothing when
 
 **What drives it.** A ring short of full advertises `RefillDemandWatts`, the pump adds it to what
 it asks the grid for, and the fill advances with the *step* rather than with the frame — coolant is
-a simulated quantity and a frame is not simulated time. **No pump, no refill**: something has to
-drive the fluid in, and a pumpless ring is a loop that holds coolant and circulates none. **No
-power, no refill either**: a pump the grid could not supply fills by the share it was given, which
-is the rule every other draw in this mod follows. Measured on an empty eight-pipe large-grid ring,
-the pump draws **18,889 W** while filling and nothing when full.
+a simulated quantity and a frame is not simulated time. **No *running* pump, no refill**: something
+has to drive the fluid in, so a pumpless ring holds coolant and fills none, and neither does a ring
+whose pumps are switched off or turned down to zero. **No power, no refill either**: a pump the grid
+could not supply fills by the share it was given, which is the rule every other draw in this mod
+follows. Measured on an empty eight-pipe large-grid ring, the pump draws **18,889 W** while filling
+and nothing when full — 38 % of a large-grid pump's own 50 kW rating, and nearly twice a small-grid
+pump's 10 kW.
+
+> **The pump did not actually add it to what it asks the grid for, until 2026-08-26.** The refill's
+> watts went onto the block's *drawn* power, which is what turns them into heat, and were never put
+> into the resource sink's request — so `PowerAvailable`, which is supplied over requested, was
+> computed against circulation alone and a ship with nothing to spare refilled anyway. **The hole
+> was widest where it mattered least to notice**: a pump switched *off* asks for nothing, a sink
+> asked for nothing reports full supply, and the ring refilled at full rate for free. Both halves
+> are closed — `HasDrivingPump` on the loop, the refill inside `DemandMegawatts` and inside the
+> sink's ceiling on the block — and this paragraph described the first of them for as long as the
+> feature has existed. See backlog.md `B44`.
 
 > **This paragraph described the intent and not the code, for as long as the feature has existed.**
 > The refill was called from the frame-paced update alone. That path is the game — but it is not the
@@ -906,6 +918,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | **The refill's watts are inside what the pump asks the grid for**, which *Coolant is a consumable* had said since the feature existed and the code had never done ([backlog.md](backlog.md) `B44`). They were billed to the block's drawn power — which is what makes them heat — and never requested, so a ship with no power to spare refilled anyway; and a pump *switched off* asked for nothing at all, which a sink reports as full supply, so a ring whose pumps were off refilled at full rate and free. `HasDrivingPump` gates the loop side and the demand is inside `DemandMegawatts` and the sink's ceiling on the block side. |
 | 2026-08-26 | **`A12`'s boundedness bound is under test again, and the case that reaches it is the coolant mechanism being switched off** ([backlog.md](backlog.md) `F28`). Not a split — the shipped pipes have two ports, so no block a player can add opens a closed ring, which is why the split falsifier was withdrawn and why looking for one again found nothing. The 698.19 K on this page was read off a grind before `B44` made a broken ring vent and before `C43` changed the coolant's capacity; on the constructor that works it is 872.0 K against 900 K of fluid, where the unbounded form reaches 12,854 K. |
 | 2026-08-26 | A segment's thermal mass takes `MassPerPipe(cell)` — a density times the volume of the cell the pipe occupies — rather than a flat mass at both grid sizes. `C43`. |
 | 2026-08-26 | Corrected *Coolant is a consumable*, which described the refill advancing with the step when the code advanced it with the frame alone — so the consumable worked in a session and was invisible to every lab, benchmark and test, which is the lane every figure on balance.md is read in. Added *A pump makes the ring conduct, not only circulate*: fluid-to-wall transfer is convective and so depends on the flow, and nothing expressed that until `LoopStagnantTransferFraction` was wired to the leg it names. Both found by `LoopDialReachTests`. |

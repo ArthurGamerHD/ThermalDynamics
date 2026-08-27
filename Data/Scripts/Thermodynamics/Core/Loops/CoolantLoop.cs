@@ -246,20 +246,48 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Whether anything in the ring is driving fluid: a pump that is switched on, undamaged and
+        /// turned up past zero.
+        ///
+        /// <para>
+        /// **Refilling needs one, and so does asking the grid to pay for it.** `HasPump` says the
+        /// ring has the hardware; this says the hardware is doing something. The two used to be the
+        /// same test here, so a ring whose pumps were all switched off refilled itself — and
+        /// refilled *free*, because a pump asking the distributor for nothing reports every watt it
+        /// asked for as supplied.
+        /// </para>
+        /// </summary>
+        public bool HasDrivingPump
+        {
+            get
+            {
+                for (int i = 0; i < Pumps.Count; i++)
+                {
+                    CoolantPump pump = Pumps[i];
+                    if (pump == null || !pump.Enabled) continue;
+                    if (pump.Speed > 0f) return true;
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
         /// What refilling is asking for right now, W — the rate times the price, or zero when the
-        /// ring is full.
+        /// ring is full or nothing is driving it.
         ///
         /// **This is what a pump adds to its power request**, so the grid's distributor decides
         /// whether the ship can afford to refill, and the heat arrives through the pump's own
-        /// `ConsumerWasteEnergy` with no second path. A ring with no pump asks for nothing and
-        /// therefore never refills, which is the right answer: something has to drive the fluid in.
+        /// `ConsumerWasteEnergy` with no second path. A ring with no *running* pump asks for
+        /// nothing and therefore never refills, which is the right answer: something has to drive
+        /// the fluid in.
         /// </summary>
         public float RefillDemandWatts
         {
             get
             {
-                if (fill >= 1f || !HasPump) return 0f;
-                return Properties.RefillKilogramsPerSecond * RefillJoulesPerKilogram;
+                if (fill >= 1f || !HasDrivingPump) return 0f;
+                return Properties.RefillWattsAt(heatTimeScale);
             }
         }
 
@@ -289,10 +317,18 @@ namespace Thermodynamics.Core
         /// The same, at the share of its request the grid actually supplied. **No power, no
         /// fill**: a ship that cannot afford the refill does not get it, and gets no heat from it
         /// either, which is the same rule every other draw in this mod follows.
+        ///
+        /// <para>
+        /// That share only means anything because <see cref="RefillDemandWatts"/> is inside what
+        /// the pump block asks the distributor for. It was not until `B44`'s last piece: the refill
+        /// was billed to the pump's *drawn* power, which is what makes it heat, and never *asked*
+        /// for — so a ship with nothing to spare paid for its refill in heat and got the coolant
+        /// anyway.
+        /// </para>
         /// </summary>
         public float Refill(float deltaSeconds, float availableFraction)
         {
-            if (deltaSeconds <= 0f || fill >= 1f || !HasPump) return 0f;
+            if (deltaSeconds <= 0f || fill >= 1f || !HasDrivingPump) return 0f;
 
             float available = availableFraction < 0f ? 0f
                 : (availableFraction > 1f ? 1f : availableFraction);

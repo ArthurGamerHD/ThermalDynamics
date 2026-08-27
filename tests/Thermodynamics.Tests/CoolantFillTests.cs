@@ -363,6 +363,89 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **A pump that is switched off refills nothing, and that is what makes the charge real.**
+        ///
+        /// <para>
+        /// The refill's watts reach the distributor inside the pump block's own request, and a
+        /// block that is off asks for nothing — so a ring whose pumps were all switched off used to
+        /// refill at full rate *and free*, because a pump asking for nothing reports everything it
+        /// asked for as supplied. `HasPump` says the ring has the hardware; `HasDrivingPump` says
+        /// the hardware is doing something, and it is the one refilling turns on. backlog.md `B44`.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ARingWhosePumpsAreOffAsksForNothingAndRefillsNothing()
+        {
+            CoolantLoop loop;
+            Ring(out loop);
+
+            loop.FillFraction = 0f;
+            Assert.True(loop.HasPump, "the ring has no pump, so this is testing the wrong rule");
+            Assert.True(loop.HasDrivingPump);
+            Assert.True(loop.RefillDemandWatts > 0f);
+
+            for (int i = 0; i < loop.Pumps.Count; i++) loop.Pumps[i].Enabled = false;
+
+            Assert.True(loop.HasPump, "switching a pump off must not take it out of the ring");
+            Assert.False(loop.HasDrivingPump);
+            Assert.Equal(0f, loop.RefillDemandWatts);
+            Assert.Equal(0f, loop.Refill(10f));
+            Assert.Equal(0f, loop.FillFraction);
+
+            // And turning it back on is all it takes: nothing about the ring was consumed by being
+            // switched off, which is what separates this from the vent.
+            for (int i = 0; i < loop.Pumps.Count; i++) loop.Pumps[i].Enabled = true;
+            Assert.True(loop.Refill(10f) > 0f);
+            Assert.True(loop.FillFraction > 0f);
+        }
+
+        /// <summary>
+        /// **A pump turned down to nothing is a pump that is off**, for this rule. The speed slider
+        /// is the other way a player stops the fluid, and stopping the fluid stops the refill for
+        /// the same reason.
+        /// </summary>
+        [Fact]
+        public void ARingWhosePumpsAreTurnedDownToZeroRefillsNothing()
+        {
+            CoolantLoop loop;
+            Ring(out loop);
+
+            loop.FillFraction = 0f;
+            for (int i = 0; i < loop.Pumps.Count; i++) loop.Pumps[i].Speed = 0f;
+
+            Assert.False(loop.HasDrivingPump);
+            Assert.Equal(0f, loop.RefillDemandWatts);
+            Assert.Equal(0f, loop.Refill(10f));
+        }
+
+        /// <summary>
+        /// **What the refill asks for is one figure with two readers**, and they have to agree: the
+        /// loop publishes it every step and the pump block's resource sink is constructed with it as
+        /// a ceiling. A ceiling under the real request is a request the distributor quietly trims,
+        /// which is a refill that runs slower than the loop thinks it did (`P5`).
+        /// </summary>
+        [Fact]
+        public void TheRefillDemandAndTheSinksCeilingAreTheSameFigure()
+        {
+            CoolantLoop loop;
+            ThermalSimulation simulation = Ring(out loop);
+
+            loop.FillFraction = 0f;
+
+            float published = loop.RefillDemandWatts;
+            float ceiling = loop.Properties.RefillWattsAt(simulation.Settings.HeatTimeScale);
+
+            output.WriteLine("published {0:n0} W, ceiling {1:n0} W", published, ceiling);
+
+            Assert.True(published > 0f, "an empty ring is asking for nothing");
+            Assert.Equal(ceiling, published, 3);
+
+            // The figure a large-grid pump has to leave room for, stated so a change to the fluid
+            // that made the refill dominate the pump's own rating is visible rather than silent.
+            output.WriteLine("that is {0:p0} of a 50 kW large-grid pump", published / 50000f);
+        }
+
+        /// <summary>
         /// **No power, no fill.** A pump the grid could not supply refills by the share it was
         /// given, which is the rule every other draw in this mod follows.
         /// </summary>

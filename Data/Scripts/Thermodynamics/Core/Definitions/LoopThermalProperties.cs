@@ -124,6 +124,20 @@ namespace Thermodynamics.Core
         public float RefillEquivalentKelvin = 100f;
 
         /// <summary>
+        /// Watts a refill running at full rate asks for, on a world at this clock.
+        ///
+        /// **One definition, because two things need it**: `CoolantLoop.RefillDemandWatts` publishes
+        /// it every step, and the pump block's resource sink needs the same figure as the ceiling it
+        /// is constructed with — a ceiling under the real request is a request the distributor
+        /// quietly trims.
+        /// </summary>
+        public float RefillWattsAt(float heatTimeScale)
+        {
+            if (heatTimeScale <= 0f) heatTimeScale = 1f;
+            return RefillKilogramsPerSecond * SpecificHeat * RefillEquivalentKelvin / heatTimeScale;
+        }
+
+        /// <summary>
         /// How fast a ring refills, kg/s. Bounds the cycle: however many grinders are aboard, the
         /// coolant comes back at this rate and no faster.
         ///
