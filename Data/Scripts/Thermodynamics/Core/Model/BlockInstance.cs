@@ -228,6 +228,30 @@ namespace Thermodynamics.Core
             gridSurfaces = new int[count];
             gridStructuralSurfaces = new int[count];
 
+            // A one-cell block's only cell is its minimum corner in every orientation, and its
+            // local cell is the origin: no iterator, no re-anchoring, nothing to rotate but the
+            // surface bits. Same values the walk below produces, which BlockInstanceOneCellTests
+            // holds over every orientation. See performance.md, Pass 2, Iteration 6.
+            if (count == 1)
+            {
+                gridCells[0] = Min;
+                gridStructuralSurfaces[0] = RotateSurface(Model.LocalSurfaceState(Vector3I.Zero, true));
+                gridSurfaces[0] = IsSealedByDoorState
+                    ? gridStructuralSurfaces[0]
+                    : RotateSurface(Model.LocalSurfaceState(Vector3I.Zero, false));
+                return;
+            }
+
+            BuildGridSurfacesWalkingTheCells();
+        }
+
+        /// <summary>
+        /// The general construction: every local cell through <see cref="LocalToGrid"/>, which
+        /// re-anchors the rotated box, and its surface bits rotated into grid space. Public so a
+        /// test can hold the one-cell path to it; a caller is expected to have sized the arrays.
+        /// </summary>
+        public void BuildGridSurfacesWalkingTheCells()
+        {
             int i = 0;
             foreach (Vector3I local in Model.LocalCells())
             {
@@ -243,6 +267,13 @@ namespace Thermodynamics.Core
         /// <summary>Rotates the six self-face bit pairs into grid space.</summary>
         private int RotateSurface(int localState)
         {
+            // Nothing to rotate: every face carries the same bits, and a rotation permutes faces.
+            if (localState == (CellSurface.SelfAirtightMask | CellSurface.SelfMountMask)
+                || localState == 0)
+            {
+                return localState;
+            }
+
             int rotated = 0;
             for (int face = 0; face < Face.Count; face++)
             {
