@@ -503,17 +503,17 @@ of the mod, so building both legs the same way is what leaves the code changes o
 | Figure | start | tip | ratio |
 | --- | ---: | ---: | ---: |
 | **World load, 1,000,294 blocks** | | | |
-| block construction and registration | 1,749 ms | **805 ms** | 0.46 |
-| `RebuildAll` | 10,126 ms | **3,974 ms** | 0.39 |
-| whole load | 12,025 ms | **4,779 ms** | **0.40** |
+| block construction and registration | 1,749 ms | **677 ms** | 0.39 |
+| `RebuildAll` | 10,126 ms | **2,481 ms** | 0.25 |
+| whole load | 12,025 ms | **3,158 ms** | **0.26** |
 | **The build ladder** | | | |
 | 8,904 blocks | 325.1 ms | **16.8 ms** | 0.05 |
 | 32,800 blocks | 1,188.8 ms | **101.8 ms** | 0.09 |
 | 126,731 blocks | 5,129.9 ms | **537.4 ms** | 0.10 |
 | calibration (4k hull, built and stepped) | 286.2 ms | **83.1 ms** | 0.29 |
 | **Memory at 126,731 blocks** | | | |
-| retained | 857 B/block | **817 B/block** | 0.95 |
-| peak | 1,086 B/block | **1,018 B/block** | 0.94 |
+| retained | 857 B/block | **797 B/block** | 0.93 |
+| peak | 1,086 B/block | **999 B/block** | 0.92 |
 | **The suite** | | | |
 | fast lane | 37 s | **4 s** | 0.11 |
 | whole suite | 2 m 34 s, 1,884 cases | **1 m 22 s, 2,001 cases** | — |
@@ -521,8 +521,9 @@ of the mod, so building both legs the same way is what leaves the code changes o
 **The build ladder's ratio is not all mod code**, and the table would mislead without saying so:
 most of the 8,000-block rung is iteration 2 taking the census generator out of the clock, which is
 harness. The figure that is all mod is the world load — `bench load` places heavy armour itself and
-times only construction and `RebuildAll` — and it is **2.5× faster**, from iterations 3, 4, 5, 7, 8
-and 10.
+times only construction and `RebuildAll` — and it is **3.8× faster**, from iterations 3, 4, 5, 7,
+8, 10 and 11. The load and memory rows were re-taken after iteration 11 in the same way, against the
+commit before it: 910 → 677 ms registering and 4,007 → 2,481 ms rebuilding, interleaved, twice.
 
 **What did not move, which is the control.** Nothing in this pass touched the substep loop, and the
 step columns say so: 1.194 → 1.143 ms at 8,904 blocks, 5.381 → 5.373 at 32,800, 19.650 → 19.784 at
