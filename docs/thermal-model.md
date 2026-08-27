@@ -494,11 +494,16 @@ The energy to restore one kilogram is the heat that kilogram holds at a stated e
 J/kg = SpecificHeat × LoopRefillEquivalentKelvin / HeatTimeScale
 ```
 
-At the shipped 3,400 J/(kg·K), 100 K and 90, that is **3,778 J/kg** — so a 50 kg parcel costs
-**188,889 J** to restore. **That is exactly what venting it removes at 100 K above ambient**,
-measured at 188,889 J in `GrindAndRewealdIsWorthKilowattsRatherThanMegawatts`. So a vent-and-refill
-cycle at 100 K over is **exactly neutral in heat** and loses on power and time, which is the exploit
-benefit erased by construction rather than by a number picked to be large enough.
+At the shipped 3,400 J/(kg·K), 100 K and 90, that is **3,778 J/kg** — so a large-grid pipe's 515.6 kg
+parcel costs **1,947,916 J** to restore. **That is exactly what venting it removes at 100 K above
+ambient**, measured on both sides of the same arithmetic by
+`VentingAndRefillingAtTheBreakEvenExcessIsNeutralInHeat`. So a vent-and-refill cycle at 100 K over is
+**exactly neutral in heat** and loses on power and time, which is the exploit benefit erased by
+construction rather than by a number picked to be large enough.
+
+> The figure was **188,889 J** before `C43`, when a pipe carried a flat 50 kg. The neutrality does
+> not depend on it: both sides are the same fluid at the same excess, so the identity holds at any
+> charge and only the size of the number moves.
 
 Above that excess venting still pays and below it costs, which is the behaviour to want: **dumping
 coolant is worth doing when the coolant is genuinely hot and worthless as a pump**. 100 K is not
@@ -574,9 +579,10 @@ being switched off rather than a split**: a split needs a three-port pipe and th
 signature carries the empty state across the rebuild, so welding the pipe back returns the ring to
 the signature it had **and to a fill of nothing**, which it then pays to restore.
 
-> **Measured end to end**: an eight-pipe ring at 100 K over holds 1,511,111 J, a grind drains all of
-> it, and refilling spends 1,511,111 J — **a ratio of 1.0000**. Before the vent a grind cost one
-> parcel, 188,889 J, at 23,611 W. The exploit is not small now; it is nothing.
+> **Measured end to end**: an eight-pipe ring at 100 K over holds 15,583,328 J, a grind drains all of
+> it, and refilling spends 15,583,425 J — **a ratio of 1.0000**. Before the vent a grind cost one
+> parcel, which is 1,947,916 J at the charge that ships and was 188,889 J at the flat 50 kg `B43`
+> priced it on. The exploit is not small now; it is nothing.
 >
 > **And `A12`'s bound lost its test to this, and has it back.** A spilled parcel must never heat
 > its pipe past itself, and the only dissolve that still spills is one that loses no pipe — which
@@ -926,6 +932,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | *Coolant is a consumable* restated at the charge that ships: a large-grid parcel costs **1,947,916 J** to restore rather than 188,889, and an eight-pipe ring holds **15,583,328 J** at 100 K over rather than 1,511,111. The neutrality is unchanged and cannot change — both sides are the same fluid at the same excess — which is now said, because the numbers moving without the conclusion moving is what makes the identity worth stating. |
 | 2026-08-26 | *Coolant loops* carried a pipe parcel at 1,889 J/K, which is what it held at the flat 50 kg charge; `C43`'s density makes it **19,479**. The two figures that ratio decides move with it — the temperature-only spill destroyed 67.9 % of a ring's heat and would now destroy **95.4 %**, and the unbounded pour reached 2,106 K and now reaches **12,854 K**. Both are stated beside the old ones rather than replacing them, because a bound is worth what the thing it bounds is worth. |
 | 2026-08-26 | **The refill's watts are inside what the pump asks the grid for**, which *Coolant is a consumable* had said since the feature existed and the code had never done ([backlog.md](backlog.md) `B44`). They were billed to the block's drawn power — which is what makes them heat — and never requested, so a ship with no power to spare refilled anyway; and a pump *switched off* asked for nothing at all, which a sink reports as full supply, so a ring whose pumps were off refilled at full rate and free. `HasDrivingPump` gates the loop side and the demand is inside `DemandMegawatts` and the sink's ceiling on the block side. |
 | 2026-08-26 | **`A12`'s boundedness bound is under test again, and the case that reaches it is the coolant mechanism being switched off** ([backlog.md](backlog.md) `F28`). Not a split — the shipped pipes have two ports, so no block a player can add opens a closed ring, which is why the split falsifier was withdrawn and why looking for one again found nothing. The 698.19 K on this page was read off a grind before `B44` made a broken ring vent and before `C43` changed the coolant's capacity; on the constructor that works it is 872.0 K against 900 K of fluid, where the unbounded form reaches 12,854 K. |

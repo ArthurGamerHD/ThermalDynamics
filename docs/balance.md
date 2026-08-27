@@ -1352,6 +1352,15 @@ pipe out of a warm eight-pipe ring removes **188,889 J**, and at the pipe's own 
 that is **23,611 W** — **0.79 %** of what the game's largest reactor makes at the fraction this mod
 ships. On a ship already at 900 K it is **143,284 W**, 4.78 %.
 
+> **Every figure in this section is at the flat 50 kg a pipe carried when it was measured, and
+> `C43` multiplied that by 10.31.** At the density that ships a parcel is 1,947,916 J and the grind
+> is **243,490 W**, which is 8.15 % of that reactor rather than 0.79 % — an exploit ten times the
+> size of the one this section priced. **It is left as it was measured** (`E10`), because the
+> conclusion it reached does not depend on the size: `B44`'s vent takes the whole ring rather than
+> one parcel, and a ring that has to be refilled at the break-even excess is neutral in heat at any
+> charge. The prediction table below is a record of what was registered against what was measured,
+> and rewriting its numbers would make it a record of neither.
+
 | | prediction | outcome |
 | --- | --- | --- |
 | the size | over 1 MJ per grind | **fails at 0.19 MJ** |
@@ -2240,6 +2249,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | Noted on *What it did: the exploit was priced out by a fix aimed at something else* that every figure in it is at the flat 50 kg a pipe carried when it was measured, and that `C43` multiplied that by **10.31**: the grind is 243,490 W rather than 23,611 W, 8.15 % of the largest reactor rather than 0.79 %. **Left as measured** (`E10`) — the section is a record of registered predictions against outcomes, and the conclusion does not depend on the size, because `B44`'s vent takes the whole ring and a refill at the break-even excess is neutral at any charge. |
 | 2026-08-26 | **The coolant density is applied** (`C43`). `CoolantKilogramsPerCubicMetre` is 33 kg/m³ — 515.6 kg a pipe on a large grid, 4.1 kg on a small one — and `CoolantMassPerPipe` stays as a flat-mass override defaulting to zero, so nothing that states a per-pipe mass is reinterpreted (`P15`). It moves a settled ring's mean by 6.9 K and 0.8 K, costs no substeps, and rights the swing between the sink face and the far side of the loop. `LoopCandidate` becomes `LoopBefore`: all three of its dials have shipped, and a candidate identical to the default is a lab arm that reports its own package as worthless. |
 | 2026-08-26 | **The correction that blocked `C43` was measured on a rig with no sink.** *The coolant mass is doing an undeclared job* published four temperatures off a ring with a 125 kW source and the environment disabled — nothing settled, every arm climbed linearly, and at step 25,600 the same arms read 26,836 K and 5,908 K rather than the 715.5 K and 387.0 K printed at step 400. It measured a ratio of heat capacities and looked like a temperature. Re-taken with the ring radiating, the density correction moves the **mean** 6.9 K on a large grid and 0.8 K on a small one and the **swing** 100.2 K → 10.0 K and 7.7 K → 94.6 K: coolant mass buffers a ring, it does not decide where the ring runs. `LoopCoolantMassTests` now asserts the rig settles before reading anything off it. |
 | 2026-08-26 | **Small grids are not the harder case, and this page had said they were on arithmetic rather than on evidence.** Per block over the eighty families the game ships at both sizes, a small variant is 2.12× behind on its own skin and 2.28× behind on the loop pickup and **2.5× ahead on conduction into the hull**; over the 8,137-ship census every column favours it, including **19.75×** the hull path per watt for the hottest block. Added *What a small cell is behind on, and what it is not* and *So small grids do not get their own pickup coefficient*: at three sink faces 79 of 80 families match large-grid answerability, closing the last one costs ×5.63 against a median need of ×2.28, and the handicap runs 0.83 to 25 because it tracks the game's per-block waste authoring rather than the cell. `CellSizeLab`, `CellSizeTests` and `tools/corpus/cellsize.py`. |

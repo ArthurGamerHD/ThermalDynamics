@@ -191,7 +191,9 @@ namespace Thermodynamics.Tests
         /// This measured the exploit before the vent existed: a grind cost one parcel, 188,889 J of
         /// an eight-pipe ring at 100 K over, and 23,611 W at the pipe's own build time — 0.79 % of
         /// the largest reactor's waste. That was `B43`'s evidence and it is why the currency it
-        /// chose could be as small as energy and time.
+        /// chose could be as small as energy and time. **`C43` multiplied a large-grid parcel by
+        /// 10.31**, so the same grind is 1,947,916 J and 243,490 W now — and it does not matter,
+        /// which is the point of the paragraph below.
         /// </para>
         ///
         /// <para>

@@ -157,9 +157,11 @@ namespace Thermodynamics.Tests
         /// </para>
         ///
         /// <para>
-        /// **188,889 J is not a coincidence** — it is what
-        /// `GrindAndRewealdIsWorthKilowattsRatherThanMegawatts` measured a grind of one parcel to
-        /// remove at 100 K over, taken from the other side of the same arithmetic.
+        /// **The two figures are the same number by construction, not by coincidence** — a vent
+        /// removes the fluid's excess times its capacity and a refill spends the heat that same
+        /// fluid holds at the same excess. Neither side depends on the charge, so the identity held
+        /// at the flat 50 kg a pipe carried before `C43` (188,889 J a parcel) and holds at the
+        /// density that ships (1,947,916 J), and only the size of the number moved.
         /// </para>
         /// </summary>
         [Fact]
