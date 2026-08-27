@@ -733,6 +733,55 @@ namespace Thermodynamics.Core
             return GetNode(grid.GetAtCell(cell));
         }
 
+        /// <summary>Per-face index steps for the occupancy set, settled once a rebuild.</summary>
+        private readonly long[] linkFaceSteps = new long[Face.Count];
+
+        /// <summary>
+        /// One byte a face a node, marking the faces whose pair has already been looked up from the
+        /// other side.
+        ///
+        /// <para>
+        /// **Every adjacent pair was looked up twice and one of the two answers thrown away.** The
+        /// rebuild visits nodes in ascending index and keeps each pair once, by the rule that the
+        /// lower index makes the link — so the higher index's probe of the opposite face is a
+        /// question whose answer is discarded the moment it arrives. There are as many of those as
+        /// there are links: about **950,000** wasted probes at half a million blocks, into the
+        /// structure that is four fifths of this stage
+        /// (performance.md, Pass 6, Iteration 4).
+        /// </para>
+        ///
+        /// <para>
+        /// Marking costs one write a link and one read a face; the reads are the six bytes of a
+        /// node's own row, so they arrive together. Nothing is skipped that could have produced a
+        /// link, and the walk's order is untouched, so the list is what it always was — which
+        /// `LinkWalkTests` holds against the walk that asks twice.
+        /// </para>
+        /// </summary>
+        private byte[] settledFaces = new byte[0];
+
+        private byte[] EnsureSettledFaces(int nodeCount)
+        {
+            if (!SkipSettledLinkFaces) return null;
+
+            long needed = (long)nodeCount * Face.Count;
+            if (needed <= 0 || needed > int.MaxValue) return null;
+
+            if (settledFaces.Length < needed) settledFaces = new byte[needed];
+            else Array.Clear(settledFaces, 0, (int)needed);
+
+            return settledFaces;
+        }
+
+        /// <summary>
+        /// Set false to look every pair up from both sides, as the rebuild did before.
+        ///
+        /// Test hook: <c>LinkWalkTests</c> builds the same grid both ways and compares the link
+        /// list entry for entry, **including the order it is built in** — which is what the
+        /// conduction pass sums over, so a different order is a different last bit on every
+        /// temperature.
+        /// </summary>
+        public bool SkipSettledLinkFaces = true;
+
         /// <summary>
         /// Brings the conduction graph up to date, incrementally when only blocks have been placed
         /// and by full rebuild otherwise. No-op when the graph already matches the layout.
@@ -800,9 +849,63 @@ namespace Thermodynamics.Core
             // placement. See GridModel.GetNeighbours.
             CellBitset occupied = walked != null ? walked.Occupancy() : null;
 
+            // Fixed for the whole rebuild, so read once rather than once a face a block.
+            long[] keyStep = GridMath.KeyByFace;
+            long[] indexStep = linkFaceSteps;
+            if (occupied != null)
+            {
+                for (int face = 0; face < Face.Count; face++) indexStep[face] = occupied.IndexStep(face);
+            }
+
+            byte[] settled = EnsureSettledFaces(nodes.Count);
+
             for (int i = 0; i < nodes.Count; i++)
             {
                 ThermalNode a = nodes[i];
+
+                // **The common block, asked half as many questions.** See EnsureSettledFaces: the
+                // pair across each face is looked up once rather than once from each side, and the
+                // block table is four fifths of this stage (performance.md, Pass 6, Iteration 4).
+                // Same faces in the same order, and nothing is skipped that would have produced a
+                // link, so the list comes out as it always did.
+                if (settled != null && occupied != null && walked != null && a.Block.CellCount == 1)
+                {
+                    Vector3I ownCell = a.Block.Min;
+                    long ownKey = GridMath.Key(ownCell);
+                    long ownSlot = occupied.IndexOf(ownCell);
+                    int mine = i * Face.Count;
+
+                    for (int face = 0; face < Face.Count; face++)
+                    {
+                        // Settled from the other side, which is the half of every pair that this
+                        // loop used to look up and throw away.
+                        if (settled[mine + face] != 0) continue;
+
+                        if (!occupied.ContainsIndex(ownSlot + indexStep[face])) continue;
+
+                        BlockInstance found = walked.GetAtKey(ownKey + keyStep[face]);
+                        if (found == null) continue;
+
+                        ThermalNode b = GetNode(found);
+                        if (b == null || b.Index <= i) continue;
+
+                        settled[b.Index * Face.Count + Face.Opposite(face)] = 1;
+
+                        int touching = ConductionBuilder.CountContactFaces(a.Block, found, face);
+                        if (touching <= 0) continue;
+
+                        float g = ConductionBuilder.Conductance(
+                            grid.GridSize, a.Block, found, touching, Face.Axis(face));
+                        if (g <= 0f) continue;
+
+                        links.Add(new ThermalLink(a.Index, b.Index, g, touching));
+                        ChainLink(links.Count - 1);
+                        a.LinkCount++;
+                        b.LinkCount++;
+                    }
+
+                    continue;
+                }
 
                 neighbourScratch.Clear();
                 neighbourFaces.Clear();
@@ -821,6 +924,9 @@ namespace Thermodynamics.Core
                         ? neighbourFaces[n]
                         : ConductionBuilder.ContactFace(a.Block, b.Block);
                     if (face < 0) continue;
+
+                    // The far side of this pair need not look it up again either.
+                    if (settled != null) settled[b.Index * Face.Count + Face.Opposite(face)] = 1;
 
                     int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block, face);
                     if (contacts <= 0) continue;
