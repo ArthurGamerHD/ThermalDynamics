@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **Closed pass 7 with one change kept**: the link list's order is a function of the graph, and with the chain rebuild folded into the sort it reads **0.94** against pass 6's tip at 505,566 blocks. The change it was meant to unblock — walking cells in index order — was built and measured at 1.23, so `D3b` is a floor rather than a task. |
 | 2026-08-27 | Pass 7 opened by removing the obstacle `D3b` named — the link list's order is a function of the graph now, at a cost of 1.02 — and then measured the change it unblocked at **1.23**, and 1.16 with the empty box skipped. The sort it needs costs nothing; the walk does, because a hull fills a fourteenth of its box and a cell-indexed row is bigger than the table it replaces. |
 | 2026-08-27 | **Closed pass 6 with no change kept.** Five bit-identical rewrites of the link build's neighbour lookup — by rank, by dense row, twice by removing the code around it, and once by halving the number of lookups — measured between 0.91 and 1.40, and the last of them explains the rest: the stage is bound by touching grid-sized memory once per neighbour, and every scheme keeps one such touch. Walking blocks in cell order would fix it and is refused here for moving every temperature's last bit. |
 | 2026-08-27 | Opened pass 6 on the load path's largest stage. Its first iteration splits the link build by ablation: **nine tenths of it is finding neighbours**, at fifty nanoseconds a dictionary probe, and every per-pair operation together is the other tenth. |
@@ -2007,6 +2008,8 @@ as wanting a pass that *opens* by removing that obstacle — the shape pass 4 us
 | 3 | What the sort the cell walk needs actually costs | **kept** — the ablation that rules it out | [Iterations 2 to 4](#pass-7-iterations-2-to-4--the-designed-change-measured) |
 | 4 | The cell walk skips the empty thirteen fourteenths | **dropped** — 1.16 | [Iterations 2 to 4](#pass-7-iterations-2-to-4--the-designed-change-measured) |
 | 5 | What the two passes together establish | the conclusion below | [Iteration 5](#pass-7--what-sixteen-iterations-on-one-stage-establish) |
+| 6 | Cleanup: the ledger, the counts, and no orphans | **kept** | — |
+| 7 | Ordering and chaining are one walk | **kept** — and it pays for iteration 1 | [Iteration 7](#pass-7-iteration-7--ordering-and-chaining-are-one-walk) |
 
 ## Pass 7, iteration 1 — the link list's order is the graph's
 
@@ -2070,6 +2073,39 @@ That is a floor, not a run of failures — and `D1`'s answer for the step has th
 is left in both is not instructions, it is the size and the sparsity of the thing being walked.**
 The remaining lever in either case is to walk less of it, which is chunking and activity tracking
 for the step and, for the load path, a grid representation the mod does not own.
+
+## Pass 7, iteration 7 — ordering and chaining are one walk
+
+Iteration 1 bought its property with a second pass over the link list: the sort placed every link,
+and then a rebuild of the chains visited every link again, because a reorder invalidates them. And
+the code it replaced was worse than it looked — chaining happened *inside* the build loop, so every
+link paid two capacity checks and a sixteen-byte read back out of the list it had just been appended
+to.
+
+A link can be chained the moment its place is settled, so the sort does both. Chain order is not an
+answer — the one walk over a chain sorts what it collects — so this only has to be complete.
+
+**Measured against pass 6's tip, iterations 1 and 7 together read 0.94** at 505,566 blocks, in the
+round where the settled step read exactly 1.00 and the room pass 0.99. So the pass's one kept change
+is not a cost at all: the property came free, and a little speed with it.
+
+*No figure is quoted at 126,731 blocks, and the reason is worth recording. The link stage is
+**bimodal** there — two windows measuring the same two commits disagreed about which leg was fast,
+one reading 16.9 ms for the code the other read at 32.8. Its spread runs to 441 %. Something about
+that stage at that size settles into one of two states, and until that is understood a figure from
+it is not a figure.*
+
+## Pass 7 — what the pass kept
+
+**One change, and it is a property rather than a speed.** The link list's order is a function of the
+graph: a rebuild may find the same links in any sequence and the result is identical to the bit.
+That is what pass 6 lacked — five optimisations there had to be held to the exact emission order,
+and the sixth was refused outright for wanting to change it.
+
+The freedom has not yet paid, because the change it unblocked was measured and does not work. It is
+kept anyway, for three reasons: it costs nothing (0.94 with the chaining folded in), it removes a
+trap where changing a walk silently moves every temperature, and it turns the checks for any future
+walk from order comparisons into set comparisons.
 
 ---
 
