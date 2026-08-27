@@ -248,6 +248,36 @@ namespace Thermodynamics.Core
         {
             if (block == null || results == null) return;
 
+            // A one-cell block — nearly every block on a hull — has six candidate cells, one per
+            // face, and no two of them can hold the same neighbour: a neighbour is a box, and a box
+            // touches a unit cube on at most one face. So the slab walk below collapses to six
+            // probes in face order, with nothing to deduplicate. Same faces, same order, same
+            // answers; GridModelAdjacencyTests holds the two paths together.
+            // See performance.md, Pass 2, Iteration 2.
+            if (block.CellCount == 1)
+            {
+                Vector3I cell = block.Min;
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    BlockInstance other = GetAtCell(cell + Face.Offsets[face]);
+                    if (other == null || other == block) continue;
+                    results.Add(other);
+                }
+                return;
+            }
+
+            GetNeighboursWalkingTheBoundary(block, results);
+        }
+
+        /// <summary>
+        /// The general query: walks every cell on each face of the block's box and deduplicates,
+        /// which is what a multi-cell block needs and a one-cell block does not. Public so a test
+        /// can hold the one-cell path to it.
+        /// </summary>
+        public void GetNeighboursWalkingTheBoundary(BlockInstance block, List<BlockInstance> results)
+        {
+            if (block == null || results == null) return;
+
             Vector3I min = block.Min;
             Vector3I maxExclusive = block.MaxExclusive;
 

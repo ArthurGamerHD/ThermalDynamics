@@ -611,8 +611,8 @@ on a station. It is budgeted now, so it costs ticks rather than a stall — 7,23
 converge at a million blocks, which is twenty minutes of a stale map. Bounded and wrong is better
 than unbounded, but it is still wrong.
 
-**World load is 3.2 seconds at a million blocks**, in one call, before the first tick — 677 ms
-placing and registering the blocks and 2.5 s in `RebuildAll`. It was **12.0 s** before the
+**World load is 2.2 seconds at a million blocks**, in one call, before the first tick — 500 ms
+placing and registering the blocks and 1.7 s in `RebuildAll`. It was **12.0 s** before the
 2026-08-26 performance pass, measured on the same machine in the same window with both builds
 optimised ([performance.md](performance.md#what-the-pass-moved)). `RebuildAll` is
 deliberately one-shot because it is far cheaper than replaying the incremental path per block, and
@@ -758,6 +758,7 @@ reasoning that produced it was sound and the premise was not.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | World load at a million blocks is **2.2 s**, from 3.2 s at the end of the first performance pass ([performance.md](performance.md#pass-2-iteration-10--what-the-pass-moved)): one-cell paths for the neighbour query, exposure and block construction, the interior scan skipping visited words, and the room map's publish sort by radix. The worst tick after a placement at 505,566 blocks is 70 ms, from 93. |
 | 2026-08-26 | World load at a million blocks is **3.2 s**, from 12.0 s (4.8 s before the cell tables were rekeyed on `GridMath.Key`), measured start-against-tip in one window with both builds optimised. The block half halved (an orientation is a table lookup rather than a matrix) and `RebuildAll` fell to 25 % (the room map reads a sealing snapshot and a bitset, the surface map holds one packed entry a cell, and every cell table is keyed on a `long`). The 11 s this page carried was taken on an unoptimised harness and is not comparable to either figure — see [performance.md](performance.md), `M13`. |
 | 2026-08-22 | Put the ten spike findings in the present tense: each is a property the code holds rather than a thing that was fixed, and the *fixed* marker on all ten of them said only that none was outstanding. Removed the struck-through *Removing a block still rebuilds the whole graph* from [What is still open](#what-is-still-open), which contradicted finding 6 four screens above it. |
 | 2026-08-22 | Corrected the figures in the sentence reading the ladder's own divergence: it quoted a tick of 42 ms against a full step of 103, which matches neither the current table (25.87 against 118.20) nor the pre-refresh one named two paragraphs later (55 against 623). A figure on a page comes from the dataset the page is about (`E5`). |

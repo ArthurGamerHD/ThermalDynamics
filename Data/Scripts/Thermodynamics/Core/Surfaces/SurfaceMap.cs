@@ -265,6 +265,35 @@ namespace Thermodynamics.Core
             Array.Clear(resultsByFace, 0, Face.Count);
             if (block == null) return;
 
+            // A one-cell block has one cell face per face, so the slab walk below is six tests on
+            // one cell state, read once rather than once a face. Same faces, same two questions in
+            // the same order; ExposureFastPathTests holds the two paths together.
+            // See performance.md, Pass 2, Iteration 3.
+            if (block.CellCount == 1)
+            {
+                Vector3I cell = block.Min;
+                int state = GetState(cell);
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    if (CellSurface.NeighbourAirtight(state, face)) continue;
+                    if (rooms != null && !rooms.IsExternal(cell + Face.Offsets[face])) continue;
+                    resultsByFace[face] = 1;
+                }
+                return;
+            }
+
+            GetExposedFacesWalkingTheBoundary(block, rooms, resultsByFace);
+        }
+
+        /// <summary>
+        /// The general count: every cell on each face of the block's box, which a multi-cell block
+        /// needs and a one-cell block does not. Public so a test can hold the one-cell path to it.
+        /// The caller has cleared <paramref name="resultsByFace"/>.
+        /// </summary>
+        public void GetExposedFacesWalkingTheBoundary(BlockInstance block, RoomMap rooms, int[] resultsByFace)
+        {
+            if (block == null || resultsByFace == null) return;
+
             Vector3I min = block.Min;
             Vector3I maxExclusive = block.MaxExclusive;
 

@@ -83,6 +83,51 @@ namespace Thermodynamics.Core
             return (((long)z * sizeY) + y) * sizeX + x;
         }
 
+        /// <summary>
+        /// The first index at or after <paramref name="index"/> whose cell is not set, or
+        /// <paramref name="endExclusive"/> if every cell up to there is. Walks whole words while
+        /// they are all ones — sixty-four cells a step — and then the bits of the first word that
+        /// is not, so a scan over a box that is mostly visited pays per word rather than per cell.
+        /// See performance.md, Pass 2, Iteration 4.
+        /// </summary>
+        /// <param name="wordsExamined">How many words were looked at, which is what the caller charges.</param>
+        public long NextClearIndex(long index, long endExclusive, out int wordsExamined)
+        {
+            wordsExamined = 0;
+            if (index < 0) index = 0;
+
+            while (index < endExclusive)
+            {
+                long word = index >> 6;
+                if (word >= words.Length) return index;
+
+                wordsExamined++;
+                long bits = words[word];
+                int offset = (int)(index & 63);
+
+                // Every bit from this offset to the end of the word set: skip the rest of the word.
+                if ((~bits >> offset) == 0L)
+                {
+                    index = (word + 1) << 6;
+                    continue;
+                }
+
+                // Otherwise the next clear bit is in this word, at or after the offset.
+                for (int bit = offset; bit < 64; bit++)
+                {
+                    if ((bits & (1L << bit)) == 0L)
+                    {
+                        long found = (word << 6) + bit;
+                        return found < endExclusive ? found : endExclusive;
+                    }
+                }
+
+                index = (word + 1) << 6;
+            }
+
+            return endExclusive;
+        }
+
         /// <summary>Whether the cell at an index from <see cref="IndexOf"/> is set. Negative and out-of-range indices are not.</summary>
         public bool ContainsIndex(long index)
         {

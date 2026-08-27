@@ -537,16 +537,30 @@ namespace Thermodynamics.Core
                 if (scanCursor.Z >= searchMaxExclusive.Z) return ScanResult.Exhausted;
                 if (spent >= budget) return ScanResult.BudgetSpent;
 
+                if (snapshotLive)
+                {
+                    // Most of the box has been visited by the time the scan reaches it — the
+                    // external flood took the air and the interior floods take the rooms — so the
+                    // scan's job is mostly to skip. The bitset does that a word at a time, and the
+                    // charge is per word looked at rather than per cell skipped: still cell by cell
+                    // where cells are unvisited, and never more than one unit per sixty-four.
+                    int examined;
+                    long next = visited.NextClearIndex(scanIndex, sealingCells, out examined);
+                    spent += examined;
+                    Work.RoomCellsVisited += examined;
+
+                    if (next > scanIndex) MoveScanTo(next);
+                    if (scanCursor.Z >= searchMaxExclusive.Z) return ScanResult.Exhausted;
+                }
+
                 Vector3I cell = scanCursor;
                 long index = scanIndex;
                 AdvanceCursor();
 
-                spent++;
-                Work.RoomCellsVisited++;
-
                 if (snapshotLive)
                 {
-                    if (visited.ContainsIndex(index)) continue;
+                    // The cell at `index` is unvisited by construction of the skip above, so the
+                    // charge for it was the word that found it.
                     visited.AddIndex(index);
 
                     if (IsStructureAt(index, cell))
@@ -557,6 +571,9 @@ namespace Thermodynamics.Core
                 }
                 else
                 {
+                    spent++;
+                    Work.RoomCellsVisited++;
+
                     if (visited.Contains(cell)) continue;
                     visited.Add(cell);
 
@@ -628,6 +645,34 @@ namespace Thermodynamics.Core
         {
             scanCursor = searchMin;
             scanIndex = 0;
+        }
+
+        /// <summary>Cells in the snapshot's box: the index one past the last cell of the scan.</summary>
+        private long sealingCells
+        {
+            get { return (long)sealingSizeX * sealingSizeY * sealingSizeZ; }
+        }
+
+        /// <summary>
+        /// Moves the scan to an index the bitset found, deriving the cursor from it: the inverse
+        /// of the order the cursor advances in, which <see cref="AdvanceCursor"/> and
+        /// <c>WalkingABoxInScanOrderAdvancesTheIndexByOne</c> hold to be the index order.
+        /// </summary>
+        private void MoveScanTo(long index)
+        {
+            scanIndex = index;
+            if (index >= sealingCells)
+            {
+                scanCursor = new Vector3I(searchMin.X, searchMin.Y, searchMaxExclusive.Z);
+                return;
+            }
+
+            long plane = (long)sealingSizeX * sealingSizeY;
+            int z = (int)(index / plane);
+            long rest = index - (z * plane);
+            int y = (int)(rest / sealingSizeX);
+            int x = (int)(rest - ((long)y * sealingSizeX));
+            scanCursor = new Vector3I(searchMin.X + x, searchMin.Y + y, searchMin.Z + z);
         }
 
         private void AdvanceCursor()

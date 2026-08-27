@@ -129,6 +129,69 @@ namespace Thermodynamics.Tests
             Assert.True(sizeY * sizeZ == 1 || wraps > 0, "the box has no wrap in it, so the wrapping case is untested");
         }
 
+        /// <summary>
+        /// The skip has to have happened for the comparison above to be a comparison of the skip:
+        /// the interior scan over a hull's box is mostly visited cells, and skipping them a word at a
+        /// time must charge far fewer units than walking them one by one did. Counted on the same
+        /// hull both ways (`E8`).
+        /// </summary>
+        [Fact]
+        public void TheSnapshotScanChargesFarFewerUnitsThanTheCellByCellScan()
+        {
+            ThermalSimulation byDictionary = Census(false);
+            ThermalSimulation bySnapshot = Census(true);
+
+            long walked = byDictionary.Work.RoomCellsVisited;
+            long skipped = bySnapshot.Work.RoomCellsVisited;
+
+            // The counter covers the flood as well as the scan, and the flood charges the same
+            // either way; what the skip can remove is the scan's own walk over the box, which is
+            // one unit per cell of the bounding volume. Most of that must go.
+            Vector3I extents = (byDictionary.Grid.Max - byDictionary.Grid.Min) + new Vector3I(3, 3, 3);
+            long volume = (long)extents.X * extents.Y * extents.Z;
+
+            Assert.True(walked > 0 && skipped > 0, "a pass charged nothing");
+            Assert.True(walked - skipped > volume / 2,
+                "the snapshot scan charged " + skipped + " units against " + walked
+                + " cell by cell over a box of " + volume + " cells, so it skipped less than half the box");
+        }
+
+        /// <summary>
+        /// The bitset's word skip, on the shapes an off-by-one would survive the map tests on: a
+        /// clear bit at the start of a word, in the middle, at the last position, past a run of
+        /// full words, and none before the end bound.
+        /// </summary>
+        [Fact]
+        public void NextClearIndexFindsTheFirstClearBitAtOrAfterAnyOffset()
+        {
+            CellBitset bits = new CellBitset();
+            Vector3I min = Vector3I.Zero;
+            bits.Reset(min, new Vector3I(200, 1, 1));
+
+            // Cells 0..149 set, except 37 and 129; 150..199 clear.
+            for (int i = 0; i < 150; i++)
+            {
+                if (i == 37 || i == 129) continue;
+                bits.AddIndex(i);
+            }
+
+            int examined;
+            Assert.Equal(37L, bits.NextClearIndex(0, 200, out examined));
+            Assert.Equal(1, examined);
+            Assert.Equal(37L, bits.NextClearIndex(37, 200, out examined));
+            Assert.Equal(129L, bits.NextClearIndex(38, 200, out examined));
+            Assert.Equal(3, examined); // the rest of word 0, all of word 1, and the word holding 129
+            Assert.Equal(150L, bits.NextClearIndex(130, 200, out examined));
+            Assert.Equal(151L, bits.NextClearIndex(151, 200, out examined));
+            Assert.Equal(150L, bits.NextClearIndex(150, 150, out examined)); // at the bound, the bound
+
+            // Fill the tail: from past the last clear bit, the answer is the bound; from the
+            // start it is still 37.
+            for (int i = 150; i < 200; i++) bits.AddIndex(i);
+            Assert.Equal(200L, bits.NextClearIndex(130, 200, out examined));
+            Assert.Equal(37L, bits.NextClearIndex(0, 200, out examined));
+        }
+
         [Fact]
         public void AShellWithADoorMapsToTheSameRoomsAndPortals()
         {

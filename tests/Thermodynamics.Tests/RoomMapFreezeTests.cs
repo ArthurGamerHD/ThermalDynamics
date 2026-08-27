@@ -48,6 +48,72 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// The freeze sorts by radix rather than by comparison, and the result must be the same
+        /// order to the element (`D8`): held against `Array.Sort` on random keys spanning every
+        /// digit, on keys already sorted, reversed, all equal, and on the offsets a real box
+        /// produces — with the rooms carried along by both.
+        /// </summary>
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(1000)]
+        [InlineData(100003)]
+        public void TheRadixSortOrdersKeysAsTheComparisonSortDoes(int count)
+        {
+            uint state = 0x2545F491u ^ (uint)count;
+            long origin = GridMath.Key(new Vector3I(-40, -7, -13));
+            long[] keys = new long[count];
+            int[] rooms = new int[count];
+            for (int i = 0; i < count; i++)
+            {
+                state ^= state << 13; state ^= state >> 17; state ^= state << 5;
+                // Cells scattered across a box wide enough to exercise five digits of offset.
+                Vector3I cell = new Vector3I(-40 + (int)(state % 500), -7 + (int)((state >> 9) % 300), -13 + (int)((state >> 18) % 200));
+                keys[i] = GridMath.Key(cell);
+                rooms[i] = (int)(state % 97);
+            }
+
+            long[] expectedKeys = (long[])keys.Clone();
+            int[] expectedRooms = (int[])rooms.Clone();
+            System.Array.Sort(expectedKeys, expectedRooms);
+
+            RoomMap.RadixSortByKey(keys, rooms, count, origin);
+
+            Assert.Equal(expectedKeys, keys);
+            // Equal keys carry equal rooms only if both sorts are stable on ties; the keys here are
+            // cells and may repeat, so rooms are compared where the key is unique.
+            for (int i = 0; i < count; i++)
+            {
+                bool unique = (i == 0 || expectedKeys[i - 1] != expectedKeys[i])
+                    && (i == count - 1 || expectedKeys[i + 1] != expectedKeys[i]);
+                if (unique) Assert.Equal(expectedRooms[i], rooms[i]);
+            }
+        }
+
+        [Fact]
+        public void TheRadixSortHandlesTheDegenerateOrders()
+        {
+            long origin = 0;
+            long[] sorted = { 1, 2, 3, 4, 5, 6, 7, 8 };
+            int[] r1 = { 0, 1, 2, 3, 4, 5, 6, 7 };
+            RoomMap.RadixSortByKey(sorted, r1, sorted.Length, origin);
+            Assert.Equal(new long[] { 1, 2, 3, 4, 5, 6, 7, 8 }, sorted);
+            Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 6, 7 }, r1);
+
+            long[] reversed = { 8, 7, 6, 5, 4, 3, 2, 1 };
+            int[] r2 = { 0, 1, 2, 3, 4, 5, 6, 7 };
+            RoomMap.RadixSortByKey(reversed, r2, reversed.Length, origin);
+            Assert.Equal(new long[] { 1, 2, 3, 4, 5, 6, 7, 8 }, reversed);
+            Assert.Equal(new[] { 7, 6, 5, 4, 3, 2, 1, 0 }, r2);
+
+            long[] wide = { 1L << 50, 3, 1L << 40, 1L << 20, 0 };
+            int[] r3 = { 0, 1, 2, 3, 4 };
+            RoomMap.RadixSortByKey(wide, r3, wide.Length, origin);
+            Assert.Equal(new long[] { 0, 3, 1L << 20, 1L << 40, 1L << 50 }, wide);
+            Assert.Equal(new[] { 4, 1, 3, 2, 0 }, r3);
+        }
+
+        /// <summary>
         /// Every cell of every room resolves to the room that holds it, and nothing else does.
         /// </summary>
         [Fact]
