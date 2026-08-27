@@ -54,6 +54,7 @@ which is what makes the ratios readable when the absolutes are not.
 | 1 | 2026-08-26 | The harness measured unoptimised code | **kept** — every configuration now compiles optimised | [Iteration 1](#iteration-1--the-harness-measured-unoptimised-code) |
 | 2 | 2026-08-26 | The ladder's `build` column measured the hull generator | **kept** — generator 9× cheaper, and outside the clock | [Iteration 2](#iteration-2--the-ladders-build-column-measured-the-hull-generator) |
 | 3 | 2026-08-26 | An orientation is a signed permutation | **kept** — block construction halved at every size | [Iteration 3](#iteration-3--an-orientation-is-a-signed-permutation) |
+| 4 | 2026-08-26 | The room mapper reads a snapshot of the sealing | **kept** — the room map 3× cheaper at half a million blocks | [Iteration 4](#iteration-4--the-room-mapper-reads-a-snapshot-of-the-sealing) |
 
 ## Iteration 1 — the harness measured unoptimised code
 
@@ -203,10 +204,57 @@ identity. The control moved by less than its own repeat-to-repeat spread (±3 %)
 million blocks is 11.2 s on this machine and the block half of it is now under a second; the ten
 seconds left are `RebuildAll`, which is where iteration 4 goes.
 
+## Iteration 4 — the room mapper reads a snapshot of the sealing
+
+**What was found.** `bench scale` split the build at 505,566 blocks: **2,954 ms of 4,388 ms was
+the room map**, against 392 ms for the links and 345 ms for exposure. The flood fill visits every
+cell of a bounding volume fourteen times the block count, asks two questions per face — is this
+face sealed on either side, is that cell solid — and each was answered from `SurfaceMap`'s
+dictionaries: two hash probes per face, twelve per cell, eighty million probes a pass. It is also
+what [backlog.md](backlog.md) `D2` measures at 7,207 ticks to converge at a million blocks, and
+what a world load waits on.
+
+**What changed.** When a pass begins, the mapper copies the structural self-airtight bits of every
+occupied cell in its search box into one byte per cell, and answers both questions from that with
+array reads. The copy is exact because a change to what a block seals already requests a restart
+(`ThermalSimulation.RefreshBlock` marks the topology dirty on any structural change; `AddBlock` and
+`RemoveBlock` always do), so a pass never read a surface map that had moved under it — and now it
+reads one that cannot. The buffer is the bounding volume in bytes, 6.8 MB at 505k blocks and 14 MB
+at a million, retained between passes and regrown only when the box outgrows it; a box past
+`int.MaxValue` cells falls back to the dictionaries rather than allocating. The dictionary path
+stays behind `SnapshotSealing` for the pin.
+
+**Pinned.** `RoomMapSnapshotTests` publishes the map both ways and requires the same room count,
+solid count, external count, the same cells in the same order in every room, the same venting, and
+the same portals — on a census hull with compartments, on a shell with a door (the portal case), and
+then steps the pressurised hull both ways to identical temperatures through `SolverAb`. Each fixture
+asserts it found rooms and portals first (`E8`).
+
+**What it was worth.** `bench scale`, ship shape, before and after in one held window, twice each:
+
+| blocks | bounding cells | rooms, before | rooms, after | ratio | build, before → after | links, exposure (control) |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 32,800 | 328,640 | 35 / 43 ms | **28 / 28 ms** | 0.65 | 130 → 165 ms | 15 / 10 → 18 / 19 ms |
+| 126,731 | 1,499,616 | 271 / 328 ms | **176 / 185 ms** | 0.54 | 592 → 525 ms | 92 / 81 → 101 / 82 ms |
+| 505,566 | 6,838,104 | 2,065 / 2,874 ms | **893 / 913 ms** | 0.31 | 3,917 → 2,328 ms | 370 / 329 → 399 / 334 ms |
+
+The fastest of the two is the figure; the pairs are printed because the *before* rows at 505k
+disagree with each other by 40 %, which is the dictionary path's own sensitivity to the state of the
+cache on a shared machine, and the *after* rows by 2 %. The control columns did not move beyond
+their spread. What is left of the room map's cost is the bitset, the frontier queue and the
+published map's own per-cell writes; the `settle` column — ticks to converge after a placement — is
+unchanged at every rung, because the mapper's budget is counted in cells and this iteration made
+each cell cheaper rather than fewer.
+
+**The next rung, measured rather than guessed.** Split further at 126,731 blocks after this change:
+`SurfaceMap.Rebuild` 173–254 ms, links 107–178, rooms 156–188, exposure 82–152, room air 3–7. The
+surface map's two per-cell dictionaries — built, then refreshed at seven probes per cell per layer —
+are now the largest single term of a load.
+
 ---
 
 ## Change log
 
 | Date | Change |
 | --- | --- |
-| 2026-08-26 | Opened, with the first two iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
+| 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
