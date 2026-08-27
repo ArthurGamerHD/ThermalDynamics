@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Pass 4, iteration 6: 92 % of the air rebuild's face probes find nothing, so a bit over the grid's padded box answers first — roomair 0.89 at 505,566 blocks. Counted before it was changed, in a separate commit. |
 | 2026-08-27 | Pass 4, iteration 5: the air rebuild and the room-side exposure refresh walk neighbours by key arithmetic — roomair 0.74 at 126k blocks but only 0.95 at 505k, which says the stage is bound by the dictionary probes, not the arithmetic around them. |
 | 2026-08-27 | Pass 4, iteration 4: room air is canonical — sorted by node, so a room's links and its starting temperature no longer depend on the path the flood took. The span flood's precondition is met. The iteration also gave the air rebuild its first instrument, and it is **the largest stage on the load path** — 185 ms at 505,566 blocks against the room pass's 134 in a quiet window — and previously unmeasured. |
 | 2026-08-27 | Pass 4, iteration 3: the room map answers from a rank over the set it already fills, so the sorted key and room arrays and the radix sort are gone. Exposure 0.45, rooms 0.89, and the pass's allocation is a tenth of what it was when the pass opened. |
@@ -1113,6 +1114,7 @@ table carries an allocation column for that reason.
 | 3 | The map answers from a rank, so the sorted arrays and the sort go | **kept** — exposure **0.45**, rooms 0.89, another 28 MB | [Iteration 3](#pass-4-iteration-3--the-room-map-answers-from-a-rank) |
 | 4 | A room's air is a function of the room, not of the flood's path | **kept** — for the property, at a cost the instrument cannot resolve; and it found the load path's largest stage, unmeasured | [Iteration 4](#pass-4-iteration-4--a-rooms-air-is-a-function-of-the-room) |
 | 5 | The air rebuild walks neighbours by key arithmetic | **kept** — roomair 0.74 at 126k, 0.95 at 505k, and the gap says what the stage is bound by | [Iteration 5](#pass-4-iteration-5--the-air-rebuild-walks-neighbours-by-key-arithmetic) |
+| 6 | A bit in front of the probe, for the nine faces in ten that hold nothing | **kept** — roomair 0.89 at 505k, 0.92 at 126k | [Iteration 6](#pass-4-iteration-6--a-bit-in-front-of-the-probe) |
 
 ## Pass 4, iteration 1 — the room map's cell-to-room dictionary is gone
 
@@ -1341,6 +1343,47 @@ then stalls on a cache miss anyway recovers little.
 That is worth stating as a measurement rather than a hunch, because it changes what to do next:
 **the probes that cost are the ones that find nothing.** A room's interior cells have six air
 neighbours and pay six full dictionary probes to be told so, and interior cells are most of a room.
+
+## Pass 4, iteration 6 — a bit in front of the probe
+
+Iteration 5 ended by saying the air rebuild is bound by the probes rather than the arithmetic around
+them, and that most of those probes find nothing. **The counters were added first, in their own
+commit, before the change they justify** — because "most" is not a number and the number is what
+decides between making the probe cheaper and not making it:
+
+| blocks | faces walked | faces holding a block | share |
+| ---: | ---: | ---: | ---: |
+| 126,731 | 1,642,800 | 139,120 | **8.5 %** |
+| 505,566 | 9,022,890 | 691,306 | **7.7 %** |
+
+So **eight and a third million of those nine million probes are a hash and a bucket chase to be told
+"nothing"**. `GridModel` now keeps one bit per cell of its padded bounding box, and the walk asks
+that first. The bit's index steps by a per-face constant exactly as the key does — `((z·sizeY) + y)·sizeX + x`
+is a sum too — so asking costs an add and a bit test.
+
+**Two things make it safe to hold rather than to maintain.** It is built on demand and dropped
+whenever the grid changes, so a load that places half a million blocks builds it once at the end
+rather than half a million times on the way; and the index step is only sound away from the box's
+own boundary, which is why the box is padded — the pad ring is external air and never holds a room
+cell, so no walk ever steps off an edge. Both are checked: the bit against the block table cell by
+cell over a whole hull, the step against deriving the neighbour on every face of every occupied
+cell, and the rebuild against placing and removing a block.
+
+| stage | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| roomair, 505,566 blocks | 147.65 ms | **131.64 ms** | **0.89** |
+| roomair, per face walked | 16.4 ns | **14.6 ns** | |
+| roomair, 126,731 blocks | 26.58 ms | **24.55 ms** | 0.92 |
+| rooms, 505,566 (control) | 133.71 ms | 133.07 ms | 1.00 |
+| a settled step, 505,566 (control) | 80.12 ms | 80.33 ms | 1.00 |
+
+**Eleven per cent, not the half the hit rate might suggest, and the reason is worth keeping.**
+Replacing a dictionary probe with a bit test does not replace a memory access with nothing: the
+bitset over the box is nearly a megabyte at this size, and the six neighbours of a cell touch it at
+six unrelated offsets. What was saved is the hash, the bucket walk and the entry read — not the
+cache miss, which both structures take. A bit is a cheaper miss, not an avoided one. The stage is
+still memory-bound, and the remaining lever there is to *touch fewer cells*, which is what the room
+pass's own designed change is about.
 
 ---
 
