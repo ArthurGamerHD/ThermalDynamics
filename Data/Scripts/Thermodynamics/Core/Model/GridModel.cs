@@ -205,8 +205,25 @@ namespace Thermodynamics.Core
 
         public BlockInstance GetAtCell(Vector3I cell)
         {
+            return GetAtKey(GridMath.Key(cell));
+        }
+
+        /// <summary>
+        /// The block occupying the cell with this key, or null. The same question as
+        /// <see cref="GetAtCell"/> for a caller that already holds the key — and since a key is a
+        /// *sum* of the components, a caller walking the six neighbours of a cell holds all six
+        /// keys the moment it holds one: `key + GridMath.KeyByFace[face]`. That is one addition a
+        /// face where converting the neighbouring cell is two multiplies and three adds.
+        ///
+        /// <para>
+        /// Not to be confused with <see cref="GetByKey"/>, which answers only for a block's
+        /// *lowest* cell and so returns null for the other cells of a multi-cell block.
+        /// </para>
+        /// </summary>
+        public BlockInstance GetAtKey(long key)
+        {
             BlockInstance block;
-            return blocksByCell.TryGetValue(GridMath.Key(cell), out block) ? block : null;
+            return blocksByCell.TryGetValue(key, out block) ? block : null;
         }
 
         /// <summary>The block with this position key, or null when the grid does not carry it.</summary>

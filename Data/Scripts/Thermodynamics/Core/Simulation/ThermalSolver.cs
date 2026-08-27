@@ -1351,14 +1351,18 @@ namespace Thermodynamics.Core
 
                 foreach (Vector3I cell in rooms.CellsOf(index))
                 {
+                    // One conversion a cell rather than seven: a neighbour's key is this cell's
+                    // key plus a per-face constant. See performance.md, Pass 3, Iteration 6.
+                    long key = GridMath.Key(cell);
+
                     for (int face = 0; face < Face.Count; face++)
                     {
-                        BlockInstance block = grid.GetAtCell(cell + Face.Offsets[face]);
+                        BlockInstance block = grid.GetAtKey(key + GridMath.KeyByFace[face]);
                         if (block != null) affected.Add(block);
                     }
 
                     // The cell itself may hold a block, such as a door standing in the room.
-                    BlockInstance occupant = grid.GetAtCell(cell);
+                    BlockInstance occupant = grid.GetAtKey(key);
                     if (occupant != null) affected.Add(occupant);
                 }
             }
@@ -1473,9 +1477,11 @@ namespace Thermodynamics.Core
 
             foreach (Vector3I cell in rooms.CellsOf(air.RoomIndex))
             {
+                long key = GridMath.Key(cell);
+
                 for (int face = 0; face < Face.Count; face++)
                 {
-                    BlockInstance block = grid.GetAtCell(cell + Face.Offsets[face]);
+                    BlockInstance block = grid.GetAtKey(key + GridMath.KeyByFace[face]);
                     if (block == null) continue;
 
                     ThermalNode node = GetNode(block);
