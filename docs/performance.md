@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Pass 4, iteration 10: the block neighbour walk goes by key arithmetic as well — 0.96 to 0.99, below what the instrument resolves, kept on the sign of eight paired readings out of eight. |
 | 2026-08-27 | **Closed pass 4**: the room pass is **0.36** and allocates a tenth, exposure **0.53**, the mapper's peak memory **0.51**, world load at a million blocks 1.66 → 1.32 s. The two largest wins were downstream of changes made for other reasons. |
 | 2026-08-27 | Pass 4, iteration 8: the rooms are walked a run at a time as well — rooms 0.84, and **the air rebuild 0.43 on identical work**, because a room's cells now arrive contiguous along X and the walk over them is sequential. The tick-budget check caught a latent overshoot in the interior scan on the way. |
 | 2026-08-27 | Pass 4, iteration 7: **the span flood is built** — the external air is walked a run at a time, 84 cells to a run, and the room pass is **0.59** at 505,566 blocks and 0.54 at 126,731. The budget check caught the first form overshooting a tick. |
@@ -1121,6 +1122,7 @@ table carries an allocation column for that reason.
 | 7 | The external air is walked a run at a time | **kept** — rooms **0.59** at 505k, **0.54** at 126k | [Iteration 7](#pass-4-iteration-7--the-external-air-is-walked-a-run-at-a-time) |
 | 8 | The rooms are walked a run at a time too | **kept** — rooms 0.84, and **roomair 0.43** on identical work | [Iteration 8](#pass-4-iteration-8--the-rooms-are-walked-a-run-at-a-time-too) |
 | 9 | What the pass moved, measured against its own start | the summary below | [Iteration 9](#pass-4--what-the-pass-moved) |
+| 10 | Block neighbours by key arithmetic too | **kept**, but below what the instrument resolves — 0.96–0.99, and the sign is the evidence | [Iteration 10](#pass-4-iteration-10--block-neighbours-by-key-arithmetic-too) |
 
 ## Pass 4, iteration 1 — the room map's cell-to-room dictionary is gone
 
@@ -1550,6 +1552,37 @@ exposure moved because the run walk stops driving the mapper's retained ring buf
 entries. The peak memory row says so: **`RoomMapper` peak is 297 → 152 bytes a block**, and the
 whole simulation's peak 967 → 821. A pass that walks the same map with a hundred and fifty
 megabytes less behind it at half a million blocks is a faster pass.
+
+## Pass 4, iteration 10 — block neighbours by key arithmetic too
+
+The link build is the largest stage left on the load path, and what it spends its time on is asking
+the grid for each block's neighbours. The one-cell walk — nearly every block on a hull — converted a
+cell to a key six times, once per candidate face, where the six candidates are the block's own key
+plus six constants. The boundary walk for multi-cell blocks takes the same treatment.
+
+| stage | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| links, 505,566 blocks | 60.51 ms | 60.04 ms | 0.99 |
+| links, 126,731 blocks | 12.94 ms | 12.37 ms | 0.96 |
+| place, 505,566 blocks | 41.21 ms | 39.37 ms | 0.96 |
+| place, 126,731 blocks | 10.76 ms | 9.76 ms | 0.91 |
+| a settled step, 505,566 (control) | 79.99 ms | 80.16 ms | 1.00 |
+
+**No individual figure here clears this instrument's floor, and the change is kept anyway.** The
+link stage's own spread is 75–105 % and the *before* leg's two rounds differ by 4.8 % on identical
+code, so 0.99 and 0.96 are not results on their own. What is a result is that **every one of the
+eight paired readings — two stages, two sizes, two rounds — is lower on the tip than on the before
+leg**. Eight readings agreeing in sign by chance is one in two hundred and fifty-six. The size of
+the effect is not resolved; its direction is, and it points the way a strict reduction in work
+should point.
+
+That is the honest end of a lever this project has pulled four times now. `GridMath.Key` is a sum,
+so a neighbour's key is an addition — and the four places that walk neighbours in a loop have all
+been converted: the surface rebuild (pass 3, iteration 6, worth **0.50**), the air rebuild and the
+room-side exposure refresh (iteration 5, worth 0.74 at the small rung), and now the block adjacency
+walk, worth *possibly* three per cent. The lever gets smaller each time it is pulled, because what is
+left is bound by the dictionary rather than by the arithmetic — which iteration 5 had already
+measured and said.
 
 ---
 
