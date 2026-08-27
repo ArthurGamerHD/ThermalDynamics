@@ -30,8 +30,13 @@ before the idea, and the oracle before the change.
    rather than a verdict (`D7`).
 3. **Branch.** One branch per iteration, off the working branch's tip, merged back with a merge
    commit once the change has passed every check below.
-4. **Validate in a lab.** The candidate is measured on one hull with the change flipped between
-   timed blocks, because two hulls are two allocations with two cache colourings.
+4. **Validate in a lab, on an instrument that can resolve the claim.** The candidate is measured on
+   one hull with the change flipped between timed blocks, because two hulls are two allocations
+   with two cache colourings — and on a *stage timed by itself*, best of many, because a figure
+   read off the whole build or the whole report carries every other stage's noise. This pass found
+   both errors that follow from getting it wrong: a change kept would have been dismissed at a 6 %
+   floor (iteration 10, really worth 10–18 %), and a change dismissed had to be re-judged at a 1 %
+   floor before the dismissal meant anything (iteration 6, really worth nothing).
 5. **Implement only if it pays and holds.** A change is kept when its saving is outside the noise
    floor (`M5`) and it breaks neither the three invariants (`C6`) nor a stated intent.
 6. **Pin it.** An optimisation is asserted bit-identical to the code it replaced on a fixture that
@@ -58,10 +63,11 @@ which is what makes the ratios readable when the absolutes are not.
 | 3 | 2026-08-26 | An orientation is a signed permutation | **kept** — block construction halved at every size | [Iteration 3](#iteration-3--an-orientation-is-a-signed-permutation) |
 | 4 | 2026-08-26 | The room mapper reads a snapshot of the sealing | **kept** — the room map 3× cheaper at half a million blocks | [Iteration 4](#iteration-4--the-room-mapper-reads-a-snapshot-of-the-sealing) |
 | 5 | 2026-08-26 | The surface map's two layers in one dictionary | **kept** — the surface map 2× cheaper | [Iteration 5](#iteration-5--the-surface-maps-two-layers-in-one-dictionary) |
-| 6 | 2026-08-26 | One row per link in the conduction loop | **dropped** — inside the noise floor | [Iteration 6](#iteration-6--one-row-per-link-in-the-conduction-loop-tried-and-dropped) |
+| 6 | 2026-08-26 | One row per link in the conduction loop | **dropped** — ±1.2 % at a 1 % floor, sign changing | [Iteration 6](#iteration-6--one-row-per-link-in-the-conduction-loop-tried-and-dropped) |
 | 7 | 2026-08-26 | The room map's solid set is a bitset | **kept** — exposure 2× cheaper | [Iteration 7](#iteration-7--the-room-maps-solid-set-is-a-bitset-over-the-search-box) |
 | 8 | 2026-08-26 | The flood fill steps an index, not a vector | **kept** — another fifth off the room map | [Iteration 8](#iteration-8--the-flood-fill-steps-an-index-not-a-vector) |
 | 9 | 2026-08-26 | The fast lane had rotted to 37 s | **kept** — 4 s again, eleven classes tagged | [Iteration 9](#iteration-9--the-fast-lane-had-rotted-to-37-s) |
+| 10 | 2026-08-26 | The interior scan steps its index | **kept** — the room pass 10–18 % cheaper | [Iteration 10](#iteration-10--the-interior-scan-steps-its-index) |
 
 ## Iteration 1 — the harness measured unoptimised code
 
@@ -301,12 +307,31 @@ twice each, fastest kept:
 | overshoot clamp, resolved, always clamped | 11.109 ms | 11.305 ms | 1.02 |
 | noise, spread of five identical runs | 0.063–0.128 ms | 0.110–0.186 ms | — |
 
-**Not kept** (`M5`). Nothing moved outside the noise floor, in either direction, on any hull. That
-is a finding about the loop rather than a shrug: the three link streams were already sequential and
-prefetched, so folding them bought nothing, and what the loop pays for is the two gathers and two
-scatters into the node rows, which no layout of the *link* side can touch. The commit is reverted in
-the same branch so the record of the attempt is in the history and the tree carries no code that
-measured as nothing (`D8`'s other half: an optimisation that did not pay is not left in).
+**Not kept** (`M5`). Nothing moved outside the noise floor, in either direction, on any hull.
+
+**And the report was the wrong instrument to decide it on, which iteration 10 is what proved.** Two
+nominally identical step measurements inside one report disagree by two to five per cent, so
+"inside the noise" there means *under about five per cent* — which is a floor wide enough to hide a
+real saving. Iteration 10 was dismissed on that same instrument and turned out to be worth 10 to
+18 % when the room pass was timed on its own, so this was re-judged the same way: the substep loop
+alone, one settled 32,800- and 126,731-block hull, twenty steps a repeat, fifteen repeats, fastest
+kept.
+
+| hull | with link rows | with three arrays | ratio |
+| --- | ---: | ---: | ---: |
+| 32,800 blocks, 64,964 links | 5.4736 ms | 5.4098 ms | **1.012** |
+| 126,731 blocks, 247,350 links | 18.7644 ms | 18.8290 ms | **0.997** |
+
+Repeating each leg puts the best-to-best variation within one tree at 0.6 to 1.3 %, so this
+instrument resolves about a per cent — and the effect is ±1.2 % with the sign changing between
+rungs. The substeps run are identical on both sides (8,485 and 7,272), so the two are the same
+arithmetic at the same count.
+
+**So the revert stands, and now it stands on evidence rather than on a floor that was too wide.**
+The finding is about the loop: the three link streams were already sequential and prefetched, so
+folding them bought nothing, and what the loop pays for is the two gathers and two scatters into
+the *node* rows, which no layout of the link side can touch. The commit is reverted in the same
+branch, so the attempt is in the history and the tree carries no code that measured as nothing.
 
 ## Iteration 7 — the room map's solid set is a bitset over the search box
 
@@ -376,6 +401,90 @@ the tests moved; what moved is which lane a developer waits for.
 has been found rotten by measuring rather than by a test. The honest check would read the runner's
 durations back, which is a tool outside the suite; until one exists the refresh is a step of every
 performance pass, which this page now lists.
+
+## Iteration 10 — the interior scan steps its index
+
+**What was found.** The interior scan walks every cell of the bounding volume — 3.1 million at
+126,731 blocks and 13.7 million at 505,566 — and derived each cell's index twice, once for the
+visited bitset and once for the sealing snapshot: three subtractions, six compares and a multiply,
+each time. **The scan order is the index order exactly**, x fastest then y then z, so a step of one
+cell is a step of one index, wraps included. And `IsStructure` asked a `HashSet<Vector3I>` whether
+every sealed cell belonged to a door, on grids that mostly have no door at all.
+
+**What changed.** The scan carries its index and increments it; the door probe tests the count
+first.
+
+**Pinned.** `RoomMapSnapshotTests` — which publishes the map both ways and compares it cell for
+cell — is the pin, and it was proven against a deliberate off-by-one on the wrap: six of its nine
+cases fail. `WalkingABoxInScanOrderAdvancesTheIndexByOne` states the ordering claim where it is
+made rather than through the map, over three box shapes including one a single row deep.
+
+**The ladder could not resolve it, and a tighter instrument could.** On the build split the room
+pass read 571 ms before and 551 after at 505,566 blocks, against a repeat-to-repeat spread of 6 to
+12 % — a figure inside the noise floor has not moved (`M5`), and on that instrument this change had
+not. So the room pass was measured **on its own**, on one prebuilt grid, fifteen passes, fastest
+kept:
+
+| blocks | cells a pass | rooms, before | after | ratio |
+| ---: | ---: | ---: | ---: | ---: |
+| 126,731 | 3,072,469 | 69.4 ms | **57.0 ms** | 0.82 |
+| 505,566 | 13,720,674 | 498.3 ms | **446.2 ms** | 0.90 |
+
+Repeated, the same pair reads 71.0 → 61.9 and 510.5 → 450.9: the direction is the same in all four
+pairs, and the gap is several times the best-to-best variation between rounds of one tree. **The
+cells-visited counter is identical on both sides** — 3,072,469 and 13,720,674 — which is what says
+the two are the same walk at a different price rather than two different walks, the same way
+`LoadTests` holds a claim on work counters rather than on milliseconds.
+
+**And the spread is the reason this needed its own instrument.** Fifteen passes of the same code
+range from 69 ms to 263: on a machine three other projects share, the *worst* of N is about the
+machine and only the best of N is about the code (`M4`, `W5`).
+
+---
+
+## What the pass moved
+
+Every figure below is the pass's starting commit against its tip, both built optimised, interleaved
+in one held window, each leg twice, fastest kept (`M7`, `M4`). The starting commit is measured
+*optimised* on purpose: iteration 1's saving is a property of how the harness was built rather than
+of the mod, so building both legs the same way is what leaves the code changes on their own.
+
+| Figure | start | tip | ratio |
+| --- | ---: | ---: | ---: |
+| **World load, 1,000,294 blocks** | | | |
+| block construction and registration | 1,749 ms | **805 ms** | 0.46 |
+| `RebuildAll` | 10,126 ms | **3,974 ms** | 0.39 |
+| whole load | 12,025 ms | **4,779 ms** | **0.40** |
+| **The build ladder** | | | |
+| 8,904 blocks | 325.1 ms | **16.8 ms** | 0.05 |
+| 32,800 blocks | 1,188.8 ms | **101.8 ms** | 0.09 |
+| 126,731 blocks | 5,129.9 ms | **537.4 ms** | 0.10 |
+| calibration (4k hull, built and stepped) | 286.2 ms | **83.1 ms** | 0.29 |
+| **Memory at 126,731 blocks** | | | |
+| retained | 857 B/block | **817 B/block** | 0.95 |
+| peak | 1,086 B/block | **1,018 B/block** | 0.94 |
+| **The suite** | | | |
+| fast lane | 37 s | **4 s** | 0.11 |
+| whole suite | — | 1 m 31 s | — |
+
+**The build ladder's ratio is not all mod code**, and the table would mislead without saying so:
+most of the 8,000-block rung is iteration 2 taking the census generator out of the clock, which is
+harness. The figure that is all mod is the world load — `bench load` places heavy armour itself and
+times only construction and `RebuildAll` — and it is **2.5× faster**, from iterations 3, 4, 5, 7, 8
+and 10.
+
+**What did not move, which is the control.** Nothing in this pass touched the substep loop, and the
+step columns say so: 1.194 → 1.143 ms at 8,904 blocks, 5.381 → 5.373 at 32,800, 19.650 → 19.784 at
+126,731, every feature's marginal and isolated cost unchanged, and a bare configuration identical to
+three decimal places. The scenario and environment rows read 3 to 6 % higher and the ladder rows
+1 % lower — two measurements of the same thing disagreeing by that much is this instrument's own
+repeatability on a shared machine, not a change.
+
+**Where the next pass starts.** At 505,566 blocks the build is 1.6 s where the pass found 4.4:
+rooms ~626 ms, links ~503, surfaces ~418, exposure ~173, registration ~56. **Links were never
+touched** and are now the largest term after the room map. Below that, `RebuildAll` at a million
+blocks is still 4 s of a world load, and the room map still floods a bounding volume fourteen times
+the block count — cheaper per cell, and the same number of cells ([backlog.md](backlog.md) `D2`).
 
 ---
 
