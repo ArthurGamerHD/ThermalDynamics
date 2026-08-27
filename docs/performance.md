@@ -574,6 +574,7 @@ same ordering and the same shape with the surface and link rows inside their own
 | 5 | The environment pass reads one row per node | *measuring* | [Iteration 5](#pass-2-iteration-5--the-environment-pass-reads-one-row-per-node) |
 | 6 | A one-cell block is built without walking its cells | *measuring* | [Iteration 6](#pass-2-iteration-6--a-one-cell-block-is-built-without-walking-its-cells) |
 | 7 | The flood's box test is one compare on the axis that moved | **dropped** — slower, 1.25–1.30 | [Iteration 7](#pass-2-iteration-7--the-floods-box-test-is-one-compare-on-the-axis-that-moved) |
+| 8 | The freeze walks a bitset in key order instead of sorting | *measuring* | [Iteration 8](#pass-2-iteration-8--the-freeze-walks-a-bitset-in-key-order-instead-of-sorting) |
 
 ## Pass 2, iteration 1 — the stage instrument lives in the tree
 
@@ -740,6 +741,25 @@ that choice eighty million times a pass. The change is reverted in the same bran
 other direction: a change that is measurably worse is a defect, whatever it was meant to save), and
 the two pins written for it — the face order and the closed shell — stay, because they were
 statements about the flood that were worth making anyway.
+
+## Pass 2, iteration 8 — the freeze walks a bitset in key order instead of sorting
+
+**What was found.** `bench spike` splits the worst tick after a block is placed by stage, and at
+505,566 blocks it is **91 ms, of which 80 is the room map on one tick** — the tick the pass
+publishes on. Measured at the commit before iteration 4 as well, to be sure the charging change had
+not made it: 81.4 ms there. The mapper is budgeted per cell for the whole of its walk and then, when
+the walk is done, sorts every room cell's key in one call — 1.2 million of them — so the one
+unbudgeted call in the pass lands on the frame a player was already waiting on.
+
+**What changed.** Room cells are marked in a bitset over the search box as the flood reaches them,
+and the freeze walks that bitset in index order. Box-index order is `GridMath.Key` order — both are
+z, then y, then x, and a key is `z·2^42 + y·2^21 + x`, monotone in that order for any coordinate a
+grid can hold — so the keys come out sorted and the arrays need no sort: one dictionary lookup per
+room cell for its room, and a word-skipping walk for the order. **The order claim is checked, not
+trusted**: the freeze verifies the keys strictly increase and falls back to sorting if they do not,
+recording that it did, and `RoomMapFreezeTests` asserts the fallback is never taken on a hull with
+tens of rooms. The bitset walk is pinned at word edges against the cells that were added, in key
+order. The bitset is retained per map at an eighth of a byte a bounding cell.
 
 , with its start figures taken by the instrument the pass begins by putting in the tree. |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
