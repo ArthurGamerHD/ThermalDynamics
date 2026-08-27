@@ -373,12 +373,15 @@ order, so `RoomMapSnapshotTests`, which runs the dictionary path beside it, is t
 | 126,731 | 136 ms | **111 ms** | 0.82 |
 | 505,566 | 769 ms | **626 ms** | 0.81 |
 
-Another fifth off, and the room pass now costs about 90 ns per bounding cell at half a million
-blocks, against 430 at the start of the pass. The ladder rows taken in the same window for this
-commit had their *step* column — a control this change cannot touch — 25 % slower than the rows
-before it, which is another project's work landing on the machine while the window was held (`W5`
-is cooperative); the split above was taken first and its own controls (links, surfaces) held, so it
-is the figure quoted.
+Another fifth off, and the room pass now costs about **92 ns per bounding cell** at half a million
+blocks — 626 ms over 6,838,104 — against **302 ns** before iteration 4 on this same instrument, and
+432 ns in the pass's first reading of it.
+
+**The ladder taken in the same window disagrees, and it is the ladder that is wrong.** Its rows for
+this commit carry a *step* column 28 % above the rows before it — a control no change in this pass
+can touch — which is another project's work landing on the machine while the window was held (`W5`
+is cooperative, and holding it does not stop anyone). The split above was taken first, its own
+controls (links, surfaces) held, and it is the figure quoted.
 
 **Where the build stands at 505,566 blocks after iterations 4, 5, 7 and 8**, on one clock: rooms
 626 ms, links 503, surfaces 418, exposure 173, block registration 56 — **1.6 s** where the pass
