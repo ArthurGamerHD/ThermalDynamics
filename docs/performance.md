@@ -20,7 +20,7 @@ checked.
 
 ## How a pass is run
 
-Every iteration takes the same seven steps, and the order is the point: the measurement comes
+Every iteration takes the same eight steps, and the order is the point: the measurement comes
 before the idea, and the oracle before the change.
 
 1. **Measure.** `bench report` at the pass's own starting commit and at its tip, minutes apart, on
