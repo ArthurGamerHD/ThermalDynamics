@@ -80,7 +80,7 @@ changed category**, which is the useful result: the boundary was right and its s
 not. The consequence is still what makes a rule worth writing down — it is the
 [one observation](#the-one-observation) above — it is simply not what separates these two piles.
 
-**A rule is not low value merely because nothing checks it.** Twenty-one of the sixty-eight rules
+**A rule is not low value merely because nothing checks it.** Twenty-one of the seventy rules
 that are still rules are unchecked and say so, and two more are *reported* rather than checked,
 which is weaker and is written as such. Restructuring `Models/` is caught by nothing and costs a
 re-export of every block model; a promote-level check gated on a forgeable field is caught by
@@ -108,10 +108,10 @@ reason. See [testing the reduction](#testing-the-reduction).
 | # | Principle | Rules |
 | --- | --- | --- |
 | **P1** | **A figure carries its scope.** A number without its population, its basis and its clock is not a number; a sample stands for a population only by a written rule — and a duration carries the machine it was taken on. | `E2` `E3` `E6` `M10` `M11` `J3` `W5` |
-| **P2** | **What the instrument could not see is part of the result.** Censoring, the noise floor, an unfinished sweep, a check that judged nothing, a discarded exception and a place nobody looked are the same failure: reading a blind spot as a value. | `E4` `E8` `E9` `M4` `M5` `D4` `D9` |
+| **P2** | **What the instrument could not see is part of the result.** Censoring, the noise floor, an unfinished sweep, a check that judged nothing, a discarded exception and a place nobody looked are the same failure: reading a blind spot as a value. | `E4` `E8` `E9` `M4` `M5` `M12` `D4` `D9` |
 | **P3** | **The claim is fixed before the data and corrected in place after.** A criterion that can move once the numbers are in is not a criterion; a finding that is corrected somewhere other than where it was published is not corrected. | `E1` `E10` `E11` `M9` `D5` `R12` |
 | **P4** | **Nothing is its own oracle.** A test that asks the model the same question twice agrees with whatever the model does; a harness fault looks exactly like physics. | `E7` `D1` `D7` `D8` |
-| **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` `R13` `R14` `R15` `R16` |
+| **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` `R13` `R14` `R15` `R16` `R17` |
 | **P6** | **A comparison holds everything but the subject equal.** Two numbers are comparable only when the stop criterion, the machine, the key and the baseline were the same. | `M1` `M2` `M3` `M7` `O4` |
 | **P7** | **The game is the authority.** The local build and the suite are an approximation of a compiler and a whitelist neither of them can see, and where the game already answers a question — what is sealed, what is destroyed, who sent this — the mod reads that answer instead of forming its own. | `C1` `C2` `C3` `C11` `C9` `C10` `W3` |
 | **P8** | **Off means off, and costs nothing.** A mechanism nobody is using must cost nothing, and the way to turn it off must be unambiguous. | `C4` `C7` `C8` `C15` |
@@ -248,6 +248,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **E6** | Pair the terms before dividing | conditional | P1 | — |
 | **E7** | Check a claim against something that is not the model | absolute | P4 | `LegacyFormulas` `Reference` `DumpAuditTests` |
 | **E8** | A check that judged nothing has not passed | absolute | P2 | `CorpusSurvey` |
+| **M12** | A settled figure proves it settled | absolute | P2 | `TheRigReachesASteadyStateAndSaysSo` |
 | **E9** | Read a censored column as censored | absolute | P2 | reported by `verdict.py` |
 | **E10** | Correct a published finding in place | absolute | P3 | — |
 | **E11** | A criterion changes only in the open | absolute | P3 | — |
@@ -296,6 +297,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **R6** | Vendored code is replaced, never edited | absolute | P12 | — |
 | **R7** | Every document is indexed, and every link resolves | absolute | P5 | `DocumentationTests` |
 | **R8** | Every setting is documented, wired, and read by something | absolute | P5 | `ConfigurationDocTests` `SettingsWiringTests` |
+| **R17** | Every dial is asserted to move an outcome, not only to be read | absolute | P5 | `SettingsDialReachTests` `LoopDialReachTests` `PlanetDialReachTests` `BlockDialReachTests` |
 | **R9** | The API page is part of the contract | absolute | P5 P9 | `EveryModApiEntryIsDocumented` `ModApiShapeTests` |
 | **R10** | Every test class says what it is for | absolute | P5 | `EveryTestClassSaysWhatItIsFor` |
 | **R11** | A check is cited only if it runs | absolute | P5 | `EveryCheckCitedByTheRulesPageResolves` |
@@ -313,8 +315,8 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **J2** | *Light, isolated, tested, open* | low value | — | absorbed into `C4` `C5` `C7` `R9` |
 | **J3** | The corpus filters are strict, and their cost is recorded | conditional | P1 | `BlueprintTests` |
 
-Seventy-one rows: **sixty-one absolute, seven conditional, three low value.** The last three are
-retired as rules and kept only so a citation to them does not dangle, so sixty-eight of these are
+Seventy-three rows: **sixty-three absolute, seven conditional, three low value.** The last three are
+retired as rules and kept only so a citation to them does not dangle, so seventy of these are
 rules a change can be measured against. Twenty-one of them are unchecked and say so, and two more are
 *reported* rather than checked, which is weaker and is written as such.
 
@@ -414,6 +416,29 @@ criterion read *failing* when it passes, and the medians were three times high.
 *Applies to:* anything drawn from a sweep that has not finished.
 *Checked by:* — the walk records its own progress, but nothing stops a partial file being read.
 *From:* [balance.md](balance.md).
+
+#### M12 — A settled figure proves it settled
+
+**A temperature read off a rig that has not reached equilibrium is a reading of how fast it is
+climbing, and nothing about the rig says which one it gave you.**
+
+`LoopCoolantMassTests` ran a ring with a 125 kW source, the environment disabled and no sink of any
+kind. Every arm climbed linearly and for ever. Read at step 400 the four arms said 715.5 K and
+387.0 K on a large grid and 661.5 K and 912.1 K on a small one, and [balance.md](balance.md)
+published them as what the coolant density is worth; read at step 25,600 the same arms say 26,836 K
+and 5,908 K. **What the rig measured was the ratio of two heat capacities**, which is exactly what
+coolant mass is — so the answer looked like physics, had the right shape, pointed the right way, and
+was a stopwatch reading. Given a sink, the correction is worth 6.9 K and 0.8 K.
+
+The check is one line and it is the run's own: read the figure, double the run, read it again. A
+number that moved is a rate.
+
+*Applies to:* any figure quoted as where something settles, ends up, or reaches.
+*Checked by:* `TheRigReachesASteadyStateAndSaysSo`, and by
+`AWorkingLoopReportsGrossFlowNotItsNearZeroNet` stepping to a balance criterion with a bound rather
+than to a fixed count. Nothing checks the labs that were not written this way.
+*From:* [balance.md](balance.md#the-coolant-mass-is-doing-an-undeclared-job-and-the-measurement-that-said-so-was-wrong),
+[backlog.md](backlog.md) `C43`.
 
 #### E8 — A check that judged nothing has not passed
 
@@ -782,6 +807,35 @@ also happened: a toggle with a menu entry, a config field, a label and no reader
 `EverySettingIsReadBySomething`, `NoTwoSettingsShareAProtoMemberNumber` and
 `EverySettingIsClampedOrDeliberatelyNot`.
 *From:* [configuration.md](configuration.md).
+
+#### R17 — Every dial is asserted to move an outcome, not only to be read
+
+**"Read by something" is a grep, and a value can be read into a variable that nothing multiplies
+by.**
+
+That is not hypothetical: `LoopStagnantTransferFraction` was authored, documented, exposed to
+players on a slider, clamped, copied into the running properties **and read** — and no line of the
+simulation multiplied anything by it. `R8` was satisfied throughout. A dial in that state does not
+announce itself, because the curve it produces comes back flat and *this dial does not matter* is
+indistinguishable from *this dial is not wired to anything*.
+
+**The check enumerates rather than recites**, because a list is what fails: every field on every
+properties class the simulation reads is swept and asserted to change something. A field added
+tomorrow is checked tomorrow. Where a rig cannot see a dial, the answer is a rig — the exemptions
+are asserted to be inert from the other side, so one that stops being true fails rather than
+quietly excusing a live dial.
+
+**Most of the cost is building a rig that can see the dial**, and every field that read inert on
+the first pass turned out to be live: a coefficient cap is invisible except across a two-kelvin
+lift, an overshoot clamp is invisible unless the step is coarse *and* the work budget is not, a
+damage rate is invisible until something crosses its rating, and a ceiling is invisible until it is
+swept to a level that binds rather than scaled.
+
+*Applies to:* every field on `ThermalSettings`, `LoopThermalProperties`, `PlanetThermalProperties`
+and `BlockThermalProperties`.
+*Checked by:* `SettingsDialReachTests`, `LoopDialReachTests`, `PlanetDialReachTests` and
+`BlockDialReachTests`; `DialReachTests` covers the eighteen `KnobLab` sweeps from the other side.
+*From:* [backlog.md](backlog.md) `C33` `C37`.
 
 #### R9 — The API page is part of the contract
 
@@ -1631,6 +1685,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | Added `M12` and `R17`, both from defects found the same day, and both under a principle that already existed — which is the fifteen still holding. **`M12` — a settled figure proves it settled**: `LoopCoolantMassTests` ran a ring with a source and no sink of any kind, so every arm climbed for ever and the four temperatures this repository published for the coolant density were that ramp read at step 400. Doubling the run is the whole check. **`R17` — every dial is asserted to move an outcome, not only to be read**: `R8`'s *read by something* is a grep, and `LoopStagnantTransferFraction` satisfied it while nothing multiplied by it. Four reflection-driven reach tests now enumerate every field on every properties class the simulation reads. |
 | 2026-08-25 | `E1`'s check now refuses a criterion its dataset cannot resolve. A partial survey slice of thirteen ships reported `G1` as *holding* — one ship is 7.7 % of it and the criterion turns on 1 %, so both sides of the line read the same. The rule is derived from each criterion's own threshold rather than being a sample-size floor somebody chose, and it is stated as a resolution test so that passing it is not mistaken for a population. Found by leaving a partial dataset on disk and pointing the scorer at it.
 
 | 2026-08-25 | Corrected `O3`'s retirement condition, which described a defect that had been fixed. It said the resume *currently* counts files and that a workaround and three pages' caveats retire with it, and cited a backlog row closed on 2026-08-22; the resume records finished blueprints and has since before this page was written. What `verdict.py` still does is a guard rather than a workaround, and the two pages that carry the 2026-08-21 dataset's 50 duplicate rows already scope them to it. Added what a resumable sweep is *for* on a shared machine, which is the half `W5` needed and did not have.
