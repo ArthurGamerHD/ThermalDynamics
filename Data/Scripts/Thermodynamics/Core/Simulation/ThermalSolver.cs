@@ -734,83 +734,6 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// The node owning each occupied cell, indexed by that cell's rank in the occupancy set,
-        /// or null when there is no set to rank.
-        ///
-        /// <para>
-        /// **This is what replaces a dictionary probe with three cached loads.** Finding a block's
-        /// neighbours was 90 % of the link build and about fifty nanoseconds a probe
-        /// (performance.md, Pass 6, Iteration 1), because `blocksByCell` holds half a million
-        /// entries in twenty-odd megabytes and a lookup misses on the bucket and again on the
-        /// entry. The three structures this walk reads instead — the occupancy words, their rank
-        /// prefixes and this row — come to about three megabytes between them at that size, and
-        /// blocks are walked in an order that is spatially local, so consecutive lookups land on
-        /// lines already fetched.
-        /// </para>
-        ///
-        /// <para>
-        /// Entries for cells whose block carries no node stay −1, which is the same answer
-        /// `GetNode` gives for them.
-        /// </para>
-        /// </summary>
-        private int[] BuildNodeByRank(CellBitset occupied)
-        {
-            if (occupied == null || occupied.Count == 0) return null;
-
-            if (!occupied.IsRanked) occupied.BuildRanks();
-
-            if (nodeByOccupiedRank.Length < occupied.Count)
-            {
-                nodeByOccupiedRank = new int[occupied.Count];
-            }
-
-            for (int i = 0; i < occupied.Count; i++) nodeByOccupiedRank[i] = -1;
-
-            for (int i = 0; i < nodes.Count; i++)
-            {
-                Vector3I[] cells = nodes[i].Block.Cells;
-                for (int c = 0; c < cells.Length; c++)
-                {
-                    int rank = occupied.RankOfIndex(occupied.IndexOf(cells[c]));
-                    if (rank >= 0 && rank < nodeByOccupiedRank.Length) nodeByOccupiedRank[rank] = i;
-                }
-            }
-
-            return nodeByOccupiedRank;
-        }
-
-        private int[] nodeByOccupiedRank = new int[0];
-
-        /// <summary>
-        /// Set false to find every block's neighbours through the block table, as the general walk
-        /// does, instead of through the occupancy set's ranks.
-        ///
-        /// Test hook: <c>LinkByRankTests</c> builds the same grid both ways and compares the link
-        /// list entry for entry, including the order it is built in — which is what the conduction
-        /// pass sums over, so a different order is a different last bit on every temperature.
-        /// </summary>
-        public bool LinkByRank = true;
-
-        /// <summary>
-        /// Makes the link between a pair the walk has settled on, if the pair conducts. Shared by
-        /// both walks so that what a link *is* is stated once.
-        /// </summary>
-        private void EmitLink(ThermalNode a, ThermalNode b, int face)
-        {
-            int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block, face);
-            if (contacts <= 0) return;
-
-            float conductance = ConductionBuilder.Conductance(
-                grid.GridSize, a.Block, b.Block, contacts, Face.Axis(face));
-            if (conductance <= 0f) return;
-
-            links.Add(new ThermalLink(a.Index, b.Index, conductance, contacts));
-            ChainLink(links.Count - 1);
-            a.LinkCount++;
-            b.LinkCount++;
-        }
-
-        /// <summary>
         /// Brings the conduction graph up to date, incrementally when only blocks have been placed
         /// and by full rebuild otherwise. No-op when the graph already matches the layout.
         /// Public so the host can run it inside its own topology stage, where it is timed as such,
@@ -877,41 +800,9 @@ namespace Thermodynamics.Core
             // placement. See GridModel.GetNeighbours.
             CellBitset occupied = walked != null ? walked.Occupancy() : null;
 
-            // And then the block table is not consulted at all for a one-cell block, which is
-            // nearly every block on a hull. See BuildNodeByRank.
-            int[] nodeByRank = LinkByRank ? BuildNodeByRank(occupied) : null;
-
             for (int i = 0; i < nodes.Count; i++)
             {
                 ThermalNode a = nodes[i];
-
-                // **The common block, walked without the block table.** A one-cell block's six
-                // candidates are its cell's index plus a per-face constant; the bit says whether
-                // anything is there, the rank says which member it is, and the row says whose node
-                // that member belongs to. Same faces in the same order as the general walk below,
-                // so the links come out in the order they always did.
-                if (nodeByRank != null && a.Block.CellCount == 1)
-                {
-                    long slot = occupied.IndexOf(a.Block.Min);
-
-                    for (int face = 0; face < Face.Count; face++)
-                    {
-                        long neighbour = slot + occupied.IndexStep(face);
-                        if (!occupied.ContainsIndex(neighbour)) continue;
-
-                        int rank = occupied.RankOfIndex(neighbour);
-                        if (rank < 0 || rank >= nodeByRank.Length) continue;
-
-                        int other = nodeByRank[rank];
-
-                        // Not a node, or the far side of a pair this loop already made.
-                        if (other <= i) continue;
-
-                        EmitLink(a, nodes[other], face);
-                    }
-
-                    continue;
-                }
 
                 neighbourScratch.Clear();
                 neighbourFaces.Clear();
@@ -931,7 +822,17 @@ namespace Thermodynamics.Core
                         : ConductionBuilder.ContactFace(a.Block, b.Block);
                     if (face < 0) continue;
 
-                    EmitLink(a, b, face);
+                    int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block, face);
+                    if (contacts <= 0) continue;
+
+                    float conductance = ConductionBuilder.Conductance(
+                        grid.GridSize, a.Block, b.Block, contacts, Face.Axis(face));
+                    if (conductance <= 0f) continue;
+
+                    links.Add(new ThermalLink(a.Index, b.Index, conductance, contacts));
+                    ChainLink(links.Count - 1);
+                    a.LinkCount++;
+                    b.LinkCount++;
                 }
             }
 
