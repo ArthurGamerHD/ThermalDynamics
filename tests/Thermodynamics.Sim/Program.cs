@@ -1051,6 +1051,35 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "stages":
+                {
+                    int stageBlocks = size > 0 ? size : 125000;
+                    string stageOut = csvDirectory ?? "out";
+                    string stageList = Option(args, "--stages", null);
+                    List<string> stages = new List<string>(stageList == null
+                        ? StageLab.Stages
+                        : stageList.Split(','));
+
+                    Console.WriteLine();
+                    Console.WriteLine("== stages, " + shape + " " + stageBlocks.ToString("n0") + " blocks ==");
+                    Console.WriteLine("  Each stage of a grid's life on its own clock, on one prebuilt grid,"
+                        + " best of " + StageLab.Repeats + ".");
+                    Console.WriteLine("  The work column must repeat exactly, or the readings are of"
+                        + " different walks and the lab says so.");
+                    Console.WriteLine();
+
+                    List<StageLab.Row> stageRows = StageLab.Run(shape, stageBlocks, stages,
+                        message => Console.Error.WriteLine("  " + message));
+
+                    Console.WriteLine(StageLab.Table(stageRows));
+
+                    Directory.CreateDirectory(stageOut);
+                    string stagePath = Path.Combine(stageOut, "stages.csv");
+                    File.WriteAllText(stagePath, StageLab.Csv(stageRows));
+                    Console.WriteLine("csv -> " + stagePath);
+                    return 0;
+                }
+
                 case "smallgrids":
                 {
                     int fleetGrids = OptionInt(args, "--grids", 200);
@@ -1569,6 +1598,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
+            Console.WriteLine("  bench stages            one stage of a grid's life on its own clock, best of fifteen; --stages a,b");
             Console.WriteLine("  bench smallgrids        what one grid costs before any of its blocks do");
             Console.WriteLine("  bench wattsclear        what zeroing the watts row costs, up a size ladder");
             Console.WriteLine("  bench rowfill           what the first substep of a step pays over a later one");
