@@ -39,6 +39,22 @@ namespace Thermodynamics.Core
         private readonly List<List<Vector3I>> rooms = new List<List<Vector3I>>();
         private Dictionary<long, int> roomIndexByCell = new Dictionary<long, int>();
 
+        /// <summary>
+        /// Whether each cell of the search box belongs to some room, one bit each — the question
+        /// <see cref="IsExternal"/> asks first, and answers *no* to for nearly every face it is
+        /// asked about, since a face onto open space is what exposure is looking for.
+        ///
+        /// <para>
+        /// Without it that answer costs a binary search over every room cell on the grid: about
+        /// twenty dependent loads through 1.5 million keys at half a million blocks, per unsealed
+        /// face, per block, on every exposure refresh. The search stays for the callers that need
+        /// the room's *index*; this is the membership test in front of it, at an eighth of a byte a
+        /// bounding cell beside the solid set it sits with.
+        /// See performance.md, Pass 3, Iteration 3.
+        /// </para>
+        /// </summary>
+        private readonly CellBitset roomCells = new CellBitset();
+
 
         /// <summary>
         /// The same answer as <see cref="roomIndexByCell"/>, as two sorted arrays, once a pass has
@@ -253,6 +269,9 @@ namespace Thermodynamics.Core
         {
             if (solid.Contains(cell)) return false;
 
+            // The common answer, in one bit rather than in a search: a cell in no room is outside.
+            if (!roomCells.Contains(cell)) return true;
+
             int room = RoomAt(cell);
             if (room < 0) return true;
 
@@ -283,6 +302,7 @@ namespace Thermodynamics.Core
             searchMin = min;
             searchMaxExclusive = maxExclusive;
             solid.Reset(min, maxExclusive);
+            roomCells.Reset(min, maxExclusive);
         }
 
         /// <summary>
@@ -328,6 +348,7 @@ namespace Thermodynamics.Core
             frozenCount = 0;
 
             rooms[roomIndex].Add(cell);
+            roomCells.Add(cell);
             roomIndexByCell[GridMath.Key(cell)] = roomIndex;
         }
 
