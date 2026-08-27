@@ -260,7 +260,7 @@ and dropped when they are switched off, costs a null check on a path that alread
 
 Everything above is a fraction of a fixed per-block cost. This one is a multiplier.
 
-`GridModel.blocksByCell`, `SurfaceMap.states` and `BlockInstance.Cells` hold one entry per occupied
+`GridModel.blocksByCell`, `SurfaceMap`'s cell table and `BlockInstance.Cells` hold one entry per occupied
 *cell*. On SE1 that is one entry per block and the rows above are the whole cost. On SE2's 0.25 m
 lattice a 5 m block occupies 8,000 cells, so those three rows alone would cost roughly **half a
 megabyte for one block**.

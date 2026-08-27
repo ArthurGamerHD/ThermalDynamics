@@ -1012,6 +1012,8 @@ report can be recovered for any row here by reading that file at the row's commi
 | 10 | 2026-08-22 | *(the standardisation pass)* | 1,533 | 2 m 36 s | +4: `EveryCheckCitedByTheRulesPageResolves`, `EveryRuleCitedByAPageExists`, `TheRulesPageIndexesEveryRuleItStates` and `NoDocCommentDescribesSomethingThatIsNotThere`. Documentation and comments only. **The duration is not comparable to rows 6–8** — this run was serialised under `maxParallelThreads: 1` and taken on a different machine — so it is recorded for the count beside it and nothing else. No shipped solver code changed, so there is no solver row below. |
 
 | 11 | 2026-08-22 | *(the profiles pass)* | 1,520 | 53 s | −13: the five settings profiles are gone and with them `ProfileTests`, replaced by `DefaultSettingsTests`. The mod ships one configuration. Shipped solver defaults moved, so there is a solver row below. |
+| — | | `131fc12..b146255` | | | **Many commits recorded no row.** The retune, the coolant consumable, the reach tests, the corpus reader fix and the rules pass all landed between rows 11 and 12. |
+| 12 | 2026-08-26 | *(the performance pass, tip)* | 1,998 | **1 m 31 s** | +478 across those commits and this pass's own suites. Taken on the optimised build in a held window on a machine two other projects were using; the fast lane is 4 s over 1,582 after the lane refresh, from 37 s before it. The rows above were taken on unoptimised builds, so this duration is not comparable to theirs ([performance.md](performance.md#iteration-1--the-harness-measured-unoptimised-code)). |
 
 ### The solver
 
