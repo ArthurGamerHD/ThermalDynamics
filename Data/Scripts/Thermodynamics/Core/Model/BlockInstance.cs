@@ -67,6 +67,21 @@ namespace Thermodynamics.Core
         /// </summary>
         public int NodeIndex = -1;
 
+        /// <summary>
+        /// Where this block sits in its grid's block list, or -1 when it is in none.
+        ///
+        /// <para>
+        /// **The block carries the slot instead of the grid carrying a second dictionary**, on the
+        /// same reasoning as <see cref="NodeIndex"/>: a `Dictionary&lt;long, int&gt;` from block key
+        /// to slot cost an insert per block at load and about thirty bytes a block to answer what
+        /// the block can hold in four. It is a hint and not an authority — one instance may be
+        /// registered with a second grid, which would overwrite what the first wrote — so every
+        /// reader checks that the slot it lands on holds this block before believing it.
+        /// See performance.md, Pass 3, Iteration 7.
+        /// </para>
+        /// </summary>
+        public int GridSlot = -1;
+
         private int[] gridSurfaces;
         private int[] gridStructuralSurfaces;
         private Vector3I[] gridCells;

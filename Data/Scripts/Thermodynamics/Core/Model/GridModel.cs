@@ -24,12 +24,6 @@ namespace Thermodynamics.Core
 
         private readonly List<BlockInstance> blocks = new List<BlockInstance>();
 
-        /// <summary>
-        /// Where each block sits in <see cref="blocks"/>, so a removal is a swap rather than a scan and
-        /// a shift. Also the grid's only index by key: a second dictionary held the same keys and
-        /// answered the same question one indirection sooner. See memory.md, 1e.
-        /// </summary>
-        private readonly Dictionary<long, int> blockSlots = new Dictionary<long, int>();
 
         /// <summary>
         /// Counts of blocks carrying coolant plumbing and blocks that are heat pumps.
@@ -124,7 +118,7 @@ namespace Thermodynamics.Core
                 Grow(cells[i]);
             }
 
-            blockSlots[block.Key] = blocks.Count;
+            block.GridSlot = blocks.Count;
             blocks.Add(block);
             if (block.HasStateDependentSealing) stateDependent.Add(block);
             if (block.Model.Coolant != null) coolantBlocks++;
@@ -145,7 +139,7 @@ namespace Thermodynamics.Core
 
         public bool Remove(BlockInstance block)
         {
-            if (block == null || !blockSlots.ContainsKey(block.Key)) return false;
+            if (block == null || !Holds(block)) return false;
 
             Vector3I[] cells = block.Cells;
             for (int i = 0; i < cells.Length; i++)
@@ -175,22 +169,23 @@ namespace Thermodynamics.Core
         /// </summary>
         private void RemoveSlot(BlockInstance block)
         {
-            int slot;
-            if (!blockSlots.TryGetValue(block.Key, out slot))
+            if (!Holds(block))
             {
                 // Should not occur, but a linear fallback is preferable to a corrupt list.
-                blocks.Remove(block);
-                return;
+                int found = blocks.IndexOf(block);
+                if (found < 0) return;
+                block.GridSlot = found;
             }
 
-            blockSlots.Remove(block.Key);
+            int slot = block.GridSlot;
+            block.GridSlot = -1;
 
             int last = blocks.Count - 1;
             if (slot != last)
             {
                 BlockInstance moved = blocks[last];
                 blocks[slot] = moved;
-                blockSlots[moved.Key] = slot;
+                moved.GridSlot = slot;
             }
 
             blocks.RemoveAt(last);
@@ -217,8 +212,18 @@ namespace Thermodynamics.Core
         /// <summary>The block with this position key, or null when the grid does not carry it.</summary>
         public BlockInstance GetByKey(long key)
         {
-            int slot;
-            return blockSlots.TryGetValue(key, out slot) ? blocks[slot] : null;
+            // A block's key is the key of its lowest cell, and that cell is one this block
+            // occupies — a block fills its own bounding box — so the cell index answers this.
+            BlockInstance block;
+            if (!blocksByCell.TryGetValue(key, out block)) return null;
+            return block.Key == key ? block : null;
+        }
+
+        /// <summary>Whether this grid's list really holds the block at the slot the block claims.</summary>
+        private bool Holds(BlockInstance block)
+        {
+            int slot = block.GridSlot;
+            return slot >= 0 && slot < blocks.Count && ReferenceEquals(blocks[slot], block);
         }
 
         public bool IsOccupied(Vector3I cell)

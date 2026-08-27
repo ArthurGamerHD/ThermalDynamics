@@ -311,5 +311,41 @@ namespace Thermodynamics.Tests
             Assert.Equal(new Vector3I(-3, 0, -1), grid.Min);
             Assert.Equal(new Vector3I(5, 4, 2), grid.Max);
         }
+
+        /// <summary>
+        /// A block carries the slot its grid holds it at, which is a hint rather than an authority:
+        /// the grid checks the slot really holds that block before using it. Held over a placement,
+        /// a swap-remove that moves another block into the freed slot, and a block that never
+        /// belonged to the grid at all.
+        /// </summary>
+        [Fact]
+        public void ABlockCarriesItsSlotAndTheGridChecksItBeforeBelievingIt()
+        {
+            GridModel grid = new GridModel(2.5f);
+            BlockModel armour = Catalog.LightArmor();
+            BlockInstance[] placed = new BlockInstance[5];
+            for (int i = 0; i < placed.Length; i++)
+            {
+                placed[i] = grid.Add(armour, new Vector3I(i * 2, 0, 0));
+                Assert.Equal(i, placed[i].GridSlot);
+            }
+
+            // Removing from the middle moves the last block into the freed slot.
+            BlockInstance last = placed[4];
+            Assert.True(grid.Remove(placed[1]));
+            Assert.Equal(-1, placed[1].GridSlot);
+            Assert.Equal(1, last.GridSlot);
+            Assert.Same(last, grid.Blocks[1]);
+            Assert.Same(last, grid.GetByKey(last.Key));
+            Assert.Null(grid.GetByKey(placed[1].Key));
+
+            // A block this grid never held claims slot -1 and is refused; one carrying a stale slot
+            // from another grid is refused because that slot holds something else.
+            BlockInstance stranger = new BlockInstance(armour, new Vector3I(99, 0, 0), BlockOrientation.Identity);
+            Assert.False(grid.Remove(stranger));
+            stranger.GridSlot = 0;
+            Assert.False(grid.Remove(stranger));
+            Assert.Equal(4, grid.BlockCount);
+        }
     }
 }
