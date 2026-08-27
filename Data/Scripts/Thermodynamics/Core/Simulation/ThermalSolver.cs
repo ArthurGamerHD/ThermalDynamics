@@ -794,13 +794,19 @@ namespace Thermodynamics.Core
             // adjacency answers only with the neighbours, and the face is worked out per pair.
             GridModel walked = adjacency as GridModel;
 
+            // Taken once, for the whole rebuild: a bit in front of the block table, for the three
+            // candidate cells in eight that hold nothing. Only a full rebuild may ask — the set is
+            // dropped whenever the grid changes, so asking per placement would rebuild it per
+            // placement. See GridModel.GetNeighbours.
+            CellBitset occupied = walked != null ? walked.Occupancy() : null;
+
             for (int i = 0; i < nodes.Count; i++)
             {
                 ThermalNode a = nodes[i];
 
                 neighbourScratch.Clear();
                 neighbourFaces.Clear();
-                if (walked != null) walked.GetNeighbours(a.Block, neighbourScratch, neighbourFaces);
+                if (walked != null) walked.GetNeighbours(a.Block, neighbourScratch, neighbourFaces, occupied);
                 else adjacency.GetNeighbours(a.Block, neighbourScratch);
 
                 for (int n = 0; n < neighbourScratch.Count; n++)

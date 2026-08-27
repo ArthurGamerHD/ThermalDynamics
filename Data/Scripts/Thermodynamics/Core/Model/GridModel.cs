@@ -335,6 +335,25 @@ namespace Thermodynamics.Core
         /// </summary>
         public void GetNeighbours(BlockInstance block, List<BlockInstance> results, List<int> faces)
         {
+            GetNeighbours(block, results, faces, null);
+        }
+
+        /// <summary>
+        /// The same, with a bit consulted before the block table.
+        ///
+        /// <para>
+        /// **Only for a caller that walks the whole grid at once.** A block's six candidate cells
+        /// hold a block about five times in eight on a hull, so three probes in eight are a hash
+        /// and a bucket chase to be told nothing — worth a bit test in front. The set is built on
+        /// demand and dropped whenever the grid changes, so a caller that walked it *per placement*
+        /// would rebuild it per placement and turn a load into quadratic work. `RebuildLinks` takes
+        /// it once and hands it down; the incremental path does not ask for it.
+        /// See performance.md, Pass 5, Iteration 6.
+        /// </para>
+        /// </summary>
+        public void GetNeighbours(BlockInstance block, List<BlockInstance> results, List<int> faces,
+            CellBitset occupied)
+        {
             if (block == null || results == null) return;
 
             // A one-cell block — nearly every block on a hull — has six candidate cells, one per
@@ -348,9 +367,17 @@ namespace Thermodynamics.Core
                 // And a neighbour's key is this cell's key plus a per-face constant, so the six
                 // candidates cost one conversion rather than six.
                 // See performance.md, Pass 3, Iteration 6 and Pass 4, Iteration 10.
-                long key = GridMath.Key(block.Min);
+                Vector3I cell = block.Min;
+                long key = GridMath.Key(cell);
+                long slot = occupied == null ? -1L : occupied.IndexOf(cell);
+
                 for (int face = 0; face < Face.Count; face++)
                 {
+                    if (occupied != null && !occupied.ContainsIndex(slot + occupied.IndexStep(face)))
+                    {
+                        continue;
+                    }
+
                     BlockInstance other = GetAtKey(key + GridMath.KeyByFace[face]);
                     if (other == null || other == block) continue;
                     results.Add(other);
@@ -361,6 +388,14 @@ namespace Thermodynamics.Core
 
             GetNeighboursWalkingTheBoundary(block, results, faces);
         }
+
+        /// <summary>
+        /// Whether the index step from a cell to its neighbour is meaningful here: it is not on the
+        /// box's own boundary, where stepping −X from the first column lands in the previous row.
+        /// The occupancy box is padded by one, and a block only ever occupies cells inside that
+        /// padding, so every block's cell is safe — but a caller that has not built the set at all
+        /// gets nothing.
+        /// </summary>
 
         /// <summary>
         /// The general query: walks every cell on each face of the block's box and deduplicates,
