@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **Closed pass 6 with no change kept.** Five bit-identical rewrites of the link build's neighbour lookup — by rank, by dense row, twice by removing the code around it, and once by halving the number of lookups — measured between 0.91 and 1.40, and the last of them explains the rest: the stage is bound by touching grid-sized memory once per neighbour, and every scheme keeps one such touch. Walking blocks in cell order would fix it and is refused here for moving every temperature's last bit. |
 | 2026-08-27 | Opened pass 6 on the load path's largest stage. Its first iteration splits the link build by ablation: **nine tenths of it is finding neighbours**, at fifty nanoseconds a dictionary probe, and every per-pair operation together is the other tenth. |
 | 2026-08-27 | **Closed pass 5**: the settled step is **0.86** and the link build **0.84** at 505,566 blocks, with three untouched stages at 1.00, 0.99 and 1.03 as controls. The step had never moved in four passes; what moved it was measuring where its time went. `D1`'s open question is answered — conduction is at its floor. |
 | 2026-08-27 | Pass 5, iteration 6: the link build consults the occupancy bit before the block table — links **0.88** at 505,566 blocks and 0.76 at 126,731, both controls flat. |
@@ -1876,6 +1877,13 @@ link to build what conduction then walks at 1.0**.
 | # | Subject | Verdict | Where |
 | ---: | --- | --- | --- |
 | 1 | Which half of the link build is the link build | **kept** — nine tenths of it is finding neighbours | [Iteration 1](#pass-6-iteration-1--which-half-of-the-link-build-is-the-link-build) |
+| 2 | A neighbour found by rank instead of by hash | **dropped** — 1.40 | [Iteration 2](#pass-6-iterations-2-to-7--five-ways-to-ask-the-same-question) |
+| 3 | The pair settled where it is found, emit body shared | **dropped** — 1.16, and it changed two things | [Iteration 3](#pass-6-iterations-2-to-7--five-ways-to-ask-the-same-question) |
+| 4 | What the walk costs without its lookups | **kept** — the ablation that explains the rest | [Iteration 4](#pass-6-iteration-4--what-the-walk-costs-without-its-lookups) |
+| 5 | The pair settled where it is found, nothing else changed | **dropped** — unresolved | [Iteration 5](#pass-6-iterations-2-to-7--five-ways-to-ask-the-same-question) |
+| 6 | A neighbour read from a row indexed by cell | **dropped** — 1.24 and 1.00, and 29 MB a rebuild | [Iteration 6](#pass-6-iterations-2-to-7--five-ways-to-ask-the-same-question) |
+| 7 | A pair looked up once instead of once from each side | **dropped** — 1.13, and it explains the other four | [Iteration 7](#pass-6-iterations-2-to-7--five-ways-to-ask-the-same-question) |
+| 8 | What the pass found, and what it refuses | the conclusion below | [Iteration 8](#pass-6--what-the-pass-found) |
 
 ## Pass 6, iteration 1 — which half of the link build is the link build
 
@@ -1905,6 +1913,81 @@ roughly twice: once on the bucket and once on the entry, in a table that holds h
 entries and cannot fit anywhere near the processor.
 
 **The pair work is not the target and the arithmetic is not the target. The lookup is.**
+
+## Pass 6, iteration 4 — what the walk costs without its lookups
+
+Iteration 1 said the neighbour walk is nine tenths of the stage. It did **not** say what inside the
+walk costs, and iteration 2 was built on the assumption that it is the probes — an assumption that
+had not been measured. So a second ablation: the same probe build, with the dictionary lookup and
+the two list appends removed as well, leaving the index arithmetic, the six bit tests and the loop.
+
+| | before | probe (no lookups, no lists) | ratio |
+| --- | ---: | ---: | ---: |
+| links, 505,566 blocks | 103.42 ms | 12.75 ms | **0.12** |
+| links, 126,731 blocks | 28.25 ms | 1.97 ms | 0.07 |
+| rooms (control) | 70.59 ms | 73.54 ms | 1.04 |
+
+So the stage divides: **12 %** is the arithmetic, the bit tests and the loop; **9 %** is every
+per-pair operation together (iteration 1); and **the remaining four fifths is the lookups**.
+
+## Pass 6, iterations 2 to 7 — five ways to ask the same question
+
+With four fifths of the stage in the lookups, five changes were made to them. Every one was
+bit-identical, every one was checked against the walk it replaced entry for entry — the conduction
+pass sums watts by walking the link list, so a different order is a different last bit on every
+temperature — and **every one measured worse or unresolved.**
+
+| # | What it did to the lookup | 126,731 | 505,566 |
+| ---: | --- | ---: | ---: |
+| 2 | Replaced the hash with a rank over a 3 MB row | 1.40 | 1.40 |
+| 3 | Removed the lists; shared the emit body | 1.13 | 1.16 |
+| 5 | Removed the lists only | 1.31 / 1.07 | 0.91 / 1.03 |
+| 6 | Replaced the hash with a load from a 29 MB row | 1.24 | 1.24 / 1.00 |
+| 7 | Halved the number of lookups | 1.13 | 1.03 |
+
+Two of them are ordinary mistakes and are worth naming as such. **Iteration 3 changed two things**:
+it shared the pair-emitting body between the two walks, which turned inlined code into a call on the
+*general* path that was supposed to be the control. **Iteration 2 was built on an unmeasured
+inference** — iteration 1 proved the walk expensive and I read that as the probe being expensive,
+which iteration 4 then had to establish separately.
+
+The other three are the result. A rank costs two loads and a fifteen-operation popcount, and lost to
+the hash. A row indexed by cell costs one load into twenty-nine megabytes, and did not beat it
+either. And iteration 7 — which does not touch the lookup at all, only stops making half of them —
+**also lost**, because the mark that saves a probe is itself a scattered write into a three-megabyte
+array.
+
+## Pass 6 — what the pass found
+
+**The link build is not bound by the block table. It is bound by touching grid-sized memory once per
+neighbour, and every scheme tried keeps exactly one such touch.**
+
+A hash probe, a rank lookup, a load from a dense row and a byte written to a mark array are all the
+same thing at this size: one access to a structure far larger than cache, at an address the previous
+access does not predict. Swapping one for another moves the cost around. Iteration 7 is the cleanest
+statement of it — it genuinely halves the lookups and still loses, because the bookkeeping that
+buys the saving is itself the thing being saved.
+
+**What the randomness is made of is worth stating too**, because it points at what would work. Nodes
+are numbered in the order blocks are added, which is spatially coherent — `LinkSpanProbe` measures
+97.8 % of links spanning fewer than 1,024 node indices. So the *cells* a rebuild asks about are
+coherent as well. **Hashing them is what throws that away**: two cells one apart in space are two
+buckets far apart in the table. That is why the cell-indexed row came closest of the five, and why
+its remaining cost is its own build rather than its lookups.
+
+**Designed and refused: walking blocks in cell order.** A rebuild that visited blocks in the box's
+own index order rather than in node order would make every neighbour lookup sequential, and the
+whole stage would fall to something near the 12 % that iteration 4 measured. It is refused *here*
+rather than untried: it emits links in a different order, and the conduction pass sums over that
+order, so it moves the last bit of every temperature on every grid. That is a change with a real
+prize and a real cost, and it belongs to a pass that can open with re-recording the bit-identity
+baselines rather than reach it seventh — the same shape as the span flood, which pass 3 designed,
+pass 4's iteration 4 unblocked and pass 4's iteration 7 built.
+
+**And the finding generalises past this stage.** Surfaces, the room flood, the air rebuild and the
+link build all walk a grid asking about neighbouring cells, and all four have now had a
+cache-shaped optimisation applied to them. What is left in each is the irreducible part: one
+unpredictable touch per element per pass.
 
 ---
 
