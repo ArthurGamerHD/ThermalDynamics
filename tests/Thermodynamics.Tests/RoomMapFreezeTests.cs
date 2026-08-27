@@ -48,69 +48,69 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The frozen arrays come from a walk of the room-cell bitset in box-index order, on the
-        /// claim that box-index order is key order. The claim is checked inside the freeze and a
-        /// failure falls back to sorting; this asserts the fallback was not taken, on a hull with
-        /// tens of rooms and on the two-room rig — because a freeze that always fell back would
-        /// pass every other test here at the old price.
+        /// The freeze sorts by radix rather than by comparison, and the result must be the same
+        /// order to the element (`D8`): held against `Array.Sort` on random keys spanning every
+        /// digit, on keys already sorted, reversed, all equal, and on the offsets a real box
+        /// produces — with the rooms carried along by both.
         /// </summary>
-        [Fact]
-        public void TheFreezeNeverFallsBackToSorting()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(1000)]
+        [InlineData(100003)]
+        public void TheRadixSortOrdersKeysAsTheComparisonSortDoes(int count)
         {
-            Assert.False(TwoRooms().Rooms.Map.FrozeByFallback, "two rooms: the bitset walk was out of order");
+            uint state = 0x2545F491u ^ (uint)count;
+            long origin = GridMath.Key(new Vector3I(-40, -7, -13));
+            long[] keys = new long[count];
+            int[] rooms = new int[count];
+            for (int i = 0; i < count; i++)
+            {
+                state ^= state << 13; state ^= state >> 17; state ^= state << 5;
+                // Cells scattered across a box wide enough to exercise five digits of offset.
+                Vector3I cell = new Vector3I(-40 + (int)(state % 500), -7 + (int)((state >> 9) % 300), -13 + (int)((state >> 18) % 200));
+                keys[i] = GridMath.Key(cell);
+                rooms[i] = (int)(state % 97);
+            }
 
-            GridBuilder builder = GridBuilder.Large();
-            builder.PlaceCensus(LoadShapes.Build("ship", 8000));
-            RoomMap map = builder.BuildSimulation(new ThermalSettings()).Rooms.Map;
-            Assert.True(map.RoomCount > 5, "the census hull mapped only " + map.RoomCount + " rooms");
-            Assert.False(map.FrozeByFallback, "census hull: the bitset walk was out of order");
+            long[] expectedKeys = (long[])keys.Clone();
+            int[] expectedRooms = (int[])rooms.Clone();
+            System.Array.Sort(expectedKeys, expectedRooms);
+
+            RoomMap.RadixSortByKey(keys, rooms, count, origin);
+
+            Assert.Equal(expectedKeys, keys);
+            // Equal keys carry equal rooms only if both sorts are stable on ties; the keys here are
+            // cells and may repeat, so rooms are compared where the key is unique.
+            for (int i = 0; i < count; i++)
+            {
+                bool unique = (i == 0 || expectedKeys[i - 1] != expectedKeys[i])
+                    && (i == count - 1 || expectedKeys[i + 1] != expectedKeys[i]);
+                if (unique) Assert.Equal(expectedRooms[i], rooms[i]);
+            }
         }
 
-        /// <summary>The lowest set bit of a word without a loop, over every position and a few mixed words.</summary>
         [Fact]
-        public void LowestSetBitIsRightForEveryPosition()
+        public void TheRadixSortHandlesTheDegenerateOrders()
         {
-            for (int bit = 0; bit < 64; bit++)
-            {
-                long word = 1L << bit;
-                Assert.Equal(bit, CellBitset.LowestSetBit(word));
-                // Higher bits set as well must not move the answer: the bit above, and the top bit.
-                Assert.Equal(bit, CellBitset.LowestSetBit(word | (word << 1) | long.MinValue));
-            }
-            Assert.Equal(0, CellBitset.LowestSetBit(-1L));
-            Assert.Equal(63, CellBitset.LowestSetBit(long.MinValue));
-        }
+            long origin = 0;
+            long[] sorted = { 1, 2, 3, 4, 5, 6, 7, 8 };
+            int[] r1 = { 0, 1, 2, 3, 4, 5, 6, 7 };
+            RoomMap.RadixSortByKey(sorted, r1, sorted.Length, origin);
+            Assert.Equal(new long[] { 1, 2, 3, 4, 5, 6, 7, 8 }, sorted);
+            Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 6, 7 }, r1);
 
-        /// <summary>The bitset walk the freeze rests on: next set bit and the cell at an index, at word edges.</summary>
-        [Fact]
-        public void NextSetIndexAndCellAtAgreeWithTheCellsThatWereAdded()
-        {
-            CellBitset bits = new CellBitset();
-            Vector3I min = new Vector3I(-5, 3, -9);
-            bits.Reset(min, min + new Vector3I(7, 5, 4));
+            long[] reversed = { 8, 7, 6, 5, 4, 3, 2, 1 };
+            int[] r2 = { 0, 1, 2, 3, 4, 5, 6, 7 };
+            RoomMap.RadixSortByKey(reversed, r2, reversed.Length, origin);
+            Assert.Equal(new long[] { 1, 2, 3, 4, 5, 6, 7, 8 }, reversed);
+            Assert.Equal(new[] { 7, 6, 5, 4, 3, 2, 1, 0 }, r2);
 
-            Vector3I[] added =
-            {
-                min, min + new Vector3I(6, 0, 0), min + new Vector3I(0, 1, 0), min + new Vector3I(3, 4, 3),
-                min + new Vector3I(6, 4, 3), min + new Vector3I(1, 2, 2),
-            };
-            foreach (Vector3I cell in added) Assert.True(bits.Add(cell));
-
-            List<Vector3I> walked = new List<Vector3I>();
-            long end = bits.Capacity;
-            for (long i = bits.NextSetIndex(0, end); i < end; i = bits.NextSetIndex(i + 1, end))
-            {
-                walked.Add(bits.CellAt(i));
-                Assert.Equal(i, bits.IndexOf(bits.CellAt(i)));
-            }
-
-            Assert.Equal(added.Length, walked.Count);
-            for (int i = 1; i < walked.Count; i++)
-            {
-                Assert.True(GridMath.Key(walked[i]) > GridMath.Key(walked[i - 1]),
-                    "walk order is not key order at " + walked[i - 1] + " -> " + walked[i]);
-            }
-            foreach (Vector3I cell in added) Assert.Contains(cell, walked);
+            long[] wide = { 1L << 50, 3, 1L << 40, 1L << 20, 0 };
+            int[] r3 = { 0, 1, 2, 3, 4 };
+            RoomMap.RadixSortByKey(wide, r3, wide.Length, origin);
+            Assert.Equal(new long[] { 0, 3, 1L << 20, 1L << 40, 1L << 50 }, wide);
+            Assert.Equal(new[] { 4, 1, 3, 2, 0 }, r3);
         }
 
         /// <summary>

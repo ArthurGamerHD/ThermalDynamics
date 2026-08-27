@@ -39,15 +39,6 @@ namespace Thermodynamics.Core
         private readonly List<List<Vector3I>> rooms = new List<List<Vector3I>>();
         private Dictionary<long, int> roomIndexByCell = new Dictionary<long, int>();
 
-        /// <summary>
-        /// Every cell in some room, one bit each over the search box. Walked in index order when
-        /// the pass completes, which yields the room cells already in <see cref="GridMath.Key"/>
-        /// order — box-index order and key order are both z, then y, then x — so the frozen arrays
-        /// need no sort. Sorting them was the one call that could not be budgeted: a million keys
-        /// on the tick a pass published, eighty milliseconds at half a million blocks. Retained per
-        /// map at an eighth of a byte a bounding cell. See performance.md, Pass 2, Iteration 8.
-        /// </summary>
-        private readonly CellBitset roomCells = new CellBitset();
 
         /// <summary>
         /// The same answer as <see cref="roomIndexByCell"/>, as two sorted arrays, once a pass has
@@ -71,12 +62,6 @@ namespace Thermodynamics.Core
         private int[] frozenRooms;
         private int frozenCount;
 
-        /// <summary>
-        /// True when this map's freeze found its bitset walk out of order or short and sorted
-        /// instead. False on every grid this repository has mapped; true is a fault to look at,
-        /// and `RoomMapFreezeTests` asserts it never is.
-        /// </summary>
-        public bool FrozeByFallback { get; private set; }
 
         private readonly List<RoomPortal> portals = new List<RoomPortal>();
 
@@ -236,81 +221,21 @@ namespace Thermodynamics.Core
             frozenKeys = new long[frozenCount];
             frozenRooms = new int[frozenCount];
 
-            // In box-index order, which is key order: z, then y, then x, and a key is
-            // z·2^42 + y·2^21 + x, monotone in that order for any coordinate a grid can hold. The
-            // dictionary supplies each cell's room; the bitset supplies the order — a word at a
-            // time, with one coordinate derivation per word and an increment per set bit, because
-            // a division per cell cost more than the sort it replaced (performance.md, Pass 2,
-            // Iteration 8).
             int at = 0;
-            long end = roomCells.Capacity;
-            int sizeX = roomCells.SizeX;
-            int sizeY = roomCells.SizeY;
-            int wordCount = roomCells.WordCount;
-
-            for (int w = 0; w < wordCount && at < frozenCount; w++)
+            foreach (KeyValuePair<long, int> entry in roomIndexByCell)
             {
-                long bits = roomCells.Word(w);
-                if (bits == 0L) continue;
-
-                long baseIndex = (long)w << 6;
-                Vector3I cell = roomCells.CellAt(baseIndex);
-                int previousBit = 0;
-
-                while (bits != 0L)
-                {
-                    int bit = CellBitset.LowestSetBit(bits);
-                    bits &= bits - 1;
-
-                    long index = baseIndex + bit;
-                    if (index >= end) break;
-
-                    // Advance the cell by the bits stepped over, wrapping rows and planes as the
-                    // index order does.
-                    cell.X += bit - previousBit;
-                    previousBit = bit;
-                    while (cell.X >= searchMin.X + sizeX)
-                    {
-                        cell.X -= sizeX;
-                        cell.Y++;
-                        if (cell.Y >= searchMin.Y + sizeY)
-                        {
-                            cell.Y -= sizeY;
-                            cell.Z++;
-                        }
-                    }
-
-                    long key = GridMath.Key(cell);
-                    int room;
-                    if (!roomIndexByCell.TryGetValue(key, out room)) continue;
-                    frozenKeys[at] = key;
-                    frozenRooms[at] = room;
-                    at++;
-                }
+                frozenKeys[at] = entry.Key;
+                frozenRooms[at] = entry.Value;
+                at++;
             }
 
-            // The order claim above is checked rather than trusted, because a search over keys
-            // that are not sorted answers "no room" for cells that are in one, silently. A pass
-            // whose bitset and dictionary disagree, or whose keys are not monotone, is sorted the
-            // old way and counted, so a report can say it happened.
-            bool ordered = at == frozenCount;
-            for (int i = 1; ordered && i < at; i++)
-            {
-                if (frozenKeys[i] <= frozenKeys[i - 1]) ordered = false;
-            }
-
-            if (!ordered)
-            {
-                FrozeByFallback = true;
-                at = 0;
-                foreach (KeyValuePair<long, int> entry in roomIndexByCell)
-                {
-                    frozenKeys[at] = entry.Key;
-                    frozenRooms[at] = entry.Value;
-                    at++;
-                }
-                Array.Sort(frozenKeys, frozenRooms);
-            }
+            // Sorted together: the keys are the search order and the rooms ride along with them.
+            // A radix sort rather than the framework's comparison sort, because this is the one
+            // call in a pass that cannot be budgeted and it lands on the tick a player is already
+            // waiting on: 1.2 million keys at half a million blocks. Every key is at or above the
+            // box's first, so the offset from it is a non-negative number a few passes of eleven
+            // bits cover, and the passes skip themselves where every offset's digit is zero.
+            RadixSortByKey(frozenKeys, frozenRooms, frozenCount, GridMath.Key(searchMin));
 
             // Replaced rather than cleared: `Clear` keeps a dictionary's buckets and entries, so
             // freezing into arrays beside them would *add* twelve bytes a cell rather than trade
@@ -358,7 +283,6 @@ namespace Thermodynamics.Core
             searchMin = min;
             searchMaxExclusive = maxExclusive;
             solid.Reset(min, maxExclusive);
-            roomCells.Reset(min, maxExclusive);
         }
 
         /// <summary>
@@ -405,12 +329,85 @@ namespace Thermodynamics.Core
 
             rooms[roomIndex].Add(cell);
             roomIndexByCell[GridMath.Key(cell)] = roomIndex;
-            roomCells.Add(cell);
         }
 
         internal void AddPortal(RoomPortal portal)
         {
             portals.Add(portal);
+        }
+
+        /// <summary>Digit width of the radix sort; 2,048 buckets, so a million keys sort in a handful of passes.</summary>
+        private const int RadixBits = 11;
+        private const int RadixBuckets = 1 << RadixBits;
+
+        /// <summary>
+        /// Sorts <paramref name="keys"/> ascending, carrying <paramref name="rooms"/> with them, by
+        /// least-significant-digit radix on <c>key − origin</c>. Exact and stable, and the same
+        /// order the comparison sort produced, which `RoomMapFreezeTests` holds against
+        /// `Array.Sort` on random keys. Scratch is two arrays of the same length, dropped after.
+        /// See performance.md, Pass 2, Iteration 8.
+        /// </summary>
+        public static void RadixSortByKey(long[] keys, int[] rooms, int count, long origin)
+        {
+            if (count < 2) return;
+
+            long largest = 0;
+            for (int i = 0; i < count; i++)
+            {
+                long offset = keys[i] - origin;
+                if (offset < 0)
+                {
+                    // A key below the origin cannot happen for a cell inside the box; if it ever
+                    // does, the comparison sort is still correct and this is the one place to say so.
+                    Array.Sort(keys, rooms, 0, count);
+                    return;
+                }
+                if (offset > largest) largest = offset;
+            }
+
+            long[] keysScratch = new long[count];
+            int[] roomsScratch = new int[count];
+            int[] counts = new int[RadixBuckets];
+
+            long[] fromKeys = keys;
+            int[] fromRooms = rooms;
+            long[] toKeys = keysScratch;
+            int[] toRooms = roomsScratch;
+
+            for (int shift = 0; shift < 64 && (largest >> shift) != 0; shift += RadixBits)
+            {
+                Array.Clear(counts, 0, RadixBuckets);
+                for (int i = 0; i < count; i++)
+                {
+                    counts[(int)(((fromKeys[i] - origin) >> shift) & (RadixBuckets - 1))]++;
+                }
+
+                int running = 0;
+                for (int b = 0; b < RadixBuckets; b++)
+                {
+                    int c = counts[b];
+                    counts[b] = running;
+                    running += c;
+                }
+
+                for (int i = 0; i < count; i++)
+                {
+                    int bucket = (int)(((fromKeys[i] - origin) >> shift) & (RadixBuckets - 1));
+                    int to = counts[bucket]++;
+                    toKeys[to] = fromKeys[i];
+                    toRooms[to] = fromRooms[i];
+                }
+
+                long[] k = fromKeys; fromKeys = toKeys; toKeys = k;
+                int[] r = fromRooms; fromRooms = toRooms; toRooms = r;
+            }
+
+            // An odd number of passes leaves the result in the scratch arrays.
+            if (!ReferenceEquals(fromKeys, keys))
+            {
+                Array.Copy(fromKeys, keys, count);
+                Array.Copy(fromRooms, rooms, count);
+            }
         }
 
         /// <summary>
