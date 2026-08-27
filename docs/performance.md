@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Pass 4, iteration 7: **the span flood is built** — the external air is walked a run at a time, 84 cells to a run, and the room pass is **0.59** at 505,566 blocks and 0.54 at 126,731. The budget check caught the first form overshooting a tick. |
 | 2026-08-27 | Pass 4, iteration 6: 92 % of the air rebuild's face probes find nothing, so a bit over the grid's padded box answers first — roomair 0.89 at 505,566 blocks. Counted before it was changed, in a separate commit. |
 | 2026-08-27 | Pass 4, iteration 5: the air rebuild and the room-side exposure refresh walk neighbours by key arithmetic — roomair 0.74 at 126k blocks but only 0.95 at 505k, which says the stage is bound by the dictionary probes, not the arithmetic around them. |
 | 2026-08-27 | Pass 4, iteration 4: room air is canonical — sorted by node, so a room's links and its starting temperature no longer depend on the path the flood took. The span flood's precondition is met. The iteration also gave the air rebuild its first instrument, and it is **the largest stage on the load path** — 185 ms at 505,566 blocks against the room pass's 134 in a quiet window — and previously unmeasured. |
@@ -1115,6 +1116,7 @@ table carries an allocation column for that reason.
 | 4 | A room's air is a function of the room, not of the flood's path | **kept** — for the property, at a cost the instrument cannot resolve; and it found the load path's largest stage, unmeasured | [Iteration 4](#pass-4-iteration-4--a-rooms-air-is-a-function-of-the-room) |
 | 5 | The air rebuild walks neighbours by key arithmetic | **kept** — roomair 0.74 at 126k, 0.95 at 505k, and the gap says what the stage is bound by | [Iteration 5](#pass-4-iteration-5--the-air-rebuild-walks-neighbours-by-key-arithmetic) |
 | 6 | A bit in front of the probe, for the nine faces in ten that hold nothing | **kept** — roomair 0.89 at 505k, 0.92 at 126k | [Iteration 6](#pass-4-iteration-6--a-bit-in-front-of-the-probe) |
+| 7 | The external air is walked a run at a time | **kept** — rooms **0.59** at 505k, **0.54** at 126k | [Iteration 7](#pass-4-iteration-7--the-external-air-is-walked-a-run-at-a-time) |
 
 ## Pass 4, iteration 1 — the room map's cell-to-room dictionary is gone
 
@@ -1384,6 +1386,63 @@ six unrelated offsets. What was saved is the hash, the bucket walk and the entry
 cache miss, which both structures take. A bit is a cheaper miss, not an avoided one. The stage is
 still memory-bound, and the remaining lever there is to *touch fewer cells*, which is what the room
 pass's own designed change is about.
+
+## Pass 4, iteration 7 — the external air is walked a run at a time
+
+This is the change [pass 3 designed and could not build](#pass-3--what-is-designed-and-not-built),
+built. Iteration 4 removed what stopped it.
+
+Most of a room-mapping pass is not the rooms. At 505,566 blocks the pass visits 7.2 million cells and
+**5.1 million of them are the open space around the hull**, in maximal runs along X averaging **84
+cells**. The cell walk paid a dequeue, an index derivation and six face tests for every one of them,
+and enqueued every one of them — a frontier of millions of entries to classify a volume that is
+mostly nothing.
+
+The run walk takes a whole run per dequeue. It extends along X while neither side of the shared face
+seals and the next cell is untaken; it walks the four lateral faces once per cell of the run; and it
+enqueues **only the first cell of each unvisited stretch** beside the run, which is what collapses
+the frontier from millions of entries to tens of thousands. External cells are counted rather than
+stored, so the order they are reached in is not an output of the pass and nothing downstream can
+tell the two walks apart.
+
+**Three things had to be got right, and each is checked rather than argued.**
+
+- *It must classify the same cells.* It is a different algorithm — a scanline fill against a
+  breadth-first one — so the cell walk stays, as `SpanFlood = false`, and is the oracle.
+  `RoomSpanFloodTests` holds the two against each other **cell by cell over the whole box**, on a
+  compartmented fixture and on a census hull. Shortening the extension by one cell fails all three
+  of its checks.
+- *It must respect the tick budget.* A run on a large hull is hundreds of cells, and
+  `RoomMappingNeverExceedsItsBudgetInOneTick` holds the mapper to its budget on every tick however
+  large the grid — the whole value of an incremental stage. **That check caught this**: the first
+  form let a run overshoot by up to the width of the box. A run now stops at what the tick has left
+  and enqueues where it stopped.
+- *A seed must be justified.* The walk counts any unvisited cell it dequeues as open air, so a cell
+  enqueued without being shown reachable would be classified on sight. The budget-truncation
+  enqueue runs the same reachability test the extension uses before enqueuing.
+
+| stage | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| rooms, 505,566 blocks | 134.14 ms | **79.43 ms** | **0.59** |
+| rooms, 126,731 blocks | 32.12 ms | **17.22 ms** | **0.54** |
+| rooms, per cell visited, 505,566 | 18.6 ns | **10.9 ns** | |
+| a settled step, 505,566 (control) | 80.25 ms | 81.02 ms | 1.01 |
+| exposure, 505,566 | 20.98 ms | 18.46 ms | 0.88 — *not a control; see below* |
+
+**The work counter is not identical between the legs, and it favours the old code.** The cell walk
+counts 7,216,527 cells visited and the run walk 7,279,786 — 0.9 % more. A cell beside a run can be
+enqueued by each of up to four runs, and the duplicates are discarded on dequeue at a cost of one
+charged cell each. So the run walk is charged for slightly more work than it does, and the per-cell
+figures above understate it. Everything else the two legs produce is identical, which is what
+`RoomSpanFloodTests` says.
+
+**Exposure moved too, and it is worth naming rather than ignoring.** It reads a published map this
+change does not alter, so 0.88 is not a result about exposure — it is most likely about what the
+pass leaves behind. The frontier is a retained ring buffer sized to the largest it ever needed: the
+cell walk drove it to millions of `Vector3I`, tens of megabytes that stay allocated for the life of
+the mapper, and the run walk needs tens of thousands. A stage that walks the same map with less of
+the process's memory behind it runs faster. That is a hypothesis with a measurement attached to it —
+the memory rows at the close of this pass are where it is settled or dropped.
 
 ---
 
