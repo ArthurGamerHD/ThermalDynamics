@@ -117,7 +117,13 @@ namespace Thermodynamics.Tests
             int links = simulation.Solver.LinkCount;
             ThermalSolver.StepPhaseProfile phases = simulation.Solver.StepPhases;
 
-            Assert.Equal(nodes * substeps, phases.Visits[1]);   // environment
+            // The environment stage is split in two — the substep that fills the rows and the ones
+            // that read them — so it is the pair that must account for every node of every substep,
+            // and the fill must be exactly one substep's worth.
+            Assert.Equal(nodes, phases.Visits[ThermalSolver.StepPhaseProfile.EnvironmentFill]);
+            Assert.Equal(nodes * substeps,
+                phases.Visits[1] + phases.Visits[ThermalSolver.StepPhaseProfile.EnvironmentFill]);
+
             Assert.Equal(links * substeps, phases.Visits[2]);   // conduction
             Assert.Equal(nodes * substeps, phases.Visits[4]);   // apply
             Assert.Equal(nodes, phases.Visits[5]);              // publish, once for the step
@@ -127,6 +133,8 @@ namespace Thermodynamics.Tests
                 Assert.True(phases.Slices[p] > 0,
                     ThermalSolver.StepPhaseProfile.Names[p] + " was never entered");
             }
+
+            Assert.Equal(1, phases.Slices[ThermalSolver.StepPhaseProfile.EnvironmentFill]);
         }
 
         /// <summary>

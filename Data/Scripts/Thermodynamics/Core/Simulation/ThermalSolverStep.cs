@@ -59,11 +59,21 @@ namespace Thermodynamics.Core
             public readonly long[] Visits = new long[PhaseCount];
             public readonly long[] Slices = new long[PhaseCount];
 
-            /// <summary>One more than the stages, because Begin is a stage the switch runs too.</summary>
-            public const int PhaseCount = 6;
+            /// <summary>
+            /// One more than the stages, because Begin is a stage the switch runs too — and one
+            /// more again, because the environment stage is two different pieces of work and
+            /// reporting them together answers nothing. The first substep of a step *fills* the
+            /// per-node rows (face weights against sun and wind, solar, friction, convection
+            /// coefficients); the other twenty-three read them. Which of those two is the 46 % is
+            /// the whole question.
+            /// </summary>
+            public const int PhaseCount = 7;
 
             public static readonly string[] Names =
-                { "begin", "environment", "conduction", "coupled", "apply", "publish" };
+                { "begin", "environment", "conduction", "coupled", "apply", "publish", "env fill" };
+
+            /// <summary>Where the environment stage's row-filling substep is charged, apart from the rest.</summary>
+            public const int EnvironmentFill = 6;
 
             public void Reset()
             {
@@ -333,6 +343,14 @@ namespace Thermodynamics.Core
                 long remaining = workBudget - spent;
 
                 int phase = (int)stage - 1;
+
+                // A substep that fills the environment rows is a different piece of work from one
+                // that reads them, and they are the same stage.
+                if (stage == StepStage.Environment && (!environmentRowsValid || !PrecomputeEnvironment))
+                {
+                    phase = StepPhaseProfile.EnvironmentFill;
+                }
+
                 long started = ProfileStepPhases ? Stopwatch.GetTimestamp() : 0L;
                 long before = spent;
 

@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Pass 5, iteration 2: **iteration 1's split was wrong and is corrected in place** — measured over twenty steps rather than one, conduction is 38 % of a step and the environment read 35 %, with the row fill a twentieth of it. And node reordering, the obvious idea for conduction, is refused before building: 97.8 % of links already span fewer than 1,024 node indices. |
 | 2026-08-27 | Opened pass 5 on the stage no pass has moved, and its first iteration says why: **the environment pass is 46 % of a step and conduction is 33 %**, at 2.5 ns a node against 0.9 ns a link. Two earlier passes reverted layout changes aimed at the cheaper half. |
 | 2026-08-27 | Pass 4, iteration 10: the block neighbour walk goes by key arithmetic as well — 0.96 to 0.99, below what the instrument resolves, kept on the sign of eight paired readings out of eight. |
 | 2026-08-27 | **Closed pass 4**: the room pass is **0.36** and allocates a tenth, exposure **0.53**, the mapper's peak memory **0.51**, world load at a million blocks 1.66 → 1.32 s. The two largest wins were downstream of changes made for other reasons. |
@@ -1595,7 +1596,8 @@ and reverted it.
 
 | # | Subject | Verdict | Where |
 | ---: | --- | --- | --- |
-| 1 | A step is measured by its parts | **kept** — and the answer is not the one three passes assumed | [Iteration 1](#pass-5-iteration-1--a-step-is-measured-by-its-parts) |
+| 1 | A step is measured by its parts | **kept** — the instrument; its first reading was wrong and iteration 2 says why | [Iteration 1](#pass-5-iteration-1--a-step-is-measured-by-its-parts) |
+| 2 | The split corrected, and the obvious idea refused | **kept** — conduction 38 %, environment 35 %, apply 20 %; and node reordering is not worth doing | [Iteration 2](#pass-5-iteration-2--the-split-corrected-and-the-obvious-idea-refused) |
 
 ## Pass 5, iteration 1 — a step is measured by its parts
 
@@ -1611,21 +1613,10 @@ a state machine over `Begin`, `Environment`, `Conduction`, `Coupled`, `Apply` an
 it is spread across frames — so the instrument is two timestamps per *slice*, of which there are a
 few hundred in a step, rather than per element, of which there are millions.
 
-**What it says, at 126,731 blocks over 24 substeps:**
-
-| stage | best | share | visits | per visit | what it walks |
-| --- | ---: | ---: | ---: | ---: | --- |
-| **environment** | **7.63 ms** | **46 %** | 3,041,544 | 2.5 ns | radiation, convection, solar, friction and waste heat, per node |
-| conduction | 5.46 ms | 33 % | 5,936,400 | 0.9 ns | one exchange per link |
-| apply | 2.94 ms | 18 % | 3,041,544 | 1.0 ns | watts into temperatures, per node |
-| publish | 0.42 ms | 3 % | 126,731 | 3.3 ns | the step's results onto the node objects |
-| begin | 0.004 ms | — | 380,184 | — | zeroing and planning, per substep |
-| coupled | 0.002 ms | — | 960 | — | loops, room air and heat pumps |
-
-**The environment pass is the largest part of a step, and conduction is not.** It is half again as
-expensive as conduction while walking *half* as many elements — 2.5 ns a node against 0.9 ns a link.
-That is the fact the two reverted layout changes were the wrong side of: both made the link stream
-cheaper to walk, and the link stream is already the cheapest thing per element in the whole step.
+**What it says** is in [iteration 2](#pass-5-iteration-2--the-split-corrected-and-the-obvious-idea-refused),
+which is where the split is reported: the first reading this iteration took was of a **single** step
+on a hull that had not settled, and it was wrong about which stage is largest. That is corrected
+there rather than here, so a reader arrives at one set of numbers rather than two (`E10`).
 
 **The instrument is off unless asked for, and it does not change what it measures.** The profile
 costs two timestamps a slice and a branch, on a path that runs a few hundred times a step;
@@ -1633,6 +1624,49 @@ costs two timestamps a slice and a branch, on a path that runs a few hundred tim
 equal **to the bit**, and checks that each stage is charged the elements it actually walks — nodes
 for environment and apply, links for conduction, once per substep — because a stage charged
 something else has a nanoseconds-per-unit figure that means nothing.
+
+## Pass 5, iteration 2 — the split corrected, and the obvious idea refused
+
+**Iteration 1's reading was of one step, and it was wrong.** A step is a millisecond or two of work,
+and a census hull that has taken three steps has not settled — it asks for a different number of
+substeps from one step to the next, which changes both the time and the element count. The first
+reading put the environment pass at 46 % of a step and conduction at 33 %. Measured the way the
+`solver` stage measures, over **twenty steps a repeat after twenty steps of warm-up**, the order
+reverses. The lab's own guard is what caught it: the environment stage charged a different number of
+visits on two repeats and it refused to average them.
+
+**And the environment stage is two different pieces of work reported as one.** The first substep of
+a step *fills* the per-node rows — the six face weights against sun and wind, solar, friction, the
+convection coefficient — and the other twenty-three read them. They are now separate rows, because
+"the environment pass is 46 %" answers nothing if it is mostly a fill that happens once.
+
+**The split, at 126,731 blocks, 24 substeps, per step:**
+
+| stage | best | share | visits | per visit | what it walks |
+| --- | ---: | ---: | ---: | ---: | --- |
+| **conduction** | **10.43 ms** | **38 %** | 5,936,400 | **1.8 ns** | one exchange per link, per substep |
+| **environment** | **9.70 ms** | **35 %** | 2,914,813 | **3.3 ns** | radiation and convection from the filled rows, per node |
+| apply | 5.41 ms | 20 % | 3,041,544 | 1.8 ns | watts into temperatures, per node |
+| env fill | 1.29 ms | 5 % | 126,731 | 10.2 ns | the rows, once a step |
+| publish | 0.74 ms | 3 % | 126,731 | 5.9 ns | the step's results onto the node objects |
+| begin, coupled | 0.01 ms | — | 381,144 | — | zeroing, planning, loops, air and pumps |
+
+So **conduction and the environment read are the same size**, the fill is a twentieth, and a step is
+three passes over the grid per substep — nodes, links, nodes — at between 1.8 and 3.3 nanoseconds an
+element. Iteration 1's conclusion that two earlier passes had aimed at the cheapest part of the step
+does not survive this: conduction is the largest single stage. What does survive is that **neither
+of those passes knew that**, and both judged their change on a number that mixed all six stages
+together.
+
+**The obvious next idea is refused on measurement, before building it.** Conduction gathers two
+temperatures and scatters two watts per link, so its cost is set by how far apart a link's two nodes
+are numbered — which makes "renumber the nodes spatially" the standard move. On this hull it is
+already true: the mean index span of a link is **244** at 126,731 blocks, two thirds span fewer than
+64, and **97.8 % span fewer than 1,024** — four kilobytes of a float row. The gathers land in L1
+nearly every time and there is nothing to recover. `LinkSpanProbe` keeps that as a check rather than
+a note, because nothing guarantees it: nodes are numbered in the order blocks are added, and a change
+to how a grid is loaded could scatter them, making conduction slower for a reason no timing would
+explain.
 
 ---
 

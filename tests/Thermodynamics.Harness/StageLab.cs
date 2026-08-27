@@ -415,7 +415,13 @@ namespace Thermodynamics.Harness
 
             if (log != null) log("step phases, " + blocks.ToString("n0") + " blocks");
 
-            for (int i = 0; i < 3; i++) simulation.Solver.Step(step, state);
+            // **A repeat is the same twenty steps the `solver` stage times**, and for the same two
+            // reasons: a step is short enough that one of them is mostly clock, and a hull that has
+            // not settled asks for a different number of substeps from one step to the next — which
+            // the guard below reports as two different walks, correctly, and which is a property of
+            // the hull rather than of the instrument. Twenty steps of warm-up first, for the same
+            // reason again.
+            for (int i = 0; i < SolverStepsPerRepeat; i++) simulation.Solver.Step(step, state);
 
             // The profile is reset per repeat and the fastest repeat is reported stage by stage, so
             // a collection landing in one repeat cannot flatter another.
@@ -432,15 +438,15 @@ namespace Thermodynamics.Harness
             for (int r = 0; r < repeats; r++)
             {
                 simulation.Solver.StepPhases.Reset();
-                simulation.Solver.Step(step, state);
+                for (int i = 0; i < SolverStepsPerRepeat; i++) simulation.Solver.Step(step, state);
 
                 for (int p = 0; p < best.Length; p++)
                 {
-                    double ms = simulation.Solver.StepPhases.MillisecondsOf(p);
+                    double ms = simulation.Solver.StepPhases.MillisecondsOf(p) / SolverStepsPerRepeat;
                     if (ms < best[p]) best[p] = ms;
                     if (ms > worst[p]) worst[p] = ms;
 
-                    long v = simulation.Solver.StepPhases.Visits[p];
+                    long v = simulation.Solver.StepPhases.Visits[p] / SolverStepsPerRepeat;
                     if (r > 0 && v != visits[p])
                     {
                         throw new InvalidOperationException(
@@ -450,7 +456,7 @@ namespace Thermodynamics.Harness
                     }
 
                     visits[p] = v;
-                    slices[p] = simulation.Solver.StepPhases.Slices[p];
+                    slices[p] = simulation.Solver.StepPhases.Slices[p] / SolverStepsPerRepeat;
                 }
             }
 
