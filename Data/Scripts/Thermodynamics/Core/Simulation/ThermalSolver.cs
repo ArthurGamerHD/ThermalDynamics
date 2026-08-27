@@ -2908,6 +2908,14 @@ namespace Thermodynamics.Core
 
                 if (!damageEnabled) continue;
 
+                // **Nothing on the grid can be over its own critical temperature below this**, so
+                // the ordinary case does not read the critical row at all — one stream fewer of the
+                // five this loop walks, on every node of every substep. The bound is the lowest
+                // positive critical the grid carries, which the cue machinery already keeps; a node
+                // whose own critical is at or above it is skipped by the test below exactly as it
+                // was. See performance.md, Pass 5, Iteration 8.
+                if (updated <= lowestCritical) continue;
+
                 // Only an overheating node dereferences its definition, so the ordinary case
                 // stays within the flat arrays — including the test itself, which is what decides
                 // whether the block is reached at all.
