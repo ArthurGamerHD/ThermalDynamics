@@ -571,7 +571,7 @@ same ordering and the same shape with the surface and link rows inside their own
 | 2 | A one-cell block's neighbours are six probes | **kept** — links 0.77–0.88 | [Iteration 2](#pass-2-iteration-2--a-one-cell-blocks-neighbours-are-six-probes) |
 | 3 | A one-cell block's exposure is one state and six tests | **kept** — exposure 0.65 | [Iteration 3](#pass-2-iteration-3--a-one-cell-blocks-exposure-is-one-cell-state-and-six-face-tests) |
 | 4 | The interior scan skips visited cells a word at a time | **kept** — room-map ticks to converge 0.54–0.62 | [Iteration 4](#pass-2-iteration-4--the-interior-scan-skips-visited-cells-a-word-at-a-time) |
-| 5 | The environment pass reads one row per node | *measuring* | [Iteration 5](#pass-2-iteration-5--the-environment-pass-reads-one-row-per-node) |
+| 5 | The environment pass reads one row per node | **dropped** — 0.99 at a 1 % floor | [Iteration 5](#pass-2-iteration-5--the-environment-pass-reads-one-row-per-node) |
 | 6 | A one-cell block is built without walking its cells | *measuring* | [Iteration 6](#pass-2-iteration-6--a-one-cell-block-is-built-without-walking-its-cells) |
 | 7 | The flood's box test is one compare on the axis that moved | **dropped** — slower, 1.25–1.30 | [Iteration 7](#pass-2-iteration-7--the-floods-box-test-is-one-compare-on-the-axis-that-moved) |
 | 8 | The freeze walks a bitset in key order instead of sorting | *measuring* | [Iteration 8](#pass-2-iteration-8--the-freeze-walks-a-bitset-in-key-order-instead-of-sorting) |
@@ -699,6 +699,22 @@ fields once a step. Same arithmetic in the same order, so the five bit-identity 
 byte-identical scenarios pass unchanged. The first pass's iteration 6 tried the same layout on the
 *link* side and measured nothing; the node side is the gather the loop actually pays for, which is
 why it is worth asking again. Judged on `bench stages --stages solver`, the settled step alone.
+
+**What it measured, and why it is dropped.** Before against after, cores proven different,
+interleaved, two rounds, twenty steps a repeat, fifteen repeats:
+
+| hull | step, before | after | ratio |
+| --- | ---: | ---: | ---: |
+| 126,731 blocks, 24 substeps | 18.50 ms | 18.40 ms | 0.99 |
+| 505,566 blocks, 28 substeps | 88.94 ms | 88.24 ms | 0.99 |
+
+Inside the instrument's own floor, with the substep count identical on both sides. Together with
+the first pass's link rows this is a finding about the loop rather than about a layout: **neither
+side's stream layout is what the substep loop pays for.** The link streams and the node rows are
+both sequential and prefetched either way; what is left is the arithmetic, the two gathers of a
+temperature per link, and the stores — and the work on the elements is already about two
+nanoseconds each at half a million blocks. Reverted in the same branch (`M5`); a change that
+measures as nothing is not left in.
 
 ## Pass 2, iteration 6 — a one-cell block is built without walking its cells
 
