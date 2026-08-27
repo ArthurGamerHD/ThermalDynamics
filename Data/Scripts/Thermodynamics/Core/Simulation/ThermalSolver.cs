@@ -706,6 +706,14 @@ namespace Thermodynamics.Core
 
             links.Clear();
             syncedLinks = 0;
+
+            // A hull carries a little under two links a block, so the list is sized for that
+            // rather than doubled into from empty: growing to a million entries copies the
+            // sixteen-byte struct several million times on the way. An estimate that is short
+            // still grows, and one that is long is a transient the rebuild drops.
+            int expected = nodes.Count * 2;
+            if (links.Capacity < expected) links.Capacity = expected;
+
             EnsureBuffers();
             ResetLinkChains();
             for (int i = 0; i < nodes.Count; i++)
@@ -733,7 +741,7 @@ namespace Thermodynamics.Core
                     int face = ConductionBuilder.ContactFace(a.Block, b.Block);
                     if (face < 0) continue;
 
-                    int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block);
+                    int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block, face);
                     if (contacts <= 0) continue;
 
                     float conductance = ConductionBuilder.Conductance(
@@ -822,7 +830,7 @@ namespace Thermodynamics.Core
                     int face = ConductionBuilder.ContactFace(a.Block, b.Block);
                     if (face < 0) continue;
 
-                    int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block);
+                    int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block, face);
                     if (contacts <= 0) continue;
 
                     float conductance = ConductionBuilder.Conductance(
