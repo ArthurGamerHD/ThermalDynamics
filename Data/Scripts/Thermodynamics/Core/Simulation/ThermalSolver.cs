@@ -1468,12 +1468,26 @@ namespace Thermodynamics.Core
         private readonly Dictionary<Vector3I, RoomAirNode> rememberedAir =
             new Dictionary<Vector3I, RoomAirNode>(Vector3I.Comparer);
 
-        private readonly Dictionary<int, int> roomContactScratch = new Dictionary<int, int>();
+        /// <summary>
+        /// Faces each bounding node presents to the room being built, counted in a row indexed by
+        /// node rather than in a hash table.
+        ///
+        /// <para>
+        /// The count is per node and node indices are dense from zero, so a hash was buying nothing
+        /// a subscript does not: at half a million blocks an air rebuild finds **691,306** faces
+        /// holding a block, and each one was a lookup and a store into a dictionary. The row is
+        /// reused across rooms and across rebuilds, and only the entries a room touched are put
+        /// back to zero — <see cref="roomContactOrder"/> is the list of exactly those.
+        /// See performance.md, Pass 5, Iteration 7.
+        /// </para>
+        /// </summary>
+        private int[] roomContactFaces = new int[0];
 
         /// <summary>
-        /// The nodes in <see cref="roomContactScratch"/>, sorted, so a room's links and the mean it
-        /// takes over them are built in an order that does not depend on how the flood reached the
-        /// room's cells. See performance.md, Pass 4, Iteration 4.
+        /// The nodes bounding the room being built, sorted, so a room's links and the mean it takes
+        /// over them are built in an order that does not depend on how the flood reached the room's
+        /// cells. Also the list of entries of <see cref="roomContactFaces"/> to clear afterwards.
+        /// See performance.md, Pass 4, Iteration 4.
         /// </summary>
         private readonly List<int> roomContactOrder = new List<int>();
 
@@ -1548,7 +1562,8 @@ namespace Thermodynamics.Core
             if (!air.HasAir) return;
             if (air.RoomIndex < 0 || air.RoomIndex >= rooms.RoomCount) return;
 
-            roomContactScratch.Clear();
+            if (roomContactFaces.Length < nodes.Count) roomContactFaces = new int[nodes.Count];
+            roomContactOrder.Clear();
 
             CellBitset occupied = grid.Occupancy();
 
@@ -1573,22 +1588,20 @@ namespace Thermodynamics.Core
                     ThermalNode node = GetNode(block);
                     if (node == null) continue;
 
-                    int faces;
-                    roomContactScratch.TryGetValue(node.Index, out faces);
-                    roomContactScratch[node.Index] = faces + 1;
+                    // First face this node presents to the room puts it on the list; the rest only
+                    // count. The list is what makes the row cheap to clear again.
+                    int index = node.Index;
+                    if (roomContactFaces[index] == 0) roomContactOrder.Add(index);
+                    roomContactFaces[index]++;
                 }
             }
 
-            // **In node order, not in the order the room's cells happened to arrive.** A dictionary
-            // enumerates by insertion, so the links of a room — and the sum below, which is a sum of
-            // floats and therefore depends on its order — were a function of the path the flood took
-            // through that room. Sorting the contacts makes both a function of the room's *contents*
-            // instead, which is what lets the flood be rewritten without moving anybody's last bit.
-            roomContactOrder.Clear();
-            foreach (KeyValuePair<int, int> contact in roomContactScratch)
-            {
-                roomContactOrder.Add(contact.Key);
-            }
+            // **In node order, not in the order the room's cells happened to arrive.** The nodes
+            // are listed as the walk first meets them, so the links of a room — and the sum below,
+            // which is a sum of floats and therefore depends on its order — would otherwise be a
+            // function of the path the flood took through that room. Sorting makes both a function
+            // of the room's *contents*, which is what lets the flood be rewritten without moving
+            // anybody's last bit.
             roomContactOrder.Sort();
 
             float surfaceSum = 0f;
@@ -1600,7 +1613,7 @@ namespace Thermodynamics.Core
                 surfaceSum += nodes[node].Temperature;
                 surfaceCount++;
 
-                float area = roomContactScratch[node] * nodes[node].CellFaceArea;
+                float area = roomContactFaces[node] * nodes[node].CellFaceArea;
                 float conductance = settings.RoomConvectionCoefficient * area;
 
                 // A room whose convection is switched off still has walls, and their mean is still
@@ -1610,6 +1623,10 @@ namespace Thermodynamics.Core
 
                 air.Links.Add(new RoomLink(node, conductance));
             }
+
+            // The row goes back to zero for the next room, at the cost of the entries this one
+            // used rather than of the grid.
+            for (int i = 0; i < roomContactOrder.Count; i++) roomContactFaces[roomContactOrder[i]] = 0;
 
             // Air appearing in a room for the first time starts at the mean temperature of the
             // walls bounding it.

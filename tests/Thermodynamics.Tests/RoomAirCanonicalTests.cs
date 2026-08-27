@@ -190,6 +190,51 @@ namespace Thermodynamics.Tests
             Assert.True(filled > 0, "no room took air, so its links were never built");
         }
 
+        /// <summary>
+        /// **Building a room's air twice gives the same answer**, which is the property the face
+        /// counters depend on: they live in a row indexed by node that is reused across rooms and
+        /// across rebuilds, and only the entries a room touched are put back to zero. An entry left
+        /// dirty would be added to the next room's count for that node, giving it a conductance for
+        /// faces it does not have — and nothing else would report it.
+        /// </summary>
+        [Fact]
+        public void BuildingARoomsAirTwiceGivesTheSameAnswer()
+        {
+            ThermalSimulation simulation = SealedBox();
+            RoomMap map = Reordered(simulation, false);
+
+            Pressurise(simulation, map);
+            List<float> first = Conductances(simulation);
+
+            Pressurise(simulation, map);
+            List<float> second = Conductances(simulation);
+
+            Assert.True(first.Count > 10, "only " + first.Count + " links were compared");
+            Assert.Equal(first.Count, second.Count);
+
+            for (int i = 0; i < first.Count; i++)
+            {
+                Assert.True(Bits(first[i]) == Bits(second[i]),
+                    "link " + i + " is " + first[i].ToString("R") + " on the first build and "
+                    + second[i].ToString("R") + " on the second, so the face counters carried"
+                    + " something between builds");
+            }
+        }
+
+        private static List<float> Conductances(ThermalSimulation simulation)
+        {
+            List<float> all = new List<float>();
+            IList<RoomAirNode> air = simulation.Solver.RoomAir;
+
+            for (int a = 0; a < air.Count; a++)
+            {
+                IList<RoomLink> links = air[a].Links;
+                for (int l = 0; l < links.Count; l++) all.Add(links[l].Conductance);
+            }
+
+            return all;
+        }
+
         private static int Bits(float value)
         {
             return BitConverter.ToInt32(BitConverter.GetBytes(value), 0);
