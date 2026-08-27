@@ -642,6 +642,8 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Pass 4, iteration 5: the air rebuild and the room-side exposure refresh walk neighbours by key arithmetic — roomair 0.74 at 126k blocks but only 0.95 at 505k, which says the stage is bound by the dictionary probes, not the arithmetic around them. |
+| 2026-08-27 | Pass 4, iteration 4: room air is canonical — sorted by node, so a room's links and its starting temperature no longer depend on the path the flood took. The span flood's precondition is met. The iteration also gave the air rebuild its first instrument, and it is **the largest stage on the load path** — 185 ms at 505,566 blocks against the room pass's 134 in a quiet window — and previously unmeasured. |
 | 2026-08-27 | Pass 4, iteration 3: the room map answers from a rank over the set it already fills, so the sorted key and room arrays and the radix sort are gone. Exposure 0.45, rooms 0.89, and the pass's allocation is a tenth of what it was when the pass opened. |
 | 2026-08-27 | Pass 4, iteration 2: the room cells are one store, hinted from the pass before. Half the remaining allocation, the worst pass a tenth quicker, the best unmoved — and the same commit reading 30 % apart in two windows. |
 | 2026-08-27 | Opened pass 4 on the figure pass 3 ended with: the room pass allocated 253 MB per execution. Its first iteration removed 149 MB of that, and a quarter of the stage. |
@@ -1109,6 +1111,8 @@ table carries an allocation column for that reason.
 | 1 | The room map's cell-to-room dictionary is gone, not merely rebuilt | **kept** — rooms 0.75, and 149 MB of the 253 with it | [Iteration 1](#pass-4-iteration-1--the-room-maps-cell-to-room-dictionary-is-gone) |
 | 2 | Every room's cells in one store, sized from the pass before | **kept** — another 50 MB, and the worst pass 0.89; the best did not move | [Iteration 2](#pass-4-iteration-2--every-rooms-cells-in-one-store) |
 | 3 | The map answers from a rank, so the sorted arrays and the sort go | **kept** — exposure **0.45**, rooms 0.89, another 28 MB | [Iteration 3](#pass-4-iteration-3--the-room-map-answers-from-a-rank) |
+| 4 | A room's air is a function of the room, not of the flood's path | **kept** — for the property, at a cost the instrument cannot resolve; and it found the load path's largest stage, unmeasured | [Iteration 4](#pass-4-iteration-4--a-rooms-air-is-a-function-of-the-room) |
+| 5 | The air rebuild walks neighbours by key arithmetic | **kept** — roomair 0.74 at 126k, 0.95 at 505k, and the gap says what the stage is bound by | [Iteration 5](#pass-4-iteration-5--the-air-rebuild-walks-neighbours-by-key-arithmetic) |
 
 ## Pass 4, iteration 1 — the room map's cell-to-room dictionary is gone
 
@@ -1247,6 +1251,96 @@ removed a structure rather than tuning one: a dictionary nothing read, per-room 
 one hinted store, and sorted keys that a rank makes unnecessary. What remains is the cell store at
 twelve bytes a cell and the room-by-rank at four, both of which the map is holding *because they are
 its answer*, not as working space.
+
+## Pass 4, iteration 4 — a room's air is a function of the room
+
+`BuildRoomLinks` counts how many faces each bounding block presents to a room into a
+`Dictionary<int, int>` and then enumerates it. A dictionary enumerates by insertion, so **a room's
+links came out in the order the flood happened to reach its cells** — and the mean wall temperature
+a new room's air starts at is a sum of floats over that same enumeration, so it did too. Two floods
+agreeing exactly about which cells are in a room disagreed about how warm its air is: on the test
+hull, **349.66922 forwards and 349.66916 backwards**. Not a rounding curiosity — a visible difference
+in the fourth decimal of a temperature.
+
+Sorting the contacts by node index makes both the links and the sum a function of the room's
+*contents*. `RoomAirCanonicalTests` builds two maps holding the same rooms with each room's cells
+offered in opposite orders and compares the resulting air bit for bit — links, conductances,
+starting temperature — and both of its checks fail when the sort is removed.
+
+**Why it is worth an iteration on its own.** This is the condition the span flood needs. A flood
+that enqueues runs of cells rather than single cells reaches a room's cells in a different order,
+and until now that would have moved every player's air temperatures in the last bits, which is why
+[the design note](#pass-3--what-is-designed-and-not-built) said it needed the air links made
+canonical first. That is done, and it was done in its own commit so that if it *had* moved a pinned
+figure, the move would have been attributable to it alone. It moved none: 2,027 tests pass unchanged.
+
+**What it cost.** `bench stages --stages roomair,rooms,solver`, with the room pass and a settled step
+as controls:
+
+| stage, 505,566 blocks | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| roomair | 417.71 ms | 442.49 ms | 1.06 |
+| rooms (control) | 141.11 ms | 140.17 ms | 0.99 |
+| a settled step (control) | 112.03 ms | 109.39 ms | 0.98 |
+| roomair, 126,731 blocks | 44.19 ms | 46.73 ms | 1.06 |
+
+**Read that as "at most a few per cent", not as six.** The *before* leg alone read 437.24 and 417.71
+in its two rounds — 4.7 % apart on identical code — and the first round's pairing was 1.01 where the
+second's was 1.06. A difference the same leg produces against itself is not a difference between
+legs (`M5`). The honest statement is that a sort of a few hundred integers per room, per air rebuild,
+costs no more than a few per cent of a stage, and it buys a property that a whole class of future
+change depends on.
+
+**And the iteration found something bigger than itself.** There was no instrument for the air
+rebuild at all: the stage lab measured place, register, surfaces, links, rooms, exposure and a
+settled step, and `RebuildRoomAir` — which runs every time a map republishes — was in none of them.
+It is a stage now, and it is **the largest single thing on the load path**, in every window it has
+been measured in. It had been that all along.
+
+*The absolute figure needs a window to mean anything, and this section first said 437 ms — the
+reading in the window above, where a settled step read 112 ms. Measured again the next window, on the
+same commit, with a settled step at 85.5 ms: the air rebuild reads **185 ms** against the room pass's
+**134**. The machine was about 30 % slower in the first window and the air rebuild was 2.4× slower,
+which is worth its own sentence: this stage is memory-bound, so it is the one that suffers most from
+whatever else is running. Corrected in place, `E10`; the ratios in the table are unaffected, being
+interleaved within one window.*
+
+The
+first draft of the stage timed an empty outer loop, because a room at zero pressure has no air and
+therefore no links, so the rooms are filled before the clock starts — which is the same failure as
+[a switch wired to nothing](#pass-2-iteration-5--the-environment-pass-reads-one-row-per-node), caught
+here by the stage reporting a suspiciously small number rather than by a check.
+
+## Pass 4, iteration 5 — the air rebuild walks neighbours by key arithmetic
+
+`BuildRoomLinks` and `RefreshExposureAround` both walk a room's cells and ask the grid what stands
+across each of the six faces. Both did it by adding the face offset to the cell and calling
+`GetAtCell`, which converts a cell to a key — **seven conversions a cell**, two multiplies and three
+adds each. A key is a sum of the components, so a neighbour's key is this cell's key plus a per-face
+constant: one addition. This is pass 3's iteration 6 applied to the two loops it did not reach.
+
+`GetAtKey` is `GetAtCell` without the conversion. It is deliberately *not* `GetByKey`, which answers
+only for a block's lowest cell — a neighbour walk that reached for that one would find every
+one-cell block and miss every multi-cell one except at its corner, a hole nothing else in the model
+would report. The two are pinned apart by a test on a 3×3×3 block.
+
+| stage | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| roomair, 126,731 blocks | 41.09 ms | **30.58 ms** | **0.74** |
+| roomair, 505,566 blocks | 184.88 ms | **175.61 ms** | 0.95 |
+| rooms, 505,566 (control) | 134.30 ms | 133.42 ms | 0.99 |
+| a settled step, 505,566 (control) | 85.55 ms | 84.36 ms | 0.99 |
+
+**The gap between the two rungs is the finding, and it names the next iteration.** The same change
+is worth a quarter of the stage at 126,731 blocks and a twentieth at 505,566. Arithmetic does not
+get cheaper with grid size, so what grew is everything else: at half a million blocks `blocksByCell`
+holds five hundred thousand entries, the six neighbour keys of a cell land in six unrelated buckets,
+and the stage is waiting on memory rather than computing. Removing five conversions from a cell that
+then stalls on a cache miss anyway recovers little.
+
+That is worth stating as a measurement rather than a hunch, because it changes what to do next:
+**the probes that cost are the ones that find nothing.** A room's interior cells have six air
+neighbours and pay six full dictionary probes to be told so, and interior cells are most of a room.
 
 ---
 
