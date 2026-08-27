@@ -172,6 +172,11 @@ namespace Thermodynamics.Tests
                 { "Thermodynamics.Core.RoomMap.EmptyCells", "empty array" },
                 { "Thermodynamics.Core.RoomMap.EmptyRanges", "empty array" },
 
+                // Which face index points along which axis, derived once from the offsets below.
+                { "Thermodynamics.Core.RoomMapper.MinusX", "geometry constant" },
+                { "Thermodynamics.Core.RoomMapper.PlusX", "geometry constant" },
+                { "Thermodynamics.Core.RoomMapper.LateralFaces", "geometry constant" },
+
                 // Geometry constants: the six faces and the unit cube, as arrays because C# has no
                 // array literal a const can hold.
                 { "Thermodynamics.Core.Face.Offsets", "geometry constant" },

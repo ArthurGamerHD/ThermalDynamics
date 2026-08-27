@@ -419,6 +419,15 @@ namespace Thermodynamics.Core
             externalCount++;
         }
 
+        /// <summary>
+        /// The same, for a whole run of open-air cells at once. External cells are counted rather
+        /// than stored (see <see cref="externalCount"/>), so a run costs one addition.
+        /// </summary>
+        internal void AddExternalRun(int count)
+        {
+            externalCount += count;
+        }
+
         /// <summary>Records the box the pass classified, so open air can be enumerated from it.</summary>
         internal void SetSearchBounds(Vector3I min, Vector3I maxExclusive)
         {

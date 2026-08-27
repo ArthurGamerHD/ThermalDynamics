@@ -311,6 +311,16 @@ namespace Thermodynamics.Core
                         BeginInteriorScan();
                         continue;
                     }
+                    if (RunWalkLive)
+                    {
+                        // A run is charged for every cell it took, and takes no more than the tick
+                        // has left; where it stops for that reason it enqueues its own remainder.
+                        int cells = StepExternalRun(cellBudget - spent);
+                        spent += cells;
+                        Work.RoomCellsVisited += cells;
+                        continue;
+                    }
+
                     StepExternal();
                     spent++;
                     Work.RoomCellsVisited++;
@@ -378,10 +388,26 @@ namespace Thermodynamics.Core
 
             // The corner of the padded bounding box is guaranteed to lie outside the grid.
             Vector3I seed = searchMin;
-            visited.Add(seed);
-            working.AddExternal(seed);
+
+            // The run walk marks and counts what it takes, and it has to be able to extend through
+            // its own seed; the cell walk marks at the enqueue.
+            if (!RunWalkLive)
+            {
+                visited.Add(seed);
+                working.AddExternal(seed);
+            }
+
             FrontierEnqueue(seed);
             phase = Phase.External;
+        }
+
+        /// <summary>
+        /// Whether this pass is walking runs: the switch is on and the snapshot it needs is live.
+        /// The run walk steps indices, which is only meaningful against a snapshot.
+        /// </summary>
+        private bool RunWalkLive
+        {
+            get { return SpanFlood && snapshotLive; }
         }
 
         private void TakeSealingSnapshot()
@@ -423,6 +449,179 @@ namespace Thermodynamics.Core
         /// See performance.md, Pass 3, Iteration 2.
         /// </summary>
         /// <returns>True when the caller should classify the neighbour; the neighbour's index is out.</returns>
+        /// <summary>
+        /// Whether to walk the external air a run of cells at a time rather than a cell at a time.
+        ///
+        /// <para>
+        /// The switch exists so the two walks can be held against each other on real hulls
+        /// (`RoomSpanFloodTests`), the way `SnapshotSealing` holds the snapshot against the live
+        /// query. The cell walk is the reference: it is the simpler statement of what a flood is,
+        /// and the span walk is only correct if it classifies the same cells.
+        /// </para>
+        /// </summary>
+        public bool SpanFlood = true;
+
+        /// <summary>The face indices of −X and +X, and the four that are neither, found once from the offsets.</summary>
+        private static readonly int MinusX = FaceAlong(-1, 0, 0);
+        private static readonly int PlusX = FaceAlong(1, 0, 0);
+        private static readonly int[] LateralFaces = BuildLateralFaces();
+
+        private static int FaceAlong(int x, int y, int z)
+        {
+            for (int face = 0; face < Face.Count; face++)
+            {
+                Vector3I offset = Face.Offsets[face];
+                if (offset.X == x && offset.Y == y && offset.Z == z) return face;
+            }
+            return -1;
+        }
+
+        private static int[] BuildLateralFaces()
+        {
+            int[] faces = new int[Face.Count - 2];
+            int at = 0;
+            for (int face = 0; face < Face.Count; face++)
+            {
+                if (Face.Offsets[face].X != 0) continue;
+                faces[at++] = face;
+            }
+            return faces;
+        }
+
+        /// <summary>
+        /// Walks one maximal run of open air along X and returns how many cells it classified.
+        ///
+        /// <para>
+        /// **Why a run.** The external flood is most of what a pass does — 5.1 million cells of the
+        /// 7.2 million visited on a 505,566-block hull — and nearly all of it is open space around
+        /// the hull, in runs averaging **84 cells**. A cell walk pays a dequeue, an index derivation
+        /// and six face tests for each of those cells, and enqueues each of them. A run walk pays
+        /// the dequeue and the index once, walks the run's own ±X faces as it extends, and enqueues
+        /// only the *first* cell of each unvisited stretch on the four other faces — which is what
+        /// keeps the frontier at tens of thousands of entries rather than millions.
+        /// </para>
+        ///
+        /// <para>
+        /// **Nothing here depends on the order cells are reached in.** External cells are counted,
+        /// not stored, so the pass's outputs — the visited set, the count, and which cells are left
+        /// for the interior scan — are the same set whichever walk finds them.
+        /// </para>
+        ///
+        /// <para>
+        /// A cell can be enqueued more than once, by each of up to four runs beside it; the visited
+        /// test at the top is what makes that harmless, and it is why the enqueue does not mark.
+        /// </para>
+        ///
+        /// <para>
+        /// **A run never outruns the tick's budget.** `RoomMappingNeverExceedsItsBudgetInOneTick`
+        /// holds the mapper to its budget on every tick however large the grid, and a run on a
+        /// large hull is hundreds of cells — so a run stops at <paramref name="most"/> cells and
+        /// **enqueues where it stopped**, which the next tick picks up. The cell it enqueues has
+        /// already been shown reachable by the same test the extension uses, because a seed the
+        /// walk cannot justify would be counted as open air on sight.
+        /// </para>
+        /// </summary>
+        /// <param name="most">Cells this run may take, being what is left of the tick's budget.</param>
+        private int StepExternalRun(int most)
+        {
+            Vector3I seed = FrontierDequeue();
+
+            long index = SealingIndex(seed);
+            if (index < 0 || visited.ContainsIndex(index)) return 1;
+
+            if (most < 1) most = 1;
+            int taken = 1;
+
+            // Extend to the low side, then to the high side, stopping at a seal on either face of
+            // the pair, at a cell some other run already took, at the box, or at the budget.
+            int low = seed.X;
+            long lowIndex = index;
+            while (taken < most && ReachesLow(low, lowIndex))
+            {
+                low--;
+                lowIndex--;
+                taken++;
+            }
+
+            if (taken >= most && ReachesLow(low, lowIndex))
+            {
+                FrontierEnqueue(new Vector3I(low - 1, seed.Y, seed.Z));
+            }
+
+            int high = seed.X;
+            long highIndex = index;
+            while (taken < most && ReachesHigh(high, highIndex))
+            {
+                high++;
+                highIndex++;
+                taken++;
+            }
+
+            if (taken >= most && ReachesHigh(high, highIndex))
+            {
+                FrontierEnqueue(new Vector3I(high + 1, seed.Y, seed.Z));
+            }
+
+            for (long i = lowIndex; i <= highIndex; i++) visited.AddIndex(i);
+
+            int length = (int)(highIndex - lowIndex + 1);
+            working.AddExternalRun(length);
+
+            for (int f = 0; f < LateralFaces.Length; f++)
+            {
+                int face = LateralFaces[f];
+                Vector3I offset = Face.Offsets[face];
+
+                int y = seed.Y + offset.Y;
+                if (y < searchMin.Y || y >= searchMaxExclusive.Y) continue;
+
+                int z = seed.Z + offset.Z;
+                if (z < searchMin.Z || z >= searchMaxExclusive.Z) continue;
+
+                long delta = faceDelta[face];
+                int opposite = Face.Opposite(face);
+                bool inStretch = false;
+
+                for (long i = lowIndex; i <= highIndex; i++)
+                {
+                    long neighbour = i + delta;
+
+                    if ((sealing[i] & (1 << face)) != 0
+                        || visited.ContainsIndex(neighbour)
+                        || (sealing[neighbour] & (1 << opposite)) != 0)
+                    {
+                        inStretch = false;
+                        continue;
+                    }
+
+                    if (inStretch) continue;
+
+                    inStretch = true;
+                    FrontierEnqueue(new Vector3I(low + (int)(i - lowIndex), y, z));
+                }
+            }
+
+            return length;
+        }
+
+        /// <summary>Whether the run may extend one cell further down X from here.</summary>
+        private bool ReachesLow(int x, long index)
+        {
+            return x > searchMin.X
+                && (sealing[index] & (1 << MinusX)) == 0
+                && !visited.ContainsIndex(index - 1)
+                && (sealing[index - 1] & (1 << PlusX)) == 0;
+        }
+
+        /// <summary>Whether the run may extend one cell further up X from here.</summary>
+        private bool ReachesHigh(int x, long index)
+        {
+            return x < searchMaxExclusive.X - 1
+                && (sealing[index] & (1 << PlusX)) == 0
+                && !visited.ContainsIndex(index + 1)
+                && (sealing[index + 1] & (1 << MinusX)) == 0;
+        }
+
         private bool Reaches(long index, int sealingHere, Vector3I neighbour, int face, out long neighbourIndex)
         {
             neighbourIndex = -1;
