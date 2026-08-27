@@ -7,7 +7,7 @@ quoted here are taken from that report unless a row says otherwise. This page do
 a step costs or how the report is read — it says what was done about it and how each claim was
 checked.
 
-> The rules argued here are stated canonically in [rules.md](rules.md): `M4` `M5` `M6` `M7`
+> The rules argued here are stated canonically in [rules.md](rules.md): `M4` `M5` `M6` `M7` `M13`
 > `D7` `D8` `W5`, and the principles P1, P4 and P6 they follow from.
 
 | Looking for | Go to |
@@ -101,7 +101,7 @@ optimisation whose case rested on hoisting a load out of a loop, was measured on
 that exaggerated exactly that kind of work.
 
 **What changed.** `tests/Directory.Build.props` sets `<Optimize>true</Optimize>` for every project
-and every configuration. `dotnet run` and `dotnet test` still build Debug; Debug is now optimised.
+and every configuration, and it is `M13` in [rules.md](rules.md) so the next harness cannot repeat it. `dotnet run` and `dotnet test` still build Debug; Debug is now optimised.
 Pinned by `OptimisedBuildTests`, which reads `DebuggableAttribute` off the built core, harness and
 test assemblies and fails if any of them says the optimiser is off — a line dropped from a props
 file fails nothing else.
