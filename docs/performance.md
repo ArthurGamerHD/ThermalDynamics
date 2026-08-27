@@ -570,6 +570,8 @@ same ordering and the same shape with the surface and link rows inside their own
 | 1 | The stage instrument lives in the tree | **kept** — `bench stages`, `StageLabTests` | [Iteration 1](#pass-2-iteration-1--the-stage-instrument-lives-in-the-tree) |
 | 2 | A one-cell block's neighbours are six probes | **kept** — links 0.77–0.88 | [Iteration 2](#pass-2-iteration-2--a-one-cell-blocks-neighbours-are-six-probes) |
 | 3 | A one-cell block's exposure is one state and six tests | **kept** — exposure 0.65 | [Iteration 3](#pass-2-iteration-3--a-one-cell-blocks-exposure-is-one-cell-state-and-six-face-tests) |
+| 4 | The interior scan skips visited cells a word at a time | **kept** — room-map ticks to converge 0.54–0.62 | [Iteration 4](#pass-2-iteration-4--the-interior-scan-skips-visited-cells-a-word-at-a-time) |
+| 5 | The environment pass reads one row per node | *measuring* | [Iteration 5](#pass-2-iteration-5--the-environment-pass-reads-one-row-per-node) |
 
 ## Pass 2, iteration 1 — the stage instrument lives in the tree
 
@@ -637,11 +639,42 @@ different, interleaved, two rounds, fastest kept:
 | --- | --- |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
 
----
+## Pass 2, iteration 4 — the interior scan skips visited cells a word at a time
 
-## Change log
+**What was found.** A room pass is two walks over the bounding volume: the floods, which reach every
+cell of air and every solid cell beside it, and then the interior scan, which walks every cell of
+the box once more to find the ones no flood reached — the start of each enclosed room. By the time
+the scan reaches a cell it has almost always been visited, so the scan's whole job is to skip, and
+it skipped one cell at a time: half of every pass's charged work, and the half a budgeted tick
+spends most of.
 
-| Date | Change |
-| --- | --- |
-| 2026-08-26 | Opened pass 2 on the page, with its start figures taken by the instrument the pass begins by putting in the tree. |
+**What changed.** The visited bitset walks whole words while they are all ones — sixty-four cells a
+step — and the scan's cursor is derived from the index it lands on, by the inverse of the order the
+cursor advances in, which the first pass's `WalkingABoxInScanOrderAdvancesTheIndexByOne` holds. The
+charge is per word looked at rather than per cell skipped: still cell by cell where cells are
+unvisited, never more than one unit per sixty-four. **The map is the same map** —
+`RoomMapSnapshotTests` runs the cell-by-cell path beside it — and the test now also asserts that the
+skip removed more than half the box's walk, since a skip that skipped nothing would agree perfectly
+(`E8`). `NextClearIndex` is pinned at every offset shape an off-by-one could survive the map tests
+on: a clear bit at the start of a word, mid-word, past a run of full words, and none before the
+bound.
+
+**What it was worth — ticks, which is the figure `D2` is about.** The mapper's budget is counted in
+the units the scan charges, so charging per word is what turns a cheaper pass into a *shorter*
+one: `bench scale`, before against after, cores proven different, two rounds each:
+
+| blocks | bounding cells | settle ticks, before | after | ratio | room map ms, before → after |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 8,904 | 68,800 | 168 | **106** | 0.63 | 15.8 → 16.7 |
+| 32,800 | 328,640 | 211 | **131** | 0.62 | 43.0 → 10.5 / 42.2 |
+| 126,731 | 1,499,616 | 794 | **438** | 0.55 | 70.5 → 43.7 |
+| 505,566 | 6,838,104 | 3,482 | **1,890** | 0.54 | 368.6 → 313.5 |
+
+The tick count is deterministic — identical between rounds on each side — and it is the count a
+world waits on a stale exposure map after a block is placed ([backlog.md](backlog.md) `D2`). The
+`+1 spike` column, the worst tick after one block is placed, fell from 145.5 to 96.3 ms at 505k for
+the same reason: the first tick of the remap does more of the scan. The milliseconds per pass are
+the ladder's and are read for direction only; the stage instrument's figure is below.
+
+, with its start figures taken by the instrument the pass begins by putting in the tree. |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
