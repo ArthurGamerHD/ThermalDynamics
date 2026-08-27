@@ -193,6 +193,36 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Writes each occupied cell's six structural self-airtight bits into a dense box, one byte a
+        /// cell, indexed <c>((z * sizeY) + y) * sizeX + x</c> from <paramref name="min"/>. Cells outside
+        /// the box are skipped and empty cells stay zero, which is what <see cref="GetStructuralState"/>
+        /// answers for them. The room mapper walks this instead of probing the dictionary twice per
+        /// face of every cell in the bounding volume. See performance.md, Iteration 4.
+        /// </summary>
+        public void CopyStructuralSealing(Vector3I min, Vector3I maxExclusive, byte[] sealing)
+        {
+            if (sealing == null) return;
+
+            int sizeX = maxExclusive.X - min.X;
+            int sizeY = maxExclusive.Y - min.Y;
+            int sizeZ = maxExclusive.Z - min.Z;
+            if (sizeX <= 0 || sizeY <= 0 || sizeZ <= 0) return;
+
+            foreach (KeyValuePair<Vector3I, int> entry in structure)
+            {
+                int x = entry.Key.X - min.X;
+                int y = entry.Key.Y - min.Y;
+                int z = entry.Key.Z - min.Z;
+                if (x < 0 || x >= sizeX || y < 0 || y >= sizeY || z < 0 || z >= sizeZ) continue;
+
+                long index = (((long)z * sizeY) + y) * sizeX + x;
+                if (index >= sealing.Length) continue;
+
+                sealing[index] = (byte)(entry.Value & CellSurface.SelfAirtightMask);
+            }
+        }
+
+        /// <summary>
         /// Counts, per face direction, how many of a block's cell faces are open to the outside: on the
         /// boundary, external beyond, and not sealed against. A mount joint is deliberately not a
         /// rejection. See thermal-model.md, Exposure.

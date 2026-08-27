@@ -308,6 +308,7 @@ counted per cell, which is §8 and §9.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | The room mapper holds one byte per cell of its search box between passes — the structural sealing snapshot the flood fill reads instead of the surface map's dictionaries: 6.8 MB at 505k blocks, 14 MB at a million, about 14 B a block. Bought a 3× cheaper room map ([performance.md](performance.md#iteration-4--the-room-mapper-reads-a-snapshot-of-the-sealing)). |
 | 2026-08-25 | Added the *Looking for* table this page's own conventions ask for. It carried the same pointers in prose, which is the shape a reader has to read rather than scan. |
 | 2026-08-23 | **§4 is finished**: the room map's cell dictionary is frozen into sorted arrays when a pass completes, 31 → 12 bytes a cell. The room map falls from 107 to **72 bytes a block** on a 20,000-block ship and the retained set from 1,000 to 966. [backlog.md](backlog.md) `E3`. |
 | 2026-08-23 | **§3's counts are packed**: `ExposedFaces` is one `long` rather than an `int[6]`, and the solver row falls 475 → **427 bytes a block** on a 20,000-block ship — the array's header and reference exactly. With §2 the same row is 524 → 427 and the whole retained set 1,097 → 1,000. [backlog.md](backlog.md) `E2`. |
