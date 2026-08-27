@@ -67,7 +67,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        public static readonly string[] Stages = { "place", "register", "surfaces", "links", "rooms", "exposure", "solver" };
+        public static readonly string[] Stages = { "place", "register", "surfaces", "links", "rooms", "exposure", "roomair", "solver" };
 
         public static List<Row> Run(string shape, int blocks, IList<string> stages, Action<string> log = null)
         {
@@ -109,6 +109,7 @@ namespace Thermodynamics.Harness
                 case "links": return Links(builder);
                 case "rooms": return Rooms(builder);
                 case "exposure": return Exposure(builder);
+                case "roomair": return RoomAir(builder);
                 case "solver": return Solver(builder);
                 default: throw new ArgumentException("Unknown stage: " + stage);
             }
@@ -291,6 +292,59 @@ namespace Thermodynamics.Harness
                 if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
                 Work(row, simulation.Work.RoomCellsVisited - before, r);
+            }
+
+            return row;
+        }
+
+        /// <summary>
+        /// Rebuilding every room's air from a published map: one air node a room, and one link per
+        /// block bounding it, found by walking the room's cells and asking the grid what is across
+        /// each face.
+        ///
+        /// <para>
+        /// **The rooms have to be filled or this stage measures nothing.** A room at zero pressure
+        /// has no air and therefore no links, so an unpressurised hull runs the outer loop and
+        /// returns — which is what the first draft of this timed. The fill happens once, before the
+        /// clock, and every repeat afterwards finds it again through the remembered air.
+        /// </para>
+        /// </summary>
+        private static Row RoomAir(GridBuilder builder)
+        {
+            ThermalSimulation simulation = Registered(builder);
+            simulation.Surfaces.Rebuild(simulation.Grid);
+            simulation.Rooms.RequestRestart(simulation.Grid);
+            simulation.Rooms.RunToCompletion();
+
+            RoomMap map = simulation.Rooms.Map;
+            simulation.Solver.RebuildRoomAir(map);
+
+            int filled = 0;
+            for (int r = 0; r < map.RoomCount; r++)
+            {
+                if (map.CellsInRoom(r) == 0) continue;
+                if (simulation.Solver.SetRoomPressure(map, map.CellsOf(r)[0], 1f)) filled++;
+            }
+
+            if (filled == 0)
+            {
+                throw new InvalidOperationException(
+                    "no room took air on a hull with " + map.RoomCount
+                    + " rooms, so this stage would time an outer loop and nothing else");
+            }
+
+            Row row = NewRow("roomair", simulation, "room cells");
+            int repeats = Math.Max(1, Repeats);
+
+            for (int r = 0; r < repeats; r++)
+            {
+                long allocated = r == repeats - 1 ? Allocated() : 0;
+                Stopwatch watch = Stopwatch.StartNew();
+                simulation.Solver.RebuildRoomAir(map);
+                watch.Stop();
+                if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
+                Take(row, watch.Elapsed.TotalMilliseconds);
+                Work(row, map.RoomCellCount, r);
             }
 
             return row;

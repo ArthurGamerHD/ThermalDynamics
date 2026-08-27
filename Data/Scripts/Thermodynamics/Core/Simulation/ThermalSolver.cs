@@ -1392,6 +1392,13 @@ namespace Thermodynamics.Core
         private readonly Dictionary<int, int> roomContactScratch = new Dictionary<int, int>();
 
         /// <summary>
+        /// The nodes in <see cref="roomContactScratch"/>, sorted, so a room's links and the mean it
+        /// takes over them are built in an order that does not depend on how the flood reached the
+        /// room's cells. See performance.md, Pass 4, Iteration 4.
+        /// </summary>
+        private readonly List<int> roomContactOrder = new List<int>();
+
+        /// <summary>
         /// Rebuilds the air masses of every sealed room from a room map, matching on each room's
         /// lowest cell so a room whose shape did not change keeps its air. See thermal-model.md,
         /// Room air.
@@ -1480,19 +1487,36 @@ namespace Thermodynamics.Core
                 }
             }
 
+            // **In node order, not in the order the room's cells happened to arrive.** A dictionary
+            // enumerates by insertion, so the links of a room — and the sum below, which is a sum of
+            // floats and therefore depends on its order — were a function of the path the flood took
+            // through that room. Sorting the contacts makes both a function of the room's *contents*
+            // instead, which is what lets the flood be rewritten without moving anybody's last bit.
+            roomContactOrder.Clear();
+            foreach (KeyValuePair<int, int> contact in roomContactScratch)
+            {
+                roomContactOrder.Add(contact.Key);
+            }
+            roomContactOrder.Sort();
+
             float surfaceSum = 0f;
             int surfaceCount = 0;
 
-            foreach (KeyValuePair<int, int> contact in roomContactScratch)
+            for (int i = 0; i < roomContactOrder.Count; i++)
             {
-                surfaceSum += nodes[contact.Key].Temperature;
+                int node = roomContactOrder[i];
+                surfaceSum += nodes[node].Temperature;
                 surfaceCount++;
 
-                float area = contact.Value * nodes[contact.Key].CellFaceArea;
+                float area = roomContactScratch[node] * nodes[node].CellFaceArea;
                 float conductance = settings.RoomConvectionCoefficient * area;
+
+                // A room whose convection is switched off still has walls, and their mean is still
+                // where its air starts; it simply has no links. So the sum counts every contact and
+                // the list takes only the ones that conduct.
                 if (conductance <= 0f) continue;
 
-                air.Links.Add(new RoomLink(contact.Key, conductance));
+                air.Links.Add(new RoomLink(node, conductance));
             }
 
             // Air appearing in a room for the first time starts at the mean temperature of the
