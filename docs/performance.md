@@ -574,8 +574,8 @@ same ordering and the same shape with the surface and link rows inside their own
 ## Pass 2, iteration 1 — the stage instrument lives in the tree
 
 The first pass judged two changes wrongly on the build ladder and had to re-judge both on a scratch
-probe that timed one stage alone. That probe is `StageLab` and `bench stages` now: surfaces, links,
-rooms, exposure and a settled step, each on one prebuilt grid, fastest of fifteen, with the stage's
+probe that timed one stage alone. That probe is `StageLab` and `bench stages` now: placing blocks,
+registering them, surfaces, links, rooms, exposure and a settled step, each on one prebuilt grid, fastest of fifteen, with the stage's
 own work counter beside the time — and a work figure that moves between repeats aborts the row,
 because two readings of different walks are not a comparison (`P6`). `StageLabTests` holds that
 every stage reports work on a hull that exercised it and that the work is the same figure asked

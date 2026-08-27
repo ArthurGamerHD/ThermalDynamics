@@ -55,7 +55,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        public static readonly string[] Stages = { "surfaces", "links", "rooms", "exposure", "solver" };
+        public static readonly string[] Stages = { "place", "register", "surfaces", "links", "rooms", "exposure", "solver" };
 
         public static List<Row> Run(string shape, int blocks, IList<string> stages, Action<string> log = null)
         {
@@ -87,6 +87,8 @@ namespace Thermodynamics.Harness
         {
             switch (stage)
             {
+                case "place": return Place(builder);
+                case "register": return Register(builder);
                 case "surfaces": return Surfaces(builder);
                 case "links": return Links(builder);
                 case "rooms": return Rooms(builder);
@@ -121,6 +123,68 @@ namespace Thermodynamics.Harness
                 throw new InvalidOperationException(row.Stage + " did " + work + " " + row.WorkUnit
                     + " on repeat " + repeat + " and " + row.Work + " on the first, so its readings are of different walks");
             }
+        }
+
+        /// <summary>
+        /// Constructing every block instance and adding it to a fresh grid — what the adapter does
+        /// per block when it mirrors a `MyCubeGrid` at world load, and what a paste does. The dealt
+        /// builder supplies the models, cells and orientations; nothing else about it is reused.
+        /// </summary>
+        private static Row Place(GridBuilder builder)
+        {
+            IList<BlockInstance> dealt = builder.Placed;
+            Row row = null;
+            int repeats = Math.Max(1, Repeats);
+
+            for (int r = 0; r < repeats; r++)
+            {
+                GridModel grid = new GridModel(builder.Grid.GridSize);
+
+                Stopwatch watch = Stopwatch.StartNew();
+                for (int i = 0; i < dealt.Count; i++)
+                {
+                    grid.Add(new BlockInstance(dealt[i].Model, dealt[i].Min, dealt[i].Orientation));
+                }
+                watch.Stop();
+
+                if (row == null)
+                {
+                    row = new Row();
+                    row.Stage = "place";
+                    row.Blocks = grid.BlockCount;
+                    row.BestMs = double.MaxValue;
+                    row.WorkUnit = "blocks";
+                }
+                Take(row, watch.Elapsed.TotalMilliseconds);
+                Work(row, grid.BlockCount, r);
+            }
+
+            return row;
+        }
+
+        /// <summary>Registering every placed block with a fresh simulation's solver: a node each, and its links pending.</summary>
+        private static Row Register(GridBuilder builder)
+        {
+            Row row = null;
+            int repeats = Math.Max(1, Repeats);
+
+            for (int r = 0; r < repeats; r++)
+            {
+                ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings().Derive(), builder.Grid);
+
+                Stopwatch watch = Stopwatch.StartNew();
+                for (int i = 0; i < builder.Placed.Count; i++)
+                {
+                    simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
+                }
+                watch.Stop();
+
+                if (row == null) row = NewRow("register", simulation, "blocks");
+                Take(row, watch.Elapsed.TotalMilliseconds);
+                Work(row, simulation.Solver.Nodes.Count, r);
+            }
+
+            return row;
         }
 
         private static Row Surfaces(GridBuilder builder)
