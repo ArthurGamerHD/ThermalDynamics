@@ -21,6 +21,20 @@ namespace Thermodynamics.Core
         private int[] setsBefore = EmptyPrefix;
         private bool ranked;
 
+        /// <summary>
+        /// What to add to a cell's index to get its neighbour's across each face: ±1, ±sizeX and
+        /// ±sizeX·sizeY, since the index order is <c>((z·sizeY) + y)·sizeX + x</c>. Rebuilt with the
+        /// box.
+        ///
+        /// <para>
+        /// **Only safe for a cell that is not on the box's own boundary.** Stepping −X from the
+        /// first column, or +X from the last, lands in the neighbouring row rather than outside the
+        /// box, and no bounds check can see it. Callers step from cells strictly inside a padded
+        /// box, where every neighbour is a real neighbour.
+        /// </para>
+        /// </summary>
+        private readonly long[] indexByFace = new long[Face.Count];
+
         private static readonly int[] EmptyPrefix = new int[0];
 
         private Vector3I min;
@@ -66,6 +80,22 @@ namespace Thermodynamics.Core
 
             Count = 0;
             ranked = false;
+
+            long planeStride = (long)sizeX * sizeY;
+            for (int face = 0; face < Face.Count; face++)
+            {
+                Vector3I offset = Face.Offsets[face];
+                indexByFace[face] = offset.X + (long)offset.Y * sizeX + (long)offset.Z * planeStride;
+            }
+        }
+
+        /// <summary>
+        /// The step from a cell's index to its neighbour's across <paramref name="face"/>. See
+        /// <see cref="indexByFace"/> for the one case this cannot be used in.
+        /// </summary>
+        public long IndexStep(int face)
+        {
+            return indexByFace[face];
         }
 
         public void Clear()

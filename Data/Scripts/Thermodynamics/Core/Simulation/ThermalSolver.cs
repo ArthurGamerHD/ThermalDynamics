@@ -1344,6 +1344,8 @@ namespace Thermodynamics.Core
             if (affected == null) affected = new HashSet<BlockInstance>();
             affected.Clear();
 
+            CellBitset occupied = grid.Occupancy();
+
             for (int r = 0; r < roomIndices.Count; r++)
             {
                 int index = roomIndices[r];
@@ -1354,13 +1356,20 @@ namespace Thermodynamics.Core
                     // One conversion a cell rather than seven: a neighbour's key is this cell's
                     // key plus a per-face constant. See performance.md, Pass 3, Iteration 6.
                     long key = GridMath.Key(cell);
+                    long slot = occupied.IndexOf(cell);
+
                     for (int face = 0; face < Face.Count; face++)
                     {
+                        // A bit says whether to ask at all. See performance.md, Pass 4, Iteration 6.
+                        if (!occupied.ContainsIndex(slot + occupied.IndexStep(face))) continue;
+
                         BlockInstance block = grid.GetAtKey(key + GridMath.KeyByFace[face]);
                         if (block != null) affected.Add(block);
                     }
 
                     // The cell itself may hold a block, such as a door standing in the room.
+                    if (!occupied.ContainsIndex(slot)) continue;
+
                     BlockInstance occupant = grid.GetAtKey(key);
                     if (occupant != null) affected.Add(occupant);
                 }
@@ -1474,13 +1483,21 @@ namespace Thermodynamics.Core
 
             roomContactScratch.Clear();
 
+            CellBitset occupied = grid.Occupancy();
+
             foreach (Vector3I cell in rooms.CellsOf(air.RoomIndex))
             {
                 long key = GridMath.Key(cell);
+                long slot = occupied.IndexOf(cell);
+
                 Work.RoomAirFaceProbes += Face.Count;
 
                 for (int face = 0; face < Face.Count; face++)
                 {
+                    // Nine faces in ten hold nothing, and a bit says so without a hash and a
+                    // bucket chase. See performance.md, Pass 4, Iteration 6.
+                    if (!occupied.ContainsIndex(slot + occupied.IndexStep(face))) continue;
+
                     BlockInstance block = grid.GetAtKey(key + GridMath.KeyByFace[face]);
                     if (block == null) continue;
 

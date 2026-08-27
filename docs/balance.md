@@ -2105,8 +2105,8 @@ Conduction ×4 departs from a pace that is already an admitted 2.4× the world's
 `ConductionScale` is for.
 
 **What shipping it costs, sized by attempting it, and the attempt is what the three levers turn out
-to mean.** Setting `ConductionScale` to 9.6 and `HeatTimeScale` to 90 fails **52 of 1,826 tests**
-across 28 classes. Reading them rather than counting them, most are figures that legitimately move
+to mean.** Setting `ConductionScale` to 9.6 and `HeatTimeScale` to 90 failed **52 checks across 28
+classes** when it was attempted on 2026-08-24. Reading them rather than counting them, most are figures that legitimately move
 with the pair — and four are the mod's own guidance failing, each in the words its own test uses:
 
 * *"a coolant sink bought 73.5 K and the best surface dial bought 135.3 K; the surface dials have
