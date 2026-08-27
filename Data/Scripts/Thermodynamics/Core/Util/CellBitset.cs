@@ -233,6 +233,47 @@ namespace Thermodynamics.Core
             return endExclusive;
         }
 
+        /// <summary>
+        /// The first index at or after <paramref name="index"/> whose cell **is** set, or
+        /// <paramref name="endExclusive"/> if none is. The mirror of <see cref="NextClearIndex"/>,
+        /// and for the mirror reason: a hull fills about a fourteenth of its own bounding box, so a
+        /// walk over the box in index order spends thirteen fourteenths of itself on empty space.
+        /// Whole empty words are skipped sixty-four cells at a time.
+        /// See performance.md, Pass 7, Iteration 4.
+        /// </summary>
+        public long NextSetIndex(long index, long endExclusive)
+        {
+            if (index < 0) index = 0;
+
+            while (index < endExclusive)
+            {
+                long word = index >> 6;
+                if (word >= words.Length) return endExclusive;
+
+                long bits = words[word];
+                int offset = (int)(index & 63);
+
+                // Nothing set at this offset or beyond in this word: on to the next.
+                if ((bits >> offset) == 0L)
+                {
+                    index = (word + 1) << 6;
+                    continue;
+                }
+
+                for (int bit = offset; bit < 64; bit++)
+                {
+                    if ((bits & (1L << bit)) == 0L) continue;
+
+                    long found = (word << 6) + bit;
+                    return found < endExclusive ? found : endExclusive;
+                }
+
+                index = (word + 1) << 6;
+            }
+
+            return endExclusive;
+        }
+
         /// <summary>Whether the cell at an index from <see cref="IndexOf"/> is set. Negative and out-of-range indices are not.</summary>
         public bool ContainsIndex(long index)
         {

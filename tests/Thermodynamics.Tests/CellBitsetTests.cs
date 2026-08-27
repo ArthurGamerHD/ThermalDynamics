@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Thermodynamics.Core;
 using VRageMath;
 
@@ -148,6 +149,64 @@ namespace Thermodynamics.Tests
             Assert.False(set.Add(new Vector3I(5, 5, 5)));
             Assert.False(set.Contains(new Vector3I(5, 5, 5)));
             Assert.Equal(0, set.Count);
+        }
+
+        /// <summary>
+        /// **The set's members can be walked without visiting what is not in it.** A hull fills
+        /// about a fourteenth of its bounding box, so a walk driven by the box's every index spends
+        /// thirteen fourteenths of itself on empty space; this skips a whole word of sixty-four
+        /// cells when none of them is a member.
+        ///
+        /// Checked against the plain test, cell by cell: the indices it yields are exactly those
+        /// `ContainsIndex` says are members, in order, and none is missed.
+        /// </summary>
+        [Fact]
+        public void WalkingTheSetYieldsEveryMemberAndNothingElse()
+        {
+            CellBitset set = Over(new Vector3I(-2, -2, -2), new Vector3I(13, 11, 9));
+
+            uint state = 0x5bd1e995u;
+            for (int z = -2; z < 9; z++)
+            {
+                for (int y = -2; y < 11; y++)
+                {
+                    for (int x = -2; x < 13; x++)
+                    {
+                        state ^= state << 13; state ^= state >> 17; state ^= state << 5;
+
+                        // Sparse, and in runs, so whole words are empty and whole words are not.
+                        if ((state & 7u) == 0u) set.Add(new Vector3I(x, y, z));
+                    }
+                }
+            }
+
+            Assert.True(set.Count > 64, "the scatter set " + set.Count + " cells, too few to span words");
+
+            long capacity = set.Capacity;
+            List<long> walked = new List<long>();
+            for (long i = set.NextSetIndex(0, capacity); i < capacity; i = set.NextSetIndex(i + 1, capacity))
+            {
+                walked.Add(i);
+            }
+
+            List<long> expected = new List<long>();
+            for (long i = 0; i < capacity; i++)
+            {
+                if (set.ContainsIndex(i)) expected.Add(i);
+            }
+
+            Assert.Equal(expected.Count, walked.Count);
+            Assert.Equal(set.Count, walked.Count);
+
+            for (int i = 0; i < expected.Count; i++) Assert.Equal(expected[i], walked[i]);
+        }
+
+        /// <summary>An empty set is walked in no steps at all, rather than in one per cell.</summary>
+        [Fact]
+        public void WalkingAnEmptySetYieldsNothing()
+        {
+            CellBitset set = Over(new Vector3I(0, 0, 0), new Vector3I(20, 20, 20));
+            Assert.Equal(set.Capacity, set.NextSetIndex(0, set.Capacity));
         }
 
         /// <summary>

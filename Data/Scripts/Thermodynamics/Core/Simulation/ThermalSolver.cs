@@ -806,7 +806,11 @@ namespace Thermodynamics.Core
 
             float gridSize = grid.GridSize;
 
-            for (int i = 0; i < capacity; i++)
+            // **Thirteen cells in fourteen are empty**, because a hull fills about a fourteenth of
+            // its own bounding box — so the walk is driven by the occupancy set's words, which skip
+            // sixty-four empty cells at a time, rather than by the box's every index.
+            for (long i = occupied.NextSetIndex(0, capacity); i < capacity;
+                 i = occupied.NextSetIndex(i + 1, capacity))
             {
                 int a = cellNode[i];
                 if (a < 0) continue;
