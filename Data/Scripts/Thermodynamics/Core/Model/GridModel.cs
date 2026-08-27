@@ -13,8 +13,14 @@ namespace Thermodynamics.Core
         /// <summary>Edge length of one cell in metres. 2.5 for large grids, 0.5 for small.</summary>
         public readonly float GridSize;
 
-        private readonly Dictionary<Vector3I, BlockInstance> blocksByCell =
-            new Dictionary<Vector3I, BlockInstance>(Vector3I.Comparer);
+        /// <summary>
+        /// The block at each occupied cell, keyed on <see cref="GridMath.Key"/> rather than on the
+        /// cell: a `long` hashes and compares inline where a `Vector3I` goes through a comparer
+        /// object, and the difference is the whole cost of the neighbour query — 51 ns a probe
+        /// against 9 on the same hull. The key is the one `BlockInstance.Key` already carries.
+        /// See performance.md, Iteration 11.
+        /// </summary>
+        private readonly Dictionary<long, BlockInstance> blocksByCell = new Dictionary<long, BlockInstance>();
 
         private readonly List<BlockInstance> blocks = new List<BlockInstance>();
 
@@ -95,7 +101,7 @@ namespace Thermodynamics.Core
         public BlockInstance At(Vector3I cell)
         {
             BlockInstance block;
-            return blocksByCell.TryGetValue(cell, out block) ? block : null;
+            return blocksByCell.TryGetValue(GridMath.Key(cell), out block) ? block : null;
         }
 
         public BlockInstance Add(BlockInstance block)
@@ -105,16 +111,16 @@ namespace Thermodynamics.Core
             Vector3I[] cells = block.Cells;
             for (int i = 0; i < cells.Length; i++)
             {
-                if (blocksByCell.ContainsKey(cells[i]))
+                if (blocksByCell.ContainsKey(GridMath.Key(cells[i])))
                 {
                     throw new InvalidOperationException(
-                        "Cell " + cells[i] + " is already occupied by " + blocksByCell[cells[i]].Name);
+                        "Cell " + cells[i] + " is already occupied by " + blocksByCell[GridMath.Key(cells[i])].Name);
                 }
             }
 
             for (int i = 0; i < cells.Length; i++)
             {
-                blocksByCell[cells[i]] = block;
+                blocksByCell[GridMath.Key(cells[i])] = block;
                 Grow(cells[i]);
             }
 
@@ -145,9 +151,10 @@ namespace Thermodynamics.Core
             for (int i = 0; i < cells.Length; i++)
             {
                 BlockInstance occupant;
-                if (blocksByCell.TryGetValue(cells[i], out occupant) && occupant == block)
+                long key = GridMath.Key(cells[i]);
+                if (blocksByCell.TryGetValue(key, out occupant) && occupant == block)
                 {
-                    blocksByCell.Remove(cells[i]);
+                    blocksByCell.Remove(key);
                 }
             }
 
@@ -204,7 +211,7 @@ namespace Thermodynamics.Core
         public BlockInstance GetAtCell(Vector3I cell)
         {
             BlockInstance block;
-            return blocksByCell.TryGetValue(cell, out block) ? block : null;
+            return blocksByCell.TryGetValue(GridMath.Key(cell), out block) ? block : null;
         }
 
         /// <summary>The block with this position key, or null when the grid does not carry it.</summary>
@@ -216,7 +223,7 @@ namespace Thermodynamics.Core
 
         public bool IsOccupied(Vector3I cell)
         {
-            return blocksByCell.ContainsKey(cell);
+            return blocksByCell.ContainsKey(GridMath.Key(cell));
         }
 
         /// <summary>
@@ -306,10 +313,11 @@ namespace Thermodynamics.Core
 
             min = Vector3I.MaxValue;
             max = Vector3I.MinValue;
-            foreach (KeyValuePair<Vector3I, BlockInstance> entry in blocksByCell)
+            foreach (KeyValuePair<long, BlockInstance> entry in blocksByCell)
             {
-                min = Vector3I.Min(min, entry.Key);
-                max = Vector3I.Max(max, entry.Key);
+                Vector3I cell = GridMath.FromKey(entry.Key);
+                min = Vector3I.Min(min, cell);
+                max = Vector3I.Max(max, cell);
             }
             boundsDirty = false;
         }

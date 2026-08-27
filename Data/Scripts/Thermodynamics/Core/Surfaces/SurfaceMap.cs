@@ -21,7 +21,13 @@ namespace Thermodynamics.Core
         /// written from the same block in the same call, never independently.
         /// See thermal-model.md, Two layers, and performance.md, Iteration 5.
         /// </summary>
-        private readonly Dictionary<Vector3I, long> cells = new Dictionary<Vector3I, long>(Vector3I.Comparer);
+        private readonly Dictionary<long, long> cells = new Dictionary<long, long>();
+
+        /// <summary>The table is keyed on <see cref="GridMath.Key"/>, as the grid's is; see performance.md, Iteration 11.</summary>
+        private static long KeyOf(Vector3I cell)
+        {
+            return GridMath.Key(cell);
+        }
 
         private const int StructuralShift = 32;
         private const long LiveMask = 0xFFFFFFFFL;
@@ -48,19 +54,22 @@ namespace Thermodynamics.Core
 
         public IEnumerable<Vector3I> Cells
         {
-            get { return cells.Keys; }
+            get
+            {
+                foreach (long key in cells.Keys) yield return GridMath.FromKey(key);
+            }
         }
 
         /// <summary>Surface state of a cell, or 0 when the cell is empty.</summary>
         public int GetState(Vector3I cell)
         {
             long packed;
-            return cells.TryGetValue(cell, out packed) ? Live(packed) : 0;
+            return cells.TryGetValue(KeyOf(cell), out packed) ? Live(packed) : 0;
         }
 
         public bool HasCell(Vector3I cell)
         {
-            return cells.ContainsKey(cell);
+            return cells.ContainsKey(KeyOf(cell));
         }
 
         /// <summary>Writes a block's cells into the map and refreshes the affected neighbours.</summary>
@@ -75,7 +84,7 @@ namespace Thermodynamics.Core
 
             for (int i = 0; i < blockCells.Length; i++)
             {
-                cells[blockCells[i]] = Pack(
+                cells[KeyOf(blockCells[i])] = Pack(
                     CellSurface.SelfOnly(self[i]),
                     CellSurface.SelfOnly(structural == null ? self[i] : structural[i]));
             }
@@ -95,7 +104,7 @@ namespace Thermodynamics.Core
             Vector3I[] blockCells = block.Cells;
             for (int i = 0; i < blockCells.Length; i++)
             {
-                cells.Remove(blockCells[i]);
+                cells.Remove(KeyOf(blockCells[i]));
             }
 
             for (int i = 0; i < blockCells.Length; i++)
@@ -122,16 +131,16 @@ namespace Thermodynamics.Core
                 int[] structural = block.StructuralSurfaces;
                 for (int i = 0; i < blockCells.Length; i++)
                 {
-                    cells[blockCells[i]] = Pack(
+                    cells[KeyOf(blockCells[i])] = Pack(
                         CellSurface.SelfOnly(self[i]),
                         CellSurface.SelfOnly(structural == null ? self[i] : structural[i]));
                 }
             }
 
-            List<Vector3I> keys = new List<Vector3I>(cells.Keys);
+            List<long> keys = new List<long>(cells.Keys);
             for (int i = 0; i < keys.Count; i++)
             {
-                RefreshCell(keys[i]);
+                RefreshCell(GridMath.FromKey(keys[i]));
             }
         }
 
@@ -139,7 +148,8 @@ namespace Thermodynamics.Core
         public void RefreshCell(Vector3I cell)
         {
             long packed;
-            if (!cells.TryGetValue(cell, out packed)) return;
+            long key = KeyOf(cell);
+            if (!cells.TryGetValue(key, out packed)) return;
 
             int live = CellSurface.SelfOnly(Live(packed));
             int structural = CellSurface.SelfOnly(Structural(packed));
@@ -147,14 +157,14 @@ namespace Thermodynamics.Core
             for (int face = 0; face < Face.Count; face++)
             {
                 long neighbour;
-                if (cells.TryGetValue(cell + Face.Offsets[face], out neighbour))
+                if (cells.TryGetValue(KeyOf(cell + Face.Offsets[face]), out neighbour))
                 {
                     live |= CellSurface.NeighbourContribution(Live(neighbour), face);
                     structural |= CellSurface.NeighbourContribution(Structural(neighbour), face);
                 }
             }
 
-            cells[cell] = Pack(live, structural);
+            cells[key] = Pack(live, structural);
         }
 
         private void RefreshNeighboursOf(Vector3I cell)
@@ -187,7 +197,7 @@ namespace Thermodynamics.Core
         public int GetStructuralState(Vector3I cell)
         {
             long packed;
-            return cells.TryGetValue(cell, out packed) ? Structural(packed) : 0;
+            return cells.TryGetValue(KeyOf(cell), out packed) ? Structural(packed) : 0;
         }
 
         /// <summary>
@@ -225,11 +235,12 @@ namespace Thermodynamics.Core
             int sizeZ = maxExclusive.Z - min.Z;
             if (sizeX <= 0 || sizeY <= 0 || sizeZ <= 0) return;
 
-            foreach (KeyValuePair<Vector3I, long> entry in cells)
+            foreach (KeyValuePair<long, long> entry in cells)
             {
-                int x = entry.Key.X - min.X;
-                int y = entry.Key.Y - min.Y;
-                int z = entry.Key.Z - min.Z;
+                Vector3I at = GridMath.FromKey(entry.Key);
+                int x = at.X - min.X;
+                int y = at.Y - min.Y;
+                int z = at.Z - min.Z;
                 if (x < 0 || x >= sizeX || y < 0 || y >= sizeY || z < 0 || z >= sizeZ) continue;
 
                 long index = (((long)z * sizeY) + y) * sizeX + x;
