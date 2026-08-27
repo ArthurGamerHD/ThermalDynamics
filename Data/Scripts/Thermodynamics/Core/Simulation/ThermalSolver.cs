@@ -734,6 +734,89 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Set false to leave the link list in the order the walk emitted it, which is what a
+        /// rebuild did before the order was made a function of the graph.
+        ///
+        /// Test hook: <c>CanonicalLinkOrderTests</c>, which checks both that the list comes out
+        /// sorted and that the walk's own order is *not* already sorted — a canonicalisation that
+        /// reorders nothing would buy no freedom at all.
+        /// </summary>
+        public bool CanonicalLinkOrder = true;
+
+        /// <summary>
+        /// Puts the link list in the order the graph implies — by lower node, then by higher —
+        /// rather than the order the walk that found it happened to produce.
+        ///
+        /// <para>
+        /// **This is what a walk is allowed to change and what it is not.** The conduction pass
+        /// accumulates watts by running down `linkA`/`linkB` in order, and a sum of floats depends
+        /// on its order, so until now the sequence a rebuild emitted links in was part of the
+        /// answer: any change to how neighbours are found moved the last bit of every temperature
+        /// on every grid. That is why five measured optimisations in the previous pass had to keep
+        /// the emission order exactly, and why the one change that would actually help — walking
+        /// blocks in the box's own index order, so the lookups are sequential — was refused
+        /// (backlog.md `D3b`).
+        /// </para>
+        ///
+        /// <para>
+        /// Sorted here, the order is a function of the graph. A rebuild may find the same links in
+        /// any sequence it likes and the result is the same to the bit. **It moves the bits once**,
+        /// which is what this iteration is for.
+        /// </para>
+        ///
+        /// <para>
+        /// The walk emits in ascending `NodeA` already, so this only has to order each run of equal
+        /// `NodeA` by `NodeB` — runs of six at most for a one-cell block. A walk that does not
+        /// group by `NodeA` needs a counting pass in front of this, which is the next iteration's
+        /// business.
+        /// </para>
+        /// </summary>
+        private void CanonicaliseLinks()
+        {
+            int count = links.Count;
+            int from = 0;
+
+            while (from < count)
+            {
+                int node = links[from].NodeA;
+
+                int to = from + 1;
+                while (to < count && links[to].NodeA == node) to++;
+
+                // Insertion sort: a run is one node's links, so at most six on a one-cell block.
+                for (int i = from + 1; i < to; i++)
+                {
+                    ThermalLink moving = links[i];
+                    int j = i - 1;
+
+                    while (j >= from && links[j].NodeB > moving.NodeB)
+                    {
+                        links[j + 1] = links[j];
+                        j--;
+                    }
+
+                    links[j + 1] = moving;
+                }
+
+                from = to;
+            }
+        }
+
+        /// <summary>
+        /// Rebuilds every node's link chain from the list, which a reorder invalidates. Chain order
+        /// itself is not an answer — the one walk over a chain sorts what it collects — so this only
+        /// has to be complete, not to be in any particular sequence.
+        /// </summary>
+        private void RechainAllLinks()
+        {
+            EnsureNodeChainCapacity(nodes.Count);
+            EnsureLinkChainCapacity(links.Count);
+            ResetLinkChains();
+
+            for (int link = 0; link < links.Count; link++) ChainLink(link);
+        }
+
+        /// <summary>
         /// Brings the conduction graph up to date, incrementally when only blocks have been placed
         /// and by full rebuild otherwise. No-op when the graph already matches the layout.
         /// Public so the host can run it inside its own topology stage, where it is timed as such,
@@ -830,11 +913,13 @@ namespace Thermodynamics.Core
                     if (conductance <= 0f) continue;
 
                     links.Add(new ThermalLink(a.Index, b.Index, conductance, contacts));
-                    ChainLink(links.Count - 1);
                     a.LinkCount++;
                     b.LinkCount++;
                 }
             }
+
+            if (CanonicalLinkOrder) CanonicaliseLinks();
+            RechainAllLinks();
 
             Work.LinksBuilt += links.Count;
 
