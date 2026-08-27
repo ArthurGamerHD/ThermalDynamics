@@ -619,8 +619,8 @@ times and six face tests.
 
 **What changed.** The one-cell path reads the state once and asks the same two questions per face
 in the same order — is this face sealed from the other side, does the space beyond reach the
-outside — and hands every larger block to the boundary walk, kept as
-`GetExposedFacesWalkingTheBoundary`. `ExposureFastPathTests` holds the two to the same count on
+outside — and hands every larger block to the boundary walk, which stays as a public overload so a test can
+reach it. `ExposureFastPathTests` holds the two to the same count on
 every face of every block of a mapped census hull and of the mixed grid.
 
 
