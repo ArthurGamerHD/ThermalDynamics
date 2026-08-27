@@ -574,8 +574,9 @@ same ordering and the same shape with the surface and link rows inside their own
 | 5 | The environment pass reads one row per node | **dropped** — 0.99 at a 1 % floor | [Iteration 5](#pass-2-iteration-5--the-environment-pass-reads-one-row-per-node) |
 | 6 | A one-cell block is built without walking its cells | **kept** — place 0.64–0.83 | [Iteration 6](#pass-2-iteration-6--a-one-cell-block-is-built-without-walking-its-cells) |
 | 7 | The flood's box test is one compare on the axis that moved | **dropped** — slower, 1.25–1.30 | [Iteration 7](#pass-2-iteration-7--the-floods-box-test-is-one-compare-on-the-axis-that-moved) |
-| 8 | The freeze walks a bitset in key order instead of sorting | *measuring* | [Iteration 8](#pass-2-iteration-8--the-freeze-walks-a-bitset-in-key-order-instead-of-sorting) |
+| 8 | The freeze sorts by radix, after two forms that walked a bitset and lost | **kept** — the publish tick 0.72, rooms 0.85–0.90 | [Iteration 8](#pass-2-iteration-8--the-freeze-walks-a-bitset-in-key-order-instead-of-sorting) |
 | 9 | A block's two surface layers share one array unless it is a door | **kept** — place 0.85–0.87 | [Iteration 9](#pass-2-iteration-9--a-blocks-two-surface-layers-share-one-array-unless-it-is-a-door) |
+| 10 | What the pass moved | world load 0.70, exposure 0.63, rooms 0.78, links 0.83, the step 1.00 | [Iteration 10](#pass-2-iteration-10--what-the-pass-moved) |
 
 ## Pass 2, iteration 1 — the stage instrument lives in the tree
 
@@ -807,8 +808,19 @@ each key from the box's first key — eleven-bit digits, passes that skip themse
 digit is zero, two scratch arrays dropped after. The bitset, its walk and the bit finder went with
 the version they served (`D2`'s defect class in reverse: code that measured worse is not left in).
 `RoomMapFreezeTests` holds the radix order against `Array.Sort` on random keys spanning every digit,
-with the rooms carried along, and on sorted, reversed and wide inputs. The figures for the third
-form follow.
+with the rooms carried along, and on sorted, reversed and wide inputs.
+
+**What it was worth, in the third form.** `bench stages --stages rooms`, before against after,
+cores proven different, interleaved, two rounds, fastest kept; and `bench spike` for the tick the
+change is about:
+
+| blocks | rooms, before | after | ratio | publish tick, before → after | worst tick after a placement |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 126,731 | 47.18 ms | **40.04 ms** | 0.85 | 16.4 → **12.1 ms** | 31.7 → 29.0 ms |
+| 505,566 | 246.17 ms | **222.80 ms** | 0.90 | 80.1 → **57.7 ms** | 91.3 → 69.6 ms |
+
+The sort was a third of the pass at 505k and is a tenth now. What is left of the publish tick is the
+enumeration, the radix passes' own memory traffic, and the portal and venting work that follows.
 
 ## Pass 2, iteration 9 — a block's two surface layers share one array unless it is a door
 
@@ -837,11 +849,61 @@ the pass's end carries the retained figure.
 , with its start figures taken by the instrument the pass begins by putting in the tree. |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
 
+## Pass 2, iteration 10 — what the pass moved
+
+The pass's first commit with the instrument in the tree (`3296cfd`) against its tip, built the same
+way, interleaved in one held window, each stage on its own clock, fastest of fifteen, two rounds;
+the world load against the true start (`84e3be5`). The step is the control: nothing kept in this
+pass touches it.
+
+| stage, 505,566 blocks | start | tip | ratio | what did it |
+| --- | ---: | ---: | ---: | --- |
+| surfaces | 84.2 ms | **75.2 ms** | 0.89 | fewer allocations per block (9) |
+| links | 177.6 ms | **147.5 ms** | 0.83 | the one-cell neighbour path (2) |
+| rooms | 285.8 ms | **222.5 ms** | 0.78 | the word skip (4) and the radix freeze (8) |
+| exposure | 92.3 ms | **57.9 ms** | 0.63 | the one-cell exposure path (3) |
+| a settled step | 89.6 ms | 89.6 ms | **1.00** | nothing — the control |
+| **World load, 1,000,294 blocks** | | | | |
+| placing and registering | 648 ms | **500 ms** | 0.77 | iterations 6 and 9 |
+| `RebuildAll` | 2,519 ms | **1,713 ms** | 0.68 | iterations 2, 3, 4, 8 |
+| whole load | 3,167 ms | **2,213 ms** | **0.70** | |
+| **Memory, 126,731 blocks** | | | | |
+| retained | 797 B/block | **765 B/block** | 0.96 | one surface array per block (9) |
+| peak | 999 B/block | **993 B/block** | 0.99 | |
+| **Ticks for a room pass to converge, 505,566 blocks** | 3,482 | **1,890** | 0.54 | the word skip (4) |
+| **Worst tick after a placement, 505,566 blocks** | 93.0 ms | **69.6 ms** | 0.75 | the radix freeze (8) |
+| **The suite** | 2,014 cases | 2,016 cases, 1 m 21 s | | |
+
+**One row is not claimed.** At 126,731 blocks the surface stage read 8.4 ms at the start and 13.3
+at the tip, both rounds, while at 505,566 it improved; nothing in the pass touches
+`SurfaceMap.Rebuild`, and the tip's run has two more stages before it that leave the heap in a
+different state. It is recorded as unexplained rather than as a regression or a saving, and it is
+the first thing the next pass should measure on its own, with the stage list held to one.
+
+**What the pass learned that the first one did not know.**
+
+* **The substep loop is not layout-bound.** Two AoS layouts, one per side of the loop, both inside a
+  one-per-cent floor. At about two nanoseconds an element the loop is at the floor of this design,
+  and the way down is structural — activity tracking, `D1` — not a cheaper stream.
+* **A jump table can lose to six compares** on a path taken eighty million times a pass, by a
+  quarter. Measured, not reasoned.
+* **A sort of sequential input beats a walk with a random probe per element**, even when the walk
+  is linear and the sort is not; and the cure was a better sort, not no sort.
+* **The tick a pass publishes on is where its unbudgeted work lands**, and `bench spike`'s per-stage
+  worst tick is the instrument that sees it; the stage's total milliseconds did not.
+* **Charging per word is what turned a cheaper scan into a shorter pass.** The budget is spent in the
+  units the scan charges, so the ticks halved where the milliseconds moved a tenth (`D2`).
+
+**Where pass 3 starts.** Rooms ~223 ms, links ~148, surfaces ~75, exposure ~58, place ~92 at
+505,566 blocks. The flood is what is left of the room pass — every air cell of a box fourteen times
+the block count, six faces each — and only fewer cells can move it now.
+
 ---
 
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Closed pass 2: ten iterations, six kept, three dropped with their measurements, one the pass summary. World load at a million blocks 3.17 → 2.21 s. |
 | 2026-08-26 | Opened pass 2 on the page, with its start figures taken by the instrument the pass begins by putting in the tree. |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |

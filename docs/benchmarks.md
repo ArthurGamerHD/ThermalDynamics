@@ -1014,6 +1014,7 @@ report can be recovered for any row here by reading that file at the row's commi
 | 11 | 2026-08-22 | *(the profiles pass)* | 1,520 | 53 s | −13: the five settings profiles are gone and with them `ProfileTests`, replaced by `DefaultSettingsTests`. The mod ships one configuration. Shipped solver defaults moved, so there is a solver row below. |
 | — | | `131fc12..b146255` | | | **Many commits recorded no row.** The retune, the coolant consumable, the reach tests, the corpus reader fix and the rules pass all landed between rows 11 and 12. |
 | 12 | 2026-08-26 | *(the performance pass, tip)* | 2,001 | **1 m 22 s** | +478 across those commits and this pass's own suites. Taken on the optimised build in a held window on a machine two other projects were using; the fast lane is 4 s over 1,582 after the lane refresh, from 37 s before it. The rows above were taken on unoptimised builds, so this duration is not comparable to theirs ([performance.md](performance.md#iteration-1--the-harness-measured-unoptimised-code)). |
+| 13 | 2026-08-27 | *(the second performance pass, tip)* | 2,016 | **1 m 21 s** | +15: `StageLabTests`, `GridModelAdjacencyTests`, `ExposureFastPathTests`, `BlockInstanceOneCellTests` and the radix and scan pins in `RoomMapFreezeTests` and `RoomMapSnapshotTests`. No solver row: the pass moved no step figure, by design, and the stage instrument (`bench stages`) is where its figures live ([performance.md](performance.md#pass-2-iteration-10--what-the-pass-moved)). |
 
 ### The solver
 
