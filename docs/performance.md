@@ -68,6 +68,7 @@ which is what makes the ratios readable when the absolutes are not.
 | 8 | 2026-08-26 | The flood fill steps an index, not a vector | **kept** — another fifth off the room map | [Iteration 8](#iteration-8--the-flood-fill-steps-an-index-not-a-vector) |
 | 9 | 2026-08-26 | The fast lane had rotted to 37 s | **kept** — 4 s again, eleven classes tagged | [Iteration 9](#iteration-9--the-fast-lane-had-rotted-to-37-s) |
 | 10 | 2026-08-26 | The interior scan steps its index | **kept** — the room pass 10–18 % cheaper | [Iteration 10](#iteration-10--the-interior-scan-steps-its-index) |
+| 11 | 2026-08-26 | The cell tables are keyed on `GridMath.Key` | **kept** — links 2× cheaper, surfaces 3× | [Iteration 11](#iteration-11--the-cell-tables-are-keyed-on-gridmathkey) |
 
 ## Iteration 1 — the harness measured unoptimised code
 
@@ -447,6 +448,49 @@ the two are the same walk at a different price rather than two different walks, 
 range from 69 ms to 263: on a machine three other projects share, the *worst* of N is about the
 machine and only the best of N is about the code (`M4`, `W5`).
 
+## Iteration 11 — the cell tables are keyed on `GridMath.Key`
+
+**What was found.** Links were the largest term never touched, so the link build was timed alone:
+at 505,566 blocks the neighbour query is **80 % of it** (282 of 338 ms), and a neighbour query is
+six dictionary probes per cell. Probed directly — the hull's own cells, six face neighbours each,
+the same hits in the same order — a `Dictionary<Vector3I, …>` with `Vector3I.Comparer` costs **51–58
+ns a probe** and a `Dictionary<long, …>` keyed on `GridMath.Key` costs **9–13**. A struct key goes
+through a comparer object for its hash and its equality; a `long` does both inline. And the same
+table shape sat under the surface map, the room index a pass writes, and the mapper's door cells.
+
+**What changed.** All four are keyed on `GridMath.Key`. That is the key `BlockInstance.Key` and the
+frozen room arrays already used — a 64-bit packing injective over any grid the game can hold, which
+`GridMathTests` pins — so no new assumption about a grid's extent is made. A dictionary's answers do
+not depend on how it hashes, so every existing pin holds unchanged: the packed surface map against
+its verbatim two-dictionary reference, the snapshot mapper against the dictionary mapper, the
+byte-identical scenarios.
+
+**What it was worth.** Best of fifteen on one prebuilt grid, before and after interleaved in one
+window, three rounds; and the build split beside it:
+
+| blocks | neighbour query, before | after | ratio | link build, before | after | ratio |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 126,731 | 44.6 ms | **30.1 ms** | 0.67 | 58.5 ms | **39.1 ms** | 0.67 |
+| 505,566 | 276.1 ms | **154.1 ms** | 0.56 | 355.5 ms | **184.4 ms** | 0.52 |
+
+| build stage, 505,566 blocks | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| surfaces | 308 ms | **100 ms** | 0.32 |
+| links | 436 ms | **232 ms** | 0.53 |
+| rooms | 513 ms | **323 ms** | 0.63 |
+| exposure | 167 ms | **95 ms** | 0.57 |
+
+Every stage that probes a cell table moved, which is what a change to the tables and nothing else
+should do. The room pass moves through the room index it writes and the door probe, not through
+the flood fill, which already reads the snapshot.
+
+**And the first two attempts to measure this compared the tip with itself.** The "before" probe is
+a scratch project whose reference the harness of a worktree, and a `sed` meant to repoint it
+matched nothing and said nothing — so two pairings read *no change* with pleasing consistency. The
+pairing above is preceded by a check that the two probes carry different core assemblies, and it
+refuses to time anything if they do not. That is the same defect the pass keeps finding, in the
+instrument rather than the mod: a comparison that cannot fail is not a comparison (`E8`).
+
 ---
 
 ## What the pass moved
@@ -487,9 +531,10 @@ three decimal places. The scenario and environment rows read 3 to 6 % higher and
 1 % lower — two measurements of the same thing disagreeing by that much is this instrument's own
 repeatability on a shared machine, not a change.
 
-**Where the next pass starts.** At 505,566 blocks the build is 1.6 s where the pass found 4.4:
-rooms ~626 ms, links ~503, surfaces ~418, exposure ~173, registration ~56. **Links were never
-touched** and are now the largest term after the room map. Below that, `RebuildAll` at a million
+**Where the next pass starts.** At 505,566 blocks the build split reads rooms ~323 ms, links
+~232, surfaces ~100, exposure ~95, registration ~43 after iteration 11 — about 0.8 s of stage time
+where the pass found 4.4 s. The room pass is the largest term again, and what is left in it is the
+frontier queue, the visited bitset and the room index's own writes. Below that, `RebuildAll` at a million
 blocks is still 4 s of a world load, and the room map still floods a bounding volume fourteen times
 the block count — cheaper per cell, and the same number of cells ([backlog.md](backlog.md) `D2`).
 
