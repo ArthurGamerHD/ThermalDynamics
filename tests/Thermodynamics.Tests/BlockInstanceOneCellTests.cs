@@ -26,6 +26,40 @@ namespace Thermodynamics.Tests
             yield return Catalog.SlideDoor();
         }
 
+        /// <summary>
+        /// A block holds its two surface layers in one array whenever they cannot differ — every
+        /// block that is not a door, and a door while it is shut — and in two once a door stands
+        /// open, because opening it must leave the structural layer where it was. Either way a
+        /// refresh hands back fresh arrays, which `ThermalSimulation.RefreshBlock` relies on to
+        /// keep the old references as a snapshot of what changed.
+        /// </summary>
+        [Fact]
+        public void TheTwoSurfaceLayersShareOneArrayExactlyWhenTheyCannotDiffer()
+        {
+            BlockInstance armour = new BlockInstance(Catalog.LightArmor(), Vector3I.Zero, BlockOrientation.Identity);
+            Assert.Same(armour.StructuralSurfaces, armour.SelfSurfaces);
+
+            BlockInstance door = new BlockInstance(Catalog.SlideDoor(), Vector3I.Zero, BlockOrientation.Identity);
+            Assert.True(door.HasStateDependentSealing);
+            Assert.True(door.IsSealedByDoorState);
+            Assert.Same(door.StructuralSurfaces, door.SelfSurfaces);
+
+            int[] structuralBefore = door.StructuralSurfaces;
+            int[] liveBefore = door.SelfSurfaces;
+            door.IsSealedByDoorState = false;
+            door.RefreshSurfaces();
+            Assert.NotSame(structuralBefore, door.StructuralSurfaces);
+            Assert.NotSame(liveBefore, door.SelfSurfaces);
+            Assert.NotSame(door.StructuralSurfaces, door.SelfSurfaces);
+            Assert.Equal(structuralBefore, door.StructuralSurfaces);
+            Assert.NotEqual(liveBefore, door.SelfSurfaces);
+
+            int[] armourBefore = armour.SelfSurfaces;
+            armour.RefreshSurfaces();
+            Assert.NotSame(armourBefore, armour.SelfSurfaces);
+            Assert.Same(armour.StructuralSurfaces, armour.SelfSurfaces);
+        }
+
         [Fact]
         public void AOneCellBlockIsBuiltAsTheCellWalkWouldBuildIt()
         {
