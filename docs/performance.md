@@ -541,8 +541,73 @@ the block count — cheaper per cell, and the same number of cells ([backlog.md]
 
 ---
 
+# Pass 2 — 2026-08-26, evening
+
+The second pass, started from `84e3be5`, the tip the first one left. It uses the first pass's
+lessons as its procedure: every candidate is judged on `bench stages`, and every before/after script
+proves its two legs differ before it times anything.
+
+**Where it started.** The same machine, the same shared window; every figure below is the fastest of
+fifteen on one prebuilt grid unless the row says otherwise:
+
+| stage, 505,566 blocks | start of pass 2 | work | ns per unit |
+| --- | ---: | ---: | ---: |
+| surfaces | 81.8 ms | 505,566 cells | 162 |
+| links | 196.2 ms | 952,523 links | 206 |
+| rooms | 292.4 ms | 13,720,674 cells visited | 21.3 |
+| exposure | 95.2 ms | 505,566 nodes | 188 |
+| a settled step, granted its substeps | 93.9 ms | 28 substeps | — |
+| world load at 1,000,294 blocks | 638 + 2,538 ms | — | — |
+
+*`bench stages --size 500000`, taken at `3296cfd` with the instrument itself in the tree; the scratch
+probe read the same commit at 121 / 177 / 311 / 93 / 94.7 ms a few minutes earlier, which is the
+same ordering and the same shape with the surface and link rows inside their own spread.*
+
+## Pass 2, iterations
+
+| # | Subject | Verdict | Where |
+| ---: | --- | --- | --- |
+| 1 | The stage instrument lives in the tree | **kept** — `bench stages`, `StageLabTests` | [Iteration 1](#pass-2-iteration-1--the-stage-instrument-lives-in-the-tree) |
+| 2 | A one-cell block's neighbours are six probes | *measuring* | [Iteration 2](#pass-2-iteration-2--a-one-cell-blocks-neighbours-are-six-probes) |
+
+## Pass 2, iteration 1 — the stage instrument lives in the tree
+
+The first pass judged two changes wrongly on the build ladder and had to re-judge both on a scratch
+probe that timed one stage alone. That probe is `StageLab` and `bench stages` now: surfaces, links,
+rooms, exposure and a settled step, each on one prebuilt grid, fastest of fifteen, with the stage's
+own work counter beside the time — and a work figure that moves between repeats aborts the row,
+because two readings of different walks are not a comparison (`P6`). `StageLabTests` holds that
+every stage reports work on a hull that exercised it and that the work is the same figure asked
+twice (`E8`). It reports nanoseconds per unit of work, which is the figure that transfers between
+sizes.
+
+## Pass 2, iteration 2 — a one-cell block's neighbours are six probes
+
+**What was found.** The neighbour query is 80 % of the link build, and at ~50 ns per probed cell
+only ~10 of it is the dictionary since iteration 11 of the first pass: the rest is the slab walk
+through `BoxGeometry`'s per-axis switches and a `List.Contains` dedupe per candidate. A one-cell
+block — nearly every block on a hull — needs neither: it has one candidate cell per face, and a
+neighbour is a box, so a box can touch a unit cube on at most one face. Its six answers are
+distinct by construction.
+
+**What changed.** `GridModel.GetNeighbours` answers a one-cell block with six probes in face order
+and hands everything else to the boundary walk, which stays as `GetNeighboursWalkingTheBoundary`.
+Same faces in the same order, so the link list — and with it the order the conduction sum
+accumulates in — is unchanged. `GridModelAdjacencyTests` holds the two paths to the same neighbours
+in the same order over every block of a census hull and of a grid that mixes unit blocks with bars
+and a cube, so both shapes the dedupe exists for are on the fixture.
+
+
+
+| Date | Change |
+| --- | --- |
+| 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
+
+---
+
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | Opened pass 2 on the page, with its start figures taken by the instrument the pass begins by putting in the tree. |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
