@@ -40,17 +40,20 @@ before the idea, and the oracle before the change.
 
 **The machine.** Every figure on this page was taken on the repository's 32-core development
 machine, which is shared with three other projects (`W5`). It was not idle on 2026-08-26: two
-editor language servers held a core each for the whole day and the swap was full, so absolute
-milliseconds on this page are about 2.7× the committed baseline's on the same hardware. The
-comparisons here are taken minutes apart in one held window, which is what makes the ratios
-readable when the absolutes are not.
+editor language servers held a core each for the whole day and the swap was full. Measured rather
+than assumed: the committed baseline's own commit, rebuilt and re-run unoptimised on this day,
+read a calibration of 146 ms against the 106 ms it recorded on 2026-08-22, so the machine is
+about **1.4×** slower than the baseline's — and nothing more. Every larger gap on this page is the
+code, and each one is named. The comparisons here are taken minutes apart in one held window,
+which is what makes the ratios readable when the absolutes are not.
 
 ## The iterations
 
 | # | Date | Subject | Verdict | Where |
 | ---: | --- | --- | --- | --- |
 | 1 | 2026-08-26 | The harness measured unoptimised code | **kept** — every configuration now compiles optimised | [Iteration 1](#iteration-1--the-harness-measured-unoptimised-code) |
-| 2 | 2026-08-26 | The ladder's `build` column measured the hull generator | *in progress* | [Iteration 2](#iteration-2--the-ladders-build-column-measured-the-hull-generator) |
+| 2 | 2026-08-26 | The ladder's `build` column measured the hull generator | **kept** — generator 9× cheaper, and outside the clock | [Iteration 2](#iteration-2--the-ladders-build-column-measured-the-hull-generator) |
+| 3 | 2026-08-26 | An orientation is a signed permutation | *measuring* | [Iteration 3](#iteration-3--an-orientation-is-a-signed-permutation) |
 
 ## Iteration 1 — the harness measured unoptimised code
 
@@ -107,11 +110,86 @@ JIT, which is what the game has.
 
 ## Iteration 2 — the ladder's `build` column measured the hull generator
 
-*In progress.* `PerformanceReport.Build` starts its stopwatch before `PlaceCensus`, which since
-`C26` bolts every block by trying all 24 orientations against six neighbours through a dictionary
-and an `Enum.GetValues` iterator per block. Measured on a 32,800-block hull, optimised: the
-generator is **1.0 s** and the simulation's own build — surfaces, links, loops, rooms, exposure —
-is **0.10 s**. The ladder's `build` column reported the sum under a name that reads as the second.
+**What was found.** `PerformanceReport.Build` started its stopwatch before `PlaceCensus`, which
+since `C26` bolts every partial-mount block by trying all 24 orientations: each candidate rotated
+each face through a freshly built matrix and probed a dictionary for the neighbour, with the 24
+orientations themselves re-enumerated through `Enum.GetValues` per block — 144 matrices and 144
+probes a block. Split on a 32,800-block hull, optimised: the generator was **1.0 s** and the
+simulation's own build — surfaces, links, loops, rooms, exposure — **0.10 s**. The ladder's `build`
+column reported the sum under a name that reads as the second, and the calibration row carried the
+same generator inside its 4,000-block build. `LoadBenchmarks.MeasureBuilt` had always dealt its
+hull outside the clock, so the repository's two `build` figures disagreed in scope (`P1`).
+
+**Two changes.** The search resolves the 24 orientations' rotated faces once, into a static table
+in `PipeFitter.AllOrientations`'s order, and probes each block's six neighbours once; same
+candidates in the same order with the same tie-break, so the chosen orientations are the same
+ship. The report deals the hull before the clock starts, in the ladder and the calibration alike.
+`FacingItsNeighbours`, a second orientation search reached by nothing, is gone (`D2`).
+
+**Pinned.** `CensusBoltTests` runs the original search — kept verbatim in the test — beside the
+table-driven one over four hulls and requires the same orientation at every cell, after checking
+that more than a twentieth of the blocks were turned at all (`D8`, `E8`). It failed on its first
+run: the table's first entry is not the identity, and producers had been given index zero. That is
+the pin doing the one thing it is for.
+
+**What it was worth.** The tip before and after this iteration, optimised, in one held window,
+each twice, fastest kept (`M4`):
+
+| figure | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| machine, calibration | 285.4 ms | **94.0 ms** | 0.33 |
+| ladder 8,000, build | 303.3 ms | **27.2 ms** | 0.09 |
+| ladder 32,000, build | 1,193.6 ms | **170.6 ms** | 0.14 |
+| ladder 125,000, build | 5,314.7 ms | **1,143.5 ms** | 0.22 |
+| ladder 8,000 / 32,000 / 125,000, step | 1.19 / 5.21 / 18.49 ms | 1.15 / 5.22 / 18.39 ms | 0.96 / 1.00 / 0.99 |
+| features, everything on | 5.16 ms | 5.40 ms | 1.05 |
+| step shape, prologue and estimate | 0.169 ms | 0.167 ms | 0.99 |
+
+And the generator on its own, dealt into a `GridBuilder` with nothing simulated, old search against
+new in the same window, fastest of five:
+
+| blocks | old `PlaceCensus` | new `PlaceCensus` | ratio | the simulation's build, for scale |
+| ---: | ---: | ---: | ---: | ---: |
+| 8,904 | 285.0 ms | **18.6 ms** | 0.065 | 18.3 ms |
+| 32,800 | 977.9 ms | **57.3 ms** | 0.059 | 93.6 ms |
+| 126,731 | 3,797.2 ms | **240.4 ms** | 0.063 | 622.1 ms |
+
+Fifteen to seventeen times cheaper, and now under the build it feeds rather than ten times over
+it. Every `Hulls.Driven` in the suite dealt a hull through the old search, so the suite's own
+duration is where the rest of this saving lands.
+
+The `step` rows are the control: the hull is the same ship, so nothing a step does may move, and
+nothing did beyond the noise row. The `build` rows now describe the mod's load path, which is the
+figure they were always read as. **The calibration row moved by 3×**, which means every
+cross-machine comparison [benchmarks.md](benchmarks.md) invited through it was, since `C26`,
+mostly comparing two copies of the generator.
+
+**What it does not say.** The ladder's `build` is still the harness's simulation build and not the
+game's world load — the adapter's mirror of a `MyCubeGrid` is outside this instrument, as it always
+was.
+
+## Iteration 3 — an orientation is a signed permutation
+
+**What was found.** Reading the load path for the same shape as iteration 2 found it in shipped
+code: `BlockOrientation.Rotate`, `Unrotate` and `RotateFace` each built a `Matrix` with
+`Matrix.CreateWorld` and transformed through it, and a `BlockInstance` calls them about ten times
+per cell at construction — every cell's grid position, and every face's rotated surface bits. That
+is the path a world load and a blueprint paste take, per block.
+
+**What changed.** The struct holds a table, built once by its static constructor *from its own
+matrix*, of where each local axis and each local face lands per orientation; a rotation is three
+multiplies by ±1 and three adds. The twelve forward/up pairs that are not orientations keep the
+matrix path unchanged. Exact on integers either way, so the two forms are identical rather than
+close.
+
+**Pinned.** `BlockOrientationCacheTests` compares the table against the matrix over every integer
+vector of a 7×7×7 cube for all thirty-six pairs — forward, back and per face — and checks
+separately that every legal orientation rotates and unrotates to where it started, so a table built
+from a degenerate matrix could not agree its way through. `FleetParallelTests` records why the three
+static tables may be shared by grids on different threads: built once, never written after.
+
+**What it was worth.** *Measured by `bench load`, which times block construction inside its clock;
+the figures land below when the window frees.*
 
 ---
 
