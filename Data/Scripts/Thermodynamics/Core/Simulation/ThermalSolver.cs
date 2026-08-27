@@ -910,8 +910,19 @@ namespace Thermodynamics.Core
         ///
         /// <para>
         /// The alternative that also conserves — pour the energy in at the node's own capacity —
-        /// puts a 900 K parcel into that 941 J/K pipe at 2,106 K and destroys it. Boundedness is
-        /// one of the solver's three invariants and this path is not where it gets traded.
+        /// is unbounded: since `C43` gave a large-grid pipe 515.6 kg of coolant, its parcel holds
+        /// 1.75 MJ/K against the node's 84.7 kJ/K, and a 900 K parcel would land on the pipe at
+        /// **12,854 K**. Boundedness is one of the solver's three invariants and this path is not
+        /// where it gets traded.
+        /// </para>
+        ///
+        /// <para>
+        /// **The reachable case is the mechanism being switched off**, not a ring being split.
+        /// Every coolant block the mod ships declares exactly two link ports, so a closed ring has
+        /// no spare port to branch from and cannot be opened except by taking a block out of it —
+        /// which vents. `EnableCoolantLoops = false` dissolves every loop with every pipe still on
+        /// the grid and no fluid anywhere it could have escaped from, which is what this path
+        /// describes and what `HeatLaunderingTests` builds. See backlog.md `F28`.
         /// </para>
         /// </summary>
         private void SpillDissolvedLoops(List<CoolantLoop> newLoops,

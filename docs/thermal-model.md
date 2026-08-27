@@ -414,8 +414,15 @@ falsifiers: a figure that is not `1/N`, a split that loses heat, or a pipe above
 
 **It ran. Three of the four hold and the fourth could not be built.** The loss is `1/N` at ring
 lengths 8, 10 and 14 — 12.50 %, 10.00 % and 7.14 %, each of them 1,146,272 J to the joule, which is
-one parcel — and the hottest pipe after a spill is 698.19 K against the 900 K parcel it absorbed.
-The reweld returns the broken ring's heat exactly: 14,901,537 J before it and 14,901,539 J after.
+one parcel. The reweld returns the broken ring's heat exactly: 14,901,537 J before it and
+14,901,539 J after.
+
+> **The bound's own figure was read off the grind and belongs to a path a grind no longer takes.**
+> It was 698.19 K against a 900 K parcel, measured before `B44` made a broken ring vent and before
+> `C43` gave a large-grid pipe ten times the fluid. On the constructor that reaches the spill
+> today — switching the mechanism off, below — it is **872.0 K against 900 K**, and the form that
+> is not bounded would reach **12,854 K**. `TheBoundHoldsWhenTheMechanismIsTurnedOff` computes the
+> second rather than pinning it, so both move when the capacities do.
 
 **The split falsifier is not constructible and is withdrawn rather than quietly dropped.** Breaking
 a ring into two rings needs a pipe with three ports, and the shipped pipes have two — straight and
@@ -541,8 +548,9 @@ reason for a pump to be switched on beyond mixing.
 
 **What triggers it.** A ring that dissolves **having lost a pipe** vents: a grinder opened a hole in
 a pressurised loop and the fluid left through it, taking its heat rather than spilling into the
-pipes. A ring that dissolves with all its pipes still on the grid does not — that is a split, and no
-fluid can have escaped, which is why `A12`'s spill is still the right answer there. The ring's
+pipes. A ring that dissolves with all its pipes still on the grid does not — no fluid can have
+escaped, which is why `A12`'s spill is still the right answer there. **That is the coolant mechanism
+being switched off rather than a split**: a split needs a three-port pipe and there is none. The ring's
 signature carries the empty state across the rebuild, so welding the pipe back returns the ring to
 the signature it had **and to a fill of nothing**, which it then pays to restore.
 
@@ -550,9 +558,13 @@ the signature it had **and to a fill of nothing**, which it then pays to restore
 > it, and refilling spends 1,511,111 J — **a ratio of 1.0000**. Before the vent a grind cost one
 > parcel, 188,889 J, at 23,611 W. The exploit is not small now; it is nothing.
 >
-> **And `A12`'s bound lost its test to this.** A spilled parcel must never heat its pipe past
-> itself, and the only dissolve that still spills is one that loses no pipe, which the harness
-> cannot construct — [backlog.md](backlog.md) `F28`, recorded rather than quietly dropped.
+> **And `A12`'s bound lost its test to this, and has it back.** A spilled parcel must never heat
+> its pipe past itself, and the only dissolve that still spills is one that loses no pipe — which
+> is not a split, because the shipped pipes have two ports and no block a player can add opens a
+> closed ring. **It is the mechanism being switched off.** `EnableCoolantLoops = false` dissolves
+> every loop with every pipe still on the grid and nowhere for fluid to have gone, which is a thing
+> an admin does to a live world; the eight-pipe ring spills 14,025,000 J/K into its pipes and the
+> hottest reaches 872.0 K against 900 K of fluid. [backlog.md](backlog.md) `F28`, closed.
 
 **Venting is instant and refilling is not, and that asymmetry is the mechanic.** An emergency dump
 buys relief now and is paid back gradually while the radiators work — useful once, useless on a
@@ -894,6 +906,7 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | **`A12`'s boundedness bound is under test again, and the case that reaches it is the coolant mechanism being switched off** ([backlog.md](backlog.md) `F28`). Not a split — the shipped pipes have two ports, so no block a player can add opens a closed ring, which is why the split falsifier was withdrawn and why looking for one again found nothing. The 698.19 K on this page was read off a grind before `B44` made a broken ring vent and before `C43` changed the coolant's capacity; on the constructor that works it is 872.0 K against 900 K of fluid, where the unbounded form reaches 12,854 K. |
 | 2026-08-26 | A segment's thermal mass takes `MassPerPipe(cell)` — a density times the volume of the cell the pipe occupies — rather than a flat mass at both grid sizes. `C43`. |
 | 2026-08-26 | Corrected *Coolant is a consumable*, which described the refill advancing with the step when the code advanced it with the frame alone — so the consumable worked in a session and was invisible to every lab, benchmark and test, which is the lane every figure on balance.md is read in. Added *A pump makes the ring conduct, not only circulate*: fluid-to-wall transfer is convective and so depends on the flow, and nothing expressed that until `LoopStagnantTransferFraction` was wired to the leg it names. Both found by `LoopDialReachTests`. |
 | 2026-08-25 | **A broken ring keeps its coolant's heat, and the two thirds it used to destroy were an accident of two capacities** ([backlog.md](backlog.md) `A12`). The spill mixed each parcel into its pipe at `(T_n·M_n + T_s·M_s) / (M_n + M_s)` and then left the node at `M_n`, so `M_s / (M_n + M_s)` of the ring's heat — **67.9 %** on a large grid, 941 J/K of pipe against 1,889 of parcel — landed nowhere. The pipe now takes the parcel's heat capacity along with its temperature and hands both back when a ring re-forms through it, so grinding a pipe out of an eight-pipe ring costs **one eighth**, which is the parcel that left inside the block, and splitting a ring costs nothing. **Predicted before it was run** and the prediction stands at three ring lengths. Two further defects came out of the same code and are fixed with it: under `WellMixedCoolant` the spill handed *every* pipe the whole ring's fluid, and `SegmentTemperature`/`SetSegmentTemperature` bounded a **pipe** index by the **parcel** count, so in that model every pipe after the first read and wrote nothing. |

@@ -330,16 +330,24 @@ namespace Thermodynamics.Tests
         /// </para>
         ///
         /// <para>
-        /// **`B44`'s vent made that bound unreachable from here.** The spill now runs only when a
-        /// ring dissolves *without* losing a pipe — a split, where no fluid can have escaped — and
-        /// the harness has no constructor for one, so grinding is no longer a way to reach it. The
-        /// test's own guard said so, in the words it was given for exactly this: *the spill moved
-        /// almost nothing and the bound above is not being tested*. Re-pointed at what a grind now
-        /// does; the bound itself is untested and that is backlog.md `F28`
-        /// rather than something this file quietly stopped checking.
+        /// **`B44`'s vent made that bound unreachable from here**, and it stayed unreachable until
+        /// the constructor turned out not to be a split at all. The spill runs only when a ring
+        /// dissolves *without* losing a pipe, and with every shipped coolant block carrying exactly
+        /// two link ports there is no way to open a closed ring by adding or moving a block —
+        /// which is why looking for a split found nothing. **Turning the mechanism off is the
+        /// way in**: `EnableCoolantLoops = false` dissolves every loop with every pipe still on the
+        /// grid, no fluid has escaped, and the spill runs. `TheBoundHoldsWhenTheMechanismIsTurnedOff`
+        /// below is `A12`'s bound restored, and backlog.md `F28` is closed.
+        /// </para>
+        ///
+        /// <para>
+        /// This test keeps the other half: a grinder opens a hole and the fluid leaves through it,
+        /// so nothing is spilled. **It also spent a while not running at all** — it lost its
+        /// `[Fact]` when it was re-pointed, which the suite reported as a warning and nothing read.
         /// </para>
         /// </summary>
-                public void AGrindLeavesNoPipeHoldingCoolantBecauseTheRingDrained()
+        [Fact]
+        public void AGrindLeavesNoPipeHoldingCoolantBecauseTheRingDrained()
         {
             GridBuilder builder = GridBuilder.Large();
             List<BlockInstance> ring =
@@ -378,42 +386,266 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **Coolant a pipe is holding survives a save and a load.** The block temperature is
-        /// written whatever happens, so a reload that dropped the capacity would put the mixed
-        /// temperature onto the bare pipe and destroy exactly the fraction the mix conserved, on a
-        /// slower trigger.
+        /// A ring at 900 K with the coolant mechanism switched off underneath it. **Every pipe is
+        /// still on the grid**, so no fluid escaped and the loop spills into its pipes rather than
+        /// venting — which is the only way this repository has found to reach the spill at all.
+        /// </summary>
+        private ThermalSimulation SpilledByTurningTheMechanismOff(out List<BlockInstance> ring,
+            out float fluidKelvin, out float pipeCapacity, out float parcelCapacity)
+        {
+            const float Fluid = 900f;
+
+            ThermalSettings settings = Isolated();
+            GridBuilder builder = GridBuilder.Large();
+            ring = PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings);
+            CoolantLoop loop = simulation.Solver.Loops[0];
+            for (int i = 0; i < loop.Pipes.Count; i++) loop.SetSegmentTemperature(i, Fluid);
+
+            fluidKelvin = Fluid;
+            pipeCapacity = simulation.Solver.GetNode(ring[0]).ThermalMass * loop.HeatTimeScale;
+            parcelCapacity = loop.ThermalMass * loop.HeatTimeScale / loop.Pipes.Count;
+
+            // The switch, and nothing else. The blocks are untouched.
+            settings.EnableCoolantLoops = false;
+            settings.Derive();
+            simulation.RebuildAll();
+
+            return simulation;
+        }
+
+        /// <summary>
+        /// **`A12`'s boundedness bound, restored: a spilled parcel never heats its pipe past
+        /// itself.**
+        ///
+        /// <para>
+        /// The spill mixes each parcel into the pipe it was sitting in, and the pipe takes the
+        /// parcel's heat capacity along with its temperature. That is bounded by construction — a
+        /// mix of two temperatures lies between them. **The alternative that also conserves energy
+        /// is not**: pour the parcel's *energy* into the pipe at the pipe's own capacity and a
+        /// 900 K parcel lands on a large-grid pipe at over twelve thousand kelvin, because since
+        /// `C43` a pipe's parcel holds 1.75 MJ/K against the node's 84.7 kJ/K — twenty times as
+        /// much. Boundedness is one of the solver's three invariants and this path is not where it
+        /// is traded.
+        /// </para>
+        ///
+        /// <para>
+        /// **The test computes what the unbounded form would have produced** rather than asserting
+        /// against a number, so it says what it is guarding against and moves when the capacities
+        /// move. `C43` multiplied a large-grid pipe's coolant tenfold, which multiplied the gap
+        /// this bound closes by the same amount.
+        /// </para>
         /// </summary>
         [Fact]
-        public void HeldCoolantSurvivesASaveAndLoad()
+        public void TheBoundHoldsWhenTheMechanismIsTurnedOff()
         {
+            List<BlockInstance> ring;
+            float fluid, pipeCapacity, parcelCapacity;
+
+            ThermalSimulation simulation =
+                SpilledByTurningTheMechanismOff(out ring, out fluid, out pipeCapacity,
+                    out parcelCapacity);
+
+            Assert.Empty(simulation.Solver.Loops);
+
+            int holding = 0;
+            float hottest = 0f;
+            for (int i = 0; i < ring.Count; i++)
+            {
+                ThermalNode node = simulation.Solver.GetNode(ring[i]);
+                Assert.NotNull(node);
+
+                if (node.HeldCoolantCapacity > 0f) holding++;
+                if (node.Temperature > hottest) hottest = node.Temperature;
+            }
+
+            // **The guard that keeps this from passing vacuously.** A spill that moved nothing
+            // would leave every pipe at ambient and satisfy the bound trivially, which is exactly
+            // how the previous version of this test stopped testing anything.
+            Assert.Equal(ring.Count, holding);
+
+            float unbounded = Ambient
+                + (fluid - Ambient) * parcelCapacity / pipeCapacity;
+
+            output.WriteLine("pipe {0:n0} J/K, parcel {1:n0} J/K", pipeCapacity, parcelCapacity);
+            output.WriteLine("hottest pipe {0:n1} K against {1:n1} K of fluid; poured in at the"
+                + " node's own capacity it would have been {2:n0} K", hottest, fluid, unbounded);
+
+            Assert.True(hottest <= fluid + 0.01f,
+                "a pipe reached " + hottest.ToString("n2") + " K, above the "
+                + fluid.ToString("n0") + " K the fluid was at; a mix of two temperatures lies"
+                + " between them, so this is the mix having stopped being a mix");
+
+            Assert.True(unbounded > fluid * 2f,
+                "the unbounded form would have reached only " + unbounded.ToString("n0")
+                + " K, which is not far enough above the fluid for this test to be guarding"
+                + " anything — the parcel and the node have stopped differing in capacity");
+        }
+
+        /// <summary>
+        /// **And the spill conserves the heat it moves**, which is the invariant the bound is not.
+        /// A parcel that lands cooler than it should is a joule count that fell; the two together
+        /// are what say the mix is a mix.
+        /// </summary>
+        [Fact]
+        public void TurningTheMechanismOffMovesTheHeatRatherThanLosingIt()
+        {
+            const float Fluid = 900f;
+
+            ThermalSettings settings = Isolated();
             GridBuilder builder = GridBuilder.Large();
             List<BlockInstance> ring =
                 PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
 
-            ThermalSimulation simulation = builder.BuildSimulation(Isolated());
+            ThermalSimulation simulation = builder.BuildSimulation(settings);
             CoolantLoop loop = simulation.Solver.Loops[0];
-            for (int i = 0; i < loop.Pipes.Count; i++) loop.SetSegmentTemperature(i, 900f);
+            for (int i = 0; i < loop.Pipes.Count; i++) loop.SetSegmentTemperature(i, Fluid);
 
-            simulation.RemoveBlock(ring[3]);
+            float before = HeatAboveAmbient(simulation);
+
+            settings.EnableCoolantLoops = false;
+            settings.Derive();
             simulation.RebuildAll();
 
-            float broken = HeatAboveAmbient(simulation);
+            float after = HeatAboveAmbient(simulation);
+
+            output.WriteLine("{0:n0} J in the ring, {1:n0} J in the pipes: {2:n3} % moved",
+                before, after, 100f * after / before);
+
+            Assert.True(before > 0f, "the ring held nothing, so this is comparing zeroes");
+            Assert.InRange(after, before * 0.999f, before * 1.001f);
+        }
+
+        /// <summary>
+        /// **And switching it back on takes the fluid up again**, which is the other half of the
+        /// path — `ReclaimSpilledCoolant` — and the reason the spill leaves the heat in the pipes
+        /// rather than anywhere else. A world that toggled the setting twice must not have gained
+        /// or lost heat for it.
+        /// </summary>
+        [Fact]
+        public void SwitchingItBackOnReclaimsWhatTheSpillLeft()
+        {
+            const float Fluid = 900f;
+
+            ThermalSettings settings = Isolated();
+            GridBuilder builder = GridBuilder.Large();
+            PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings);
+            CoolantLoop loop = simulation.Solver.Loops[0];
+            for (int i = 0; i < loop.Pipes.Count; i++) loop.SetSegmentTemperature(i, Fluid);
+
+            float before = HeatAboveAmbient(simulation);
+
+            settings.EnableCoolantLoops = false;
+            settings.Derive();
+            simulation.RebuildAll();
+
+            settings.EnableCoolantLoops = true;
+            settings.Derive();
+            simulation.RebuildAll();
+
+            float after = HeatAboveAmbient(simulation);
+
+            Assert.Single(simulation.Solver.Loops);
+            output.WriteLine("{0:n0} J -> off -> on -> {1:n0} J ({2:n3} %)",
+                before, after, 100f * after / before);
+
+            Assert.InRange(after, before * 0.999f, before * 1.001f);
+        }
+
+        /// <summary>
+        /// **Why looking for a split found nothing.** Every coolant block the mod ships declares
+        /// exactly two link ports, so a closed ring has no spare port to branch from and no way to
+        /// be opened except by taking a block out of it — which vents. A three-port block would make
+        /// splits reachable and would need this file to grow the case; pinning the count is what
+        /// would say so.
+        /// </summary>
+        [Fact]
+        public void EveryCoolantBlockHasExactlyTwoLinkPorts()
+        {
+            List<string> wrong = new List<string>();
+            int seen = 0;
+
+            foreach (string subtype in ShippedBlocks.Subtypes())
+            {
+                BlockModel model = ShippedBlocks.Model(subtype);
+                if (model == null || model.Coolant == null) continue;
+                if (model.Coolant.LinkPorts.Length == 0) continue;
+
+                seen++;
+                if (model.Coolant.LinkPorts.Length == 2) continue;
+
+                wrong.Add(subtype + " declares " + model.Coolant.LinkPorts.Length);
+            }
+
+            Assert.True(seen >= 8,
+                "only " + seen + " shipped blocks carry coolant link ports, so this is asserting"
+                + " about almost nothing");
+
+            Assert.True(wrong.Count == 0,
+                "coolant blocks with a port count other than two, which makes a ring splittable"
+                + " and reopens backlog.md F28:\n  " + string.Join("\n  ", wrong));
+        }
+
+        /// <summary>
+        /// **Coolant a pipe is holding survives a save and a load.** The block temperature is
+        /// written whatever happens, so a reload that dropped the capacity would put the mixed
+        /// temperature onto the bare pipe and destroy exactly the fraction the mix conserved, on a
+        /// slower trigger.
+        ///
+        /// <para>
+        /// **It was written against a grind and a grind holds nothing.** Once `B44` made a broken
+        /// ring vent, every pipe here was left at ambient with no held capacity at all, and the
+        /// comparison it makes was between two figures that were both the heat of eight cold pipes.
+        /// It passes on the mechanism switch instead, which is what actually puts coolant in a pipe,
+        /// and asserts that some is there before comparing anything.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void HeldCoolantSurvivesASaveAndLoad()
+        {
+            List<BlockInstance> ring;
+            float fluid, pipeCapacity, parcelCapacity;
+
+            ThermalSimulation simulation =
+                SpilledByTurningTheMechanismOff(out ring, out fluid, out pipeCapacity,
+                    out parcelCapacity);
+
+            float held = 0f;
+            for (int i = 0; i < ring.Count; i++)
+            {
+                ThermalNode node = simulation.Solver.GetNode(ring[i]);
+                if (node != null) held += node.HeldCoolantCapacity;
+            }
+
+            Assert.True(held > 0f,
+                "no pipe was holding coolant, so a save and a load of it is a save and a load of"
+                + " nothing — which is what this test spent a while doing");
+
+            float spilled = HeatAboveAmbient(simulation);
             string saved = simulation.Save();
 
-            // A fresh world built from the same blueprint, minus the pipe that was ground out.
+            // A fresh world built from the same blueprint, in the same state: the mechanism off,
+            // so the loops are gone and the pipes are the only place coolant can be.
+            ThermalSettings reloadSettings = Isolated();
+            reloadSettings.EnableCoolantLoops = false;
+            reloadSettings.Derive();
+
             GridBuilder reloadBuilder = GridBuilder.Large();
             PipeFitter.BuildRing(reloadBuilder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
-            ThermalSimulation reloaded = reloadBuilder.BuildSimulation(Isolated());
-            reloaded.RemoveBlock(reloaded.Grid.GetAtCell(ring[3].Position));
+            ThermalSimulation reloaded = reloadBuilder.BuildSimulation(reloadSettings);
             reloaded.RebuildAll();
 
             reloaded.Load(saved);
 
             float restored = HeatAboveAmbient(reloaded);
 
-            output.WriteLine("{0:n0} J saved, {1:n0} J restored", broken, restored);
+            output.WriteLine("{0:n0} J/K held, {1:n0} J saved, {2:n0} J restored",
+                held, spilled, restored);
 
-            Assert.InRange(restored, broken * 0.999f, broken * 1.001f);
+            Assert.InRange(restored, spilled * 0.999f, spilled * 1.001f);
         }
 
         /// <summary>

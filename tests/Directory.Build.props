@@ -31,6 +31,15 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <!-- referencing a net472 assembly from net9.0 is intentional here -->
     <NoWarn>$(NoWarn);MSB3277;NU1701;CS1591</NoWarn>
+    <!--
+      xUnit1013 is a test method that is not a test: a public method on a test class with no [Fact]
+      or [Theory]. It is the one analyser finding in this tree that is a silent failure rather than
+      a style note - the suite goes green with the case not running, and nothing else says so.
+      `AGrindLeavesNoPipeHoldingCoolantBecauseTheRingDrained` lost its attribute during a rewrite and
+      sat unrun through several full-suite runs while the build printed this warning every time.
+      See rules.md, the one observation, and backlog.md F28.
+    -->
+    <WarningsAsErrors>$(WarningsAsErrors);xUnit1013</WarningsAsErrors>
     <CoreSourceRoot>$(MSBuildThisFileDirectory)../Data/Scripts/Thermodynamics/Core/</CoreSourceRoot>
     <TelemetrySourceRoot>$(MSBuildThisFileDirectory)../Data/Scripts/Thermodynamics/Telemetry/</TelemetrySourceRoot>
     <GameSourceRoot>$(MSBuildThisFileDirectory)../Data/Scripts/Thermodynamics/Game/</GameSourceRoot>
