@@ -374,11 +374,22 @@ namespace Thermodynamics.Core
         /// <returns>True when the caller should classify the neighbour; the neighbour's index is out.</returns>
         private bool Reaches(long index, Vector3I cell, int face, out Vector3I neighbour, out long neighbourIndex)
         {
-            neighbour = cell + Face.Offsets[face];
             neighbourIndex = -1;
 
-            if (!GridMath.Contains(searchMin, searchMaxExclusive, neighbour)) return false;
+            // The cell is inside the box, so only the axis this face moves along can leave it:
+            // one compare against that edge rather than six against all of them. The face order
+            // is Face.Offsets', which FaceOffsetsAreTheOrderThisSwitchAssumes pins.
+            switch (face)
+            {
+                case 0: if (cell.Z <= searchMin.Z) { neighbour = cell; return false; } break;
+                case 1: if (cell.X <= searchMin.X) { neighbour = cell; return false; } break;
+                case 2: if (cell.Y + 1 >= searchMaxExclusive.Y) { neighbour = cell; return false; } break;
+                case 3: if (cell.Y <= searchMin.Y) { neighbour = cell; return false; } break;
+                case 4: if (cell.X + 1 >= searchMaxExclusive.X) { neighbour = cell; return false; } break;
+                default: if (cell.Z + 1 >= searchMaxExclusive.Z) { neighbour = cell; return false; } break;
+            }
 
+            neighbour = cell + Face.Offsets[face];
             neighbourIndex = index + faceDelta[face];
             if (visited.ContainsIndex(neighbourIndex)) return false;
 
