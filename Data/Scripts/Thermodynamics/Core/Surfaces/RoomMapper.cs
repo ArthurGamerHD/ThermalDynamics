@@ -366,26 +366,25 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// One flood step over a cell's six neighbours with the snapshot live: the cell's index is
-        /// derived once and each neighbour's is an add, the box test is the only per-face geometry,
-        /// and the sealing and visited answers are array reads at those indices. Same faces in the
-        /// same order as the dictionary path, so the same map.
+        /// One flood step over a cell's six neighbours with the snapshot live: the cell's index and
+        /// its own sealing byte are read once for all six faces, each neighbour's index is an add,
+        /// and the box test is the only per-face geometry. Same faces in the same order as the
+        /// dictionary path, so the same map — and the same order within a room, which is what keeps
+        /// a room's air links, and the sum over them, bit for bit what they were.
+        /// See performance.md, Pass 3, Iteration 2.
         /// </summary>
         /// <returns>True when the caller should classify the neighbour; the neighbour's index is out.</returns>
-        private bool Reaches(long index, Vector3I cell, int face, out Vector3I neighbour, out long neighbourIndex)
+        private bool Reaches(long index, int sealingHere, Vector3I neighbour, int face, out long neighbourIndex)
         {
-            neighbour = cell + Face.Offsets[face];
             neighbourIndex = -1;
 
+            if ((sealingHere & (1 << face)) != 0) return false;
             if (!GridMath.Contains(searchMin, searchMaxExclusive, neighbour)) return false;
 
             neighbourIndex = index + faceDelta[face];
             if (visited.ContainsIndex(neighbourIndex)) return false;
 
-            if ((sealing[index] & (1 << face)) != 0) return false;
-            if ((sealing[neighbourIndex] & (1 << Face.Opposite(face))) != 0) return false;
-
-            return true;
+            return (sealing[neighbourIndex] & (1 << Face.Opposite(face))) == 0;
         }
 
         /// <summary>Index into <see cref="sealing"/>, or -1 outside the box.</summary>
@@ -434,11 +433,13 @@ namespace Thermodynamics.Core
             if (snapshotLive)
             {
                 long index = SealingIndex(cell);
+                int sealingHere = sealing[index];
+
                 for (int face = 0; face < Face.Count; face++)
                 {
-                    Vector3I neighbour;
+                    Vector3I neighbour = cell + Face.Offsets[face];
                     long neighbourIndex;
-                    if (!Reaches(index, cell, face, out neighbour, out neighbourIndex)) continue;
+                    if (!Reaches(index, sealingHere, neighbour, face, out neighbourIndex)) continue;
 
                     visited.AddIndex(neighbourIndex);
                     working.AddExternal(neighbour);
@@ -470,14 +471,16 @@ namespace Thermodynamics.Core
             if (snapshotLive)
             {
                 long index = SealingIndex(cell);
+                int sealingHere = sealing[index];
+
                 for (int face = 0; face < Face.Count; face++)
                 {
-                    Vector3I neighbour;
+                    Vector3I neighbour = cell + Face.Offsets[face];
                     long neighbourIndex;
-                    if (!Reaches(index, cell, face, out neighbour, out neighbourIndex)) continue;
+                    if (!Reaches(index, sealingHere, neighbour, face, out neighbourIndex)) continue;
 
                     visited.AddIndex(neighbourIndex);
-                    if (IsStructure(neighbour))
+                    if (IsStructureAt(neighbourIndex, neighbour))
                     {
                         working.AddSolid(neighbour);
                     }
