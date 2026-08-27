@@ -802,10 +802,16 @@ it — or it does not exist.**
 Twenty-one settings had accumulated that were in the code and not the reference. The opposite
 also happened: a toggle with a menu entry, a config field, a label and no reader at all.
 
+**And *wired* is five places, not four.** The world's copy and the solver's are two classes bridged
+by a hand-written list of assignments; a field on the solver's that the bridge does not copy is a
+setting that is documented, named, clamped, replicated and left at its default in every world, with
+every test green, because a test builds the solver's copy directly and never crosses the bridge.
+
 *Applies to:* every world setting.
 *Checked by:* `ConfigurationDocTests` and `SettingsWiringTests`, including
-`EverySettingIsReadBySomething`, `NoTwoSettingsShareAProtoMemberNumber` and
-`EverySettingIsClampedOrDeliberatelyNot`.
+`EverySettingIsReadBySomething`, `NoTwoSettingsShareAProtoMemberNumber`,
+`EverySettingIsClampedOrDeliberatelyNot`, `EverySolverSettingIsCopiedFromTheWorldsCopy` and
+`NothingIsCopiedIntoTheSolverThatTheSolverDoesNotHave`.
 *From:* [configuration.md](configuration.md).
 
 #### R17 — Every dial is asserted to move an outcome, not only to be read
@@ -1685,6 +1691,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | `R8` gained its fifth place: the bridge from the world's settings to the solver's. A field on `ThermalSettings` the bridge does not copy satisfies every other clause of the rule and is still left at its default in every world, and the suite cannot see it because a test builds the solver's copy directly. Checked in both directions now. |
 | 2026-08-26 | Added `M12` and `R17`, both from defects found the same day, and both under a principle that already existed — which is the fifteen still holding. **`M12` — a settled figure proves it settled**: `LoopCoolantMassTests` ran a ring with a source and no sink of any kind, so every arm climbed for ever and the four temperatures this repository published for the coolant density were that ramp read at step 400. Doubling the run is the whole check. **`R17` — every dial is asserted to move an outcome, not only to be read**: `R8`'s *read by something* is a grep, and `LoopStagnantTransferFraction` satisfied it while nothing multiplied by it. Four reflection-driven reach tests now enumerate every field on every properties class the simulation reads. |
 | 2026-08-25 | `E1`'s check now refuses a criterion its dataset cannot resolve. A partial survey slice of thirteen ships reported `G1` as *holding* — one ship is 7.7 % of it and the criterion turns on 1 %, so both sides of the line read the same. The rule is derived from each criterion's own threshold rather than being a sample-size floor somebody chose, and it is stated as a resolution test so that passing it is not mistaken for a population. Found by leaving a partial dataset on disk and pointing the scorer at it.
 
