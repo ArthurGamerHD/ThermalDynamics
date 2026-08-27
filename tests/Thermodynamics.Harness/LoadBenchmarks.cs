@@ -987,7 +987,7 @@ namespace Thermodynamics.Harness
 
             long afterSurfaces = Settled();
             rows.Add(Row("SurfaceMap", afterSurfaces - afterGrid, simulation.Surfaces.CellCount, blocks,
-                "two dictionaries, one entry per occupied cell each"));
+                "one packed entry per occupied cell, holding both surface layers"));
 
             // 4. solver nodes and the conduction graph
             for (int i = 0; i < instances.Count; i++)
@@ -1003,9 +1003,10 @@ namespace Thermodynamics.Harness
             // 5. the room map, which floods the whole bounding volume.
             //
             // Two figures, because they differ by an order of magnitude and only one of them is
-            // usually quoted. What the finished map retains is modest. What the pass needs while
-            // it runs is a visited set over every cell of the bounding box, and that is live for
-            // the whole pass — on a large grid it is the high-water mark of the entire mod.
+            // usually quoted. What the finished map retains is modest. What the pass needs while it
+            // runs is a bit and a byte for every cell of the bounding box — the visited set and the
+            // sealing snapshot — and both are live for the whole pass and retained between passes,
+            // so on a large grid this is the high-water mark of the entire mod.
             Vector3I extents = (grid.Max - grid.Min) + Vector3I.One;
             long volume = (long)extents.X * extents.Y * extents.Z;
 
@@ -1031,7 +1032,7 @@ namespace Thermodynamics.Harness
                 + map.RoomCellCount.ToString("n0") + " cells in " + map.RoomCount.ToString("n0")
                 + " rooms; counted, not stored: " + map.ExternalCellCount.ToString("n0") + " external"));
             rows.Add(Row("RoomMapper peak", peak - afterSolver, volume, blocks,
-                "high-water mark while a pass runs — a visited set over the whole bounding box"));
+                "high-water mark while a pass runs — a visited bit and a sealing byte per cell of the box"));
 
             rows.Add(Row("TOTAL retained", afterRooms - baseline, blocks, blocks, ""));
             rows.Add(Row("TOTAL peak", peak - baseline, blocks, blocks,
