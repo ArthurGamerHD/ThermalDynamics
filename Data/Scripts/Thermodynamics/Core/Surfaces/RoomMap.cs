@@ -40,6 +40,16 @@ namespace Thermodynamics.Core
         private Dictionary<long, int> roomIndexByCell = new Dictionary<long, int>();
 
         /// <summary>
+        /// Every cell in some room, one bit each over the search box. Walked in index order when
+        /// the pass completes, which yields the room cells already in <see cref="GridMath.Key"/>
+        /// order — box-index order and key order are both z, then y, then x — so the frozen arrays
+        /// need no sort. Sorting them was the one call that could not be budgeted: a million keys
+        /// on the tick a pass published, eighty milliseconds at half a million blocks. Retained per
+        /// map at an eighth of a byte a bounding cell. See performance.md, Pass 2, Iteration 8.
+        /// </summary>
+        private readonly CellBitset roomCells = new CellBitset();
+
+        /// <summary>
         /// The same answer as <see cref="roomIndexByCell"/>, as two sorted arrays, once a pass has
         /// completed. Null while one is running.
         ///
@@ -60,6 +70,13 @@ namespace Thermodynamics.Core
         private long[] frozenKeys;
         private int[] frozenRooms;
         private int frozenCount;
+
+        /// <summary>
+        /// True when this map's freeze found its bitset walk out of order or short and sorted
+        /// instead. False on every grid this repository has mapped; true is a fault to look at,
+        /// and `RoomMapFreezeTests` asserts it never is.
+        /// </summary>
+        public bool FrozeByFallback { get; private set; }
 
         private readonly List<RoomPortal> portals = new List<RoomPortal>();
 
@@ -219,16 +236,44 @@ namespace Thermodynamics.Core
             frozenKeys = new long[frozenCount];
             frozenRooms = new int[frozenCount];
 
+            // In box-index order, which is key order: z, then y, then x, and a key is
+            // z·2^42 + y·2^21 + x, monotone in that order for any coordinate a grid can hold. The
+            // dictionary supplies each cell's room; the bitset supplies the order.
             int at = 0;
-            foreach (KeyValuePair<long, int> entry in roomIndexByCell)
+            long end = roomCells.Capacity;
+            for (long index = roomCells.NextSetIndex(0, end); index < end && at < frozenCount;
+                index = roomCells.NextSetIndex(index + 1, end))
             {
-                frozenKeys[at] = entry.Key;
-                frozenRooms[at] = entry.Value;
+                long key = GridMath.Key(roomCells.CellAt(index));
+                int room;
+                if (!roomIndexByCell.TryGetValue(key, out room)) continue;
+                frozenKeys[at] = key;
+                frozenRooms[at] = room;
                 at++;
             }
 
-            // Sorted together: the keys are the search order and the rooms ride along with them.
-            Array.Sort(frozenKeys, frozenRooms);
+            // The order claim above is checked rather than trusted, because a search over keys
+            // that are not sorted answers "no room" for cells that are in one, silently. A pass
+            // whose bitset and dictionary disagree, or whose keys are not monotone, is sorted the
+            // old way and counted, so a report can say it happened.
+            bool ordered = at == frozenCount;
+            for (int i = 1; ordered && i < at; i++)
+            {
+                if (frozenKeys[i] <= frozenKeys[i - 1]) ordered = false;
+            }
+
+            if (!ordered)
+            {
+                FrozeByFallback = true;
+                at = 0;
+                foreach (KeyValuePair<long, int> entry in roomIndexByCell)
+                {
+                    frozenKeys[at] = entry.Key;
+                    frozenRooms[at] = entry.Value;
+                    at++;
+                }
+                Array.Sort(frozenKeys, frozenRooms);
+            }
 
             // Replaced rather than cleared: `Clear` keeps a dictionary's buckets and entries, so
             // freezing into arrays beside them would *add* twelve bytes a cell rather than trade
@@ -276,6 +321,7 @@ namespace Thermodynamics.Core
             searchMin = min;
             searchMaxExclusive = maxExclusive;
             solid.Reset(min, maxExclusive);
+            roomCells.Reset(min, maxExclusive);
         }
 
         /// <summary>
@@ -322,6 +368,7 @@ namespace Thermodynamics.Core
 
             rooms[roomIndex].Add(cell);
             roomIndexByCell[GridMath.Key(cell)] = roomIndex;
+            roomCells.Add(cell);
         }
 
         internal void AddPortal(RoomPortal portal)

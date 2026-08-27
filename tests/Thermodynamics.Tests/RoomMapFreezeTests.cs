@@ -48,6 +48,57 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// The frozen arrays come from a walk of the room-cell bitset in box-index order, on the
+        /// claim that box-index order is key order. The claim is checked inside the freeze and a
+        /// failure falls back to sorting; this asserts the fallback was not taken, on a hull with
+        /// tens of rooms and on the two-room rig — because a freeze that always fell back would
+        /// pass every other test here at the old price.
+        /// </summary>
+        [Fact]
+        public void TheFreezeNeverFallsBackToSorting()
+        {
+            Assert.False(TwoRooms().Rooms.Map.FrozeByFallback, "two rooms: the bitset walk was out of order");
+
+            GridBuilder builder = GridBuilder.Large();
+            builder.PlaceCensus(LoadShapes.Build("ship", 8000));
+            RoomMap map = builder.BuildSimulation(new ThermalSettings()).Rooms.Map;
+            Assert.True(map.RoomCount > 5, "the census hull mapped only " + map.RoomCount + " rooms");
+            Assert.False(map.FrozeByFallback, "census hull: the bitset walk was out of order");
+        }
+
+        /// <summary>The bitset walk the freeze rests on: next set bit and the cell at an index, at word edges.</summary>
+        [Fact]
+        public void NextSetIndexAndCellAtAgreeWithTheCellsThatWereAdded()
+        {
+            CellBitset bits = new CellBitset();
+            Vector3I min = new Vector3I(-5, 3, -9);
+            bits.Reset(min, min + new Vector3I(7, 5, 4));
+
+            Vector3I[] added =
+            {
+                min, min + new Vector3I(6, 0, 0), min + new Vector3I(0, 1, 0), min + new Vector3I(3, 4, 3),
+                min + new Vector3I(6, 4, 3), min + new Vector3I(1, 2, 2),
+            };
+            foreach (Vector3I cell in added) Assert.True(bits.Add(cell));
+
+            List<Vector3I> walked = new List<Vector3I>();
+            long end = bits.Capacity;
+            for (long i = bits.NextSetIndex(0, end); i < end; i = bits.NextSetIndex(i + 1, end))
+            {
+                walked.Add(bits.CellAt(i));
+                Assert.Equal(i, bits.IndexOf(bits.CellAt(i)));
+            }
+
+            Assert.Equal(added.Length, walked.Count);
+            for (int i = 1; i < walked.Count; i++)
+            {
+                Assert.True(GridMath.Key(walked[i]) > GridMath.Key(walked[i - 1]),
+                    "walk order is not key order at " + walked[i - 1] + " -> " + walked[i]);
+            }
+            foreach (Vector3I cell in added) Assert.Contains(cell, walked);
+        }
+
+        /// <summary>
         /// Every cell of every room resolves to the room that holds it, and nothing else does.
         /// </summary>
         [Fact]

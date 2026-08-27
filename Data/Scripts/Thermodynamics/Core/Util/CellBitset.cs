@@ -128,6 +128,50 @@ namespace Thermodynamics.Core
             return endExclusive;
         }
 
+        /// <summary>
+        /// The first index at or after <paramref name="index"/> whose cell is set, or
+        /// <paramref name="endExclusive"/> if none is. Skips whole words that are all zeros, so a
+        /// sparse set over a large box is walked per word rather than per cell.
+        /// </summary>
+        public long NextSetIndex(long index, long endExclusive)
+        {
+            if (index < 0) index = 0;
+
+            while (index < endExclusive)
+            {
+                long word = index >> 6;
+                if (word >= words.Length) return endExclusive;
+
+                long bits = words[word] >> (int)(index & 63);
+                if (bits == 0L)
+                {
+                    index = (word + 1) << 6;
+                    continue;
+                }
+
+                while ((bits & 1L) == 0L)
+                {
+                    bits >>= 1;
+                    index++;
+                }
+
+                return index < endExclusive ? index : endExclusive;
+            }
+
+            return endExclusive;
+        }
+
+        /// <summary>The cell at an index from <see cref="IndexOf"/>: its inverse.</summary>
+        public Vector3I CellAt(long index)
+        {
+            long plane = (long)sizeX * sizeY;
+            int z = (int)(index / plane);
+            long rest = index - (z * plane);
+            int y = (int)(rest / sizeX);
+            int x = (int)(rest - ((long)y * sizeX));
+            return new Vector3I(min.X + x, min.Y + y, min.Z + z);
+        }
+
         /// <summary>Whether the cell at an index from <see cref="IndexOf"/> is set. Negative and out-of-range indices are not.</summary>
         public bool ContainsIndex(long index)
         {
