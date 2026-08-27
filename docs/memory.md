@@ -55,16 +55,16 @@ the benchmarks build **now**, which also carries 1e.
 
 | Structure | armour hull, before | armour hull, after 1a–1d | census hull, today | Scales with |
 | --- | ---: | ---: | ---: | --- |
-| `BlockInstance` | 456 | 240 | **208** | blocks, and their **cells** |
-| `GridModel` indexes | 122 | 122 | **77** | blocks, and their **cells** |
+| `BlockInstance` | 456 | 240 | **216** | blocks, and their **cells** |
+| `GridModel` indexes | 122 | 122 | **43** | blocks, and their **cells** |
 | `SurfaceMap` | 69 | 69 | **35** | **cells** |
 | Solver | 537 | 468 | **377** | nodes and links |
 | `RoomMap` retained | 1,126 | 32 | **68** | structure, and cells **in rooms** |
-| **Total retained** | **2,311** | **932** | **765** | |
-| **Total peak** | **3,309** | **960** | **993** | |
+| **Total retained** | **2,311** | **932** | **739** | |
+| **Total peak** | **3,309** | **960** | **967** | |
 
 In megabytes at that size: 279 MB retained and 400 MB peak became 113 MB and 116 MB on the armour
-hull, and are **93 MB and 120 MB** on the census hull.
+hull, and are **89 MB and 117 MB** on the census hull.
 
 > **The third column was re-taken on 2026-08-26** and three of its rows moved, all from the
 > performance pass ([performance.md](performance.md)): the surface map holds both its layers in one
@@ -318,6 +318,7 @@ counted per cell, which is §8 and §9.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | `GridModel`'s indexes are 43 B/block from 77: the dictionary from block key to list slot is gone, because a block can carry its slot the way it already carries its node index ([performance.md](performance.md#pass-3-iteration-7--a-block-carries-its-grid-slot)). `BlockInstance` is 216 from 208, the four bytes of that slot and its padding. Retained 739, peak 967. **And a figure this page has never carried is now measured**: a room-mapping pass *allocates* 253 MB at 505,566 blocks — per-room cell lists, the cell-to-room dictionary, the frozen arrays and the radix scratch — against nothing at all for the link build, the exposure refresh and a settled step. Retained memory is what this page is about; that transient is what makes the room pass the one stage whose timings will not resolve. |
 | 2026-08-27 | `BlockInstance` is 208 B/block from 240: a block's live and structural surface arrays are one array unless it is a door standing open ([performance.md](performance.md#pass-2-iteration-9--a-blocks-two-surface-layers-share-one-array-unless-it-is-a-door)). Retained 765, peak 993. |
 | 2026-08-26 | Re-took the census-hull column: retained **797 B/block** and peak **999**, from 1,023 and 1,179. The surface map is 35 B/block from 68 (both layers in one packed entry, keyed on a `long`), the grid index 77 from 87 (the same key) and the room map 68 from 128 (a bitset rather than a hash set of solid cells); the mapper keeps a sealing byte per bounding cell it did not before and the peak still fell. The benchmark's own row labels said *two dictionaries* and *a visited set*, and now say what is there. |
 | 2026-08-26 | The room mapper holds one byte per cell of its search box between passes — the structural sealing snapshot the flood fill reads instead of the surface map's dictionaries: 6.8 MB at 505k blocks, 14 MB at a million, about 14 B a block. Bought a 3× cheaper room map ([performance.md](performance.md#iteration-4--the-room-mapper-reads-a-snapshot-of-the-sealing)). |

@@ -62,6 +62,26 @@ namespace Thermodynamics.Core
             return ((long)v.Z << (WideStrideBits * 2)) + ((long)v.Y << WideStrideBits) + v.X;
         }
 
+        /// <summary>
+        /// What <see cref="Key"/> changes by when a cell steps one along a face, indexed by face.
+        ///
+        /// <para>
+        /// A key is <c>z·2^42 + y·2^21 + x</c> — a *sum* of the components rather than a packing of
+        /// bit fields — so it is linear: <c>Key(v + d) == Key(v) + Key(d)</c> for every v and d,
+        /// including across zero and across a component's sign. A neighbour's key is therefore an
+        /// addition, where deriving it from coordinates is three of them and two shifts.
+        /// See performance.md, Pass 3, Iteration 6.
+        /// </para>
+        /// </summary>
+        public static readonly long[] KeyByFace = BuildKeyByFace();
+
+        private static long[] BuildKeyByFace()
+        {
+            long[] byFace = new long[Face.Count];
+            for (int face = 0; face < Face.Count; face++) byFace[face] = Key(Face.Offsets[face]);
+            return byFace;
+        }
+
         /// <summary>Inverse of <see cref="Key"/>.</summary>
         public static Vector3I FromKey(long key)
         {

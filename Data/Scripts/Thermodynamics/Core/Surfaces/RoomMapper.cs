@@ -21,7 +21,51 @@ namespace Thermodynamics.Core
 
         private readonly SurfaceMap surfaces;
 
-        private readonly Queue<Vector3I> frontier = new Queue<Vector3I>();
+        /// <summary>
+        /// The flood's frontier: a ring buffer kept between passes rather than a <c>Queue</c> grown
+        /// from empty each time. A pass enqueues every air cell of the bounding volume — 6.6 million
+        /// at half a million blocks — so a queue that doubles from nothing spends about twenty
+        /// reallocations and thirteen million struct copies on growth alone, every pass, having
+        /// already been that large on the previous one. Same order in and out, so the same map.
+        /// See performance.md, Pass 3, Iteration 8.
+        /// </summary>
+        private Vector3I[] frontier = new Vector3I[64];
+        private int frontierHead;
+        private int frontierCount;
+
+        private void FrontierClear()
+        {
+            frontierHead = 0;
+            frontierCount = 0;
+        }
+
+        private void FrontierEnqueue(Vector3I cell)
+        {
+            if (frontierCount == frontier.Length)
+            {
+                Vector3I[] grown = new Vector3I[frontier.Length * 2];
+                for (int i = 0; i < frontierCount; i++)
+                {
+                    grown[i] = frontier[(frontierHead + i) % frontier.Length];
+                }
+                frontier = grown;
+                frontierHead = 0;
+            }
+
+            int at = frontierHead + frontierCount;
+            if (at >= frontier.Length) at -= frontier.Length;
+            frontier[at] = cell;
+            frontierCount++;
+        }
+
+        private Vector3I FrontierDequeue()
+        {
+            Vector3I cell = frontier[frontierHead];
+            frontierHead++;
+            if (frontierHead == frontier.Length) frontierHead = 0;
+            frontierCount--;
+            return cell;
+        }
         /// <summary>
         /// Cells this pass has already classified, one bit each over the search box — a set the region
         /// is dense in, which is what a bitset is for. See memory.md, 1a.
@@ -167,7 +211,7 @@ namespace Thermodynamics.Core
         /// </summary>
         public int PendingCells
         {
-            get { return frontier.Count; }
+            get { return frontierCount; }
         }
 
         /// <summary>
@@ -261,7 +305,7 @@ namespace Thermodynamics.Core
             {
                 if (phase == Phase.External)
                 {
-                    if (frontier.Count == 0)
+                    if (frontierCount == 0)
                     {
                         phase = Phase.Interior;
                         BeginInteriorScan();
@@ -273,7 +317,7 @@ namespace Thermodynamics.Core
                 }
                 else if (phase == Phase.Interior)
                 {
-                    if (frontier.Count > 0)
+                    if (frontierCount > 0)
                     {
                         StepInterior();
                         spent++;
@@ -313,7 +357,7 @@ namespace Thermodynamics.Core
 
             working = new RoomMap();
             working.SetSearchBounds(searchMin, searchMaxExclusive);
-            frontier.Clear();
+            FrontierClear();
             visited.Reset(searchMin, searchMaxExclusive);
             CollectDoorCells();
             TakeSealingSnapshot();
@@ -331,7 +375,7 @@ namespace Thermodynamics.Core
             Vector3I seed = searchMin;
             visited.Add(seed);
             working.AddExternal(seed);
-            frontier.Enqueue(seed);
+            FrontierEnqueue(seed);
             phase = Phase.External;
         }
 
@@ -366,26 +410,25 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// One flood step over a cell's six neighbours with the snapshot live: the cell's index is
-        /// derived once and each neighbour's is an add, the box test is the only per-face geometry,
-        /// and the sealing and visited answers are array reads at those indices. Same faces in the
-        /// same order as the dictionary path, so the same map.
+        /// One flood step over a cell's six neighbours with the snapshot live: the cell's index and
+        /// its own sealing byte are read once for all six faces, each neighbour's index is an add,
+        /// and the box test is the only per-face geometry. Same faces in the same order as the
+        /// dictionary path, so the same map — and the same order within a room, which is what keeps
+        /// a room's air links, and the sum over them, bit for bit what they were.
+        /// See performance.md, Pass 3, Iteration 2.
         /// </summary>
         /// <returns>True when the caller should classify the neighbour; the neighbour's index is out.</returns>
-        private bool Reaches(long index, Vector3I cell, int face, out Vector3I neighbour, out long neighbourIndex)
+        private bool Reaches(long index, int sealingHere, Vector3I neighbour, int face, out long neighbourIndex)
         {
-            neighbour = cell + Face.Offsets[face];
             neighbourIndex = -1;
 
+            if ((sealingHere & (1 << face)) != 0) return false;
             if (!GridMath.Contains(searchMin, searchMaxExclusive, neighbour)) return false;
 
             neighbourIndex = index + faceDelta[face];
             if (visited.ContainsIndex(neighbourIndex)) return false;
 
-            if ((sealing[index] & (1 << face)) != 0) return false;
-            if ((sealing[neighbourIndex] & (1 << Face.Opposite(face))) != 0) return false;
-
-            return true;
+            return (sealing[neighbourIndex] & (1 << Face.Opposite(face))) == 0;
         }
 
         /// <summary>Index into <see cref="sealing"/>, or -1 outside the box.</summary>
@@ -429,20 +472,22 @@ namespace Thermodynamics.Core
 
         private void StepExternal()
         {
-            Vector3I cell = frontier.Dequeue();
+            Vector3I cell = FrontierDequeue();
 
             if (snapshotLive)
             {
                 long index = SealingIndex(cell);
+                int sealingHere = sealing[index];
+
                 for (int face = 0; face < Face.Count; face++)
                 {
-                    Vector3I neighbour;
+                    Vector3I neighbour = cell + Face.Offsets[face];
                     long neighbourIndex;
-                    if (!Reaches(index, cell, face, out neighbour, out neighbourIndex)) continue;
+                    if (!Reaches(index, sealingHere, neighbour, face, out neighbourIndex)) continue;
 
                     visited.AddIndex(neighbourIndex);
                     working.AddExternal(neighbour);
-                    frontier.Enqueue(neighbour);
+                    FrontierEnqueue(neighbour);
                 }
                 return;
             }
@@ -457,7 +502,7 @@ namespace Thermodynamics.Core
 
                 visited.Add(neighbour);
                 working.AddExternal(neighbour);
-                frontier.Enqueue(neighbour);
+                FrontierEnqueue(neighbour);
             }
         }
 
@@ -465,26 +510,28 @@ namespace Thermodynamics.Core
 
         private void StepInterior()
         {
-            Vector3I cell = frontier.Dequeue();
+            Vector3I cell = FrontierDequeue();
 
             if (snapshotLive)
             {
                 long index = SealingIndex(cell);
+                int sealingHere = sealing[index];
+
                 for (int face = 0; face < Face.Count; face++)
                 {
-                    Vector3I neighbour;
+                    Vector3I neighbour = cell + Face.Offsets[face];
                     long neighbourIndex;
-                    if (!Reaches(index, cell, face, out neighbour, out neighbourIndex)) continue;
+                    if (!Reaches(index, sealingHere, neighbour, face, out neighbourIndex)) continue;
 
                     visited.AddIndex(neighbourIndex);
-                    if (IsStructure(neighbour))
+                    if (IsStructureAt(neighbourIndex, neighbour))
                     {
                         working.AddSolid(neighbour);
                     }
                     else
                     {
                         working.AddToRoom(currentRoom, neighbour);
-                        frontier.Enqueue(neighbour);
+                        FrontierEnqueue(neighbour);
                     }
                 }
                 return;
@@ -506,7 +553,7 @@ namespace Thermodynamics.Core
                 else
                 {
                     working.AddToRoom(currentRoom, neighbour);
-                    frontier.Enqueue(neighbour);
+                    FrontierEnqueue(neighbour);
                 }
             }
         }
@@ -586,7 +633,7 @@ namespace Thermodynamics.Core
 
                 currentRoom = working.BeginRoom();
                 working.AddToRoom(currentRoom, cell);
-                frontier.Enqueue(cell);
+                FrontierEnqueue(cell);
                 return ScanResult.Found;
             }
         }

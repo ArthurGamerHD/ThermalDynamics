@@ -114,6 +114,83 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// The two sets `IsExternal` reads cover the same box, so one cell has one index in both.
+        /// Held over the box and outside it, since an index derived for the wrong box would answer
+        /// for a different cell — and outside the box both must refuse rather than wrap.
+        /// </summary>
+        [Fact]
+        public void TheSolidAndRoomSetsIndexACellTheSameWay()
+        {
+            CellBitset solid = new CellBitset();
+            CellBitset roomCells = new CellBitset();
+            Vector3I min = new Vector3I(-9, 4, -2);
+            Vector3I max = min + new Vector3I(11, 7, 5);
+            solid.Reset(min, max);
+            roomCells.Reset(min, max);
+
+            int inside = 0, outside = 0;
+            for (int x = min.X - 2; x < max.X + 2; x++)
+            for (int y = min.Y - 2; y < max.Y + 2; y++)
+            for (int z = min.Z - 2; z < max.Z + 2; z++)
+            {
+                Vector3I cell = new Vector3I(x, y, z);
+                Assert.Equal(solid.IndexOf(cell), roomCells.IndexOf(cell));
+                if (solid.IndexOf(cell) >= 0) inside++; else outside++;
+            }
+
+            Assert.Equal(11 * 7 * 5, inside);
+            Assert.True(outside > 0, "no cell outside the box, so the refusal is untested");
+
+            // And a bit set through one path reads back through the other.
+            Vector3I probe = min + new Vector3I(3, 2, 1);
+            Assert.True(roomCells.Add(probe));
+            Assert.True(roomCells.ContainsIndex(roomCells.IndexOf(probe)));
+            Assert.False(solid.ContainsIndex(solid.IndexOf(probe)));
+        }
+
+        /// <summary>
+        /// `IsExternal` answers a cell in no room from a membership bitset rather than from the
+        /// search over room keys, so the two must agree everywhere: over every cell of the search
+        /// box — room cells, solid cells, open air and the padding — the bitset says *in a room*
+        /// exactly when the search finds one (`D3`, two things that exist twice).
+        /// </summary>
+        [Fact]
+        public void MembershipAgreesWithTheSearchOverEveryCellOfTheBox()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.PlaceCensus(LoadShapes.Build("ship", 4000));
+            ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings());
+            RoomMap map = simulation.Rooms.Map;
+            Assert.True(map.RoomCount > 3, "the hull mapped only " + map.RoomCount + " rooms");
+
+            Vector3I min = simulation.Grid.Min - new Vector3I(2, 2, 2);
+            Vector3I max = simulation.Grid.Max + new Vector3I(2, 2, 2);
+
+            int inRoom = 0, external = 0, solid = 0;
+            for (int x = min.X; x <= max.X; x++)
+            for (int y = min.Y; y <= max.Y; y++)
+            for (int z = min.Z; z <= max.Z; z++)
+            {
+                Vector3I cell = new Vector3I(x, y, z);
+                int room = map.RoomIndexOf(cell);
+
+                // What IsExternal must say, derived from the search alone.
+                bool expected = !map.IsSolid(cell) && (room < 0 || map.IsVented(room));
+                Assert.True(expected == map.IsExternal(cell),
+                    cell + " is " + (map.IsExternal(cell) ? "external" : "not external")
+                    + " and the search says room " + room + ", solid " + map.IsSolid(cell));
+
+                if (map.IsSolid(cell)) solid++;
+                else if (room >= 0) inRoom++;
+                else external++;
+            }
+
+            Assert.True(inRoom > 0 && external > 0 && solid > 0,
+                "the box held " + inRoom + " room cells, " + external + " external and " + solid + " solid");
+            Assert.Equal(inRoom, map.RoomCellCount);
+        }
+
+        /// <summary>
         /// Every cell of every room resolves to the room that holds it, and nothing else does.
         /// </summary>
         [Fact]

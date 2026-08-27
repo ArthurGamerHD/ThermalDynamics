@@ -35,6 +35,18 @@ namespace Thermodynamics.Harness
             public string Stage;
             public int Blocks;
 
+            /// <summary>
+            /// Bytes one execution of the stage allocated, from the last repeat's own delta.
+            ///
+            /// **A stage that churns the heap changes what the stage after it measures**, which is
+            /// how a figure in this lab came to be unexplainable: `place` allocates a block instance
+            /// and a grid per repeat, fifteen times, and everything after it read a different heap.
+            /// The lab settles between stages now, and reports this so a reader can see which stage
+            /// is the one doing it rather than inferring it from an odd row.
+            /// See performance.md, Pass 3, Iteration 1.
+            /// </summary>
+            public long AllocatedBytes;
+
             /// <summary>Milliseconds for one execution of the stage, the fastest of the repeats.</summary>
             public double BestMs;
             public double WorstMs;
@@ -67,6 +79,10 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < stages.Count; i++)
             {
                 if (log != null) log(stages[i] + ", " + blocks.ToString("n0") + " blocks");
+
+                // Settled before every stage, so the list's order cannot carry: whatever the stage
+                // before it left on the heap is collected before this one is timed.
+                Settle();
                 rows.Add(Measure(stages[i], builder));
             }
 
@@ -108,6 +124,28 @@ namespace Thermodynamics.Harness
             return row;
         }
 
+        /// <summary>Collects twice and waits, so a stage is timed against a settled heap rather than the last stage's garbage.</summary>
+        private static void Settle()
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+        }
+
+        /// <summary>
+        /// Records what one execution of a stage allocated; called around the last repeat only.
+        ///
+        /// **Per thread, not per process.** `GC.GetTotalAllocatedBytes` counts every thread, so
+        /// under a suite running eight classes at once a stage's delta collects whatever the other
+        /// seven allocated meanwhile — which is how the assertion that a settled step allocates
+        /// nothing came to read half a megabyte and fail. Alone it passed, which is the worst way
+        /// for a check to be wrong. See performance.md, Pass 3, Iteration 10.
+        /// </summary>
+        private static long Allocated()
+        {
+            return GC.GetAllocatedBytesForCurrentThread();
+        }
+
         private static void Take(Row row, double ms)
         {
             if (ms < row.BestMs) row.BestMs = ms;
@@ -140,6 +178,7 @@ namespace Thermodynamics.Harness
             {
                 GridModel grid = new GridModel(builder.Grid.GridSize);
 
+                long allocated = r == repeats - 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 for (int i = 0; i < dealt.Count; i++)
                 {
@@ -155,6 +194,7 @@ namespace Thermodynamics.Harness
                     row.BestMs = double.MaxValue;
                     row.WorkUnit = "blocks";
                 }
+                if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
                 Work(row, grid.BlockCount, r);
             }
@@ -172,12 +212,14 @@ namespace Thermodynamics.Harness
             {
                 ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings().Derive(), builder.Grid);
 
+                long allocated = r == repeats - 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 for (int i = 0; i < builder.Placed.Count; i++)
                 {
                     simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
                 }
                 watch.Stop();
+                if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
 
                 if (row == null) row = NewRow("register", simulation, "blocks");
                 Take(row, watch.Elapsed.TotalMilliseconds);
@@ -195,9 +237,11 @@ namespace Thermodynamics.Harness
 
             for (int r = 0; r < repeats; r++)
             {
+                long allocated = r == repeats - 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Surfaces.Rebuild(simulation.Grid);
                 watch.Stop();
+                if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
                 Work(row, simulation.Surfaces.CellCount, r);
             }
@@ -214,9 +258,11 @@ namespace Thermodynamics.Harness
 
             for (int r = 0; r < repeats; r++)
             {
+                long allocated = r == repeats - 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Solver.RebuildLinks();
                 watch.Stop();
+                if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
                 Work(row, simulation.Solver.LinkCount, r);
             }
@@ -234,6 +280,7 @@ namespace Thermodynamics.Harness
             for (int r = 0; r < repeats; r++)
             {
                 long before = simulation.Work.RoomCellsVisited;
+                long allocated = r == repeats - 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Rooms.RequestRestart(simulation.Grid);
                 if (!simulation.Rooms.RunToCompletion())
@@ -241,6 +288,7 @@ namespace Thermodynamics.Harness
                     throw new InvalidOperationException("the room pass did not finish, so there is no stage to time");
                 }
                 watch.Stop();
+                if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
                 Work(row, simulation.Work.RoomCellsVisited - before, r);
             }
@@ -260,9 +308,11 @@ namespace Thermodynamics.Harness
             for (int r = 0; r < repeats; r++)
             {
                 long before = simulation.Work.ExposureNodeVisits;
+                long allocated = r == repeats - 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Solver.RefreshExposure(simulation.Rooms.Map);
                 watch.Stop();
+                if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
                 Work(row, simulation.Work.ExposureNodeVisits - before, r);
             }
@@ -292,9 +342,11 @@ namespace Thermodynamics.Harness
             for (int r = 0; r < repeats; r++)
             {
                 long before = simulation.Work.SolverSubsteps;
+                long allocated = r == repeats - 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 for (int i = 0; i < SolverStepsPerRepeat; i++) simulation.Solver.Step(step, state);
                 watch.Stop();
+                if (r == repeats - 1) row.AllocatedBytes = (Allocated() - allocated) / SolverStepsPerRepeat;
                 Take(row, watch.Elapsed.TotalMilliseconds / SolverStepsPerRepeat);
                 Work(row, simulation.Work.SolverSubsteps - before, r);
             }
@@ -305,14 +357,14 @@ namespace Thermodynamics.Harness
         public static string Table(IList<Row> rows)
         {
             StringBuilder text = new StringBuilder();
-            text.AppendLine("  stage        blocks       best ms      worst ms   spread          work  unit              ns/unit");
+            text.AppendLine("  stage        blocks       best ms      worst ms   spread          work  unit              ns/unit      alloc KB");
             for (int i = 0; i < rows.Count; i++)
             {
                 Row row = rows[i];
                 text.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                    "  {0,-10} {1,9:n0}  {2,12:n3}  {3,12:n3}  {4,6:n0}%  {5,12:n0}  {6,-16}  {7,8:n1}",
+                    "  {0,-10} {1,9:n0}  {2,12:n3}  {3,12:n3}  {4,6:n0}%  {5,12:n0}  {6,-16}  {7,8:n1}  {8,12:n0}",
                     row.Stage, row.Blocks, row.BestMs, row.WorstMs, row.SpreadPercent,
-                    row.Work, row.WorkUnit, row.NsPerWork));
+                    row.Work, row.WorkUnit, row.NsPerWork, row.AllocatedBytes / 1024));
             }
             return text.ToString();
         }
@@ -320,7 +372,7 @@ namespace Thermodynamics.Harness
         public static string Csv(IList<Row> rows)
         {
             StringBuilder text = new StringBuilder();
-            text.AppendLine("stage,blocks,best_ms,worst_ms,spread_percent,work,work_unit,ns_per_unit");
+            text.AppendLine("stage,blocks,best_ms,worst_ms,spread_percent,work,work_unit,ns_per_unit,allocated_bytes");
             for (int i = 0; i < rows.Count; i++)
             {
                 Row row = rows[i];
@@ -332,7 +384,8 @@ namespace Thermodynamics.Harness
                     row.SpreadPercent.ToString("r", CultureInfo.InvariantCulture),
                     row.Work.ToString(CultureInfo.InvariantCulture),
                     row.WorkUnit,
-                    row.NsPerWork.ToString("r", CultureInfo.InvariantCulture)));
+                    row.NsPerWork.ToString("r", CultureInfo.InvariantCulture),
+                    row.AllocatedBytes.ToString(CultureInfo.InvariantCulture)));
             }
             return text.ToString();
         }
