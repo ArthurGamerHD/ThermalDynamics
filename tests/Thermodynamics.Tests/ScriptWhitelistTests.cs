@@ -19,6 +19,7 @@ namespace Thermodynamics.Tests
     /// known-issues.md.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class ScriptWhitelistTests
     {
         /// <summary>

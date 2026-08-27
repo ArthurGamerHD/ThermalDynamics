@@ -32,6 +32,7 @@ namespace Thermodynamics.Tests
     /// survive every retune without being touched.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class DialReachTests
     {
         private readonly ITestOutputHelper output;

@@ -22,6 +22,7 @@ namespace Thermodynamics.Tests
     /// installed, and the difference appears: a bolted panel is buried too.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class DesignedHullTests
     {
         private readonly ITestOutputHelper output;

@@ -63,7 +63,13 @@ namespace Thermodynamics.Core
             Count = 0;
         }
 
-        private long IndexOf(Vector3I cell)
+        /// <summary>
+        /// Index of a cell in this box, or -1 outside it: <c>((z * sizeY) + y) * sizeX + x</c> from
+        /// the box's minimum, which is the order every dense per-cell buffer over the same box uses,
+        /// so a caller that walks neighbours can step an index by ±1, ±sizeX and ±sizeX·sizeY
+        /// instead of deriving it six times a cell. See performance.md, Iteration 8.
+        /// </summary>
+        public long IndexOf(Vector3I cell)
         {
             int x = cell.X - min.X;
             if (x < 0 || x >= sizeX) return -1;
@@ -75,6 +81,33 @@ namespace Thermodynamics.Core
             if (z < 0 || z >= sizeZ) return -1;
 
             return (((long)z * sizeY) + y) * sizeX + x;
+        }
+
+        /// <summary>Whether the cell at an index from <see cref="IndexOf"/> is set. Negative and out-of-range indices are not.</summary>
+        public bool ContainsIndex(long index)
+        {
+            if (index < 0) return false;
+
+            long word = index >> 6;
+            if (word >= words.Length) return false;
+
+            return (words[word] & (1L << (int)(index & 63))) != 0L;
+        }
+
+        /// <summary>Sets the cell at an index from <see cref="IndexOf"/>. Returns false when already set or out of range.</summary>
+        public bool AddIndex(long index)
+        {
+            if (index < 0) return false;
+
+            long word = index >> 6;
+            if (word >= words.Length) return false;
+
+            long bit = 1L << (int)(index & 63);
+            if ((words[word] & bit) != 0L) return false;
+
+            words[word] |= bit;
+            Count++;
+            return true;
         }
 
         public bool Contains(Vector3I cell)

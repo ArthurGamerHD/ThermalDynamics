@@ -228,11 +228,12 @@ a subject rule only sorts the classes whose subject somebody remembered to look 
 the fast lane was **3 m 45 s** — against the fifteen seconds this page claimed — because the labs
 built for `C24`, `C26`, `C27` and `D19` step whole hulls and none of them was tagged. One class,
 `ClientInputTests`, was 143 s of it on its own: twenty-eight tests, each a 480-second run of a
-1,004-node hull, and `C26` doubled that clock from 240 s the same week. Nineteen classes are tagged
-now and the fast lane is **4 s over 1,585 of the 1,884 cases** — 6, 4, 5 across three runs, so the
-figure is the fastest of three and the spread is two seconds (`M4`). It was 6 s over 1,554 of 1,852
-when the lanes were re-sorted on 2026-08-24, so twenty cases have been added and nothing has slowed
-down.
+1,004-node hull, and `C26` doubled that clock from 240 s the same week. Nineteen classes were tagged
+on 2026-08-24, and the lane rotted again inside two days: on 2026-08-26 it measured **37 s**, with
+`DesignedHullTests` alone 35 s of test time and ten more classes past two seconds, none of them
+tagged. Thirty classes carry the trait now and the fast lane is **4 s over 1,582 of the 1,998
+cases** — 5.5, 5.6, 6.2 s of wall clock across three runs, so the figure is the fastest of three
+and the spread is under a second (`M4`). The whole suite is 1 m 31 s.
 
 *Nothing checks it*, and that is why it rotted. The honest check would be a class's own measured
 cost, which a test inside that class cannot read; the naming rule that looks available — *a class
@@ -242,7 +243,8 @@ third most expensive things in the suite. So the rule is stated, the measurement
 refresh is: take the durations, tag what crossed two seconds (`R11` — an unchecked rule is a hope,
 and marking it says so).
 
-**The whole suite is 2 m 34 s**, and the fast lane is what a change is iterated against. It was
+**The whole suite is 1 m 31 s** (2026-08-26, optimised build, 1,998 cases), and the fast lane is
+what a change is iterated against. It was
 published here as 5 m 23 s until 2026-08-25 and had not been that for some time — the first
 measurement of the day, before anything was changed, was 2 m 55 s over the same 1,864 cases. The suite
 also spent months at five minutes for a different reason — one test read the whole blueprint corpus
@@ -258,10 +260,9 @@ elapsed time.
 **Eight rather than one per core, measured.** On this repository's 32-core machine, over the 1,825
 cases the suite held on 2026-08-24, it is **1 m 41 s at one worker, 38 s at eight, and 1 m 47 s at
 thirty-two** — one per core is no faster than serial, because the tests are memory-bound and
-thirty-two of them thrash each other's cache. *(The suite is 2 m 34 s now at the same eight workers:
-what grew is the work, not the scheduling. It is 550 s of test time against 323 s of wall clock, and
-the ceiling is one class — xUnit parallelises collections, a class is a collection, and
-`ClientInputTests` is 143 s of serial work inside one of them.)*
+thirty-two of them thrash each other's cache. *(The suite is 1 m 31 s at the same eight workers on the optimised build, 2026-08-26: what
+bounds it is still one class at a time — xUnit parallelises collections, a class is a collection,
+and the largest classes are tens of seconds of serial work each.)*
 That is the same effect, one rung up, that made the corpus walks need isolation in the first place:
 four walks across thirty-one workers ran seventeen times slower than one at a time, behind a 93 %
 CPU reading.
@@ -631,7 +632,7 @@ hold — `A13` was a change to how *vanilla* blocks are read, and it moved the p
 | Subject | Suites |
 | --- | --- |
 | **Block geometry and the grid model** | `FaceTests` `BoxGeometryTests` `GridMathTests` `CellBitsetTests` `BlockOrientationTests` `BlockOrientationCacheTests` `BlockInstanceTests` `GridModelTests` `BlockSurfaceBuilderTests` `Se2LatticeTests` `ShapeTests` |
-| **Surfaces, rooms and air** | `SurfaceMapTests` `RoomMapperTests` `DoorSealingTests` `RoomPortalTests` `IncrementalRoomTests` `RoomMapFreezeTests` `RoomMapSnapshotTests` `RoomMapCompletionTests` `RoomCellStorageTests` `RoomAuditTests` `UnmappedRoomTests` `RoomAirTests` `RoomAirCouplingTests` `RoomPressureTests` `RoomAirPressureTests` `ExposureAuditTests` |
+| **Surfaces, rooms and air** | `SurfaceMapTests` `SurfaceMapPackingTests` `RoomMapperTests` `DoorSealingTests` `RoomPortalTests` `IncrementalRoomTests` `RoomMapFreezeTests` `RoomMapSnapshotTests` `RoomMapSolidTests` `RoomMapCompletionTests` `RoomCellStorageTests` `RoomAuditTests` `UnmappedRoomTests` `RoomAirTests` `RoomAirCouplingTests` `RoomPressureTests` `RoomAirPressureTests` `ExposureAuditTests` |
 | **Conduction and the integrator** | `ConductionTests` `StabilityTests` `ConductionClampGateTests` `CoupledConductanceCacheTests` `NodeIndexTests` `FacePackingTests` `SubstepDemandTests` `SubstepFloorTests` `SubstepCeilingTests` `SubstepScaleTests` `HeatTimeScaleTests` |
 | **Environment: air, climate, weather** | `EnvironmentSolverTests` `RadiationTests` `ConvectionSolarFrictionTests` `FrictionIsolationTests` `ClimateModelTests` `GroundRoughnessTests` `DayLengthTests` `WeatherAndDepthTests` `UndergroundContactTests` `PlanetThermalTests` `PlanetReferenceTests` `PlanetPropertyMergeTests` `DescentTests` |
 | **Sun, shadow and occlusion** | `SunShadowMapTests` `SolarSelfShadowingTests` `SunLitSliceTests` `SolarOcclusionTests` `SolarOcclusionSamplerTests` `OcclusionLadderTests` `OcclusionMathTests` `SolarSymmetryTests` `GridShadowTests` `TerrainHorizonTests` `SelfShadowScenarioTests` `FaceWeightPairingTests` |
@@ -673,6 +674,7 @@ hold — `A13` was a change to how *vanilla* blocks are read, and it moved the p
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | The fast lane had rotted to 37 s inside two days of being re-sorted, and the rule refresh brought it back to 4 s: `DesignedHullTests` was 35 s of it on its own and ten more classes had crossed two seconds untagged — `DialReachTests`, `ModHardwareRetestTests`, `SettingsDialReachTests`, `LoopDialReachTests`, `LoopCoolantMassTests`, `ScenarioTests`, `ScriptWhitelistTests`, `HeatTimeScaleTests`, `CoolantLoopTests` and `DocumentationTests`. The whole suite is 1 m 31 s over 1,998 cases on the optimised build, from 2 m 34 s over 1,884 ([performance.md](../docs/performance.md)). |
 | 2026-08-26 | The test tree compiles optimised in every configuration. Nothing set `<Optimize>`, `dotnet run` and `dotnet test` build Debug, and a Debug assembly tells the JIT not to optimise — so every timing the harness ever produced was of code the game never runs, at 3.4× a step and up to 7.7× on the diagnostics surcharge ([performance.md](../docs/performance.md)). |
 | 2026-08-26 | Added `ShippedIdentityTests`, which checks the two rules that were *judgement* because nothing could see them break: the workshop id in `modinfo.sbmi` (`R5` — a regenerated file publishes the mod as a new item and every subscriber stays on the old one, with a green build and a correct-looking repository) and the shape of `Models/` (`R4` — a `.mwm` path is baked into the `.sbc` that names it, so a move is a re-export of the source this repository does not hold). The model pin is a digest of the sorted set of paths: a file added is a normal day, a file moved is the failure, and only the set tells them apart. |
 | 2026-08-26 | `SettingsWiringTests` covers the bridge between the world's settings and the solver's, which was thirty-nine hand-written assignments nothing read. **A field added to `ThermalSettings` and not to that list is a setting that is documented, wired, named, clamped, replicated and left at its default in every world** — and every test passes, because a test builds a `ThermalSettings` directly and never crosses the bridge, and `SettingsDialReachTests` asks whether the *core* field reaches the solver, which it does. Checked in both directions: nothing missing from the list, and nothing on it the solver no longer has. |

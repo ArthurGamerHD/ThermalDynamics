@@ -37,6 +37,8 @@ before the idea, and the oracle before the change.
 6. **Pin it.** An optimisation is asserted bit-identical to the code it replaced on a fixture that
    proves it exercised something (`D8`), and a defect it found is pinned so it cannot return.
 7. **Clean up.** The code and the pages it replaced go; what stays describes the present.
+8. **Refresh the lanes.** Take the runner's per-class durations and tag what crossed two seconds,
+   because nothing checks that rule and it has rotted twice in two days.
 
 **The machine.** Every figure on this page was taken on the repository's 32-core development
 machine, which is shared with three other projects (`W5`). It was not idle on 2026-08-26: two
@@ -55,6 +57,11 @@ which is what makes the ratios readable when the absolutes are not.
 | 2 | 2026-08-26 | The ladder's `build` column measured the hull generator | **kept** — generator 9× cheaper, and outside the clock | [Iteration 2](#iteration-2--the-ladders-build-column-measured-the-hull-generator) |
 | 3 | 2026-08-26 | An orientation is a signed permutation | **kept** — block construction halved at every size | [Iteration 3](#iteration-3--an-orientation-is-a-signed-permutation) |
 | 4 | 2026-08-26 | The room mapper reads a snapshot of the sealing | **kept** — the room map 3× cheaper at half a million blocks | [Iteration 4](#iteration-4--the-room-mapper-reads-a-snapshot-of-the-sealing) |
+| 5 | 2026-08-26 | The surface map's two layers in one dictionary | **kept** — the surface map 2× cheaper | [Iteration 5](#iteration-5--the-surface-maps-two-layers-in-one-dictionary) |
+| 6 | 2026-08-26 | One row per link in the conduction loop | **dropped** — inside the noise floor | [Iteration 6](#iteration-6--one-row-per-link-in-the-conduction-loop-tried-and-dropped) |
+| 7 | 2026-08-26 | The room map's solid set is a bitset | **kept** — exposure 2× cheaper | [Iteration 7](#iteration-7--the-room-maps-solid-set-is-a-bitset-over-the-search-box) |
+| 8 | 2026-08-26 | The flood fill steps an index, not a vector | **kept** — another fifth off the room map | [Iteration 8](#iteration-8--the-flood-fill-steps-an-index-not-a-vector) |
+| 9 | 2026-08-26 | The fast lane had rotted to 37 s | **kept** — 4 s again, eleven classes tagged | [Iteration 9](#iteration-9--the-fast-lane-had-rotted-to-37-s) |
 
 ## Iteration 1 — the harness measured unoptimised code
 
@@ -250,6 +257,125 @@ each cell cheaper rather than fewer.
 `SurfaceMap.Rebuild` 173–254 ms, links 107–178, rooms 156–188, exposure 82–152, room air 3–7. The
 surface map's two per-cell dictionaries — built, then refreshed at seven probes per cell per layer —
 are now the largest single term of a load.
+
+## Iteration 5 — the surface map's two layers in one dictionary
+
+Every occupied cell was
+held twice, in two `Dictionary<Vector3I, int>` keyed on the same cell — the live layer and the
+structural one — and refreshed in the same call, so a refresh probed each of six neighbours twice and
+a rebuild inserted every cell twice. The two states are packed into one `long` now, live in the low
+half and structural in the high: seven probes a cell rather than fourteen, and one table rather than
+two, which is also the surface map's retained memory halved. `SurfaceMapPackingTests` keeps the
+two-dictionary map verbatim and holds the packed one to the same answer on every cell and every
+neighbour of a census hull and of a shell with a door — rebuilt, added block by block, with blocks
+removed, and with the door open, which is the only state in which the two layers differ and the test
+asserts that they do.
+
+**What it was worth.** The `RebuildAll` split, each stage on its own clock on a dealt hull, at the
+commit before and after, one held window, fastest of two:
+
+| blocks | `SurfaceMap.Rebuild`, before | after | ratio | links, rooms (controls) |
+| ---: | ---: | ---: | ---: | ---: |
+| 126,731 | 86 ms | **32 ms** | 0.37 | 76 / 138 → 95 / 181 ms |
+| 505,566 | 653 ms | **291 ms** | 0.45 | 426 / 863 → 428 / 866 ms |
+
+Better than the halving the probe count predicts at the small rung, because the second table was
+also the second set of cache lines; and the controls at 505k did not move.
+
+## Iteration 6 — one row per link in the conduction loop: tried and dropped
+
+**What was tried.** The innermost loop gathered a link from three parallel arrays — two node
+indices and a conductance — beside the node rows it scatters into. A `LinkRow` struct put the three
+in one array: one stream and one bounds check where there were three of each, the same arithmetic in
+the same order, so every bit-identity suite and every byte-identical scenario passed unchanged.
+
+**What it measured.** The full report at the commit before and after, optimised, one held window,
+twice each, fastest kept:
+
+| figure | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| ladder 8,000 / 32,000 / 125,000, step | 1.146 / 5.252 / 18.325 ms | 1.209 / 5.190 / 19.366 ms | 1.06 / 0.99 / 1.06 |
+| features, everything on | 5.213 ms | 5.217 ms | 1.00 |
+| features, conduction, isolated | 0.458 ms | 0.478 ms | 1.05 |
+| features, conduction, marginal | 1.675 ms | 1.539 ms | 0.92 |
+| overshoot clamp, resolved, always clamped | 11.109 ms | 11.305 ms | 1.02 |
+| noise, spread of five identical runs | 0.063–0.128 ms | 0.110–0.186 ms | — |
+
+**Not kept** (`M5`). Nothing moved outside the noise floor, in either direction, on any hull. That
+is a finding about the loop rather than a shrug: the three link streams were already sequential and
+prefetched, so folding them bought nothing, and what the loop pays for is the two gathers and two
+scatters into the node rows, which no layout of the *link* side can touch. The commit is reverted in
+the same branch so the record of the attempt is in the history and the tree carries no code that
+measured as nothing (`D8`'s other half: an optimisation that did not pay is not left in).
+
+## Iteration 7 — the room map's solid set is a bitset over the search box
+
+The published map held its solid cells in a
+`HashSet<Vector3I>` — about forty bytes a member on a hull that is a third to three quarters
+structure — and every exposure face asks `IsExternal`, which asked that set first. It is a
+`CellBitset` over the search box now: an eighth of a byte a cell, and a bit read where there was a
+hash. `RoomMapSolidTests` checks every cell of the box, inside and out, against the surface map's
+own sealing rather than against the map (`E7`), and that a second pass starts from an empty set.
+
+**What it was worth.** The same split, at the commit before and after, fastest of two:
+
+| blocks | exposure, before | after | ratio | rooms, before → after | resident MB (ladder) |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 126,731 | 61 ms | **32 ms** | 0.52 | 181 → 136 ms | 88 → 90 |
+| 505,566 | 317 ms | **143 ms** | 0.45 | 866 → 769 ms | 450 → 391 |
+
+Exposure halves because most of its faces are exposed ones, and each of those asked the hash set.
+The room pass gains too, from writing bits rather than hashing cells into the set. The resident
+column is the ladder's coarse `GC.GetTotalMemory` difference and moves by more than this change
+between repeats of one tree, so it is printed and not claimed.
+
+## Iteration 8 — the flood fill steps an index, not a vector
+
+With the sealing snapshot live, a flood step still
+derived each neighbour's index in the visited bitset from its coordinates — three subtractions and
+three compares — and then again for the snapshot. The cell's index is derived once and each face
+adds a precomputed delta; the box test is the only per-face geometry left. Same faces in the same
+order, so `RoomMapSnapshotTests`, which runs the dictionary path beside it, is the pin.
+
+**What it was worth.** The same split, at the commit before and after, fastest of two:
+
+| blocks | rooms, before | after | ratio |
+| ---: | ---: | ---: | ---: |
+| 126,731 | 136 ms | **111 ms** | 0.82 |
+| 505,566 | 769 ms | **626 ms** | 0.81 |
+
+Another fifth off, and the room pass now costs about 90 ns per bounding cell at half a million
+blocks, against 430 at the start of the pass. The ladder rows taken in the same window for this
+commit had their *step* column — a control this change cannot touch — 25 % slower than the rows
+before it, which is another project's work landing on the machine while the window was held (`W5`
+is cooperative); the split above was taken first and its own controls (links, surfaces) held, so it
+is the figure quoted.
+
+**Where the build stands at 505,566 blocks after iterations 4, 5, 7 and 8**, on one clock: rooms
+626 ms, links 503, surfaces 418, exposure 173, block registration 56 — **1.6 s** where the pass
+began at 4.4. Links are the next largest term and were not touched.
+
+## Iteration 9 — the fast lane had rotted to 37 s
+
+**What was found.** The suite's own duration is a number no test inside it can read, which is why
+[tests/README.md](../tests/README.md#the-two-lanes-and-the-rule-that-sorts-them) says the lane rule
+rots. Timed for this pass's iteration log: the whole suite **1 m 31 s** over 1,998 cases on the
+optimised build, from 2 m 34 s over 1,884 — and the fast lane **37 s**, where the page said 4.
+Per class, from the runner's own log: `DesignedHullTests` 35 s of test time on its own, and ten
+more classes past two seconds — `DialReachTests` 11.8 s, `ModHardwareRetestTests`,
+`SettingsDialReachTests`, `LoopDialReachTests`, `LoopCoolantMassTests`, `ScenarioTests`,
+`ScriptWhitelistTests`, `HeatTimeScaleTests`, `CoolantLoopTests` and `DocumentationTests`, each
+between 2.4 and 4.1 s — none tagged, all written or grown in the two days since the lanes were last
+sorted.
+
+**What changed.** The eleven carry `[Trait("speed", "slow")]`; thirty classes do now. The fast lane
+is **4 s over 1,582 cases** — 5.5, 5.6, 6.2 s of wall clock across three runs (`M4`). Nothing about
+the tests moved; what moved is which lane a developer waits for.
+
+**What it does not fix.** The rule is still unchecked, and this is the second time in two days it
+has been found rotten by measuring rather than by a test. The honest check would read the runner's
+durations back, which is a tool outside the suite; until one exists the refresh is a step of every
+performance pass, which this page now lists.
 
 ---
 

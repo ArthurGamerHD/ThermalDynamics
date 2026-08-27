@@ -35,6 +35,7 @@ namespace Thermodynamics.Tests
     /// direction or the size of the change, which is what lets it survive every retune untouched.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class LoopDialReachTests
     {
         private readonly ITestOutputHelper output;

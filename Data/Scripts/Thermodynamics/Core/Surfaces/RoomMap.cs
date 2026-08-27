@@ -21,7 +21,16 @@ namespace Thermodynamics.Core
 
         private Vector3I searchMin;
         private Vector3I searchMaxExclusive;
-        private readonly HashSet<Vector3I> solid = new HashSet<Vector3I>(Vector3I.Comparer);
+        /// <summary>
+        /// The cells the pass classified as sealed structure, one bit each over the search box.
+        /// A set the region is dense in — a hull is a third to three quarters structure — so a
+        /// bitset holds it at an eighth of a byte a cell where a hash set held about forty bytes
+        /// a member, and every exposure face that asks <see cref="IsExternal"/> reads a bit rather
+        /// than hashing. Sized by <see cref="SetSearchBounds"/>, which every pass calls before it
+        /// adds a cell; a map with no bounds holds nothing, which is what <see cref="AllExternal"/>
+        /// is. See performance.md, Iteration 7.
+        /// </summary>
+        private readonly CellBitset solid = new CellBitset();
         /// <summary>
         /// The cells of each room, in the order the flood reached them. Lists rather than sets:
         /// containment goes to <see cref="roomIndexByCell"/>, and the flood cannot offer a cell twice
@@ -266,6 +275,7 @@ namespace Thermodynamics.Core
         {
             searchMin = min;
             searchMaxExclusive = maxExclusive;
+            solid.Reset(min, maxExclusive);
         }
 
         /// <summary>

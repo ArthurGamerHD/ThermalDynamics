@@ -12,6 +12,7 @@ namespace Thermodynamics.Tests
     /// one, because it reads as though somebody checked**. Textual and cheap.
     /// Holds `R7`, `R10`, `R12`, `R13` and half of `E5`.
     /// </summary>
+    [Trait("speed", "slow")]
     public class DocumentationTests
     {
         private static string RepoRoot()
