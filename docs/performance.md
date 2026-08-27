@@ -575,7 +575,7 @@ same ordering and the same shape with the surface and link rows inside their own
 | 6 | A one-cell block is built without walking its cells | **kept** — place 0.64–0.83 | [Iteration 6](#pass-2-iteration-6--a-one-cell-block-is-built-without-walking-its-cells) |
 | 7 | The flood's box test is one compare on the axis that moved | **dropped** — slower, 1.25–1.30 | [Iteration 7](#pass-2-iteration-7--the-floods-box-test-is-one-compare-on-the-axis-that-moved) |
 | 8 | The freeze walks a bitset in key order instead of sorting | *measuring* | [Iteration 8](#pass-2-iteration-8--the-freeze-walks-a-bitset-in-key-order-instead-of-sorting) |
-| 9 | A block's two surface layers share one array unless it is a door | *measuring* | [Iteration 9](#pass-2-iteration-9--a-blocks-two-surface-layers-share-one-array-unless-it-is-a-door) |
+| 9 | A block's two surface layers share one array unless it is a door | **kept** — place 0.85–0.87 | [Iteration 9](#pass-2-iteration-9--a-blocks-two-surface-layers-share-one-array-unless-it-is-a-door) |
 
 ## Pass 2, iteration 1 — the stage instrument lives in the tree
 
@@ -796,7 +796,19 @@ time — 1.2 million cells' worth of both — which cost more than the sort it r
 320 ms and the publish tick 80 → 155 ms at 505,566 blocks, in all four pairs. The walk is per word
 now: one coordinate derivation per sixty-four cells, an increment with row and plane wraps per set
 bit, and a de Bruijn multiply to find each bit without a loop (the game's framework and whitelist
-offer no intrinsic for it). The finder is pinned at every position. The corrected figures follow.
+offer no intrinsic for it).
+
+**And corrected, it still lost to the sort — which is the finding.** Rooms 258.9 → 256.5 ms at
+505k, level, and the publish tick **80 → 155 ms**. The walk needed one dictionary probe per room
+cell to learn its room, and 1.2 million probes into a 1.2 million-entry table are 1.2 million cache
+misses; the sort's input was the same dictionary *enumerated*, which is sequential. So the third
+form keeps the enumeration and replaces the comparison sort with a radix sort on the offset of
+each key from the box's first key — eleven-bit digits, passes that skip themselves where every
+digit is zero, two scratch arrays dropped after. The bitset, its walk and the bit finder went with
+the version they served (`D2`'s defect class in reverse: code that measured worse is not left in).
+`RoomMapFreezeTests` holds the radix order against `Array.Sort` on random keys spanning every digit,
+with the rooms carried along, and on sorted, reversed and wide inputs. The figures for the third
+form follow.
 
 ## Pass 2, iteration 9 — a block's two surface layers share one array unless it is a door
 
@@ -810,6 +822,17 @@ afresh, so `ThermalSimulation.RefreshBlock`'s old references remain the snapshot
 against. Nothing writes into either array after construction — checked by reading every reader of
 `SelfSurfaces` and `StructuralSurfaces`. `BlockInstanceOneCellTests` pins when the layers share,
 when they do not, and that a door opening leaves the structural layer where it was.
+
+**What it was worth.** `bench stages --stages place,register`, before against after, cores proven
+different, interleaved, two rounds, fastest kept:
+
+| blocks | place, before | after | ratio | register (control) |
+| ---: | ---: | ---: | ---: | ---: |
+| 126,731 | 19.74 ms | **17.10 ms** | 0.87 | 7.07 → 6.37 / 7.93 ms |
+| 505,566 | 107.30 ms | **91.09 ms** | 0.85 | 25.26 → 23.61 ms |
+
+One allocation fewer per block, and a third less surface memory per block — the memory table at
+the pass's end carries the retained figure.
 
 , with its start figures taken by the instrument the pass begins by putting in the tree. |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
