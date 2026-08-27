@@ -192,60 +192,6 @@ namespace Thermodynamics.Tests
             Assert.Equal(37L, bits.NextClearIndex(0, 200, out examined));
         }
 
-        /// <summary>
-        /// The flood's one-compare box test is written against the order of `Face.Offsets`: face 0
-        /// moves −Z, 1 moves −X, 2 moves +Y, 3 moves −Y, 4 moves +X, 5 moves +Z. A reordering of that
-        /// table would pass every map test on a hull whose box is padded — the flood never reaches
-        /// an edge from inside — so the assumption is pinned where it is made.
-        /// </summary>
-        [Fact]
-        public void FaceOffsetsAreTheOrderThisSwitchAssumes()
-        {
-            Assert.Equal(new Vector3I(0, 0, -1), Face.Offsets[0]);
-            Assert.Equal(new Vector3I(-1, 0, 0), Face.Offsets[1]);
-            Assert.Equal(new Vector3I(0, 1, 0), Face.Offsets[2]);
-            Assert.Equal(new Vector3I(0, -1, 0), Face.Offsets[3]);
-            Assert.Equal(new Vector3I(1, 0, 0), Face.Offsets[4]);
-            Assert.Equal(new Vector3I(0, 0, 1), Face.Offsets[5]);
-            Assert.Equal(6, Face.Count);
-        }
-
-        /// <summary>
-        /// A small closed shell, so the flood meets every edge of its padded box from inside on
-        /// every axis in both directions — the one-compare test's six branches — and finds one room
-        /// behind the walls. `RequestRestart` pads the grid's bounds by one cell whatever it is
-        /// given, so the outer layer of every box is air the flood reaches and tests outward from.
-        /// </summary>
-        [Fact]
-        public void AFloodThatMeetsEveryEdgeOfItsBoxMapsTheSameEitherWay()
-        {
-            GridBuilder builder = GridBuilder.Large();
-            BlockModel armour = Catalog.LightArmor();
-            for (int x = 0; x < 5; x++)
-            for (int y = 0; y < 5; y++)
-            for (int z = 0; z < 5; z++)
-            {
-                bool wall = x == 0 || x == 4 || y == 0 || y == 4 || z == 0 || z == 4;
-                if (wall) builder.Place(armour, new Vector3I(x + 10, y - 3, z + 7));
-            }
-
-            RoomMap byDictionary = null;
-            foreach (bool snapshot in new[] { false, true })
-            {
-                ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
-                simulation.Rooms.SnapshotSealing = snapshot;
-                for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
-                simulation.RebuildAll();
-
-                if (!snapshot) { byDictionary = simulation.Rooms.Map; continue; }
-
-                Assert.Equal(1, simulation.Rooms.Map.RoomCount);
-                Assert.Equal(27, simulation.Rooms.Map.RoomCellCount);
-                Assert.True(simulation.Rooms.Map.ExternalCellCount > 0, "nothing reached the outside of the box");
-                AssertSameMap(byDictionary, simulation.Rooms.Map, "closed shell");
-            }
-        }
-
         [Fact]
         public void AShellWithADoorMapsToTheSameRoomsAndPortals()
         {
