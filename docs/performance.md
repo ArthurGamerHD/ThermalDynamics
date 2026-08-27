@@ -572,6 +572,8 @@ same ordering and the same shape with the surface and link rows inside their own
 | 3 | A one-cell block's exposure is one state and six tests | **kept** — exposure 0.65 | [Iteration 3](#pass-2-iteration-3--a-one-cell-blocks-exposure-is-one-cell-state-and-six-face-tests) |
 | 4 | The interior scan skips visited cells a word at a time | **kept** — room-map ticks to converge 0.54–0.62 | [Iteration 4](#pass-2-iteration-4--the-interior-scan-skips-visited-cells-a-word-at-a-time) |
 | 5 | The environment pass reads one row per node | *measuring* | [Iteration 5](#pass-2-iteration-5--the-environment-pass-reads-one-row-per-node) |
+| 6 | A one-cell block is built without walking its cells | *measuring* | [Iteration 6](#pass-2-iteration-6--a-one-cell-block-is-built-without-walking-its-cells) |
+| 7 | The flood's box test is one compare on the axis that moved | *measuring* | [Iteration 7](#pass-2-iteration-7--the-floods-box-test-is-one-compare-on-the-axis-that-moved) |
 
 ## Pass 2, iteration 1 — the stage instrument lives in the tree
 
@@ -674,7 +676,17 @@ The tick count is deterministic — identical between rounds on each side — an
 world waits on a stale exposure map after a block is placed ([backlog.md](backlog.md) `D2`). The
 `+1 spike` column, the worst tick after one block is placed, fell from 145.5 to 96.3 ms at 505k for
 the same reason: the first tick of the remap does more of the scan. The milliseconds per pass are
-the ladder's and are read for direction only; the stage instrument's figure is below.
+the ladder's and are read for direction only; the stage instrument's figure is this:
+
+| blocks | rooms, before | after | ratio | units charged, before → after |
+| ---: | ---: | ---: | ---: | ---: |
+| 126,731 | 50.49 ms | **43.60 ms** | 0.86 | 3,072,469 → 1,622,649 |
+| 505,566 | 286.22 ms | **258.39 ms** | 0.90 | 13,720,674 → 7,216,527 |
+
+`bench stages --stages rooms`, before against after, interleaved, two rounds, fastest kept. The
+milliseconds move by a tenth because the scan was already the cheap half per cell; the *units* halve,
+and the units are what a tick's budget is spent in, which is why the ticks halved and the
+milliseconds did not.
 
 ## Pass 2, iteration 5 — the environment pass reads one row per node
 
@@ -686,6 +698,32 @@ fields once a step. Same arithmetic in the same order, so the five bit-identity 
 byte-identical scenarios pass unchanged. The first pass's iteration 6 tried the same layout on the
 *link* side and measured nothing; the node side is the gather the loop actually pays for, which is
 why it is worth asking again. Judged on `bench stages --stages solver`, the settled step alone.
+
+## Pass 2, iteration 6 — a one-cell block is built without walking its cells
+
+**What was found.** With the instrument grown two stages, placing a block read **250 ns** at
+505,566 blocks — four times registering it — and a one-cell block's construction ran an iterator
+over its one cell, re-anchored a rotated box that cannot move off its corner, and rotated surface
+bits that are the same on every face through six face lookups.
+
+**What changed.** The one-cell path writes the cell — the block's minimum corner in every
+orientation — and rotates only what a rotation can change: a state uniform across all six faces is
+returned as it is, since a rotation permutes faces. The cell walk stays as a public method and
+`BlockInstanceOneCellTests` holds the two together over all twenty-four orientations for a solid
+block, a partly mounted one, and a door shut and open — the uniform short cut is taken by the first
+and cannot be by the second, so both sides of it are on the fixture.
+
+## Pass 2, iteration 7 — the flood's box test is one compare on the axis that moved
+
+**What was found.** Every flood step tested each of six neighbours against all six edges of the box
+after constructing the neighbour, when the cell it stepped from is inside the box by construction
+and only the axis a face moves along can leave it.
+
+**What changed.** One compare per face, against that edge, before the neighbour is built. The face
+order the switch assumes is pinned beside the map tests (`FaceOffsetsAreTheOrderThisSwitchAssumes`),
+because a reordering of `Face.Offsets` would pass every map test on a hull whose flood never met an
+edge from the wrong side; and a small closed shell, whose padded box the flood meets on every edge
+in both directions of every axis, maps the same by both paths.
 
 , with its start figures taken by the instrument the pass begins by putting in the tree. |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
