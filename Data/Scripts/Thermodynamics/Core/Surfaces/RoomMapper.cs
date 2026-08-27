@@ -53,6 +53,13 @@ namespace Thermodynamics.Core
         private bool snapshotLive;
 
         /// <summary>
+        /// What each face adds to a cell's index in the snapshot and the visited bitset, which share
+        /// one box and one ordering. A neighbour's index is the cell's plus this, once the
+        /// neighbour is known to be inside the box.
+        /// </summary>
+        private readonly long[] faceDelta = new long[Face.Count];
+
+        /// <summary>
         /// Cells belonging to a door. Never classified as solid structure even when they seal on all
         /// six faces: a door is an openable volume, and a portal needs a region on the door's own
         /// side to join to. A shut airtight hangar door is a room of one cell, which merges with the
@@ -334,6 +341,36 @@ namespace Thermodynamics.Core
             else Array.Clear(sealing, 0, (int)cells);
 
             surfaces.CopyStructuralSealing(searchMin, searchMaxExclusive, sealing);
+
+            for (int face = 0; face < Face.Count; face++)
+            {
+                Vector3I offset = Face.Offsets[face];
+                faceDelta[face] = offset.X + ((long)offset.Y * sealingSizeX)
+                    + ((long)offset.Z * sealingSizeX * sealingSizeY);
+            }
+        }
+
+        /// <summary>
+        /// One flood step over a cell's six neighbours with the snapshot live: the cell's index is
+        /// derived once and each neighbour's is an add, the box test is the only per-face geometry,
+        /// and the sealing and visited answers are array reads at those indices. Same faces in the
+        /// same order as the dictionary path, so the same map.
+        /// </summary>
+        /// <returns>True when the caller should classify the neighbour; the neighbour's index is out.</returns>
+        private bool Reaches(long index, Vector3I cell, int face, out Vector3I neighbour, out long neighbourIndex)
+        {
+            neighbour = cell + Face.Offsets[face];
+            neighbourIndex = -1;
+
+            if (!GridMath.Contains(searchMin, searchMaxExclusive, neighbour)) return false;
+
+            neighbourIndex = index + faceDelta[face];
+            if (visited.ContainsIndex(neighbourIndex)) return false;
+
+            if ((sealing[index] & (1 << face)) != 0) return false;
+            if ((sealing[neighbourIndex] & (1 << Face.Opposite(face))) != 0) return false;
+
+            return true;
         }
 
         /// <summary>Index into <see cref="sealing"/>, or -1 outside the box.</summary>
@@ -379,6 +416,22 @@ namespace Thermodynamics.Core
         {
             Vector3I cell = frontier.Dequeue();
 
+            if (snapshotLive)
+            {
+                long index = SealingIndex(cell);
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    Vector3I neighbour;
+                    long neighbourIndex;
+                    if (!Reaches(index, cell, face, out neighbour, out neighbourIndex)) continue;
+
+                    visited.AddIndex(neighbourIndex);
+                    working.AddExternal(neighbour);
+                    frontier.Enqueue(neighbour);
+                }
+                return;
+            }
+
             for (int face = 0; face < Face.Count; face++)
             {
                 Vector3I neighbour = cell + Face.Offsets[face];
@@ -398,6 +451,29 @@ namespace Thermodynamics.Core
         private void StepInterior()
         {
             Vector3I cell = frontier.Dequeue();
+
+            if (snapshotLive)
+            {
+                long index = SealingIndex(cell);
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    Vector3I neighbour;
+                    long neighbourIndex;
+                    if (!Reaches(index, cell, face, out neighbour, out neighbourIndex)) continue;
+
+                    visited.AddIndex(neighbourIndex);
+                    if (IsStructure(neighbour))
+                    {
+                        working.AddSolid(neighbour);
+                    }
+                    else
+                    {
+                        working.AddToRoom(currentRoom, neighbour);
+                        frontier.Enqueue(neighbour);
+                    }
+                }
+                return;
+            }
 
             for (int face = 0; face < Face.Count; face++)
             {
