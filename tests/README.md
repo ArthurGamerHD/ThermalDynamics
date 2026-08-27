@@ -260,10 +260,9 @@ elapsed time.
 **Eight rather than one per core, measured.** On this repository's 32-core machine, over the 1,825
 cases the suite held on 2026-08-24, it is **1 m 41 s at one worker, 38 s at eight, and 1 m 47 s at
 thirty-two** — one per core is no faster than serial, because the tests are memory-bound and
-thirty-two of them thrash each other's cache. *(The suite is 2 m 34 s now at the same eight workers:
-what grew is the work, not the scheduling. It is 550 s of test time against 323 s of wall clock, and
-the ceiling is one class — xUnit parallelises collections, a class is a collection, and
-`ClientInputTests` is 143 s of serial work inside one of them.)*
+thirty-two of them thrash each other's cache. *(The suite is 1 m 31 s at the same eight workers on the optimised build, 2026-08-26: what
+bounds it is still one class at a time — xUnit parallelises collections, a class is a collection,
+and the largest classes are tens of seconds of serial work each.)*
 That is the same effect, one rung up, that made the corpus walks need isolation in the first place:
 four walks across thirty-one workers ran seventeen times slower than one at a time, behind a 93 %
 CPU reading.
