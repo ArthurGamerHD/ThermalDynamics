@@ -12,6 +12,8 @@ The rules these pin are stated canonically in [rules.md](../../docs/rules.md): `
 """
 import os
 import sys
+import shutil
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -453,3 +455,63 @@ class APairedWalkIsScoredOnTheArmThatShips(unittest.TestCase):
         rows = [self.arm("0", 300), self.arm("6", 290)]
         self.assertNotEqual(rows[0]["cap"], rows[1]["cap"])
         self.assertEqual(rows[0]["scenario"], rows[1]["scenario"])
+
+
+class APartialDatasetIsNamedAsPartial(unittest.TestCase):
+    """`E4` — *a corpus run is quoted whole, or quoted with the words "partial" and the count
+    attached* — had nothing checking it until 2026-08-26. The failure it is about is not a small
+    population: the corpus is walked largest-first, so a killed walk holds the capital ships and
+    reads 95 % where the truth is 75 %."""
+
+    def test_a_finished_walk_is_whole_and_a_third_of_one_is_not(self):
+        # The 2026-08-21 survey against the corpus it walked, and the 2026-08-25 survey at the
+        # point `E4` would have been quoted from it.
+        self.assertGreaterEqual(scoring.walked_share(8132, 8144), scoring.WHOLE_ENOUGH)
+        self.assertLess(scoring.walked_share(2683, 8144), scoring.WHOLE_ENOUGH)
+
+    def test_the_filters_rejections_do_not_make_a_finished_walk_partial(self):
+        """A walk that lost one ship in a hundred is finished. The threshold has to sit between
+        that and an interruption, and this is what says it does."""
+        self.assertGreaterEqual(scoring.walked_share(8062, 8144), scoring.WHOLE_ENOUGH)
+
+    def test_an_unknown_population_is_not_a_whole_one(self):
+        """A machine with no corpus can still read a dataset, and answering *is this partial* with
+        silence there is the failure the rule is about (`P2`)."""
+        self.assertIsNone(scoring.walked_share(8132, None))
+        self.assertIsNone(scoring.walked_share(8132, 0))
+
+    def test_a_stated_population_overrides_the_count(self):
+        self.assertEqual(1234, scoring.corpus_population("1234"))
+        self.assertEqual(1234, scoring.corpus_population(1234))
+
+    def test_a_population_that_cannot_be_read_is_none_rather_than_zero(self):
+        self.assertIsNone(scoring.corpus_population("not a number"))
+
+        keep = scoring.CORPUS
+        try:
+            scoring.CORPUS = os.path.join(tempfile.gettempdir(), "no-corpus-here-" + os.urandom(8).hex())
+            self.assertIsNone(scoring.corpus_population())
+        finally:
+            scoring.CORPUS = keep
+
+    def test_a_collection_of_blueprints_under_one_workshop_id_is_counted(self):
+        """**One workshop item can hold several blueprints**, in named folders under its id. Counting
+        one level deep misses fourteen of this corpus's and reports a population *smaller than the
+        walk that covered it*, which reads as a dataset more than whole."""
+        root = tempfile.mkdtemp()
+        keep = scoring.CORPUS
+        try:
+            os.makedirs(os.path.join(root, "111"))
+            open(os.path.join(root, "111", "bp.sbc"), "w").close()
+
+            for name in ("Ghost Mk.III", "Ghost Mk.IV"):
+                os.makedirs(os.path.join(root, "222", name))
+                open(os.path.join(root, "222", name, "bp.sbc"), "w").close()
+
+            os.makedirs(os.path.join(root, "333"))       # an item with no blueprint in it
+
+            scoring.CORPUS = root
+            self.assertEqual(3, scoring.corpus_population())
+        finally:
+            scoring.CORPUS = keep
+            shutil.rmtree(root, ignore_errors=True)

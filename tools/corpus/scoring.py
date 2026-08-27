@@ -5,6 +5,8 @@
 So anything of its arithmetic that deserves a test lives here instead, where a test can call it
 without running a report.
 """
+import os
+
 
 
 def oversubscription_note(p99, cap):
@@ -492,3 +494,55 @@ def too_coarse(runs, threshold_percent, what):
     return (f"{runs:,} {what} cannot answer this: one is {each:.1f} % of the dataset and the "
             f"criterion turns on {threshold_percent:g} %, so both sides of the line read the same. "
             f"It needs {needed:,}.")
+
+
+# ---- is a dataset the whole corpus (`E4`) -------------------------------------------------------
+
+# Where the corpus lives when nothing says otherwise, as `pace.py` has it and development.md
+# documents. Only needed to count blueprints, which is a directory listing.
+CORPUS = os.path.expanduser(
+    os.environ.get("THERMAL_CORPUS_CONTENT",
+                   "~/.local/share/thermal-dynamics/corpus/steamapps/workshop/content/244850"))
+
+# **A walk is allowed to lose a few ships and still be whole.** The blueprint filters reject hulls
+# — not vanilla, too small, unparsable — so the finished 2026-08-21 survey recorded 8,132 distinct
+# ships over the corpus's 8,144 blueprints, which is 99.9 %, and the `A13` reader fix moved four
+# more. Demanding equality would call every complete dataset partial. Ninety-five per cent is far
+# above any rejection rate this corpus has shown and far below any interruption worth catching: the
+# case `E4` is about read 43 % when it was quoted.
+WHOLE_ENOUGH = 0.95
+
+
+def corpus_population(stated=None):
+    """Blueprints the corpus holds, or None where that cannot be established here.
+
+    **None is not zero and is not "whole".** A machine without the corpus checked out can still
+    read a dataset, and answering "is this partial" with silence there is the failure `E4` is
+    about; the caller says *unknown* instead.
+    """
+    if stated is not None:
+        try:
+            return int(stated)
+        except (TypeError, ValueError):
+            return None
+
+    if not os.path.isdir(CORPUS):
+        return None
+
+    # **Recursive, because a workshop item can be a collection.** One id directory can hold several
+    # named blueprint folders — `.../372787238/T.N.F. Planetary Dropship 'Ghost' Mk.III (M)/bp.sbc`
+    # — and counting one level deep misses fourteen of them and reports a population *smaller than
+    # the walk that covered it*, which reads as a dataset more than whole. A tenth of a second.
+    count = 0
+    for _, _, filenames in os.walk(CORPUS):
+        if "bp.sbc" in filenames:
+            count += 1
+
+    return count or None
+
+
+def walked_share(walked, population):
+    """What share of the corpus a dataset reached, or None where the population is unknown."""
+    if not population:
+        return None
+    return walked / float(population)

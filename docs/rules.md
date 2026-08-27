@@ -243,7 +243,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **E1** | Criteria before data | absolute | P3 | reported by `verdict.py` |
 | **E2** | Measure the population, not the specimen | conditional | P1 | `CensusFidelityTests` |
 | **E3** | Name the population and the basis of every figure | absolute | P1 | — |
-| **E4** | A partial sweep is not a result | absolute | P2 | — |
+| **E4** | A partial sweep is not a result | absolute | P2 | reported by `verdict.py` |
 | **E5** | Every figure on a page comes from the dataset the page is about | absolute | P5 | `EveryQuotedDatasetCountIsCurrent` |
 | **E6** | Pair the terms before dividing | conditional | P1 | — |
 | **E7** | Check a claim against something that is not the model | absolute | P4 | `LegacyFormulas` `Reference` `DumpAuditTests` |
@@ -414,7 +414,11 @@ else. At 500 of 8,142 ships the load criterion read 95 % against a true 75 %, th
 criterion read *failing* when it passes, and the medians were three times high.
 
 *Applies to:* anything drawn from a sweep that has not finished.
-*Checked by:* — the walk records its own progress, but nothing stops a partial file being read.
+*Checked by:* `verdict.py`, which counts the blueprints the corpus holds and prints
+`*** PARTIAL: n of m ***` above everything else — and says the population is **unknown** where the
+corpus is not on the machine, rather than assuming a dataset is whole (`P2`). `test_scoring.py`
+pins the threshold and the collection case. It is *reported* rather than enforced: nothing stops a
+reader quoting the figures under the banner.
 *From:* [balance.md](balance.md).
 
 #### M12 — A settled figure proves it settled
@@ -1691,6 +1695,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | `E4` has a check, having been unchecked since it was written. `verdict.py` counts the corpus's blueprints and prints `*** PARTIAL: n of m ***` above everything else — the 2026-08-25 survey reads 46.2 % — and says the population is *unknown* where the corpus is not on the machine rather than assuming a dataset is whole. It is *reported* rather than enforced, and the index says so. |
 | 2026-08-26 | `R8` gained its fifth place: the bridge from the world's settings to the solver's. A field on `ThermalSettings` the bridge does not copy satisfies every other clause of the rule and is still left at its default in every world, and the suite cannot see it because a test builds the solver's copy directly. Checked in both directions now. |
 | 2026-08-26 | Added `M12` and `R17`, both from defects found the same day, and both under a principle that already existed — which is the fifteen still holding. **`M12` — a settled figure proves it settled**: `LoopCoolantMassTests` ran a ring with a source and no sink of any kind, so every arm climbed for ever and the four temperatures this repository published for the coolant density were that ramp read at step 400. Doubling the run is the whole check. **`R17` — every dial is asserted to move an outcome, not only to be read**: `R8`'s *read by something* is a grep, and `LoopStagnantTransferFraction` satisfied it while nothing multiplied by it. Four reflection-driven reach tests now enumerate every field on every properties class the simulation reads. |
 | 2026-08-25 | `E1`'s check now refuses a criterion its dataset cannot resolve. A partial survey slice of thirteen ships reported `G1` as *holding* — one ship is 7.7 % of it and the criterion turns on 1 %, so both sides of the line read the same. The rule is derived from each criterion's own threshold rather than being a sample-size floor somebody chose, and it is stated as a resolution test so that passing it is not mistaken for a population. Found by leaving a partial dataset on disk and pointing the scorer at it.
