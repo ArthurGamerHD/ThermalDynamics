@@ -41,6 +41,7 @@ in the prose. The conventions are in
 | --- | --- |
 | [telemetry.md](telemetry.md) | Session data collection and what the report contains. |
 | [benchmarks.md](benchmarks.md) | The performance report: cost by size, feature and configuration; what a substep costs; and the trend across passes. |
+| [performance.md](performance.md) | The performance passes: what each iteration measured, changed and was worth, and how every claim was checked. |
 | [load-and-hitching.md](load-and-hitching.md) | What a grid costs as it grows, what makes it stutter, and what live worlds measure. |
 | [stiffness.md](stiffness.md) | Why a handful of light fittings sets the cost of a capital ship, and what to do about it. |
 | [memory.md](memory.md) | Where a grid's memory goes, and what can be given back. |

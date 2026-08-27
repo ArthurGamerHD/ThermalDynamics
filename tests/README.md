@@ -129,7 +129,11 @@ with `-m:1 --no-incremental` and no error printed. A `dotnet test --no-build` th
 *previous* edit's results, which reads as a test that mysteriously still fails after being fixed, or
 worse, one that passes after being broken. It cost three false readings in a single session. Build
 `tests/Thermodynamics.Tests` by name, and if a result looks impossible, check the DLL's timestamp
-before believing it:
+before believing it. **And an incremental build does not notice a property passed on the command
+line**: `dotnet build -p:Optimize=false` over an up-to-date tree recompiled nothing and left the
+optimised assemblies in place, so a check proven against a *flag* has to be proven against
+`--no-incremental` as well — which is how `OptimisedBuildTests` was shown to fail before it was
+believed:
 
 ```bash
 dotnet build tests/Thermodynamics.Tests -v q --nologo
@@ -550,7 +554,10 @@ speed. `FlowSpeedDoesNotCostSubsteps` asserts that at 5,000 parcels per second.
 `WellMixedCoolant` therefore exists for the choice rather than for the cost.
 
 **The harness runs on .NET 9 and the game runs .NET Framework 4.8**, so absolute milliseconds here
-are optimistic against the game. Ratios and shapes of curve carry across; a millisecond figure
+are optimistic against the game. Every project under `tests/` compiles optimised in every
+configuration — `tests/Directory.Build.props` sets `<Optimize>true</Optimize>` — because `dotnet run`
+and `dotnet test` build Debug, and an unoptimised Debug assembly was what every figure before
+2026-08-26 was taken on. See [performance.md](../docs/performance.md#iteration-1--the-harness-measured-unoptimised-code). Ratios and shapes of curve carry across; a millisecond figure
 does not. `--diagnostics` turns on the per-node watt figures that switching telemetry on turns on
 in a live world, so a benchmark can be compared against a field report that includes the cost of
 being measured — about 2 % on a 42,000-block hull.
@@ -635,7 +642,7 @@ hold — `A13` was a change to how *vanilla* blocks are read, and it moved the p
 | **Bit-identity: an optimisation against what it replaced** | `PrecomputedEnvironmentTests` `FixedSourceRowTests` `WattsClearFusionTests` `ConductionClampGateTests` `DiagnosticBatchingTests` |
 | **Settings, storage and definitions** | `DialReachTests` `SettingsDialReachTests` `LoopDialReachTests` `PlanetDialReachTests` `BlockDialReachTests` `LoopBeforeTests` `LoopCoolantMassTests` `CellSizeTests` `DesignedHullTests` `SettingsTests` `SettingsDefaultsTests` `SettingsWiringTests` `ShippedIdentityTests` `ValidationReportingTests` `StorageCodecTests` `SchedulerTests` `DefinitionTests` `DefinitionFileTests` `ShippedDefinitionTests` `AuthoredMaterialTests` `AuthoredWasteTests` `BlockDerivationTests` `SolarAbsorptivityTests` `SelectiveSurfaceTests` `MaterialOverrideTests` `FeatureToggleTests` `DefaultSettingsTests` `ProfileSuiteTests` `ProfileClockTests` `WorldSettingsTests` |
 | **Readouts a player sees** | `TemperatureScaleTests` `UnitsTests` |
-| **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` |
+| **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` `OptimisedBuildTests` |
 | **Field dumps: the mod checked against a world** | `DumpAuditTests` `FieldDumpTests` `CensusFidelityTests` |
 | **End to end, and the host boundary** | `SimulationIntegrationTests` `ScenarioTests` `ScenarioClaimTests` `HostAdapterTests` `CoreIsolationTests` `FleetParallelTests` `ParallelTickTests` |
 | **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `RetrofitTests` `BlockHeatIndexTests` `HandCoolingTests` `BuildCostTests` `GlowChannelTests` `SuspendedRulesTests` `KnobBaselineTests` `LocalisationSurfaceTests` `CorpusProvenanceTests` `TimeToLossTests` `CatalogDriftTests` `ModHardwareRetestTests` `RetestSetTests` `SettleReadingTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `SubgridBridgeTests` `PrefabWalk` `CorpusCapWalk` `CorpusGuardTests` `CorpusArchiveTests` `CorpusRecordTests` `ClientDriftTests` `ClientInputTests` `HotTailTests` `HotTailSyncTests` `AirCostTests` `ConductionPaceTests` `LoadDialTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
@@ -666,6 +673,7 @@ hold — `A13` was a change to how *vanilla* blocks are read, and it moved the p
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | The test tree compiles optimised in every configuration. Nothing set `<Optimize>`, `dotnet run` and `dotnet test` build Debug, and a Debug assembly tells the JIT not to optimise — so every timing the harness ever produced was of code the game never runs, at 3.4× a step and up to 7.7× on the diagnostics surcharge ([performance.md](../docs/performance.md)). |
 | 2026-08-26 | Added `ShippedIdentityTests`, which checks the two rules that were *judgement* because nothing could see them break: the workshop id in `modinfo.sbmi` (`R5` — a regenerated file publishes the mod as a new item and every subscriber stays on the old one, with a green build and a correct-looking repository) and the shape of `Models/` (`R4` — a `.mwm` path is baked into the `.sbc` that names it, so a move is a re-export of the source this repository does not hold). The model pin is a digest of the sorted set of paths: a file added is a normal day, a file moved is the failure, and only the set tells them apart. |
 | 2026-08-26 | `SettingsWiringTests` covers the bridge between the world's settings and the solver's, which was thirty-nine hand-written assignments nothing read. **A field added to `ThermalSettings` and not to that list is a setting that is documented, wired, named, clamped, replicated and left at its default in every world** — and every test passes, because a test builds a `ThermalSettings` directly and never crosses the bridge, and `SettingsDialReachTests` asks whether the *core* field reaches the solver, which it does. Checked in both directions: nothing missing from the list, and nothing on it the solver no longer has. |
 | 2026-08-26 | `DocumentationTests.EveryClaimAPageSaysIsPinnedNamesSomethingThatExists`: every page that says a claim is *pinned by*, *checked by* or *measured by* something names something that exists. rules.md's `*Checked by:*` fields already had that check over one page; every other page cites in prose and nothing read those. Written after blocks.md's ring-length advice was found citing a test that had stopped existing, with three model changes' worth of stale figures above it — `NoPageNamesATestThatHasBeenRenamed` missed it because the rename changed the third camel word. **The dead name is deliberately not written in the new test's own comment**: a citation resolves if the code mentions it twice anywhere, so naming it there made the citation under test resolve, which is how the first attempt to prove the check works passed. |

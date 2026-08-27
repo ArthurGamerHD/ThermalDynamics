@@ -25,6 +25,14 @@
     -->
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <!--
+      Optimised in every configuration. `dotnet run` and `dotnet test` build Debug, and a Debug
+      assembly tells the JIT not to optimise - so every millisecond this harness ever reported
+      was taken on unoptimised code, which the game never runs. Measured 2026-08-26: a step is
+      3.4x slower and the fixed cost 3.9x, so the ratios a benchmark exists for were wrong as
+      well as the absolutes. See performance.md, Iteration 1.
+    -->
+    <Optimize>true</Optimize>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
