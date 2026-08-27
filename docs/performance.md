@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **Closed pass 5**: the settled step is **0.86** and the link build **0.84** at 505,566 blocks, with three untouched stages at 1.00, 0.99 and 1.03 as controls. The step had never moved in four passes; what moved it was measuring where its time went. `D1`'s open question is answered — conduction is at its floor. |
 | 2026-08-27 | Pass 5, iteration 6: the link build consults the occupancy bit before the block table — links **0.88** at 505,566 blocks and 0.76 at 126,731, both controls flat. |
 | 2026-08-27 | Pass 5, iterations 4 and 5: `bench stepfloor` answers `D1`'s open question — **conduction is its own floor**, faster than a loop doing its memory accesses and no arithmetic. And the idea that came out of it, putting buried nodes through the exposed path, measured **1.30** and was dropped: the branch is predictable and what it skips is three row reads, not just arithmetic. |
 | 2026-08-27 | Pass 5, iteration 3: the grid's own heat gain is summed once a step rather than once a substep — the environment stage **0.68** at 505,566 blocks, bit-identical, with both controls at 1.00. A probe had measured the loop's two accumulators at 35 % of the stage between them. |
@@ -1605,6 +1606,9 @@ and reverted it.
 | 4 | What a substep's passes cost touching memory and computing nothing | **kept** — the instrument, and `D1`'s open question answered | [Iteration 4](#pass-5-iteration-4--what-a-substeps-passes-cost-computing-nothing) |
 | 5 | A buried node takes the exposed path | **dropped** — 1.30, and the reason is worth more than the change would have been | [Iteration 5](#pass-5-iteration-5--a-buried-node-takes-the-exposed-path-dropped) |
 | 6 | A bit in front of the link build's probes | **kept** — links **0.88** at 505k, 0.76 at 126k | [Iteration 6](#pass-5-iteration-6--a-bit-in-front-of-the-link-builds-probes) |
+| 7 | The air rebuild counts contacts in a row, not a hash table | **kept** — 0.95, below what the instrument resolves | [Iteration 7](#pass-5-iteration-7--the-air-rebuild-counts-contacts-in-a-row) |
+| 8 | The apply pass reads the critical row only when it could matter | **kept** — apply 1.2 → **0.8 ns** a node | [Iteration 8](#pass-5-iteration-8--the-apply-pass-reads-the-critical-row-only-when-it-could-matter) |
+| 9 | What the pass moved | the summary below | [Iteration 9](#pass-5--what-the-pass-moved) |
 
 ## Pass 5, iteration 1 — a step is measured by its parts
 
@@ -1785,6 +1789,81 @@ is separate from the one that does not, so nothing can drift into using it by ac
 excludes that because only the first of the fifteen rebuilds pays for it. At half a million blocks
 that build is about half a million bit-sets, once. On a real load it is paid once for both this and
 the air rebuild, which is why it is worth having at all rather than worth having twice.*
+
+## Pass 5, iteration 7 — the air rebuild counts contacts in a row
+
+A room's bounding faces are counted per node, and node indices are dense from zero, so the
+`Dictionary<int, int>` doing the counting was buying nothing a subscript does not: at half a million
+blocks an air rebuild finds **691,306** faces holding a block, and each one was a lookup and a store.
+The row is indexed by node, reused across rooms and rebuilds, and only the entries a room touched
+are put back to zero — the sorted contact list is exactly that set.
+
+**Leaving it clean is the property that matters**, because an entry left dirty would be added to the
+next room's count for that node, giving it conductance for faces it does not have, with nothing else
+in the model to report it. Building a room's air twice now has to give the same conductances to the
+bit.
+
+**It is 0.95, and that is not resolved.** The air rebuild is the noisiest stage in the lab — its
+spread runs from 72 % to 204 % because it allocates — and its two rounds disagreed in direction more
+than once. Across four paired readings at two sizes, three favour the change. It is kept on being
+strictly less work, bit-identical, and one field simpler, not on a number.
+
+*Three windows were thrown away getting even that far: another project held the machine, and the
+controls moved 1.29, 1.44 and 1.86 between legs. A pairing whose control moves is not a pairing
+(`W5`), and the figure above is from the one window where the settled step read within 2 % on both
+legs.*
+
+## Pass 5, iteration 8 — the apply pass reads the critical row only when it could matter
+
+The apply pass walks five rows a node a substep, and one of them exists only to ask whether the node
+has gone over its own critical temperature. **The grid already knows the lowest positive critical it
+carries** — the cue machinery computes it — and nothing on the grid can be over its own critical
+below that, so the ordinary case does not read the row at all. Apply reads **0.8 ns a node visit**
+against 1.2 before it.
+
+That figure is a *bound* rather than the minimum: it only falls, except on a full resync, so a grid
+that loses its most fragile block keeps the old value until then. Low is safe — it skips fewer
+nodes. High is the failure, and it is silent: a node would sail past its critical without accruing
+damage. `OverheatEventTests` refuses a bound above any node's own, and takes a step first, because
+the bound is settled by the same sync that precedes the pass using it.
+
+## Pass 5 — what the pass moved
+
+Start (`bff27f0`) against tip, interleaved in one window, two rounds at 505,566 blocks, fastest
+kept. **Three stages this pass never touched are the controls** — the room pass, the surface
+rebuild and the exposure refresh — and they read 1.00, 0.99 and 1.03.
+
+| stage, 505,566 blocks | start | tip | ratio |
+| --- | ---: | ---: | ---: |
+| **a settled step** | 96.74 ms | **83.50 ms** | **0.86** |
+| **links** | 132.36 ms | **110.98 ms** | **0.84** |
+| roomair | 85.01 ms | 81.08 ms | 0.95 |
+| rooms (control) | 73.67 ms | 73.79 ms | 1.00 |
+| surfaces (control) | 54.73 ms | 54.28 ms | 0.99 |
+| exposure (control) | 29.43 ms | 30.26 ms | 1.03 |
+
+**The step moved, and no pass had moved it before.** Passes 1, 2 and 3 all left it where they found
+it — pass 1 by design, and the other two on measurement, both having tried to rearrange the link
+stream. What moved it was knowing where its time went: a sum hoisted out of twenty-three substeps
+that could not change between them, and a row read on every node of every substep that only three
+nodes in a million could ever need.
+
+**And the split at the tip says where a sixth pass would have to start**, at 505,566 blocks:
+
+| stage of a step | best | per element |
+| --- | ---: | ---: |
+| environment | 28.88 ms | 2.1 ns a node |
+| conduction | 27.95 ms | 1.0 ns a link |
+| apply | 11.71 ms | 0.8 ns a node |
+| publish | 5.31 ms | 10.5 ns a node |
+| env fill | 4.12 ms | 8.2 ns a node |
+| begin, coupled | 0.05 ms | — |
+
+Conduction is at its floor, measured. Apply is within a third of its own. The environment read is
+the only stage with visible headroom, and iteration 5 established that a good part of *that* is a
+branch doing its job. **What is left is not instructions: it is three passes over the grid, twenty-
+eight times a step.** Fewer substeps or fewer nodes is the next order of magnitude, and both are
+`D1`'s structural work rather than a performance pass's.
 
 ---
 
