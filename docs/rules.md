@@ -277,7 +277,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **C2** | The whitelist covers types the local build accepts | absolute | P7 | — |
 | **C3** | Target `net48`, and never reference the native assembly | absolute | P7 | the build |
 | **C11** | Every file the game compiles is compiled by the suite's own build | absolute | P7 | the build |
-| **C4** | Nothing allocates on the stepping path | absolute | P8 | `bench report` |
+| **C4** | Nothing allocates on the stepping path | absolute | P8 | `StageLabTests` |
 | **C5** | The core speaks no game type | absolute | P9 | `CoreIsolationTests` |
 | **C6** | The solver's three invariants hold | absolute | P10 | `ConductionTests` `StabilityTests` `ConductionClampGateTests` |
 | **C7** | Every mechanism has a switch that removes its own cost | absolute | P8 | `FeatureToggleTests` |
@@ -1176,12 +1176,16 @@ from-the-server flag is the only thing that says a packet is the server's.
 
 #### C4 — Nothing allocates on the stepping path
 
-**Anything allocating per frame shows up in the report.**
+**Anything allocating per frame shows up in the report, and a settled step is asserted to allocate
+nothing at all.**
 
 The raycast result lists and the grid list are pooled and the `kA` arrays cached for this reason.
 
 *Applies to:* the solver, the environment pass and everything a step reaches.
-*Checked by:* `bench report` — measured rather than asserted.
+*Checked by:* `StageLabTests`, which reads `GC.GetTotalAllocatedBytes` around a settled step of a
+census hull and fails above four kilobytes — it was measured rather than asserted until 2026-08-27,
+which for a rule about a quantity that should be *zero* is a gap a report cannot close. `bench
+report` still carries the per-feature figures.
 *From:* [development.md](development.md).
 
 #### C7 — Every mechanism has a switch that removes its own cost
@@ -1725,6 +1729,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | `C4` is asserted rather than measured. *Nothing allocates on the stepping path* was checked by reading a benchmark, which for a quantity whose correct value is **zero** is not a check at all: any figure at all reads as a small number. `StageLabTests` reads `GC.GetTotalAllocatedBytes` around a settled step of a census hull and fails above four kilobytes. Unchecked rules: eighteen, unchanged — this one was cited to a report and is now cited to a test. |
 | 2026-08-26 | **Added `M13` — a timing is taken on the build that ships — after finding that no timing ever had been.** Nothing under `tests/` set `<Optimize>`, and every command this repository runs builds `Debug`, which tells the JIT not to optimise. A step is 3.4× dearer that way and the factor is not uniform — 5× on the row fill, 7.7× on the diagnostics surcharge, 2.6× on the clamped conduction loop — so the *shares* this repository published were wrong as well as the absolutes, and they were wrong in favour of exactly the work an optimisation pass looks at. It lands under `P1` because it is the same failure as a duration quoted without its machine: the figure's stated scope was untrue. Unchecked rules: eighteen, unchanged — `M13` arrived with `OptimisedBuildTests`. |
 | 2026-08-26 | `R4` and `R5` were both *judgement* and are checked now, by `ShippedIdentityTests`. They are the two things here that editing back does not undo: regenerating `modinfo.sbmi` publishes the mod as a new workshop item and leaves every subscriber on the old one, and moving a folder under `Models/` costs a re-export of every block that names a path in it. The model pin is a digest of the sorted **set** of paths, because a file added is a normal day and a file moved is the failure. Unchecked rules: twenty-one down to eighteen. |
 | 2026-08-26 | `E4` has a check, having been unchecked since it was written. `verdict.py` counts the corpus's blueprints and prints `*** PARTIAL: n of m ***` above everything else — the 2026-08-25 survey reads 46.2 % — and says the population is *unknown* where the corpus is not on the machine rather than assuming a dataset is whole. It is *reported* rather than enforced, and the index says so. |
