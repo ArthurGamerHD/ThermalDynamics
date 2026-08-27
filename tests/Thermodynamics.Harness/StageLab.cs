@@ -132,10 +132,18 @@ namespace Thermodynamics.Harness
             GC.Collect();
         }
 
-        /// <summary>Records what one execution of a stage allocated; called around the last repeat only.</summary>
+        /// <summary>
+        /// Records what one execution of a stage allocated; called around the last repeat only.
+        ///
+        /// **Per thread, not per process.** `GC.GetTotalAllocatedBytes` counts every thread, so
+        /// under a suite running eight classes at once a stage's delta collects whatever the other
+        /// seven allocated meanwhile — which is how the assertion that a settled step allocates
+        /// nothing came to read half a megabyte and fail. Alone it passed, which is the worst way
+        /// for a check to be wrong. See performance.md, Pass 3, Iteration 10.
+        /// </summary>
         private static long Allocated()
         {
-            return GC.GetTotalAllocatedBytes(false);
+            return GC.GetAllocatedBytesForCurrentThread();
         }
 
         private static void Take(Row row, double ms)
