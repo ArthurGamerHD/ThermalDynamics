@@ -1035,7 +1035,7 @@ the column can be read.
 | links | 105.4 ms | **84.4 ms** | 0.80 |
 | exposure | 49.4 ms | **46.5 ms** | 0.94 |
 | register | 17.6 ms | 18.7 ms | 1.06 |
-| **rooms** | **192.9 ms** | **207.2 ms** | **1.07** |
+| rooms | 192.9 ms | 207.2 ms | 1.07 — *inside this stage's floor; see below* |
 | a settled step (control) | 90.8 ms | 89.6 ms | 0.99 |
 | **Memory, 126,731 blocks** | | | |
 | `GridModel` indexes | 77 B/block | **43 B/block** | 0.56 |
@@ -1043,12 +1043,34 @@ the column can be read.
 | retained | 765 B/block | **739 B/block** | 0.97 |
 | **Worst tick after a placement, 505,566 blocks** | 69.6 ms | **49.4 ms** | 0.71 |
 
-**The room pass is slower and that is this pass's finding, not its footnote.** Four changes aimed at
-it and the stage came out seven per cent worse, on a control that did not move. The suspect is
-iteration 3: a membership bit that makes *exposure* cheaper is set 1.5 million times *inside the
-room pass*, so a saving of 2.9 ms in exposure was bought with something like 14 ms in rooms. It is
-being attributed by measuring the stage at each of the pass's commits rather than by reasoning, and
-the change stands or falls on that reading.
+**The room pass read seven per cent worse, and that reading does not survive being attributed.**
+This section said for half an hour that the regression was the finding and named iteration 3 as the
+suspect — a membership bit set 1.5 million times inside the room pass to make exposure cheaper.
+Measured at each of the pass's commits instead of reasoned about, best of fifteen, two rounds each
+at 505,566 blocks:
+
+| commit | rooms, round 1 | round 2 | best |
+| --- | ---: | ---: | ---: |
+| `a81ee0b` start | 201.6 ms | 196.2 ms | 196.2 |
+| iteration 2 | 208.1 | 208.9 | 208.1 |
+| iteration 3 | 201.9 | **186.2** | 186.2 |
+| iteration 5 | 195.7 | 209.0 | 195.7 |
+| iteration 8 | 220.4 | 208.1 | 208.1 |
+
+**The spread within one commit is as large as the difference between any two** — 186 to 202 at
+iteration 3, 196 to 202 at the start — so nothing here is convicted and iteration 3, the accused,
+reads *faster* than the commit before it. The stage's floor at this size is about seven per cent,
+which is exactly the size of the end-to-end reading, so the honest statement is that **the room
+pass did not measurably move in this pass, in either direction** (`M5`, applied to my own claim,
+corrected in place per `E10`).
+
+**Why that stage is the noisy one is now visible, and it is the next pass's opening.** The
+allocation column added in iteration 1 says the room pass allocates **253 MB per execution** at
+505,566 blocks — the per-room cell lists, the cell-to-room dictionary, the frozen arrays and the
+radix scratch — against links and exposure and a settled step, which allocate nothing at all. A
+stage whose cost is dominated by allocation and collection is a stage whose timings will keep
+refusing to resolve a few per cent, and cutting that 253 MB is worth more than any instruction in
+the flood. The column earned its place within the pass that added it.
 
 ## Pass 3 — what is designed and not built
 
@@ -1059,7 +1081,11 @@ a run** — and the room air is 1,503,815 cells in 22,445 runs. A flood that enq
 than cells would push about eighty thousand entries where this one pushes six and a half million,
 and could mark whole words of the visited set at a time.
 
-**What stops it being this pass's work is bit-identity, and it is worth writing down.** A span flood
+**And it is not the first thing to try any more.** The allocation figure above says the room pass
+is bound by what it allocates before it is bound by how many cells it walks, so a pass aimed at this
+stage should cut the 253 MB first and count cells second.
+
+**What stops a span flood being this pass's work is bit-identity, and it is worth writing down.** A span flood
 reaches a room's cells in a different order; `BuildRoomLinks` walks a room's cells to build its air
 links, and `AccumulateRoomAir` sums over those links in order — so a different cell order is a
 different sum order and a different last bit on a temperature. Landing it means first making the air
