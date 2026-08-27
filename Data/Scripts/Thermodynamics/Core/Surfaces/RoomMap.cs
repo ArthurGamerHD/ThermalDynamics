@@ -238,18 +238,55 @@ namespace Thermodynamics.Core
 
             // In box-index order, which is key order: z, then y, then x, and a key is
             // z·2^42 + y·2^21 + x, monotone in that order for any coordinate a grid can hold. The
-            // dictionary supplies each cell's room; the bitset supplies the order.
+            // dictionary supplies each cell's room; the bitset supplies the order — a word at a
+            // time, with one coordinate derivation per word and an increment per set bit, because
+            // a division per cell cost more than the sort it replaced (performance.md, Pass 2,
+            // Iteration 8).
             int at = 0;
             long end = roomCells.Capacity;
-            for (long index = roomCells.NextSetIndex(0, end); index < end && at < frozenCount;
-                index = roomCells.NextSetIndex(index + 1, end))
+            int sizeX = roomCells.SizeX;
+            int sizeY = roomCells.SizeY;
+            int wordCount = roomCells.WordCount;
+
+            for (int w = 0; w < wordCount && at < frozenCount; w++)
             {
-                long key = GridMath.Key(roomCells.CellAt(index));
-                int room;
-                if (!roomIndexByCell.TryGetValue(key, out room)) continue;
-                frozenKeys[at] = key;
-                frozenRooms[at] = room;
-                at++;
+                long bits = roomCells.Word(w);
+                if (bits == 0L) continue;
+
+                long baseIndex = (long)w << 6;
+                Vector3I cell = roomCells.CellAt(baseIndex);
+                int previousBit = 0;
+
+                while (bits != 0L)
+                {
+                    int bit = CellBitset.LowestSetBit(bits);
+                    bits &= bits - 1;
+
+                    long index = baseIndex + bit;
+                    if (index >= end) break;
+
+                    // Advance the cell by the bits stepped over, wrapping rows and planes as the
+                    // index order does.
+                    cell.X += bit - previousBit;
+                    previousBit = bit;
+                    while (cell.X >= searchMin.X + sizeX)
+                    {
+                        cell.X -= sizeX;
+                        cell.Y++;
+                        if (cell.Y >= searchMin.Y + sizeY)
+                        {
+                            cell.Y -= sizeY;
+                            cell.Z++;
+                        }
+                    }
+
+                    long key = GridMath.Key(cell);
+                    int room;
+                    if (!roomIndexByCell.TryGetValue(key, out room)) continue;
+                    frozenKeys[at] = key;
+                    frozenRooms[at] = room;
+                    at++;
+                }
             }
 
             // The order claim above is checked rather than trusted, because a search over keys

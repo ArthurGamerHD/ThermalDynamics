@@ -192,6 +192,9 @@ namespace Thermodynamics.Tests
                 { "Thermodynamics.Core.BlockOrientation.rotatedFaces", "table built once, never written after" },
                 { "Thermodynamics.Core.BlockOrientation.legal", "table built once, never written after" },
 
+                // A constant table: the de Bruijn sequence positions for the lowest set bit.
+                { "Thermodynamics.Core.CellBitset.DeBruijn", "value constant" },
+
                 // The lock the mutable pair below is taken under, which is shared on purpose.
                 { "Thermodynamics.Core.ThermalValidation.Lock", "the lock itself" },
 

@@ -161,6 +161,48 @@ namespace Thermodynamics.Core
             return endExclusive;
         }
 
+        /// <summary>Words the box occupies; <see cref="Word"/> reads one.</summary>
+        public int WordCount
+        {
+            get { return (int)Math.Min(words.Length, (Capacity + 63) / 64); }
+        }
+
+        /// <summary>The sixty-four cells from index <c>64 × word</c>, one bit each.</summary>
+        public long Word(int word)
+        {
+            return word >= 0 && word < words.Length ? words[word] : 0L;
+        }
+
+        /// <summary>Cells along x in this box, which is how far a word's cells run before the index wraps to the next row.</summary>
+        public int SizeX
+        {
+            get { return sizeX; }
+        }
+
+        public int SizeY
+        {
+            get { return sizeY; }
+        }
+
+        private static readonly int[] DeBruijn =
+        {
+            0, 1, 2, 53, 3, 7, 54, 27, 4, 38, 41, 8, 34, 55, 48, 28,
+            62, 5, 39, 46, 44, 42, 22, 9, 24, 35, 59, 56, 49, 18, 29, 11,
+            63, 52, 6, 26, 37, 40, 33, 47, 61, 45, 43, 21, 23, 58, 17, 10,
+            51, 25, 36, 32, 60, 20, 57, 16, 50, 31, 19, 15, 30, 14, 13, 12,
+        };
+
+        /// <summary>
+        /// The position of the lowest set bit of a non-zero word, without a loop: a de Bruijn
+        /// sequence multiply, which is what a walk over set bits needs and neither the game's
+        /// framework nor its whitelist offers an intrinsic for.
+        /// </summary>
+        public static int LowestSetBit(long word)
+        {
+            long isolated = word & -word;
+            return DeBruijn[(int)((ulong)(isolated * 0x022FDD63CC95386DL) >> 58)];
+        }
+
         /// <summary>The cell at an index from <see cref="IndexOf"/>: its inverse.</summary>
         public Vector3I CellAt(long index)
         {

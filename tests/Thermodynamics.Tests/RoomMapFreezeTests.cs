@@ -66,6 +66,21 @@ namespace Thermodynamics.Tests
             Assert.False(map.FrozeByFallback, "census hull: the bitset walk was out of order");
         }
 
+        /// <summary>The lowest set bit of a word without a loop, over every position and a few mixed words.</summary>
+        [Fact]
+        public void LowestSetBitIsRightForEveryPosition()
+        {
+            for (int bit = 0; bit < 64; bit++)
+            {
+                long word = 1L << bit;
+                Assert.Equal(bit, CellBitset.LowestSetBit(word));
+                // Higher bits set as well must not move the answer: the bit above, and the top bit.
+                Assert.Equal(bit, CellBitset.LowestSetBit(word | (word << 1) | long.MinValue));
+            }
+            Assert.Equal(0, CellBitset.LowestSetBit(-1L));
+            Assert.Equal(63, CellBitset.LowestSetBit(long.MinValue));
+        }
+
         /// <summary>The bitset walk the freeze rests on: next set bit and the cell at an index, at word edges.</summary>
         [Fact]
         public void NextSetIndexAndCellAtAgreeWithTheCellsThatWereAdded()
