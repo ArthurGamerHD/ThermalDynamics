@@ -573,7 +573,7 @@ same ordering and the same shape with the surface and link rows inside their own
 | 4 | The interior scan skips visited cells a word at a time | **kept** — room-map ticks to converge 0.54–0.62 | [Iteration 4](#pass-2-iteration-4--the-interior-scan-skips-visited-cells-a-word-at-a-time) |
 | 5 | The environment pass reads one row per node | *measuring* | [Iteration 5](#pass-2-iteration-5--the-environment-pass-reads-one-row-per-node) |
 | 6 | A one-cell block is built without walking its cells | *measuring* | [Iteration 6](#pass-2-iteration-6--a-one-cell-block-is-built-without-walking-its-cells) |
-| 7 | The flood's box test is one compare on the axis that moved | *measuring* | [Iteration 7](#pass-2-iteration-7--the-floods-box-test-is-one-compare-on-the-axis-that-moved) |
+| 7 | The flood's box test is one compare on the axis that moved | **dropped** — slower, 1.25–1.30 | [Iteration 7](#pass-2-iteration-7--the-floods-box-test-is-one-compare-on-the-axis-that-moved) |
 
 ## Pass 2, iteration 1 — the stage instrument lives in the tree
 
@@ -724,6 +724,22 @@ order the switch assumes is pinned beside the map tests (`FaceOffsetsAreTheOrder
 because a reordering of `Face.Offsets` would pass every map test on a hull whose flood never met an
 edge from the wrong side; and a small closed shell, whose padded box the flood meets on every edge
 in both directions of every axis, maps the same by both paths.
+
+**What it measured, and why it is dropped.** `bench stages --stages rooms`, before against after,
+cores proven different, interleaved, two rounds:
+
+| blocks | rooms, before | after | ratio |
+| ---: | ---: | ---: | ---: |
+| 126,731 | 46.61 ms | 57.11 ms | **1.23** |
+| 505,566 | 245.08 ms | 317.51 ms | **1.30** |
+
+Slower, by a quarter, in all four pairs, on identical work. Six compares against a box in one
+expression are six well-predicted branches the JIT keeps in registers; a six-way `switch` that
+writes an out-parameter on every path is a jump table and a store per face, and the flood makes
+that choice eighty million times a pass. The change is reverted in the same branch (`M5` in the
+other direction: a change that is measurably worse is a defect, whatever it was meant to save), and
+the two pins written for it — the face order and the closed shell — stay, because they were
+statements about the flood that were worth making anyway.
 
 , with its start figures taken by the instrument the pass begins by putting in the tree. |
 | 2026-08-26 | Opened, with the first four iterations of the 2026-08-26 pass: the harness had measured unoptimised code for its whole life, and the ladder's `build` column had been measuring the census generator since `C26`. |
