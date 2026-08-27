@@ -387,6 +387,93 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
+        /// The stages *inside* a settled step, each on its own clock: what a step spends on the
+        /// environment pass, on conduction, on the coupled bodies, on turning watts into
+        /// temperatures and on publishing.
+        ///
+        /// <para>
+        /// Returned as one row per stage, so the caller sees the split rather than a total. The
+        /// work column is the element visits the solver charges that stage, which is the same
+        /// number every repeat or the readings are of different walks.
+        /// </para>
+        /// </summary>
+        public static List<Row> StepPhases(string shape, int blocks, Action<string> log = null)
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.PlaceCensus(LoadShapes.Build(shape, blocks));
+
+            // Built exactly as the `solver` stage builds it, and stepped through the same call, so
+            // the split below adds up to the figure that stage reports rather than to some other
+            // step's (`P6`).
+            ThermalSimulation simulation = builder.BuildSimulation(Hulls.Uncapped(), 293.15f);
+            LoadBenchmarks.SeedSpread(simulation);
+            Census.DriveCensus(simulation);
+
+            EnvironmentState state = EnvironmentSolver.Solve(
+                simulation.Settings, simulation.Planet, Worlds.Flight(1f, 300f));
+            float step = simulation.Settings.StepSeconds;
+
+            if (log != null) log("step phases, " + blocks.ToString("n0") + " blocks");
+
+            for (int i = 0; i < 3; i++) simulation.Solver.Step(step, state);
+
+            // The profile is reset per repeat and the fastest repeat is reported stage by stage, so
+            // a collection landing in one repeat cannot flatter another.
+            Settle();
+            simulation.Solver.ProfileStepPhases = true;
+
+            int repeats = Math.Max(1, Repeats);
+            double[] best = new double[ThermalSolver.StepPhaseProfile.PhaseCount];
+            double[] worst = new double[ThermalSolver.StepPhaseProfile.PhaseCount];
+            long[] visits = new long[ThermalSolver.StepPhaseProfile.PhaseCount];
+            long[] slices = new long[ThermalSolver.StepPhaseProfile.PhaseCount];
+            for (int p = 0; p < best.Length; p++) best[p] = double.MaxValue;
+
+            for (int r = 0; r < repeats; r++)
+            {
+                simulation.Solver.StepPhases.Reset();
+                simulation.Solver.Step(step, state);
+
+                for (int p = 0; p < best.Length; p++)
+                {
+                    double ms = simulation.Solver.StepPhases.MillisecondsOf(p);
+                    if (ms < best[p]) best[p] = ms;
+                    if (ms > worst[p]) worst[p] = ms;
+
+                    long v = simulation.Solver.StepPhases.Visits[p];
+                    if (r > 0 && v != visits[p])
+                    {
+                        throw new InvalidOperationException(
+                            "the " + ThermalSolver.StepPhaseProfile.Names[p] + " stage charged "
+                            + v + " visits this repeat and " + visits[p] + " last, so these are"
+                            + " readings of two different walks");
+                    }
+
+                    visits[p] = v;
+                    slices[p] = simulation.Solver.StepPhases.Slices[p];
+                }
+            }
+
+            simulation.Solver.ProfileStepPhases = false;
+
+            List<Row> rows = new List<Row>();
+            for (int p = 0; p < best.Length; p++)
+            {
+                Row row = new Row();
+                row.Stage = ThermalSolver.StepPhaseProfile.Names[p];
+                row.Blocks = simulation.Solver.Nodes.Count;
+                row.BestMs = best[p];
+                row.WorstMs = worst[p];
+                row.Work = visits[p];
+                row.WorkUnit = "visits";
+                row.Note = slices[p] + " slices";
+                rows.Add(row);
+            }
+
+            return rows;
+        }
+
+        /// <summary>
         /// A settled, driven hull in flight, granted every substep it asks for: what a step costs
         /// once nothing about the grid is changing. Reported per step, over twenty steps a repeat.
         /// </summary>

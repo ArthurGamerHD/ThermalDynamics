@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Opened pass 5 on the stage no pass has moved, and its first iteration says why: **the environment pass is 46 % of a step and conduction is 33 %**, at 2.5 ns a node against 0.9 ns a link. Two earlier passes reverted layout changes aimed at the cheaper half. |
 | 2026-08-27 | Pass 4, iteration 10: the block neighbour walk goes by key arithmetic as well — 0.96 to 0.99, below what the instrument resolves, kept on the sign of eight paired readings out of eight. |
 | 2026-08-27 | **Closed pass 4**: the room pass is **0.36** and allocates a tenth, exposure **0.53**, the mapper's peak memory **0.51**, world load at a million blocks 1.66 → 1.32 s. The two largest wins were downstream of changes made for other reasons. |
 | 2026-08-27 | Pass 4, iteration 8: the rooms are walked a run at a time as well — rooms 0.84, and **the air rebuild 0.43 on identical work**, because a room's cells now arrive contiguous along X and the walk over them is sequential. The tick-budget check caught a latent overshoot in the interior scan on the way. |
@@ -1583,6 +1584,55 @@ room-side exposure refresh (iteration 5, worth 0.74 at the small rung), and now 
 walk, worth *possibly* three per cent. The lever gets smaller each time it is pulled, because what is
 left is bound by the dictionary rather than by the arithmetic — which iteration 5 had already
 measured and said.
+
+## Pass 5, iterations
+
+Pass 4 ended by naming this pass's subject: **the settled step is the biggest thing left and no pass
+has moved it.** It reads about 80 ms at 505,566 blocks in a quiet window, against the room pass's 66
+and the link build's 60, and passes 1, 2 and 3 all left it exactly where they found it — by design in
+pass 1, and on measurement in the other two, both of which tried a layout change on the link stream
+and reverted it.
+
+| # | Subject | Verdict | Where |
+| ---: | --- | --- | --- |
+| 1 | A step is measured by its parts | **kept** — and the answer is not the one three passes assumed | [Iteration 1](#pass-5-iteration-1--a-step-is-measured-by-its-parts) |
+
+## Pass 5, iteration 1 — a step is measured by its parts
+
+**Three passes have tried to make a step faster and none of them knew where its time went.** It has
+been reported as one number throughout — `bench report`'s step milliseconds, `bench stages`'
+`solver` row — and twice that number was used to judge a change aimed at *one part* of it: pass 1's
+iteration 6 and pass 2's iteration 5 both rearranged the link stream, on the assumption that
+conduction is what a step spends its time on, and both were reverted. A stage lab was built in pass
+2 for exactly this reason, one level up; the step never got one.
+
+`bench stepphases` times each stage of a step on its own clock. The stages already exist — a step is
+a state machine over `Begin`, `Environment`, `Conduction`, `Coupled`, `Apply` and `Publish`, because
+it is spread across frames — so the instrument is two timestamps per *slice*, of which there are a
+few hundred in a step, rather than per element, of which there are millions.
+
+**What it says, at 126,731 blocks over 24 substeps:**
+
+| stage | best | share | visits | per visit | what it walks |
+| --- | ---: | ---: | ---: | ---: | --- |
+| **environment** | **7.63 ms** | **46 %** | 3,041,544 | 2.5 ns | radiation, convection, solar, friction and waste heat, per node |
+| conduction | 5.46 ms | 33 % | 5,936,400 | 0.9 ns | one exchange per link |
+| apply | 2.94 ms | 18 % | 3,041,544 | 1.0 ns | watts into temperatures, per node |
+| publish | 0.42 ms | 3 % | 126,731 | 3.3 ns | the step's results onto the node objects |
+| begin | 0.004 ms | — | 380,184 | — | zeroing and planning, per substep |
+| coupled | 0.002 ms | — | 960 | — | loops, room air and heat pumps |
+
+**The environment pass is the largest part of a step, and conduction is not.** It is half again as
+expensive as conduction while walking *half* as many elements — 2.5 ns a node against 0.9 ns a link.
+That is the fact the two reverted layout changes were the wrong side of: both made the link stream
+cheaper to walk, and the link stream is already the cheapest thing per element in the whole step.
+
+**The instrument is off unless asked for, and it does not change what it measures.** The profile
+costs two timestamps a slice and a branch, on a path that runs a few hundred times a step;
+`StepPhaseLabTests` steps the same hull profiled and unprofiled and holds every node's temperature
+equal **to the bit**, and checks that each stage is charged the elements it actually walks — nodes
+for environment and apply, links for conduction, once per substep — because a stage charged
+something else has a nanoseconds-per-unit figure that means nothing.
 
 ---
 
