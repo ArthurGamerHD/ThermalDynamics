@@ -569,7 +569,7 @@ same ordering and the same shape with the surface and link rows inside their own
 | ---: | --- | --- | --- |
 | 1 | The stage instrument lives in the tree | **kept** — `bench stages`, `StageLabTests` | [Iteration 1](#pass-2-iteration-1--the-stage-instrument-lives-in-the-tree) |
 | 2 | A one-cell block's neighbours are six probes | **kept** — links 0.77–0.88 | [Iteration 2](#pass-2-iteration-2--a-one-cell-blocks-neighbours-are-six-probes) |
-| 3 | A one-cell block's exposure is one state and six tests | *measuring* | [Iteration 3](#pass-2-iteration-3--a-one-cell-blocks-exposure-is-one-cell-state-and-six-face-tests) |
+| 3 | A one-cell block's exposure is one state and six tests | **kept** — exposure 0.65 | [Iteration 3](#pass-2-iteration-3--a-one-cell-blocks-exposure-is-one-cell-state-and-six-face-tests) |
 
 ## Pass 2, iteration 1 — the stage instrument lives in the tree
 
@@ -622,6 +622,14 @@ in the same order — is this face sealed from the other side, does the space be
 outside — and hands every larger block to the boundary walk, which stays as a public overload so a test can
 reach it. `ExposureFastPathTests` holds the two to the same count on
 every face of every block of a mapped census hull and of the mixed grid.
+
+**What it was worth.** `bench stages --stages exposure`, before against after, cores proven
+different, interleaved, two rounds, fastest kept:
+
+| blocks | exposure, before | after | ratio |
+| ---: | ---: | ---: | ---: |
+| 126,731 | 17.74 ms | **11.88 ms** | 0.67 |
+| 505,566 | 97.11 ms | **63.43 ms** | 0.65 |
 
 
 
