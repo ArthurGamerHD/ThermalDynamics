@@ -267,10 +267,14 @@ namespace Thermodynamics.Core
         /// </summary>
         public bool IsExternal(Vector3I cell)
         {
-            if (solid.Contains(cell)) return false;
+            // Both sets cover the same box, so the cell's place in it is derived once and read
+            // twice — three subtractions, six compares and two multiplies that exposure was
+            // paying per face, twice. See performance.md, Pass 3, Iteration 5.
+            long index = solid.IndexOf(cell);
+            if (solid.ContainsIndex(index)) return false;
 
             // The common answer, in one bit rather than in a search: a cell in no room is outside.
-            if (!roomCells.Contains(cell)) return true;
+            if (!roomCells.ContainsIndex(index)) return true;
 
             int room = RoomAt(cell);
             if (room < 0) return true;

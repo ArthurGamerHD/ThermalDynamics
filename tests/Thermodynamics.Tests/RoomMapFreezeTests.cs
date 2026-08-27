@@ -114,6 +114,41 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// The two sets `IsExternal` reads cover the same box, so one cell has one index in both.
+        /// Held over the box and outside it, since an index derived for the wrong box would answer
+        /// for a different cell — and outside the box both must refuse rather than wrap.
+        /// </summary>
+        [Fact]
+        public void TheSolidAndRoomSetsIndexACellTheSameWay()
+        {
+            CellBitset solid = new CellBitset();
+            CellBitset roomCells = new CellBitset();
+            Vector3I min = new Vector3I(-9, 4, -2);
+            Vector3I max = min + new Vector3I(11, 7, 5);
+            solid.Reset(min, max);
+            roomCells.Reset(min, max);
+
+            int inside = 0, outside = 0;
+            for (int x = min.X - 2; x < max.X + 2; x++)
+            for (int y = min.Y - 2; y < max.Y + 2; y++)
+            for (int z = min.Z - 2; z < max.Z + 2; z++)
+            {
+                Vector3I cell = new Vector3I(x, y, z);
+                Assert.Equal(solid.IndexOf(cell), roomCells.IndexOf(cell));
+                if (solid.IndexOf(cell) >= 0) inside++; else outside++;
+            }
+
+            Assert.Equal(11 * 7 * 5, inside);
+            Assert.True(outside > 0, "no cell outside the box, so the refusal is untested");
+
+            // And a bit set through one path reads back through the other.
+            Vector3I probe = min + new Vector3I(3, 2, 1);
+            Assert.True(roomCells.Add(probe));
+            Assert.True(roomCells.ContainsIndex(roomCells.IndexOf(probe)));
+            Assert.False(solid.ContainsIndex(solid.IndexOf(probe)));
+        }
+
+        /// <summary>
         /// `IsExternal` answers a cell in no room from a membership bitset rather than from the
         /// search over room keys, so the two must agree everywhere: over every cell of the search
         /// box — room cells, solid cells, open air and the padding — the bitset says *in a room*
