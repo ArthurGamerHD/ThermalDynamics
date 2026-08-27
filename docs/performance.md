@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Pass 5, iteration 3: the grid's own heat gain is summed once a step rather than once a substep — the environment stage **0.68** at 505,566 blocks, bit-identical, with both controls at 1.00. A probe had measured the loop's two accumulators at 35 % of the stage between them. |
 | 2026-08-27 | Pass 5, iteration 2: **iteration 1's split was wrong and is corrected in place** — measured over twenty steps rather than one, conduction is 38 % of a step and the environment read 35 %, with the row fill a twentieth of it. And node reordering, the obvious idea for conduction, is refused before building: 97.8 % of links already span fewer than 1,024 node indices. |
 | 2026-08-27 | Opened pass 5 on the stage no pass has moved, and its first iteration says why: **the environment pass is 46 % of a step and conduction is 33 %**, at 2.5 ns a node against 0.9 ns a link. Two earlier passes reverted layout changes aimed at the cheaper half. |
 | 2026-08-27 | Pass 4, iteration 10: the block neighbour walk goes by key arithmetic as well — 0.96 to 0.99, below what the instrument resolves, kept on the sign of eight paired readings out of eight. |
@@ -1598,6 +1599,7 @@ and reverted it.
 | ---: | --- | --- | --- |
 | 1 | A step is measured by its parts | **kept** — the instrument; its first reading was wrong and iteration 2 says why | [Iteration 1](#pass-5-iteration-1--a-step-is-measured-by-its-parts) |
 | 2 | The split corrected, and the obvious idea refused | **kept** — conduction 38 %, environment 35 %, apply 20 %; and node reordering is not worth doing | [Iteration 2](#pass-5-iteration-2--the-split-corrected-and-the-obvious-idea-refused) |
+| 3 | The grid's own heat gain is summed once a step, not once a substep | **kept** — environment **0.68** at 505k, bit-identical | [Iteration 3](#pass-5-iteration-3--the-grids-own-heat-gain-is-summed-once-a-step) |
 
 ## Pass 5, iteration 1 — a step is measured by its parts
 
@@ -1667,6 +1669,39 @@ nearly every time and there is nothing to recover. `LinkSpanProbe` keeps that as
 a note, because nothing guarantees it: nodes are numbered in the order blocks are added, and a change
 to how a grid is loaded could scatter them, making conduction slower for a reason no timing would
 explain.
+
+## Pass 5, iteration 3 — the grid's own heat gain is summed once a step
+
+The environment loop carried two running float sums: the watts the grid sheds to its surroundings,
+and the watts it puts into itself. **A probe deleted both and measured the stage at 0.65** — so
+between them they were **35 %** of it, which is what a dependency the loop carries from one node to
+the next costs when the body is three nanoseconds long.
+
+One of the two is removable outright. Waste heat, solar gain and friction are read out of
+`nodeSourceRow`, which one substep fills and twenty-three read, so summing it every substep computed
+the same float twenty-four times. It is summed once now, and the sum is over the same values in the
+same order, so the published figure is unchanged **to the bit**.
+
+**The check found the bug the same hour it was written.** The first form primed the accumulator at
+the top of a substep from the stored total — and the plan is resolved *after* that point and can
+invalidate the rows, because the sun moving refreshes the shadow map. A substep primed with a total
+it then re-summed counted it twice, and `HeatGainHoistTests` reported the figure doubled on the
+first step it took. The total is settled at the end of the pass instead, exactly where a substep
+that re-summed would have reached, so what runs after it — the point sources — adds onto the same
+total in the same order.
+
+| stage | before | after | ratio |
+| --- | ---: | ---: | ---: |
+| **environment, 505,566 blocks** | 33.41 ms | **22.76 ms** | **0.68** |
+| environment, per node visit | 2.4 ns | **1.7 ns** | |
+| conduction, 505,566 (control) | 27.05 ms | 27.00 ms | 1.00 |
+| apply, 505,566 (control) | 14.64 ms | 14.59 ms | 1.00 |
+| environment, 126,731 blocks | 6.86 ms | **5.12 ms** | 0.75 |
+
+At half a million blocks the controls read 1.00 and 1.00, which is what says the 0.68 is the change
+and not the window. The other accumulator stays: it is a function of temperature and cannot be
+hoisted, and breaking its dependency with partial sums would change a published figure's last bits
+to buy about four per cent of a step — which is not a trade this project makes for that price.
 
 ---
 
