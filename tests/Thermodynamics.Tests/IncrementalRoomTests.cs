@@ -144,7 +144,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(98, map.ExternalCellCount);
             Assert.Equal(26, map.SolidCellCount);
             Assert.Equal(1, map.RoomCount);
-            Assert.Single(map.Rooms[0]);
+            Assert.Equal(1, map.CellsInRoom(0));
         }
     }
 }

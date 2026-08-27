@@ -202,10 +202,10 @@ namespace Thermodynamics.Tests
             Assert.True(map.RoomCount >= 2, "the rig built " + map.RoomCount + " rooms");
 
             int judged = 0;
-            for (int r = 0; r < map.Rooms.Count; r++)
+            for (int r = 0; r < map.RoomCount; r++)
             {
-                List<Vector3I> cells = map.Rooms[r];
-                Assert.NotEmpty(cells);
+                RoomMap.RoomCells cells = map.CellsOf(r);
+                Assert.NotEqual(0, cells.Count);
 
                 for (int i = 0; i < cells.Count; i++)
                 {
@@ -245,7 +245,7 @@ namespace Thermodynamics.Tests
 
             // A sealed room is not external; the cells above are. Both directions, or the test
             // passes on a map that answers "nothing" to everything.
-            Assert.False(map.IsExternal(map.Rooms[0][0]));
+            Assert.False(map.IsExternal(map.CellsOf(0)[0]));
             Assert.True(map.IsExternal(new Vector3I(4, 0, 0)));
         }
 
@@ -260,9 +260,9 @@ namespace Thermodynamics.Tests
             RoomMap map = simulation.Rooms.Map;
 
             Dictionary<Vector3I, int> byCell = new Dictionary<Vector3I, int>(Vector3I.Comparer);
-            for (int r = 0; r < map.Rooms.Count; r++)
+            for (int r = 0; r < map.RoomCount; r++)
             {
-                List<Vector3I> cells = map.Rooms[r];
+                RoomMap.RoomCells cells = map.CellsOf(r);
                 for (int i = 0; i < cells.Count; i++) byCell[cells[i]] = r;
             }
 

@@ -357,6 +357,11 @@ namespace Thermodynamics.Core
 
             working = new RoomMap();
             working.SetSearchBounds(searchMin, searchMaxExclusive);
+
+            // A rebuild is not a guess: the pass before it found this many room cells, and a hull
+            // that gained or lost a block has very nearly as many. Sizing the store once here is
+            // what removes the doubling copies and the trim copy from every pass after the first.
+            if (published != null) working.HintRoomCells(published.RoomCellCount);
             FrontierClear();
             visited.Reset(searchMin, searchMaxExclusive);
             CollectDoorCells();
@@ -744,7 +749,8 @@ namespace Thermodynamics.Core
             Work.RoomPassesCompleted++;
             working.DropEmptyRooms();
 
-            // Run after the renumbering, so a portal's region indices are the surviving ones.
+            // Run after the empty rooms are dropped, so a portal's region indices are the
+            // surviving ones.
             FindPortals(working);
             working.RefreshVenting();
 

@@ -20,6 +20,9 @@
 
   <ItemGroup>
     <Compile Include="$(CoreSourceRoot)**/*.cs" LinkBase="Core" />
+
+    <!-- Outside Data/Scripts on purpose; see the file's own note. -->
+    <Compile Include="TestVisibility.cs" />
   </ItemGroup>
 
   <ItemGroup>

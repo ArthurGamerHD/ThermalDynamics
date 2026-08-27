@@ -411,9 +411,7 @@ namespace Thermodynamics
             float min = Settings.Instance.RoomOverlayMinKelvin;
             float max = Settings.Instance.RoomOverlayMaxKelvin;
 
-            IList<List<Vector3I>> rooms = map.Rooms;
-
-            for (int room = 0; room < rooms.Count; room++)
+            for (int room = 0; room < map.RoomCount; room++)
             {
                 RoomAirNode air = AirOf(thermals, room);
 
@@ -430,7 +428,7 @@ namespace Thermodynamics
 
                 Color edge = RoomColour(room, map.IsVented(room));
 
-                foreach (Vector3I cell in rooms[room])
+                foreach (Vector3I cell in map.CellsOf(room))
                 {
                     Vector3D centre = thermals.Grid.GridIntegerToWorld(cell);
                     Vector3D delta = centre - eye;

@@ -32,11 +32,31 @@ namespace Thermodynamics.Core
         /// </summary>
         private readonly CellBitset solid = new CellBitset();
         /// <summary>
-        /// The cells of each room, in the order the flood reached them. Lists rather than sets:
-        /// containment goes to the frozen lookup these are the source of, and the flood cannot offer
-        /// a cell twice because every add is behind a visited bitset. See memory.md, 4.
+        /// The cells of every room, in the order the flood reached them, in **one array** with a
+        /// start and a length per room.
+        ///
+        /// <para>
+        /// The flood fills one room to exhaustion before it opens the next — only
+        /// <c>currentRoom</c> is ever added to — so a room's cells are contiguous by construction,
+        /// and <see cref="AddToRoom"/> refuses any other index rather than corrupting a range
+        /// quietly. What that buys over a list per room is not the room objects, of which a hull
+        /// this size has a few hundred: it is that a *rebuild* is handed the last pass's cell count
+        /// (<see cref="HintRoomCells"/>) and so allocates its store once, at the right size, with
+        /// no doubling copies to abandon and no trim copy at the end.
+        /// See performance.md, Pass 4, Iteration 2.
+        /// </para>
+        ///
+        /// An array rather than a set: containment goes to the frozen lookup these cells are the
+        /// source of, and the flood cannot offer a cell twice because every add is behind a visited
+        /// bitset. See memory.md, 4.
         /// </summary>
-        private readonly List<List<Vector3I>> rooms = new List<List<Vector3I>>();
+        private Vector3I[] roomCellStore = EmptyCells;
+        private int[] roomStarts = EmptyRanges;
+        private int[] roomLengths = EmptyRanges;
+        private int roomCount;
+
+        private static readonly Vector3I[] EmptyCells = new Vector3I[0];
+        private static readonly int[] EmptyRanges = new int[0];
         /// <summary>
         /// Cells across every room, counted rather than held.
         ///
@@ -83,8 +103,11 @@ namespace Thermodynamics.Core
         /// </para>
         ///
         /// <para>
-        /// The dictionary is still what a *running* pass writes into, because a flood adds cells
-        /// one at a time and a sorted array cannot. It is dropped when the pass completes.
+        /// They are built at the freeze rather than as the flood goes, because a flood adds cells
+        /// one at a time and a sorted array cannot — and because nothing outside the pass may ask a
+        /// map that is still being written. The room cells the freeze reads are the same cells the
+        /// solver reads afterwards, so this is a sort of what is already held, not a second copy of
+        /// it kept in step.
         /// </para>
         /// </summary>
         private long[] frozenKeys;
@@ -114,7 +137,7 @@ namespace Thermodynamics.Core
 
         public int RoomCount
         {
-            get { return rooms.Count; }
+            get { return roomCount; }
         }
 
         public int ExternalCellCount
@@ -125,6 +148,18 @@ namespace Thermodynamics.Core
         public int SolidCellCount
         {
             get { return solid.Count; }
+        }
+
+        /// <summary>
+        /// Cells the room store has room for. Equal to <see cref="RoomCellCount"/> after a
+        /// completed pass, which is the property that says the store is carrying no doubling slack
+        /// into the life of the grid; larger than it only while a pass is running. Reported by the
+        /// memory benchmark beside the cells themselves, because slack is the difference between
+        /// what the row measures and what the map needs.
+        /// </summary>
+        public int RoomCellCapacity
+        {
+            get { return roomCellStore.Length; }
         }
 
         /// <summary>Cells belonging to some enclosed room, across every room.</summary>
@@ -143,10 +178,82 @@ namespace Thermodynamics.Core
             get { return externalCount == 0 && solid.Count == 0 && RoomCellCount == 0; }
         }
 
-        /// <summary>The cells of each room. Read in order; never searched.</summary>
-        public IList<List<Vector3I>> Rooms
+        /// <summary>
+        /// One room's cells, as a window onto the shared store. Read in order; never searched. The
+        /// window is a struct and enumerates through a struct, so walking a room allocates nothing —
+        /// which matters because the solver walks every room's cells on every air rebuild.
+        /// </summary>
+        public RoomCells CellsOf(int roomIndex)
         {
-            get { return rooms; }
+            if (roomIndex < 0 || roomIndex >= roomCount) return new RoomCells(EmptyCells, 0, 0);
+            return new RoomCells(roomCellStore, roomStarts[roomIndex], roomLengths[roomIndex]);
+        }
+
+        /// <summary>Cells in one room, without building the window.</summary>
+        public int CellsInRoom(int roomIndex)
+        {
+            if (roomIndex < 0 || roomIndex >= roomCount) return 0;
+            return roomLengths[roomIndex];
+        }
+
+        /// <summary>
+        /// A room's cells: the shared array, and the half-open range within it that is this room's.
+        /// </summary>
+        public struct RoomCells
+        {
+            private readonly Vector3I[] store;
+            private readonly int start;
+            private readonly int count;
+
+            internal RoomCells(Vector3I[] store, int start, int count)
+            {
+                this.store = store;
+                this.start = start;
+                this.count = count;
+            }
+
+            public int Count
+            {
+                get { return count; }
+            }
+
+            public Vector3I this[int index]
+            {
+                get { return store[start + index]; }
+            }
+
+            public Enumerator GetEnumerator()
+            {
+                return new Enumerator(store, start, count);
+            }
+
+            /// <summary>A struct enumerator, so <c>foreach</c> over a room boxes nothing.</summary>
+            public struct Enumerator
+            {
+                private readonly Vector3I[] store;
+                private readonly int start;
+                private readonly int count;
+                private int at;
+
+                internal Enumerator(Vector3I[] store, int start, int count)
+                {
+                    this.store = store;
+                    this.start = start;
+                    this.count = count;
+                    at = -1;
+                }
+
+                public Vector3I Current
+                {
+                    get { return store[start + at]; }
+                }
+
+                public bool MoveNext()
+                {
+                    at++;
+                    return at < count;
+                }
+            }
         }
 
         /// <summary>
@@ -183,7 +290,7 @@ namespace Thermodynamics.Core
             get
             {
                 int count = 0;
-                for (int i = 0; i < rooms.Count; i++)
+                for (int i = 0; i < roomCount; i++)
                 {
                     if (!IsVented(i)) count++;
                 }
@@ -239,8 +346,8 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
-        /// Replaces the dictionary with the sorted arrays that answer the same question. Called
-        /// once, when a pass completes and the map stops being written to.
+        /// Builds the sorted arrays that answer <see cref="RoomAt"/>, from the rooms themselves.
+        /// Called once, when a pass completes and the map stops being written to.
         /// </summary>
         private void Freeze()
         {
@@ -251,12 +358,13 @@ namespace Thermodynamics.Core
             // From the rooms themselves, which hold every cell with its room already known — and
             // after any empty room has been dropped, so the numbering here is the surviving one.
             int at = 0;
-            for (int r = 0; r < rooms.Count; r++)
+            for (int r = 0; r < roomCount; r++)
             {
-                List<Vector3I> cells = rooms[r];
-                for (int i = 0; i < cells.Count && at < frozenCount; i++)
+                int start = roomStarts[r];
+                int end = start + roomLengths[r];
+                for (int i = start; i < end && at < frozenCount; i++)
                 {
-                    frozenKeys[at] = GridMath.Key(cells[i]);
+                    frozenKeys[at] = GridMath.Key(roomCellStore[i]);
                     frozenRooms[at] = r;
                     at++;
                 }
@@ -350,19 +458,63 @@ namespace Thermodynamics.Core
 
         internal int BeginRoom()
         {
-            rooms.Add(new List<Vector3I>());
-            return rooms.Count - 1;
+            if (roomCount == roomStarts.Length)
+            {
+                int size = roomStarts.Length == 0 ? 16 : roomStarts.Length * 2;
+                int[] starts = new int[size];
+                int[] lengths = new int[size];
+                Array.Copy(roomStarts, starts, roomCount);
+                Array.Copy(roomLengths, lengths, roomCount);
+                roomStarts = starts;
+                roomLengths = lengths;
+            }
+
+            roomStarts[roomCount] = roomCellCount;
+            roomLengths[roomCount] = 0;
+            roomCount++;
+            return roomCount - 1;
+        }
+
+        /// <summary>
+        /// Sizes the cell store for a pass expected to find about this many room cells. A rebuild
+        /// knows that number: the pass before it found one. Called before the first cell, or
+        /// ignored — a store with cells in it is not resized under them.
+        /// </summary>
+        internal void HintRoomCells(int expected)
+        {
+            if (roomCellCount != 0 || expected <= roomCellStore.Length) return;
+            roomCellStore = new Vector3I[expected];
         }
 
         internal void AddToRoom(int roomIndex, Vector3I cell)
         {
-            // A pass that resumed after a freeze would be writing into a dictionary nothing reads.
-            // It cannot happen — a map is filled once — and saying so is cheaper than finding out.
+            // A pass that resumed after a freeze would be answering queries from arrays that no
+            // longer match its cells. It cannot happen — a map is filled once — and dropping them
+            // is cheaper than finding out.
             frozenKeys = null;
             frozenRooms = null;
             frozenCount = 0;
 
-            rooms[roomIndex].Add(cell);
+            // Contiguity is the whole design: a room owns a range, so only the room the flood is
+            // currently filling can grow. Refusing here is how that stays true, because the failure
+            // it prevents is silent — a cell filed under the wrong room's range.
+            if (roomIndex != roomCount - 1)
+            {
+                throw new InvalidOperationException(
+                    "a room map is filled one room at a time; room " + roomIndex +
+                    " cannot grow while room " + (roomCount - 1) + " is open");
+            }
+
+            if (roomCellCount == roomCellStore.Length)
+            {
+                int size = roomCellStore.Length == 0 ? 1024 : roomCellStore.Length * 2;
+                Vector3I[] grown = new Vector3I[size];
+                Array.Copy(roomCellStore, grown, roomCellCount);
+                roomCellStore = grown;
+            }
+
+            roomCellStore[roomCellCount] = cell;
+            roomLengths[roomIndex]++;
             roomCells.Add(cell);
             roomCellCount++;
         }
@@ -455,7 +607,7 @@ namespace Thermodynamics.Core
         {
             changedRooms.Clear();
 
-            int count = rooms.Count;
+            int count = roomCount;
             if (vented.Length != count) vented = new bool[count];
 
             // One slot per room, plus a final slot representing open air.
@@ -522,23 +674,30 @@ namespace Thermodynamics.Core
 
         /// <summary>
         /// Called once when a pass completes: drops the rooms the flood opened and never filled, then
-        /// hands back the doubling slack in the rest, which on a large hull is tens of megabytes.
-        /// <c>Capacity</c> rather than <c>TrimExcess</c>, which declines below ninety per cent full
-        /// and so leaves the common case — a room that stopped just past a doubling — carrying it.
+        /// hands back whatever doubling slack the cell store is carrying, which on a large hull is
+        /// tens of megabytes. A pass that was hinted correctly has none and skips the copy.
         /// </summary>
         internal void DropEmptyRooms()
         {
-            for (int i = rooms.Count - 1; i >= 0; i--)
+            // Ranges compact; cells do not move. An empty room owns no cells, so removing its range
+            // leaves every surviving room's start and length exactly as they were, and nothing needs
+            // renumbering: the freeze below reads the surviving ranges in order.
+            int kept = 0;
+            for (int i = 0; i < roomCount; i++)
             {
-                if (rooms[i].Count != 0)
-                {
-                    rooms[i].Capacity = rooms[i].Count;
-                    continue;
-                }
+                if (roomLengths[i] == 0) continue;
 
-                // Nothing to renumber: the freeze below reads the surviving list, so a dropped
-                // room takes its own index out of the numbering by being gone.
-                rooms.RemoveAt(i);
+                roomStarts[kept] = roomStarts[i];
+                roomLengths[kept] = roomLengths[i];
+                kept++;
+            }
+            roomCount = kept;
+
+            if (roomCellStore.Length > roomCellCount)
+            {
+                Vector3I[] exact = new Vector3I[roomCellCount];
+                Array.Copy(roomCellStore, exact, roomCellCount);
+                roomCellStore = exact;
             }
 
             // The map is written once and read for the life of the grid, so this is where its

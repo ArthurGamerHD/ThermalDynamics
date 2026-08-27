@@ -1347,9 +1347,9 @@ namespace Thermodynamics.Core
             for (int r = 0; r < roomIndices.Count; r++)
             {
                 int index = roomIndices[r];
-                if (index < 0 || index >= rooms.Rooms.Count) continue;
+                if (index < 0 || index >= rooms.RoomCount) continue;
 
-                foreach (Vector3I cell in rooms.Rooms[index])
+                foreach (Vector3I cell in rooms.CellsOf(index))
                 {
                     for (int face = 0; face < Face.Count; face++)
                     {
@@ -1399,7 +1399,7 @@ namespace Thermodynamics.Core
         public void RebuildRoomAir(RoomMap rooms)
         {
             Work.RoomAirRebuilds++;
-            if (rooms != null) Work.RoomAirRoomVisits += rooms.Rooms.Count;
+            if (rooms != null) Work.RoomAirRoomVisits += rooms.RoomCount;
 
             rememberedAir.Clear();
             for (int i = 0; i < roomAir.Count; i++)
@@ -1413,11 +1413,11 @@ namespace Thermodynamics.Core
             {
                 float cellVolume = grid.GridSize * grid.GridSize * grid.GridSize;
 
-                for (int r = 0; r < rooms.Rooms.Count; r++)
+                for (int r = 0; r < rooms.RoomCount; r++)
                 {
                     if (rooms.IsVented(r)) continue;
 
-                    List<Vector3I> cells = rooms.Rooms[r];
+                    RoomMap.RoomCells cells = rooms.CellsOf(r);
                     if (cells.Count == 0) continue;
 
                     RoomAirNode air = new RoomAirNode();
@@ -1460,11 +1460,11 @@ namespace Thermodynamics.Core
         {
             air.Links.Clear();
             if (!air.HasAir) return;
-            if (air.RoomIndex < 0 || air.RoomIndex >= rooms.Rooms.Count) return;
+            if (air.RoomIndex < 0 || air.RoomIndex >= rooms.RoomCount) return;
 
             roomContactScratch.Clear();
 
-            foreach (Vector3I cell in rooms.Rooms[air.RoomIndex])
+            foreach (Vector3I cell in rooms.CellsOf(air.RoomIndex))
             {
                 for (int face = 0; face < Face.Count; face++)
                 {
@@ -1534,7 +1534,7 @@ namespace Thermodynamics.Core
             return restored;
         }
 
-        private static Vector3I LowestCell(List<Vector3I> cells)
+        private static Vector3I LowestCell(RoomMap.RoomCells cells)
         {
             bool first = true;
             Vector3I lowest = Vector3I.Zero;

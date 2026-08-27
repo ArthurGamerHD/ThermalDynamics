@@ -82,10 +82,10 @@ namespace Thermodynamics.Harness
         {
             Built built = Hull(shape, size, settings);
 
-            IList<List<Vector3I>> rooms = built.Simulation.Rooms.Map.Rooms;
-            for (int r = 0; r < rooms.Count; r++)
+            RoomMap rooms = built.Simulation.Rooms.Map;
+            for (int r = 0; r < rooms.RoomCount; r++)
             {
-                foreach (Vector3I cell in rooms[r])
+                foreach (Vector3I cell in rooms.CellsOf(r))
                 {
                     if (built.Simulation.SetRoomPressure(cell, 1f)) built.RoomsWithAir++;
                     break;
