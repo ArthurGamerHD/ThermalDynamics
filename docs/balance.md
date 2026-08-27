@@ -600,18 +600,24 @@ A 500 kW block with one sink face, rings of rising size:
 
 | Pipes | Coupling | Settles |
 | --- | --- | --- |
-| 8 | 56,250 W/K | 727.1 K |
-| 12 | 81,250 W/K | 673.0 K |
-| 20 | 131,250 W/K | 622.1 K |
-| 28 | 181,250 W/K | 588.3 K |
+| 8 | 56,250 W/K | 722.7 K |
+| 12 | 81,250 W/K | 667.0 K |
+| 20 | 131,250 W/K | 613.3 K |
+| 28 | 181,250 W/K | 577.5 K |
 
-Each pipe adds 6,250 W/K of its own and the fluid mass does not grow, so **a longer ring is strictly
-better**. Pinned by `LongerRingsDeliverColderBlocks` and
-`LongerRingsCoupleHarderAndCarryTheSameFluid`.
+Each pipe adds 6,250 W/K of its own **and its own charge of fluid**, so a longer ring is a harder
+coupling and a bigger buffer at once and **is strictly better**. Pinned by
+`LongerRingsDeliverColderBlocks`.
 
-> **Re-measured at `C42`**, which multiplied the pumped coefficient by 6.25 and took the whole table
-> with it: the same rings were 9,000 to 29,000 W/K settling at 857.2 K down to 740.9 K. The shape is
-> unchanged and it is the shape the claim rests on.
+> **Re-measured twice.** `C42` multiplied the pumped coefficient by 6.25 and took the whole table
+> with it: the same rings were 9,000 to 29,000 W/K settling at 857.2 K down to 740.9 K. `C43` then
+> gave a large-grid pipe 10.31× the coolant, which **left the coupling column identical** — mass is
+> not in a conductance — and moved the settled column by 4.4 K at eight pipes and 10.8 K at
+> twenty-eight, from 727.1/673.0/622.1/588.3. The shape is unchanged through both, and it is the
+> shape the claim rests on.
+>
+> The sentence above used to read *the fluid mass does not grow*, which was true when the charge was
+> per loop and has not been since it became per pipe. Nothing about the conclusion depended on it.
 
 ### What the real-unit conversion moved
 
@@ -2249,6 +2255,7 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | *Coolant rings* re-measured after `C43`: the coupling column is **identical**, because mass is not in a conductance, and the settled column moved 4.4 K to 10.8 K. Corrected the sentence under it, which said the fluid mass does not grow with the ring — true when the charge was per loop, false since it became per pipe — and dropped a citation to `LongerRingsCoupleHarderAndCarryTheSameFluid`, a test that no longer exists. |
 | 2026-08-26 | Noted on *What it did: the exploit was priced out by a fix aimed at something else* that every figure in it is at the flat 50 kg a pipe carried when it was measured, and that `C43` multiplied that by **10.31**: the grind is 243,490 W rather than 23,611 W, 8.15 % of the largest reactor rather than 0.79 %. **Left as measured** (`E10`) — the section is a record of registered predictions against outcomes, and the conclusion does not depend on the size, because `B44`'s vent takes the whole ring and a refill at the break-even excess is neutral at any charge. |
 | 2026-08-26 | **The coolant density is applied** (`C43`). `CoolantKilogramsPerCubicMetre` is 33 kg/m³ — 515.6 kg a pipe on a large grid, 4.1 kg on a small one — and `CoolantMassPerPipe` stays as a flat-mass override defaulting to zero, so nothing that states a per-pipe mass is reinterpreted (`P15`). It moves a settled ring's mean by 6.9 K and 0.8 K, costs no substeps, and rights the swing between the sink face and the far side of the loop. `LoopCandidate` becomes `LoopBefore`: all three of its dials have shipped, and a candidate identical to the default is a lab arm that reports its own package as worthless. |
 | 2026-08-26 | **The correction that blocked `C43` was measured on a rig with no sink.** *The coolant mass is doing an undeclared job* published four temperatures off a ring with a 125 kW source and the environment disabled — nothing settled, every arm climbed linearly, and at step 25,600 the same arms read 26,836 K and 5,908 K rather than the 715.5 K and 387.0 K printed at step 400. It measured a ratio of heat capacities and looked like a temperature. Re-taken with the ring radiating, the density correction moves the **mean** 6.9 K on a large grid and 0.8 K on a small one and the **swing** 100.2 K → 10.0 K and 7.7 K → 94.6 K: coolant mass buffers a ring, it does not decide where the ring runs. `LoopCoolantMassTests` now asserts the rig settles before reading anything off it. |

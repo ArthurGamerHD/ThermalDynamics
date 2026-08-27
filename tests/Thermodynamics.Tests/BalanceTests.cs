@@ -464,9 +464,11 @@ namespace Thermodynamics.Tests
         /// <summary>
         /// A longer ring couples harder, and the block it cools ends up colder for it.
         ///
-        /// Restates <c>LongerRingsCoupleHarderAndCarryTheSameFluid</c> in the balance suite's terms
-        /// — as the delivered temperature rather than the coupling — because that is the figure the
-        /// build advice in blocks.md is written from.
+        /// **The only thing that asserts this**, and blocks.md's build advice is written from it.
+        /// It used to say it restated `LongerRingsCoupleHarderAndCarryTheSameFluid`, which stopped
+        /// existing at some point and took its half of the claim with it — the coupling column is
+        /// checked here, as the ordering, and nowhere else. The name also carried a claim that is
+        /// no longer true: the charge is per *pipe*, so a longer ring does not carry the same fluid.
         /// </summary>
         [Fact]
         public void LongerRingsDeliverColderBlocks()

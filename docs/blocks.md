@@ -84,14 +84,17 @@ Practical build advice:
 
 * Run the loop *through* your heat sources with sink faces against reactors, thrusters and
   batteries, then out to radiators or a cold hull section.
-* **Loop length does increase total transfer, and the fluid mass does not grow with it.** Each pipe
-  in the ring gets its own full-strength link to the fluid, so a 32-pipe ring couples at 32,000 W/K
-  against an 8-pipe ring's 8,000 W/K, while both carry the same 500 kg of coolant. A longer ring
-  therefore cools strictly better: measured with a single sink face on the same hot block, an
-  8-pipe ring took a 500 kW block to 752.6 K and a 28-pipe ring to 627.4 K, because the fixed fluid
-  mass is buffered by more pipe metal and so stays colder at the sink. Nothing divides by segment
-  count.
-  Pinned by `LongerRingsCoupleHarderAndCarryTheSameFluid`.
+* **Loop length increases both the transfer and the fluid**, and a longer ring cools strictly
+  better. Each pipe gets its own full-strength link to the fluid, so coupling grows with the ring —
+  measured with a single sink face on the same 500 kW block, 56,250 W/K at 8 pipes and 181,250 W/K
+  at 28, taking that block from **722.7 K to 577.5 K**. Nothing divides by segment count.
+  Pinned by `LongerRingsDeliverColderBlocks`.
+
+  > **This advice used to say the fluid mass does *not* grow with the ring, and that both a 32-pipe
+  > and an 8-pipe ring carry the same 500 kg.** That was true when the charge was per *loop*; it is
+  > per *pipe* now, so a longer ring is a bigger buffer as well as a harder coupling — which is why
+  > the reason given here is the coupling and not the mass. The coupling figures moved too, by the
+  > 6.25× `C42` put on the pickup coefficient.
 * A loop's temperature is saved and restored by member hash, so reloading cannot swap two loops'
   heat and rebuilding a ring does not reset it.
 * **Spread your sources around the ring; do not bother splitting it.** Four sources bunched into one
@@ -374,6 +377,7 @@ all, so it is the readout that works in any world.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | **The build advice on ring length was written against a model that has changed twice**, and every number in it was wrong. It said the fluid mass does not grow with the ring and that a 32-pipe and an 8-pipe ring carry the same 500 kg — true when the charge was per loop and false since it became per pipe — and it quoted 32,000 W/K against 8,000, which predates `C42`'s 6.25× on the pickup. It also cited `LongerRingsCoupleHarderAndCarryTheSameFluid`, a test that no longer exists. Re-measured: 56,250 W/K at 8 pipes and 181,250 at 28, taking a 500 kW block from **722.7 K to 577.5 K**, and the reason is the coupling rather than the mass. Pinned by `LongerRingsDeliverColderBlocks`, which is what actually asserts it. |
 | 2026-08-24 | **Re-quoted every measured figure on this page at `C24`'s pair**, which moved the ones a bolt joint is in. A radiator bolted to a source is worth 228.6 K where it was 42.9 K and 26× armour per tonne where it was 48×, because solid conduction runs four times faster: the stack now keeps paying to the eighth panel instead of saturating at the second. *Plumb it, do not bolt it* holds on **reach** rather than on rate — plumbing a panel is worth 73.5 K over bolting it, while the joint itself now carries 1,168 W/K against a sink face's 1,000 ([backlog.md](backlog.md) `C25`). Ring, layout and air-conditioning figures re-read from their own scenarios. |
 | 2026-08-23 | Re-quoted the `loop-layout` and `air-conditioning` figures after `C4`: the scenario catalogue's blocks derive from the ones they stand in for now, and the rigs state their load in watts of heat rather than in a reactor's output. Bunched-against-spread is 140 C against 91 C, four rings 93 C; the cabin settles at −60 C with the pump off and −106 C with it on. |
 | 2026-08-22 | Said that a coolant pump draws power — 50 kW large, 10 kW small, all of it becoming heat ([backlog.md](backlog.md) `C13`). It drew nothing until now. |
