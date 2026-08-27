@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **Closed pass 4**: the room pass is **0.36** and allocates a tenth, exposure **0.53**, the mapper's peak memory **0.51**, world load at a million blocks 1.66 → 1.32 s. The two largest wins were downstream of changes made for other reasons. |
 | 2026-08-27 | Pass 4, iteration 8: the rooms are walked a run at a time as well — rooms 0.84, and **the air rebuild 0.43 on identical work**, because a room's cells now arrive contiguous along X and the walk over them is sequential. The tick-budget check caught a latent overshoot in the interior scan on the way. |
 | 2026-08-27 | Pass 4, iteration 7: **the span flood is built** — the external air is walked a run at a time, 84 cells to a run, and the room pass is **0.59** at 505,566 blocks and 0.54 at 126,731. The budget check caught the first form overshooting a tick. |
 | 2026-08-27 | Pass 4, iteration 6: 92 % of the air rebuild's face probes find nothing, so a bit over the grid's padded box answers first — roomair 0.89 at 505,566 blocks. Counted before it was changed, in a separate commit. |
@@ -1119,6 +1120,7 @@ table carries an allocation column for that reason.
 | 6 | A bit in front of the probe, for the nine faces in ten that hold nothing | **kept** — roomair 0.89 at 505k, 0.92 at 126k | [Iteration 6](#pass-4-iteration-6--a-bit-in-front-of-the-probe) |
 | 7 | The external air is walked a run at a time | **kept** — rooms **0.59** at 505k, **0.54** at 126k | [Iteration 7](#pass-4-iteration-7--the-external-air-is-walked-a-run-at-a-time) |
 | 8 | The rooms are walked a run at a time too | **kept** — rooms 0.84, and **roomair 0.43** on identical work | [Iteration 8](#pass-4-iteration-8--the-rooms-are-walked-a-run-at-a-time-too) |
+| 9 | What the pass moved, measured against its own start | the summary below | [Iteration 9](#pass-4--what-the-pass-moved) |
 
 ## Pass 4, iteration 1 — the room map's cell-to-room dictionary is gone
 
@@ -1486,6 +1488,68 @@ word it had looked at, so **a tick could overshoot its budget by however far the
 to reach** — nothing had made it do so, and this change did. It is capped to the words the tick can
 still afford, and the cursor resumes next tick. `RoomMappingNeverExceedsItsBudgetInOneTick` found
 both, four cells over and then one cell over; a check that fails by one is a check worth having.
+
+## Pass 4 — what the pass moved
+
+Start (`7d9838d`) against tip, both built the same way, interleaved in one window, two rounds at
+505,566 blocks, fastest kept. **The settled step is the control** — nothing in this pass touches the
+substep loop — and it reads 79.9 ms against 81.1, which is what says the rest of the column can be
+read.
+
+| stage, 505,566 blocks | start | tip | ratio |
+| --- | ---: | ---: | ---: |
+| **rooms** | 181.80 ms | **66.23 ms** | **0.36** |
+| **exposure** | 40.92 ms | **21.54 ms** | **0.53** |
+| rooms, allocated per execution | 258,882 KB | **25,671 KB** | **0.10** |
+| rooms, per cell visited | 25.2 ns | **9.1 ns** | 0.36 |
+| a settled step (control) | 81.08 ms | 79.88 ms | 0.99 |
+| register (control) | 15.48 ms | 15.50 ms | 1.00 |
+| place | 40.29 ms | 42.83 ms | 1.06 — *see below* |
+| links | 78.19 ms | 82.50 ms | 1.06 — *see below* |
+| surfaces | 22.33 ms | 25.13 ms | 1.13 — *see below* |
+| **Memory, 126,731 blocks** | | | |
+| `RoomMap` retained | 70 B/block | **53 B/block** | 0.76 |
+| **`RoomMapper` peak** | 297 B/block | **152 B/block** | **0.51** |
+| retained, whole simulation | 739 B/block | **722 B/block** | 0.98 |
+| peak, whole simulation | 967 B/block | **821 B/block** | 0.85 |
+| **World load, 1,000,294 blocks** | | | |
+| built in | 1,657 ms | **1,319 ms** | 0.80 |
+| of which `RebuildAll` | 1,326 ms | **983 ms** | 0.74 |
+
+**Three stages read worse and none of them moved.** Place, links and surfaces are untouched by this
+pass, and they read 1.06, 1.06 and 1.13. The same leg's two rounds disagree by more: the *start*
+tree read place at 40.3 and 46.0 ms, and surfaces at 22.3 and 29.7 — 14 % and 33 % apart on
+identical code, against spreads of 176 % and 421 % within a stage's own fifteen repeats. A
+difference the same leg produces against itself is not a difference between legs. This is the rule
+pass 3 had to apply to a claim of its own (`M5`), and it applies to a flattering column exactly as
+it does to an unflattering one.
+
+**The room pass is a third of what it was and allocates a tenth.** In order: a cell-to-room
+dictionary that nothing read while a pass ran; per-room lists that became ranges into one store,
+sized from the pass before it; sorted key and room arrays, and the sort itself, replaced by a rank
+over a set the pass already fills; and then the flood itself, walked a run at a time — 84 cells to a
+run in the open air around the hull — for the external air and then for the rooms.
+
+**And the two things that were not the point are the ones worth remembering.**
+
+*Exposure halved without being touched.* Iteration 3 replaced a binary search through twelve
+megabytes of cell keys with a rank lookup, and exposure — the biggest reader of that lookup — went
+from 40.9 ms to 21.5. The change was made to remove a sort from the publish tick; more than half its
+value turned up in a different stage.
+
+*The air rebuild halved for the same kind of reason, twice removed.* It was 0.43 in iteration 8 on
+**identical work counters and unchanged code**, because a room's cells now arrive contiguous along X
+and the walk over them is sequential rather than shell-shaped. Which was only possible because
+iteration 4 made a room's air a function of its contents rather than of the path through it — a
+change that measured as a cost of at most a few per cent and was kept for the property alone.
+**The two largest wins in this pass were downstream of changes made for other reasons**, and neither
+would have been visible without an instrument per stage.
+
+*The frontier hypothesis from iteration 7 is settled, and it was right.* That section guessed that
+exposure moved because the run walk stops driving the mapper's retained ring buffer to millions of
+entries. The peak memory row says so: **`RoomMapper` peak is 297 → 152 bytes a block**, and the
+whole simulation's peak 967 → 821. A pass that walks the same map with a hundred and fifty
+megabytes less behind it at half a million blocks is a faster pass.
 
 ---
 
