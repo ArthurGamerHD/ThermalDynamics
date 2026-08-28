@@ -156,12 +156,21 @@ fourth and the fifth. One format, two readers, and they had drifted (`D3`).
 `provenance.py` now prints `SPANS n VERSIONS of <file>` above its figures, and
 `spans_several_definitions` is the lookup. It says the dataset is mixed; it does not say whether
 that reaches the figures, because that depends on which blocks moved and whether the population
-carries them. For that survey it does not, and the reason is structural rather than lucky: the only
-`Cubes.xml` change in the window is the emissivity of `Gauge_SG_Radiator` and `Gauge_LG_Radiator`,
-and **no ship in the corpus carries a radiator, a coolant pipe, a pump or a heat pump** — 207
-distinct block types across the whole census and not one of the mod's own. `Loops.xml` describes
-coolant, which is the same argument. Both halves of the dataset are comparable, and now a reader can
-see the question rather than having to think of it.
+carries them. For that survey it does not: the only `Cubes.xml` change in the window is the
+emissivity of `Gauge_SG_Radiator` and `Gauge_LG_Radiator`, and **no ship in the corpus carries a
+radiator, a coolant pipe, a pump or a heat pump**. `Loops.xml` describes coolant, which is the same
+argument. Both halves of the dataset are comparable, and now a reader can see the question rather
+than having to think of it.
+
+That last claim is a measurement, not an argument from what a workshop blueprint ought to contain —
+`Ship.IsVanilla` means every block named a definition, and the mod's blocks *are* definitions, so it
+would not have caught one. It is 207 distinct types across the whole census and none of them one
+this mod adds:
+
+```bash
+cut -d, -f4 out/census-2026-08-25/composition.csv | tr -d '"' | sort -u \
+    | grep -icE 'radiator|coolant|heatpump'      # 0, of 207 distinct types
+```
 
 It exists because the alternative was paid for once. The 2026-08-24 air walk finished **one minute
 after** a commit that took twenty-seven `ConsumerWasteEnergy` fractions from 0.9 to 1.0, and
