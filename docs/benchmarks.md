@@ -1031,6 +1031,7 @@ report can be recovered for any row here by reading that file at the row's commi
 | 15 | 2026-08-27 | *(the fifth performance pass, tip)* | 2,044 | **1 m 14 s** | +10: `StepPhaseLabTests` and `LinkSpanProbe` for the new step instruments, `HeatGainHoistTests` for the hoisted sum, and the occupancy-filtered walk, twice-built room air and lowest-critical bound pins added to `GridModelAdjacencyTests`, `RoomAirCanonicalTests` and `OverheatEventTests`. `BranchlessEnvironmentTests` came and went with the change it checked. **A solver row below**, for the first time since row 11: this pass moved the step. |
 | 16 | 2026-08-27 | *(the sixth and seventh performance passes, tip)* | 2,047 | **1 m 23 s** | +3, all of them `CanonicalLinkOrderTests`. **Two passes and one change kept**, which is the row's point: the sixth measured five rewrites of the link build's neighbour lookup and the seventh measured the sixth's designed fix, and every one was reverted ([performance.md](performance.md#pass-7--what-sixteen-iterations-on-one-stage-establish)). The tests each of those needed were reverted with them. No solver row: neither pass touched a step. |
 | 17 | 2026-08-27 | *(the eighth performance pass, tip)* | 2,048 | **1 m 26 s** | +1: `EveryStageStopsForAReasonItCanName`, which replaced a check that failed and passed on consecutive runs of unchanged code. `LinkWalkTests` came back with pass 6's halving, to be re-measured on the corrected instrument, and went again with it. **This pass changed the instrument, not the solver**: `bench stages` kept the fastest of a fixed fifteen for six passes and had never converged — three runs of one binary spread 48 %, 28 % and 67 % on the surface, room and link stages, against 3.5 % for the solver, which was quietly taking twenty times the samples. It repeats until its best is reproduced now. What that does to the figures already on this page is audited in [performance.md](performance.md#pass-8-iteration-7--which-published-figures-survive). |
+| 18 | 2026-08-28 | *(the ninth performance pass, tip)* | 2,082 | **1 m 14 s** | +34. Six of the ten iterations were about the instrument rather than the model, and the suites say so: `ProjectFileTests` (the mod project had not built for three commits and nothing said so), `UncalledCodeTests` (`D2`'s own stated gap, two dead helpers found), `ExposureSkipTests`, and additions to `SampleStatisticTests`, `StageLabTests`, `PerformanceReportTests`, `FacePackingTests` and `BlockInstanceOneCellTests`. **The two changes to the shipped model are both on the load path**: the exposure stage's six per-face writes became one and one-cell blocks stopped allocating a surface array each. No step figure moved and none was meant to. |
 | 14 | 2026-08-27 | *(the fourth performance pass, tip)* | 2,034 | **1 m 14 s** | **+18 since row 13, across the third and fourth performance passes** — the third took no row of its own, which is why this one spans two. The fourth's own suites are `RoomAirCanonicalTests`, `RoomSpanFloodTests` and `GridOccupancyTests`, the rank pins in `CellBitsetTests`, and the store, hint and contiguity pins in `RoomCellStorageTests`; against them, five radix-sort cases went when the sort did. No solver row: this pass moved no step figure, by design, and its figures live in the stage instrument ([performance.md](performance.md#pass-4--what-the-pass-moved)). |
 
 ### The solver
@@ -1051,8 +1052,18 @@ flight unless the row says otherwise.
 | 11 | *(the profiles pass)* | 105.9 ms | 0.123 ms | 2.134 ms | 6.719 ms | 6.583 ms | 3.093 ms | 2.09 |
 | 12 | *(the performance pass)* | 83.1 ms | 0.131 ms | 1.143 ms | 5.373 ms | 5.301 ms | 3.010 ms | — |
 | 15 | *(the fifth performance pass)* | 59.8 ms | 0.071 ms | 1.026 ms | 4.561 ms | — | 2.424 ms | — |
+| 18 | *(the ninth performance pass, tip)* | 41.6 ms | 0.179 ms | 1.048 ms | 4.272 ms | 4.211 ms | 2.162 ms | — |
 
 Row 2 changed no shipped code, so its solver figures are row 1's.
+
+**Row 18's calibration is not comparable with any row above it, and that is the ninth pass's own
+doing.** Until that pass the calibration was a *single sample*; it is the fastest of three now
+(`M4`), so the 41.6 ms against row 15's 59.8 is a change of instrument as much as of machine — and
+since every cross-machine comparison divides by this column, no ratio spanning row 17 and row 18 is
+a measurement. The ladder and step columns are directly comparable: their sampling did not change.
+And by `M7` none of these rows is a measurement against another in any case — they are a trend, and
+the ninth pass's own start-against-tip figures are in
+[performance.md](performance.md#pass-9-iteration-10--what-the-pass-moved-and-the-control-that-was-not-one).
 
 **Row 12 is the first row on this table taken on an optimised build, and nothing else on it is**
 (`M13`). It is not readable against its neighbours at all: the same commit measured both ways is
@@ -1168,6 +1179,7 @@ several times its neighbours' should be re-taken rather than explained.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | Recorded row 18 in both tables, from the ninth performance pass. **Its calibration column is not comparable with any row above it** — that pass made the calibration a fastest-of-three where it had been a single sample, and every cross-machine comparison divides by it. The ladder and step columns are unaffected, and by `M7` no two rows of this log were a measurement against each other in the first place. |
 | 2026-08-27 | **The ladder's `build` column is timed three times like every other case.** It was one stopwatch from the day this report was written, under the sentence above saying otherwise — and it is the column a reader compares between runs to say a load-path change worked. `bench report --repeats N` exposes the dial so the claim can be measured rather than believed, and the repeats are asserted to have built the same graph, because the fastest of two different walks is not a figure. |
 | 2026-08-27 | Said what a row of the iteration log is and is not. The log's caution was *a row belongs to the machine that took it*, with the calibration and noise columns as the guard; pass 9's sixth iteration measured bit-identical code 2.2× apart between two sessions of one machine, invisibly to both columns, because what moved was the distribution's shape rather than its floor. Two rows are a trend; a measurement is two legs alternated inside one window (`M7`). |
 | 2026-08-26 | Recorded row 12 in both tables, from the 2026-08-26 performance pass, and marked it as the first solver row taken on an optimised build — which makes it unreadable against every row above it and readable only against the pass's own start (`M7`, `M13`). The pass moved no step figure and was not meant to: it is a load-path pass, and [performance.md](performance.md) carries what it did move. |
