@@ -1103,6 +1103,12 @@ namespace Thermodynamics.Sim
                     // has not. See performance.md, Pass 7, Iteration 9.
                     int stageRepeats = OptionInt(args, "--repeats", StageLab.Repeats);
                     StageLab.Repeats = Math.Max(1, stageRepeats);
+
+                    // Every repeat, in order, for a stage whose best-of-N will not settle.
+                    if (Array.IndexOf(args, "--trace") >= 0)
+                    {
+                        StageLab.TraceRepeat = line => Console.WriteLine("  trace " + line);
+                    }
                     string stageOut = csvDirectory ?? "out";
                     string stageList = Option(args, "--stages", null);
                     List<string> stages = new List<string>(stageList == null
@@ -1647,7 +1653,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
-            Console.WriteLine("  bench stages            one stage of a grid's life on its own clock, best of fifteen; --stages a,b; --repeats N");
+            Console.WriteLine("  bench stages            one stage of a grid's life on its own clock, best of fifteen; --stages a,b; --repeats N; --trace");
             Console.WriteLine("  bench stepphases        where a step's own time goes: environment, conduction, coupled, apply, publish");
             Console.WriteLine("  bench stepfloor         what those passes would cost touching the same memory and computing nothing");
             Console.WriteLine("  bench smallgrids        what one grid costs before any of its blocks do");
