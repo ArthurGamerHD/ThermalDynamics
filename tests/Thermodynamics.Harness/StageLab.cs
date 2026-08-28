@@ -56,8 +56,17 @@ namespace Thermodynamics.Harness
         /// twenty steps, so it was already taking three hundred samples. That is the shape of the
         /// fix: sample until the answer stops moving. See performance.md, Pass 8, Iteration 3.
         /// </para>
+        ///
+        /// <para>
+        /// **Agreement alone is not enough, which cost an iteration to find out.** A rule that
+        /// stopped when five readings landed within two per cent of the best settled a *plateau*
+        /// rather than a minimum: on a contended machine a run's first readings cluster tightly at
+        /// a slow value, five of them agree, and the fast mode is never sampled — two legs of one
+        /// pairing read 75 ms and 154 ms for the same stage with the control flat. The floor is a
+        /// hundred repeats now, so a stage has to look before it is allowed to be satisfied.
+        /// </para>
         /// </summary>
-        public static int Repeats = 15;
+        public static int Repeats = 100;
 
         /// <summary>
         /// How many repeats must land within <see cref="ConfirmingBand"/> of the fastest before a
