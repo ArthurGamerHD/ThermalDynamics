@@ -177,6 +177,48 @@ namespace Thermodynamics.Harness
             public const string Capped = "capped";
             public const string Fixed = "fixed";
 
+            /// <summary>
+            /// The middle repeat, which is the other half of the answer.
+            ///
+            /// <para>
+            /// **The fastest repeat is not reproducible for every stage, and which stages it fails
+            /// for cannot be guessed.** Four runs of one binary at 126,731 blocks, four hundred
+            /// repeats each, every candidate summary compared: the minimum reproduces to 4.5 % on
+            /// the room pass and to 97 % on `register`; the *median* reproduces to 0.9 % on
+            /// exposure and to 4.4 % on the solver, where the minimum manages 30 % and 16 %. No
+            /// summary is best for more than three of the eight, and for `links` and `register`
+            /// nothing tried reproduces at all.
+            /// </para>
+            ///
+            /// <para>
+            /// What separates them is whether a stage has a **fast mode it reaches rarely**. Where
+            /// the minimum sits far below the bulk — exposure's is 45 % of its median — best-of-N
+            /// samples that mode to a depth that is an independent draw per run, which is precisely
+            /// pass 8's finding and is not fixed by taking more repeats: four hundred did not fix
+            /// it. Where the distribution is one mode with additive noise, as the room pass's is at
+            /// 85 %, the minimum is the right statistic and reproduces.
+            /// </para>
+            ///
+            /// <para>
+            /// So both are reported and neither is privileged. <see cref="FastModeShare"/> is the
+            /// ratio that says which kind of stage a row is, and a pairing is readable only where
+            /// the two legs agree on **both** figures. See performance.md, Pass 9, Iteration 5.
+            /// </para>
+            /// </summary>
+            public double MedianMs;
+
+            /// <summary>
+            /// The fastest repeat as a share of the middle one — how far below its own bulk a
+            /// stage's best reading sits, and so how much of a lottery <see cref="BestMs"/> is.
+            /// Near 1 the stage has one mode and its minimum is sound; near 0.45 it has a fast mode
+            /// reached a few times in four hundred and its minimum is a draw. See
+            /// <see cref="MedianMs"/>.
+            /// </summary>
+            public double FastModeShare
+            {
+                get { return MedianMs <= 0d ? 0d : BestMs / MedianMs; }
+            }
+
             /// <summary>Nanoseconds per unit of work, which is the figure that transfers between sizes.</summary>
             public double NsPerWork
             {
@@ -200,7 +242,9 @@ namespace Thermodynamics.Harness
                 // Settled before every stage, so the list's order cannot carry: whatever the stage
                 // before it left on the heap is collected before this one is timed.
                 Settle();
-                rows.Add(Measure(stages[i], builder));
+                Row row = Measure(stages[i], builder);
+                Summarise(row);
+                rows.Add(row);
             }
 
             return rows;
@@ -312,6 +356,20 @@ namespace Thermodynamics.Harness
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Fills in <see cref="Row.MedianMs"/> from the repeats, once a row has stopped taking them.
+        /// By nearest rank on the sorted samples, so the figure reported is a reading the instrument
+        /// actually took rather than the average of two it did not.
+        /// </summary>
+        private static void Summarise(Row row)
+        {
+            if (row == null || row.Samples.Count == 0) return;
+
+            double[] sorted = row.Samples.ToArray();
+            Array.Sort(sorted);
+            row.MedianMs = sorted[sorted.Length / 2];
         }
 
         /// <summary>Whether a work figure repeated exactly; a stage whose work moves between repeats is not one stage.</summary>
@@ -574,6 +632,12 @@ namespace Thermodynamics.Harness
             int repeats = Math.Max(1, Repeats);
             double[] best = new double[ThermalSolver.StepPhaseProfile.PhaseCount];
             double[] worst = new double[ThermalSolver.StepPhaseProfile.PhaseCount];
+
+            // Every repeat kept here too, so a phase carries the same evidence a stage does: its
+            // median as well as its best, and the ratio that says whether the best is a rare draw.
+            // See Row.MedianMs.
+            List<double>[] samples = new List<double>[ThermalSolver.StepPhaseProfile.PhaseCount];
+            for (int p = 0; p < samples.Length; p++) samples[p] = new List<double>();
             long[] visits = new long[ThermalSolver.StepPhaseProfile.PhaseCount];
             long[] slices = new long[ThermalSolver.StepPhaseProfile.PhaseCount];
             for (int p = 0; p < best.Length; p++) best[p] = double.MaxValue;
@@ -588,6 +652,7 @@ namespace Thermodynamics.Harness
                     double ms = simulation.Solver.StepPhases.MillisecondsOf(p) / SolverStepsPerRepeat;
                     if (ms < best[p]) best[p] = ms;
                     if (ms > worst[p]) worst[p] = ms;
+                    samples[p].Add(ms);
 
                     long v = simulation.Solver.StepPhases.Visits[p] / SolverStepsPerRepeat;
                     if (r > 0 && v != visits[p])
@@ -622,6 +687,8 @@ namespace Thermodynamics.Harness
                 row.Repeats = repeats;
                 row.Stop = Row.Fixed;
                 row.Note = slices[p] + " slices";
+                row.Samples.AddRange(samples[p]);
+                Summarise(row);
                 rows.Add(row);
             }
 
@@ -663,13 +730,14 @@ namespace Thermodynamics.Harness
         public static string Table(IList<Row> rows)
         {
             StringBuilder text = new StringBuilder();
-            text.AppendLine("  stage        blocks       best ms      worst ms   spread  repeats  stopped          work  unit              ns/unit      alloc KB  note");
+            text.AppendLine("  stage        blocks       best ms    median ms   best/med      worst ms   spread  repeats  stopped          work  unit              ns/unit      alloc KB  note");
             for (int i = 0; i < rows.Count; i++)
             {
                 Row row = rows[i];
                 text.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                    "  {0,-10} {1,9:n0}  {2,12:n3}  {3,12:n3}  {4,6:n0}%  {5,7:n0}  {6,-9}  {7,12:n0}  {8,-16}  {9,8:n1}  {10,12:n0}  {11}",
-                    row.Stage, row.Blocks, row.BestMs, row.WorstMs, row.SpreadPercent,
+                    "  {0,-10} {1,9:n0}  {2,12:n3}  {3,11:n3}  {4,8:n2}  {5,12:n3}  {6,6:n0}%  {7,7:n0}  {8,-9}  {9,12:n0}  {10,-16}  {11,8:n1}  {12,12:n0}  {13}",
+                    row.Stage, row.Blocks, row.BestMs, row.MedianMs, row.FastModeShare,
+                    row.WorstMs, row.SpreadPercent,
                     row.Repeats, row.Stop,
                     row.Work, row.WorkUnit, row.NsPerWork, row.AllocatedBytes / 1024, row.Note));
             }
@@ -679,7 +747,7 @@ namespace Thermodynamics.Harness
         public static string Csv(IList<Row> rows)
         {
             StringBuilder text = new StringBuilder();
-            text.AppendLine("stage,blocks,best_ms,worst_ms,spread_percent,repeats,confirmed_best,stopped,work,work_unit,ns_per_unit,allocated_bytes");
+            text.AppendLine("stage,blocks,best_ms,median_ms,fast_mode_share,worst_ms,spread_percent,repeats,confirmed_best,stopped,work,work_unit,ns_per_unit,allocated_bytes");
             for (int i = 0; i < rows.Count; i++)
             {
                 Row row = rows[i];
@@ -687,6 +755,8 @@ namespace Thermodynamics.Harness
                     row.Stage,
                     row.Blocks.ToString(CultureInfo.InvariantCulture),
                     row.BestMs.ToString("r", CultureInfo.InvariantCulture),
+                    row.MedianMs.ToString("r", CultureInfo.InvariantCulture),
+                    row.FastModeShare.ToString("r", CultureInfo.InvariantCulture),
                     row.WorstMs.ToString("r", CultureInfo.InvariantCulture),
                     row.SpreadPercent.ToString("r", CultureInfo.InvariantCulture),
                     row.Repeats.ToString(CultureInfo.InvariantCulture),

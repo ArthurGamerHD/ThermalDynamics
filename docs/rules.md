@@ -255,7 +255,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **M1** | Compare only runs that were stopped the same way | conditional | P6 | `SunlightPanelWalk` |
 | **M2** | Parallel for values, linear for durations | absolute | P6 | `ParallelAndLinearProduceTheSameMatrix` |
 | **M3** | The run is the unit of parallelism | conditional | P6 | `ParallelAndLinearProduceTheSameMatrix` |
-| **M4** | Keep the fastest of N, and publish the noise floor | absolute | P2 | `PerformanceReportTests` |
+| **M4** | Keep the fastest of N and the median, and publish the noise floor | absolute | P2 | `PerformanceReportTests` `StageLabTests` |
 | **M5** | A figure inside the noise floor has not moved | absolute | P2 | `PerformanceReportTests` |
 | **M6** | The case key is the contract | absolute | P5 | `BenchmarkBaselineTests` |
 | **M7** | Measure a pass against its own start | absolute | P6 | — |
@@ -502,10 +502,10 @@ rest on those.
 *Checked by:* reported by `verdict.py`, which prints the censored share beside the criteria.
 *From:* [known-issues.md](known-issues.md#deliberate-limits).
 
-#### M4 — Keep the fastest of N, and publish the noise floor
+#### M4 — Keep the fastest of N and the median, and publish the noise floor
 
-**Every timed case is measured several times and the fastest kept, and every report opens with
-the spread between fastest and slowest of a repeated case.**
+**Every timed case is measured several times and both the fastest and the middle reading kept, and
+every report opens with the spread between fastest and slowest of a repeated case.**
 
 Timing noise is one-sided: a sample is the true cost plus whatever else the machine was doing, so
 averaging it in measures the operating system. Without the floor printed beside them, several
@@ -521,10 +521,28 @@ one that was checked — by requiring several readings to agree with the best ra
 a number. Two passes' worth of rejected optimisations were judged at effect sizes smaller than the
 uncertainty this hid.
 
+**And reproducing the fastest is not enough either, which took a fifth pass on this rule to find
+out.** Four runs of one binary at 126,731 blocks, four hundred repeats each, every candidate summary
+compared: the minimum reproduces to **4.5 %** on the room pass and to **97 %** on `register`, and
+the *median* reproduces to **0.9 %** on exposure where the minimum manages 30 %. **No summary is
+best for more than three of the eight stages, and for two of them nothing tried reproduces at all.**
+What separates them is whether a stage has a fast mode it reaches rarely: where the minimum sits at
+45 % of the median, best-of-N samples that mode to a depth that is an independent draw per run, and
+four hundred repeats do not fix it. Where the distribution is one mode with additive noise — the
+room pass, at 85 % — the minimum is right.
+
+So **a stage reports its minimum and its median, and a ratio is believed only where both legs agree
+on both.** The one-sided-noise argument still holds and still rules out the mean; what it does not
+establish is that the minimum of a *bimodal* sample is reproducible, and that was assumed for nine
+passes rather than measured.
+
 *Applies to:* every millisecond in a report.
-*Checked by:* `PerformanceReportTests`, and `StageLabTests.EveryStageStopsForAReasonItCanName` for
-the sampling.
-*From:* [benchmarks.md](benchmarks.md), [performance.md](performance.md#pass-8-iteration-2--every-stage-but-one).
+*Checked by:* `PerformanceReportTests`, and `StageLabTests.EveryStageStopsForAReasonItCanName` and
+`EveryRowCarriesItsMedianAndItsShape` for the sampling. **The reproducibility itself is not checked
+and cannot usefully be**: it is a property of the machine, and a test demanding it inside an
+eight-way parallel suite failed and passed on consecutive runs of unchanged code. It is measured on
+a held machine with `bench samplestats`, which is what the figures above come from.
+*From:* [benchmarks.md](benchmarks.md), [performance.md](performance.md#pass-9-iteration-5--no-single-statistic-reproduces-and-two-stages-have-none).
 
 #### M5 — A figure inside the noise floor has not moved
 
@@ -1756,6 +1774,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **`M4` takes the median as well as the fastest, and says the reproducibility is not checkable.** Four runs of one binary at 126,731 blocks, four hundred repeats a stage, every candidate summary compared: the minimum reproduces to 4.5 % on the room pass and 97 % on `register`; the median to 0.9 % on exposure where the minimum manages 30 %. No summary is best for more than three of the eight and two have none. Pass 8's fix — sample until the best is reproduced — was right and does not reach a stage whose best is a rare draw. Unchecked rules: eighteen, unchanged. |
 | 2026-08-27 | **`R14` is checked by the compiler.** Turning on `GenerateDocumentationFile` and making `CS1574` and its family errors makes every `<see cref>`, `<param>` and `<paramref>` in this tree resolve to something that exists — real name binding, which no test here could do without reimplementing it, and which had never been asked for. Twenty-five failures were waiting, four in the shipped mod, including a `[ProtoMember]` whose comment described a deleted field and a method's parameters documented onto the constant inserted above it. `CS1570` and `CS1572` stay warnings in `Generic.csproj` alone, for the five a vendored file carries and `R6` forbids fixing. Unchecked rules: eighteen, unchanged — `R14` was already cited to a test, and now has the stronger check in front of it. |
 | 2026-08-27 | `M4` says what makes N enough: the fastest reading has to have been reproduced. Keeping the fastest of a fixed fifteen had not converged for any stage but the solver — three runs of one binary spread 48 %, 28 % and 67 % — and two passes of optimisations were judged at effect sizes smaller than that. |
 | 2026-08-27 | `C4` is asserted rather than measured. *Nothing allocates on the stepping path* was checked by reading a benchmark, which for a quantity whose correct value is **zero** is not a check at all: any figure at all reads as a small number. `StageLabTests` reads `GC.GetTotalAllocatedBytes` around a settled step of a census hull and fails above four kilobytes. Unchecked rules: eighteen, unchanged — this one was cited to a report and is now cited to a test. |

@@ -2123,7 +2123,7 @@ rejected seven changes on that instrument**, at effect sizes between 3 % and 40 
 | 2 | Whether that is one stage or the instrument | **kept** — every stage but the solver | [Iteration 2](#pass-8-iteration-2--every-stage-but-one) |
 | 3 | Sample until the fastest reading is reproduced | **kept** | [Iteration 3](#pass-8-iteration-3--sample-until-the-answer-is-reproduced) |
 | 4–5 | Pass 6's halving recovered and re-measured; the rule needed a floor as well as agreement | **dropped again** — 1.02 on the corrected instrument | [Iteration 10](#pass-8-iteration-10--the-first-rejection-re-measured) |
-| 6 | `M4` says what makes N enough | **kept** | [rules.md](rules.md#m4--keep-the-fastest-of-n-and-publish-the-noise-floor) |
+| 6 | `M4` says what makes N enough | **kept** | [rules.md](rules.md#m4--keep-the-fastest-of-n-and-the-median-and-publish-the-noise-floor) |
 | 7 | Which published figures survive the correction | the audit below | [Iteration 7](#pass-8-iteration-7--which-published-figures-survive) |
 
 ## Pass 8, iteration 1 — the stage is not bimodal, it is under-sampled
@@ -2287,6 +2287,7 @@ next by the same measure. This pass starts there.
 | 2 | Whether a stage settled, in the table and the CSV | **kept** — five stages of eight never reproduced their best | [Iteration 2](#pass-9-iteration-2--the-stage-lab-knew-which-rows-had-not-settled-and-did-not-say) |
 | 3 | The lab that asks which summary of a stage's repeats reproduces | **kept** — `bench samplestats` | [Iteration 3](#pass-9-iteration-3--the-lab-that-asks-which-statistic-reproduces) |
 | 4 | Cleanup: whether a doc comment names something that is there | **kept** — the compiler does it, and found twenty-five | [Iteration 4](#pass-9-iteration-4--the-compiler-was-never-asked-whether-a-comment-names-something-that-is-there) |
+| 5 | Which summary of a stage's repeats reproduces, measured | **kept** — none of them does for every stage; both are reported now | [Iteration 5](#pass-9-iteration-5--no-single-statistic-reproduces-and-two-stages-have-none) |
 
 ## Pass 9, iteration 1 — two thirds of the exposure stage is writing the answer down
 
@@ -2475,12 +2476,77 @@ wrong twice in three iterations should expect the same of the tool that says wha
 Both of pass 9's instrument findings have the identical shape: *the thing already knew, and was
 never asked to say.*
 
+## Pass 9, iteration 5 — no single statistic reproduces, and two stages have none
+
+Iteration 3's lab, put to the question it was built for: four runs of one binary at 126,731 blocks,
+four hundred repeats of every stage each, every candidate summary compared on the one property a
+comparison uses — **do two runs of identical code agree on it.**
+
+| stage | min | p1 | p5 | p10 | p25 | median | best |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| place | **17 %** | 41 | 66 | 55 | 84 | 96 | min |
+| register | 97 % | 99 | 126 | 146 | 106 | 129 | **none** |
+| surfaces | **28 %** | 30 | 81 | 93 | 114 | 80 | min |
+| links | 105 % | 103 | 111 | 80 | 29 | 108 | **none** |
+| rooms | **4.5 %** | 5.0 | 8.4 | 6.1 | 12 | 66 | min |
+| exposure | 30 % | 63 | 65 | 60 | 14 | **0.9 %** | median |
+| roomair | 108 % | 109 | 4.3 | **1.7 %** | 13 | 23 | p10 |
+| solver | 16 % | 25 | 17 | 42 | 7.3 | **4.4 %** | median |
+
+*Spread between the four runs, per stage, per summary. `bench stages --repeats 400` four times and
+`bench samplestats --from` over the four, in one held window.*
+
+**The minimum is best for three stages, the median for two, the tenth percentile for one, and for
+two of the eight nothing tried reproduces at all.** That is not a result anybody expected, and it is
+the third instrument finding of this pass.
+
+**What separates them is whether a stage has a fast mode it reaches rarely.** Exposure's minimum is
+5.08 ms and its median 11.40; its first percentile is 5.14, so about four of four hundred repeats
+are anywhere near the best. Best-of-N samples that mode to a depth that is an independent draw per
+run — which is exactly pass 8's diagnosis, and **four hundred repeats do not fix it**, because the
+depth reached is not a function of how long you look. The room pass, whose minimum is 85 % of its
+median, is one mode with additive noise, and its minimum reproduces to 4.5 %.
+
+**Pass 8 raised the sample size, which was the right fix for the wrong half of the problem.** It
+established that fifteen was not enough and that a stage must reproduce its best before stopping.
+Both are true. Neither addresses a stage whose best is a rare draw, and the confirmation rule
+guarantees only that the draw happened five times in four hundred — which two runs will do to
+different depths and at different values.
+
+**`links` is the sharpest case, and it revises pass 8's headline.** Run 2's entire distribution sat
+at 30.5–31.3 ms: its minimum, first percentile and median are within 3 % of each other, and it never
+reached the ~15 ms that runs 1 and 3 found in their first few repeats. That is not under-sampling —
+run 2 took four hundred samples. **A whole process can be in the slow mode for its lifetime.** So
+pass 7's observation of *bimodality* at 126,731 blocks was right, and pass 8's "it is not bimodal,
+it is under-sampled" was a correct reading of one trace generalised too far: the modes are between
+processes, and a within-process trace cannot see them.
+
+**What this means for the seven rejections in passes 6 and 7 is stronger than pass 8's audit
+said.** That audit put the uncertainty at 28–67 % on a stage ratio and called the rejections
+unproven. On this evidence the link stage is **not resolvable between processes by any summary** —
+105 %, 103 %, 111 %, 80 %, 29 %, 108 % — and every one of those pairings was two processes. They are
+not merely unproven; the instrument that judged them could not have judged them.
+
+**What changes.** A stage row now carries **both** its minimum and its median, and `best/med`
+beside them — the ratio that says whether the minimum sits in the stage's own bulk or in a mode it
+visited a handful of times. A ratio is believed only where both legs agree on both figures. `M4` is
+rewritten to say so, and says plainly that the reproducibility itself is not checked by a test and
+cannot usefully be: it is a property of the machine, and the one test that demanded it failed and
+passed on consecutive runs of unchanged code.
+
+**What is deliberately not done.** No stage is given its own statistic. That would fit this
+measurement and nothing else — the assignment is a property of the machine and the size as much as
+of the stage, and a lab that hard-codes which column to read for `roomair` is a lab that lies the
+first time the answer changes. Reporting both and refusing marginal ratios costs a column and
+assumes nothing.
+
 ---
 
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **`M4` takes the median as well as the fastest.** Four runs of one binary, four hundred repeats a stage: no summary reproduces for more than three of the eight stages, and `links` and `register` have none. The link stage's modes are *between processes* — one run of four never left 31 ms while two others found 15 in their first repeats — which revises pass 8's "not bimodal, under-sampled" and makes passes 6 and 7's seven rejections unjudgeable rather than merely unproven. |
 | 2026-08-27 | `R14` is checked by the compiler now, not only by a pattern test: twenty-five doc comments named something that was not there, four of them in the shipped mod. |
 | 2026-08-27 | Opened pass 9 on the stages the link build's twenty-six iterations crowded out, with an ablation that puts two thirds of the exposure stage in writing its answer down. |
 | 2026-08-27 | Opened pass 3, whose first iteration explains the figure pass 2 could not: the instrument, not the surface map. |
