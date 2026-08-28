@@ -58,6 +58,99 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **Both statistics reach the reader, and the shape that says which to believe.**
+        ///
+        /// <para>
+        /// The fastest repeat reproduces between runs for some stages and not others, and which is
+        /// which cannot be guessed — measured over four runs of one binary at 126,731 blocks, the
+        /// minimum spreads 4.5 % on the room pass and 97 % on `register`, while the median spreads
+        /// 0.9 % on exposure where the minimum spreads 30 % (performance.md, Pass 9, Iteration 5).
+        /// So the lab reports both and privileges neither, and `best/med` is the ratio that says
+        /// whether a row's minimum sits in its own bulk or in a fast mode it reached a few times.
+        /// </para>
+        ///
+        /// <para>
+        /// This asserts the arithmetic and the artefacts, not the reproducibility: whether two runs
+        /// agree is a property of the machine, and a test that demanded it under an eight-way
+        /// parallel suite would be testing the hardware — the mistake pass 8 made and undid.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryRowCarriesItsMedianAndItsShape()
+        {
+            int repeats = StageLab.Repeats;
+            int confirming = StageLab.ConfirmingRepeats;
+
+            StageLab.Repeats = 5;
+            StageLab.ConfirmingRepeats = 2;
+            try
+            {
+                List<StageLab.Row> rows = StageLab.Run("ship", 2000, StageLab.Stages);
+
+                foreach (StageLab.Row row in rows)
+                {
+                    // The median is one of the readings taken, and it is between the two extremes.
+                    Assert.Contains(row.MedianMs, row.Samples);
+                    Assert.True(row.MedianMs >= row.BestMs,
+                        row.Stage + " has a median of " + row.MedianMs + " below its best of "
+                        + row.BestMs + ", so one of the two is not of these repeats");
+                    Assert.True(row.MedianMs <= row.WorstMs,
+                        row.Stage + " has a median of " + row.MedianMs + " above its worst of "
+                        + row.WorstMs);
+
+                    // The shape is the ratio, and it cannot exceed one by construction.
+                    Assert.True(row.FastModeShare > 0d && row.FastModeShare <= 1d,
+                        row.Stage + " reports a best/median of " + row.FastModeShare);
+                }
+
+                string table = StageLab.Table(rows);
+                string header = StageLab.Csv(rows).Split('\n')[0];
+
+                Assert.Contains("median ms", table);
+                Assert.Contains("best/med", table);
+                Assert.Contains("median_ms", header);
+                Assert.Contains("fast_mode_share", header);
+            }
+            finally
+            {
+                StageLab.Repeats = repeats;
+                StageLab.ConfirmingRepeats = confirming;
+            }
+        }
+
+        /// <summary>
+        /// The step-phase path reports a median too, rather than a zero that would read as a stage
+        /// with an infinitely rare fast mode. It takes a fixed count of repeats and says `fixed`,
+        /// and it keeps them all like every other row.
+        /// </summary>
+        [Fact]
+        public void AStepPhaseRowCarriesItsRepeatsAndItsMedian()
+        {
+            int repeats = StageLab.Repeats;
+
+            StageLab.Repeats = 3;
+            try
+            {
+                List<StageLab.Row> rows = StageLab.StepPhases("ship", 2000);
+
+                Assert.NotEmpty(rows);
+                foreach (StageLab.Row row in rows)
+                {
+                    Assert.Equal(StageLab.Row.Fixed, row.Stop);
+                    Assert.Equal(3, row.Repeats);
+                    Assert.Equal(3, row.Samples.Count);
+                    Assert.True(row.MedianMs > 0d,
+                        row.Stage + " reports no median, which would read as a best that is"
+                        + " infinitely far below its own bulk");
+                }
+            }
+            finally
+            {
+                StageLab.Repeats = repeats;
+            }
+        }
+
+        /// <summary>
         /// **And the reason reaches the reader.** The lab has counted confirmations since pass 8
         /// and the test below has asserted that every row is either confirmed or capped — but for a
         /// pass neither the table a person reads nor the CSV a comparison is built from carried the
