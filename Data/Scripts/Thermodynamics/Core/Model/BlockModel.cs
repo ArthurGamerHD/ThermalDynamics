@@ -231,6 +231,80 @@ namespace Thermodynamics.Core
         private readonly FaceFractions[] fractionsByOrientation = new FaceFractions[36];
 
         /// <summary>
+        /// One-cell blocks' surface arrays, one per orientation and layer, shared by every instance
+        /// of this model in that orientation.
+        ///
+        /// <para>
+        /// **A one-cell block's surface array does not depend on where it is.** Its only cell is
+        /// the origin, so the bits are a function of the model and the orientation alone — and a
+        /// census hull is mostly one-cell blocks, so `place` was allocating an `int[1]` per block
+        /// for an answer that repeats a few dozen times over the whole grid. The cells array is
+        /// **not** interned and cannot be: it holds the block's own `Min`.
+        /// </para>
+        ///
+        /// <para>
+        /// Same shape as <see cref="fractionsByOrientation"/> above, and safe for the same reason:
+        /// two threads that race to fill a slot compute the same value and write a reference
+        /// atomically, so the loser's array is garbage rather than a wrong answer. What it *does*
+        /// require is that nothing writes through the array afterwards, which
+        /// `OneCellSurfacesAreNeverWrittenThrough` asserts over the whole tree — an aliased array
+        /// written by one block would change the others silently.
+        /// </para>
+        /// </summary>
+        private readonly int[][] oneCellSurfacesByOrientation = new int[72][];
+
+        /// <summary>
+        /// The shared `int[1]` a one-cell block of this model, orientation and layer uses, or null
+        /// if this slot has not been filled yet.
+        ///
+        /// <para>
+        /// **Asked and stored in two calls rather than one call taking a rotate delegate.** The
+        /// delegate version was written first and measured: a method group converted at a call site
+        /// on the placement path allocates a delegate object *per block*, which is larger than the
+        /// `int[1]` it was there to save — the `place` stage's allocation went from 36,044 KB to
+        /// 40,005 KB. The stage lab's allocation column is what said so.
+        /// </para>
+        /// </summary>
+        public int[] OneCellSurfaces(BlockOrientation orientation, bool structural)
+        {
+            int index = OneCellSlot(orientation, structural);
+            return index < 0 ? null : oneCellSurfacesByOrientation[index];
+        }
+
+        /// <summary>
+        /// Fills a slot with the caller's rotated bits and hands back the array every later block
+        /// of this model, orientation and layer will share.
+        ///
+        /// <para>
+        /// A racing caller may have filled it first. Its array holds the same value — the bits are
+        /// a function of the model, the orientation and the layer, and of nothing else — so the
+        /// winner's is kept and the loser's is garbage rather than a wrong answer.
+        /// </para>
+        /// </summary>
+        public int[] StoreOneCellSurfaces(BlockOrientation orientation, bool structural, int rotated)
+        {
+            int index = OneCellSlot(orientation, structural);
+            if (index < 0) return new[] { rotated };
+
+            int[] known = oneCellSurfacesByOrientation[index];
+            if (known != null) return known;
+
+            int[] built = { rotated };
+            oneCellSurfacesByOrientation[index] = built;
+            return built;
+        }
+
+        /// <summary>Which slot a one-cell block of this orientation and layer shares, or -1 if it shares none.</summary>
+        private int OneCellSlot(BlockOrientation orientation, bool structural)
+        {
+            if (CellCount != 1) return -1;
+
+            int index = (((int)orientation.Forward * 6) + (int)orientation.Up) * 2
+                + (structural ? 0 : 1);
+            return index >= 0 && index < oneCellSurfacesByOrientation.Length ? index : -1;
+        }
+
+        /// <summary>
         /// The face fractions for one orientation of this model, built on first use. Two threads may
         /// arrive together and both are allowed to build: the values are identical, and the reference
         /// is published by one aligned write. Cheaper than a lock on the placement path.

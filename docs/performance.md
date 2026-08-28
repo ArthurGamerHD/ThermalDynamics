@@ -2276,6 +2276,14 @@ machine is the one [named above](#performance-work); `heavy run` held it.*
 > the ranking here — *which stage is largest* — is not safe as it stands. What the pass did with it
 > is unaffected: it went to the stage that had had the least work, and the ablation that followed is
 > a ratio inside one window against a flat control (`E10`).
+>
+> **And a second, larger reason, found in
+> [iteration 6](#pass-9-iteration-6--the-one-write-exposure-change-and-the-session-it-was-measured-in):
+> these figures belong to the session that took them.** The exposure row here reads 11.33 ms where
+> twelve processes of a later window read 3.8–5.6 for bit-identical code. So no number in this table
+> may be read against a number anywhere else on this page — including against this pass's own
+> results — and the milliseconds are kept only because the *ranking* is what the pass used them for.
+> `M7`.
 
 **Exposure is the largest stage with the least work behind it** — one optimisation, in pass 4, and
 eighty-nine nanoseconds a node to answer a question about six faces. `register` and `place` are
@@ -2292,6 +2300,7 @@ next by the same measure. This pass starts there.
 | 6 | Cleanup: the mod project had not built for three commits | **kept** — `ProjectFileTests` | [Iteration 6](#pass-9-iteration-6--the-one-write-exposure-change-and-the-session-it-was-measured-in) |
 | 7 | An exposure refresh that changed nothing writing nothing | **kept, and not for the reason it was proposed** — worth nothing on the stage, 2.0 ms on the step after a remap | [Iteration 7](#pass-9-iteration-7--the-skip-is-worthless-where-it-was-aimed-and-worth-two-milliseconds-where-it-was-not) |
 | 8 | The ladder's `build` column, which the page says is fastest-of-three | **kept** — it was one stopwatch | [Iteration 8](#pass-9-iteration-8--the-one-column-a-load-path-change-is-judged-by-was-a-single-sample) |
+| 9 | One-cell blocks' surface arrays, shared instead of allocated | **kept** — `place` falls 15.6 %, after a first attempt that allocated *more* | [Iteration 9](#pass-9-iteration-9--a-one-cell-blocks-walls-do-not-depend-on-where-it-is) |
 
 ## Pass 9, iteration 1 — two thirds of the exposure stage is writing the answer down
 
@@ -2797,12 +2806,79 @@ throws with both counts rather than reporting a figure. The hull is dealt once a
 repeatedly, because dealing it is the census generator at about ten times the build it feeds
 (`C26`) and is not what the column is about.
 
+## Pass 9, iteration 9 — a one-cell block's walls do not depend on where it is
+
+The `place` stage allocates **36 MB a repeat** at 126,731 blocks, and a census hull is mostly
+one-cell blocks — armour cubes. Each was given a `Vector3I[1]` for its cell and an `int[1]` for its
+surface bits. The cell array holds the block's own `Min` and cannot be shared. **The surface array
+holds bits that are a function of the model, the orientation and the layer, and of nothing else** —
+so one array serves every block of that model in that orientation, on every grid in the session.
+
+| | base | change | |
+| --- | ---: | ---: | ---: |
+| place, best of 400 | 9.959 ms | 8.739 ms | **−12.2 %** |
+| place, median of 400 | 11.518 ms | 9.716 ms | **−15.6 %** |
+| place, allocated a repeat | 36,044 KB | 32,084 KB | −11.0 % |
+| place, ns a block | 78.6 | 68.9 | |
+| rooms *(control)*, median | 15.489 ms | 15.329 ms | −1.0 % |
+
+*Twelve processes, one held window, alternating, six a leg. Neither statistic's ranges overlap —
+the slowest change minimum is 8.873 against a fastest base of 9.476, and the medians are 10.951
+against 10.984 — so by `M4` the ratio is believed on both. Block count is 126,731 in all twelve.*
+
+**Eleven per cent of the allocation buys twelve to sixteen per cent of the time**, which is more
+than proportional and is the reason to remove an allocation rather than to make it smaller: what
+goes with it is the collection it would have caused and the cache line it would have dirtied.
+
+### The first version of it allocated more, and the lab said so before the clock did
+
+The cache was first written as one call taking the rotation as a `Func<int, int>`, so the model
+could rotate the bits itself on a miss. A method group converted at a call site on the placement
+path **allocates a delegate per block** — larger than the `int[1]` it was there to save. The stage
+row said `place` allocated **40,005 KB** against the base's 36,044, and the timing had not moved.
+Asked and stored in two calls instead, with the caller doing the rotation, it is 32,084.
+
+That is the allocation column earning its place. It was added in pass 3 because a stage that churns
+the heap changes what the stage after it measures; here it is the column that distinguished *this
+change does nothing* from *this change is backwards*, which no timing in that window did.
+
+### What sharing an array costs, and what pays for it
+
+**A refresh no longer hands back a fresh array for a one-cell block**, and that had been written
+down as the mechanism `ThermalSimulation.RefreshBlock` relies on to keep the old references as a
+snapshot. What it actually relies on is `SameSurfaces`, which compares **by value** — so an array
+compared against itself reports *unchanged*, which is the right answer when nothing changed, and a
+door cycling still moves the live layer onto a *different* interned array holding different bits.
+Both directions are asserted rather than argued: the door's round trip, open and shut, and the
+multi-cell block that still gets a fresh array because only the one-cell path is interned.
+
+Two tests that were already there turn out to be the end-to-end statement of it, and they pass
+unchanged: `AMountingChangeDoesNotAskForARemap` — a one-cell block refreshed with nothing altered
+must not trigger a flood fill, which is the case where `before` and `after` are now the *same
+object* — and `ADoorOpeningIsResolvedThroughItsPortalRatherThanARemap`, which is the case where they
+must differ. `SameSurfaces`'s by-value comparison is what makes both true, and its summary says so
+now rather than leaving the next reader to find out by changing it.
+
+**The real cost is aliasing.** One write through `block.SelfSurfaces[i]` would change every other
+block of that model and orientation in the session, and the failure is invisible — a neighbouring
+block's walls quietly move and every downstream answer stays self-consistent. Nothing does it
+today, and `NothingWritesThroughABlocksSurfaceArrays` parses every `.cs` under `Data/` and `tests/`
+and fails on an element assignment whose target is `Cells`, `SelfSurfaces` or `StructuralSurfaces`.
+That is the same shape as iteration 8's check and for the same reason: the instance is not the
+problem, the next one is.
+
+The race is benign and is stated where the cache lives. Two threads filling one slot compute the
+same value — the bits depend on nothing else — and a reference write is atomic, so the loser's array
+is garbage rather than a wrong answer. It is the same shape as `fractionsByOrientation`, which has
+been doing this since pass 2.
+
 ---
 
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **One-cell blocks share their surface arrays per model and orientation**, because the bits do not depend on where the block is. `place` falls **15.6 % on its median and 12.2 % on its minimum** with neither leg's range overlapping, and allocates 11 % less. The first version took the rotation as a delegate and allocated *more* than it saved — 40,005 KB against 36,044 — which the stage lab's allocation column caught and no timing in that window did. |
 | 2026-08-27 | **The ladder's `build` column and the `calibration` row were single samples**, under a page that says every case is timed three times and the fastest kept. One is what a load-path change is judged by and the other is the divisor two machines are compared through. Repeated now: the between-run spread at 500,000 blocks falls from **19.0 % to 3.4 %** and at a million from 6.8 % to 1.1 %, and the figure falls a few per cent at every rung. `EveryTimedCaseInTheReportIsRepeated` fails on any stopwatch in the report with no repeat loop around it, because a third would arrive the same way. |
 | 2026-08-27 | **An exposure refresh that changed nothing writes nothing, which is worth nothing where it was aimed.** The stage does not move — the two legs' ranges overlap on both statistics, because iteration 6 had already removed the six writes a skip would skip. What it is worth is the full, unsliced `SyncNodeState` it stopped forcing onto the step after every room remap: **2.13 ms against 0.145** to mirror 126,731 rows. That is `load-and-hitching.md`'s property 8 one level down, and it is property 11 there now. |
 | 2026-08-27 | **`M7` is scoped to any two figures compared, not to a pass.** The exposure stage's six per-face writes became one, worth **19.5 % of the stage's median** over twelve alternating processes of one window against a flat control — and measuring it found that the same code read 2.2× slower in iteration 5's session, with the source, the instrument, the build configuration and the stage order each eliminated. The minimum roughly travels between sessions and the median does not, which inverts iteration 5's assignment for this stage and makes that whole table a within-window measurement. Artefacts carry `taken_utc` now and `bench samplestats` says whether its runs are one window. |

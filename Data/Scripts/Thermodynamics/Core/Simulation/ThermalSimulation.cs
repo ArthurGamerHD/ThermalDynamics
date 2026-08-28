@@ -405,7 +405,13 @@ namespace Thermodynamics.Core
         {
             if (block == null) return;
 
-            // RefreshSurfaces allocates fresh arrays, so the old references are a free snapshot.
+            // The old references are a snapshot, and `SameSurfaces` compares them by *value*, which
+            // is what makes that true whether or not the refresh allocated. A one-cell block's
+            // surface arrays are shared per model and orientation since Pass 9, Iteration 9, so a
+            // refresh that changed nothing hands back the same object — compared against itself
+            // that reports unchanged, which is the right answer. A door cycling still moves the
+            // live layer onto a different array holding different bits.
+            //
             // Both layers are compared because they answer different questions: the structural one
             // decides the shape of a room, the live one only which rooms currently reach open air.
             int[] structuralBefore = block.StructuralSurfaces;
@@ -456,6 +462,13 @@ namespace Thermodynamics.Core
         /// <summary>
         /// Whether two of a block's per-cell surface arrays agree. A block keeps its cell count
         /// across a refresh, so a length change means the model itself was swapped.
+        ///
+        /// <para>
+        /// **By value, and that is load-bearing rather than incidental.** One-cell blocks share
+        /// their surface arrays per model and orientation, so `before` and `after` are often the
+        /// same object; a reference comparison would read every refresh of every armour cube as a
+        /// change and mark the topology dirty on each one.
+        /// </para>
         /// </summary>
         private static bool SameSurfaces(int[] before, int[] after)
         {
