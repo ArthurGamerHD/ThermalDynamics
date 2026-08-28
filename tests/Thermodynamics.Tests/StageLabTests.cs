@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using Thermodynamics.Harness;
 
 namespace Thermodynamics.Tests
@@ -73,6 +75,107 @@ namespace Thermodynamics.Tests
             finally
             {
                 StageLab.Repeats = repeats;
+            }
+        }
+
+        /// <summary>
+        /// **A row survives the round trip through the artefact**, which is what lets a stage be
+        /// timed in a process of its own and still appear in one table.
+        ///
+        /// <para>
+        /// `--isolate` exists because settling the heap between stages is not enough: pass 9's
+        /// tenth iteration measured the room pass moving 4.5 % between two binaries when `place`
+        /// and `exposure` ran before it in the same process, and 0.3 % when it ran alone. The child
+        /// process writes `stages.csv` and the parent reads it back, so what is asserted here is
+        /// that reading it back loses nothing a comparison uses — including the stopping reason,
+        /// because a capped row that came back as a confirmed one would be compared with things it
+        /// must not be.
+        /// </para>
+        ///
+        /// <para>
+        /// Columns are found by name, so this also pins that a column added in the middle cannot
+        /// silently shift the rest — the failure that reads as a plausible number rather than as an
+        /// error (`D3`).
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ARowSurvivesBeingWrittenAndReadBack()
+        {
+            int repeats = StageLab.Repeats;
+            StageLab.Repeats = 3;
+            try
+            {
+                List<StageLab.Row> written = StageLab.Run("ship", 2000,
+                    new List<string> { "place", "rooms" });
+
+                string path = Path.Combine(Path.GetTempPath(),
+                    "stagelab-" + Guid.NewGuid().ToString("n") + ".csv");
+                try
+                {
+                    File.WriteAllText(path, StageLab.Csv(written));
+                    List<StageLab.Row> read = StageLab.ReadCsv(path);
+
+                    Assert.Equal(written.Count, read.Count);
+                    for (int i = 0; i < written.Count; i++)
+                    {
+                        Assert.Equal(written[i].Stage, read[i].Stage);
+                        Assert.Equal(written[i].Blocks, read[i].Blocks);
+                        Assert.Equal(written[i].BestMs, read[i].BestMs);
+                        Assert.Equal(written[i].MedianMs, read[i].MedianMs);
+                        Assert.Equal(written[i].WorstMs, read[i].WorstMs);
+                        Assert.Equal(written[i].Repeats, read[i].Repeats);
+                        Assert.Equal(written[i].ConfirmedBest, read[i].ConfirmedBest);
+                        Assert.Equal(written[i].Stop, read[i].Stop);
+                        Assert.Equal(written[i].Work, read[i].Work);
+                        Assert.Equal(written[i].WorkUnit, read[i].WorkUnit);
+                        Assert.Equal(written[i].AllocatedBytes, read[i].AllocatedBytes);
+                        Assert.Equal(written[i].FastModeShare, read[i].FastModeShare);
+                    }
+                }
+                finally
+                {
+                    File.Delete(path);
+                }
+            }
+            finally
+            {
+                StageLab.Repeats = repeats;
+            }
+        }
+
+        /// <summary>
+        /// A file this lab did not write is refused by name rather than parsed into a plausible
+        /// row. The case that matters is a `stages.csv` from before a column existed — the pass's
+        /// own starting binary writes one — which positional parsing would read as a row of
+        /// numbers in the wrong columns.
+        /// </summary>
+        [Fact]
+        public void AnArtefactMissingAColumnIsRefusedRatherThanMisread()
+        {
+            string path = Path.Combine(Path.GetTempPath(),
+                "stagelab-old-" + Guid.NewGuid().ToString("n") + ".csv");
+            try
+            {
+                // The header this lab wrote before pass 9's second iteration: no median, no
+                // stopping reason, no repeats.
+                File.WriteAllText(path,
+                    "stage,blocks,best_ms,worst_ms,spread_percent,work,work_unit,ns_per_unit,allocated_bytes"
+                    + Environment.NewLine
+                    + "rooms,126731,13.6,69.4,409,1651592,cells visited,8.3,4882720"
+                    + Environment.NewLine);
+
+                InvalidOperationException failure =
+                    Assert.Throws<InvalidOperationException>(() => StageLab.ReadCsv(path));
+                Assert.Contains("median_ms", failure.Message);
+
+                // And a file with a header and nothing under it is a stage that reported nothing,
+                // not an empty table.
+                File.WriteAllText(path, "stage,blocks,best_ms" + Environment.NewLine);
+                Assert.Throws<InvalidOperationException>(() => StageLab.ReadCsv(path));
+            }
+            finally
+            {
+                File.Delete(path);
             }
         }
 

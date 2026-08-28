@@ -1121,9 +1121,19 @@ whatever the session is doing is doing it to both legs. Alternate the legs rathe
 them, so drift within the window is common to both as well, and carry an untouched stage as a
 control.
 
+**And the control has to be somewhere the change cannot reach, which is narrower than it sounds.**
+A stage that runs *after* the changed stage in the same process is not a control: settling between
+stages reclaims the garbage and leaves the heap it was allocated into, so a stage carries its
+predecessors' allocation history. Measured — the room pass reads 4.5 % apart between two binaries
+when two stages ran before it, and **0.3 % apart when it runs alone**, and what differed between the
+binaries was how much the first of those stages allocates. Give each stage its own process
+(`bench stages --isolate`), or put the control before the change.
+
 *Applies to:* any two timings put in a ratio — a pass against its start, an A/B's two legs, a
 figure on a page against a figure on another.
-*Checked by:* `SampleStatisticTests` — `RunsAreOneWindowOnlyIfTheyWereTakenInsideOne`,
+*Checked by:* `StageLabTests.ARowSurvivesBeingWrittenAndReadBack` and
+`AnArtefactMissingAColumnIsRefusedRatherThanMisread` for the isolation the second half needs, and
+`SampleStatisticTests` — `RunsAreOneWindowOnlyIfTheyWereTakenInsideOne`,
 `ARunWithNoReadableStampIsNotOneWindowWithAnything` and
 `TheStampIsWrittenToTheArtefactAndReadBackFromIt`. Every artefact `bench stages` writes carries the
 stamp those read, and `bench samplestats` says above its table whether the runs it is comparing are
@@ -1817,6 +1827,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **`M7` gains the half that was luck rather than method: a control the change can reach is not a control.** Pass 9's tenth iteration measured a stage nothing had touched moving 4.5 % between two binaries — and 0.3 % when run on its own. Settling between stages reclaims the garbage and leaves the heap it was allocated into, so a stage carries its predecessors' allocation, and the change under test had cut exactly that. `bench stages --isolate` gives each stage its own process. |
 | 2026-08-27 | **`D2`'s own stated gap is closed: the test tree scans itself.** The entry ended by saying nothing looked for an uncalled `internal static` invariant in the test project, which is how four survived a pass. `UncalledCodeTests` looks now — over the shipped code as well, where it comes back clean — and found two on its first run — a documented six-face count in `Scenarios` and a photopic luminance integration in `IncandescenceTests` that was written from first principles and never called. The compiler cannot find these: an unused private field is a warning and an unused private method is not. |
 | 2026-08-27 | **`M7` is now *two figures are comparable only if they were taken in one window*, and `M4` says which statistic to read is a property of the session.** The same exposure code measured a 4.75 ms median in one held window and 11.40 two days earlier — `best/med` 0.83 against 0.45 — with the source, the instrument, the build configuration and the stage order each eliminated in turn. The minimum roughly travels between sessions and the median does not, which is the reverse of what `M4`'s within-window table assigns this stage. Pass 4 saw the same effect at thirty per cent and left it as prose; it has an artefact behind it now, `taken_utc` on every run the stage lab writes. |
 | 2026-08-27 | **`M4` takes the median as well as the fastest, and says the reproducibility is not checkable.** Four runs of one binary at 126,731 blocks, four hundred repeats a stage, every candidate summary compared: the minimum reproduces to 4.5 % on the room pass and 97 % on `register`; the median to 0.9 % on exposure where the minimum manages 30 %. No summary is best for more than three of the eight and two have none. Pass 8's fix — sample until the best is reproduced — was right and does not reach a stage whose best is a rare draw. Unchecked rules: eighteen, unchanged. |

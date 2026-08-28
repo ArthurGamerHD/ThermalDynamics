@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -1135,8 +1136,25 @@ namespace Thermodynamics.Sim
                         + " different walks and the lab says so.");
                     Console.WriteLine();
 
-                    List<StageLab.Row> stageRows = StageLab.Run(shape, stageBlocks, stages,
-                        message => Console.Error.WriteLine("  " + message));
+                    // **One stage per process, when what is wanted is a comparison.**
+                    // `StageLab.Run` settles the heap before every stage and each stage builds its
+                    // own simulation, so the list's order was believed not to carry. It carries
+                    // anyway: settling collects garbage and does not undo what the churn did to the
+                    // heap. Measured — the room pass reads 13.65 ms on one binary and 14.26 on
+                    // another when `place` and `exposure` ran before it, and 14.08 against 14.12,
+                    // flat, when it runs on its own. See performance.md, Pass 9, Iteration 10.
+                    bool isolate = Array.IndexOf(args, "--isolate") >= 0;
+                    if (isolate)
+                    {
+                        Console.WriteLine("  --isolate: one stage per process, so no stage carries"
+                            + " what the stage before it did to the heap.");
+                        Console.WriteLine();
+                    }
+
+                    List<StageLab.Row> stageRows = isolate
+                        ? StageInSeparateProcesses(args, stages, stageOut)
+                        : StageLab.Run(shape, stageBlocks, stages,
+                            message => Console.Error.WriteLine("  " + message));
 
                     Console.WriteLine(StageLab.Table(stageRows));
 
@@ -1630,6 +1648,79 @@ namespace Thermodynamics.Sim
             return false;
         }
 
+        /// <summary>
+        /// Runs each stage in a process of its own and collects the rows, so that no stage carries
+        /// what the stage before it did to the heap.
+        ///
+        /// <para>
+        /// **This is the only way to make a stage comparison's control a control.** Pass 3 found
+        /// that a stage churning the heap changes what the stage after it measures and answered it
+        /// by settling between stages; pass 9's tenth iteration found that settling is not enough,
+        /// because a collection reclaims the garbage and leaves the heap it was allocated into. The
+        /// room pass moved 4.5 % between two binaries when `place` and `exposure` ran before it, and
+        /// 0.3 % when it ran alone — and the thing that changed between those binaries was how much
+        /// `place` allocates.
+        /// </para>
+        ///
+        /// <para>
+        /// The child is this same executable with the same arguments, one stage named and
+        /// `--isolate` removed, writing into a directory of its own. A child that fails takes the
+        /// run with it rather than leaving a short table: a comparison missing a row is a
+        /// comparison quietly taken over a different set of stages (`E4`).
+        /// </para>
+        /// </summary>
+        private static List<StageLab.Row> StageInSeparateProcesses(string[] args,
+            IList<string> stages, string outDirectory)
+        {
+            List<StageLab.Row> rows = new List<StageLab.Row>();
+
+            for (int i = 0; i < stages.Count; i++)
+            {
+                string stage = stages[i].Trim();
+                string childOut = Path.Combine(outDirectory, "isolated", stage);
+                Directory.CreateDirectory(childOut);
+
+                List<string> childArgs = new List<string>();
+                for (int a = 0; a < args.Length; a++)
+                {
+                    if (args[a] == "--isolate") continue;
+                    if (args[a] == "--stages" || args[a] == "--csv") { a++; continue; }
+                    childArgs.Add(args[a]);
+                }
+                childArgs.Add("--stages");
+                childArgs.Add(stage);
+                childArgs.Add("--csv");
+                childArgs.Add(childOut);
+
+                Console.Error.WriteLine("  isolated: " + stage);
+
+                ProcessStartInfo start = new ProcessStartInfo();
+                start.FileName = Environment.ProcessPath;
+                foreach (string a in childArgs) start.ArgumentList.Add(a);
+                start.RedirectStandardOutput = true;
+                start.RedirectStandardError = true;
+
+                using (Process child = Process.Start(start))
+                {
+                    child.StandardOutput.ReadToEnd();
+                    string errors = child.StandardError.ReadToEnd();
+                    child.WaitForExit();
+
+                    if (child.ExitCode != 0)
+                    {
+                        throw new InvalidOperationException("the isolated run of \"" + stage
+                            + "\" exited " + child.ExitCode + ", so this table would be short a row"
+                            + " and would look like a table over a different set of stages: "
+                            + errors.Trim());
+                    }
+                }
+
+                rows.AddRange(StageLab.ReadCsv(Path.Combine(childOut, "stages.csv")));
+            }
+
+            return rows;
+        }
+
         private static string Option(string[] args, string flag, string fallback)
         {
             for (int i = 0; i < args.Length - 1; i++)
@@ -1763,7 +1854,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare; --repeats N per case");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
-            Console.WriteLine("  bench stages            one stage of a grid's life on its own clock, fastest of a settled sample; --stages a,b; --repeats N (the floor); --trace");
+            Console.WriteLine("  bench stages            one stage of a grid's life on its own clock, fastest of a settled sample; --stages a,b; --repeats N (the floor); --isolate (a process per stage); --trace");
             Console.WriteLine("  bench samplestats       which summary of a stage's repeats two runs agree on; --from dir1,dir2,...");
             Console.WriteLine("  bench stepphases        where a step's own time goes: environment, conduction, coupled, apply, publish");
             Console.WriteLine("  bench stepfloor         what those passes would cost touching the same memory and computing nothing");
