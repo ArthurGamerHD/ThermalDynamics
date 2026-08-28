@@ -49,20 +49,6 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// A census hull with its heat producers running and its temperatures spread across
-        /// 250-750 K, built and mapped.
-        ///
-        /// Every postcondition an A/B suite depends on is checked here rather than assumed. A
-        /// hull that built nothing, found no producer or came back unseeded still lets two runs
-        /// of it agree perfectly, and agreement is the whole assertion those suites make — so the
-        /// failure has to be raised where it happened, not left to a green test run.
-        /// </summary>
-        /// <param name="buildOrderSeed">
-        /// Permutes the order the same blocks are handed to the solver in, moving none of them.
-        /// Zero — the default — builds in placement order, which is what every other caller wants.
-        /// See <see cref="GridBuilder.ReorderPlacement"/>.
-        /// </param>
-        /// <summary>
         /// **How much harder than the census share a hull has to be driven before its hot blocks
         /// straddle their own ratings.**
         ///
@@ -93,6 +79,11 @@ namespace Thermodynamics.Harness
         /// census share is measured on the population, not here.
         /// </para>
         /// </summary>
+        /// <param name="buildOrderSeed">
+        /// Permutes the order the same blocks are handed to the solver in, moving none of them.
+        /// Zero — the default — builds in placement order, which is what every other caller wants.
+        /// See <see cref="GridBuilder.ReorderPlacement"/>.
+        /// </param>
         public static ThermalSimulation DrivenPastCritical(ThermalSettings settings,
             int blocks = DefaultBlocks, int buildOrderSeed = 0)
         {
@@ -100,6 +91,15 @@ namespace Thermodynamics.Harness
                 Census.ProducerWatts * PastCriticalMultiple);
         }
 
+        /// <summary>
+        /// A census hull with its heat producers running and its temperatures spread across
+        /// 250-750 K, built and mapped.
+        ///
+        /// Every postcondition an A/B suite depends on is checked here rather than assumed. A
+        /// hull that built nothing, found no producer or came back unseeded still lets two runs
+        /// of it agree perfectly, and agreement is the whole assertion those suites make — so the
+        /// failure has to be raised where it happened, not left to a green test run.
+        /// </summary>
         public static ThermalSimulation Driven(ThermalSettings settings, int blocks = DefaultBlocks,
             int buildOrderSeed = 0)
         {

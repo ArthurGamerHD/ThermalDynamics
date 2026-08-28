@@ -48,6 +48,38 @@
       See rules.md, the one observation, and backlog.md F28.
     -->
     <WarningsAsErrors>$(WarningsAsErrors);xUnit1013</WarningsAsErrors>
+    <!--
+      A doc comment's cref that resolves to nothing is a comment naming something that is not
+      there (R14), and it is exactly the silent kind: it compiles, it reads as documentation, and
+      the reader following it finds no such member. StageLab carried two of them to a field that
+      pass 8 had replaced, through eight performance passes, past EveryCitedIdentifierResolves,
+      which reads rule identifiers out of the pages and does not look at cref targets at all.
+      The compiler resolves them properly, including generics, overloads and inherited members,
+      which no test here could do without reimplementing name binding; it just needed asking.
+      Generating the documentation file is what turns the resolution on, and CS1574 with its
+      relatives is what it reports. CS1591, a public member with no comment at all, stays
+      suppressed: that is a coverage rule and this is a correctness one.
+      See performance.md, Pass 9, Iteration 4.
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!--
+      The whole family, because they are one defect: a doc comment naming something that is not
+      there. CS1574 and CS1580/1581/1584/1710 are a cref that does not resolve; CS1572 is a param
+      tag for a parameter the member does not have and CS1734 a paramref for one; CS1587 is a doc
+      comment attached to no language element at all, which is the orphan
+      NoDocCommentDescribesSomethingThatIsNotThere hunts by pattern and misses whenever the
+      intervening text is not another summary; CS1570 is a comment whose XML does not parse, which
+      means the tags a reader relies on are not the tags the compiler saw.
+      Twenty-five of them were in the tree, four of those in the shipped mod, including a
+      ProtoMember whose comment described a field that had been deleted.
+      CS1573 and CS0419 are deliberately not here: a missing param tag and an ambiguous overload
+      reference are coverage and precision, not a name that resolves to nothing.
+      No vendored file is compiled by any project under tests/, so all nine can be errors here.
+      Generic.csproj, which compiles all three vendored paths, keeps CS1570 and CS1572 as warnings
+      for the five that Draygo's client carries and R6 forbids fixing; its own note says so.
+    -->
+    <NoWarn>$(NoWarn);CS1573;CS0419</NoWarn>
+    <WarningsAsErrors>$(WarningsAsErrors);CS1570;CS1572;CS1574;CS1580;CS1581;CS1584;CS1587;CS1710;CS1734</WarningsAsErrors>
     <CoreSourceRoot>$(MSBuildThisFileDirectory)../Data/Scripts/Thermodynamics/Core/</CoreSourceRoot>
     <TelemetrySourceRoot>$(MSBuildThisFileDirectory)../Data/Scripts/Thermodynamics/Telemetry/</TelemetrySourceRoot>
     <GameSourceRoot>$(MSBuildThisFileDirectory)../Data/Scripts/Thermodynamics/Game/</GameSourceRoot>

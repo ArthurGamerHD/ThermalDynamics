@@ -17,6 +17,7 @@ namespace Thermodynamics.Harness
     /// and what the number said is that **two of the six vanilla generators cannot be built at 0.6**:
     /// they sit past their own critical temperature alone in open space at their own rated draw. The
     /// file ships **0.40** since 2026-08-25.
+    /// </para>
     ///
     /// <para>
     /// It stays runnable rather than being a one-off, because the fraction is only defensible while

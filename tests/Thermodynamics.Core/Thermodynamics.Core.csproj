@@ -15,7 +15,13 @@
     <LangVersion>6</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!--
+      Left on, from the root props: it is what makes the compiler resolve a doc comment's cref, and
+      this project is the one that compiles the simulation core on its own. It was `false` here and
+      the five dangling references in Core that pass 9 found were invisible to every test build
+      because of it. See docs/performance.md, Pass 9, Iteration 4.
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>

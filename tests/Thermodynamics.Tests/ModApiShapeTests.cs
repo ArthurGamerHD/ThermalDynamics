@@ -73,7 +73,7 @@ namespace Thermodynamics.Tests
             return shapes;
         }
 
-        /// <summary>Every `| `Name` | `Func<…>` |` row of the API page's tables.</summary>
+        /// <summary>Every `| `Name` | `Func&lt;…&gt;` |` row of the API page's tables.</summary>
         private static Dictionary<string, string> Documented()
         {
             string page = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "api.md"));

@@ -5,7 +5,7 @@ namespace Thermodynamics
 {
     /// <summary>
     /// How much of a point source reaches a place, and from which way: <c>P / 4πr²</c>, the near-field
-    /// clamp and the range cutoff. Held apart from <see cref="ThermalHeatSources"/>, which cannot be
+    /// clamp and the range cutoff. Held apart from <c>ThermalHeatSources</c>, which cannot be
     /// compiled without the game assemblies, so the arithmetic the whole mechanism is judged on can be
     /// tested. See api.md, Heat sources.
     /// </summary>

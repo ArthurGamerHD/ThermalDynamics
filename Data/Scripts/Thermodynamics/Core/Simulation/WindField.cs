@@ -13,7 +13,7 @@ namespace Thermodynamics.Core
     {
         /// <summary>
         /// Share of the planet's maximum wind that blows in clear weather. Weather scales up from
-        /// here towards <see cref="StormShare"/>.
+        /// here towards <see cref="StormFraction"/>.
         /// </summary>
         public const float CalmFraction = 0.12f;
 

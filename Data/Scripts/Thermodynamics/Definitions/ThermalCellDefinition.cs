@@ -44,7 +44,7 @@ namespace Thermodynamics
         /// Thermal conductivity in real W/(m K) — the number a materials table gives.
         ///
         /// Mild steel 50, stainless 15, aluminium 237, copper 400. The game's pace is set once, in
-        /// <see cref="ThermalConstants.ConductionScale"/>, so this stays a description of what the
+        /// <see cref="Thermodynamics.Core.ThermalConstants.ConductionScale"/>, so this stays a description of what the
         /// block is made of.
         /// </summary>
         [ProtoMember(5)]

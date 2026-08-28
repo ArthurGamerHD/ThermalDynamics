@@ -25,7 +25,7 @@ namespace Thermodynamics.Core
     /// </summary>
     public class RoomAirNode
     {
-        /// <summary>Index into <see cref="RoomMap.Rooms"/> this air belongs to.</summary>
+        /// <summary>The room this air belongs to, in the numbering <see cref="RoomMap.CellsOf"/> reads.</summary>
         public int RoomIndex;
 
         /// <summary>

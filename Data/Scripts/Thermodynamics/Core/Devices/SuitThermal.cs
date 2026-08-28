@@ -49,7 +49,7 @@ namespace Thermodynamics.Core
     /// **The cooler is free**, and that is a limit rather than a decision. `IMyCharacter` exposes
     /// `SuitEnergyLevel` to read and nothing to write, so a mod cannot charge a player for running
     /// it; what it can do is notice when the suit is flat, which is what
-    /// <paramref name="energyAvailable"/> is. See backlog `C16`.
+    /// <c>energyAvailable</c> is. See backlog `C16`.
     /// </para>
     ///
     /// <para>

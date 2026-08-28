@@ -2285,6 +2285,8 @@ next by the same measure. This pass starts there.
 | ---: | --- | --- | --- |
 | 1 | Where the exposure stage's eighty-nine nanoseconds a node go | **kept** — two thirds of it is writing the answer down | [Iteration 1](#pass-9-iteration-1--two-thirds-of-the-exposure-stage-is-writing-the-answer-down) |
 | 2 | Whether a stage settled, in the table and the CSV | **kept** — five stages of eight never reproduced their best | [Iteration 2](#pass-9-iteration-2--the-stage-lab-knew-which-rows-had-not-settled-and-did-not-say) |
+| 3 | The lab that asks which summary of a stage's repeats reproduces | **kept** — `bench samplestats` | [Iteration 3](#pass-9-iteration-3--the-lab-that-asks-which-statistic-reproduces) |
+| 4 | Cleanup: whether a doc comment names something that is there | **kept** — the compiler does it, and found twenty-five | [Iteration 4](#pass-9-iteration-4--the-compiler-was-never-asked-whether-a-comment-names-something-that-is-there) |
 
 ## Pass 9, iteration 1 — two thirds of the exposure stage is writing the answer down
 
@@ -2395,12 +2397,91 @@ and measured the fix on a held machine, three runs a stage. It did not check whe
 produced those spreads had *confirmed*, because nothing printed it. The next iteration asks the
 question that answers directly: over a stage's own repeats, which statistic reproduces.
 
+## Pass 9, iteration 3 — the lab that asks which statistic reproduces
+
+Iteration 2 leaves one question, and it is older than pass 8. `bench stages` has reported the
+**fastest** repeat since pass 1, on the argument that a timing sample is the true cost plus whatever
+else the machine was doing and that noise is one-sided, so averaging it in measures the operating
+system. That argument is sound, and it establishes that the minimum is the least *biased* summary —
+not that the minimum of a sample this size is *reproducible*. Nobody has ever compared it with an
+alternative, so fastest-of-N is a choice nobody made.
+
+`bench samplestats` asks directly. `bench stages` now keeps every repeat and writes `samples.csv`
+beside `stages.csv`; the new command reads several of those — one per process, because that is how a
+pairing's two legs are actually taken — and reports, per stage and per candidate, **the spread
+between runs of one binary**. That is the only property a comparison uses: a statistic whose value
+two runs of identical code disagree about cannot say whether a change moved anything.
+
+The candidates are the minimum and the 1st, 5th, 10th, 25th and 50th percentiles, by **nearest
+rank**, so every value reported is a reading the instrument actually took rather than an
+interpolation between two it did not. Nothing above the median is offered: the one-sided-noise
+argument rules out the mean and the upper tail on evidence that has not changed, and this is a
+narrower question than *which statistic is best*.
+
+`SampleStatisticTests` checks the arithmetic against hand-computed answers rather than against the
+lab itself (`E7`), and both ways it could quietly compare the wrong thing: a stage present in some
+runs and not others is named and dropped rather than averaged over the runs that hold it (`E4`), and
+a run file that parsed to no repeats throws rather than leaving the comparison silently one run
+short (`E8`). It also pins that the fastest reading in the file is the one the stage row reported,
+because an artefact that is not of the run that produced the row would make every figure here about
+some other run.
+
+## Pass 9, iteration 4 — the compiler was never asked whether a comment names something that is there
+
+The exposure work turned up two `<see cref="RepeatsWithoutImprovement"/>` in `StageLab`, pointing at
+a field pass 8 replaced. They had survived eight performance passes, `R14`'s own check, and
+`EveryCitedIdentifierResolves` — which reads *rule* identifiers out of the pages and never looks at
+a cref at all. **Nothing in this repository resolved a doc comment's references, and the compiler
+does it for free.**
+
+`GenerateDocumentationFile` was `false` on the core project and unset elsewhere, which is what turns
+the resolution off. With it on, and `CS1574`, `CS1580`, `CS1581`, `CS1584`, `CS1710`, `CS1572`,
+`CS1734`, `CS1587` and `CS1570` as errors, the build does name binding on every reference in every
+comment: generics, overloads, inherited members, the lot. **Twenty-five failures were waiting**, in
+twelve files, four of them in the shipped mod:
+
+| what it was | where | how many |
+| --- | --- | ---: |
+| a cref to a member that had been renamed or removed | `StageLab`, `WindField`, `RoomAir`, `RoomMap`, `ThermalCellDefinition` | 9 |
+| a method's `<param>` tags left behind when something was inserted above it | `WindProfile`, `Hulls` | 4 |
+| a `<paramref>` to a parameter that is not there — one of them on a *class* | `SuitThermal`, `SolverAb` | 2 |
+| a doc comment attached to no language element at all | `ThermalLoopDefinition`, `RetrofitTests` | 2 |
+| a comment whose XML does not parse, so the tags a reader relies on are not the tags the compiler saw | five files | 8 |
+
+**Two are worth naming.** `ThermalLoopDefinition` had a summary reading *Thermal conductivity of the
+coolant, W/(m K)* sitting above `[ProtoMember(5)]` and below it `HeatTransferCoefficient` — a
+conductivity field deleted years of commits ago, its comment resting on the attribute of the field
+that followed. That is in the mod players load. And `WindProfile.Multiplier`'s three parameters were
+documented onto `GradientHeightIn`, which was inserted between them and it: `R14`'s own test is
+built to catch exactly that shape and looks for a `</summary>` followed by a `<summary>`, so an
+orphan separated by `<param>` tags walks past it.
+
+**What is deliberately not an error.** `CS1573`, a member with some parameters documented and not
+others, and `CS0419`, a cref that resolves to more than one overload. Both are about coverage and
+precision; neither is a name that resolves to nothing, and 84 of the first would have drowned the
+nine that matter.
+
+**The vendored exemption, and why it is a project rather than a path.** `.editorconfig` cannot
+narrow this: its severities are overridden by `WarningsAsErrors`, which was tried and measured to
+change nothing at all. So `CS1570` and `CS1572` are warnings in
+[Generic.csproj](../Generic.csproj) — the only project that compiles the three vendored paths, and
+the only place `R6` forbids the fix — and errors everywhere else, which is every project under
+`tests/` and so every file in `Core`, `Game` and `Telemetry`. The seven no vendored file trips are
+errors in both.
+
+**This is not a performance iteration and it is in a performance pass on purpose.** The rule this
+page runs on is that the instrument is part of the result; a pass that finds its measuring tool
+wrong twice in three iterations should expect the same of the tool that says what its code means.
+Both of pass 9's instrument findings have the identical shape: *the thing already knew, and was
+never asked to say.*
+
 ---
 
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | `R14` is checked by the compiler now, not only by a pattern test: twenty-five doc comments named something that was not there, four of them in the shipped mod. |
 | 2026-08-27 | Opened pass 9 on the stages the link build's twenty-six iterations crowded out, with an ablation that puts two thirds of the exposure stage in writing its answer down. |
 | 2026-08-27 | Opened pass 3, whose first iteration explains the figure pass 2 could not: the instrument, not the surface map. |
 | 2026-08-27 | Closed pass 2: ten iterations, six kept, three dropped with their measurements, one the pass summary. World load at a million blocks 3.17 → 2.21 s. |

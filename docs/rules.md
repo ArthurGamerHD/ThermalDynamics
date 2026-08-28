@@ -306,7 +306,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **R16** | A pointer in code is plain text, never a link | absolute | P5 | `NoPointerInCodeIsWrittenAsALink` |
 | **R12** | A page states its scope, describes the present, and logs its changes | absolute | P3 | partly |
 | **R13** | A standing rule is stated here once, and argued elsewhere | absolute | P5 | `EveryRuleCitedByAPageExists` |
-| **R14** | A comment names something that is there | absolute | P5 | `NoDocCommentDescribesSomethingThatIsNotThere` |
+| **R14** | A comment names something that is there | absolute | P5 | the build (`CS1574` and its family) `NoDocCommentDescribesSomethingThatIsNotThere` |
 | **O1** | Every long run is capped | absolute | P13 | — |
 | **O2** | A run with no bounded duration gets no hang timeout | conditional | P13 | — |
 | **O3** | Long sweeps resume, and progress is measured in bytes | absolute | P13 | — |
@@ -979,15 +979,31 @@ that line.
 > carry an experiment's controls. Sorting summaries by length finds the careful ones.
 
 *Applies to:* every comment under `Data/Scripts` and `tests`, excluding vendored code.
-*Checked by:* `NoDocCommentDescribesSomethingThatIsNotThere`, which fails on **two signatures, and
-they are different faults**. *Closed then reopened* — a summary closed on one line and another
+*Checked by:* **the compiler first, and a test for what it cannot see.**
+
+The compiler resolves every `<see cref>`, `<param>` and `<paramref>` in this tree, because
+`GenerateDocumentationFile` is on and `CS1574`, `CS1580`, `CS1581`, `CS1584`, `CS1710`, `CS1572`,
+`CS1734`, `CS1587` and `CS1570` are errors. That is name binding, with generics, overloads and
+inherited members, which no test here could do without reimplementing it; it had simply never been
+asked. Twenty-five failures were in the tree when it was, four of them in the shipped mod — a
+`[ProtoMember]` whose comment described a deleted field, a method's parameters documented onto the
+constant that had been inserted above it, a `<paramref>` on a class. `CS1573` and `CS0419` are
+deliberately not errors: a missing param tag and an ambiguous overload reference are coverage and
+precision, not a name that resolves to nothing. `CS1570` and `CS1572` are errors everywhere except
+[Generic.csproj](../Generic.csproj), which is the only project that compiles the three vendored
+paths and where `R6` forbids fixing the five they carry; `.editorconfig` cannot narrow it, because
+`WarningsAsErrors` overrides those severities, which was tried and measured.
+
+And `NoDocCommentDescribesSomethingThatIsNotThere` for the orphan the compiler accepts, which fails
+on **two signatures, and they are different faults**. *Closed then reopened* — a summary closed on one line and another
 opened on the next — is a member that has gone, leaving its comment on the one below. *Opened
 twice* — a second summary opened before the first is closed — is a member **inserted into the middle
 of somebody else's comment**, which breaks two comments rather than one: the tail of the first now
 hangs under the newcomer and describes the member after it. Either way C# allows one summary per
 member, so neither shape can be innocent. It states rather than hides its limit: an orphan landing
-somewhere with no comment of its own is invisible to it. Nothing checks the length, which is
-judgement.
+somewhere with no comment of its own is invisible to it — though `CS1587` now takes the case where
+it lands on nothing at all, which is how two of the twenty-five were found. Nothing checks the
+length, which is judgement.
 *From:* [document-of-intent.md](document-of-intent.md#what-a-code-comment-is-for).
 
 #### R15 — An identifier cited anywhere resolves to something that exists
@@ -1740,6 +1756,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **`R14` is checked by the compiler.** Turning on `GenerateDocumentationFile` and making `CS1574` and its family errors makes every `<see cref>`, `<param>` and `<paramref>` in this tree resolve to something that exists — real name binding, which no test here could do without reimplementing it, and which had never been asked for. Twenty-five failures were waiting, four in the shipped mod, including a `[ProtoMember]` whose comment described a deleted field and a method's parameters documented onto the constant inserted above it. `CS1570` and `CS1572` stay warnings in `Generic.csproj` alone, for the five a vendored file carries and `R6` forbids fixing. Unchecked rules: eighteen, unchanged — `R14` was already cited to a test, and now has the stronger check in front of it. |
 | 2026-08-27 | `M4` says what makes N enough: the fastest reading has to have been reproduced. Keeping the fastest of a fixed fifteen had not converged for any stage but the solver — three runs of one binary spread 48 %, 28 % and 67 % — and two passes of optimisations were judged at effect sizes smaller than that. |
 | 2026-08-27 | `C4` is asserted rather than measured. *Nothing allocates on the stepping path* was checked by reading a benchmark, which for a quantity whose correct value is **zero** is not a check at all: any figure at all reads as a small number. `StageLabTests` reads `GC.GetTotalAllocatedBytes` around a settled step of a census hull and fails above four kilobytes. Unchecked rules: eighteen, unchanged — this one was cited to a report and is now cited to a test. |
 | 2026-08-26 | **Added `M13` — a timing is taken on the build that ships — after finding that no timing ever had been.** Nothing under `tests/` set `<Optimize>`, and every command this repository runs builds `Debug`, which tells the JIT not to optimise. A step is 3.4× dearer that way and the factor is not uniform — 5× on the row fill, 7.7× on the diagnostics surcharge, 2.6× on the clamped conduction loop — so the *shares* this repository published were wrong as well as the absolutes, and they were wrong in favour of exactly the work an optimisation pass looks at. It lands under `P1` because it is the same failure as a duration quoted without its machine: the figure's stated scope was untrue. Unchecked rules: eighteen, unchanged — `M13` arrived with `OptimisedBuildTests`. |

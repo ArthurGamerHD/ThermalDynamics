@@ -40,7 +40,7 @@ namespace Thermodynamics.Harness
 
         /// <summary>
         /// **Fewest** timed repeats per stage. The fastest is reported, and repeats continue past
-        /// this until the fastest stops improving — see <see cref="RepeatsWithoutImprovement"/>.
+        /// this until the fastest has been reproduced — see <see cref="ConfirmingRepeats"/>.
         ///
         /// <para>
         /// **Fifteen was not enough, and that was measured rather than assumed.** Three runs of the
@@ -288,7 +288,8 @@ namespace Thermodynamics.Harness
 
         /// <summary>
         /// Whether a stage has taken enough repeats: at least <see cref="Repeats"/> of them, and
-        /// then <see cref="RepeatsWithoutImprovement"/> in a row that did not beat the fastest.
+        /// then <see cref="ConfirmingRepeats"/> of them within <see cref="ConfirmingBand"/> of it,
+        /// or <see cref="MaxRepeats"/> in all. <see cref="Row.Stop"/> records which.
         /// </summary>
         private static bool Settled(Row row)
         {
