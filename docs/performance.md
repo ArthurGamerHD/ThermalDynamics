@@ -2246,12 +2246,99 @@ be, and stated rather than implied.*
 them is a pass rather than an iteration. What this pass leaves behind is an instrument that can
 settle them and a page that says which of its own numbers are load-bearing.
 
+# Pass 9 — 2026-08-27, the stages nobody looked at
+
+Passes 6, 7 and 8 spent twenty-six iterations on **one stage**. The link build is now the
+best-understood thing in this repository and, by its own evidence, at a floor: sixteen iterations
+established that it is bound by one unpredictable touch of grid-sized memory per neighbour, and
+pass 8 established that the instrument which judged them could not have resolved most of what it
+was asked. That is a good place to stop looking at it.
+
+This pass opens on the other end of the build. On the corrected instrument, at 126,731 blocks:
+
+| stage | best ms | ns a unit | prior passes that touched it |
+| --- | ---: | ---: | --- |
+| solver, 20 steps | 17.23 | — | 5 |
+| rooms | 15.80 | 9.6 a cell visited | 1, 2, 3, 4 |
+| links | 14.49 | 58.6 a link | 3, 4, 5, 6, 7 |
+| place | 11.33 | 89.4 a block | 1 |
+| **exposure** | **11.33** | **89.4 a node** | **4** |
+| roomair | 7.83 | 4.8 a probe | 4, 5 |
+| surfaces | 6.54 | 51.6 a cell | 2, 3 |
+| register | 5.04 | 39.8 a block | — |
+
+*Taken at `a4e4f9b`, ship hull, all eight stages in one run, `bench stages --size 125000`. The
+machine is the one [named above](#performance-work); `heavy run` held it.*
+
+**Exposure is the largest stage with the least work behind it** — one optimisation, in pass 4, and
+eighty-nine nanoseconds a node to answer a question about six faces. `register` and `place` are
+next by the same measure. This pass starts there.
+
+| # | Subject | Verdict | Where |
+| ---: | --- | --- | --- |
+| 1 | Where the exposure stage's eighty-nine nanoseconds a node go | **kept** — two thirds of it is writing the answer down | [Iteration 1](#pass-9-iteration-1--two-thirds-of-the-exposure-stage-is-writing-the-answer-down) |
+
+## Pass 9, iteration 1 — two thirds of the exposure stage is writing the answer down
+
+Pass 6's iteration 2 is the cautionary tale for this one: an optimisation built on the inference
+that *the walk is expensive, so the probe must be* — an inference iteration 4 then had to measure
+separately, and which was wrong. So the exposure stage was split by ablation before anything was
+proposed.
+
+The stage's inner loop is three things:
+
+```
+surfaces.GetExposedFaces(node.Block, exposureMap, exposureScratch);   // the question
+for f in 0..5: node.SetExposedFaces(f, exposureScratch[f]);           // the answer, written down
+node.RefreshExposure();                                               // and read back out
+```
+
+Five probe builds of the same tree, each rebuilt `--no-incremental` and measured on the corrected
+instrument with the room pass as control, all five inside one held window:
+
+| leg | what is left | exposure | rooms (control) |
+| --- | --- | ---: | ---: |
+| A | everything | 6.56 ms | 14.71 |
+| D | the walk and the answer; the question not asked | **4.63 ms** | 16.03 |
+| E | the walk alone; neither asked nor written | **0.11 ms** | 16.03 |
+
+**Legs D and E are the result, and they are clean**: neither removes a *predicate*, so neither
+changes how many times anything downstream runs. `exposureScratch` is all zeros in leg D and the
+six writes and the refresh execute exactly as many instructions as they do in leg A.
+
+So the stage divides:
+
+* **the loop itself, `nodes[i]` and `node.Block` — 0.11 ms, under 2 %**
+* **writing the answer into the node — 4.52 ms, 69 %**
+* **computing the answer — 1.93 ms, 29 %**
+
+**Two thirds of the exposure stage is not the exposure test.** It is six read-modify-writes of one
+packed field followed by a second pass that unpacks all six again to total them, and four derived
+values written after it — thirty-five nanoseconds a node to record six numbers the caller already
+had in a local array.
+
+*Two further legs asked what inside `GetExposedFaces` costs, by removing the room test and then the
+surface-state lookup. **Both are confounded and neither is quoted**: each removes a predicate that
+guards the work after it, so the leg with the cheaper body also runs more of it — the reading with
+the room test removed came out at 2.86 ms and the one with the state lookup removed as well at
+5.83, which is a smaller change measuring slower than a larger one that contains it. That is the
+signature of an ablation that changed two things, and it is recorded here rather than deleted
+because pass 6's iteration 3 made the same mistake and the note is cheaper than the repeat.*
+
+**A caution about the absolute.** Leg A reads 6.56 ms for a stage the eight-stage run at the top of
+this pass reads at 11.33. Both are best-of-a-settled-hundred on the same binary and the same hull;
+what differs is what ran before it. A stage's cost depends on the cache and heap the stage before it
+left, and the lab settles the heap but cannot settle the cache. **Ratios within one window are what
+this instrument produces**; the absolute belongs to its window, which is why every leg above carries
+its own control.
+
 ---
 
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Opened pass 9 on the stages the link build's twenty-six iterations crowded out, with an ablation that puts two thirds of the exposure stage in writing its answer down. |
 | 2026-08-27 | Opened pass 3, whose first iteration explains the figure pass 2 could not: the instrument, not the surface map. |
 | 2026-08-27 | Closed pass 2: ten iterations, six kept, three dropped with their measurements, one the pass summary. World load at a million blocks 3.17 → 2.21 s. |
 | 2026-08-26 | Opened pass 2 on the page, with its start figures taken by the instrument the pass begins by putting in the tree. |
