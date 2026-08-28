@@ -744,10 +744,35 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
+        /// <summary>
+        /// When this process started, in UTC, to the second — the stamp every artefact this lab
+        /// writes carries.
+        ///
+        /// <para>
+        /// **A stage figure is only comparable with one taken in the same window.** Pass 9,
+        /// Iteration 6 measured the exposure stage at a 4.75 ms median across twelve processes of
+        /// one held window, agreeing to 1.3 %, against the 11.40 ms Iteration 5 recorded for
+        /// bit-identical code — and eliminated the stage order, the build configuration, the
+        /// instrument's own changes and the source in turn. Whatever moved it moved the *whole*
+        /// distribution, so no summary of the repeats can detect it and nothing in the artefact
+        /// said which session it came from. This is what says so.
+        /// </para>
+        ///
+        /// <para>
+        /// Taken once per process rather than per row, because the question a reader asks of it is
+        /// *were these two figures taken together*, and rows of one run were.
+        /// </para>
+        /// </summary>
+        public static readonly string TakenUtc =
+            DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+
+        /// <summary>The machine, for the same reason as <see cref="TakenUtc"/>: figures from two of them are not one measurement.</summary>
+        public static readonly string Host = Environment.MachineName;
+
         public static string Csv(IList<Row> rows)
         {
             StringBuilder text = new StringBuilder();
-            text.AppendLine("stage,blocks,best_ms,median_ms,fast_mode_share,worst_ms,spread_percent,repeats,confirmed_best,stopped,work,work_unit,ns_per_unit,allocated_bytes");
+            text.AppendLine("stage,blocks,best_ms,median_ms,fast_mode_share,worst_ms,spread_percent,repeats,confirmed_best,stopped,work,work_unit,ns_per_unit,allocated_bytes,taken_utc,host");
             for (int i = 0; i < rows.Count; i++)
             {
                 Row row = rows[i];
@@ -765,7 +790,9 @@ namespace Thermodynamics.Harness
                     row.Work.ToString(CultureInfo.InvariantCulture),
                     row.WorkUnit,
                     row.NsPerWork.ToString("r", CultureInfo.InvariantCulture),
-                    row.AllocatedBytes.ToString(CultureInfo.InvariantCulture)));
+                    row.AllocatedBytes.ToString(CultureInfo.InvariantCulture),
+                    TakenUtc,
+                    Host));
             }
             return text.ToString();
         }
@@ -777,7 +804,7 @@ namespace Thermodynamics.Harness
         public static string SamplesCsv(IList<Row> rows)
         {
             StringBuilder text = new StringBuilder();
-            text.AppendLine("stage,blocks,repeat,ms");
+            text.AppendLine("stage,blocks,repeat,ms,taken_utc");
             for (int i = 0; i < rows.Count; i++)
             {
                 Row row = rows[i];
@@ -787,7 +814,8 @@ namespace Thermodynamics.Harness
                         row.Stage,
                         row.Blocks.ToString(CultureInfo.InvariantCulture),
                         r.ToString(CultureInfo.InvariantCulture),
-                        row.Samples[r].ToString("r", CultureInfo.InvariantCulture)));
+                        row.Samples[r].ToString("r", CultureInfo.InvariantCulture),
+                        TakenUtc));
                 }
             }
             return text.ToString();

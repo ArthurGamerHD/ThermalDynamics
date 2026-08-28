@@ -29,7 +29,7 @@
       fixing. There is no way to exempt one file: `.editorconfig` severities are overridden by
       WarningsAsErrors, which was tried and measured to change nothing, so the choice is a rule
       nobody may satisfy or a narrower rule here. The seven that no vendored file trips stay errors
-      in both, and the two that one does are errors wherever they can be met -- which is every file
+      in both, and the two that one does are errors wherever they can be met, which is every file
       this repository actually maintains except the top-level Game and Definitions sources.
     -->
     <NoWarn>$(NoWarn);CS1570;CS1572</NoWarn>
