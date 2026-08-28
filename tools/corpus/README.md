@@ -94,6 +94,14 @@ scenario; the capped arm cannot stop there, because it has to stop where its own
 (`M1`). `THERMAL_CORPUS_SHIPS=40` walks a stride sample instead of the population, which is how to
 see that a walk works before committing the hours — the sample for this one was 320 runs in 77 s.
 
+**A walk's cost is a property of the build, not just of the corpus.** The 2026-08-28 air re-take is
+**1.78x per file** over the same file range as the 2026-08-24 walk it replaces — about 3.1 hours
+against 104 minutes — and the reason is `A13`: the eleven block kinds that reader built as armour
+are oxygen generators, gravity generators, doors and turrets now, and this walk runs to equilibrium.
+**A dataset taken through a broken reader was cheaper to collect than the truth.** So the 1.95x
+figure below is a ratio between two walks *of one build*, and re-using it across a build that
+changed what the corpus contains would understate the cost.
+
 **Twice is a ceiling, and it is the estimate to use.** The cap walk is the air walk's four
 scenarios with a second arm on each, and the two arms share one blueprint parse, so the second arm
 can only ever add what it simulates. Measured over the fifty files the two walks' progress records
@@ -496,6 +504,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | Said that a walk's cost belongs to the build as well as to the corpus. The `A13` air re-take is **1.78x per file** over the walk it replaces, because the blocks that reader built as armour are generators and doors now and this walk runs to equilibrium — so the 1.95x cap-to-air ratio is a ratio *within one build* and understates the cap walk's cost across a build that changed what the corpus contains. |
 | 2026-08-28 | **A dataset that spans two builds says so, and the reader that could not see it is fixed.** `provenance.txt` has appended a block per slice since it was written, and its writer's summary said as much; `provenance.py` read only the last `Cubes.xml` line, so the 2026-08-25 survey — five slices, two `Cubes.xml` hashes, two `Loops.xml` hashes — reported as measured against the current file. One format, two readers, drifted (`D3`). `spans_several_definitions` is the lookup and the report prints it. **It does not decide whether the split matters**: for that survey it does not, because the only change in the window is the two radiators' emissivity and no corpus ship carries a radiator or any other block the mod adds. Also corrected: this page named `Materials.xml` as the second hashed file for months, and the three the code hashes are `Cubes.xml`, `Loops.xml` and `Planets.xml`. |
 | 2026-08-26 | **`verdict.py` says when a dataset is partial**, which `E4` has asked for since it was written and nothing did. It counts the corpus's blueprints — recursively, because a workshop item can be a collection of several and counting one level deep misses fourteen of this corpus's and reports a population *smaller* than the walk that covered it — and prints `*** PARTIAL: n of m ***` above everything else. Where the corpus is not on the machine it says the population is **unknown** rather than assuming the dataset is whole; `--population <n>` states it. The threshold is 95 %, because the blueprint filters reject about one hull in a thousand and demanding equality would call every finished walk partial. |
 | 2026-08-26 | Added [`cellsize.py`](cellsize.py) and `test_cellsize.py`: which cell size is the harder one to cool, split off a census rather than argued off a cell face. Every column favours small grids — 2.47× the exposed skin per kilowatt, a fifth as much of it buried, **19.75×** the hull path per watt for the hottest block — which is the opposite of what [balance.md](../../docs/balance.md) had written down and what `C43` was blocked on. The hull path is read per kilowatt because the raw column says the reverse, and the test is built around that one column. |
