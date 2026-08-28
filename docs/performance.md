@@ -2301,6 +2301,7 @@ next by the same measure. This pass starts there.
 | 7 | An exposure refresh that changed nothing writing nothing | **kept, and not for the reason it was proposed** — worth nothing on the stage, 2.0 ms on the step after a remap | [Iteration 7](#pass-9-iteration-7--the-skip-is-worthless-where-it-was-aimed-and-worth-two-milliseconds-where-it-was-not) |
 | 8 | The ladder's `build` column, which the page says is fastest-of-three | **kept** — it was one stopwatch | [Iteration 8](#pass-9-iteration-8--the-one-column-a-load-path-change-is-judged-by-was-a-single-sample) |
 | 9 | One-cell blocks' surface arrays, shared instead of allocated | **kept** — `place` falls 15.6 %, after a first attempt that allocated *more* | [Iteration 9](#pass-9-iteration-9--a-one-cell-blocks-walls-do-not-depend-on-where-it-is) |
+| 10 | The pass measured against its own start | the summary below — and a control that was not one | [Iteration 10](#pass-9-iteration-10--what-the-pass-moved-and-the-control-that-was-not-one) |
 
 ## Pass 9, iteration 1 — two thirds of the exposure stage is writing the answer down
 
@@ -2872,12 +2873,115 @@ same value — the bits depend on nothing else — and a reference write is atom
 is garbage rather than a wrong answer. It is the same shape as `fractionsByOrientation`, which has
 been doing this since pass 2.
 
+## Pass 9, iteration 10 — what the pass moved, and the control that was not one
+
+The pass measured against its own start (`M7`): the binary at `a4e4f9b`, the merge it opened from,
+against the binary at its tip, six of each alternating in one held window at 126,731 blocks and four
+hundred repeats a stage.
+
+**Through `bench stages` and not `bench report`, deliberately.** Iteration 8 made the ladder's
+`build` column a fastest-of-three where it had been one sample, so a start-against-tip comparison
+through the report would be two different instruments — which is `A11`'s finding, and the reason
+this page has a pass 8 at all. The stage lab's own changes over this pass are the median column, the
+samples file and the stamp: all reporting, none inside a stopwatch, so the two legs are one
+instrument.
+
+| stage | start | tip | | |
+| --- | ---: | ---: | ---: | --- |
+| place, minimum | 8.994 ms | 7.905 ms | **−12.1 %** | ranges do not overlap |
+| place, allocated a repeat | 36,044 KB | 32,084 KB | −11.0 % | exact |
+| exposure, minimum | 4.699 ms | 4.468 ms | **−4.9 %** | ranges do not overlap |
+| rooms *(control)*, minimum | 13.651 ms | 14.263 ms | +4.5 % | **ranges overlap** |
+
+*Minimum only, because the start binary predates iteration 2 and its `stages.csv` has no median
+column. That is the pass's own theme arriving one more time: a pass that improves its instrument
+cannot measure itself with the improved instrument on both legs.*
+
+**`place` reproduces iteration 9's figure to a tenth of a per cent** — −12.1 % here against −12.2 %
+there — measured on a different day, in a different window, with a different stage list. That is the
+strongest single piece of evidence in this pass that a within-window ratio travels even where an
+absolute figure does not.
+
+**`exposure` is −4.9 % where iteration 6 measured −8.5 % on the same statistic.** Both legs' ranges
+are tight and do not overlap, so both are real; the difference is that iteration 6's *base* had a
+minimum sitting in a rare fast mode (`best/med` 0.82) and this window's start leg does not — its six
+minima span 0.6 %. The median, which iteration 6 measured at −19.5 %, cannot be checked here at all.
+
+### The control moved, and the control was the finding
+
+`rooms` reads 13.65 ms on the starting binary and 14.26 on the tip, and **no iteration of this pass
+went near the room pass.** The ranges overlap, so by `M4` it is not a believed movement — but it
+reproduces in five of six pairs, which is not what noise looks like.
+
+The suspect is the stage before it. Pass 3's first iteration established that a stage churning the
+heap changes what the stage after it measures, and answered it by settling between stages. So: the
+same two binaries, `rooms` on its own, nothing run before it.
+
+| | after `place` and `exposure` | on its own |
+| --- | ---: | ---: |
+| start | 13.651 ms | 14.075 ms |
+| tip | 14.263 ms | 14.117 ms |
+| | **+4.5 %** | **+0.3 %** |
+
+**Run alone the two binaries agree to three parts in a thousand.** Settling was not enough: a
+collection reclaims the garbage and leaves the heap it was allocated into, so a stage carries the
+allocation history of the stages before it — and iteration 9 changed exactly that, cutting `place`
+from 36,044 KB a repeat to 32,084, which over four hundred repeats is 14.4 GB of churn against 12.8.
+The control did not drift. **The change moved it**, through a channel nobody had looked for.
+
+**So a control that runs after the changed stage in the same process is not a control**, and that is
+true of iterations 6, 7 and 9's controls as well. It does not overturn them — each of those measured
+a ratio between two binaries with the control measured identically in both legs, and each control
+read within 2 % — but it is luck rather than method, and it is now removed as a matter of method.
+
+**It also explains iteration 6's loose end.** That iteration found exposure 13.9 % cheaper measured
+third than measured sixth, in a forward-versus-reversed stage order, and recorded it as a real effect
+with no mechanism. This is the mechanism: measured third its predecessors are `solver` and `roomair`;
+measured sixth they are `place`, `register`, `surfaces`, `links` and `rooms` — five stages of churn,
+`place` alone allocating 36 MB a repeat.
+
+**`bench stages --isolate` runs one stage per process.** The child is this same executable with one
+stage named, writing its own `stages.csv`, which the parent reads back and puts in one table; a child
+that fails takes the run with it rather than leaving a table quietly short of a row (`E4`). Reading a
+row back is pinned in both directions — every column a comparison uses survives the round trip, and
+an artefact missing a column is refused by name rather than parsed into a plausible row, which is
+exactly what this pass's own starting binary writes.
+
+### What the pass did
+
+Nine iterations, two of them changes to the shipped model and six of them changes to the instrument
+that judges it. That ratio is the pass.
+
+**What moved:** the exposure stage's six per-face writes became one store (−19.5 % of its median),
+and one-cell blocks stopped allocating a surface array each (−15.6 % of `place`'s median, −11 % of
+its allocation). Both are on the load path, which is where the mod's stated goal lives — a million
+blocks at 1.0 simulation — and neither touches a settled step.
+
+**What was refused, and why that is the more useful half.** The exposure skip does nothing to the
+stage it was aimed at, because iteration 6 had already removed the writes it would have skipped; it
+is kept for the 2.0 ms of unsliced node-state mirroring it stops forcing onto the step after every
+room remap, which is a different claim measured a different way.
+
+**What was found about the instrument**, in the order it was found: five stages of eight never
+reproduced their own fastest reading; no summary of a stage's repeats reproduces for more than three
+of the eight, and two have none; a stage figure belongs to the session that took it, and which
+statistic to read it with belongs to the session too; the report's two most-compared columns were
+single samples under a page saying otherwise; and a stage carries the heap its predecessors left.
+Every one of those was found while trying to measure something else.
+
+**What that says about the six passes before it.** Passes 6 and 7 rejected seven changes on an
+instrument that, on this evidence, could not have judged them. Pass 8's audit called them unproven;
+iteration 5 called them unjudgeable. Nothing here recovers them — each takes a pairing of its own —
+but the instrument that would settle them now exists, reports both statistics, says when it did not
+settle, says which session it came from, and can be told to give every stage a process of its own.
+
 ---
 
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **Pass 9 measured against its own start, and the control was the finding.** `place` −12.1 % and exposure −4.9 % on the minimum, both with ranges that do not overlap — and `place` reproduces iteration 9's −12.2 % on a different day with a different stage list, which is the pass's clearest evidence that a within-window ratio travels where an absolute figure does not. The `rooms` control moved 4.5 % on a stage nothing touched; **run on its own the two binaries agree to 0.3 %**. Settling between stages reclaims the garbage and leaves the heap, so a stage carries its predecessors' allocation — which is also the mechanism behind iteration 6's unexplained 13.9 %. `bench stages --isolate` gives every stage its own process. |
 | 2026-08-27 | **One-cell blocks share their surface arrays per model and orientation**, because the bits do not depend on where the block is. `place` falls **15.6 % on its median and 12.2 % on its minimum** with neither leg's range overlapping, and allocates 11 % less. The first version took the rotation as a delegate and allocated *more* than it saved — 40,005 KB against 36,044 — which the stage lab's allocation column caught and no timing in that window did. |
 | 2026-08-27 | **The ladder's `build` column and the `calibration` row were single samples**, under a page that says every case is timed three times and the fastest kept. One is what a load-path change is judged by and the other is the divisor two machines are compared through. Repeated now: the between-run spread at 500,000 blocks falls from **19.0 % to 3.4 %** and at a million from 6.8 % to 1.1 %, and the figure falls a few per cent at every rung. `EveryTimedCaseInTheReportIsRepeated` fails on any stopwatch in the report with no repeat loop around it, because a third would arrive the same way. |
 | 2026-08-27 | **An exposure refresh that changed nothing writes nothing, which is worth nothing where it was aimed.** The stage does not move — the two legs' ranges overlap on both statistics, because iteration 6 had already removed the six writes a skip would skip. What it is worth is the full, unsliced `SyncNodeState` it stopped forcing onto the step after every room remap: **2.13 ms against 0.145** to mirror 126,731 rows. That is `load-and-hitching.md`'s property 8 one level down, and it is property 11 there now. |

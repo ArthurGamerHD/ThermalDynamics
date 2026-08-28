@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using Thermodynamics.Core;
 
@@ -858,6 +859,66 @@ namespace Thermodynamics.Harness
                     Host));
             }
             return text.ToString();
+        }
+
+        /// <summary>
+        /// Reads back what <see cref="Csv"/> wrote, so a caller that ran a stage in a process of its
+        /// own can put the row in its own table.
+        ///
+        /// <para>
+        /// **Only the columns a comparison uses**: the stage, its blocks, both statistics, the work
+        /// and the allocation. The stopping reason comes back too, because a capped row is not
+        /// comparable with anything and a reader who cannot see that is the reader `E9` is about.
+        /// A row that does not parse throws rather than being skipped, since a table quietly short
+        /// of a row is a table over a different set of stages (`E4`).
+        /// </para>
+        /// </summary>
+        public static List<Row> ReadCsv(string path)
+        {
+            List<Row> rows = new List<Row>();
+            string[] lines = File.ReadAllLines(path);
+
+            if (lines.Length < 2)
+            {
+                throw new InvalidOperationException(path + " holds no rows, so the stage it was"
+                    + " supposed to time reported nothing");
+            }
+
+            string[] header = lines[0].Split(',');
+
+            for (int i = 1; i < lines.Length; i++)
+            {
+                if (lines[i].Trim().Length == 0) continue;
+
+                string[] parts = lines[i].Split(',');
+                Row row = new Row();
+                row.Stage = Field(header, parts, "stage", path);
+                row.Blocks = int.Parse(Field(header, parts, "blocks", path), CultureInfo.InvariantCulture);
+                row.BestMs = double.Parse(Field(header, parts, "best_ms", path), CultureInfo.InvariantCulture);
+                row.MedianMs = double.Parse(Field(header, parts, "median_ms", path), CultureInfo.InvariantCulture);
+                row.WorstMs = double.Parse(Field(header, parts, "worst_ms", path), CultureInfo.InvariantCulture);
+                row.Repeats = int.Parse(Field(header, parts, "repeats", path), CultureInfo.InvariantCulture);
+                row.ConfirmedBest = int.Parse(Field(header, parts, "confirmed_best", path), CultureInfo.InvariantCulture);
+                row.Stop = Field(header, parts, "stopped", path);
+                row.Work = long.Parse(Field(header, parts, "work", path), CultureInfo.InvariantCulture);
+                row.WorkUnit = Field(header, parts, "work_unit", path);
+                row.AllocatedBytes = long.Parse(Field(header, parts, "allocated_bytes", path), CultureInfo.InvariantCulture);
+                rows.Add(row);
+            }
+
+            return rows;
+        }
+
+        /// <summary>One named column of one row, by header rather than by position, so a column added in the middle cannot silently shift the rest.</summary>
+        private static string Field(string[] header, string[] parts, string column, string path)
+        {
+            int index = Array.IndexOf(header, column);
+            if (index < 0 || index >= parts.Length)
+            {
+                throw new InvalidOperationException(path + " has no \"" + column + "\" column, so it"
+                    + " was not written by this lab");
+            }
+            return parts[index];
         }
 
         /// <summary>
