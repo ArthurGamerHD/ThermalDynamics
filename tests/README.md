@@ -615,7 +615,7 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-2,051 tests. **What each class is for is stated in its own summary, not here** —
+2,048 tests. **What each class is for is stated in its own summary, not here** —
 the index below says where to look, and `EveryTestClassSaysWhatItIsFor` fails when a class arrives
 without saying. This table is checked by `EveryTestClassIsInTheIndex`, so a suite cannot be added
 and left off it.
@@ -644,7 +644,7 @@ hold — `A13` was a change to how *vanilla* blocks are read, and it moved the p
 | **Heat sources, damage and thresholds** | `HeatGenerationTests` `DamageTests` `CriticalTemperatureTests` `CriticalTemperatureMirrorTests` `OverheatEventTests` `SuitThermalTests` `IncandescenceTests` `HeatWarningTests` `HeatCueScanTests` `ThresholdTests` `HeatSourceTests` `HeatSourceMathTests` `HeatSourceCommandTests` `CustomHeatSourceTests` `MultiCellAndDamageTests` `ReactorWasteHeatTests` `GridHeatBalanceTests` `HottestNodeTests` `GlowGeometryTests` |
 | **Coolant loops and heat pumps** | `CoolantFillTests` `CoolantLoopTests` `PumpPowerTests` `CoolantFlowTests` `CoolantFaultTests` `HeatLaunderingTests` `PipeFitterTests` `HeatPumpTests` `CoolingScenarioClaimTests` |
 | **What a step costs, and what it must not change** | `LoadTests` `StepBudgetTests` `AllowanceTests` `CapVersusAllowanceTests` `StepWorkUnitTests` `PairedRunTests` `FrankenHullTests` `StepFixedCostTests` `StepPacingTests` `StepTermsTests` `SpreadStepTests` `StaggerTests` `PaceEquivalenceTests` `SweepSliceTests` `BufferGrowthTests` `IncrementalTopologyTests` `BlockRefreshTests` `CostRollupTests` `SolverReportingTests` `StressFindingsTests` |
-| **Bit-identity: an optimisation against what it replaced** | `PrecomputedEnvironmentTests` `HeatGainHoistTests` `LinkWalkTests` `CanonicalLinkOrderTests` `FixedSourceRowTests` `WattsClearFusionTests` `ConductionClampGateTests` `DiagnosticBatchingTests` |
+| **Bit-identity: an optimisation against what it replaced** | `PrecomputedEnvironmentTests` `HeatGainHoistTests` `CanonicalLinkOrderTests` `FixedSourceRowTests` `WattsClearFusionTests` `ConductionClampGateTests` `DiagnosticBatchingTests` |
 | **Settings, storage and definitions** | `DialReachTests` `SettingsDialReachTests` `LoopDialReachTests` `PlanetDialReachTests` `BlockDialReachTests` `LoopBeforeTests` `LoopCoolantMassTests` `CellSizeTests` `DesignedHullTests` `SettingsTests` `SettingsDefaultsTests` `SettingsWiringTests` `ShippedIdentityTests` `ValidationReportingTests` `StorageCodecTests` `SchedulerTests` `DefinitionTests` `DefinitionFileTests` `ShippedDefinitionTests` `AuthoredMaterialTests` `AuthoredWasteTests` `BlockDerivationTests` `SolarAbsorptivityTests` `SelectiveSurfaceTests` `MaterialOverrideTests` `FeatureToggleTests` `DefaultSettingsTests` `ProfileSuiteTests` `ProfileClockTests` `WorldSettingsTests` |
 | **Readouts a player sees** | `TemperatureScaleTests` `UnitsTests` |
 | **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` `OptimisedBuildTests` `CensusBoltTests` `StageLabTests` `StepPhaseLabTests` `LinkSpanProbe` |

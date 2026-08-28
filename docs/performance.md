@@ -642,6 +642,7 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **Closed pass 8.** The first of passes 6–7's rejections was re-measured on the corrected instrument and stands: halving the link build's lookups is 1.02. The other six want a pass of their own. |
 | 2026-08-27 | Audited this page against the instrument correction: pass 5's figures and the large wins (0.36, 0.43, 0.50, 0.53, 0.59) survive, and **every stage ratio between about 0.7 and 1.4 taken before pass 8 is inside the uncertainty** — including seven rejections in passes 6 and 7. A flat control does not rescue them, because the control was a stage with the same problem. |
 | 2026-08-27 | Opened pass 8 on the instrument rather than the code: `bench stages`' best-of-fifteen had **not converged** — three runs of the same binary spread 48 %, 28 % and 67 % on the surface, room and link stages, against 3.5 % for the solver, which was taking twenty times the samples. A stage now repeats until five readings agree with its best within two per cent, on a floor of a hundred. |
 | 2026-08-27 | **Closed pass 7 with one change kept**: the link list's order is a function of the graph, and with the chain rebuild folded into the sort it reads **0.94** against pass 6's tip at 505,566 blocks. The change it was meant to unblock — walking cells in index order — was built and measured at 1.23, so `D3b` is a floor rather than a task. |
@@ -2121,7 +2122,7 @@ rejected seven changes on that instrument**, at effect sizes between 3 % and 40 
 | 1 | Whether the stage is bimodal, traced repeat by repeat | **kept** — it is not; it is under-sampled | [Iteration 1](#pass-8-iteration-1--the-stage-is-not-bimodal-it-is-under-sampled) |
 | 2 | Whether that is one stage or the instrument | **kept** — every stage but the solver | [Iteration 2](#pass-8-iteration-2--every-stage-but-one) |
 | 3 | Sample until the fastest reading is reproduced | **kept** | [Iteration 3](#pass-8-iteration-3--sample-until-the-answer-is-reproduced) |
-| 4–5 | Pass 6's halving recovered; the rule needed a floor as well as agreement | **kept** | [Iteration 3](#pass-8-iteration-3--sample-until-the-answer-is-reproduced) |
+| 4–5 | Pass 6's halving recovered and re-measured; the rule needed a floor as well as agreement | **dropped again** — 1.02 on the corrected instrument | [Iteration 10](#pass-8-iteration-10--the-first-rejection-re-measured) |
 | 6 | `M4` says what makes N enough | **kept** | [rules.md](rules.md#m4--keep-the-fastest-of-n-and-publish-the-noise-floor) |
 | 7 | Which published figures survive the correction | the audit below | [Iteration 7](#pass-8-iteration-7--which-published-figures-survive) |
 
@@ -2223,6 +2224,27 @@ The controls were themselves stages, with the same 28 % of their own.
 beyond its ratio — less work, fewer allocations, a simpler structure — and re-measuring seven
 reverted optimisations properly is a pass of its own, not a footnote to this one. What this iteration
 buys is that the page now says which of its numbers are load-bearing and which are decoration.
+
+## Pass 8, iteration 10 — the first rejection, re-measured
+
+Of the seven changes passes 6 and 7 rejected, the most suspect was **halving the number of
+lookups** — marking the far side of each pair so it does not look up what the near side already
+found. It is structurally less work, and it was rejected at 1.13 and 1.03 on an instrument since
+measured at 28–67 % uncertainty.
+
+Recovered and put to the corrected instrument, it reads **1.02** at 126,731 blocks with the room
+pass flat. **Pass 6's verdict stands**, now on a sound reading: the mark that saves a probe is a
+scattered write into three megabytes, which is the same random touch of grid-sized memory it saves.
+It is dropped again, and this time the number means something.
+
+*The reading at 505,566 blocks was queued behind another project's two-hour hold on the machine and
+had not returned when the pass closed. The verdict rests on the smaller rung, where the corrected
+instrument reads within 3 % across runs — enough to see a change of the size this one would have to
+be, and stated rather than implied.*
+
+**The other six rejections are not re-measured here.** Each takes a pairing of its own, and seven of
+them is a pass rather than an iteration. What this pass leaves behind is an instrument that can
+settle them and a page that says which of its own numbers are load-bearing.
 
 ---
 
