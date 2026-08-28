@@ -137,6 +137,22 @@ namespace Thermodynamics.Harness
             /// </summary>
             public string Stop = Fixed;
 
+            /// <summary>
+            /// Every repeat's milliseconds, in the order they were taken.
+            ///
+            /// <para>
+            /// **The best of a sample is a statistic, and a statistic that has never been compared
+            /// with the alternatives is a choice nobody made.** Fastest-of-N was chosen in pass 1
+            /// because timing noise is one-sided, which is true and does not say that the minimum
+            /// of a sample this size is *reproducible* — and iteration 2 found five stages of eight
+            /// that could not reproduce theirs in four hundred repeats. Answering that needs the
+            /// repeats themselves rather than a summary of them, in enough runs to see between-run
+            /// spread, which is what this carries and `bench samplestats` reads.
+            /// See performance.md, Pass 9, Iteration 3.
+            /// </para>
+            /// </summary>
+            public readonly List<double> Samples = new List<double>();
+
             /// <summary>Milliseconds for one execution of the stage, the fastest of the repeats.</summary>
             public double BestMs;
             public double WorstMs;
@@ -251,6 +267,7 @@ namespace Thermodynamics.Harness
         private static void Take(Row row, double ms)
         {
             if (TraceRepeat != null) TraceRepeat(row.Stage + " " + ms.ToString("n3", CultureInfo.InvariantCulture));
+            row.Samples.Add(ms);
 
             if (ms < row.BestMs)
             {
@@ -678,6 +695,29 @@ namespace Thermodynamics.Harness
                     row.WorkUnit,
                     row.NsPerWork.ToString("r", CultureInfo.InvariantCulture),
                     row.AllocatedBytes.ToString(CultureInfo.InvariantCulture)));
+            }
+            return text.ToString();
+        }
+
+        /// <summary>
+        /// Every repeat of every stage, one row each, in the order they were taken. The artefact
+        /// `bench samplestats` reads; see <see cref="Row.Samples"/> for why it exists.
+        /// </summary>
+        public static string SamplesCsv(IList<Row> rows)
+        {
+            StringBuilder text = new StringBuilder();
+            text.AppendLine("stage,blocks,repeat,ms");
+            for (int i = 0; i < rows.Count; i++)
+            {
+                Row row = rows[i];
+                for (int r = 0; r < row.Samples.Count; r++)
+                {
+                    text.AppendLine(string.Join(",",
+                        row.Stage,
+                        row.Blocks.ToString(CultureInfo.InvariantCulture),
+                        r.ToString(CultureInfo.InvariantCulture),
+                        row.Samples[r].ToString("r", CultureInfo.InvariantCulture)));
+                }
             }
             return text.ToString();
         }

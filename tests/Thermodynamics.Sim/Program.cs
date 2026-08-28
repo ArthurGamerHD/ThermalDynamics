@@ -1137,6 +1137,74 @@ namespace Thermodynamics.Sim
                     string stagePath = Path.Combine(stageOut, "stages.csv");
                     File.WriteAllText(stagePath, StageLab.Csv(stageRows));
                     Console.WriteLine("csv -> " + stagePath);
+
+                    // The repeats themselves, for `bench samplestats`. Always written: they cost a
+                    // few hundred kilobytes and a run that was not traced cannot be traced later.
+                    string samplePath = Path.Combine(stageOut, "samples.csv");
+                    File.WriteAllText(samplePath, StageLab.SamplesCsv(stageRows));
+                    Console.WriteLine("csv -> " + samplePath);
+                    return 0;
+                }
+
+                case "samplestats":
+                {
+                    // Several runs of one binary, compared statistic by statistic. The runs are
+                    // directories `bench stages` wrote, and the answer is which summary of a
+                    // stage's repeats two runs of the same code agree on.
+                    string from = Option(args, "--from", null);
+                    if (from == null)
+                    {
+                        Console.Error.WriteLine("bench samplestats needs --from dir1,dir2,... —"
+                            + " two or more directories `bench stages` wrote a samples.csv into.");
+                        return 2;
+                    }
+
+                    string[] dirs = from.Split(',');
+                    if (dirs.Length < 2)
+                    {
+                        Console.Error.WriteLine("bench samplestats compares runs, so it needs at"
+                            + " least two; it was given " + dirs.Length + ".");
+                        return 2;
+                    }
+
+                    List<SampleStatisticLab.Series> series = new List<SampleStatisticLab.Series>();
+                    for (int i = 0; i < dirs.Length; i++)
+                    {
+                        string path = Path.Combine(dirs[i].Trim(), "samples.csv");
+                        if (!File.Exists(path))
+                        {
+                            Console.Error.WriteLine("no samples.csv in " + dirs[i].Trim()
+                                + " — a run that is not there is a run this comparison would be"
+                                + " silently short of.");
+                            return 2;
+                        }
+                        series.AddRange(SampleStatisticLab.Read(path, "run" + (i + 1)));
+                    }
+
+                    List<string> droppedStages;
+                    List<SampleStatisticLab.Row> statRows =
+                        SampleStatisticLab.Compare(series, out droppedStages);
+
+                    Console.WriteLine();
+                    Console.WriteLine("== which statistic reproduces, " + dirs.Length + " runs ==");
+                    Console.WriteLine("  The spread between runs of one binary, per stage, per"
+                        + " candidate summary of its repeats.");
+                    Console.WriteLine("  The one to keep is the one two runs of the same code agree"
+                        + " on, which is the only property a comparison uses.");
+                    Console.WriteLine();
+                    Console.WriteLine(SampleStatisticLab.Table(statRows));
+
+                    for (int i = 0; i < droppedStages.Count; i++)
+                    {
+                        Console.WriteLine("  dropped: " + droppedStages[i]
+                            + ", so it is not compared here");
+                    }
+
+                    string statOut = csvDirectory ?? "out";
+                    Directory.CreateDirectory(statOut);
+                    string statPath = Path.Combine(statOut, "samplestats.csv");
+                    File.WriteAllText(statPath, SampleStatisticLab.Csv(statRows));
+                    Console.WriteLine("csv -> " + statPath);
                     return 0;
                 }
 
@@ -1659,6 +1727,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
             Console.WriteLine("  bench stages            one stage of a grid's life on its own clock, fastest of a settled sample; --stages a,b; --repeats N (the floor); --trace");
+            Console.WriteLine("  bench samplestats       which summary of a stage's repeats two runs agree on; --from dir1,dir2,...");
             Console.WriteLine("  bench stepphases        where a step's own time goes: environment, conduction, coupled, apply, publish");
             Console.WriteLine("  bench stepfloor         what those passes would cost touching the same memory and computing nothing");
             Console.WriteLine("  bench smallgrids        what one grid costs before any of its blocks do");
