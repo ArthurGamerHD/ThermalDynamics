@@ -115,6 +115,28 @@ namespace Thermodynamics.Harness
             public int RepeatsSinceBest;
             public int ConfirmedBest;
 
+            /// <summary>
+            /// Why the repeats stopped, in one word, for the table and the CSV.
+            ///
+            /// <para>
+            /// **A row that hit the cap is a row whose best was never confirmed, and its number
+            /// should not be compared with anything.** The lab has counted the confirmations since
+            /// pass 8 and a test has asserted that every row is either confirmed or capped — but
+            /// neither the table a person reads nor the CSV a comparison is built from carried the
+            /// answer, so the one reader who needed it could not see it. That is the shape of every
+            /// finding on this page: the instrument knew and did not say (`P2`, `E9`).
+            /// </para>
+            ///
+            /// <para>
+            /// `confirmed` — the fastest reading was reproduced <see cref="ConfirmingRepeats"/>
+            /// times within <see cref="ConfirmingBand"/>. `capped` — it was not, and
+            /// <see cref="MaxRepeats"/> ended the row. `fixed` — the stage does not use the rule at
+            /// all, which is <see cref="StepPhases"/>, whose repeat is twenty steps.
+            /// See performance.md, Pass 9, Iteration 2.
+            /// </para>
+            /// </summary>
+            public string Stop = Fixed;
+
             /// <summary>Milliseconds for one execution of the stage, the fastest of the repeats.</summary>
             public double BestMs;
             public double WorstMs;
@@ -133,6 +155,11 @@ namespace Thermodynamics.Harness
             /// the air rebuild's probes that found a block, for instance. Blank for most stages.
             /// </summary>
             public string Note = "";
+
+            /// <summary>The three values <see cref="Stop"/> takes, so a reader and a test spell them the same way.</summary>
+            public const string Confirmed = "confirmed";
+            public const string Capped = "capped";
+            public const string Fixed = "fixed";
 
             /// <summary>Nanoseconds per unit of work, which is the figure that transfers between sizes.</summary>
             public double NsPerWork
@@ -250,9 +277,23 @@ namespace Thermodynamics.Harness
         {
             if (row == null) return false;
             if (row.Repeats < Repeats) return false;
-            if (row.Repeats >= MaxRepeats) return true;
 
-            return row.ConfirmedBest >= ConfirmingRepeats;
+            // Recorded where it is decided rather than inferred afterwards: a reader deriving the
+            // reason from the counts would have to know the dials the run used, and the dials are
+            // static and settable. See <see cref="Row.Stop"/>.
+            if (row.ConfirmedBest >= ConfirmingRepeats)
+            {
+                row.Stop = Row.Confirmed;
+                return true;
+            }
+
+            if (row.Repeats >= MaxRepeats)
+            {
+                row.Stop = Row.Capped;
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>Whether a work figure repeated exactly; a stage whose work moves between repeats is not one stage.</summary>
@@ -556,6 +597,12 @@ namespace Thermodynamics.Harness
                 row.WorstMs = worst[p];
                 row.Work = visits[p];
                 row.WorkUnit = "visits";
+
+                // A fixed count, not the settle rule: a repeat here is twenty steps, so this path
+                // was already taking `20 * Repeats` samples when the stage lab was taking fifteen.
+                // Reported as `fixed` rather than left to read as a confirmation (`E9`).
+                row.Repeats = repeats;
+                row.Stop = Row.Fixed;
                 row.Note = slices[p] + " slices";
                 rows.Add(row);
             }
@@ -598,13 +645,14 @@ namespace Thermodynamics.Harness
         public static string Table(IList<Row> rows)
         {
             StringBuilder text = new StringBuilder();
-            text.AppendLine("  stage        blocks       best ms      worst ms   spread          work  unit              ns/unit      alloc KB  note");
+            text.AppendLine("  stage        blocks       best ms      worst ms   spread  repeats  stopped          work  unit              ns/unit      alloc KB  note");
             for (int i = 0; i < rows.Count; i++)
             {
                 Row row = rows[i];
                 text.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                    "  {0,-10} {1,9:n0}  {2,12:n3}  {3,12:n3}  {4,6:n0}%  {5,12:n0}  {6,-16}  {7,8:n1}  {8,12:n0}  {9}",
+                    "  {0,-10} {1,9:n0}  {2,12:n3}  {3,12:n3}  {4,6:n0}%  {5,7:n0}  {6,-9}  {7,12:n0}  {8,-16}  {9,8:n1}  {10,12:n0}  {11}",
                     row.Stage, row.Blocks, row.BestMs, row.WorstMs, row.SpreadPercent,
+                    row.Repeats, row.Stop,
                     row.Work, row.WorkUnit, row.NsPerWork, row.AllocatedBytes / 1024, row.Note));
             }
             return text.ToString();
@@ -613,7 +661,7 @@ namespace Thermodynamics.Harness
         public static string Csv(IList<Row> rows)
         {
             StringBuilder text = new StringBuilder();
-            text.AppendLine("stage,blocks,best_ms,worst_ms,spread_percent,work,work_unit,ns_per_unit,allocated_bytes");
+            text.AppendLine("stage,blocks,best_ms,worst_ms,spread_percent,repeats,confirmed_best,stopped,work,work_unit,ns_per_unit,allocated_bytes");
             for (int i = 0; i < rows.Count; i++)
             {
                 Row row = rows[i];
@@ -623,6 +671,9 @@ namespace Thermodynamics.Harness
                     row.BestMs.ToString("r", CultureInfo.InvariantCulture),
                     row.WorstMs.ToString("r", CultureInfo.InvariantCulture),
                     row.SpreadPercent.ToString("r", CultureInfo.InvariantCulture),
+                    row.Repeats.ToString(CultureInfo.InvariantCulture),
+                    row.ConfirmedBest.ToString(CultureInfo.InvariantCulture),
+                    row.Stop,
                     row.Work.ToString(CultureInfo.InvariantCulture),
                     row.WorkUnit,
                     row.NsPerWork.ToString("r", CultureInfo.InvariantCulture),

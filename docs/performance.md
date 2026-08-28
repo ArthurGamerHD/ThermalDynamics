@@ -2270,6 +2270,13 @@ This pass opens on the other end of the build. On the corrected instrument, at 1
 *Taken at `a4e4f9b`, ship hull, all eight stages in one run, `bench stages --size 125000`. The
 machine is the one [named above](#performance-work); `heavy run` held it.*
 
+> **Provisional, and corrected below.** This table was taken before the lab said whether a row had
+> settled. [Iteration 2](#pass-9-iteration-2--the-stage-lab-knew-which-rows-had-not-settled-and-did-not-say)
+> added that column and found five stages of eight never reproducing their own fastest reading, so
+> the ranking here — *which stage is largest* — is not safe as it stands. What the pass did with it
+> is unaffected: it went to the stage that had had the least work, and the ablation that followed is
+> a ratio inside one window against a flat control (`E10`).
+
 **Exposure is the largest stage with the least work behind it** — one optimisation, in pass 4, and
 eighty-nine nanoseconds a node to answer a question about six faces. `register` and `place` are
 next by the same measure. This pass starts there.
@@ -2277,6 +2284,7 @@ next by the same measure. This pass starts there.
 | # | Subject | Verdict | Where |
 | ---: | --- | --- | --- |
 | 1 | Where the exposure stage's eighty-nine nanoseconds a node go | **kept** — two thirds of it is writing the answer down | [Iteration 1](#pass-9-iteration-1--two-thirds-of-the-exposure-stage-is-writing-the-answer-down) |
+| 2 | Whether a stage settled, in the table and the CSV | **kept** — five stages of eight never reproduced their best | [Iteration 2](#pass-9-iteration-2--the-stage-lab-knew-which-rows-had-not-settled-and-did-not-say) |
 
 ## Pass 9, iteration 1 — two thirds of the exposure stage is writing the answer down
 
@@ -2331,6 +2339,61 @@ what differs is what ran before it. A stage's cost depends on the cache and heap
 left, and the lab settles the heap but cannot settle the cache. **Ratios within one window are what
 this instrument produces**; the absolute belongs to its window, which is why every leg above carries
 its own control.
+
+## Pass 9, iteration 2 — the stage lab knew which rows had not settled, and did not say
+
+Iteration 1's pairing was measured twice, and the two rounds disagreed: the exposure stage read
+6.81 ms in one leg and 5.37 in the other on identical code, 27 % apart, with the room pass flat to
+0.05 % between them. Pass 8 closed by reporting the same three stages settling to 2.1 %, 3.0 % and
+7.0 %, so either that had rotted in a day or something about it was never true.
+
+**The lab already held the answer and printed none of it.** Since pass 8 a `Row` has carried
+`Repeats`, `RepeatsSinceBest` and `ConfirmedBest`, and `EveryStageStopsForAReasonItCanName` has
+asserted that every row ends on a confirmation or at the cap. Neither the table a person reads nor
+the CSV a comparison is built from carried any of the three. A row whose best was reproduced five
+times and a row that gave up at four hundred repeats printed identically.
+
+So the three go into both artefacts, with the reason in one word — `confirmed`, `capped`, or
+`fixed` for the step-phase path, which uses a count rather than the rule. `TheTableAndTheCsvSayWhyEachStageStopped`
+pins the header, the vocabulary and that a capped row and a confirmed one do not print the same;
+it was run against a CSV with the column removed and fails there.
+
+**What it says, the first time it was asked:**
+
+| stage | best ms | repeats | stopped |
+| --- | ---: | ---: | --- |
+| place | 11.34 | 400 | **capped** |
+| register | 4.75 | 400 | **capped** |
+| surfaces | 6.18 | 400 | **capped** |
+| links | 31.92 | 113 | confirmed |
+| rooms | 15.69 | 400 | **capped** |
+| exposure | 10.98 | 100 | confirmed |
+| roomair | 18.25 | 103 | confirmed |
+| solver | 17.33 | 400 | **capped** |
+
+**Five stages of eight never reproduced their own fastest reading.** Pass 8's rule — a hundred
+repeats and then until five land within two per cent of the best — does not settle this lab at
+126,731 blocks. It reports a number anyway, and until this iteration it reported it in the same
+type as a settled one.
+
+**And the row that did confirm is the worst of the eight.** `links` stopped at 113 repeats,
+confirmed, at 31.92 ms — against 14.49 ms for the same code in the run at the head of this pass.
+A confirmation is not a convergence: five readings agreeing to two per cent is exactly what a
+contended run's *plateau* looks like, which pass 8's iteration 3 identified and believed a
+hundred-repeat floor had fixed. It has not. The floor makes a stage look for longer; it does not
+make the minimum reproducible.
+
+**So every stage figure in this pass so far is provisional, including its own opening table.** The
+table at the head of pass 9 was taken before this column existed and cannot say which of its rows
+settled; the ranking it draws — which stage is largest — is not safe until it is re-taken. What
+survives it unchanged is iteration 1's *split*, because that is a ratio between three legs measured
+in one window against a control that was flat across all five, and 69 % against 2 % is not a figure
+the sampling can produce.
+
+**This does not correct pass 8; it continues it.** Pass 8 found that fifteen repeats never settled
+and measured the fix on a held machine, three runs a stage. It did not check whether the runs that
+produced those spreads had *confirmed*, because nothing printed it. The next iteration asks the
+question that answers directly: over a stage's own repeats, which statistic reproduces.
 
 ---
 
