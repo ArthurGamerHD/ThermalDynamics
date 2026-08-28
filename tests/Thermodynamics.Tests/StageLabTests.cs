@@ -58,6 +58,80 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **And the reason reaches the reader.** The lab has counted confirmations since pass 8
+        /// and the test below has asserted that every row is either confirmed or capped — but for a
+        /// pass neither the table a person reads nor the CSV a comparison is built from carried the
+        /// answer, so a capped row and a settled one printed identically. An instrument that knows
+        /// and does not say is the failure this whole page is about (`P2`, `E9`).
+        ///
+        /// <para>
+        /// This asserts the two artefacts, not the counting: that the header names the columns, that
+        /// every row's word is one of the three the lab defines, and that the word printed is the
+        /// one the row holds. It runs the lab at a floor of three so it costs a second.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheTableAndTheCsvSayWhyEachStageStopped()
+        {
+            int repeats = StageLab.Repeats;
+            int confirming = StageLab.ConfirmingRepeats;
+
+            StageLab.Repeats = 3;
+            StageLab.ConfirmingRepeats = 2;
+            try
+            {
+                List<StageLab.Row> rows = StageLab.Run("ship", 2000, StageLab.Stages);
+
+                string table = StageLab.Table(rows);
+                string csv = StageLab.Csv(rows);
+
+                Assert.Contains("stopped", table);
+                Assert.Contains("repeats", table);
+                Assert.Contains("stopped", csv.Split('\n')[0]);
+                Assert.Contains("repeats", csv.Split('\n')[0]);
+                Assert.Contains("confirmed_best", csv.Split('\n')[0]);
+
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    StageLab.Row row = rows[i];
+
+                    Assert.True(row.Stop == StageLab.Row.Confirmed || row.Stop == StageLab.Row.Capped,
+                        row.Stage + " stopped for \"" + row.Stop + "\", which is not one of the words"
+                        + " the lab defines, so a reader cannot tell what ended it");
+
+                    // The word has to be *in* the artefacts, not merely on the row.
+                    Assert.Contains(row.Stage, table);
+                    Assert.Contains(row.Stage + ",", csv);
+                }
+
+                // A capped row and a confirmed one must not print the same, which is the whole
+                // point; at a floor of three on a 2,000-block hull every row confirms, so the
+                // discrimination is checked on a row made to hit the cap instead.
+                StageLab.Row capped = new StageLab.Row();
+                capped.Stage = "contrived";
+                capped.Stop = StageLab.Row.Capped;
+                capped.BestMs = 1d;
+                capped.WorstMs = 2d;
+                capped.Work = 1;
+                capped.WorkUnit = "things";
+
+                List<StageLab.Row> mixed = new List<StageLab.Row> { rows[0], capped };
+                string mixedTable = StageLab.Table(mixed);
+                string mixedCsv = StageLab.Csv(mixed);
+
+                Assert.Contains(StageLab.Row.Capped, mixedTable);
+                Assert.Contains(StageLab.Row.Confirmed, mixedTable);
+                Assert.Contains("," + StageLab.Row.Capped + ",", mixedCsv);
+                Assert.Contains("," + StageLab.Row.Confirmed + ",", mixedCsv);
+            }
+            finally
+            {
+                StageLab.Repeats = repeats;
+                StageLab.ConfirmingRepeats = confirming;
+            }
+        }
+
+        /// <summary>
         /// **Every stage stops for a reason it can name.** A figure confirmed once is a fluke, so
         /// the lab keeps sampling until several readings agree with the best to within two per
         /// cent, and gives up at a cap. A row that hit the cap is a row whose best was never

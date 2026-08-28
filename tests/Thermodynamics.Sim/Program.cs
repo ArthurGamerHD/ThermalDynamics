@@ -1098,9 +1098,10 @@ namespace Thermodynamics.Sim
                 {
                     int stageBlocks = size > 0 ? size : 125000;
 
-                    // Raised for a stage that will not settle: fifteen repeats is enough for a
-                    // stage the runtime has finished compiling, and a way of finding out when it
-                    // has not. See performance.md, Pass 7, Iteration 9.
+                    // The *floor*: a stage takes at least this many repeats and then keeps going
+                    // until five of them land within two per cent of its best, or until the cap.
+                    // Raise it to make a stage look harder before it is allowed to be satisfied.
+                    // See performance.md, Pass 8, Iteration 3.
                     int stageRepeats = OptionInt(args, "--repeats", StageLab.Repeats);
                     StageLab.Repeats = Math.Max(1, stageRepeats);
 
@@ -1118,7 +1119,11 @@ namespace Thermodynamics.Sim
                     Console.WriteLine();
                     Console.WriteLine("== stages, " + shape + " " + stageBlocks.ToString("n0") + " blocks ==");
                     Console.WriteLine("  Each stage of a grid's life on its own clock, on one prebuilt grid,"
-                        + " best of " + StageLab.Repeats + ".");
+                        + " fastest of at least " + StageLab.Repeats + " repeats and then until "
+                        + StageLab.ConfirmingRepeats + " of them land within "
+                        + ((StageLab.ConfirmingBand - 1d) * 100d).ToString("n0") + "% of it.");
+                    Console.WriteLine("  The stopped column says which ended each row: a capped row's"
+                        + " best was never reproduced, and is not comparable with anything.");
                     Console.WriteLine("  The work column must repeat exactly, or the readings are of"
                         + " different walks and the lab says so.");
                     Console.WriteLine();
@@ -1653,7 +1658,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
-            Console.WriteLine("  bench stages            one stage of a grid's life on its own clock, best of fifteen; --stages a,b; --repeats N; --trace");
+            Console.WriteLine("  bench stages            one stage of a grid's life on its own clock, fastest of a settled sample; --stages a,b; --repeats N (the floor); --trace");
             Console.WriteLine("  bench stepphases        where a step's own time goes: environment, conduction, coupled, apply, publish");
             Console.WriteLine("  bench stepfloor         what those passes would cost touching the same memory and computing nothing");
             Console.WriteLine("  bench smallgrids        what one grid costs before any of its blocks do");
