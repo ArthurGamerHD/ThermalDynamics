@@ -228,6 +228,13 @@ namespace Thermodynamics.Harness
 
         public static readonly string[] Stages = { "place", "register", "surfaces", "links", "rooms", "exposure", "roomair", "solver" };
 
+        /// <summary>
+        /// Stages that are not part of a grid's life in order and so are not in <see cref="Stages"/>:
+        /// they answer one question and are asked for by name. Named here rather than left to a
+        /// reader of the switch, so `bench stages --stages` has somewhere to point.
+        /// </summary>
+        public static readonly string[] ExtraStages = { "syncdirty", "syncclean" };
+
         public static List<Row> Run(string shape, int blocks, IList<string> stages, Action<string> log = null)
         {
             List<Row> rows = new List<Row>();
@@ -270,6 +277,8 @@ namespace Thermodynamics.Harness
                 case "links": return Links(builder);
                 case "rooms": return Rooms(builder);
                 case "exposure": return Exposure(builder);
+                case "syncdirty": return NodeSync(builder, true);
+                case "syncclean": return NodeSync(builder, false);
                 case "roomair": return RoomAir(builder);
                 case "solver": return Solver(builder);
                 default: throw new ArgumentException("Unknown stage: " + stage);
@@ -582,6 +591,60 @@ namespace Thermodynamics.Harness
                 if (r == 1) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
                 Work(row, simulation.Work.ExposureNodeVisits - before, r);
+            }
+
+            return row;
+        }
+
+        /// <summary>
+        /// What mirroring the grid's node state into the solver's flat arrays costs, with every
+        /// node asking to be mirrored and with none of them.
+        ///
+        /// <para>
+        /// **This is the price of a dirty flag, and it is the whole value of Pass 9's exposure
+        /// skip.** A refresh over an unchanged hull used to mark all 126,731 nodes `StateDirty`, so
+        /// the next step rewrote every mirrored row; it now marks none. The difference is inside a
+        /// fifteen-millisecond step and cannot be read off it, which is why this is its own stage
+        /// and why <c>SyncNodeState</c> is internal.
+        /// </para>
+        ///
+        /// <para>
+        /// Marking the nodes is done outside the stopwatch, so what is timed is the sync and not
+        /// the marking. The two rows share a simulation and differ only in that flag.
+        /// </para>
+        /// </summary>
+        private static Row NodeSync(GridBuilder builder, bool dirty)
+        {
+            ThermalSimulation simulation = builder.BuildSimulation(Hulls.Uncapped(), 293.15f);
+            LoadBenchmarks.SeedSpread(simulation);
+            Census.DriveCensus(simulation);
+
+            // **Stepped first, and not for warm-up.** `SyncNodeState` writes rows of buffers that
+            // `PrepareStepState` allocates immediately before calling it, and calling it on a
+            // solver that has never stepped indexes past the end of arrays that are not there yet.
+            // A step is the only public thing that sets that up. It is also what leaves the heap
+            // and the JIT in the state the timed repeats want.
+            EnvironmentState state = EnvironmentSolver.Solve(
+                simulation.Settings, simulation.Planet, Worlds.Flight(1f, 300f));
+            for (int i = 0; i < 3; i++) simulation.Solver.Step(simulation.Settings.StepSeconds, state);
+
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+
+            Row row = NewRow(dirty ? "syncdirty" : "syncclean", simulation, "nodes");
+            for (int r = 0; !Settled(row); r++)
+            {
+                if (dirty)
+                {
+                    for (int i = 0; i < nodes.Count; i++) nodes[i].StateDirty = true;
+                }
+
+                long allocated = r == 1 ? Allocated() : 0;
+                Stopwatch watch = Stopwatch.StartNew();
+                simulation.Solver.SyncNodeState();
+                watch.Stop();
+                if (r == 1) row.AllocatedBytes = Allocated() - allocated;
+                Take(row, watch.Elapsed.TotalMilliseconds);
+                Work(row, nodes.Count, r);
             }
 
             return row;

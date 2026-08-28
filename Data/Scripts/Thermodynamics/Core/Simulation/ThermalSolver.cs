@@ -702,7 +702,7 @@ namespace Thermodynamics.Core
             Work.ExposureNodeVisits++;
 
             surfaces.GetExposedFaces(block, rooms, exposureScratch);
-            node.SetExposedFaces(exposureScratch);
+            if (node.SetExposedFaces(exposureScratch)) Work.ExposureNodeWrites++;
         }
 
         /// <summary>
@@ -1464,7 +1464,7 @@ namespace Thermodynamics.Core
             {
                 ThermalNode node = nodes[i];
                 surfaces.GetExposedFaces(node.Block, exposureMap, exposureScratch);
-                node.SetExposedFaces(exposureScratch);
+                if (node.SetExposedFaces(exposureScratch)) Work.ExposureNodeWrites++;
             }
 
             exposureCursor = end;
@@ -1529,7 +1529,7 @@ namespace Thermodynamics.Core
                 if (node == null) continue;
 
                 surfaces.GetExposedFaces(block, rooms, exposureScratch);
-                node.SetExposedFaces(exposureScratch);
+                if (node.SetExposedFaces(exposureScratch)) Work.ExposureNodeWrites++;
             }
         }
 
@@ -1990,7 +1990,14 @@ namespace Thermodynamics.Core
         /// constant across a step: it changes when a block is built, damaged, exposed or
         /// re-powered, never between substeps.
         /// </summary>
-        private void SyncNodeState()
+        /// <remarks>
+        /// **Internal rather than private so the stage lab can time it on its own.** What a full
+        /// mirror costs is the whole value of the exposure skip — an unchanged refresh used to mark
+        /// every node and leave this pass rewriting the grid — and a figure inside a fifteen
+        /// millisecond step cannot be read off the step. See `TestVisibility.cs` for why this seam
+        /// exists at all, and performance.md, Pass 9, Iteration 7.
+        /// </remarks>
+        internal void SyncNodeState()
         {
             Work.NodeStateSyncs++;
 

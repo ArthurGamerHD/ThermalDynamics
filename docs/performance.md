@@ -2290,6 +2290,7 @@ next by the same measure. This pass starts there.
 | 5 | Which summary of a stage's repeats reproduces, measured | **kept** — none of them does for every stage; both are reported now | [Iteration 5](#pass-9-iteration-5--no-single-statistic-reproduces-and-two-stages-have-none) |
 | 6 | The exposure stage's six writes packed into one | **kept** — the stage's median falls 19.5 % | [Iteration 6](#pass-9-iteration-6--the-one-write-exposure-change-and-the-session-it-was-measured-in) |
 | 6 | Cleanup: the mod project had not built for three commits | **kept** — `ProjectFileTests` | [Iteration 6](#pass-9-iteration-6--the-one-write-exposure-change-and-the-session-it-was-measured-in) |
+| 7 | An exposure refresh that changed nothing writing nothing | **kept, and not for the reason it was proposed** — worth nothing on the stage, 2.0 ms on the step after a remap | [Iteration 7](#pass-9-iteration-7--the-skip-is-worthless-where-it-was-aimed-and-worth-two-milliseconds-where-it-was-not) |
 
 ## Pass 9, iteration 1 — two thirds of the exposure stage is writing the answer down
 
@@ -2667,12 +2668,84 @@ for a project that never reaches the compiler — every `.csproj`, `.props`, `.t
 outside `obj` and `bin`, found rather than listed, asserted to parse. Verified by reintroducing the
 exact break.
 
+## Pass 9, iteration 7 — the skip is worthless where it was aimed, and worth two milliseconds where it was not
+
+The exposure refresh walks every node and asks the surface map what each one's six faces see. On a
+hull nobody is building the answer is the one the node already had, and it was written anyway. The
+proposal was to compare and skip.
+
+**On the stage it was aimed at, it is worth nothing, and that is measured rather than assumed.**
+
+| | base | change | |
+| --- | ---: | ---: | ---: |
+| exposure, best of 400 | 3.874 ms | 3.865 ms | −0.2 % |
+| exposure, median of 400 | 4.214 ms | 4.353 ms | +3.3 % |
+| rooms *(control)*, median | 15.703 ms | 15.905 ms | +1.3 % |
+
+*Twelve processes, one held window, alternating, six a leg — the same shape as iteration 6's. The
+two legs' ranges overlap on both statistics (base 3.738–4.060 against change 3.801–3.901 on the
+minimum), so by `M4` the ratio is not believed in either direction.*
+
+**The reason is iteration 6.** The ablation that proposed this change measured 4.52 ms of the stage
+in six per-face read-modify-writes and a second pass to total them. Iteration 6 replaced those with
+one store — and *one store is what a skip skips*. The two changes are not additive; the first took
+the prize, and what is left is the walk and the surface probe, which the skip does not touch. This
+is the pass's own `E10` in miniature: a saving priced against the code as it was, banked against the
+code as it is.
+
+### What it is worth is on the next step, and it had never been looked at
+
+`StateDirty` is the other half of a write. A node that is written asks the solver to re-mirror its
+row into the flat arrays a step reads, and `SyncNodeState` does that at the top of the next step in
+**one unsliced pass**. So a refresh that changed nothing was also asking for all 126,731 rows to be
+rewritten, and a room-mapping pass completes on any structural or venting change.
+
+| at 126,731 blocks | mirror every node | mirror none |
+| --- | ---: | ---: |
+| minimum of 400 | 1.695 ms | **0.124 ms** |
+| median of 400 | 2.133 ms | **0.145 ms** |
+| per node | 16.8 ns | 1.1 ns |
+
+*`bench stages --stages syncdirty,syncclean`, four processes in one held window. Both stages capped
+on three runs of four and both spread 25–33 % between runs, so neither figure is reproducible on its
+own — but the legs are fourteen times apart and never come near each other: the slowest *mirror
+none* reading in four hundred is 0.157 ms against a fastest *mirror every node* of 1.302. A ratio
+that large does not need a statistic that reproduces to 1 %, and saying so is the point of reporting
+both.*
+
+**So the change costs a remap about 2.0 ms less, and the saving is the unsliced part.** The exposure
+refresh itself is budgeted and spread across frames; the mirror it forced was neither. That is the
+same defect as [load-and-hitching.md](load-and-hitching.md)'s property 8 — a budgeted pass asking
+for unbudgeted work when it finishes — one level further down, and it is now property 11 there.
+
+### Two seams this needed, and why each is where it is
+
+`SyncNodeState` became `internal`. What a full mirror costs cannot be read off a fifteen-millisecond
+step, and the harness already has a seam for exactly this — `TestVisibility.cs` exists so a pass can
+drive an internal without it becoming public API the mod never calls. The stage it enables prices
+both sides of one flag on one grid, which is a thing no A/B of two binaries can do.
+
+`SetExposedFaces` returns whether anything moved, and the solver counts it as
+`Work.ExposureNodeWrites`. **The claim a skip rests on is that the gate engaged**, and a gate that
+never fires makes two runs agree perfectly (`E8`); `ExposureSkipTests` asserts that a second refresh
+over an unchanged hull writes zero of 126,731 and leaves zero nodes marked, that one moved face is
+still written and marks exactly one, and — against the code the skip replaced, six per-face writes
+and an unconditional refresh — that twenty steps of both produce bit-identical temperatures and
+bit-identical per-mechanism watts (`D8`).
+
+**One case needed a guard rather than an argument.** The skip compares the total as well as the
+packing, because the single-face setter writes the packing without touching what it derives; a node
+left in that state would otherwise skip and keep a stale radiating area, which is a wrong answer
+rather than a slow one. It has no caller under `Data/Scripts` and the comparison costs one integer,
+which is the right price for not having to reason about it again.
+
 ---
 
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **An exposure refresh that changed nothing writes nothing, which is worth nothing where it was aimed.** The stage does not move — the two legs' ranges overlap on both statistics, because iteration 6 had already removed the six writes a skip would skip. What it is worth is the full, unsliced `SyncNodeState` it stopped forcing onto the step after every room remap: **2.13 ms against 0.145** to mirror 126,731 rows. That is `load-and-hitching.md`'s property 8 one level down, and it is property 11 there now. |
 | 2026-08-27 | **`M7` is scoped to any two figures compared, not to a pass.** The exposure stage's six per-face writes became one, worth **19.5 % of the stage's median** over twelve alternating processes of one window against a flat control — and measuring it found that the same code read 2.2× slower in iteration 5's session, with the source, the instrument, the build configuration and the stage order each eliminated. The minimum roughly travels between sessions and the median does not, which inverts iteration 5's assignment for this stage and makes that whole table a within-window measurement. Artefacts carry `taken_utc` now and `bench samplestats` says whether its runs are one window. |
 | 2026-08-27 | The mod project had not built for three commits: iteration 4's own explanatory comment contained a `--`, so MSBuild refused `Generic.csproj` and it left the build instead of failing it. `ProjectFileTests` asserts every MSBuild file in the tree parses. |
 | 2026-08-27 | **`M4` takes the median as well as the fastest.** Four runs of one binary, four hundred repeats a stage: no summary reproduces for more than three of the eight stages, and `links` and `register` have none. The link stage's modes are *between processes* — one run of four never left 31 ms while two others found 15 in their first repeats — which revises pass 8's "not bimodal, under-sampled" and makes passes 6 and 7's seven rejections unjudgeable rather than merely unproven. |
