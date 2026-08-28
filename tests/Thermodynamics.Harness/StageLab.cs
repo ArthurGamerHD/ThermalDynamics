@@ -24,8 +24,71 @@ namespace Thermodynamics.Harness
     /// </summary>
     public static class StageLab
     {
-        /// <summary>Timed repeats per stage; the fastest is reported. Fifteen, because the worst of fifteen room passes on a shared machine is four times the best.</summary>
-        public static int Repeats = 15;
+        /// <summary>
+        /// Called with every repeat's time as it is taken, when a caller wants the shape of a
+        /// reading rather than its best and worst.
+        ///
+        /// <para>
+        /// **A best-of-N hides the shape of N.** The link stage was found to be *bimodal* at
+        /// 126,731 blocks — two windows measuring the same two commits disagreed about which was
+        /// faster, one reading 16.9 ms for the code the other read at 32.8 — and best, worst and
+        /// spread cannot tell a run that warmed into a fast state from one that never did.
+        /// See performance.md, Pass 8, Iteration 1.
+        /// </para>
+        /// </summary>
+        public static Action<string> TraceRepeat;
+
+        /// <summary>
+        /// **Fewest** timed repeats per stage. The fastest is reported, and repeats continue past
+        /// this until the fastest stops improving — see <see cref="RepeatsWithoutImprovement"/>.
+        ///
+        /// <para>
+        /// **Fifteen was not enough, and that was measured rather than assumed.** Three runs of the
+        /// same binary on the same hull, best of fifteen: the surface rebuild read 7.4, 9.6 and
+        /// 6.5 ms — a spread of 48 % — the room pass 28 %, and the link build **67 %**. At a
+        /// hundred and fifty repeats the same three readings come within 2 %, 4 % and 9 %. The
+        /// per-repeat distribution has a long lower tail and fifteen samples reach an unpredictable
+        /// depth into it; the statistic was right and the sample size was not.
+        /// </para>
+        ///
+        /// <para>
+        /// The solver stage was the exception, at 3.5 % on fifteen — because each of its repeats is
+        /// twenty steps, so it was already taking three hundred samples. That is the shape of the
+        /// fix: sample until the answer stops moving. See performance.md, Pass 8, Iteration 3.
+        /// </para>
+        ///
+        /// <para>
+        /// **Agreement alone is not enough, which cost an iteration to find out.** A rule that
+        /// stopped when five readings landed within two per cent of the best settled a *plateau*
+        /// rather than a minimum: on a contended machine a run's first readings cluster tightly at
+        /// a slow value, five of them agree, and the fast mode is never sampled — two legs of one
+        /// pairing read 75 ms and 154 ms for the same stage with the control flat. The floor is a
+        /// hundred repeats now, so a stage has to look before it is allowed to be satisfied.
+        /// </para>
+        /// </summary>
+        public static int Repeats = 100;
+
+        /// <summary>
+        /// How many repeats must land within <see cref="ConfirmingBand"/> of the fastest before a
+        /// stage is called settled.
+        ///
+        /// <para>
+        /// **A fastest reading is trustworthy when it has been reproduced, not when it is old.**
+        /// Two rules were tried on elapsed evidence — a fixed count of repeats since the best, and
+        /// a count scaled to how long the best took to find — and each settled some stages and not
+        /// others, because how rare a stage's fast repeats are differs by stage and by what else
+        /// the machine is doing. Counting how many repeats *agree* with the best asks the question
+        /// directly: a minimum seen once is a fluke, and a minimum seen five times is the cost.
+        /// See performance.md, Pass 8, Iteration 3.
+        /// </para>
+        /// </summary>
+        public static int ConfirmingRepeats = 5;
+
+        /// <summary>How close a repeat must come to the fastest to confirm it. Two per cent.</summary>
+        public static double ConfirmingBand = 1.02;
+
+        /// <summary>A stage that will not settle stops here rather than running for ever.</summary>
+        public static int MaxRepeats = 400;
 
         /// <summary>Steps per timed repeat of the solver stage, so a repeat is milliseconds rather than microseconds.</summary>
         public const int SolverStepsPerRepeat = 20;
@@ -46,6 +109,11 @@ namespace Thermodynamics.Harness
             /// See performance.md, Pass 3, Iteration 1.
             /// </summary>
             public long AllocatedBytes;
+
+            /// <summary>Repeats taken, how many since the fastest was seen, and how many agreed with it.</summary>
+            public int Repeats;
+            public int RepeatsSinceBest;
+            public int ConfirmedBest;
 
             /// <summary>Milliseconds for one execution of the stage, the fastest of the repeats.</summary>
             public double BestMs;
@@ -155,8 +223,36 @@ namespace Thermodynamics.Harness
 
         private static void Take(Row row, double ms)
         {
-            if (ms < row.BestMs) row.BestMs = ms;
+            if (TraceRepeat != null) TraceRepeat(row.Stage + " " + ms.ToString("n3", CultureInfo.InvariantCulture));
+
+            if (ms < row.BestMs)
+            {
+                // A new best restarts the count: what confirmed the old one says nothing about it.
+                row.BestMs = ms;
+                row.RepeatsSinceBest = 0;
+                row.ConfirmedBest = 1;
+            }
+            else
+            {
+                row.RepeatsSinceBest++;
+                if (ms <= row.BestMs * ConfirmingBand) row.ConfirmedBest++;
+            }
+
+            row.Repeats++;
             if (ms > row.WorstMs) row.WorstMs = ms;
+        }
+
+        /// <summary>
+        /// Whether a stage has taken enough repeats: at least <see cref="Repeats"/> of them, and
+        /// then <see cref="RepeatsWithoutImprovement"/> in a row that did not beat the fastest.
+        /// </summary>
+        private static bool Settled(Row row)
+        {
+            if (row == null) return false;
+            if (row.Repeats < Repeats) return false;
+            if (row.Repeats >= MaxRepeats) return true;
+
+            return row.ConfirmedBest >= ConfirmingRepeats;
         }
 
         /// <summary>Whether a work figure repeated exactly; a stage whose work moves between repeats is not one stage.</summary>
@@ -179,13 +275,12 @@ namespace Thermodynamics.Harness
         {
             IList<BlockInstance> dealt = builder.Placed;
             Row row = null;
-            int repeats = Math.Max(1, Repeats);
 
-            for (int r = 0; r < repeats; r++)
+            for (int r = 0; !Settled(row); r++)
             {
                 GridModel grid = new GridModel(builder.Grid.GridSize);
 
-                long allocated = r == repeats - 1 ? Allocated() : 0;
+                long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 for (int i = 0; i < dealt.Count; i++)
                 {
@@ -201,7 +296,7 @@ namespace Thermodynamics.Harness
                     row.BestMs = double.MaxValue;
                     row.WorkUnit = "blocks";
                 }
-                if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
+                if (r == 1) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
                 Work(row, grid.BlockCount, r);
             }
@@ -213,20 +308,19 @@ namespace Thermodynamics.Harness
         private static Row Register(GridBuilder builder)
         {
             Row row = null;
-            int repeats = Math.Max(1, Repeats);
 
-            for (int r = 0; r < repeats; r++)
+            for (int r = 0; !Settled(row); r++)
             {
                 ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings().Derive(), builder.Grid);
 
-                long allocated = r == repeats - 1 ? Allocated() : 0;
+                long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 for (int i = 0; i < builder.Placed.Count; i++)
                 {
                     simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
                 }
                 watch.Stop();
-                if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
+                if (r == 1) row.AllocatedBytes = Allocated() - allocated;
 
                 if (row == null) row = NewRow("register", simulation, "blocks");
                 Take(row, watch.Elapsed.TotalMilliseconds);
@@ -240,15 +334,13 @@ namespace Thermodynamics.Harness
         {
             ThermalSimulation simulation = Registered(builder);
             Row row = NewRow("surfaces", simulation, "cells");
-            int repeats = Math.Max(1, Repeats);
-
-            for (int r = 0; r < repeats; r++)
+            for (int r = 0; !Settled(row); r++)
             {
-                long allocated = r == repeats - 1 ? Allocated() : 0;
+                long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Surfaces.Rebuild(simulation.Grid);
                 watch.Stop();
-                if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
+                if (r == 1) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
                 Work(row, simulation.Surfaces.CellCount, r);
             }
@@ -261,15 +353,13 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = Registered(builder);
             simulation.Surfaces.Rebuild(simulation.Grid);
             Row row = NewRow("links", simulation, "links");
-            int repeats = Math.Max(1, Repeats);
-
-            for (int r = 0; r < repeats; r++)
+            for (int r = 0; !Settled(row); r++)
             {
-                long allocated = r == repeats - 1 ? Allocated() : 0;
+                long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Solver.RebuildLinks();
                 watch.Stop();
-                if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
+                if (r == 1) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
                 Work(row, simulation.Solver.LinkCount, r);
             }
@@ -282,12 +372,10 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = Registered(builder);
             simulation.Surfaces.Rebuild(simulation.Grid);
             Row row = NewRow("rooms", simulation, "cells visited");
-            int repeats = Math.Max(1, Repeats);
-
-            for (int r = 0; r < repeats; r++)
+            for (int r = 0; !Settled(row); r++)
             {
                 long before = simulation.Work.RoomCellsVisited;
-                long allocated = r == repeats - 1 ? Allocated() : 0;
+                long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Rooms.RequestRestart(simulation.Grid);
                 if (!simulation.Rooms.RunToCompletion())
@@ -295,7 +383,7 @@ namespace Thermodynamics.Harness
                     throw new InvalidOperationException("the room pass did not finish, so there is no stage to time");
                 }
                 watch.Stop();
-                if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
+                if (r == 1) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
                 Work(row, simulation.Work.RoomCellsVisited - before, r);
             }
@@ -340,17 +428,15 @@ namespace Thermodynamics.Harness
             }
 
             Row row = NewRow("roomair", simulation, "face probes");
-            int repeats = Math.Max(1, Repeats);
-
-            for (int r = 0; r < repeats; r++)
+            for (int r = 0; !Settled(row); r++)
             {
                 long before = simulation.Work.RoomAirFaceProbes;
                 long hitsBefore = simulation.Work.RoomAirFaceHits;
-                long allocated = r == repeats - 1 ? Allocated() : 0;
+                long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Solver.RebuildRoomAir(map);
                 watch.Stop();
-                if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
+                if (r == 1) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
                 Work(row, simulation.Work.RoomAirFaceProbes - before, r);
 
@@ -369,16 +455,14 @@ namespace Thermodynamics.Harness
             simulation.Rooms.RequestRestart(simulation.Grid);
             simulation.Rooms.RunToCompletion();
             Row row = NewRow("exposure", simulation, "nodes");
-            int repeats = Math.Max(1, Repeats);
-
-            for (int r = 0; r < repeats; r++)
+            for (int r = 0; !Settled(row); r++)
             {
                 long before = simulation.Work.ExposureNodeVisits;
-                long allocated = r == repeats - 1 ? Allocated() : 0;
+                long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Solver.RefreshExposure(simulation.Rooms.Map);
                 watch.Stop();
-                if (r == repeats - 1) row.AllocatedBytes = Allocated() - allocated;
+                if (r == 1) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
                 Work(row, simulation.Work.ExposureNodeVisits - before, r);
             }
@@ -496,16 +580,14 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < 3; i++) simulation.Solver.Step(step, state);
 
             Row row = NewRow("solver", simulation, "substeps");
-            int repeats = Math.Max(1, Repeats);
-
-            for (int r = 0; r < repeats; r++)
+            for (int r = 0; !Settled(row); r++)
             {
                 long before = simulation.Work.SolverSubsteps;
-                long allocated = r == repeats - 1 ? Allocated() : 0;
+                long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 for (int i = 0; i < SolverStepsPerRepeat; i++) simulation.Solver.Step(step, state);
                 watch.Stop();
-                if (r == repeats - 1) row.AllocatedBytes = (Allocated() - allocated) / SolverStepsPerRepeat;
+                if (r == 1) row.AllocatedBytes = (Allocated() - allocated) / SolverStepsPerRepeat;
                 Take(row, watch.Elapsed.TotalMilliseconds / SolverStepsPerRepeat);
                 Work(row, simulation.Work.SolverSubsteps - before, r);
             }

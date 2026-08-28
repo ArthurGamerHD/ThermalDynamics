@@ -511,9 +511,20 @@ Timing noise is one-sided: a sample is the true cost plus whatever else the mach
 averaging it in measures the operating system. Without the floor printed beside them, several
 features cost less than the spread and would read as making the solver faster.
 
+**And N is enough only when the fastest has been reproduced.** The one-sidedness that makes the
+minimum the right statistic also gives it a long lower tail, and a fixed N samples that tail to an
+unpredictable depth: `bench stages` kept the fastest of fifteen for six passes, and three runs of
+one binary on one hull spread **48 %, 28 % and 67 %** across its surface, room and link stages. The
+solver stage was the exception at 3.5 %, because each of its repeats was twenty steps and it was
+quietly taking three hundred samples. A repeat count is a claim about convergence, so it has to be
+one that was checked — by requiring several readings to agree with the best rather than by choosing
+a number. Two passes' worth of rejected optimisations were judged at effect sizes smaller than the
+uncertainty this hid.
+
 *Applies to:* every millisecond in a report.
-*Checked by:* `PerformanceReportTests`.
-*From:* [benchmarks.md](benchmarks.md).
+*Checked by:* `PerformanceReportTests`, and `StageLabTests.EveryStageStopsForAReasonItCanName` for
+the sampling.
+*From:* [benchmarks.md](benchmarks.md), [performance.md](performance.md#pass-8-iteration-2--every-stage-but-one).
 
 #### M5 — A figure inside the noise floor has not moved
 
@@ -1729,6 +1740,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | `M4` says what makes N enough: the fastest reading has to have been reproduced. Keeping the fastest of a fixed fifteen had not converged for any stage but the solver — three runs of one binary spread 48 %, 28 % and 67 % — and two passes of optimisations were judged at effect sizes smaller than that. |
 | 2026-08-27 | `C4` is asserted rather than measured. *Nothing allocates on the stepping path* was checked by reading a benchmark, which for a quantity whose correct value is **zero** is not a check at all: any figure at all reads as a small number. `StageLabTests` reads `GC.GetTotalAllocatedBytes` around a settled step of a census hull and fails above four kilobytes. Unchecked rules: eighteen, unchanged — this one was cited to a report and is now cited to a test. |
 | 2026-08-26 | **Added `M13` — a timing is taken on the build that ships — after finding that no timing ever had been.** Nothing under `tests/` set `<Optimize>`, and every command this repository runs builds `Debug`, which tells the JIT not to optimise. A step is 3.4× dearer that way and the factor is not uniform — 5× on the row fill, 7.7× on the diagnostics surcharge, 2.6× on the clamped conduction loop — so the *shares* this repository published were wrong as well as the absolutes, and they were wrong in favour of exactly the work an optimisation pass looks at. It lands under `P1` because it is the same failure as a duration quoted without its machine: the figure's stated scope was untrue. Unchecked rules: eighteen, unchanged — `M13` arrived with `OptimisedBuildTests`. |
 | 2026-08-26 | `R4` and `R5` were both *judgement* and are checked now, by `ShippedIdentityTests`. They are the two things here that editing back does not undo: regenerating `modinfo.sbmi` publishes the mod as a new workshop item and leaves every subscriber on the old one, and moving a folder under `Models/` costs a re-export of every block that names a path in it. The model pin is a digest of the sorted **set** of paths, because a file added is a normal day and a file moved is the failure. Unchecked rules: twenty-one down to eighteen. |

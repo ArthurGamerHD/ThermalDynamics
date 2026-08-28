@@ -4,12 +4,33 @@ using Thermodynamics.Harness;
 namespace Thermodynamics.Tests
 {
     /// <summary>
+    /// **The two classes that turn the stage lab's dials down run one at a time.** `StageLab.Repeats`
+    /// and its convergence settings are static, and a suite that runs eight ways in parallel had two
+    /// classes assigning them at once — which showed up the moment a second dial was added, as a
+    /// stage that stopped before its best was confirmed. Serialised rather than made instance state,
+    /// because a lab that a caller configures is what every other bench command here expects.
+    /// </summary>
+    [CollectionDefinition("the stage lab's dials", DisableParallelization = true)]
+    public class StageLabDials
+    {
+    }
+
+    /// <summary>
     /// `bench stages` is the instrument a performance pass judges a stage on, so this holds the
     /// two properties that make its reading a reading: every stage it names produces a figure on a
     /// hull that exercised it, and a stage's work counter is identical across repeats — which the
     /// lab enforces by refusing, and this checks by asking twice.
+    ///
+    /// <para>
+    /// And a third, since pass 8: **a stage does not stop until its fastest reading has been
+    /// reproduced.** Best-of-fifteen was not converged — three runs of the same binary read the
+    /// surface rebuild at 7.4, 9.6 and 6.5 ms — so a stage now repeats until five readings land
+    /// within two per cent of its best. `EveryStageConfirmsItsBest` is what says that happened
+    /// rather than that the cap was reached.
+    /// </para>
     /// </summary>
     [Trait("speed", "slow")]
+    [Collection("the stage lab's dials")]
     public class StageLabTests
     {
         [Fact]
@@ -33,6 +54,66 @@ namespace Thermodynamics.Tests
             finally
             {
                 StageLab.Repeats = repeats;
+            }
+        }
+
+        /// <summary>
+        /// **Every stage stops for a reason it can name.** A figure confirmed once is a fluke, so
+        /// the lab keeps sampling until several readings agree with the best to within two per
+        /// cent, and gives up at a cap. A row that hit the cap is a row whose best was never
+        /// confirmed, and its number should not be compared with anything — so the two must be
+        /// distinguishable, and every row must be one or the other.
+        ///
+        /// <para>
+        /// **What this does not assert is that the readings are stable**, and that is deliberate.
+        /// This suite runs eight ways in parallel, which is exactly the contention that makes a
+        /// fast repeat rare; a test demanding convergence under it failed and passed on
+        /// consecutive runs of unchanged code, which is worse than no test. The stability the rule
+        /// buys — three runs within 2 %, 3 % and 7 % where fifteen repeats gave 48 %, 67 % and
+        /// 28 % — is measured on a held machine and recorded in performance.md, Pass 8.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryStageStopsForAReasonItCanName()
+        {
+            int repeats = StageLab.Repeats;
+            int confirming = StageLab.ConfirmingRepeats;
+
+            StageLab.Repeats = 3;
+            StageLab.ConfirmingRepeats = 2;
+            try
+            {
+                List<StageLab.Row> rows = StageLab.Run("ship", 2000, StageLab.Stages);
+
+                int confirmed = 0;
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    StageLab.Row row = rows[i];
+
+                    Assert.True(row.Repeats >= StageLab.Repeats,
+                        row.Stage + " stopped after " + row.Repeats + " repeats, below the floor of "
+                        + StageLab.Repeats);
+
+                    Assert.True(row.ConfirmedBest >= StageLab.ConfirmingRepeats
+                        || row.Repeats >= StageLab.MaxRepeats,
+                        row.Stage + " stopped after " + row.Repeats + " repeats with its best"
+                        + " confirmed " + row.ConfirmedBest + " times — neither a confirmation nor"
+                        + " the cap, so the rule that ended it is not the rule as written");
+
+                    Assert.True(row.ConfirmedBest >= 1,
+                        row.Stage + " never counted its own best as confirming itself");
+
+                    if (row.ConfirmedBest >= StageLab.ConfirmingRepeats) confirmed++;
+                }
+
+                Assert.True(confirmed > 0,
+                    "not one stage of " + rows.Count + " confirmed its best, so either the counting"
+                    + " is broken or the cap is being reached every time");
+            }
+            finally
+            {
+                StageLab.Repeats = repeats;
+                StageLab.ConfirmingRepeats = confirming;
             }
         }
 

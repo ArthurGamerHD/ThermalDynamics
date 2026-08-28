@@ -24,6 +24,7 @@ namespace Thermodynamics.Tests
     /// two readings comparable and what says a stage was entered at all (`M6`).
     /// </para>
     /// </summary>
+    [Collection("the stage lab's dials")]
     public class StepPhaseLabTests
     {
         private static ThermalSimulation Hull(int blocks)

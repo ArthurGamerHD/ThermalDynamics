@@ -642,6 +642,9 @@ different, interleaved, two rounds, fastest kept:
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **Closed pass 8.** The first of passes 6–7's rejections was re-measured on the corrected instrument and stands: halving the link build's lookups is 1.02. The other six want a pass of their own. |
+| 2026-08-27 | Audited this page against the instrument correction: pass 5's figures and the large wins (0.36, 0.43, 0.50, 0.53, 0.59) survive, and **every stage ratio between about 0.7 and 1.4 taken before pass 8 is inside the uncertainty** — including seven rejections in passes 6 and 7. A flat control does not rescue them, because the control was a stage with the same problem. |
+| 2026-08-27 | Opened pass 8 on the instrument rather than the code: `bench stages`' best-of-fifteen had **not converged** — three runs of the same binary spread 48 %, 28 % and 67 % on the surface, room and link stages, against 3.5 % for the solver, which was taking twenty times the samples. A stage now repeats until five readings agree with its best within two per cent, on a floor of a hundred. |
 | 2026-08-27 | **Closed pass 7 with one change kept**: the link list's order is a function of the graph, and with the chain rebuild folded into the sort it reads **0.94** against pass 6's tip at 505,566 blocks. The change it was meant to unblock — walking cells in index order — was built and measured at 1.23, so `D3b` is a floor rather than a task. |
 | 2026-08-27 | Pass 7 opened by removing the obstacle `D3b` named — the link list's order is a function of the graph now, at a cost of 1.02 — and then measured the change it unblocked at **1.23**, and 1.16 with the empty box skipped. The sort it needs costs nothing; the walk does, because a hull fills a fourteenth of its box and a cell-indexed row is bigger than the table it replaces. |
 | 2026-08-27 | **Closed pass 6 with no change kept.** Five bit-identical rewrites of the link build's neighbour lookup — by rank, by dense row, twice by removing the code around it, and once by halving the number of lookups — measured between 0.91 and 1.40, and the last of them explains the rest: the stage is bound by touching grid-sized memory once per neighbour, and every scheme keeps one such touch. Walking blocks in cell order would fix it and is refused here for moving every temperature's last bit. |
@@ -2106,6 +2109,142 @@ The freedom has not yet paid, because the change it unblocked was measured and d
 kept anyway, for three reasons: it costs nothing (0.94 with the chaining folded in), it removes a
 trap where changing a walk silently moves every temperature, and it turns the checks for any future
 walk from order comparisons into set comparisons.
+
+## Pass 8, iterations
+
+Pass 7 closed with an instrument question rather than a code question: the link stage was **bimodal**
+at 126,731 blocks — two windows measuring the same two commits disagreed about which was faster, one
+reading 16.9 ms for the code the other read at 32.8. That is not a footnote. **Passes 6 and 7
+rejected seven changes on that instrument**, at effect sizes between 3 % and 40 %.
+
+| # | Subject | Verdict | Where |
+| ---: | --- | --- | --- |
+| 1 | Whether the stage is bimodal, traced repeat by repeat | **kept** — it is not; it is under-sampled | [Iteration 1](#pass-8-iteration-1--the-stage-is-not-bimodal-it-is-under-sampled) |
+| 2 | Whether that is one stage or the instrument | **kept** — every stage but the solver | [Iteration 2](#pass-8-iteration-2--every-stage-but-one) |
+| 3 | Sample until the fastest reading is reproduced | **kept** | [Iteration 3](#pass-8-iteration-3--sample-until-the-answer-is-reproduced) |
+| 4–5 | Pass 6's halving recovered and re-measured; the rule needed a floor as well as agreement | **dropped again** — 1.02 on the corrected instrument | [Iteration 10](#pass-8-iteration-10--the-first-rejection-re-measured) |
+| 6 | `M4` says what makes N enough | **kept** | [rules.md](rules.md#m4--keep-the-fastest-of-n-and-publish-the-noise-floor) |
+| 7 | Which published figures survive the correction | the audit below | [Iteration 7](#pass-8-iteration-7--which-published-figures-survive) |
+
+## Pass 8, iteration 1 — the stage is not bimodal, it is under-sampled
+
+Traced repeat by repeat, the link build at 126,731 blocks reads:
+
+> **98.0**, 40.4, 34.2, 35.6, 37.8, 35.2, 32.6, 26.7, 33.6, 34.4, 35.6, **25.3**, 25.5, 37.0, 37.8
+
+There is no bimodality. The first repeat is cold, and the rest scatter between 25 and 40 with an
+occasional dip. **Best-of-fifteen samples the lower tail of that scatter to an unpredictable depth**,
+which is what produced 16.9 in one window and 32.8 in another. The statistic was right; the sample
+size was never checked.
+
+| repeats | best across three runs of the same binary | spread |
+| ---: | --- | ---: |
+| 15 | 38.1, 24.8, 22.8 ms | **67 %** |
+| 60 | 15.9, 25.5, 23.9 ms | 60 % |
+| 150 | 22.6, 24.6, 24.3 ms | **9 %** |
+
+## Pass 8, iteration 2 — every stage but one
+
+| stage | best-of-15, three runs | spread | best-of-150 | spread |
+| --- | --- | ---: | --- | ---: |
+| surfaces | 7.4, 9.6, 6.5 | **48 %** | 7.24, 7.16, 7.33 | 2 % |
+| rooms | 15.3, 17.1, 19.6 | **28 %** | 16.5, 16.6, 15.9 | 4 % |
+| links | 38.1, 24.8, 22.8 | **67 %** | 22.6, 24.6, 24.3 | 9 % |
+| a settled step | 17.7, 17.6, 17.1 | 3.5 % | 18.4, 16.9, 18.0 | 8 % |
+
+**Only the solver was converged at fifteen** — because each of its repeats is twenty steps, so it
+was already taking three hundred samples. Which is why pass 5, whose figures came from the step and
+its phases, reads consistently, and why the passes that judged *stages* did not.
+
+**Fifteen was chosen for a different question.** It dates from the first pass, where the worst of
+fifteen room passes was four times the best — a statement about the *spread*, which fifteen shows
+perfectly well. Nobody asked whether fifteen was enough for the *minimum* to settle, and it is not.
+
+## Pass 8, iteration 3 — sample until the answer is reproduced
+
+The fix keeps fastest-of-N and fixes the sampling. A stage now repeats until **five readings land
+within two per cent of its best**, on a floor of a hundred repeats, capped at four hundred.
+
+Two rules were tried and discarded first, and both are instructive. A fixed count of repeats since
+the best settled the link build and the room pass and not the surface rebuild. A count *scaled* to
+how long the best took to find settled the surface rebuild and not the link build — because how rare
+a stage's fast repeats are differs by stage and by what else the machine is doing.
+
+**And agreement alone was not enough either**, which cost an iteration to discover: a rule that
+stopped at five agreeing readings settled a *plateau* rather than a minimum, because on a contended
+machine a run's first readings cluster tightly at a slow value. Two legs of one pairing read 75 ms
+and 154 ms for the same stage with the control flat between them. The hundred-repeat floor is what
+makes a stage look before it is allowed to be satisfied.
+
+| stage | three runs, before | three runs, after |
+| --- | ---: | ---: |
+| surfaces, 126,731 | 48 % | **2.1 %** |
+| links, 126,731 | 67 % | **3.0 %** |
+| rooms, 126,731 | 28 % | **7.0 %** |
+| links, 505,566 | — | **7.4 %** |
+
+`EveryStageStopsForAReasonItCanName` pins the bookkeeping — every row stopped on a confirmation or
+at the cap and says which — and deliberately does **not** assert stability, because a check that
+demands convergence under an eight-way parallel suite is testing the hardware. The first version of
+it did, and failed and passed on consecutive runs of unchanged code.
+
+## Pass 8, iteration 7 — which published figures survive
+
+An instrument that was wrong for six passes is only half a finding; the other half is what it did to
+what has already been published here. **The uncertainty it hid is 28–67 % on a stage ratio**, so the
+question for every figure is whether the effect is larger than that.
+
+**What is unaffected.** Anything measured through the *step* or its phases: each solver repeat is
+twenty steps, so that path was taking three hundred samples and reads 3.5 % across runs. That covers
+**all of pass 5** — the settled step at 0.86, the environment stage at 0.68, apply at 0.8 ns a node —
+and every `bench report` figure, which is a different instrument again.
+
+**What survives on size.** An effect several times the uncertainty is still an effect:
+
+| | | |
+| --- | ---: | --- |
+| pass 4, the room pass | **0.36** | and its allocation 0.10, which is a count and not a timing |
+| pass 4, exposure | **0.53** | |
+| pass 4, the air rebuild | **0.43** | on identical work counters, which is the stronger claim |
+| pass 3, surfaces | **0.50** | the narrowest of these against a 48 % floor on that stage |
+| pass 4, the span flood | **0.59** | |
+
+**What is now unproven, in either direction.** Every stage ratio between roughly 0.7 and 1.4 taken
+before this pass is inside the instrument's uncertainty. That includes several figures this page
+reports as kept — pass 3's links at 0.80 and place at 0.77, pass 4's links at 0.84 and rooms at
+0.84, pass 5's links at 0.88 — **and all seven rejections in passes 6 and 7**, which were judged at
+1.03 to 1.40.
+
+**A flat control does not rescue them**, which is worth saying because the pairings all carried one.
+A control constrains what the *machine* was doing between the legs; it says nothing about how deep
+into its own lower tail the subject stage happened to sample, which is an independent draw per run.
+The controls were themselves stages, with the same 28 % of their own.
+
+**None of the unproven changes is reverted on this account.** Each was kept or dropped for reasons
+beyond its ratio — less work, fewer allocations, a simpler structure — and re-measuring seven
+reverted optimisations properly is a pass of its own, not a footnote to this one. What this iteration
+buys is that the page now says which of its numbers are load-bearing and which are decoration.
+
+## Pass 8, iteration 10 — the first rejection, re-measured
+
+Of the seven changes passes 6 and 7 rejected, the most suspect was **halving the number of
+lookups** — marking the far side of each pair so it does not look up what the near side already
+found. It is structurally less work, and it was rejected at 1.13 and 1.03 on an instrument since
+measured at 28–67 % uncertainty.
+
+Recovered and put to the corrected instrument, it reads **1.02** at 126,731 blocks with the room
+pass flat. **Pass 6's verdict stands**, now on a sound reading: the mark that saves a probe is a
+scattered write into three megabytes, which is the same random touch of grid-sized memory it saves.
+It is dropped again, and this time the number means something.
+
+*The reading at 505,566 blocks was queued behind another project's two-hour hold on the machine and
+had not returned when the pass closed. The verdict rests on the smaller rung, where the corrected
+instrument reads within 3 % across runs — enough to see a change of the size this one would have to
+be, and stated rather than implied.*
+
+**The other six rejections are not re-measured here.** Each takes a pairing of its own, and seven of
+them is a pass rather than an iteration. What this pass leaves behind is an instrument that can
+settle them and a page that says which of its own numbers are load-bearing.
 
 ---
 
