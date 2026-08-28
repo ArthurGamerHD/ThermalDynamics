@@ -16,9 +16,11 @@ namespace Thermodynamics.Tests
     /// <para>
     /// Opt-in on the same terms as the rest of the corpus work, and additionally on a panel file:
     /// <c>tools/corpus/panel.csv</c>, built by <c>tools/corpus/panel.py</c> from a census and a
-    /// survey. The panel is 36 ships chosen for spread — both grid sizes, both failure modes, the
-    /// hulls that are critical in exactly one scenario, and controls that must stay safe — and it
-    /// is small enough that the whole grid of configurations is hours rather than weeks.
+    /// survey. The panel is chosen for spread — both grid sizes, both failure modes, the hulls that
+    /// are critical in exactly one scenario, and controls that must stay safe — and it is small
+    /// enough that the whole grid of configurations is hours rather than weeks. **Its size is not
+    /// quoted here**: it was 36 for as long as this comment said so and the file had 50 (`E5`), and
+    /// `panel.csv` is the only place that answers it.
     /// </para>
     ///
     /// <code>

@@ -32,7 +32,7 @@ waste memory.
 | Sealing and mounting as a per-face fraction | **done** — `BlockModel.LocalFaceMountFraction`, `BlockInstance.MountFraction` |
 | Adjacency behind a host port | **done** — [`IBlockAdjacency`](../Data/Scripts/Thermodynamics/Core/Model/IBlockAdjacency.cs), `ThermalSolver.Adjacency` |
 | Exposure walks surfaces, not volumes | **done** — `SurfaceMap.GetExposedFaces` |
-| Block *storage* stops enumerating cells | **not done** — `GridModel.blocksByCell`, `SurfaceMap.states` and `BlockInstance.Cells` are still one entry per occupied cell. This is the one thing between the model and an SE2 grid; the maths above is already there. `Se2LatticeTests` marks the line between them. |
+| Block *storage* stops enumerating cells | **not done** — `GridModel.blocksByCell`, `SurfaceMap`'s cell table and `BlockInstance.Cells` are still one entry per occupied cell. This is the one thing between the model and an SE2 grid; the maths above is already there. `Se2LatticeTests` marks the line between them. |
 | Room mapping off the block lattice | not done |
 | Struct-of-arrays solver state | **done for the step** — the substep loop reads flat arrays mirrored from the nodes, refreshed only for nodes that changed. The node objects remain the public face. |
 | One grid per thread | **measured and built, shipping off** — `ParallelGrids`; `bench parallel`: 10.17x on a 242-grid fleet at 32 threads, 7.09x at eight, 3.35x on an uneven fleet, hand-off 1.6-6.8 us. See [One grid per thread, measured and built](#one-grid-per-thread-measured-and-built) |
@@ -86,9 +86,9 @@ The current model is **cell-centric**. Every one of these is keyed by `Vector3I`
 | Structure | Entries | Cost for one 5 m block |
 | --- | --- | --- |
 | `GridModel.blocksByCell` | one per occupied cell | 8 000 |
-| `SurfaceMap.states` | one per occupied cell | 8 000 |
+| `SurfaceMap`'s cell table | one per occupied cell | 8 000 |
 | `BlockInstance.gridCells[]` + `gridSurfaces[]` | one per occupied cell | 8 000 × 16 B |
-| `RoomMap.solid` / `roomIndexByCell` | one per cell in the bounding volume | grows as the cube of ship size |
+| `RoomMap.solid` / `RoomMap.roomCells` | one **bit** per cell in the bounding volume | grows as the cube of ship size |
 | `SurfaceMap.GetExposedFaces` | iterates cells × 6 faces | 48 000 iterations |
 | `GridModel.Neighbours` | iterates cells × 6 faces, with `List.Contains` | 48 000 iterations |
 
@@ -350,7 +350,7 @@ Minor consideration, per the brief, but the numbers are worth having. 8 000 bloc
 | --- | --- | --- |
 | Per-node state | class + `int[6]` + `List<int>` ≈ 3 heap objects, ~150 B | ~64 B in arrays, 0 heap objects |
 | `blocksByCell` | ~40 B/cell | gone |
-| `SurfaceMap.states` | ~30 B/cell | gone (6 floats + 6 bits per block) |
+| `SurfaceMap`'s cell table | ~30 B/cell, holding both layers packed since 2026-08-26 | gone (6 floats + 6 bits per block) |
 | `RoomMap` | 3 collections over the bounding volume | coarse lattice, ~1/1000 the cells in SE2 |
 | Links | `List<ThermalLink>` 16 B | `ThermalLink[]` 16 B (unchanged) |
 | **Heap objects** | ~24 000 for nodes alone | ~12 arrays total |

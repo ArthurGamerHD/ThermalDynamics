@@ -168,5 +168,55 @@ namespace Thermodynamics.Tests
                 + " twenty-one steps against " + first + " after one, so the list is accumulating"
                 + " across steps rather than describing the step just taken");
         }
+
+        /// <summary>
+        /// **The apply pass skips the critical row below the grid's lowest critical temperature**,
+        /// so that bound must never be above any node's own — or a node would sail past its
+        /// critical without accruing damage, and nothing else in the model would report it.
+        ///
+        /// <para>
+        /// It is a *bound* rather than the minimum: it only falls, except on a full resync, so a
+        /// grid that loses its most fragile block keeps the old figure until then. Low is safe —
+        /// it skips fewer nodes. High is the failure, and this is what refuses it.
+        /// See performance.md, Pass 5, Iteration 8.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheLowestCriticalTemperatureIsNeverAboveANodesOwn()
+        {
+            ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(), 3000);
+
+            // The bound is settled when a step syncs the node rows, which is also when the pass
+            // that uses it runs — so a step has to have happened for the question to mean anything.
+            Assert.True(float.IsInfinity(simulation.Solver.LowestCriticalTemperature),
+                "the bound was already finite before a step, so this test is not exercising the"
+                + " order it depends on");
+
+            simulation.Solver.Step(simulation.Settings.StepSeconds, EnvironmentSolver.Solve(
+                simulation.Settings, simulation.Planet, Worlds.Flight(1f, 300f)));
+
+            float bound = simulation.Solver.LowestCriticalTemperature;
+
+            Assert.True(bound > 0f && !float.IsInfinity(bound),
+                "after a step the hull still reports a lowest critical temperature of " + bound
+                + ", so the apply pass would skip every node's damage test");
+
+            IList<ThermalNode> nodes = simulation.Solver.Nodes;
+            int judged = 0;
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                float critical = nodes[i].Thermal.CriticalTemperature;
+                if (critical <= 0f) continue;
+
+                Assert.True(bound <= critical,
+                    "node " + i + " (" + nodes[i].Block.Name + ") melts at " + critical
+                    + " K but the grid's bound is " + bound
+                    + " K, so the apply pass would skip it up to the bound");
+                judged++;
+            }
+
+            Assert.True(judged > 1000, "only " + judged + " nodes carry a critical temperature");
+        }
     }
 }

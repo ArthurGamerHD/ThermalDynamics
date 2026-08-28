@@ -346,6 +346,14 @@ namespace Thermodynamics.Core
                 }
                 SimulatedSecondsRun += seconds;
 
+                // **The same call the frame-paced path makes**, because refilling advances with
+                // simulated time and this path is simulated time. It was on `Update` alone, so
+                // coolant came back in a session and never in a lab: every scenario, every
+                // benchmark and every test ran a mod where venting was free and permanent, which
+                // is the one lane a balance figure is read in. `LoopDialReachTests` found it by
+                // reporting both refill dials as reaching nothing.
+                RefillLoops(seconds);
+
                 solver.Step(seconds, state, demand);
 
                 IList<OverheatEvent> stepOverheats = solver.Overheats;
@@ -805,6 +813,12 @@ namespace Thermodynamics.Core
                 }
                 SimulatedSecondsRun += seconds;
 
+                // **Refilling advances with the step, not with the frame**, because the coolant
+                // is a simulated quantity and a frame is not simulated time. A ring with no pump
+                // asks for nothing and never fills — something has to drive the fluid in — and a
+                // pump that was not supplied fills by the share it was.
+                RefillLoops(seconds);
+
                 if (!solver.BeginStep(seconds, state, demand)) return;
 
                 overheats.Clear();
@@ -844,6 +858,48 @@ namespace Thermodynamics.Core
             // The next step starts on the following frame, so a completion never pulls a second
             // step in behind it. This is what bounds a frame's cost.
             CollectStepOutput();
+        }
+
+        /// <summary>
+        /// Puts one step of refilling into every ring that is short, and charges the pump for it.
+        ///
+        /// <para>
+        /// **The watts go onto the pump block's drawn power**, which is the only path this needs:
+        /// a pump's `ConsumerWasteEnergy` is 1, so the existing waste-heat model turns all of it
+        /// into heat where the pump stands. That is what makes venting and refilling neutral at
+        /// the priced excess rather than a free heat sink — see thermal-model.md, *Coolant is a
+        /// consumable*.
+        /// </para>
+        ///
+        /// <para>
+        /// **The previous step's charge is taken off before this one is added**, so a refill that
+        /// runs for a hundred steps does not bill the pump a hundred times over. The pump's own
+        /// draw, which the host sets, is left alone either way.
+        /// </para>
+        /// </summary>
+        private void RefillLoops(float seconds)
+        {
+            IList<CoolantLoop> all = solver.Loops;
+
+            for (int i = 0; i < all.Count; i++)
+            {
+                CoolantLoop loop = all[i];
+                if (loop.Pumps.Count == 0) continue;
+
+                CoolantPump pump = loop.Pumps[0];
+                if (pump.Block == null) continue;
+
+                float watts = loop.Refill(seconds, pump.PowerAvailable);
+
+                if (watts == pump.LastRefillWatts) continue;
+
+                pump.Block.PowerConsumedWatts =
+                    Math.Max(0f, pump.Block.PowerConsumedWatts - pump.LastRefillWatts) + watts;
+                pump.LastRefillWatts = watts;
+
+                ThermalNode node = solver.GetNode(pump.Block);
+                if (node != null) node.RefreshHeatGeneration();
+            }
         }
 
         private void CollectStepOutput()
@@ -907,10 +963,19 @@ namespace Thermodynamics.Core
             }
 
             List<StoredLoop> loops = new List<StoredLoop>(solver.Loops.Count);
+
+            // Sized for the common case, which is none: a full ring needs no record, and a ring is
+            // full unless it has been vented and not yet refilled.
+            List<StoredLoopFill> fills = null;
+
             for (int i = 0; i < solver.Loops.Count; i++)
             {
                 CoolantLoop loop = solver.Loops[i];
                 loops.Add(new StoredLoop(loop.Signature, loop.Temperature));
+
+                if (loop.FillFraction >= 1f) continue;
+                if (fills == null) fills = new List<StoredLoopFill>();
+                fills.Add(new StoredLoopFill(loop.Signature, loop.FillFraction));
             }
 
             // Only initialised air is written. An uninitialised room holds ambient as a
@@ -924,7 +989,7 @@ namespace Thermodynamics.Core
                 rooms.Add(new StoredRoom(air[i].Anchor, air[i].Temperature));
             }
 
-            return ThermalStorageCodec.Encode(blocks, loops, rooms, held);
+            return ThermalStorageCodec.Encode(blocks, loops, rooms, held, fills);
         }
 
         /// <summary>
@@ -939,10 +1004,15 @@ namespace Thermodynamics.Core
 
             List<StoredTemperature> blocks = new List<StoredTemperature>();
             List<StoredLoop> storedLoops = new List<StoredLoop>();
+            List<StoredLoopFill> storedFills = new List<StoredLoopFill>();
             List<StoredRoom> storedRooms = new List<StoredRoom>();
             List<StoredHeldCoolant> storedHeld = new List<StoredHeldCoolant>();
 
-            if (!ThermalStorageCodec.TryDecode(data, blocks, storedLoops, storedRooms, storedHeld)) return 0;
+            if (!ThermalStorageCodec.TryDecode(
+                    data, blocks, storedLoops, storedRooms, storedHeld, storedFills))
+            {
+                return 0;
+            }
 
             int restored = 0;
             for (int i = 0; i < blocks.Count; i++)
@@ -963,6 +1033,25 @@ namespace Thermodynamics.Core
                 {
                     if (solver.Loops[l].Signature != storedLoops[i].Signature) continue;
                     solver.Loops[l].Temperature = Math.Max(ThermalConstants.MinimumTemperature, storedLoops[i].Temperature);
+                    break;
+                }
+            }
+
+            // How full each ring is. **A ring with no record loads full**, which is both the
+            // default and what it was in a world saved before coolant was a consumable — the
+            // section is absent from every payload a released build has written (`W1`).
+            //
+            // Every ring is set, not only the ones with records: a full ring writes no record by
+            // design, so *absent* means full and a loop left at whatever the rebuild gave it would
+            // be reading the live grid rather than the save.
+            for (int l = 0; l < solver.Loops.Count; l++) solver.Loops[l].FillFraction = 1f;
+
+            for (int i = 0; i < storedFills.Count; i++)
+            {
+                for (int l = 0; l < solver.Loops.Count; l++)
+                {
+                    if (solver.Loops[l].Signature != storedFills[i].Signature) continue;
+                    solver.Loops[l].FillFraction = storedFills[i].Fill;
                     break;
                 }
             }

@@ -12,6 +12,8 @@ The rules these pin are stated canonically in [rules.md](../../docs/rules.md): `
 """
 import os
 import sys
+import shutil
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -375,6 +377,44 @@ class PerBlockCap(unittest.TestCase):
         self.assertIsNone(scoring.delta_peak(None, 300.0))
         self.assertIsNone(scoring.delta_peak(300.0, None))
 
+class ACriterionNeedsADatasetFineEnoughToStateIt(unittest.TestCase):
+    """`resolves` is the guard on a partial walk being read as a population.
+
+    A criterion stated as a share of the corpus needs a corpus that can tell its two sides apart.
+    On thirteen ships one ship is 7.7 %, so *nothing critical* and *one per cent critical* are the
+    same reading and `G1` has not been answered — it has been asked of a dataset that cannot
+    distinguish the answers. The partial survey of 2026-08-25 read `[HOLDS]` on exactly that until
+    this existed.
+    """
+
+    def test_one_row_finer_than_the_threshold_resolves_it(self):
+        self.assertTrue(scoring.resolves(100, 1.0))
+        self.assertTrue(scoring.resolves(101, 1.0))
+        self.assertTrue(scoring.resolves(5, 20.0))
+
+    def test_one_row_coarser_than_the_threshold_does_not(self):
+        self.assertFalse(scoring.resolves(13, 1.0))
+        self.assertFalse(scoring.resolves(99, 1.0))
+        self.assertFalse(scoring.resolves(4, 20.0))
+
+    def test_an_empty_dataset_resolves_nothing(self):
+        self.assertFalse(scoring.resolves(0, 1.0))
+        self.assertFalse(scoring.resolves(13, 0.0))
+
+    def test_the_note_says_what_the_dataset_would_need(self):
+        note = scoring.too_coarse(13, 1.0, "idle runs")
+
+        self.assertIn("13 idle runs", note)
+        self.assertIn("7.7 %", note)
+        self.assertIn("It needs 100", note)
+
+    def test_the_note_rounds_the_requirement_up(self):
+        # 3 % needs 34 rows, not 33: at 33 one row is 3.03 % and still coarser than the line.
+        self.assertIn("It needs 34", scoring.too_coarse(10, 3.0, "runs"))
+        self.assertTrue(scoring.resolves(34, 3.0))
+        self.assertFalse(scoring.resolves(33, 3.0))
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -415,3 +455,63 @@ class APairedWalkIsScoredOnTheArmThatShips(unittest.TestCase):
         rows = [self.arm("0", 300), self.arm("6", 290)]
         self.assertNotEqual(rows[0]["cap"], rows[1]["cap"])
         self.assertEqual(rows[0]["scenario"], rows[1]["scenario"])
+
+
+class APartialDatasetIsNamedAsPartial(unittest.TestCase):
+    """`E4` — *a corpus run is quoted whole, or quoted with the words "partial" and the count
+    attached* — had nothing checking it until 2026-08-26. The failure it is about is not a small
+    population: the corpus is walked largest-first, so a killed walk holds the capital ships and
+    reads 95 % where the truth is 75 %."""
+
+    def test_a_finished_walk_is_whole_and_a_third_of_one_is_not(self):
+        # The 2026-08-21 survey against the corpus it walked, and the 2026-08-25 survey at the
+        # point `E4` would have been quoted from it.
+        self.assertGreaterEqual(scoring.walked_share(8132, 8144), scoring.WHOLE_ENOUGH)
+        self.assertLess(scoring.walked_share(2683, 8144), scoring.WHOLE_ENOUGH)
+
+    def test_the_filters_rejections_do_not_make_a_finished_walk_partial(self):
+        """A walk that lost one ship in a hundred is finished. The threshold has to sit between
+        that and an interruption, and this is what says it does."""
+        self.assertGreaterEqual(scoring.walked_share(8062, 8144), scoring.WHOLE_ENOUGH)
+
+    def test_an_unknown_population_is_not_a_whole_one(self):
+        """A machine with no corpus can still read a dataset, and answering *is this partial* with
+        silence there is the failure the rule is about (`P2`)."""
+        self.assertIsNone(scoring.walked_share(8132, None))
+        self.assertIsNone(scoring.walked_share(8132, 0))
+
+    def test_a_stated_population_overrides_the_count(self):
+        self.assertEqual(1234, scoring.corpus_population("1234"))
+        self.assertEqual(1234, scoring.corpus_population(1234))
+
+    def test_a_population_that_cannot_be_read_is_none_rather_than_zero(self):
+        self.assertIsNone(scoring.corpus_population("not a number"))
+
+        keep = scoring.CORPUS
+        try:
+            scoring.CORPUS = os.path.join(tempfile.gettempdir(), "no-corpus-here-" + os.urandom(8).hex())
+            self.assertIsNone(scoring.corpus_population())
+        finally:
+            scoring.CORPUS = keep
+
+    def test_a_collection_of_blueprints_under_one_workshop_id_is_counted(self):
+        """**One workshop item can hold several blueprints**, in named folders under its id. Counting
+        one level deep misses fourteen of this corpus's and reports a population *smaller than the
+        walk that covered it*, which reads as a dataset more than whole."""
+        root = tempfile.mkdtemp()
+        keep = scoring.CORPUS
+        try:
+            os.makedirs(os.path.join(root, "111"))
+            open(os.path.join(root, "111", "bp.sbc"), "w").close()
+
+            for name in ("Ghost Mk.III", "Ghost Mk.IV"):
+                os.makedirs(os.path.join(root, "222", name))
+                open(os.path.join(root, "222", name, "bp.sbc"), "w").close()
+
+            os.makedirs(os.path.join(root, "333"))       # an item with no blueprint in it
+
+            scoring.CORPUS = root
+            self.assertEqual(3, scoring.corpus_population())
+        finally:
+            scoring.CORPUS = keep
+            shutil.rmtree(root, ignore_errors=True)

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Thermodynamics.Core;
-using VRageMath;
 
 namespace Thermodynamics.Harness
 {
@@ -164,60 +163,18 @@ namespace Thermodynamics.Harness
         /// <summary>
         /// One reactor in shadow, skinned or not, run to steady state at the given output.
         ///
-        /// The fraction is applied by the solver rather than by this method: the block is given the
-        /// electrical watts it produces, and the thermal properties carry the fraction, which is
-        /// the path a real reactor's heat takes through <c>ThermalNode.RefreshHeatGeneration</c>.
-        /// Multiplying the two here instead would measure arithmetic rather than the model.
+        /// The two bounds and the clock are <see cref="SoloBlockRig"/>'s, shared with
+        /// <see cref="OxygenGeneratorLab"/> so a producer's kelvin and a consumer's are readable
+        /// against each other. All this adds is which fraction the copy carries.
         /// </summary>
         private static float Settled(Vanilla.Block reactor, BlockThermalProperties shipped,
             float fraction, float producedWatts, bool skinned)
         {
-            BlockThermalProperties thermal = Clone(shipped);
+            BlockThermalProperties thermal = SoloBlockRig.Clone(shipped);
             thermal.ProducerWasteEnergy = fraction;
 
-            GridBuilder builder = reactor.Large ? GridBuilder.Large() : GridBuilder.Small();
-            builder.Place(BlockModel.Solid(reactor.Subtype, reactor.Size, reactor.Mass, thermal), Vector3I.Zero);
-            builder.Producing(producedWatts);
-            BlockInstance block = builder.Last;
-
-            // One cell of light armour over every face. The shell's own cells are the surface of a
-            // box one larger than the reactor in each direction, so it wraps the block without
-            // overlapping it, and the reactor is left with no face on open space.
-            if (skinned)
-            {
-                Vanilla.Block plate = Vanilla.Find(reactor.Large ? LargeArmour : SmallArmour);
-                BlockModel armour = BlockModel.Solid(plate.Subtype, Vector3I.One, plate.Mass, Catalog.DefaultThermal());
-                builder.Shell(armour, -Vector3I.One, reactor.Size + Vector3I.One);
-            }
-
-            ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
-            ScenarioRunner runner = new ScenarioRunner(simulation);
-            runner.Environment = t => Worlds.Shadow();
-            runner.Track("reactor", block);
-            runner.Run(14400f, 1200f);
-
-            float value;
-            return runner.Final.Tracked.TryGetValue("reactor", out value) ? value : 0f;
-        }
-
-        /// <summary>The vanilla light armour cubes the skin is built from, one per grid size.</summary>
-        private const string LargeArmour = "LargeBlockArmorBlock";
-        private const string SmallArmour = "SmallBlockArmorBlock";
-
-        private static BlockThermalProperties Clone(BlockThermalProperties source)
-        {
-            return new BlockThermalProperties
-            {
-                ExcludeFromSimulation = source.ExcludeFromSimulation,
-                Conductivity = source.Conductivity,
-                SpecificHeat = source.SpecificHeat,
-                Emissivity = source.Emissivity,
-                ExposedSurfaceMultiplier = source.ExposedSurfaceMultiplier,
-                ProducerWasteEnergy = source.ProducerWasteEnergy,
-                ConsumerWasteEnergy = source.ConsumerWasteEnergy,
-                CriticalTemperature = source.CriticalTemperature,
-                OverheatDamagePerKelvin = source.OverheatDamagePerKelvin,
-            };
+            return SoloBlockRig.Settled(reactor, thermal, producedWatts,
+                SoloBlockRig.Power.Produced, skinned);
         }
 
         public static string Report()

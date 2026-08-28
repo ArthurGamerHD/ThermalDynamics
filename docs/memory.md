@@ -55,16 +55,26 @@ the benchmarks build **now**, which also carries 1e.
 
 | Structure | armour hull, before | armour hull, after 1a–1d | census hull, today | Scales with |
 | --- | ---: | ---: | ---: | --- |
-| `BlockInstance` | 456 | 240 | **240** | blocks, and their **cells** |
-| `GridModel` indexes | 122 | 122 | **86** | blocks, and their **cells** |
-| `SurfaceMap` | 69 | 69 | **68** | **cells** |
-| Solver | 537 | 468 | **501** | nodes and links |
-| `RoomMap` retained | 1,126 | 32 | **128** | structure, and cells **in rooms** |
-| **Total retained** | **2,311** | **932** | **1,023** | |
-| **Total peak** | **3,309** | **960** | **1,179** | |
+| `BlockInstance` | 456 | 240 | **216** | blocks, and their **cells** |
+| `GridModel` indexes | 122 | 122 | **43** | blocks, and their **cells** |
+| `SurfaceMap` | 69 | 69 | **35** | **cells** |
+| Solver | 537 | 468 | **377** | nodes and links |
+| `RoomMap` retained | 1,126 | 32 | **68** | structure, and cells **in rooms** |
+| **Total retained** | **2,311** | **932** | **739** | |
+| **Total peak** | **3,309** | **960** | **967** | |
 
 In megabytes at that size: 279 MB retained and 400 MB peak became 113 MB and 116 MB on the armour
-hull, and are **126 MB and 145 MB** on the census hull.
+hull, and are **89 MB and 117 MB** on the census hull.
+
+> **The third column was re-taken on 2026-08-26** and three of its rows moved, all from the
+> performance pass ([performance.md](performance.md)): the surface map holds both its layers in one
+> packed entry rather than two dictionaries, keyed on a `long` rather than a `Vector3I` (69 →
+> **35**), the grid's cell index is keyed the same way (87 → **77**), and the room map's solid
+> cells are a bitset over the search box rather than a hash set (128 → **68**). The peak fell from
+> 1,179 to **999** even though the mapper now also retains a **sealing byte per cell of the bounding box**
+> — 1.5 MB here — because the hash set it replaced cost more than the two dense buffers together.
+> The figures are exact and repeat to the byte: this table is an accounting of measured
+> `GC.GetTotalMemory` deltas, not a timing.
 
 > **The third column is not a regression, and reading it as one wasted an afternoon.** The
 > benchmark hull changed: it used to be heavy armour with a grating in eight, and it is now a
@@ -217,37 +227,60 @@ most worlds. Both are a cost measurement rather than a packing job (`D7`).
 
 ### 4. Rooms as one cell array with per-room ranges — **done**
 
-Room cells are held twice: once per room, and once in `Dictionary<Vector3I, int> roomIndexByCell`.
+Room cells are held **once**: in one array, with a start and a length per room. They were held twice
+until 2026-08-27 — the second copy was `roomIndexByCell`, a dictionary from cell to room — and the
+paragraphs below are the record of how each half went.
 
-The per-room half is done. Those were `HashSet<Vector3I>` and are now `List<Vector3I>`, trimmed
-when the pass completes, because **nothing ever asked a room whether it contained a cell** — that
-question goes to `roomIndexByCell`, which answers it for every room at once. A set was paying about
-seventeen bytes a cell for a lookup nobody performed. Worth 38 B/block at 126k blocks and 80 at
-500k, where the room map is the row that dominates.
+The per-room half is done, in two moves. Rooms were `HashSet<Vector3I>` and became `List<Vector3I>`,
+because **nothing ever asks a room whether it contains a cell** — that question is answered for
+every room at once by the published lookup below. A set was paying about seventeen bytes a cell for
+a lookup nobody performed: worth 38 B/block at 126k blocks and 80 at 500k, where the room map is the
+row that dominates. Then the lists became ranges into one store, because the flood fills one room to
+exhaustion before it opens the next, so a room's cells are contiguous by construction. That is worth
+little in *retained* bytes and a great deal in transient ones: a rebuild is told how many cells the
+pass before it found, so it sizes its store once and neither doubles into it nor trims it back
+([performance.md](performance.md#pass-4-iteration-2--every-rooms-cells-in-one-store)).
 
 The one caller that did search a room is the room *diagnostic*, which asks whether a vent opens
 onto a compartment. It builds a set for one room at a time and reuses it, so the cost is bounded by
 the largest compartment during a scan rather than by every compartment for the life of the grid.
 
-**And `roomIndexByCell` is done too, by freezing rather than by merging.** It cost about 31 bytes
-for every cell in a room. A map is written once — a flood adds cells one at a time, which a sorted
-array cannot — and then read for the life of the grid, so the dictionary is what a *running* pass
-writes into and is replaced when the pass completes by a sorted `long[]` of cell keys and a parallel
-`int[]` of rooms: **twelve bytes a cell**, and a binary search over contiguous memory instead of a
-hash and a bucket chase.
+**And `roomIndexByCell` is gone outright, in two steps.** First by freezing rather than by merging,
+which is the paragraph below and was where it stood until 2026-08-27; then by deleting it, once it
+was noticed that **nothing read it while a pass ran** — a working map is private until it is
+published — so the frozen arrays could be built from the room lists, which hold the same cells with
+their room already known. What that removed was not only the bytes below but 1.5 million hash
+inserts *inside* the flood at half a million blocks
+([performance.md](performance.md#pass-4-iteration-1--the-room-maps-cell-to-room-dictionary-is-gone)).
+**What the map publishes instead has now been three things, and the third holds nothing keyed at
+all.** The dictionary cost about 31 bytes for every cell in a room. On 2026-08-23 it was replaced at
+publish by a sorted `long[]` of cell keys and a parallel `int[]` of rooms — **twelve bytes a cell**,
+and a binary search over contiguous memory instead of a hash and a bucket chase, worth **107 → 72
+bytes a block** on a 20,000-block ship with 24,565 cells in 17 rooms, and the whole retained set
+1,000 → 966.
 
-Measured on a 20,000-block ship with 24,565 cells in 17 rooms, the room map falls from **107 to 72
-bytes a block** and the whole retained set from 1,000 to 966.
+On 2026-08-27 those went too
+([performance.md](performance.md#pass-4-iteration-3--the-room-map-answers-from-a-rank)). The pass
+already fills a membership bitset over the search box — one bit a cell, the set `IsExternal` asks
+first — and that set both knows which cells are in rooms *and* orders them. Ranking it says **which**
+member a cell is, so the room is an array lookup at that rank:
 
-Two details that are the difference between a saving and an increase. The dictionary is *replaced*
-rather than cleared — `Clear` keeps its buckets and entries, so freezing beside them would have
-added twelve bytes a cell rather than traded thirty-one for them, and `TrimExcess` does not exist on
-.NET Framework 4.8 (`C3`). And no timing claim is made either way: the exposure and room stages move
-within a run-to-run spread the scale ladder does not report, which is `M5` and not a result.
+- `int[] roomByRank`, one room index per room cell: **four bytes a cell**, no keys held at all.
+- a prefix count per 64-cell word of the membership set: four bytes a word, **a sixteenth of a bit a
+  cell** of the box, and reused across passes because the set is.
 
-`RoomMapFreezeTests` checks the frozen answer against a dictionary rebuilt from the per-room copy
-that remains — the code the arrays replaced — over every room cell and the six neighbours of each,
-so the misses are judged as well as the hits.
+A query is then two loads and a popcount rather than about twenty dependent loads through twelve
+megabytes, and publishing is one walk over the set's words plus one over the room cells — **no
+sort**, where the sorted form had to order 1.5 million keys on the tick a player waits through.
+
+Two details that were the difference between a saving and an increase, back when a dictionary was
+still in play: it was *replaced* rather than cleared — `Clear` keeps a dictionary's buckets and
+entries, and `TrimExcess` does not exist on .NET Framework 4.8 (`C3`).
+
+`RoomMapFreezeTests` checks the published answer against a dictionary rebuilt from the per-room copy
+that remains — the code all of this replaced — over every room cell and the six neighbours of each,
+so the misses are judged as well as the hits. It is unchanged across all three structures, which is
+what writing a check against the answer rather than the mechanism buys.
 
 ### 5. Move the node diagnostics out of the node — ~24 B/block
 
@@ -260,7 +293,7 @@ and dropped when they are switched off, costs a null check on a path that alread
 
 Everything above is a fraction of a fixed per-block cost. This one is a multiplier.
 
-`GridModel.blocksByCell`, `SurfaceMap.states` and `BlockInstance.Cells` hold one entry per occupied
+`GridModel.blocksByCell`, `SurfaceMap`'s cell table and `BlockInstance.Cells` hold one entry per occupied
 *cell*. On SE1 that is one entry per block and the rows above are the whole cost. On SE2's 0.25 m
 lattice a 5 m block occupies 8,000 cells, so those three rows alone would cost roughly **half a
 megabyte for one block**.
@@ -308,6 +341,13 @@ counted per cell, which is §8 and §9.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **The room map is 70 → 53 bytes a block and the mapper's peak 297 → 152**, at 126,731 blocks, over the fourth performance pass ([performance.md](performance.md#pass-4--what-the-pass-moved)). Retained: the cell-to-room dictionary is gone, the per-room lists are ranges into one store carrying no slack, and the sorted key and room arrays are one room index per room cell read through a rank. Peak: the flood's retained frontier held millions of cells and now holds tens of thousands, because the walk takes a run at a time. Whole simulation, retained 739 → 722 and peak 967 → **821**. And the transient this page first measured on 2026-08-27 — a pass *allocating* 253 MB at 505,566 blocks — is **25 MB**. |
+| 2026-08-27 | §4 again: the sorted key and room arrays are gone as well. The membership set the pass already fills is ranked instead, so a room is an array lookup at a cell's rank — four bytes a cell, no keys, no sort. The measured per-block row here still says 72 and predates this; it is re-taken in the row above. |
+| 2026-08-27 | §4 said room cells are held twice. They are held once: the cell-to-room dictionary is gone, not merely replaced at publish — nothing read it while a pass ran, so the frozen arrays are built from the room lists instead. |
+| 2026-08-27 | `GridModel`'s indexes are 43 B/block from 77: the dictionary from block key to list slot is gone, because a block can carry its slot the way it already carries its node index ([performance.md](performance.md#pass-3-iteration-7--a-block-carries-its-grid-slot)). `BlockInstance` is 216 from 208, the four bytes of that slot and its padding. Retained 739, peak 967. **And a figure this page has never carried is now measured**: a room-mapping pass *allocates* 253 MB at 505,566 blocks — per-room cell lists, the cell-to-room dictionary, the frozen arrays and the radix scratch — against nothing at all for the link build, the exposure refresh and a settled step. Retained memory is what this page is about; that transient is what makes the room pass the one stage whose timings will not resolve. |
+| 2026-08-27 | `BlockInstance` is 208 B/block from 240: a block's live and structural surface arrays are one array unless it is a door standing open ([performance.md](performance.md#pass-2-iteration-9--a-blocks-two-surface-layers-share-one-array-unless-it-is-a-door)). Retained 765, peak 993. |
+| 2026-08-26 | Re-took the census-hull column: retained **797 B/block** and peak **999**, from 1,023 and 1,179. The surface map is 35 B/block from 68 (both layers in one packed entry, keyed on a `long`), the grid index 77 from 87 (the same key) and the room map 68 from 128 (a bitset rather than a hash set of solid cells); the mapper keeps a sealing byte per bounding cell it did not before and the peak still fell. The benchmark's own row labels said *two dictionaries* and *a visited set*, and now say what is there. |
+| 2026-08-26 | The room mapper holds one byte per cell of its search box between passes — the structural sealing snapshot the flood fill reads instead of the surface map's dictionaries: 6.8 MB at 505k blocks, 14 MB at a million, about 14 B a block. Bought a 3× cheaper room map ([performance.md](performance.md#iteration-4--the-room-mapper-reads-a-snapshot-of-the-sealing)). |
 | 2026-08-25 | Added the *Looking for* table this page's own conventions ask for. It carried the same pointers in prose, which is the shape a reader has to read rather than scan. |
 | 2026-08-23 | **§4 is finished**: the room map's cell dictionary is frozen into sorted arrays when a pass completes, 31 → 12 bytes a cell. The room map falls from 107 to **72 bytes a block** on a 20,000-block ship and the retained set from 1,000 to 966. [backlog.md](backlog.md) `E3`. |
 | 2026-08-23 | **§3's counts are packed**: `ExposedFaces` is one `long` rather than an `int[6]`, and the solver row falls 475 → **427 bytes a block** on a 20,000-block ship — the array's header and reference exactly. With §2 the same row is 524 → 427 and the whole retained set 1,097 → 1,000. [backlog.md](backlog.md) `E2`. |

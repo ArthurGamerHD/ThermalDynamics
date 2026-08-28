@@ -392,6 +392,17 @@ destroys every large reactor in every world, so the fraction is chosen so the *c
 where they should. Applying a real number to a fictional rating compounds the fiction rather than
 correcting it. See [balance.md](balance.md#reactor-waste-heat).
 
+**The oxygen generator is the same test taken the other way, and it is why the prior is about
+consequences rather than about invention** (2026-08-25). Its 0.6 was an admitted opinion and water
+electrolysis sources 0.20–0.40, which is the largest gap in the file — an argument for the real
+number on provenance alone. What decided it was neither: at 0.6 **two of the game's six oxygen
+generators sit past their own critical temperature alone in open space**, at the draw their own
+definition rates them at, which is a block that cannot be built rather than a fraction that is
+merely unsourced. It is 0.40 now, the top of the sourced band. So the reactor kept an invention and
+the generator lost one, on the same test applied in both directions: **the question is never whether
+a figure is real, it is where its consequences land.** See
+[balance.md](balance.md#what-it-did-the-invention-was-the-value-that-could-not-be-built-and-two-of-four-predictions-fail).
+
 ### Where something is modelled, it is modelled as a mechanism rather than as a threshold
 
 The prior above says when to take a shortcut. This says what the thing that is *not* shortened looks
@@ -592,7 +603,7 @@ is the pattern worth keeping: a target that is not a criterion is a target nothi
 | --- | --- | --- |
 | **G1** | **Idle is safe.** A ship at rest in the environment it was built for does not overheat. | **Holds, and it holds in air too.** 0.22 % go critical at idle in vacuum against a ~1 % gate — and **0.02 %** across the 2026-08-24 air walk, which the corpus had never been asked, because air cools. |
 | **G2** | **Load bites.** Under sustained full power a meaningful share of uncooled ships reach a warning state. | **Holds.** 65.5% of ships carrying no jump drive reach 400 K under full electrical load, against a ~20% gate. |
-| **G3** | **Cooling works.** Fitting radiators or a loop moves the outcome. | **Answered.** Plumbing works — a sink face carries 1,000 W/K against a bolt joint's 167 — and bolting makes more ships worse than better. It fits on 15% of *finished* hulls, which is a fact about retrofits rather than about the mechanic, now that cooling is stated as designed in. |
+| **G3** | **Cooling works.** Fitting radiators or a loop moves the outcome. | **Answered.** Plumbing works — a sink face carries 6,250 W/K against a bolt joint's 167 — and bolting makes more ships worse than better. It fits on 15% of *finished* hulls, which is a fact about retrofits rather than about the mechanic, now that cooling is stated as designed in. |
 | **G4** | **Design decides, not size.** Outcome follows what a builder controls. | **Holds, strongly.** Peak correlates +0.89 with worst local W/m² under load against +0.49 with block count. |
 | **G5** | **No death spiral.** A ship past critical that throttles to idle returns below critical in bounded time. | **Holds as written.** Its stated reason does not — see below. |
 | **G6** | **Affordable across the population**, at p95/p99 rather than at the mean. | **The demand half passes with room; the cost half fails in air, and its figures are withdrawn pending a re-walk.** *Demand*: corpus p99 **34.8 substeps against 64 granted** over the 32,575 runs of the 2026-08-24 air walk, where the panel had read 115 % of the cap before `C24` and 55 % after it. *Cost*: `F11` walked the corpus in air and the criterion failed in three of the four worlds, holding only in vacuum, with **2.73 % of published hulls past the element-visit allowance** in at least one air scenario — the smallest at 28,781 blocks. **Every step-work number this repository has published is withdrawn**, because the unit is `links + 4 × nodes` and the scorer was handed the *joint* count in place of the link count, so it was evaluating the node half alone — 1.51× low on a census hull. That makes the air figure worse rather than better and moves no verdict; the corrected measurement is the paired walk under `C3`. See [balance-lab.md](balance-lab.md), [backlog.md](backlog.md) `F11`, `C3`, `C23`, `C27`. |
@@ -619,7 +630,7 @@ shape.
 ### Cooling is designed in — and a vanilla ship still has to survive
 
 **The intent is that players design cooling in.** A hull that was laid out with heat in mind is the
-ship the mod is for, and that is why the sink face carries 1,000 W/K against a bolt joint's 167.
+ship the mod is for, and that is why the sink face carries 6,250 W/K against a bolt joint's 167.
 
 **It must not follow from that that a vanilla design is unusable.** This game has been out a long
 time, and two cases are load-bearing:
@@ -1264,7 +1275,7 @@ environment sample, and results out — and nothing else.
 
 The remaining distance is storage rather than mathematics. The geometry, the conduction graph and
 the integrator already work from integer AABBs and cost the same whatever a block's volume;
-`GridModel.blocksByCell`, `SurfaceMap.states` and `BlockInstance.Cells` are still one entry per
+`GridModel.blocksByCell`, `SurfaceMap`'s cell table and `BlockInstance.Cells` are still one entry per
 occupied cell, which is what a 0.25 m lattice cannot afford. See
 [scale-design.md](scale-design.md#cell-centric--boundary-centric).
 
@@ -1433,6 +1444,8 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-25 | Gave *realism wins where the difference is visible* its second worked example, which is the reactor's taken the other way. The oxygen generator's 0.6 was an invention with a sourced 0.20-0.40 sitting beside it, and what moved it was not the provenance: at 0.6 two of the game's six generators are past their own critical temperature alone in open space at their rated draw. The reactor kept an invention because the real number destroyed it; the generator lost one because the invention destroyed it. The prior reads better with both, because one case alone reads as *inventions are fine*.
+
 | 2026-08-25 | **Measured the base claim and kept it, with its emphasis corrected.** A station really is harder to cool than a ship of the same block count — 284.4 K above ambient against 236.1 — and *what a base gets in exchange* is room to run **transport** rather than room for surface. On a planet its penalty is three times what its halved area explains, because the binding resistance is the path from its middle to its skin: 39.9 K of interior-to-skin drop where a ship has none. Radiator area helps and cannot close it, at 43 % of the station's blocks. So this page's pairing of *elaborate coolant systems and radiator farms* keeps the first and demotes the second, on evidence rather than on preference. |
 | 2026-08-25 | **Corrected the hand-tool position the same day it was written, and the measurement is what changed it.** The extinguisher fires expendable ammunition that cools a block as *damage mitigation*; the earlier closure priced *cooling a ship*, which is a different question and impossible. Damage tracks the overshoot, so half a bottle pulls the median block 10 K back from its rating where 26 bottles would be needed to return it to ambient — and 90 bottles do nothing for the worst block, which is what keeps it an emergency tool. Also: a base's advantage is **layout freedom rather than size**, and **nothing is refused yet by sequencing** — soft limits wait until testing has found the hard boundaries. |
 | 2026-08-25 | **A base is a thermal problem, and the place cooling can be done properly** — it heats and has to be managed, and what it gets in exchange is room, so elaborate loops and radiator farms work far better there than on a ship. None of it is measured: every scenario is a ship or a rig, the corpus is blueprints, and room air is the part a base leans on hardest with the least evidence under it (`F27`). **And the compatibility promises bind from release, which has not happened** — before then a behaviour change is checked against the corpus rather than against a promise, and the identifiers are reserved rather than depended upon, so a rename that includes them is available now and will not be later. |

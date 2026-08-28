@@ -80,7 +80,7 @@ changed category**, which is the useful result: the boundary was right and its s
 not. The consequence is still what makes a rule worth writing down — it is the
 [one observation](#the-one-observation) above — it is simply not what separates these two piles.
 
-**A rule is not low value merely because nothing checks it.** Twenty-one of the sixty-eight rules
+**A rule is not low value merely because nothing checks it.** Eighteen of the seventy rules
 that are still rules are unchecked and say so, and two more are *reported* rather than checked,
 which is weaker and is written as such. Restructuring `Models/` is caught by nothing and costs a
 re-export of every block model; a promote-level check gated on a forgeable field is caught by
@@ -107,11 +107,11 @@ reason. See [testing the reduction](#testing-the-reduction).
 
 | # | Principle | Rules |
 | --- | --- | --- |
-| **P1** | **A figure carries its scope.** A number without its population, its basis and its clock is not a number; a sample stands for a population only by a written rule — and a duration carries the machine it was taken on. | `E2` `E3` `E6` `M10` `M11` `J3` `W5` |
-| **P2** | **What the instrument could not see is part of the result.** Censoring, the noise floor, an unfinished sweep, a check that judged nothing, a discarded exception and a place nobody looked are the same failure: reading a blind spot as a value. | `E4` `E8` `E9` `M4` `M5` `D4` `D9` |
+| **P1** | **A figure carries its scope.** A number without its population, its basis and its clock is not a number; a sample stands for a population only by a written rule — and a duration carries the machine it was taken on, and the build it was taken from. | `E2` `E3` `E6` `M10` `M11` `M13` `J3` `W5` |
+| **P2** | **What the instrument could not see is part of the result.** Censoring, the noise floor, an unfinished sweep, a check that judged nothing, a discarded exception and a place nobody looked are the same failure: reading a blind spot as a value. | `E4` `E8` `E9` `M4` `M5` `M12` `D4` `D9` |
 | **P3** | **The claim is fixed before the data and corrected in place after.** A criterion that can move once the numbers are in is not a criterion; a finding that is corrected somewhere other than where it was published is not corrected. | `E1` `E10` `E11` `M9` `D5` `R12` |
 | **P4** | **Nothing is its own oracle.** A test that asks the model the same question twice agrees with whatever the model does; a harness fault looks exactly like physics. | `E7` `D1` `D7` `D8` |
-| **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` `R13` `R14` `R15` `R16` |
+| **P5** | **One definition, and at least one consumer.** Two definitions drift, and the drift is silent in both directions; zero consumers means the thing does not exist however well it is written and tested. | `E5` `D2` `D3` `M6` `R7` `R8` `R9` `R10` `R11` `R13` `R14` `R15` `R16` `R17` |
 | **P6** | **A comparison holds everything but the subject equal.** Two numbers are comparable only when the stop criterion, the machine, the key and the baseline were the same. | `M1` `M2` `M3` `M7` `O4` |
 | **P7** | **The game is the authority.** The local build and the suite are an approximation of a compiler and a whitelist neither of them can see, and where the game already answers a question — what is sealed, what is destroyed, who sent this — the mod reads that answer instead of forming its own. | `C1` `C2` `C3` `C11` `C9` `C10` `W3` |
 | **P8** | **Off means off, and costs nothing.** A mechanism nobody is using must cost nothing, and the way to turn it off must be unambiguous. | `C4` `C7` `C8` `C15` |
@@ -243,11 +243,12 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **E1** | Criteria before data | absolute | P3 | reported by `verdict.py` |
 | **E2** | Measure the population, not the specimen | conditional | P1 | `CensusFidelityTests` |
 | **E3** | Name the population and the basis of every figure | absolute | P1 | — |
-| **E4** | A partial sweep is not a result | absolute | P2 | — |
+| **E4** | A partial sweep is not a result | absolute | P2 | reported by `verdict.py` |
 | **E5** | Every figure on a page comes from the dataset the page is about | absolute | P5 | `EveryQuotedDatasetCountIsCurrent` |
 | **E6** | Pair the terms before dividing | conditional | P1 | — |
 | **E7** | Check a claim against something that is not the model | absolute | P4 | `LegacyFormulas` `Reference` `DumpAuditTests` |
 | **E8** | A check that judged nothing has not passed | absolute | P2 | `CorpusSurvey` |
+| **M12** | A settled figure proves it settled | absolute | P2 | `TheRigReachesASteadyStateAndSaysSo` |
 | **E9** | Read a censored column as censored | absolute | P2 | reported by `verdict.py` |
 | **E10** | Correct a published finding in place | absolute | P3 | — |
 | **E11** | A criterion changes only in the open | absolute | P3 | — |
@@ -262,6 +263,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **M9** | A scenario's conclusion is pinned so it cannot invert | absolute | P3 | `ScenarioClaimTests` |
 | **M10** | Specimens are chosen by coverage, and every pick names its rule | absolute | P1 | `panel.csv` carries the rule |
 | **M11** | The synthetic ship is refreshed against the field | absolute | P1 | `CensusFidelityTests` |
+| **M13** | A timing is taken on the build that ships | absolute | P1 | `OptimisedBuildTests` |
 | **D1** | Disbelieve a plausible number | absolute | P4 | `ScreeningTests` `LabInvariantTests` |
 | **D2** | Hunt for what is built, documented and reached by nothing | absolute | P5 | `SimCommandTests` `DocumentationTests` |
 | **D3** | Where one thing exists twice, a test compares the two | absolute | P5 | `BothParsersKnowTheSamePropertyNames` |
@@ -275,7 +277,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **C2** | The whitelist covers types the local build accepts | absolute | P7 | — |
 | **C3** | Target `net48`, and never reference the native assembly | absolute | P7 | the build |
 | **C11** | Every file the game compiles is compiled by the suite's own build | absolute | P7 | the build |
-| **C4** | Nothing allocates on the stepping path | absolute | P8 | `bench report` |
+| **C4** | Nothing allocates on the stepping path | absolute | P8 | `StageLabTests` |
 | **C5** | The core speaks no game type | absolute | P9 | `CoreIsolationTests` |
 | **C6** | The solver's three invariants hold | absolute | P10 | `ConductionTests` `StabilityTests` `ConductionClampGateTests` |
 | **C7** | Every mechanism has a switch that removes its own cost | absolute | P8 | `FeatureToggleTests` |
@@ -291,11 +293,12 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **R1** | *The repository is the mod folder* | low value | P11 | absorbed into P11 |
 | **R2** | Build output and the corpus live outside it | absolute | P11 | `Directory.Build.props` |
 | **R3** | No credential is written into the tree | absolute | P11 | `CredentialScanTests` |
-| **R4** | `Models/` is not restructured | absolute | P12 | — |
-| **R5** | The workshop identity files are not regenerated | absolute | P15 | — |
+| **R4** | `Models/` is not restructured | absolute | P12 | `TheModelTreeKeepsItsShape` |
+| **R5** | The workshop identity files are not regenerated | absolute | P15 | `ShippedIdentityTests` |
 | **R6** | Vendored code is replaced, never edited | absolute | P12 | — |
 | **R7** | Every document is indexed, and every link resolves | absolute | P5 | `DocumentationTests` |
 | **R8** | Every setting is documented, wired, and read by something | absolute | P5 | `ConfigurationDocTests` `SettingsWiringTests` |
+| **R17** | Every dial is asserted to move an outcome, not only to be read | absolute | P5 | `SettingsDialReachTests` `LoopDialReachTests` `PlanetDialReachTests` `BlockDialReachTests` |
 | **R9** | The API page is part of the contract | absolute | P5 P9 | `EveryModApiEntryIsDocumented` `ModApiShapeTests` |
 | **R10** | Every test class says what it is for | absolute | P5 | `EveryTestClassSaysWhatItIsFor` |
 | **R11** | A check is cited only if it runs | absolute | P5 | `EveryCheckCitedByTheRulesPageResolves` |
@@ -313,10 +316,10 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **J2** | *Light, isolated, tested, open* | low value | — | absorbed into `C4` `C5` `C7` `R9` |
 | **J3** | The corpus filters are strict, and their cost is recorded | conditional | P1 | `BlueprintTests` |
 
-Seventy-one rows: **sixty-one absolute, seven conditional, three low value.** The last three are
-retired as rules and kept only so a citation to them does not dangle, so sixty-eight of these are
-rules a change can be measured against. Twenty-one of them are unchecked and say so, and two more are
-*reported* rather than checked, which is weaker and is written as such.
+Seventy-four rows: **sixty-four absolute, seven conditional, three low value.** The last three are
+retired as rules and kept only so a citation to them does not dangle, so seventy-one of these are
+rules a change can be measured against. Eighteen of them are unchecked and say so, and three more
+are *reported* rather than checked, which is weaker and is written as such.
 
 ---
 
@@ -368,6 +371,31 @@ to thirty, which made every scale figure about six times too cheap.
 *Checked by:* `CensusFidelityTests`.
 *From:* [benchmarks.md](benchmarks.md#keeping-it-honest), [tests/README.md](../tests/README.md).
 
+#### M13 — A timing is taken on the build that ships
+
+**Every project the harness times compiles optimised, in every configuration, and a check reads the
+attribute off the built assembly.**
+
+`dotnet run` and `dotnet test` build `Debug`, and a Debug assembly carries
+`DebuggableAttribute(DisableOptimizations)`, which the JIT obeys: no register allocation across
+statements, no bounds-check elimination, no inlining. Nothing set `<Optimize>` under `tests/`, so
+**every millisecond this repository published before 2026-08-26 was measured on code the game never
+runs** — a step 3.4× dearer than the same commit optimised.
+
+**It is not a constant, which is why it is a rule and not a footnote.** A uniform factor would leave
+every ratio intact, and a benchmark exists for ratios. Measured on one commit in one window, the row
+fill is 5× and the cost of being measured 7.7× where the clamped conduction loop is 2.6×: the
+instrument exaggerated exactly the work — a store through a field, a load hoisted out of a loop —
+that an optimisation pass spends its time on. Every *share of a step* on
+[benchmarks.md](benchmarks.md) taken before that date is a share of the wrong step.
+
+*Applies to:* every project under `tests/`, and any future harness that reports a duration.
+*Checked by:* `OptimisedBuildTests`, which reads `DebuggableAttribute` off the built core, harness
+and test assemblies. It was proven against an unoptimised `--no-incremental` build before it was
+believed — an incremental build ignores a `-p:Optimize=false` on the command line, so the first
+attempt to break it passed.
+*From:* [performance.md](performance.md#iteration-1--the-harness-measured-unoptimised-code).
+
 #### W5 — A measurement holds the machine
 
 **This machine is shared with three other projects that run heavy workloads on it. Anything that
@@ -388,6 +416,13 @@ those means queuing for the rest of your life, and so does everyone else. `heavy
 whether you would wait; exit **75** means the machine was busy and nothing ran, so try later rather
 than running unlocked.
 
+**And read a contended run's log before believing its exit code.** Twice on 2026-08-25 a suite
+queued behind two other projects came back non-zero having run no tests at all — `MSBUILD : error
+MSB4166: Child node exited prematurely`, a build worker reaped under memory pressure. Held on a
+quiet machine the same tree passes 1,915 of 1,915. A run that reports no totals ran nothing, which
+is the same shape as `E8`: the loud thing to check is not whether it failed but whether it judged
+anything.
+
 *Applies to:* corpus walks, the full suite, `LoadTests`, `bench`, every `Thermodynamics.Sim` lab,
 and any release build. [tests/README.md](../tests/README.md#running-heavy-work-on-a-shared-machine)
 lists them and `~/.local/bin/HEAVY.md` is the tool's own page.
@@ -405,8 +440,35 @@ else. At 500 of 8,142 ships the load criterion read 95 % against a true 75 %, th
 criterion read *failing* when it passes, and the medians were three times high.
 
 *Applies to:* anything drawn from a sweep that has not finished.
-*Checked by:* — the walk records its own progress, but nothing stops a partial file being read.
+*Checked by:* `verdict.py`, which counts the blueprints the corpus holds and prints
+`*** PARTIAL: n of m ***` above everything else — and says the population is **unknown** where the
+corpus is not on the machine, rather than assuming a dataset is whole (`P2`). `test_scoring.py`
+pins the threshold and the collection case. It is *reported* rather than enforced: nothing stops a
+reader quoting the figures under the banner.
 *From:* [balance.md](balance.md).
+
+#### M12 — A settled figure proves it settled
+
+**A temperature read off a rig that has not reached equilibrium is a reading of how fast it is
+climbing, and nothing about the rig says which one it gave you.**
+
+`LoopCoolantMassTests` ran a ring with a 125 kW source, the environment disabled and no sink of any
+kind. Every arm climbed linearly and for ever. Read at step 400 the four arms said 715.5 K and
+387.0 K on a large grid and 661.5 K and 912.1 K on a small one, and [balance.md](balance.md)
+published them as what the coolant density is worth; read at step 25,600 the same arms say 26,836 K
+and 5,908 K. **What the rig measured was the ratio of two heat capacities**, which is exactly what
+coolant mass is — so the answer looked like physics, had the right shape, pointed the right way, and
+was a stopwatch reading. Given a sink, the correction is worth 6.9 K and 0.8 K.
+
+The check is one line and it is the run's own: read the figure, double the run, read it again. A
+number that moved is a rate.
+
+*Applies to:* any figure quoted as where something settles, ends up, or reaches.
+*Checked by:* `TheRigReachesASteadyStateAndSaysSo`, and by
+`AWorkingLoopReportsGrossFlowNotItsNearZeroNet` stepping to a balance criterion with a bound rather
+than to a fixed count. Nothing checks the labs that were not written this way.
+*From:* [balance.md](balance.md#the-coolant-mass-is-doing-an-undeclared-job-and-the-measurement-that-said-so-was-wrong),
+[backlog.md](backlog.md) `C43`.
 
 #### E8 — A check that judged nothing has not passed
 
@@ -449,9 +511,20 @@ Timing noise is one-sided: a sample is the true cost plus whatever else the mach
 averaging it in measures the operating system. Without the floor printed beside them, several
 features cost less than the spread and would read as making the solver faster.
 
+**And N is enough only when the fastest has been reproduced.** The one-sidedness that makes the
+minimum the right statistic also gives it a long lower tail, and a fixed N samples that tail to an
+unpredictable depth: `bench stages` kept the fastest of fifteen for six passes, and three runs of
+one binary on one hull spread **48 %, 28 % and 67 %** across its surface, room and link stages. The
+solver stage was the exception at 3.5 %, because each of its repeats was twenty steps and it was
+quietly taking three hundred samples. A repeat count is a claim about convergence, so it has to be
+one that was checked — by requiring several readings to agree with the best rather than by choosing
+a number. Two passes' worth of rejected optimisations were judged at effect sizes smaller than the
+uncertainty this hid.
+
 *Applies to:* every millisecond in a report.
-*Checked by:* `PerformanceReportTests`.
-*From:* [benchmarks.md](benchmarks.md).
+*Checked by:* `PerformanceReportTests`, and `StageLabTests.EveryStageStopsForAReasonItCanName` for
+the sampling.
+*From:* [benchmarks.md](benchmarks.md), [performance.md](performance.md#pass-8-iteration-2--every-stage-but-one).
 
 #### M5 — A figure inside the noise floor has not moved
 
@@ -512,6 +585,13 @@ excuse to move a threshold.
 that arose this morning; a criterion may not.
 *Checked by:* reported by `tools/corpus/verdict.py`, which evaluates the criteria as written and
 names the ones a dataset cannot answer instead of skipping them. It prints; it does not fail.
+**A dataset too coarse to state a criterion cannot answer it either**, and since 2026-08-25 it says
+so: a criterion given as a share of the corpus needs a corpus that can tell its two sides apart, so
+on thirteen ships — where one ship is 7.7 % — *nothing critical* and *one per cent critical* are the
+same reading and `G1` is unanswered rather than holding. `scoring.resolves` is the rule and it
+follows from the threshold each criterion already states rather than from a floor typed anywhere.
+It is a resolution test and not a confidence one: a partial walk that passes it is still a partial
+walk (`P1`).
 *From:* [balance-lab.md](balance-lab.md).
 
 #### E10 — Correct a published finding in place
@@ -682,9 +762,13 @@ ones.
 suite.
 *Checked by:* `EveryQuotedSuiteSizeIsCurrent` for a stale suite size and
 `EveryQuotedDatasetCountIsCurrent` for a count of the panel, of the values authored in `Cubes.xml`
-or of the suite's classes; the pack scripts generate the figures the report pages carry. A count of
-a dataset that is not in this repository — the corpus, the game's own definitions — is still caught
-by nobody.
+or of the suite's classes; the pack scripts generate the figures the report pages carry. **It reads
+source comments as well as pages since 2026-08-25**, which is where the same drift had been sitting
+unwatched — `KnobSweep`'s summary went on describing a panel of 36 for a day after every page had
+been corrected to 50, and two more stale counts came out of the extension. A count of a dataset that is not in this repository
+— the corpus, the game's own definitions — is still caught by nobody, and neither is a count written
+in a form other than *`N` `<noun>`*: `a 49-ship panel` is how the tree scopes a past measurement to
+the dataset it was taken on (`P1`), and no check can tell that apart from a stale claim.
 *From:* [tools/corpus/README.md](../tools/corpus/README.md).
 
 #### D2 — Hunt for what is built, documented and reached by nothing
@@ -759,11 +843,46 @@ it — or it does not exist.**
 Twenty-one settings had accumulated that were in the code and not the reference. The opposite
 also happened: a toggle with a menu entry, a config field, a label and no reader at all.
 
+**And *wired* is five places, not four.** The world's copy and the solver's are two classes bridged
+by a hand-written list of assignments; a field on the solver's that the bridge does not copy is a
+setting that is documented, named, clamped, replicated and left at its default in every world, with
+every test green, because a test builds the solver's copy directly and never crosses the bridge.
+
 *Applies to:* every world setting.
 *Checked by:* `ConfigurationDocTests` and `SettingsWiringTests`, including
-`EverySettingIsReadBySomething`, `NoTwoSettingsShareAProtoMemberNumber` and
-`EverySettingIsClampedOrDeliberatelyNot`.
+`EverySettingIsReadBySomething`, `NoTwoSettingsShareAProtoMemberNumber`,
+`EverySettingIsClampedOrDeliberatelyNot`, `EverySolverSettingIsCopiedFromTheWorldsCopy` and
+`NothingIsCopiedIntoTheSolverThatTheSolverDoesNotHave`.
 *From:* [configuration.md](configuration.md).
+
+#### R17 — Every dial is asserted to move an outcome, not only to be read
+
+**"Read by something" is a grep, and a value can be read into a variable that nothing multiplies
+by.**
+
+That is not hypothetical: `LoopStagnantTransferFraction` was authored, documented, exposed to
+players on a slider, clamped, copied into the running properties **and read** — and no line of the
+simulation multiplied anything by it. `R8` was satisfied throughout. A dial in that state does not
+announce itself, because the curve it produces comes back flat and *this dial does not matter* is
+indistinguishable from *this dial is not wired to anything*.
+
+**The check enumerates rather than recites**, because a list is what fails: every field on every
+properties class the simulation reads is swept and asserted to change something. A field added
+tomorrow is checked tomorrow. Where a rig cannot see a dial, the answer is a rig — the exemptions
+are asserted to be inert from the other side, so one that stops being true fails rather than
+quietly excusing a live dial.
+
+**Most of the cost is building a rig that can see the dial**, and every field that read inert on
+the first pass turned out to be live: a coefficient cap is invisible except across a two-kelvin
+lift, an overshoot clamp is invisible unless the step is coarse *and* the work budget is not, a
+damage rate is invisible until something crosses its rating, and a ceiling is invisible until it is
+swept to a level that binds rather than scaled.
+
+*Applies to:* every field on `ThermalSettings`, `LoopThermalProperties`, `PlanetThermalProperties`
+and `BlockThermalProperties`.
+*Checked by:* `SettingsDialReachTests`, `LoopDialReachTests`, `PlanetDialReachTests` and
+`BlockDialReachTests`; `DialReachTests` covers the eighteen `KnobLab` sweeps from the other side.
+*From:* [backlog.md](backlog.md) `C33` `C37`.
 
 #### R9 — The API page is part of the contract
 
@@ -1068,12 +1187,16 @@ from-the-server flag is the only thing that says a packet is the server's.
 
 #### C4 — Nothing allocates on the stepping path
 
-**Anything allocating per frame shows up in the report.**
+**Anything allocating per frame shows up in the report, and a settled step is asserted to allocate
+nothing at all.**
 
 The raycast result lists and the grid list are pooled and the `kA` arrays cached for this reason.
 
 *Applies to:* the solver, the environment pass and everything a step reaches.
-*Checked by:* `bench report` — measured rather than asserted.
+*Checked by:* `StageLabTests`, which reads `GC.GetTotalAllocatedBytes` around a settled step of a
+census hull and fails above four kilobytes — it was measured rather than asserted until 2026-08-27,
+which for a rule about a quantity that should be *zero* is a gap a report cannot close. `bench
+report` still carries the per-feature figures.
 *From:* [development.md](development.md).
 
 #### C7 — Every mechanism has a switch that removes its own cost
@@ -1231,7 +1354,9 @@ Moving or renaming a folder under `Models/` silently breaks LOD switching in gam
 fix is re-exporting the models — which needs the source scene, not this repository.
 
 *Applies to:* `Models/` and everything under it.
-*Checked by:* — nothing; both `note.txt` files say so and that is all.
+*Checked by:* `ShippedIdentityTests.TheModelTreeKeepsItsShape`, which pins a digest of the sorted
+set of model paths — a **set** rather than a count, because a file added is a normal day and a file
+*moved* is the failure, and only the set tells those apart. Both `note.txt` files say so as well.
 *From:* [development.md](development.md).
 
 #### R6 — Vendored code is replaced, never edited
@@ -1276,12 +1401,22 @@ Progress must be counted in bytes rather than files: the walk is largest-first, 
 9,981 is 5 % of the files and 50 % of the work. A kill pattern must not match the relaunch that
 has just started.
 
+**The resume is a record of finished blueprints, not a count** (corrected 2026-08-25). This rule
+carried a retirement condition saying it *currently* counted files — an interrupted batch re-emitted,
+the shipped dataset 50 duplicate rows — and that had already been fixed: `CorpusFixture` writes a
+path to `done-<walk>.txt` only once every ship in it has been recorded, so a path present there has
+nothing left to do. The 2026-08-21 dataset still carries its 50 rows and nothing collected since
+can, which is why `verdict.py` still drops duplicates and prints the count: it is a **guard** now
+rather than a workaround, and the count is also how a reader learns which kind of dataset they are
+holding.
+
+**A resumable sweep is what makes an hours-long walk fair on a shared machine** (`W5`). It can be
+taken in bounded windows — `heavy run --minutes 25`, relaunched — instead of one hold that starves
+three other projects for a working day, because a killed slice loses nothing but the batch it was
+in.
+
 *Applies to:* every corpus sweep.
 *Checked by:* — procedure.
-*Retires when:* the resume counts ships rather than files. It currently counts files while the
-writing is per ship, so an interrupted batch is re-emitted, the shipped dataset carries 50
-duplicate rows, and `verdict.py` drops them and prints the count. That workaround and the caveats
-on three pages retire together; [backlog.md](backlog.md) H2.
 *From:* the operations record, [balance.md](balance.md).
 
 #### O5 — A lab streams, and counts what it did not measure
@@ -1408,7 +1543,9 @@ the mod API's keys and signatures.
 every subscriber stays on the old one.**
 
 *Applies to:* `modinfo.sbmi`, `metadata.mod`.
-*Checked by:* — judgement.
+*Checked by:* `ShippedIdentityTests`, which pins the workshop id and the owner and asserts the
+second file is still there. Changing the pinned id is the deliberate act, and it is one line in a
+diff.
 *From:* [development.md](development.md).
 
 ## Conditional
@@ -1603,6 +1740,20 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | `M4` says what makes N enough: the fastest reading has to have been reproduced. Keeping the fastest of a fixed fifteen had not converged for any stage but the solver — three runs of one binary spread 48 %, 28 % and 67 % — and two passes of optimisations were judged at effect sizes smaller than that. |
+| 2026-08-27 | `C4` is asserted rather than measured. *Nothing allocates on the stepping path* was checked by reading a benchmark, which for a quantity whose correct value is **zero** is not a check at all: any figure at all reads as a small number. `StageLabTests` reads `GC.GetTotalAllocatedBytes` around a settled step of a census hull and fails above four kilobytes. Unchecked rules: eighteen, unchanged — this one was cited to a report and is now cited to a test. |
+| 2026-08-26 | **Added `M13` — a timing is taken on the build that ships — after finding that no timing ever had been.** Nothing under `tests/` set `<Optimize>`, and every command this repository runs builds `Debug`, which tells the JIT not to optimise. A step is 3.4× dearer that way and the factor is not uniform — 5× on the row fill, 7.7× on the diagnostics surcharge, 2.6× on the clamped conduction loop — so the *shares* this repository published were wrong as well as the absolutes, and they were wrong in favour of exactly the work an optimisation pass looks at. It lands under `P1` because it is the same failure as a duration quoted without its machine: the figure's stated scope was untrue. Unchecked rules: eighteen, unchanged — `M13` arrived with `OptimisedBuildTests`. |
+| 2026-08-26 | `R4` and `R5` were both *judgement* and are checked now, by `ShippedIdentityTests`. They are the two things here that editing back does not undo: regenerating `modinfo.sbmi` publishes the mod as a new workshop item and leaves every subscriber on the old one, and moving a folder under `Models/` costs a re-export of every block that names a path in it. The model pin is a digest of the sorted **set** of paths, because a file added is a normal day and a file moved is the failure. Unchecked rules: twenty-one down to eighteen. |
+| 2026-08-26 | `E4` has a check, having been unchecked since it was written. `verdict.py` counts the corpus's blueprints and prints `*** PARTIAL: n of m ***` above everything else — the 2026-08-25 survey reads 46.2 % — and says the population is *unknown* where the corpus is not on the machine rather than assuming a dataset is whole. It is *reported* rather than enforced, and the index says so. |
+| 2026-08-26 | `R8` gained its fifth place: the bridge from the world's settings to the solver's. A field on `ThermalSettings` the bridge does not copy satisfies every other clause of the rule and is still left at its default in every world, and the suite cannot see it because a test builds the solver's copy directly. Checked in both directions now. |
+| 2026-08-26 | Added `M12` and `R17`, both from defects found the same day, and both under a principle that already existed — which is the fifteen still holding. **`M12` — a settled figure proves it settled**: `LoopCoolantMassTests` ran a ring with a source and no sink of any kind, so every arm climbed for ever and the four temperatures this repository published for the coolant density were that ramp read at step 400. Doubling the run is the whole check. **`R17` — every dial is asserted to move an outcome, not only to be read**: `R8`'s *read by something* is a grep, and `LoopStagnantTransferFraction` satisfied it while nothing multiplied by it. Four reflection-driven reach tests now enumerate every field on every properties class the simulation reads. |
+| 2026-08-25 | `E1`'s check now refuses a criterion its dataset cannot resolve. A partial survey slice of thirteen ships reported `G1` as *holding* — one ship is 7.7 % of it and the criterion turns on 1 %, so both sides of the line read the same. The rule is derived from each criterion's own threshold rather than being a sample-size floor somebody chose, and it is stated as a resolution test so that passing it is not mistaken for a population. Found by leaving a partial dataset on disk and pointing the scorer at it.
+
+| 2026-08-25 | Corrected `O3`'s retirement condition, which described a defect that had been fixed. It said the resume *currently* counts files and that a workaround and three pages' caveats retire with it, and cited a backlog row closed on 2026-08-22; the resume records finished blueprints and has since before this page was written. What `verdict.py` still does is a guard rather than a workaround, and the two pages that carry the 2026-08-21 dataset's 50 duplicate rows already scope them to it. Added what a resumable sweep is *for* on a shared machine, which is the half `W5` needed and did not have.
+
+| 2026-08-25 | `E5`'s check reads source comments as well as pages. The gap was demonstrated rather than argued: the panel grew from 36 ships to 50, every page was corrected, and `KnobSweep`'s own summary — the file a reader opens to find out what the sweep does — went on saying 36. Extending it found two more stale counts in comments. What it still cannot do is now written into the rule: it matches one phrasing, because the other phrasing in the tree is how a figure is correctly scoped to the run it came from. |
+
+| 2026-08-25 | Extended `W5` with how a contended run lies. A suite queued behind two other projects came back non-zero twice having run no tests — a reaped MSBuild worker, not a failure — and the log reads the same as a real one to anything grepping for a verdict. The reading instruction is now in the rule and the worked case is in [tests/README.md](../tests/README.md#running-heavy-work-on-a-shared-machine).
 | 2026-08-25 | Added `W5` — a measurement holds the machine. This machine is shared with three other projects and nothing in the repository said so, which is how two suite passes came to report `LoadTests` failures that were about the machine rather than about the code. It is `P1` from the other side: a duration taken next to somebody else's compile is a figure whose stated scope is untrue. |
 | 2026-08-25 | Said what this page's identifiers share with [backlog.md](backlog.md)'s and what was decided about it (`H8`): eleven collide, 215 citations would have to be resolved by hand to remap them, and the errors of that diff would be silent — so the set is frozen by a check rather than paid off. |
 | 2026-08-25 | **`R16`, and the 155 links it found.** *A pointer in code is plain text, never a markdown link* was written into [development.md](development.md#and-in-the-code) after two such links were found rotted, and nothing checked it — a link inside a `.cs` file renders nowhere, so nobody clicks it, nobody finds out it is wrong, and `EveryRelativeLinkResolves` reads markdown only. The one form of cross-reference here that nothing checked was the one written in the syntax that looks checked, and 155 had accumulated across 91 files. Flattening them cost nothing, because every link text was already the page's own name. `NoPointerInCodeIsWrittenAsALink` holds it, and it demonstrated that it works by failing on the first draft of its own summary, where the example was quoted verbatim. |

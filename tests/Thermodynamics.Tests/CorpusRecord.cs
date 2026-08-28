@@ -23,11 +23,24 @@ namespace Thermodynamics.Tests
         private static readonly object Gate = new object();
         private static readonly HashSet<string> Started = new HashSet<string>(StringComparer.Ordinal);
 
-        /// <summary>The directory to write into, or null when recording is off.</summary>
+        /// <summary>
+        /// The directory to write into, or null when recording is off.
+        ///
+        /// <para>
+        /// **A relative path is resolved against the repository root, not the process's working
+        /// directory.** The test host runs from its own `bin/Debug` folder, so
+        /// `THERMAL_CORPUS_DATA=../out/census-2026-08-25` wrote a census three directories away
+        /// from where it was asked for — the run passed, the named directory stayed empty, and the
+        /// dataset had to be hunted for. A person typing that variable means it relative to the
+        /// repository, which is the anchor everything else in the harness already uses.
+        /// </para>
+        /// </summary>
         public static string Directory()
         {
             string path = Environment.GetEnvironmentVariable("THERMAL_CORPUS_DATA");
-            return string.IsNullOrEmpty(path) ? null : path;
+            if (string.IsNullOrEmpty(path)) return null;
+
+            return Path.IsPathRooted(path) ? path : Path.GetFullPath(Path.Combine(Root(), path));
         }
 
         public static bool On
@@ -89,6 +102,14 @@ namespace Thermodynamics.Tests
 
             try
             {
+                // **The directory first, because this runs before the first batch is written.**
+                // Without it `AppendAllText` throws `DirectoryNotFoundException` — an `IOException`,
+                // so the catch below swallowed it — and **no dataset with a fresh output directory
+                // ever recorded its build**, which is every dataset. Found on 2026-08-25 when the
+                // `A13` census re-take had no `provenance.txt` and the question *which fractions
+                // was this taken at* had to be answered from the git log again, which is the exact
+                // thing this method exists to make a lookup.
+                System.IO.Directory.CreateDirectory(directory);
                 File.AppendAllText(Path.Combine(directory, "provenance.txt"), text.ToString());
             }
             catch (IOException)

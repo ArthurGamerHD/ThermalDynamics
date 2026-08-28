@@ -99,6 +99,17 @@ namespace Thermodynamics.Harness
             /// </summary>
             public int UnknownBlocks;
 
+            /// <summary>
+            /// Blocks whose type and subtype named no definition, and which were resolved on the
+            /// subtype alone.
+            ///
+            /// **Not an error and not nothing.** It is how a modded block that reuses a vanilla
+            /// subtype under its own type still builds, and it is the only place the old
+            /// subtype-keyed behaviour survives — so a walk that finds a lot of them is a walk
+            /// resolving blocks by a key that is not an identity (`P1`).
+            /// </summary>
+            public int AmbiguousBlocks;
+
             public List<string> UnknownSubtypes = new List<string>();
 
             public bool IsVanilla
@@ -417,6 +428,33 @@ namespace Thermodynamics.Harness
             return ships;
         }
 
+        /// <summary>
+        /// Read one file and return the ship **whether or not it would be kept**, so the counters
+        /// of a discarded ship can be seen.
+        ///
+        /// <see cref="Read"/> drops a ship whose grids all came back empty, which is the right
+        /// behaviour and makes the reason invisible: the counts that say *why* live on the object
+        /// that was thrown away. This is for a person holding one blueprint and asking what
+        /// happened to it, and is not on any measurement path.
+        /// </summary>
+        public static Ship Probe(string path)
+        {
+            Ship ship = new Ship { Path = path, WorkshopId = WorkshopIdOf(path) };
+
+            XDocument document = Load(path);
+            if (document == null) return ship;
+
+            Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
+
+            foreach (XElement grid in document.Descendants("CubeGrid"))
+            {
+                Grid part = ReadGrid(grid, definitions, ship);
+                if (part != null && part.Blocks > 0) ship.Grids.Add(part);
+            }
+
+            return ship;
+        }
+
         private static long WorkshopIdOf(string path)
         {
             string folder = Path.GetFileName(Path.GetDirectoryName(path) ?? "");
@@ -442,23 +480,60 @@ namespace Thermodynamics.Harness
             foreach (XElement block in blocks.Elements())
             {
                 string subtype = (string)block.Element("SubtypeName");
+                GameBlocks.Definition definition = null;
+                string named = subtype;
 
-                // An empty SubtypeName is how the game spells the base variant of a type — armour
-                // blocks are the common case — so the type carries the identity instead.
-                if (string.IsNullOrEmpty(subtype)) subtype = BaseSubtypeOf(block, large);
+                if (string.IsNullOrEmpty(subtype))
+                {
+                    // An empty SubtypeName is how the game spells the base variant of a type, and
+                    // the type is what identifies it. Armour is the common case and was for a long
+                    // time the *only* case this handled — see BaseVariantOf.
+                    named = TypeOf(block);
+                    definition = BaseVariantOf(named, large);
 
-                GameBlocks.Definition definition;
+                    // **`CubeBlock` is the one type the game resolves by convention rather than by
+                    // a definition.** Armour cubes all carry subtypes, so there is no empty-subtype
+                    // `CubeBlock` for `BaseVariants` to find, and a blueprint spelling one with an
+                    // empty `SubtypeName` means the plain cube of its grid's size. It is written as
+                    // its own case rather than as a fallback so that a type nobody has thought
+                    // about resolves to *nothing* and is counted, instead of quietly becoming
+                    // armour — which is exactly how eleven types came to be armour for a year.
+                    if (definition == null && named == "CubeBlock")
+                    {
+                        named = large ? "LargeBlockArmorBlock" : "SmallBlockArmorBlock";
+                        definitions.TryGetValue(named, out definition);
+                    }
+                }
+                else
+                {
+                    // **The pair first, because a subtype is not an identity.** Three of the game's
+                    // subtypes are claimed by two types each, and `LargePistonBase` belongs to both
+                    // `PistonBase` and `ExtendedPistonBase` — same components, same power, sizes
+                    // 1x2x1 and 1x3x1 — so resolving on the subtype alone built every extended
+                    // piston a cell short. See GameBlocks.ByTypeAndSubtype.
+                    string typeId = TypeOf(block);
+                    if (typeId == null
+                        || !GameBlocks.ByTypeAndSubtype().TryGetValue(
+                            GameBlocks.TypeAndSubtypeKey(typeId, subtype), out definition))
+                    {
+                        // **The fallback is for modded blocks and is counted, not silent.** A mod
+                        // may name a subtype the game holds under another type; refusing those
+                        // would change which ships the corpus admits, which is a bigger error than
+                        // the one being fixed. `AmbiguousBlocks` is what says how often it happens.
+                        definition = null;
+                        if (definitions.TryGetValue(subtype, out definition)) ship.AmbiguousBlocks++;
+                    }
+                }
 
                 // A blueprint's grid size and a definition's must agree, or a small-grid ship would
                 // be built out of large-grid blocks that happen to share a subtype name.
-                if (subtype == null || !definitions.TryGetValue(subtype, out definition)
-                    || definition.Large != large)
+                if (definition == null || definition.Large != large)
                 {
                     ship.UnknownBlocks++;
-                    if (ship.UnknownSubtypes.Count < 4 && subtype != null
-                        && !ship.UnknownSubtypes.Contains(subtype))
+                    if (ship.UnknownSubtypes.Count < 4 && named != null
+                        && !ship.UnknownSubtypes.Contains(named))
                     {
-                        ship.UnknownSubtypes.Add(subtype);
+                        ship.UnknownSubtypes.Add(named);
                     }
                     continue;
                 }
@@ -537,16 +612,47 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// The subtype an armour block carries when the blueprint leaves <c>SubtypeName</c> empty.
+        /// The definition a block with an empty <c>SubtypeName</c> is, resolved from its type.
         ///
-        /// Every such block is a cube of the grid's own size, so the fallback only has to be a
-        /// block that exists and weighs the right thing. Guessing wrong here would silently make a
-        /// hull out of something else, so it is deliberately narrow: the plain armour cube, and
-        /// nothing clever.
+        /// <para>
+        /// **This returned the plain armour cube until 2026-08-25, and the comment that said so
+        /// described the bug as the design**: *every such block is a cube of the grid's own size,
+        /// so the fallback only has to be a block that exists and weighs the right thing*. It is
+        /// not — the game leaves <c>SubtypeId</c> empty on **thirteen** definitions, and eleven of
+        /// them are not armour. Every vanilla oxygen generator, air vent, oxygen tank, gravity
+        /// generator, door, hangar door, passage, ladder and large turret in the corpus was built
+        /// as a 500 kg armour cube: wrong mass, wrong material, and **no power draw at all**, so it
+        /// made no heat. Measured over a sixty-blueprint sample, 4,094 blocks of 406,361 — one per
+        /// cent — were mis-built this way.
+        /// </para>
+        ///
+        /// <para>
+        /// It is the exact failure the old comment worried about — *guessing wrong here would
+        /// silently make a hull out of something else* — reached by guessing narrowly rather than
+        /// by guessing cleverly. Nothing guesses now: the type is what the blueprint states and
+        /// <see cref="GameBlocks.BaseVariants"/> is keyed on it.
+        /// </para>
         /// </summary>
-        private static string BaseSubtypeOf(XElement block, bool large)
+        private static GameBlocks.Definition BaseVariantOf(string typeId, bool large)
         {
-            return large ? "LargeBlockArmorBlock" : "SmallBlockArmorBlock";
+            GameBlocks.Definition definition;
+            return GameBlocks.BaseVariants().TryGetValue(
+                GameBlocks.BaseVariantKey(typeId, large), out definition) ? definition : null;
+        }
+
+        /// <summary>
+        /// The block's type, from the <c>xsi:type</c> its element carries, with the object-builder
+        /// prefix stripped so it matches what <see cref="GameBlocks"/> keys on.
+        /// </summary>
+        private static string TypeOf(XElement block)
+        {
+            XAttribute type = block.Attribute(
+                XName.Get("type", "http://www.w3.org/2001/XMLSchema-instance"));
+            if (type == null) return null;
+
+            string value = type.Value ?? "";
+            return value.StartsWith("MyObjectBuilder_")
+                ? value.Substring("MyObjectBuilder_".Length) : value;
         }
 
         /// <summary>
@@ -591,8 +697,17 @@ namespace Thermodynamics.Harness
 
         public static BlockModel Model(GameBlocks.Definition definition)
         {
+            // **Keyed on the pair, because neither half is an identity on its own.** Thirteen
+            // definitions share the empty subtype, so a cache keyed on subtype hands an air vent
+            // whichever of the thirteen was built first; and three subtypes are claimed by two
+            // types, so a cache keyed on the model *name* hands an `ExtendedPistonBase` the
+            // `PistonBase` model — same name, and a size of 1x2x1 against 1x3x1, which puts a
+            // block in a cell that is already occupied.
+            string key = GameBlocks.TypeAndSubtypeKey(definition.TypeId, definition.SubtypeId);
+            string name = GameBlocks.ModelName(definition);
+
             BlockModel model;
-            if (Models.TryGetValue(definition.SubtypeId, out model)) return model;
+            if (Models.TryGetValue(key, out model)) return model;
 
             BlockThermalProperties thermal = ShippedBlocks.DeriveWithFunction(
                 definition.Components, definition.TypeId, definition.PowerEfficiency);
@@ -604,7 +719,7 @@ namespace Thermodynamics.Harness
             Func<string, string, BlockThermalProperties, BlockThermalProperties> material = materialOverride;
             if (material != null) thermal = material(definition.TypeId, definition.SubtypeId, thermal);
 
-            model = BlockModel.Solid(definition.SubtypeId, definition.Size, definition.Mass, thermal);
+            model = BlockModel.Solid(name, definition.Size, definition.Mass, thermal);
 
             // A definition that declares no mount points has them generated from its model, which
             // is geometry this harness cannot read. Treating that silence as "mounts nowhere" is
@@ -642,7 +757,7 @@ namespace Thermodynamics.Harness
                 }
             }
 
-            return Models.GetOrAdd(definition.SubtypeId, model);
+            return Models.GetOrAdd(key, model);
         }
 
         private static Vector3I ParseCell(XElement element)

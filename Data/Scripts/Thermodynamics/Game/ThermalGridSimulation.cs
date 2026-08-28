@@ -531,6 +531,38 @@ namespace Thermodynamics
                 // and the slider would move a number nothing reads — which is exactly the state
                 // the switch was already in.
                 if (changed) loop.RefreshFlow();
+
+                PublishRefillDemand(loop);
+            }
+        }
+
+        /// <summary>
+        /// Puts what refilling this ring wants onto the pump that will be charged for it, so the
+        /// distributor is asked for those watts rather than only billed them afterwards.
+        ///
+        /// <para>
+        /// **The charge and the request must land on the same pump**, which is
+        /// <c>ThermalSimulation.RefillLoops</c>'s `Pumps[0]`; every other pump in the ring is set
+        /// back to zero so a ring whose first pump changed does not leave a request standing on a
+        /// block nothing is billing. See backlog.md `B44`.
+        /// </para>
+        /// </summary>
+        private void PublishRefillDemand(CoolantLoop loop)
+        {
+            IList<Core.CoolantPump> pumps = loop.Pumps;
+            if (pumps.Count == 0) return;
+
+            float demand = loop.RefillDemandWatts;
+
+            for (int p = 0; p < pumps.Count; p++)
+            {
+                Core.CoolantPump pump = pumps[p];
+                if (pump.Block == null) continue;
+
+                ThermalBlock bound = Get(pump.Block.Min);
+                if (bound == null || bound.CoolantPump == null) continue;
+
+                bound.CoolantPump.SetRefillDemandWatts(p == 0 ? demand : 0f);
             }
         }
 

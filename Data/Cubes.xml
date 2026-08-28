@@ -1003,10 +1003,13 @@
 					<Bool Name="ExcludeFromSimulation" Value="false" />
 					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
 					<Decimal Name="ProducerWasteEnergy" Value="0" />
-					<!--invented: water electrolysis runs 0.60-0.80 efficient, so the sourced figure is 0.20-0.40 and
-					    this is over twice it. A balance choice, and the largest gap between an authored fraction and a
-					    real one.-->
-					<Decimal Name="ConsumerWasteEnergy" Value="0.6" />
+					<!--waste: water electrolysis. 0.60-0.80 efficient, so 0.20-0.40 of the draw stays as heat and
+					    the rest leaves as chemical energy in the gas. It was 0.6 and invented until 2026-08-25, when
+					    the rig measured what that does: at their own rated draw, 0.6 puts two of the game's six
+					    oxygen generators past their own critical temperature alone in open space, and nothing a
+					    player builds is cooler than that. 0.40 is the top of the band and the highest value where
+					    all six survive both rigs. See balance.md, Oxygen generator waste heat.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="0.4" />
 					<Decimal Name="ExposedSurfaceMultiplier" Value="1" />
 					<Decimal Name="OverheatDamagePerKelvin" Value="1" />
 				</Group>
@@ -2295,14 +2298,22 @@
 					<Decimal Name="Conductivity" Value="237" />
 					<!--J/(kg K), real units: aluminium-->
 					<Decimal Name="SpecificHeat" Value="900" />
-					<Decimal Name="Emissivity" Value="0.35" />
+					<!--
+						A selective surface is high emissivity AND low absorptivity, and this block had only
+						the low half. The comment below names the finishes a real radiator carries - a
+						second-surface mirror, white paint - and takes their absorptivity while leaving
+						emissivity at the 0.35 the derivation gave it, which is nearer bare aluminium than
+						either of them. Those finishes run 0.8 to 0.9 emissive, so 0.85 is the middle of the
+						same two surfaces that line already cites: the block was emitting 41 % of what its
+						own stated finish emits. See balance.md, The runaway and the retrofit.
+					-->
+					<Decimal Name="Emissivity" Value="0.85" />
 					<!--
 						The one selective surface the mod ships, and the reason the two numbers were
 						separated. A radiator's job is to emit in the infrared without collecting in
 						the visible: a second-surface mirror runs about 0.08 and white paint about
-						0.2, so 0.1 is the middle of what a real radiator is finished with. Emissivity
-						is untouched, so the block emits exactly what it emitted and stops absorbing
-						sunlight it physically would not. Measured worth 10.9 K to a sunlit stack and
+						0.2, so 0.1 is the middle of what a real radiator is finished with. It stops the block
+						absorbing sunlight it physically would not. Measured worth 10.9 K to a sunlit stack and
 						nothing at all in shadow - see balance.md, What a selective surface is worth.
 					-->
 					<Decimal Name="SolarAbsorptivity" Value="0.1" />
@@ -2329,14 +2340,22 @@
 					<Decimal Name="Conductivity" Value="237" />
 					<!--J/(kg K), real units: aluminium-->
 					<Decimal Name="SpecificHeat" Value="900" />
-					<Decimal Name="Emissivity" Value="0.35" />
+					<!--
+						A selective surface is high emissivity AND low absorptivity, and this block had only
+						the low half. The comment below names the finishes a real radiator carries - a
+						second-surface mirror, white paint - and takes their absorptivity while leaving
+						emissivity at the 0.35 the derivation gave it, which is nearer bare aluminium than
+						either of them. Those finishes run 0.8 to 0.9 emissive, so 0.85 is the middle of the
+						same two surfaces that line already cites: the block was emitting 41 % of what its
+						own stated finish emits. See balance.md, The runaway and the retrofit.
+					-->
+					<Decimal Name="Emissivity" Value="0.85" />
 					<!--
 						The one selective surface the mod ships, and the reason the two numbers were
 						separated. A radiator's job is to emit in the infrared without collecting in
 						the visible: a second-surface mirror runs about 0.08 and white paint about
-						0.2, so 0.1 is the middle of what a real radiator is finished with. Emissivity
-						is untouched, so the block emits exactly what it emitted and stops absorbing
-						sunlight it physically would not. Measured worth 10.9 K to a sunlit stack and
+						0.2, so 0.1 is the middle of what a real radiator is finished with. It stops the block
+						absorbing sunlight it physically would not. Measured worth 10.9 K to a sunlit stack and
 						nothing at all in shadow - see balance.md, What a selective surface is worth.
 					-->
 					<Decimal Name="SolarAbsorptivity" Value="0.1" />

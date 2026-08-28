@@ -123,10 +123,77 @@ failures that are about the machine. If you must run the suite unlocked, exclude
 dotnet test --filter "FullyQualifiedName!~LoadTests"
 ```
 
+**Build the test project, not the solution, before `--no-build`.** `dotnet build` from the repo root
+leaves `Thermodynamics.Tests.dll` stale — measured at **25 minutes** behind the sources in one case,
+with `-m:1 --no-incremental` and no error printed. A `dotnet test --no-build` then reports the
+*previous* edit's results, which reads as a test that mysteriously still fails after being fixed, or
+worse, one that passes after being broken. It cost three false readings in a single session. Build
+`tests/Thermodynamics.Tests` by name, and if a result looks impossible, check the DLL's timestamp
+before believing it. **And an incremental build does not notice a property passed on the command
+line**: `dotnet build -p:Optimize=false` over an up-to-date tree recompiled nothing and left the
+optimised assemblies in place, so a check proven against a *flag* has to be proven against
+`--no-incremental` as well — which is how `OptimisedBuildTests` was shown to fail before it was
+believed:
+
+```bash
+dotnet build tests/Thermodynamics.Tests -v q --nologo
+ls -la --time-style=+%H:%M:%S .build/Thermodynamics.Tests/bin/Debug/net9.0/Thermodynamics.Tests.dll
+```
+
 **Clean up after a build.** `dotnet build-server shutdown` does *not* reap the `nodeReuse` MSBuild
 worker nodes; they idle out after ten to fifteen minutes and hold about 128 MB each until they do.
 Kill them if the machine is wanted. They are also why `heavy` closes its lock descriptor before
 running a command — a daemon that inherits it keeps the window held after the run has ended.
+
+**An hours-long walk is taken in slices, not in one hold.** Every corpus sweep resumes exactly — a
+blueprint is written to `done-<walk>.txt` only once every ship in it has been recorded (`O3`), so a
+killed slice loses the batch it was in and nothing else. On a machine three other projects are
+cycling through in three-to-six-minute windows, `heavy run --minutes 25` relaunched until the walk
+finishes is fair where a single eight-hour hold is not:
+
+```bash
+THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=out/survey-2026-08-25 \
+  heavy run --minutes 25 -- dotnet test --filter CorpusSurvey     # repeat until it completes
+```
+
+Do not delete the data directory between slices — that is what starts the walk over.
+
+**A slice shorter than one blueprint does no durable work.** A path is recorded only when it is
+finished, so a slice killed part-way through a hull loses that hull's work entirely — and with 31
+workers in flight, a slice shorter than the batch loses all of them. Measured on 2026-08-25: the
+first 13 blueprints took 23 minutes between them, an 8-minute slice after them completed **none**,
+and a 22-minute slice completed **one**. Twenty-five minutes is a floor for the first hour of a
+survey, not a default to shorten.
+
+**Progress is read in bytes; a finishing time is not read from them.** Those 13 files are 0.16 % of
+the corpus by count and 4.06 % of it by size, and the second is the honest statement of *how far in*
+a walk is:
+
+```bash
+for f in $(cat out/survey-2026-08-25/done-survey.txt); do stat -c%s "$f"; done |
+  paste -sd+ | bc            # how far in, against the corpus total
+```
+
+**Dividing that by elapsed time is not an estimate of the remainder**, and `pace.py` exists because
+that mistake abandoned a walk once already. The corpus is walked largest first, so the rate falls
+throughout every healthy run and is a property of the ordering rather than of the walk: on
+2026-08-25 the same survey ran at 56 MB/min over its first 13 hulls and under 3 MB/min over its
+fourteenth. **The estimate that means something is a finished walk of the same shape, times the
+ratio of work per ship** — `pace.py --reference`, and read its output on a walk that is over before
+trusting it on one that is not.
+
+**A killed build node is not a test failure, and it reads exactly like one.** Twice on 2026-08-25 a
+queued suite came back non-zero having run no tests at all:
+
+```
+MSBUILD : error MSB4166: Child node "3" exited prematurely. Shutting down.
+```
+
+That is a build worker being reaped under memory pressure while two other projects held the
+machine — the run never reached a test, and a log skimmed for `Failed!` shows nothing either way.
+**A suite that reports no totals ran nothing**; read the head of the log before believing a
+non-zero exit is about the code. Waiting for the window is the fix, and `-m:1` avoids the
+multi-node build entirely for a run queued behind someone else's work.
 
 ## Running it
 
@@ -161,11 +228,12 @@ a subject rule only sorts the classes whose subject somebody remembered to look 
 the fast lane was **3 m 45 s** — against the fifteen seconds this page claimed — because the labs
 built for `C24`, `C26`, `C27` and `D19` step whole hulls and none of them was tagged. One class,
 `ClientInputTests`, was 143 s of it on its own: twenty-eight tests, each a 480-second run of a
-1,004-node hull, and `C26` doubled that clock from 240 s the same week. Nineteen classes are tagged
-now and the fast lane is **4 s over 1,585 of the 1,884 cases** — 6, 4, 5 across three runs, so the
-figure is the fastest of three and the spread is two seconds (`M4`). It was 6 s over 1,554 of 1,852
-when the lanes were re-sorted on 2026-08-24, so twenty cases have been added and nothing has slowed
-down.
+1,004-node hull, and `C26` doubled that clock from 240 s the same week. Nineteen classes were tagged
+on 2026-08-24, and the lane rotted again inside two days: on 2026-08-26 it measured **37 s**, with
+`DesignedHullTests` alone 35 s of test time and ten more classes past two seconds, none of them
+tagged. Thirty classes carry the trait now and the fast lane is **4 s over 1,582 of the 2,001
+cases** — 5.5, 5.6, 6.2 s of wall clock across three runs, so the figure is the fastest of three
+and the spread is under a second (`M4`). The whole suite is 1 m 22 s.
 
 *Nothing checks it*, and that is why it rotted. The honest check would be a class's own measured
 cost, which a test inside that class cannot read; the naming rule that looks available — *a class
@@ -175,7 +243,8 @@ third most expensive things in the suite. So the rule is stated, the measurement
 refresh is: take the durations, tag what crossed two seconds (`R11` — an unchecked rule is a hope,
 and marking it says so).
 
-**The whole suite is 2 m 34 s**, and the fast lane is what a change is iterated against. It was
+**The whole suite is 1 m 22 s** (2026-08-26, optimised build, 2,001 cases), and the fast lane is
+what a change is iterated against. It was
 published here as 5 m 23 s until 2026-08-25 and had not been that for some time — the first
 measurement of the day, before anything was changed, was 2 m 55 s over the same 1,864 cases. The suite
 also spent months at five minutes for a different reason — one test read the whole blueprint corpus
@@ -191,10 +260,9 @@ elapsed time.
 **Eight rather than one per core, measured.** On this repository's 32-core machine, over the 1,825
 cases the suite held on 2026-08-24, it is **1 m 41 s at one worker, 38 s at eight, and 1 m 47 s at
 thirty-two** — one per core is no faster than serial, because the tests are memory-bound and
-thirty-two of them thrash each other's cache. *(The suite is 2 m 34 s now at the same eight workers:
-what grew is the work, not the scheduling. It is 550 s of test time against 323 s of wall clock, and
-the ceiling is one class — xUnit parallelises collections, a class is a collection, and
-`ClientInputTests` is 143 s of serial work inside one of them.)*
+thirty-two of them thrash each other's cache. *(The suite is 1 m 22 s at the same eight workers on the optimised build, 2026-08-26: what
+bounds it is still one class at a time — xUnit parallelises collections, a class is a collection,
+and the largest classes are tens of seconds of serial work each.)*
 That is the same effect, one rung up, that made the corpus walks need isolation in the first place:
 four walks across thirty-one workers ran seventeen times slower than one at a time, behind a 93 %
 CPU reading.
@@ -288,13 +356,19 @@ is what to run and where to read the answer.
 | `balance [--csv out/]` | What is every block this mod ships worth against the vanilla blocks it competes with? Five tables: every block costed and measured, what the vanilla heat sources put in, what a panel delivers end to end, which dial moves that number, and the heat pump and coolant rings across their ranges. | `BalanceTests` | [balance.md](../docs/balance.md#block-balance) |
 | `coolers` | Which block in the whole game is the best cooling in it, stacked one to thirty-two against the largest reactor at plate rating, in shadow? | `CoolingLadderTests` | [balance.md](../docs/balance.md#the-same-question-asked-of-the-whole-game) |
 | `reactors` | What fraction of a reactor's output should become heat, across three orders of magnitude of rating? Every vanilla reactor at six fractions and three loads, in two rigs — **bare** in shadow on a 2.7 K sky, and **skinned** under one cell of light armour. | `ReactorWasteHeatTests` | [balance.md](../docs/balance.md#reactor-waste-heat) |
+| `basevariants [--ships N] [--type T]` | What are the blocks a blueprint spells with an empty `SubtypeName` worth? A parse, not a simulation, so a 400-ship stride sample is seconds. It exists because the reader built all thirteen of them as armour until 2026-08-25 — see [backlog.md](../docs/backlog.md) `A13` — and it is how a corpus figure taken before that is priced without re-running a census. `--type` reports one type's share of the waste of the ships that carry it, and `--file` parses one named blueprint and prints the reader's own counters *even when the ship is discarded* — which is the state a ship that resolved to nothing is in, and the only way to see why. | `BlueprintTests` | [backlog.md](../docs/backlog.md) `A13` |
+| `triage [--top N] [--census F]` | Which blocks should a balance pass look at, and in what order? No simulation: `BlockHeatIndex` says whether a block can survive itself from its definition alone, a census says how much of a fleet's heat its type carries, and the ranking is the two multiplied. Turns *rig 1,503 blocks* into *rig the twenty this names*. `--levers N` inverts the index instead: what each of the four dials would have to do to bring a block to a self index of N, which is the per-block pass in one screen. `--csv` writes the ranking as a table. | `BlockHeatIndexTests` | [balance.md](../docs/balance.md#one-number-says-whether-a-block-can-survive-itself) |
+| `oxygen` | What fraction of an oxygen generator's *draw* should become heat? The same two rigs as `reactors`, pointed at a consumer: six vanilla generators at five fractions and three draws, where the draws are the game's own `StandbyPowerConsumption` and `OperationalPowerConsumption` and one observed field duty. It is what decided 0.6 to 0.40, and it found that **a skin cools a small heat source where it cooks a reactor**. | `OxygenGeneratorWasteHeatTests` | [balance.md](../docs/balance.md#oxygen-generator-waste-heat-written-before-it-is-measured) |
 | `retrofit --ships 500 [--csv out/]` | Can cooling be fitted to ships people actually built? A real hull is parsed, run under load to find where its heat is, and the mod's blocks go into the cells that hull left free — bolted and plumbed. | `RetrofitTests` | [balance-lab.md](../docs/balance-lab.md#0-define-good-balance-before-collecting-anything) |
-| `stiffness [--csv out/]` | What does a ship's stiffest block demand of a step, asked of 8,105 workshop hulls rather than one save? **Three minutes, and it is what re-baselines `Census.Corpus` whenever a default moves** — the cheapest way to ask a population anything. Nothing is stepped: stiffness is a property of a built grid and the world it is asked about. | `DecorativeStiffnessTests` | [stiffness.md](../docs/stiffness.md#the-same-question-asked-of-eight-thousand-real-ships) |
+| `stiffness [--csv out/]` | What does a ship's stiffest block demand of a step, asked of 8,098 workshop hulls rather than one save? **Three minutes, and it is what re-baselines `Census.Corpus` whenever a default moves** — the cheapest way to ask a population anything. Nothing is stepped: stiffness is a property of a built grid and the world it is asked about. | `DecorativeStiffnessTests` | [stiffness.md](../docs/stiffness.md#the-same-question-asked-of-eight-thousand-real-ships) |
 
 ```bash
 dotnet run --project Thermodynamics.Sim -- balance --csv out/
 dotnet run --project Thermodynamics.Sim -- coolers
 dotnet run --project Thermodynamics.Sim -- reactors
+dotnet run --project Thermodynamics.Sim -- oxygen
+dotnet run --project Thermodynamics.Sim -- triage --top 25
+dotnet run --project Thermodynamics.Sim -- basevariants --ships 400
 dotnet run --project Thermodynamics.Sim -- retrofit --ships 500 --csv out/
 dotnet run --project Thermodynamics.Sim -- stiffness --csv out/     # ~3 min
 ```
@@ -414,6 +488,8 @@ dotnet run --project Thermodynamics.Sim -- bench parallel --size 600    # one gr
 dotnet run --project Thermodynamics.Sim -- bench surface                # what a selective surface on the radiator is worth
 dotnet run --project Thermodynamics.Sim -- bench stagger --size 600     # whole steps against spread ones: what locality costs
 dotnet run --project Thermodynamics.Sim -- bench steppath              # a step at the solver, against a step through the host
+dotnet run --project Thermodynamics.Sim -- bench stages --size 500000  # one stage of a grid's life on its own clock, best of fifteen
+dotnet run --project Thermodynamics.Sim -- bench stepphases --size 125000  # and where the time inside one step goes
 dotnet run --project Thermodynamics.Sim -- bench smallgrids            # what one grid costs before any of its blocks do
 dotnet run --project Thermodynamics.Sim -- bench wattsclear            # what zeroing the watts row costs, up a size ladder
 dotnet run --project Thermodynamics.Sim -- bench rowfill               # what the first substep of a step pays over a later one
@@ -435,6 +511,8 @@ dotnet run --project Thermodynamics.Sim -- bench report --baseline benchmarks/pe
 | `floor --driven` | The same sweep on a ship held at temperature by forty 250 kW sources instead of by a seeded spread — the case that says whether a player would notice, and the one that reports the peak temperature overheat damage is decided by. |
 | `coolant` | The segmented fluid model against the well-mixed one it replaced, on the same grid, at rising amounts of pipe. |
 | `steppath` | The same step driven straight at the solver and then through the host's entry point, at three substep caps. Everything else here drives the solver, so work the host does around a step is invisible to it — which is how a duplicate stability estimate survived a section written to attribute fixed cost. Both timed runs re-seed the temperature spread; conduction skips a link whose ends agree, so whichever runs second on a flatter grid reads cheaper for no reason but its order. |
+| `stepphases` | **Where a step's time goes**: the environment pass, conduction, the coupled bodies, turning watts into temperatures and publishing, each on its own clock inside one settled step, best of fifteen, with the element visits the solver charges each. A step had been reported as one number by three performance passes, two of which changed the link stream's layout on a guess about which part was expensive and reverted it on measurement. `StepPhaseLabTests` holds the instrument to not changing what it measures — the same hull profiled and unprofiled reaches the same temperatures to the bit. See [performance.md](../docs/performance.md#pass-5-iteration-1--a-step-is-measured-by-its-parts). |
+| `stages` | Placing blocks, registering them, surfaces, links, rooms, exposure, **the room air rebuild** and a settled step, each timed on its own on one prebuilt grid, fastest of fifteen, with the stage's work counter beside it — the instrument that resolves a change to one stage where the build ladder's summed column cannot. A work figure that moves between repeats aborts the row, because two readings of different walks are not a comparison. `--stages surfaces,rooms` narrows it, `--repeats N` sets the floor on repeats and `--trace` prints every one of them. **A stage repeats until its fastest reading has been reproduced** — five readings within two per cent of it, on a floor of a hundred — because best-of-fifteen had not converged: three runs of the same binary spread 48 %, 28 % and 67 % on the surface, room and link stages ([performance.md](../docs/performance.md#pass-8-iteration-2--every-stage-but-one)). The `roomair` stage fills every room before the clock starts, because a room at zero pressure has no air and no links, and a stage that timed *that* would time an empty outer loop. See [performance.md](../docs/performance.md#how-a-pass-is-run). |
 | `smallgrids` | A 200-grid fleet swept from one block a grid upwards, each row run whole, again paced the way the host drives it, and a third time on a zero-length frame to measure the per-grid visit on its own. The report's fleet rows stop at eight hundred blocks a grid because that is the smallest the ship generator builds; a real world is mostly smaller than that, and the per-grid fixed cost is what decides its price. Phases alternate order between repeats — whichever ran second inherited a settled grid and read five times faster than the phase it is a superset of. |
 | `franken` | A single grid of a target size welded out of real workshop ships — the corpus's largest, tiled on a lattice until they add up. **No published blueprint is a million blocks** (the largest of 8,132 is 641,711 and p99 is 70,141), so every figure this repository has at the scale bound was taken on census tiers dealt into a shape. This measures it on a real block mixture instead, which is the thing a synthetic ladder cannot invent. Not a population sample and not readable as one: it is the biggest ships there are, repeated. `--ships` points at a survey's `ships.csv`, which is where the paths come from. |
 | `allowance` | `MaxElementVisitsPerStep` swept across grid size and world, through the host's frame-paced entry point — the one path where the bound is in force, so it is the only benchmark that can see it at all. Reports what each allowance costs a frame beside the share of real time the grid keeps, and converts the second into kelvin off a ladder of clock errors run through `ClientInputLab`'s own slow-clock mechanism rather than extrapolated from `F23`'s single point. A deficit past the last measured rung is printed with a `>` rather than answered. |
@@ -481,7 +559,10 @@ speed. `FlowSpeedDoesNotCostSubsteps` asserts that at 5,000 parcels per second.
 `WellMixedCoolant` therefore exists for the choice rather than for the cost.
 
 **The harness runs on .NET 9 and the game runs .NET Framework 4.8**, so absolute milliseconds here
-are optimistic against the game. Ratios and shapes of curve carry across; a millisecond figure
+are optimistic against the game. Every project under `tests/` compiles optimised in every
+configuration — `tests/Directory.Build.props` sets `<Optimize>true</Optimize>` — because `dotnet run`
+and `dotnet test` build Debug, and an unoptimised Debug assembly was what every figure before
+2026-08-26 was taken on. See [performance.md](../docs/performance.md#iteration-1--the-harness-measured-unoptimised-code). Ratios and shapes of curve carry across; a millisecond figure
 does not. `--diagnostics` turns on the per-node watt figures that switching telemetry on turns on
 in a live world, so a benchmark can be compared against a field report that includes the cost of
 being measured — about 2 % on a 42,000-block hull.
@@ -534,29 +615,42 @@ PipeFitter.BuildRing(builder, ring);      // pump goes on the first straight run
 
 ## Test coverage
 
-1,829 tests. **What each class is for is stated in its own summary, not here** —
+2,048 tests. **What each class is for is stated in its own summary, not here** —
 the index below says where to look, and `EveryTestClassSaysWhatItIsFor` fails when a class arrives
 without saying. This table is checked by `EveryTestClassIsInTheIndex`, so a suite cannot be added
 and left off it.
 
+**The vanilla lane and the modded lane are separate, and keeping them so is what makes both
+usable.** Everything measured on the corpus is measured on hulls built out of the *game's* blocks —
+the filter rejects a ship with anything it cannot resolve, which is what makes a population figure a
+statement about Space Engineers rather than about this mod. Everything about the mod's own blocks —
+radiators, pipes, pumps, heat pumps, coolant — is measured in synthetic rigs, because no published
+ship carries one. `RetrofitLab` is the deliberate bridge and says so: it fits the mod's blocks into
+the cells a real hull left free.
+
+The practical consequence is worth stating, because it is not obvious and it is load-bearing: **a
+change to the mod's own blocks cannot move a corpus figure**, so a modded feature can be built while
+a vanilla walk is running, and a vanilla walk cannot be invalidated by one. The reverse does not
+hold — `A13` was a change to how *vanilla* blocks are read, and it moved the population by 15.76 %.
+
 | Subject | Suites |
 | --- | --- |
-| **Block geometry and the grid model** | `FaceTests` `BoxGeometryTests` `GridMathTests` `CellBitsetTests` `BlockOrientationTests` `BlockInstanceTests` `GridModelTests` `BlockSurfaceBuilderTests` `Se2LatticeTests` `ShapeTests` |
-| **Surfaces, rooms and air** | `SurfaceMapTests` `RoomMapperTests` `DoorSealingTests` `RoomPortalTests` `IncrementalRoomTests` `RoomMapFreezeTests` `RoomMapCompletionTests` `RoomCellStorageTests` `RoomAuditTests` `UnmappedRoomTests` `RoomAirTests` `RoomAirCouplingTests` `RoomPressureTests` `RoomAirPressureTests` `ExposureAuditTests` |
+| **Block geometry and the grid model** | `FaceTests` `BoxGeometryTests` `GridMathTests` `CellBitsetTests` `BlockOrientationTests` `BlockOrientationCacheTests` `BlockInstanceTests` `BlockInstanceOneCellTests` `GridModelTests` `GridModelAdjacencyTests` `BlockSurfaceBuilderTests` `Se2LatticeTests` `ShapeTests` |
+| **Surfaces, rooms and air** | `SurfaceMapTests` `SurfaceMapPackingTests` `RoomMapperTests` `DoorSealingTests` `RoomPortalTests` `IncrementalRoomTests` `RoomMapFreezeTests` `RoomMapSnapshotTests` `RoomMapSolidTests` `RoomSpanFloodTests` `RoomMapCompletionTests` `GridOccupancyTests` `RoomCellStorageTests` `RoomAuditTests` `UnmappedRoomTests` `RoomAirTests` `RoomAirCanonicalTests` `RoomAirCouplingTests` `RoomPressureTests` `RoomAirPressureTests` `ExposureAuditTests` `ExposureFastPathTests` |
 | **Conduction and the integrator** | `ConductionTests` `StabilityTests` `ConductionClampGateTests` `CoupledConductanceCacheTests` `NodeIndexTests` `FacePackingTests` `SubstepDemandTests` `SubstepFloorTests` `SubstepCeilingTests` `SubstepScaleTests` `HeatTimeScaleTests` |
 | **Environment: air, climate, weather** | `EnvironmentSolverTests` `RadiationTests` `ConvectionSolarFrictionTests` `FrictionIsolationTests` `ClimateModelTests` `GroundRoughnessTests` `DayLengthTests` `WeatherAndDepthTests` `UndergroundContactTests` `PlanetThermalTests` `PlanetReferenceTests` `PlanetPropertyMergeTests` `DescentTests` |
 | **Sun, shadow and occlusion** | `SunShadowMapTests` `SolarSelfShadowingTests` `SunLitSliceTests` `SolarOcclusionTests` `SolarOcclusionSamplerTests` `OcclusionLadderTests` `OcclusionMathTests` `SolarSymmetryTests` `GridShadowTests` `TerrainHorizonTests` `SelfShadowScenarioTests` `FaceWeightPairingTests` |
 | **Wind** | `WindFieldTests` `WindProfileTests` `GradientHeightTests` `WindSlopeTests` `WindTerrainTests` `WindCompassTests` `StormHeatingTests` `WindScenarioTests` `WindSolverContractTests` `WindLabTests` |
 | **Heat sources, damage and thresholds** | `HeatGenerationTests` `DamageTests` `CriticalTemperatureTests` `CriticalTemperatureMirrorTests` `OverheatEventTests` `SuitThermalTests` `IncandescenceTests` `HeatWarningTests` `HeatCueScanTests` `ThresholdTests` `HeatSourceTests` `HeatSourceMathTests` `HeatSourceCommandTests` `CustomHeatSourceTests` `MultiCellAndDamageTests` `ReactorWasteHeatTests` `GridHeatBalanceTests` `HottestNodeTests` `GlowGeometryTests` |
-| **Coolant loops and heat pumps** | `CoolantLoopTests` `PumpPowerTests` `CoolantFlowTests` `CoolantFaultTests` `HeatLaunderingTests` `PipeFitterTests` `HeatPumpTests` `CoolingScenarioClaimTests` |
+| **Coolant loops and heat pumps** | `CoolantFillTests` `CoolantLoopTests` `PumpPowerTests` `CoolantFlowTests` `CoolantFaultTests` `HeatLaunderingTests` `PipeFitterTests` `HeatPumpTests` `CoolingScenarioClaimTests` |
 | **What a step costs, and what it must not change** | `LoadTests` `StepBudgetTests` `AllowanceTests` `CapVersusAllowanceTests` `StepWorkUnitTests` `PairedRunTests` `FrankenHullTests` `StepFixedCostTests` `StepPacingTests` `StepTermsTests` `SpreadStepTests` `StaggerTests` `PaceEquivalenceTests` `SweepSliceTests` `BufferGrowthTests` `IncrementalTopologyTests` `BlockRefreshTests` `CostRollupTests` `SolverReportingTests` `StressFindingsTests` |
-| **Bit-identity: an optimisation against what it replaced** | `PrecomputedEnvironmentTests` `FixedSourceRowTests` `WattsClearFusionTests` `ConductionClampGateTests` `DiagnosticBatchingTests` |
-| **Settings, storage and definitions** | `SettingsTests` `SettingsDefaultsTests` `SettingsWiringTests` `ValidationReportingTests` `StorageCodecTests` `SchedulerTests` `DefinitionTests` `DefinitionFileTests` `ShippedDefinitionTests` `AuthoredMaterialTests` `AuthoredWasteTests` `BlockDerivationTests` `SolarAbsorptivityTests` `SelectiveSurfaceTests` `MaterialOverrideTests` `FeatureToggleTests` `DefaultSettingsTests` `ProfileSuiteTests` `ProfileClockTests` `WorldSettingsTests` |
+| **Bit-identity: an optimisation against what it replaced** | `PrecomputedEnvironmentTests` `HeatGainHoistTests` `CanonicalLinkOrderTests` `FixedSourceRowTests` `WattsClearFusionTests` `ConductionClampGateTests` `DiagnosticBatchingTests` |
+| **Settings, storage and definitions** | `DialReachTests` `SettingsDialReachTests` `LoopDialReachTests` `PlanetDialReachTests` `BlockDialReachTests` `LoopBeforeTests` `LoopCoolantMassTests` `CellSizeTests` `DesignedHullTests` `SettingsTests` `SettingsDefaultsTests` `SettingsWiringTests` `ShippedIdentityTests` `ValidationReportingTests` `StorageCodecTests` `SchedulerTests` `DefinitionTests` `DefinitionFileTests` `ShippedDefinitionTests` `AuthoredMaterialTests` `AuthoredWasteTests` `BlockDerivationTests` `SolarAbsorptivityTests` `SelectiveSurfaceTests` `MaterialOverrideTests` `FeatureToggleTests` `DefaultSettingsTests` `ProfileSuiteTests` `ProfileClockTests` `WorldSettingsTests` |
 | **Readouts a player sees** | `TemperatureScaleTests` `UnitsTests` |
-| **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` |
+| **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` `OptimisedBuildTests` `CensusBoltTests` `StageLabTests` `StepPhaseLabTests` `LinkSpanProbe` |
 | **Field dumps: the mod checked against a world** | `DumpAuditTests` `FieldDumpTests` `CensusFidelityTests` |
 | **End to end, and the host boundary** | `SimulationIntegrationTests` `ScenarioTests` `ScenarioClaimTests` `HostAdapterTests` `CoreIsolationTests` `FleetParallelTests` `ParallelTickTests` |
-| **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `RetrofitTests` `BlockHeatIndexTests` `HandCoolingTests` `BuildCostTests` `GlowChannelTests` `SuspendedRulesTests` `KnobBaselineTests` `LocalisationSurfaceTests` `CorpusProvenanceTests` `TimeToLossTests` `CatalogDriftTests` `ModHardwareRetestTests` `RetestSetTests` `SettleReadingTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `SubgridBridgeTests` `PrefabWalk` `CorpusCapWalk` `CorpusGuardTests` `CorpusArchiveTests` `ClientDriftTests` `ClientInputTests` `HotTailTests` `HotTailSyncTests` `AirCostTests` `ConductionPaceTests` `LoadDialTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
+| **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `RetrofitTests` `BlockHeatIndexTests` `HandCoolingTests` `BuildCostTests` `GlowChannelTests` `SuspendedRulesTests` `KnobBaselineTests` `LocalisationSurfaceTests` `CorpusProvenanceTests` `TimeToLossTests` `CatalogDriftTests` `ModHardwareRetestTests` `RetestSetTests` `SettleReadingTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `SubgridBridgeTests` `PrefabWalk` `CorpusCapWalk` `CorpusGuardTests` `CorpusArchiveTests` `CorpusRecordTests` `ClientDriftTests` `ClientInputTests` `HotTailTests` `HotTailSyncTests` `AirCostTests` `ConductionPaceTests` `LoadDialTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
 | **Corpus walks** (opt-in, `THERMAL_CORPUS_TESTS`) | `CorpusSurvey` `CorpusAirWalk` `CorpusFloorWalk` `CorpusCensus` `KnobSweep` `ConductanceRetestWalk` `PairSweep` `SunlightPanelWalk` `BlockAccountingWalk` `DeterminismWalk` |
 | **The documentation itself** | `DocumentationTests` `ModApiShapeTests` `ConfigurationDocTests` `SimCommandTests` `CredentialScanTests` `ScriptWhitelistTests` |
 
@@ -584,6 +678,19 @@ and left off it.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | The fast lane had rotted to 37 s inside two days of being re-sorted, and the rule refresh brought it back to 4 s: `DesignedHullTests` was 35 s of it on its own and ten more classes had crossed two seconds untagged — `DialReachTests`, `ModHardwareRetestTests`, `SettingsDialReachTests`, `LoopDialReachTests`, `LoopCoolantMassTests`, `ScenarioTests`, `ScriptWhitelistTests`, `HeatTimeScaleTests`, `CoolantLoopTests` and `DocumentationTests`. The whole suite is 1 m 22 s over 2,001 cases on the optimised build, from 2 m 34 s over 1,884 ([performance.md](../docs/performance.md)). |
+| 2026-08-26 | The test tree compiles optimised in every configuration. Nothing set `<Optimize>`, `dotnet run` and `dotnet test` build Debug, and a Debug assembly tells the JIT not to optimise — so every timing the harness ever produced was of code the game never runs, at 3.4× a step and up to 7.7× on the diagnostics surcharge ([performance.md](../docs/performance.md)). |
+| 2026-08-26 | Added `ShippedIdentityTests`, which checks the two rules that were *judgement* because nothing could see them break: the workshop id in `modinfo.sbmi` (`R5` — a regenerated file publishes the mod as a new item and every subscriber stays on the old one, with a green build and a correct-looking repository) and the shape of `Models/` (`R4` — a `.mwm` path is baked into the `.sbc` that names it, so a move is a re-export of the source this repository does not hold). The model pin is a digest of the sorted set of paths: a file added is a normal day, a file moved is the failure, and only the set tells them apart. |
+| 2026-08-26 | `SettingsWiringTests` covers the bridge between the world's settings and the solver's, which was thirty-nine hand-written assignments nothing read. **A field added to `ThermalSettings` and not to that list is a setting that is documented, wired, named, clamped, replicated and left at its default in every world** — and every test passes, because a test builds a `ThermalSettings` directly and never crosses the bridge, and `SettingsDialReachTests` asks whether the *core* field reaches the solver, which it does. Checked in both directions: nothing missing from the list, and nothing on it the solver no longer has. |
+| 2026-08-26 | `DocumentationTests.EveryClaimAPageSaysIsPinnedNamesSomethingThatExists`: every page that says a claim is *pinned by*, *checked by* or *measured by* something names something that exists. rules.md's `*Checked by:*` fields already had that check over one page; every other page cites in prose and nothing read those. Written after blocks.md's ring-length advice was found citing a test that had stopped existing, with three model changes' worth of stale figures above it — `NoPageNamesATestThatHasBeenRenamed` missed it because the rename changed the third camel word. **The dead name is deliberately not written in the new test's own comment**: a citation resolves if the code mentions it twice anywhere, so naming it there made the citation under test resolve, which is how the first attempt to prove the check works passed. |
+| 2026-08-26 | Added `BlockDialReachTests`, which completes the set: **every number this mod carries is now enumerated and asserted to reach something** — the coolant's, the world's, the planet's and a block's. Seven of the eleven block properties were already covered as `KnobLab` dials and the other four had a dedicated test class each, which is not the same thing: the point of enumerating is the field written tomorrow. Two needed a rig that did not exist — a *drawing* subject rather than a producing one, because the two waste fractions are read off different terms, and a load that actually cooks the subject past its rating, because at a tenth of it nothing crosses and both the rating and the damage rate read inert. |
+| 2026-08-26 | Added `PlanetDialReachTests`: every float on `PlanetThermalProperties` changes what `EnvironmentSolver.Solve` produces, over thirteen places. The planet's thirteen dials are the largest group `C33` counts as unswept and they had no reach check either. All thirteen reach, and **three needed a place that did not exist**: the damping depth is invisible below about twenty metres because it clamps, the ambient lag does nothing at all unless the sample carries where ambient was and how long ago, and the *absolute* lag is used only where the day length is unknown — which is what the game passes for a world whose rotation it could not read. Each of those is a branch nothing was exercising. |
+| 2026-08-26 | Added `SettingsDialReachTests`: **every settable field on `ThermalSettings` changes something the solver computes**, enumerated by reflection over thirteen rigs. `DialReachTests` covered the eighteen dials `KnobLab` sweeps and thirteen of those are material dials, so five world settings had a reach check and thirty-five had none — the silent half of [backlog.md](../docs/backlog.md) `C33`. All forty reach; four are named as inert with reasons (a version number and three derived readouts), and the test asserts those really are inert, so an exemption that stops being true fails from the other side. **Building it was mostly building rigs**, and each one is a statement about what a dial needs to be visible: a raking sun on an asymmetric hull for `SolarSelfShadowing`, an environment point source for `EnableHeatSources`, a frame-paced run for `SimulationSpeed`, a two-kelvin lift for `HeatPumpMaxCoefficient`, a suit the regulator loses for `SuitHeatCapacity`, a census hull at two substeps for the overshoot clamps and the same hull under a tight element budget for `FloorBlocksWhenOverBudget`. Caps are swept to a level that binds rather than scaled, because a ceiling above what a rig demands is a ceiling that does nothing. |
+| 2026-08-26 | `HeatLaunderingTests` reaches the coolant spill again, and by a route nobody was looking for: **turning `EnableCoolantLoops` off** dissolves every loop with every pipe still on the grid, which is what the spill needs and what a grind stopped being at `B44`. `A12`'s boundedness bound is under test again (`F28`), with conservation and the reclaim-on-switch-back beside it and a pin on the two-port count that makes a split impossible. Two defects the same reading found: `AGrindLeavesNoPipeHoldingCoolantBecauseTheRingDrained` had lost its `[Fact]` and was not running — the suite reported it as an xUnit warning and nothing read it — and `HeldCoolantSurvivesASaveAndLoad` was saving a ring that vents, so it compared eight cold pipes against eight cold pipes. |
+| 2026-08-26 | `LoopCandidateTests` is `LoopBeforeTests` and `LoopCandidate` is `LoopBefore`: all three dials the candidate proposed have shipped, so a class still calling itself a candidate would have left every lab with two identical arms reporting *the package is worthless* in the voice it would use if it were. The arms hold the **before** now (`D8`). Added `CellSizeTests`: which cell size is the harder one to cool, per block and from the definitions. `LoopCoolantMassTests` ran its ring with the environment disabled — a source and no sink — so it published a ramp read at step 400 as a temperature; it asserts the rig settles before reading anything off it now, and `CoolantLoopTests` steps to a balance criterion rather than to a fixed count for the same reason. |
+| 2026-08-25 | The 8.89 % below is what a 400-ship sample said and the population says **15.76 %** — `BaseVariantLab`'s stride sample carried a representative share of blocks and an unrepresentative share of gravity generators, which are 6.9 GW on their own. The entry below is left as written (`R12`); this is the figure to quote, and [balance-lab.md](../docs/balance-lab.md) carries how the sample missed it. The stiffness walk over the same corrected population moved by **0.00 %**, because heat is a sum over blocks and stiffness is a maximum over them. |
+| 2026-08-25 | **The blueprint reader built eleven kinds of vanilla block as armour, and does not now.** The game gives thirteen definitions no `SubtypeId`; `BaseSubtypeOf` turned every one into a plain armour cube — wrong mass, wrong material, no power draw, no heat — and the ship still parsed with the right block count, so nothing looked wrong. It resolves by type now, the model cache and every lookup that resolves a *placed* block key on a unique name, and `ABlockWithNoSubtypeNameIsItsOwnTypesBaseVariantRatherThanArmour` fails if it goes back. **The same pass found the other half of it**: three subtypes are claimed by two types each, and `LargePistonBase` belongs to both `PistonBase` and `ExtendedPistonBase` — same components, same power, sizes 1x2x1 and 1x3x1 — so every extended piston in the corpus was built a cell short. Blocks resolve on the pair now. Added `BaseVariantLab` and `basevariants` to price what it cost: on 400 ships, 17,079 blocks on 275 of them change identity and the sample's full-load waste rises **8.89 %**. Every dataset in `out/` was taken under the defect ([backlog.md](../docs/backlog.md) `A13`). |
+| 2026-08-25 | Added `OxygenGeneratorLab` and the `oxygen` command, and moved the two bounds `ReactorLab` had into `SoloBlockRig` so both labs run the same rig on the same clock. It decided the oxygen generator's waste fraction — 0.6 to 0.40 — on the finding that two of six vanilla generators were past critical *bare* at their rated draw, and it falsified the reading that bare is a ceiling and skinned a floor: at three orders of magnitude less waste than a reactor, the shell is the larger radiator and skinning **cools**. Also fixed the two `Vanilla` drift tests, which matched a reference row to a game definition by subtype alone — thirteen of the game's definitions carry no subtype, so the vanilla oxygen generator resolved to a door. |
 | 2026-08-25 | Wrote down that the machine is shared and what on this page is heavy enough to serialize with `heavy run` (`W5`), including the `LoadTests` case where a timing failed twice against a corpus walk in another process rather than against the code, and how to exclude them when the suite has to run unlocked. |
 | 2026-08-25 | Added the `station` scenario, which is the first thing in the library that is not a ship, a rig or a component ([backlog.md](../docs/backlog.md) `F27`). It runs a station against a ship matched to one cell with exactly half the external faces, in vacuum and in air at two loads, and prices what roof radiators are worth. `ScenarioClaimTests` pins both halves of its conclusion, and `TheStationAndTheShipAreMatchedOnBlocksAndHalvedOnArea` checks the pair off the shapes rather than off the scenario, so a change that quietly unmatches them fails there rather than moving every figure `F27` rests on. |
 | 2026-08-25 | **A walk launched from a git worktree recorded `unknown` for its commit**, which is what a walk on a machine with no repository records — so the one thing provenance exists to make loud was silent for anyone building on a branch checkout. `.git` is a directory in a clone and a *file* naming one in a worktree; `CorpusRecord.Commit` now follows it, and looks for a loose ref in the common directory a worktree shares with its clone before falling back to `packed-refs`. Found by `AWalkWritesWhatBuildItRanOn`, which was written to catch exactly this and had never had a worktree to catch it on. Its own summary also claimed a `dirty` marker no line of the method produced; the claim is gone and the reason it is not cheap to have is written down instead. |

@@ -84,7 +84,8 @@ namespace Thermodynamics.Tests
             // times the coolant in one, times its specific heat.
             const float ParcelMetres = 2.5f;
             float parcelsPerSecond = loop.FlowRateFor(ParcelMetres) / ParcelMetres;
-            float wattsPerKelvin = parcelsPerSecond * loop.CoolantMassPerPipe * loop.SpecificHeat;
+            float wattsPerKelvin =
+                parcelsPerSecond * loop.MassPerPipe(ParcelMetres) * loop.SpecificHeat;
 
             Assert.True(wattsPerKelvin > 100000f,
                 "a ring should carry hundreds of kilowatts per kelvin: " + wattsPerKelvin);

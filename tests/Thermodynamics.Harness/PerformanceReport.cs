@@ -162,8 +162,10 @@ namespace Thermodynamics.Harness
             Add(rows, "machine", "host", "processors", System.Environment.ProcessorCount, "", false);
             Add(rows, "machine", "host", "64 bit", System.Environment.Is64BitProcess ? 1 : 0, "", false);
 
+            // The hull is dealt before the clock starts, for the same reason as the ladder's build column.
+            GridBuilder hull = Hull("ship", 4000);
             Stopwatch watch = Stopwatch.StartNew();
-            ThermalSimulation calibration = Build(Configure(0, true), "ship", 4000);
+            ThermalSimulation calibration = Build(Configure(0, true), hull);
             LoadBenchmarks.SeedSpread(calibration);
 
             EnvironmentState state = EnvironmentSolver.Solve(
@@ -214,9 +216,10 @@ namespace Thermodynamics.Harness
                 if (log != null) log("  ladder " + size.ToString("n0"));
 
                 ThermalSettings settings = Configure(0, true);
+                GridBuilder hull = Hull(shape, size);
 
                 Stopwatch build = Stopwatch.StartNew();
-                ThermalSimulation simulation = Build(settings, shape, size);
+                ThermalSimulation simulation = Build(settings, hull);
                 build.Stop();
 
                 string name = size.ToString("n0");
@@ -717,11 +720,28 @@ namespace Thermodynamics.Harness
             return settings.Derive();
         }
 
-        private static ThermalSimulation Build(ThermalSettings settings, string shape, int size)
+        /// <summary>
+        /// The hull a case is measured on, dealt from the census and not yet simulated. Kept apart
+        /// from <see cref="Build"/> so the ladder's `build` column times the simulation's own load
+        /// path and not the generator: from `C26` the bolt search was ten times the build it fed,
+        /// and the column reported the sum under a name that reads as the mod's.
+        /// See performance.md, Iteration 2.
+        /// </summary>
+        private static GridBuilder Hull(string shape, int size)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build(shape, size));
+            return builder;
+        }
 
+        private static ThermalSimulation Build(ThermalSettings settings, string shape, int size)
+        {
+            return Build(settings, Hull(shape, size));
+        }
+
+        /// <summary>Surfaces, links, loops, rooms and exposure for a hull already dealt.</summary>
+        private static ThermalSimulation Build(ThermalSettings settings, GridBuilder builder)
+        {
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
             simulation.RebuildAll();
 

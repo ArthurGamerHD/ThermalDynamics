@@ -47,11 +47,42 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// The coefficient the shipped loop runs at, W/(m²·K). It is 160 because that is what the
-        /// old quality-times-reference came to on a large grid, so the page's cooling figures still
-        /// describe the loop they were taken on.
+        /// The coefficient the shipped loop runs at while its pump is running, W/(m²·K).
+        ///
+        /// <para>
+        /// **It was 160 and `C42` made it 1,000.** 160 was what the old quality-times-reference came
+        /// to on a large grid, and it is the stagnant end of the range a pumped water-glycol mix
+        /// actually sits in — which mattered because the pickup a block gets is `sink faces × h · A`,
+        /// the face count is fixed by design, and watts over the pickup is the gradient a buried
+        /// source is forced to sit at whatever radiator is hung off the far end. At 160 a 6.4 MW
+        /// jump drive was forced 6,400 K above its surroundings against a 689 K rating: no answer at
+        /// any radiator count, on the block carrying 65.5 % of a loaded fleet's heat.
+        /// </para>
+        ///
+        /// <para>
+        /// **160 is still what a stopped ring runs at**, through
+        /// <see cref="LoopThermalProperties.StagnantTransferFraction"/> at 0.16, so nothing anywhere
+        /// carries less than it did. See balance.md, *What was decided, and what it cost*.
+        /// </para>
         /// </summary>
-        private const float ShippedCoefficient = 160f;
+        private const float ShippedCoefficient = 1000f;
+
+        /// <summary>What a ring with nothing circulating carries, W/(m²·K) — unchanged by `C42`.</summary>
+        private const float StoppedCoefficient = 160f;
+
+        /// <summary>
+        /// **And a stopped ring carries exactly what every ring carried before the retune.** The
+        /// product is the invariant, not either number: moving one without the other silently makes
+        /// a stopped ring better or worse than it has ever been.
+        /// </summary>
+        [Fact]
+        public void AStoppedRingStillCarriesTheOldCoefficient()
+        {
+            LoopThermalProperties properties = LoopThermalProperties.Default();
+
+            Assert.Equal(StoppedCoefficient,
+                properties.HeatTransferCoefficient * properties.StagnantTransferFraction, 1);
+        }
 
         [Fact]
         public void TheFluidCouplingIsStillWhatTheCoolingFiguresWereMeasuredAt()

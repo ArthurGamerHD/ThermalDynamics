@@ -78,6 +78,86 @@ namespace Thermodynamics.Sim
                     Console.Write(ReactorLab.Report());
                     return 0;
 
+                case "triage":
+                {
+                    int take;
+                    int.TryParse(ValueAfter(args, "--top") ?? "25", out take);
+                    string census = ValueAfter(args, "--census")
+                        ?? "out/census-2026-08-25/composition.csv";
+
+                    string triageCsv = ValueAfter(args, "--csv");
+                    if (triageCsv != null)
+                    {
+                        Directory.CreateDirectory(triageCsv);
+                        string file = Path.Combine(triageCsv, "triage.csv");
+                        File.WriteAllText(file, BlockTriageLab.Csv(census));
+                        Console.WriteLine("wrote " + file);
+                        return 0;
+                    }
+
+                    string levers = ValueAfter(args, "--levers");
+                    if (levers != null)
+                    {
+                        float target;
+                        if (!float.TryParse(levers, out target)) target = 3f;
+                        Console.Write(BlockTriageLab.Levers(census, target, 0.001f));
+                        return 0;
+                    }
+
+                    Console.Write(BlockTriageLab.Report(census, take));
+                    return 0;
+                }
+
+                case "oxygen":
+                    Console.Write(OxygenGeneratorLab.Report());
+                    return 0;
+
+                case "basevariants":
+                {
+                    int take;
+                    int.TryParse(ValueAfter(args, "--ships") ?? "500", out take);
+
+                    // One named file, parsed with the reader's own counters visible even when the
+                    // ship is discarded — which is the state a dropped ship is in.
+                    string one_file = ValueAfter(args, "--file");
+                    if (one_file != null)
+                    {
+                        Blueprints.Ship probe = Blueprints.Probe(one_file);
+                        Console.WriteLine("grids " + probe.Grids.Count + "  blocks " + probe.Blocks
+                            + "  unknown " + probe.UnknownBlocks
+                            + "  ambiguous " + probe.AmbiguousBlocks
+                            + "  unresolved: " + string.Join(" ", probe.UnknownSubtypes.ToArray()));
+                        return 0;
+                    }
+
+                    System.Collections.Generic.List<string> sample =
+                        BaseVariantLab.Sample(ValueAfter(args, "--path"), take);
+
+                    string ofType = ValueAfter(args, "--type");
+                    Console.Write(ofType != null
+                        ? BaseVariantLab.ShareReport(sample, ofType)
+                        : BaseVariantLab.Report(sample));
+                    return 0;
+                }
+
+                case "designed":
+                {
+                    float watts = float.Parse(Option(args, "--watts", "200000"),
+                        System.Globalization.CultureInfo.InvariantCulture);
+
+                    if (Has(args, "--sweep"))
+                    {
+                        float critical = float.Parse(Option(args, "--critical", "689"),
+                            System.Globalization.CultureInfo.InvariantCulture);
+                        Console.Write(DesignedHullLab.Sweep(watts, critical,
+                            OptionInt(args, "--panels", 8)));
+                        return 0;
+                    }
+
+                    Console.Write(DesignedHullLab.Report(watts, OptionInt(args, "--panels", 4)));
+                    return 0;
+                }
+
                 case "coolers":
                     Console.Write(CoolingLadder.Report());
                     return 0;
@@ -971,6 +1051,90 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "stepfloor":
+                {
+                    int floorBlocks = size > 0 ? size : 125000;
+
+                    Console.WriteLine();
+                    Console.WriteLine("== step floor, " + shape + " " + floorBlocks.ToString("n0") + " blocks ==");
+                    Console.WriteLine("  What each pass of a substep would cost doing no arithmetic:");
+                    Console.WriteLine("  the same rows, the same sizes, the grid's own link indices.");
+                    Console.WriteLine();
+
+                    List<StageLab.Row> measured = StageLab.StepPhases(shape, floorBlocks,
+                        message => Console.Error.WriteLine("  " + message));
+                    List<StepFloorLab.Row> floorRows = StepFloorLab.Run(shape, floorBlocks);
+
+                    Console.WriteLine(StepFloorLab.Table(floorRows, measured));
+                    return 0;
+                }
+
+                case "stepphases":
+                {
+                    int phaseBlocks = size > 0 ? size : 125000;
+
+                    Console.WriteLine();
+                    Console.WriteLine("== step phases, " + shape + " " + phaseBlocks.ToString("n0") + " blocks ==");
+                    Console.WriteLine("  Each stage inside one settled step on its own clock, best of "
+                        + StageLab.Repeats + ".");
+                    Console.WriteLine("  The visits column is what the solver charges that stage;"
+                        + " it must repeat exactly or the lab says so.");
+                    Console.WriteLine();
+
+                    List<StageLab.Row> phaseRows = StageLab.StepPhases(shape, phaseBlocks,
+                        message => Console.Error.WriteLine("  " + message));
+
+                    Console.WriteLine(StageLab.Table(phaseRows));
+
+                    string phaseOut = csvDirectory ?? "out";
+                    Directory.CreateDirectory(phaseOut);
+                    string phasePath = Path.Combine(phaseOut, "stepphases.csv");
+                    File.WriteAllText(phasePath, StageLab.Csv(phaseRows));
+                    Console.WriteLine("csv -> " + phasePath);
+                    return 0;
+                }
+
+                case "stages":
+                {
+                    int stageBlocks = size > 0 ? size : 125000;
+
+                    // Raised for a stage that will not settle: fifteen repeats is enough for a
+                    // stage the runtime has finished compiling, and a way of finding out when it
+                    // has not. See performance.md, Pass 7, Iteration 9.
+                    int stageRepeats = OptionInt(args, "--repeats", StageLab.Repeats);
+                    StageLab.Repeats = Math.Max(1, stageRepeats);
+
+                    // Every repeat, in order, for a stage whose best-of-N will not settle.
+                    if (Array.IndexOf(args, "--trace") >= 0)
+                    {
+                        StageLab.TraceRepeat = line => Console.WriteLine("  trace " + line);
+                    }
+                    string stageOut = csvDirectory ?? "out";
+                    string stageList = Option(args, "--stages", null);
+                    List<string> stages = new List<string>(stageList == null
+                        ? StageLab.Stages
+                        : stageList.Split(','));
+
+                    Console.WriteLine();
+                    Console.WriteLine("== stages, " + shape + " " + stageBlocks.ToString("n0") + " blocks ==");
+                    Console.WriteLine("  Each stage of a grid's life on its own clock, on one prebuilt grid,"
+                        + " best of " + StageLab.Repeats + ".");
+                    Console.WriteLine("  The work column must repeat exactly, or the readings are of"
+                        + " different walks and the lab says so.");
+                    Console.WriteLine();
+
+                    List<StageLab.Row> stageRows = StageLab.Run(shape, stageBlocks, stages,
+                        message => Console.Error.WriteLine("  " + message));
+
+                    Console.WriteLine(StageLab.Table(stageRows));
+
+                    Directory.CreateDirectory(stageOut);
+                    string stagePath = Path.Combine(stageOut, "stages.csv");
+                    File.WriteAllText(stagePath, StageLab.Csv(stageRows));
+                    Console.WriteLine("csv -> " + stagePath);
+                    return 0;
+                }
+
                 case "smallgrids":
                 {
                     int fleetGrids = OptionInt(args, "--grids", 200);
@@ -1437,7 +1601,12 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  features                mechanism switches in combination, per profile");
             Console.WriteLine("  frequency               where substep cost bottoms out against Frequency");
             Console.WriteLine("  reactors                where a vanilla reactor settles, against its waste fraction");
+            Console.WriteLine("  oxygen                  where a vanilla oxygen generator settles, against its waste fraction");
+            Console.WriteLine("  triage [--top N] [--census F]  which blocks a balance pass should look at, in order");
+            Console.WriteLine("  basevariants [--ships N] [--type T] [--file F]  what the blocks a blueprint spells with no subtype are worth");
             Console.WriteLine("  coolers                 every block that could cool a reactor, stacked against one");
+            Console.WriteLine("  designed                a source buried in armour: bolted panels against a loop to the skin");
+            Console.WriteLine("                          --sweep --watts --critical --panels for the pickup ladder");
             Console.WriteLine("  conductance             what real units did to the mod's own pipes and radiators");
             Console.WriteLine("  blocks                  every block in the game, derived from its build components");
             Console.WriteLine("  corpus [--path <dir>]   real ships read from blueprints, and what they are made of");
@@ -1462,6 +1631,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  drift                   how long a client that joined stale stays wrong");
             Console.WriteLine("  inputs                  each input a client drives its sim from, degraded");
             Console.WriteLine("  occlusion               what a terminator crossing costs at each rung of the shadow ladder");
+            Console.WriteLine("  roomsweep               what the room pressure sweep costs as a grid gains compartments");
             Console.WriteLine("    --scenario shadow|sunlit|planet  --watch <s> --size N --csv <dir>");
             Console.WriteLine("  planets                 every shipped world's climate, and where each figure came from");
             Console.WriteLine("    --xml | --write <path>    the generated Planets.xml");
@@ -1483,6 +1653,9 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
+            Console.WriteLine("  bench stages            one stage of a grid's life on its own clock, best of fifteen; --stages a,b; --repeats N; --trace");
+            Console.WriteLine("  bench stepphases        where a step's own time goes: environment, conduction, coupled, apply, publish");
+            Console.WriteLine("  bench stepfloor         what those passes would cost touching the same memory and computing nothing");
             Console.WriteLine("  bench smallgrids        what one grid costs before any of its blocks do");
             Console.WriteLine("  bench wattsclear        what zeroing the watts row costs, up a size ladder");
             Console.WriteLine("  bench rowfill           what the first substep of a step pays over a later one");

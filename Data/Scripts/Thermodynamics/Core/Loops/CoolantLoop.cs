@@ -173,6 +173,270 @@ namespace Thermodynamics.Core
         public float SegmentThermalMass { get; private set; }
 
         /// <summary>
+        /// How full the ring is, 0 to 1. Coolant is a consumable: venting empties it and refilling
+        /// costs energy and time — thermal-model.md, *Coolant is a consumable*.
+        ///
+        /// <para>
+        /// **A part-full ring holds proportionally less and couples proportionally less**, and the
+        /// second half is what keeps it cheap. The integrator sizes a substep from
+        /// `SegmentConductance / SegmentThermalMass`, and scaling only the capacity would make a
+        /// 5 %-full loop twenty times stiffer on an element that already competes to be a grid's
+        /// worst. Scaling both leaves the ratio invariant at every level, and it is the physical
+        /// answer as well: half the fluid touching a wall carries half the heat through it.
+        /// </para>
+        ///
+        /// <para>
+        /// **A dry ring is still a ring.** It exists, holds nothing, transports nothing and can be
+        /// refilled. *The loop stops existing* is the shape this area has failed in twice, once at
+        /// 190 MJ through a ground pump, which is why zero is a level rather than a deletion.
+        /// </para>
+        /// </summary>
+        public float FillFraction
+        {
+            get { return fill; }
+            set
+            {
+                float clamped = value < 0f ? 0f : (value > 1f ? 1f : value);
+                if (clamped == fill) return;
+
+                fill = clamped;
+                RefreshThermalMass();
+            }
+        }
+
+        private float fill = 1f;
+
+        /// <summary>
+        /// Kilograms one pipe of this ring carries. **The cell size is the ring's own parcel
+        /// length**, which the builder sets from the grid, so a small-grid ring charges itself from
+        /// the same density as a large-grid one rather than from a flat figure that suits neither.
+        /// </summary>
+        public float MassPerPipe
+        {
+            get { return Properties.MassPerPipe(ParcelLengthMetres); }
+        }
+
+        /// <summary>Kilograms of coolant a full ring holds. What a refill is priced against.</summary>
+        public float CapacityKilograms
+        {
+            get { return MassPerPipe * Math.Max(1, Pipes.Count); }
+        }
+
+        /// <summary>Kilograms it is currently holding.</summary>
+        public float HeldKilograms
+        {
+            get { return CapacityKilograms * fill; }
+        }
+
+        /// <summary>
+        /// Energy to restore one kilogram of coolant, J. The heat that kilogram holds at
+        /// <see cref="LoopThermalProperties.RefillEquivalentKelvin"/> above ambient.
+        ///
+        /// **Divided by the clock for the same reason a parcel's capacity is.** The heat a vent
+        /// removes is `capacity × excess` and the capacity the solver carries is already scaled, so
+        /// a refill priced in unscaled joules would cost `HeatTimeScale` times what the vent saved.
+        /// The two have to be in the same currency or the exchange rate is a factor of ninety out.
+        /// </summary>
+        public float RefillJoulesPerKilogram
+        {
+            get
+            {
+                return (Properties.SpecificHeat * Properties.RefillEquivalentKelvin) / heatTimeScale;
+            }
+        }
+
+        /// <summary>
+        /// Whether anything in the ring is driving fluid: a pump that is switched on, undamaged and
+        /// turned up past zero.
+        ///
+        /// <para>
+        /// **Refilling needs one, and so does asking the grid to pay for it.** `HasPump` says the
+        /// ring has the hardware; this says the hardware is doing something. The two used to be the
+        /// same test here, so a ring whose pumps were all switched off refilled itself — and
+        /// refilled *free*, because a pump asking the distributor for nothing reports every watt it
+        /// asked for as supplied.
+        /// </para>
+        /// </summary>
+        public bool HasDrivingPump
+        {
+            get
+            {
+                for (int i = 0; i < Pumps.Count; i++)
+                {
+                    CoolantPump pump = Pumps[i];
+                    if (pump == null || !pump.Enabled) continue;
+                    if (pump.Speed > 0f) return true;
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// What refilling is asking for right now, W — the rate times the price, or zero when the
+        /// ring is full or nothing is driving it.
+        ///
+        /// **This is what a pump adds to its power request**, so the grid's distributor decides
+        /// whether the ship can afford to refill, and the heat arrives through the pump's own
+        /// `ConsumerWasteEnergy` with no second path. A ring with no *running* pump asks for
+        /// nothing and therefore never refills, which is the right answer: something has to drive
+        /// the fluid in.
+        /// </summary>
+        public float RefillDemandWatts
+        {
+            get
+            {
+                if (fill >= 1f || !HasDrivingPump) return 0f;
+                return Properties.RefillWattsAt(heatTimeScale);
+            }
+        }
+
+        /// <summary>
+        /// Puts <paramref name="deltaSeconds"/> of refilling into the ring and returns the watts it
+        /// drew doing so — zero when the ring is already full.
+        ///
+        /// <para>
+        /// **The watts are the caller's to spend**, because what makes this cost anything is the
+        /// pump's own waste fraction of 1: the host adds them to the pump block's drawn power and
+        /// the existing heat path turns all of it into heat where the pump stands. Nothing new
+        /// generates heat here, which is why the exchange rate needs no authored threshold.
+        /// </para>
+        ///
+        /// <para>
+        /// Returns watts rather than joules so a caller can hand it to a power model that thinks in
+        /// watts, and so a partial step — the last one of a refill, which restores less than a full
+        /// tick's worth — is priced for what it actually moved.
+        /// </para>
+        /// </summary>
+        public float Refill(float deltaSeconds)
+        {
+            return Refill(deltaSeconds, 1f);
+        }
+
+        /// <summary>
+        /// The same, at the share of its request the grid actually supplied. **No power, no
+        /// fill**: a ship that cannot afford the refill does not get it, and gets no heat from it
+        /// either, which is the same rule every other draw in this mod follows.
+        ///
+        /// <para>
+        /// That share only means anything because <see cref="RefillDemandWatts"/> is inside what
+        /// the pump block asks the distributor for. It was not until `B44`'s last piece: the refill
+        /// was billed to the pump's *drawn* power, which is what makes it heat, and never *asked*
+        /// for — so a ship with nothing to spare paid for its refill in heat and got the coolant
+        /// anyway.
+        /// </para>
+        /// </summary>
+        public float Refill(float deltaSeconds, float availableFraction)
+        {
+            if (deltaSeconds <= 0f || fill >= 1f || !HasDrivingPump) return 0f;
+
+            float available = availableFraction < 0f ? 0f
+                : (availableFraction > 1f ? 1f : availableFraction);
+            if (available <= 0f) return 0f;
+
+            float capacity = CapacityKilograms;
+            if (capacity <= 0f) return 0f;
+
+            float wanted = Properties.RefillKilogramsPerSecond * available * deltaSeconds;
+            float room = (1f - fill) * capacity;
+            float added = wanted < room ? wanted : room;
+            if (added <= 0f) return 0f;
+
+            FillFraction = fill + added / capacity;
+
+            return (added * RefillJoulesPerKilogram) / deltaSeconds;
+        }
+
+        /// <summary>
+        /// Empties the ring and returns the heat that left with the fluid, J.
+        ///
+        /// <para>
+        /// **The heat is what the fluid was carrying above ambient**, which is exactly what a refill
+        /// at the same excess costs to put back. That is the whole of `B43`'s answer: venting at
+        /// <see cref="LoopThermalProperties.RefillEquivalentKelvin"/> is neutral, above it pays, and
+        /// below it costs.
+        /// </para>
+        ///
+        /// <para>
+        /// The ring survives. It holds nothing and transports nothing until it is refilled, which is
+        /// what backlog.md `B44` requires: *the loop stops existing* is the shape this area has
+        /// failed in twice.
+        /// </para>
+        /// </summary>
+        public float Vent(float ambientKelvin)
+        {
+            if (fill <= 0f) return 0f;
+
+            float excess = Temperature - ambientKelvin;
+            float heat = excess > 0f ? excess * ThermalMass : 0f;
+
+            FillFraction = 0f;
+            return heat;
+        }
+
+        /// <summary>
+        /// The conductance of one link as the solver must use it: what the geometry gives, scaled
+        /// by how full the ring is.
+        ///
+        /// <para>
+        /// **Scaled here rather than baked into `Links`**, because refilling moves the fill every
+        /// tick and the links are built at topology time — folding it in would mean rebuilding the
+        /// grid's link graph to add a kilogram of water. The stored figure stays the geometry's;
+        /// this is the one every consumer reads.
+        /// </para>
+        ///
+        /// <para>
+        /// **Every consumer must read it**, and one that does not is a silent asymmetry rather than
+        /// a compile error: the capacity is scaled too, so a site left unscaled makes a part-full
+        /// ring stiffer than a full one instead of identical to it. `CoolantFillTests` asserts the
+        /// substep demand is invariant in fill, which is what actually catches that.
+        /// </para>
+        /// </summary>
+        public float LinkConductance(int index)
+        {
+            if (index < 0 || index >= Links.Count) return 0f;
+            return Links[index].Conductance * fill * StagnantFactor;
+        }
+
+        /// <summary>
+        /// What a link carries as a share of its flowing value, given whether the ring is
+        /// circulating: one while it flows, <see cref="LoopThermalProperties.StagnantTransferFraction"/>
+        /// while it does not.
+        ///
+        /// <para>
+        /// **Fluid-to-wall transfer is convective, so it depends on the flow.** A pumped ring is
+        /// forced convection and a stopped one is natural convection against the same wall, which
+        /// is the best part of an order of magnitude apart in any handbook. Nothing in the model
+        /// expressed that: <see cref="LoopThermalProperties.HeatTransferCoefficient"/> applied
+        /// whole whether or not anything was moving, so a pump earned its power only by evening the
+        /// ring out and never by making the ring conduct.
+        /// </para>
+        ///
+        /// <para>
+        /// **The field is older than this use and did nothing before it.** It was authored for the
+        /// segment-to-segment transport, which <see cref="Advect"/> already stops dead by returning
+        /// on zero flow — so as written it was a slider a player could move that multiplied nothing,
+        /// found by `LoopDialReachTests`. Its name, its range and what the menu promises are all
+        /// unchanged; it now has the leg it describes.
+        /// </para>
+        ///
+        /// <para>
+        /// It ships at 1, so a ring behaves exactly as it did until someone decides otherwise —
+        /// see balance.md, *The joint, not the panel*.
+        /// </para>
+        /// </summary>
+        public float StagnantFactor
+        {
+            get
+            {
+                if (FlowSegmentsPerSecond != 0f) return 1f;
+
+                float fraction = Properties.StagnantTransferFraction;
+                return fraction < 0f ? 0f : (fraction > 1f ? 1f : fraction);
+            }
+        }
+
+        /// <summary>
         /// Coolant parcels the pumps are pushing past a point each second. Set by the host from the
         /// pumps in this ring; zero when nothing is circulating. Signed: negative runs the ring the
         /// other way, which works just as well.
@@ -303,7 +567,10 @@ namespace Thermodynamics.Core
         /// </summary>
         public void RefreshThermalMass()
         {
-            float perSegment = (Properties.SpecificHeat * Properties.CoolantMassPerPipe) / heatTimeScale;
+            // Scaled by the fill, along with every link's conductance, so the ratio the integrator
+            // sizes a substep from does not move — see FillFraction.
+            float perSegment =
+                (fill * Properties.SpecificHeat * MassPerPipe) / heatTimeScale;
             SegmentThermalMass = Math.Max(ThermalConstants.MinimumThermalMass, perSegment);
 
             // The well-mixed model is a ring carrying exactly one parcel. Expressing it that way rather

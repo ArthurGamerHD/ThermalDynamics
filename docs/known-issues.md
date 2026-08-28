@@ -697,7 +697,7 @@ is that three structures are indexed per cell rather than per block.
 
 **Block storage is still per cell, which is what stands between the model and SE2.** The geometry,
 the conduction graph and the integrator all work from integer AABBs and cost the same whatever a
-block's volume — `Se2LatticeTests` pins that. `GridModel.blocksByCell`, `SurfaceMap.states` and
+block's volume — `Se2LatticeTests` pins that. `GridModel.blocksByCell`, `SurfaceMap`'s cell table and
 `BlockInstance.Cells` do not: they are one entry per occupied cell, so a 5 m block on SE2's 0.25 m
 lattice would cost 16,000 dictionary entries and an 8,000-element array. See
 [scale-design.md](scale-design.md#cell-centric--boundary-centric).

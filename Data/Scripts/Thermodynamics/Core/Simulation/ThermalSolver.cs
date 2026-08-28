@@ -124,10 +124,14 @@ namespace Thermodynamics.Core
         /// </summary>
         private bool environmentRowsValid;
 
-        /// <summary>Forces the per-step environment rows to be recomputed on the next pass.</summary>
+        /// <summary>
+        /// Forces the per-step environment rows to be recomputed on the next pass — and with them
+        /// the heat-gain total taken from those rows, which is only a step's own if the rows are.
+        /// </summary>
         private void InvalidateEnvironmentRows()
         {
             environmentRowsValid = false;
+            heatGainRowTotalValid = false;
         }
 
         /// <summary>
@@ -136,6 +140,13 @@ namespace Thermodynamics.Core
         /// ways and compares the results bit for bit.
         /// </summary>
         public bool PrecomputeEnvironment = true;
+
+        /// <summary>
+        /// Set false to re-sum the grid's own heat gain on every substep instead of once a step.
+        /// Test hook: <c>HeatGainHoistTests</c> runs the same grid both ways and compares the
+        /// figure and every temperature bit for bit.
+        /// </summary>
+        public bool HoistHeatGainTotal = true;
 
         /// <summary>
         /// Fraction of each node face the sun reaches, six per node, 0..1. All ones when
@@ -259,6 +270,29 @@ namespace Thermodynamics.Core
         private float heatGainAccumulator;
 
         /// <summary>
+        /// The heat a grid puts into itself from its own rows — waste heat, solar gain, friction —
+        /// summed once for the step rather than once a substep.
+        ///
+        /// <para>
+        /// **It cannot change between the substeps of one step.** Those three are read out of
+        /// `nodeSourceRow`, which is filled on the first substep and read by the rest, so summing
+        /// it twenty-four times computes the same float twenty-four times. Once is enough, and the
+        /// sum is over the same values in the same order, so the figure is unchanged to the bit.
+        /// </para>
+        ///
+        /// <para>
+        /// It is worth its own field because the add was not free: a running float sum is a
+        /// dependency the loop carries from one node to the next, and the two accumulators in that
+        /// loop measured **35 %** of the environment stage between them.
+        /// See performance.md, Pass 5, Iteration 3.
+        /// </para>
+        /// </summary>
+        private float heatGainRowTotal;
+
+        /// <summary>Whether <see cref="heatGainRowTotal"/> belongs to the step now running.</summary>
+        private bool heatGainRowTotalValid;
+
+        /// <summary>
         /// Starts a substep's heat totals. Called from both stepping paths: the direct one, which
         /// runs a whole substep in a call, and the spread one, which cuts each substep into
         /// budgeted slices across frames. Publishing from only one of them is how the first
@@ -269,6 +303,33 @@ namespace Thermodynamics.Core
         {
             environmentWattsAccumulator = 0f;
             heatGainAccumulator = 0f;
+        }
+
+        /// <summary>
+        /// Settles what the rows contributed to this substep's heat gain, once the whole grid has
+        /// been covered and before the point sources are added — which is exactly where a substep
+        /// that re-summed them would have got to, so what follows adds onto the same total in the
+        /// same order.
+        ///
+        /// <para>
+        /// A substep that summed the rows files the total; one that did not adds the filed one.
+        /// **It is settled here rather than primed at the top of the substep** because the plan is
+        /// resolved after that point and can invalidate the rows — the sun moving refreshes the
+        /// shadow map — and a substep primed with a total it then re-sums counts it twice. Which is
+        /// what the first form of this did, and what `HeatGainHoistTests` reported as a doubled
+        /// figure on the first step it took.
+        /// </para>
+        /// </summary>
+        private void SettleHeatGainRowTotal(bool summed)
+        {
+            if (summed)
+            {
+                heatGainRowTotal = heatGainAccumulator;
+                heatGainRowTotalValid = true;
+                return;
+            }
+
+            heatGainAccumulator += heatGainRowTotal;
         }
 
         /// <summary>
@@ -300,6 +361,12 @@ namespace Thermodynamics.Core
         private readonly List<ThresholdCrossing> crossings = new List<ThresholdCrossing>();
         private readonly int[] exposureScratch = new int[Face.Count];
         private readonly List<BlockInstance> neighbourScratch = new List<BlockInstance>();
+
+        /// <summary>
+        /// The face each scratch neighbour was found across, when the adjacency is this grid's own
+        /// walk and can say. Empty when it cannot, and the builder works the face out instead.
+        /// </summary>
+        private readonly List<int> neighbourFaces = new List<int>();
 
         private IBlockAdjacency adjacency;
 
@@ -667,6 +734,83 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Set false to leave the link list in the order the walk emitted it, which is what a
+        /// rebuild did before the order was made a function of the graph.
+        ///
+        /// Test hook: <c>CanonicalLinkOrderTests</c>, which checks both that the list comes out
+        /// sorted and that the walk's own order is *not* already sorted — a canonicalisation that
+        /// reorders nothing would buy no freedom at all.
+        /// </summary>
+        public bool CanonicalLinkOrder = true;
+
+        /// <summary>
+        /// Puts the link list in the order the graph implies — by lower node, then by higher —
+        /// rather than the order the walk that found it happened to produce.
+        ///
+        /// <para>
+        /// **This is what a walk is allowed to change and what it is not.** The conduction pass
+        /// accumulates watts by running down `linkA`/`linkB` in order, and a sum of floats depends
+        /// on its order, so until now the sequence a rebuild emitted links in was part of the
+        /// answer: any change to how neighbours are found moved the last bit of every temperature
+        /// on every grid. That is why five measured optimisations in the previous pass had to keep
+        /// the emission order exactly, and why the one change that would actually help — walking
+        /// blocks in the box's own index order, so the lookups are sequential — was refused
+        /// (backlog.md `D3b`).
+        /// </para>
+        ///
+        /// <para>
+        /// Sorted here, the order is a function of the graph. A rebuild may find the same links in
+        /// any sequence it likes and the result is the same to the bit. **It moves the bits once**,
+        /// which is what this iteration is for.
+        /// </para>
+        ///
+        /// <para>
+        /// The walk emits in ascending `NodeA` already, so this only has to order each run of equal
+        /// `NodeA` by `NodeB` — runs of six at most for a one-cell block.
+        /// </para>
+        ///
+        /// <para>
+        /// **It chains as it goes.** A reorder invalidates every node's link chain, so the chains
+        /// are rebuilt here rather than in a pass of their own: a link can be chained the moment
+        /// its place is settled, and a second walk over a million sixteen-byte entries is a walk
+        /// the work does not need. Chain order is not an answer — the one walk over a chain sorts
+        /// what it collects — so this only has to be complete.
+        /// </para>
+        /// </summary>
+        private void CanonicaliseLinks()
+        {
+            int count = links.Count;
+            int from = 0;
+
+            while (from < count)
+            {
+                int node = links[from].NodeA;
+
+                int to = from + 1;
+                while (to < count && links[to].NodeA == node) to++;
+
+                // Insertion sort: a run is one node's links, so at most six on a one-cell block.
+                for (int i = from + 1; i < to; i++)
+                {
+                    ThermalLink moving = links[i];
+                    int j = i - 1;
+
+                    while (j >= from && links[j].NodeB > moving.NodeB)
+                    {
+                        links[j + 1] = links[j];
+                        j--;
+                    }
+
+                    links[j + 1] = moving;
+                }
+
+                for (int i = from; i < to; i++) ChainLink(i);
+
+                from = to;
+            }
+        }
+
+        /// <summary>
         /// Brings the conduction graph up to date, incrementally when only blocks have been placed
         /// and by full rebuild otherwise. No-op when the graph already matches the layout.
         /// Public so the host can run it inside its own topology stage, where it is timed as such,
@@ -706,6 +850,14 @@ namespace Thermodynamics.Core
 
             links.Clear();
             syncedLinks = 0;
+
+            // A hull carries a little under two links a block, so the list is sized for that
+            // rather than doubled into from empty: growing to a million entries copies the
+            // sixteen-byte struct several million times on the way. An estimate that is short
+            // still grows, and one that is long is a transient the rebuild drops.
+            int expected = nodes.Count * 2;
+            if (links.Capacity < expected) links.Capacity = expected;
+
             EnsureBuffers();
             ResetLinkChains();
             for (int i = 0; i < nodes.Count; i++)
@@ -715,12 +867,24 @@ namespace Thermodynamics.Core
 
             IBlockAdjacency adjacency = Adjacency;
 
+            // The grid's own walk reports which face each neighbour was found across; any other
+            // adjacency answers only with the neighbours, and the face is worked out per pair.
+            GridModel walked = adjacency as GridModel;
+
+            // Taken once, for the whole rebuild: a bit in front of the block table, for the three
+            // candidate cells in eight that hold nothing. Only a full rebuild may ask — the set is
+            // dropped whenever the grid changes, so asking per placement would rebuild it per
+            // placement. See GridModel.GetNeighbours.
+            CellBitset occupied = walked != null ? walked.Occupancy() : null;
+
             for (int i = 0; i < nodes.Count; i++)
             {
                 ThermalNode a = nodes[i];
 
                 neighbourScratch.Clear();
-                adjacency.GetNeighbours(a.Block, neighbourScratch);
+                neighbourFaces.Clear();
+                if (walked != null) walked.GetNeighbours(a.Block, neighbourScratch, neighbourFaces, occupied);
+                else adjacency.GetNeighbours(a.Block, neighbourScratch);
 
                 for (int n = 0; n < neighbourScratch.Count; n++)
                 {
@@ -730,10 +894,12 @@ namespace Thermodynamics.Core
                     // Visit each pair once.
                     if (b.Index <= a.Index) continue;
 
-                    int face = ConductionBuilder.ContactFace(a.Block, b.Block);
+                    int face = neighbourFaces.Count == neighbourScratch.Count
+                        ? neighbourFaces[n]
+                        : ConductionBuilder.ContactFace(a.Block, b.Block);
                     if (face < 0) continue;
 
-                    int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block);
+                    int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block, face);
                     if (contacts <= 0) continue;
 
                     float conductance = ConductionBuilder.Conductance(
@@ -741,11 +907,20 @@ namespace Thermodynamics.Core
                     if (conductance <= 0f) continue;
 
                     links.Add(new ThermalLink(a.Index, b.Index, conductance, contacts));
-                    ChainLink(links.Count - 1);
                     a.LinkCount++;
                     b.LinkCount++;
                 }
             }
+
+            // Ordering and chaining are one walk: the sort visits every link to place it, and a
+            // link can be chained the moment its place is settled. Two passes over a million
+            // sixteen-byte entries is one pass more than the work needs.
+            EnsureNodeChainCapacity(nodes.Count);
+            EnsureLinkChainCapacity(links.Count);
+            ResetLinkChains();
+
+            if (CanonicalLinkOrder) CanonicaliseLinks();
+            else for (int link = 0; link < links.Count; link++) ChainLink(link);
 
             Work.LinksBuilt += links.Count;
 
@@ -797,6 +972,10 @@ namespace Thermodynamics.Core
             bool buffersGrew = EnsureBuffers();
 
             IBlockAdjacency adjacency = Adjacency;
+
+            // The grid's own walk reports which face each neighbour was found across; any other
+            // adjacency answers only with the neighbours, and the face is worked out per pair.
+            GridModel walked = adjacency as GridModel;
             int firstNewLink = links.Count;
 
             for (int p = 0; p < pendingLinkNodes.Count; p++)
@@ -807,7 +986,9 @@ namespace Thermodynamics.Core
                 if (a.Index < 0 || a.Index >= nodes.Count || nodes[a.Index] != a) continue;
 
                 neighbourScratch.Clear();
-                adjacency.GetNeighbours(a.Block, neighbourScratch);
+                neighbourFaces.Clear();
+                if (walked != null) walked.GetNeighbours(a.Block, neighbourScratch, neighbourFaces);
+                else adjacency.GetNeighbours(a.Block, neighbourScratch);
 
                 for (int n = 0; n < neighbourScratch.Count; n++)
                 {
@@ -819,10 +1000,12 @@ namespace Thermodynamics.Core
                     // pending, so its links are never skipped here.
                     if (b.PendingLinks && b.Index <= a.Index) continue;
 
-                    int face = ConductionBuilder.ContactFace(a.Block, b.Block);
+                    int face = neighbourFaces.Count == neighbourScratch.Count
+                        ? neighbourFaces[n]
+                        : ConductionBuilder.ContactFace(a.Block, b.Block);
                     if (face < 0) continue;
 
-                    int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block);
+                    int contacts = ConductionBuilder.CountContactFaces(a.Block, b.Block, face);
                     if (contacts <= 0) continue;
 
                     float conductance = ConductionBuilder.Conductance(
@@ -873,6 +1056,25 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Rings that were vented, by signature, waiting for the ring to be welded back.
+        ///
+        /// <para>
+        /// **It has to outlive the rebuild that emptied it**, which is the whole reason it is a
+        /// field. Grinding a pipe is one rebuild and welding it back is another, and the
+        /// `previousFill` a single rebuild carries is built from the loops that exist at its start
+        /// — at the reweld there are none, so a ring would come back full and the vent would have
+        /// cost nothing.
+        /// </para>
+        ///
+        /// <para>
+        /// An entry is taken out when the ring returns. One left behind is a ring nobody rebuilt,
+        /// at twelve bytes a signature, and grinding a loop open is not something a player does in
+        /// a hot path.
+        /// </para>
+        /// </summary>
+        private readonly Dictionary<long, float> ventedRings = new Dictionary<long, float>();
+
+        /// <summary>
         /// Moves the coolant of every loop with no successor into the pipes that were carrying it.
         /// A pipe destroyed with the ring takes no share, which is right: that coolant left with the
         /// block.
@@ -891,11 +1093,23 @@ namespace Thermodynamics.Core
         ///
         /// <para>
         /// The alternative that also conserves — pour the energy in at the node's own capacity —
-        /// puts a 900 K parcel into that 941 J/K pipe at 2,106 K and destroys it. Boundedness is
-        /// one of the solver's three invariants and this path is not where it gets traded.
+        /// is unbounded: since `C43` gave a large-grid pipe 515.6 kg of coolant, its parcel holds
+        /// 1.75 MJ/K against the node's 84.7 kJ/K, and a 900 K parcel would land on the pipe at
+        /// **12,854 K**. Boundedness is one of the solver's three invariants and this path is not
+        /// where it gets traded.
+        /// </para>
+        ///
+        /// <para>
+        /// **The reachable case is the mechanism being switched off**, not a ring being split.
+        /// Every coolant block the mod ships declares exactly two link ports, so a closed ring has
+        /// no spare port to branch from and cannot be opened except by taking a block out of it —
+        /// which vents. `EnableCoolantLoops = false` dissolves every loop with every pipe still on
+        /// the grid and no fluid anywhere it could have escaped from, which is what this path
+        /// describes and what `HeatLaunderingTests` builds. See backlog.md `F28`.
         /// </para>
         /// </summary>
-        private void SpillDissolvedLoops(List<CoolantLoop> newLoops)
+        private void SpillDissolvedLoops(List<CoolantLoop> newLoops,
+            Dictionary<long, float> previousFill)
         {
             if (loops.Count == 0) return;
 
@@ -926,6 +1140,36 @@ namespace Thermodynamics.Core
                 // every pipe the whole ring's fluid.
                 int pipes = dying.Pipes.Count;
                 if (pipes <= 0) continue;
+
+                // **A ring a grinder opened vents; a ring that merely split does not.** The
+                // discriminator is whether the ring still has all its pipes: a block that left the
+                // grid no longer resolves to a node, and that is a hole in a pressurised loop. A
+                // split loses no fluid — backlog.md `B44` — so its coolant spills into its pipes as
+                // it always has.
+                // **Asked of the grid rather than of the node table**, because a node outlives the
+                // block for the length of a rebuild: `GetNode` still answered for a block that had
+                // just been ground out, so the first version of this vented nothing and every test
+                // that should have changed carried on passing.
+                bool lostAPipe = false;
+                for (int p = 0; p < pipes; p++)
+                {
+                    BlockInstance pipe = dying.Pipes[p];
+                    if (pipe.Cells.Length > 0 && grid.GetAtCell(pipe.Cells[0]) == pipe) continue;
+
+                    lostAPipe = true;
+                    break;
+                }
+
+                if (lostAPipe && dying.FillFraction > 0f)
+                {
+                    // The fluid drained out of the hole and took its heat with it. Nothing is
+                    // spilled into the pipes, and the ring's signature remembers that it is empty —
+                    // so welding the pipe back returns the ring to the signature it had, and to a
+                    // fill of nothing, which it then pays to restore.
+                    ventedRings[dying.Signature] = 0f;
+                    dying.FillFraction = 0f;
+                    continue;
+                }
 
                 float segmentMass = dying.ThermalMass / pipes;
                 if (segmentMass <= 0f) continue;
@@ -1041,9 +1285,18 @@ namespace Thermodynamics.Core
         public void SetLoops(List<CoolantLoop> newLoops)
         {
             Dictionary<long, float> previous = new Dictionary<long, float>();
+
+            // **How full a ring was, carried across the rebuild the same way its temperature is.**
+            // A ring is torn down and rebuilt whenever anything about the layout changes, and the
+            // signature is what makes a ring the same ring on the other side — so grinding a pipe
+            // out and welding it back returns the ring to the signature it had, and to the fill it
+            // had, which is what a vented ring needs to come back empty.
+            Dictionary<long, float> previousFill = new Dictionary<long, float>();
+
             for (int i = 0; i < loops.Count; i++)
             {
                 previous[loops[i].Signature] = loops[i].Temperature;
+                previousFill[loops[i].Signature] = loops[i].FillFraction;
             }
 
             // Pump settings are the player's, so they survive any rebuild the layout provokes. Keyed
@@ -1065,7 +1318,7 @@ namespace Thermodynamics.Core
             // loop and silently delete every joule its coolant was holding with it: 190 MJ in one
             // measured case, and a ship close to overheating could dump heat on demand by grinding
             // its own pump and rebuilding the ring cold.
-            SpillDissolvedLoops(newLoops);
+            SpillDissolvedLoops(newLoops, previousFill);
 
             loops.Clear();
             if (newLoops != null)
@@ -1077,6 +1330,19 @@ namespace Thermodynamics.Core
                     if (previous.TryGetValue(loop.Signature, out carried))
                     {
                         loop.Temperature = carried;
+                    }
+
+                    float carriedFill;
+                    if (previousFill.TryGetValue(loop.Signature, out carriedFill))
+                    {
+                        loop.FillFraction = carriedFill;
+                    }
+                    else if (ventedRings.TryGetValue(loop.Signature, out carriedFill))
+                    {
+                        // A ring welded back after being ground open. It returns as it was left:
+                        // empty, and paying to refill.
+                        loop.FillFraction = carriedFill;
+                        ventedRings.Remove(loop.Signature);
                     }
 
                     // Coolant must run on the same clock as the blocks it exchanges with, so the
@@ -1231,21 +1497,33 @@ namespace Thermodynamics.Core
             if (affected == null) affected = new HashSet<BlockInstance>();
             affected.Clear();
 
+            CellBitset occupied = grid.Occupancy();
+
             for (int r = 0; r < roomIndices.Count; r++)
             {
                 int index = roomIndices[r];
-                if (index < 0 || index >= rooms.Rooms.Count) continue;
+                if (index < 0 || index >= rooms.RoomCount) continue;
 
-                foreach (Vector3I cell in rooms.Rooms[index])
+                foreach (Vector3I cell in rooms.CellsOf(index))
                 {
+                    // One conversion a cell rather than seven: a neighbour's key is this cell's
+                    // key plus a per-face constant. See performance.md, Pass 3, Iteration 6.
+                    long key = GridMath.Key(cell);
+                    long slot = occupied.IndexOf(cell);
+
                     for (int face = 0; face < Face.Count; face++)
                     {
-                        BlockInstance block = grid.GetAtCell(cell + Face.Offsets[face]);
+                        // A bit says whether to ask at all. See performance.md, Pass 4, Iteration 6.
+                        if (!occupied.ContainsIndex(slot + occupied.IndexStep(face))) continue;
+
+                        BlockInstance block = grid.GetAtKey(key + GridMath.KeyByFace[face]);
                         if (block != null) affected.Add(block);
                     }
 
                     // The cell itself may hold a block, such as a door standing in the room.
-                    BlockInstance occupant = grid.GetAtCell(cell);
+                    if (!occupied.ContainsIndex(slot)) continue;
+
+                    BlockInstance occupant = grid.GetAtKey(key);
                     if (occupant != null) affected.Add(occupant);
                 }
             }
@@ -1276,7 +1554,28 @@ namespace Thermodynamics.Core
         private readonly Dictionary<Vector3I, RoomAirNode> rememberedAir =
             new Dictionary<Vector3I, RoomAirNode>(Vector3I.Comparer);
 
-        private readonly Dictionary<int, int> roomContactScratch = new Dictionary<int, int>();
+        /// <summary>
+        /// Faces each bounding node presents to the room being built, counted in a row indexed by
+        /// node rather than in a hash table.
+        ///
+        /// <para>
+        /// The count is per node and node indices are dense from zero, so a hash was buying nothing
+        /// a subscript does not: at half a million blocks an air rebuild finds **691,306** faces
+        /// holding a block, and each one was a lookup and a store into a dictionary. The row is
+        /// reused across rooms and across rebuilds, and only the entries a room touched are put
+        /// back to zero — <see cref="roomContactOrder"/> is the list of exactly those.
+        /// See performance.md, Pass 5, Iteration 7.
+        /// </para>
+        /// </summary>
+        private int[] roomContactFaces = new int[0];
+
+        /// <summary>
+        /// The nodes bounding the room being built, sorted, so a room's links and the mean it takes
+        /// over them are built in an order that does not depend on how the flood reached the room's
+        /// cells. Also the list of entries of <see cref="roomContactFaces"/> to clear afterwards.
+        /// See performance.md, Pass 4, Iteration 4.
+        /// </summary>
+        private readonly List<int> roomContactOrder = new List<int>();
 
         /// <summary>
         /// Rebuilds the air masses of every sealed room from a room map, matching on each room's
@@ -1286,7 +1585,7 @@ namespace Thermodynamics.Core
         public void RebuildRoomAir(RoomMap rooms)
         {
             Work.RoomAirRebuilds++;
-            if (rooms != null) Work.RoomAirRoomVisits += rooms.Rooms.Count;
+            if (rooms != null) Work.RoomAirRoomVisits += rooms.RoomCount;
 
             rememberedAir.Clear();
             for (int i = 0; i < roomAir.Count; i++)
@@ -1300,11 +1599,11 @@ namespace Thermodynamics.Core
             {
                 float cellVolume = grid.GridSize * grid.GridSize * grid.GridSize;
 
-                for (int r = 0; r < rooms.Rooms.Count; r++)
+                for (int r = 0; r < rooms.RoomCount; r++)
                 {
                     if (rooms.IsVented(r)) continue;
 
-                    List<Vector3I> cells = rooms.Rooms[r];
+                    RoomMap.RoomCells cells = rooms.CellsOf(r);
                     if (cells.Count == 0) continue;
 
                     RoomAirNode air = new RoomAirNode();
@@ -1347,40 +1646,73 @@ namespace Thermodynamics.Core
         {
             air.Links.Clear();
             if (!air.HasAir) return;
-            if (air.RoomIndex < 0 || air.RoomIndex >= rooms.Rooms.Count) return;
+            if (air.RoomIndex < 0 || air.RoomIndex >= rooms.RoomCount) return;
 
-            roomContactScratch.Clear();
+            if (roomContactFaces.Length < nodes.Count) roomContactFaces = new int[nodes.Count];
+            roomContactOrder.Clear();
 
-            foreach (Vector3I cell in rooms.Rooms[air.RoomIndex])
+            CellBitset occupied = grid.Occupancy();
+
+            foreach (Vector3I cell in rooms.CellsOf(air.RoomIndex))
             {
+                long key = GridMath.Key(cell);
+                long slot = occupied.IndexOf(cell);
+
+                Work.RoomAirFaceProbes += Face.Count;
+
                 for (int face = 0; face < Face.Count; face++)
                 {
-                    BlockInstance block = grid.GetAtCell(cell + Face.Offsets[face]);
+                    // Nine faces in ten hold nothing, and a bit says so without a hash and a
+                    // bucket chase. See performance.md, Pass 4, Iteration 6.
+                    if (!occupied.ContainsIndex(slot + occupied.IndexStep(face))) continue;
+
+                    BlockInstance block = grid.GetAtKey(key + GridMath.KeyByFace[face]);
                     if (block == null) continue;
+
+                    Work.RoomAirFaceHits++;
 
                     ThermalNode node = GetNode(block);
                     if (node == null) continue;
 
-                    int faces;
-                    roomContactScratch.TryGetValue(node.Index, out faces);
-                    roomContactScratch[node.Index] = faces + 1;
+                    // First face this node presents to the room puts it on the list; the rest only
+                    // count. The list is what makes the row cheap to clear again.
+                    int index = node.Index;
+                    if (roomContactFaces[index] == 0) roomContactOrder.Add(index);
+                    roomContactFaces[index]++;
                 }
             }
+
+            // **In node order, not in the order the room's cells happened to arrive.** The nodes
+            // are listed as the walk first meets them, so the links of a room — and the sum below,
+            // which is a sum of floats and therefore depends on its order — would otherwise be a
+            // function of the path the flood took through that room. Sorting makes both a function
+            // of the room's *contents*, which is what lets the flood be rewritten without moving
+            // anybody's last bit.
+            roomContactOrder.Sort();
 
             float surfaceSum = 0f;
             int surfaceCount = 0;
 
-            foreach (KeyValuePair<int, int> contact in roomContactScratch)
+            for (int i = 0; i < roomContactOrder.Count; i++)
             {
-                surfaceSum += nodes[contact.Key].Temperature;
+                int node = roomContactOrder[i];
+                surfaceSum += nodes[node].Temperature;
                 surfaceCount++;
 
-                float area = contact.Value * nodes[contact.Key].CellFaceArea;
+                float area = roomContactFaces[node] * nodes[node].CellFaceArea;
                 float conductance = settings.RoomConvectionCoefficient * area;
+
+                // A room whose convection is switched off still has walls, and their mean is still
+                // where its air starts; it simply has no links. So the sum counts every contact and
+                // the list takes only the ones that conduct.
                 if (conductance <= 0f) continue;
 
-                air.Links.Add(new RoomLink(contact.Key, conductance));
+                air.Links.Add(new RoomLink(node, conductance));
             }
+
+            // The row goes back to zero for the next room, at the cost of the entries this one
+            // used rather than of the grid.
+            for (int i = 0; i < roomContactOrder.Count; i++) roomContactFaces[roomContactOrder[i]] = 0;
 
             // Air appearing in a room for the first time starts at the mean temperature of the
             // walls bounding it.
@@ -1421,7 +1753,7 @@ namespace Thermodynamics.Core
             return restored;
         }
 
-        private static Vector3I LowestCell(List<Vector3I> cells)
+        private static Vector3I LowestCell(RoomMap.RoomCells cells)
         {
             bool first = true;
             Vector3I lowest = Vector3I.Zero;
@@ -1903,7 +2235,7 @@ namespace Thermodynamics.Core
                 ResolveDirection(ref sun, sunWeights);
 
                 // The one input to the precomputed rows that can change part way through a step.
-                if (RefreshSunShadow(ref sun)) environmentRowsValid = false;
+                if (RefreshSunShadow(ref sun)) InvalidateEnvironmentRows();
             }
 
             return plan;
@@ -1928,16 +2260,22 @@ namespace Thermodynamics.Core
                     }
                 }
 
+                // The sum is only taken while the rows are being established; after that it is
+                // the same sum of the same values, and `heatGainRowTotal` carries it.
+                bool summing = !HoistHeatGainTotal || !heatGainRowTotalValid;
+
                 if (plan.Generating)
                 {
                     float generated = 0f;
+
                     for (int i = from; i < to; i++)
                     {
                         float generation = nodeGeneration[i];
                         nodeWatts[i] = generation;
-                        generated += generation;
+                        if (summing) generated += generation;
                     }
-                    heatGainAccumulator += generated;
+
+                    if (summing) heatGainAccumulator += generated;
                 }
                 else
                 {
@@ -1950,6 +2288,7 @@ namespace Thermodynamics.Core
                     for (int i = from; i < to; i++) ClearEnvironmentDiagnostics(i);
                 }
 
+                if (to >= nodes.Count && plan.Generating) SettleHeatGainRowTotal(summing);
                 if (PrecomputeEnvironment && to >= nodes.Count) environmentRowsValid = true;
                 return;
             }
@@ -1976,6 +2315,10 @@ namespace Thermodynamics.Core
             // on a grid granted the substeps it asked for.
             bool fillRelaxation = fill && ConductionClampLive;
 
+            // The rows are summed into the step's heat-gain total on the substep that fills them,
+            // and read from it by every substep after.
+            bool summingRows = !HoistHeatGainTotal || !heatGainRowTotalValid;
+
             for (int i = from; i < to; i++)
             {
                 // Folded into this loop rather than given a pass of its own: this loop already
@@ -1995,7 +2338,7 @@ namespace Thermodynamics.Core
 
                     float buried = nodeSourceRow[i];
                     nodeWatts[i] = buried;
-                    heatGainAccumulator += buried;
+                    if (summingRows) heatGainAccumulator += buried;
                     if (diagnostics) ClearEnvironmentDiagnostics(i);
                     continue;
                 }
@@ -2118,7 +2461,7 @@ namespace Thermodynamics.Core
                 // environment half is signed, so a grid absorbing more than it sheds reads
                 // positive and the venting figure derived from it reads zero.
                 environmentWattsAccumulator += radiationWatts + convectionWatts;
-                heatGainAccumulator += source;
+                if (summingRows) heatGainAccumulator += source;
 
                 if (!diagnostics) continue;
 
@@ -2134,6 +2477,7 @@ namespace Thermodynamics.Core
             // partly filled row must not be read by a later substep. Counted here rather than at
             // the top of the loop for the same reason — a fill that spans three frames is one
             // fill, not three.
+            if (to >= nodes.Count) SettleHeatGainRowTotal(summingRows);
             if (fill && to >= nodes.Count) Work.EnvironmentRowFills++;
             if (PrecomputeEnvironment && to >= nodes.Count) environmentRowsValid = true;
         }
@@ -2443,7 +2787,8 @@ namespace Thermodynamics.Core
                     {
                         LoopLink probe = loop.Links[i];
                         if (probe.SegmentIndex < 0 || probe.SegmentIndex >= loop.PipeCount) continue;
-                        parcelConductanceTotal[loop.ParcelOf(probe.SegmentIndex)] += probe.Conductance;
+                        parcelConductanceTotal[loop.ParcelOf(probe.SegmentIndex)] +=
+                            loop.LinkConductance(i);
                     }
 
                     // The worst parcel sets the factor for the ring: a per-link factor would let a
@@ -2476,7 +2821,7 @@ namespace Thermodynamics.Core
                     // stops drawing, while the coolant at a radiator never learns the reactor is hot.
                     float difference = loop.SegmentTemperature(link.SegmentIndex)
                                      - nodeTemperatures[link.NodeIndex];
-                    float exchange = link.Conductance * difference;
+                    float exchange = loop.LinkConductance(i) * difference;
 
                     if (clamp)
                     {
@@ -2648,6 +2993,14 @@ namespace Thermodynamics.Core
                 nodeTemperatures[i] = updated;
 
                 if (!damageEnabled) continue;
+
+                // **Nothing on the grid can be over its own critical temperature below this**, so
+                // the ordinary case does not read the critical row at all — one stream fewer of the
+                // five this loop walks, on every node of every substep. The bound is the lowest
+                // positive critical the grid carries, which the cue machinery already keeps; a node
+                // whose own critical is at or above it is skipped by the test below exactly as it
+                // was. See performance.md, Pass 5, Iteration 8.
+                if (updated <= lowestCritical) continue;
 
                 // Only an overheating node dereferences its definition, so the ordinary case
                 // stays within the flat arrays — including the test itself, which is what decides
@@ -3189,7 +3542,7 @@ namespace Thermodynamics.Core
                 int parcel = loop.ParcelOf(link.SegmentIndex);
                 if (parcel < 0 || parcel >= count) continue;
 
-                segmentConductanceScratch[parcel] += link.Conductance;
+                segmentConductanceScratch[parcel] += loop.LinkConductance(i);
             }
 
             float worst = 0f;
@@ -3224,7 +3577,7 @@ namespace Thermodynamics.Core
             {
                 CoolantLoop loop = loops[l];
                 float total = 0f;
-                for (int i = 0; i < loop.Links.Count; i++) total += loop.Links[i].Conductance;
+                for (int i = 0; i < loop.Links.Count; i++) total += loop.LinkConductance(i);
                 loopConductanceTotal[l] = total;
             }
 
@@ -3377,7 +3730,7 @@ namespace Thermodynamics.Core
                 nodeSourceRow = new float[size];
                 nodeOverheatDamage = new float[size];
                 nodeOverheatPeak = new float[size];
-                environmentRowsValid = false;
+                InvalidateEnvironmentRows();
                 nodeFaceWeights = new float[size * Face.Count];
                 nodeSunLit = new float[size * Face.Count];
             }

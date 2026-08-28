@@ -273,7 +273,7 @@ namespace Thermodynamics.Harness
             {
                 GameBlocks.Definition definition;
                 string detail = "";
-                if (GameBlocks.BySubtype().TryGetValue(row.Key, out definition))
+                if (GameBlocks.ByModelName().TryGetValue(row.Key, out definition))
                 {
                     detail = "  " + definition.Size + "  mounts declared: " + definition.HasDeclaredMounts
                         + "  airtight: " + (definition.Airtight.HasValue

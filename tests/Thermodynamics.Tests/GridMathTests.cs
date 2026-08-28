@@ -135,5 +135,33 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, GridMath.CellCount(Vector3I.Zero, Vector3I.One));
             Assert.Equal(0, GridMath.CellCount(Vector3I.Zero, Vector3I.Zero));
         }
+
+        /// <summary>
+        /// The key is linear — `Key(v + d) == Key(v) + Key(d)` — which is what lets a neighbour's
+        /// key be an addition rather than a derivation, and it must hold across zero and across a
+        /// negative component, not only in the positive octant where an accident would pass.
+        /// </summary>
+        [Fact]
+        public void AKeyIsLinearInTheCellSoANeighboursKeyIsAnAddition()
+        {
+            int checkedPairs = 0;
+            for (int x = -3; x <= 3; x++)
+            for (int y = -3; y <= 3; y++)
+            for (int z = -3; z <= 3; z++)
+            {
+                Vector3I cell = new Vector3I(x * 7, y * 5, z * 11);
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    Vector3I neighbour = cell + Face.Offsets[face];
+                    Assert.True(GridMath.Key(neighbour) == GridMath.Key(cell) + GridMath.KeyByFace[face],
+                        cell + " + " + Face.Name(face) + " keys to " + GridMath.Key(neighbour)
+                        + " and by addition to " + (GridMath.Key(cell) + GridMath.KeyByFace[face]));
+                    checkedPairs++;
+                }
+            }
+
+            Assert.Equal(343 * 6, checkedPairs);
+            Assert.Equal(Face.Count, GridMath.KeyByFace.Length);
+        }
     }
 }

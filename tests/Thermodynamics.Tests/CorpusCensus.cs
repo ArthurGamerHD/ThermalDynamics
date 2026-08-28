@@ -106,7 +106,9 @@ namespace Thermodynamics.Tests
             ShipAssembly assembly = ship.Build();
             if (assembly.NodeCount == 0) return null;
 
-            Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
+            // By model name: a placed block carries its type where the game states no subtype,
+            // and a subtype index resolves all thirteen of those to one arbitrary definition.
+            Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.ByModelName();
 
             // ---- the hull, as built ------------------------------------------------------------
 

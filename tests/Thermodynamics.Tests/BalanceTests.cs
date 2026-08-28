@@ -67,6 +67,12 @@ namespace Thermodynamics.Tests
                     entry.Key + " mass is " + actual + " in game, " + entry.Value + " in Vanilla.cs");
             }
 
+            // **Keyed on type and subtype together, because a subtype is not a name.** Thirteen
+            // of the game's definitions carry no `SubtypeId` at all — the vanilla oxygen generator
+            // among them — so a dictionary keyed on subtype alone gives every one of them the same
+            // key, and the first file read wins. This test resolved that block to a door and
+            // checked the door's mass against the generator's, which is the shape of failure the
+            // whole page exists to make loud rather than quiet.
             Dictionary<string, XElement> blocks = new Dictionary<string, XElement>();
             foreach (string file in Directory.GetFiles(Path.Combine(content, "CubeBlocks"), "*.sbc"))
             {
@@ -77,16 +83,22 @@ namespace Thermodynamics.Tests
                 foreach (XElement definition in document.Descendants("Definition"))
                 {
                     XElement id = definition.Element("Id");
-                    string subtype = id == null ? null : (string)id.Element("SubtypeId");
-                    if (subtype != null && !blocks.ContainsKey(subtype)) blocks[subtype] = definition;
+                    if (id == null) continue;
+
+                    string subtype = (string)id.Element("SubtypeId");
+                    string type = (string)id.Element("TypeId");
+                    if (subtype == null || type == null) continue;
+
+                    string key = Key(type, subtype);
+                    if (!blocks.ContainsKey(key)) blocks[key] = definition;
                 }
             }
 
             foreach (Vanilla.Block block in Vanilla.Reference)
             {
                 XElement definition;
-                Assert.True(blocks.TryGetValue(block.Subtype, out definition),
-                    block.Subtype + " is no longer a block in the installed game");
+                Assert.True(blocks.TryGetValue(Key(block.TypeId, block.Subtype), out definition),
+                    Name(block) + " is no longer a block in the installed game");
 
                 float mass = 0f;
                 foreach (XElement component in definition.Descendants("Component"))
@@ -101,8 +113,26 @@ namespace Thermodynamics.Tests
                 }
 
                 Assert.True(Math.Abs(mass - block.Mass) < 1f,
-                    block.Subtype + " weighs " + mass + " kg in game, " + block.Mass + " kg in Vanilla.cs");
+                    Name(block) + " weighs " + mass + " kg in game, " + block.Mass + " kg in Vanilla.cs");
             }
+        }
+
+        /// <summary>
+        /// The identity of a definition, as the pair the game actually keys on. `MyObjectBuilder_`
+        /// is stripped so a `TypeId` read from a definition file and one transcribed into
+        /// <see cref="Vanilla"/> compare equal.
+        /// </summary>
+        private static string Key(string typeId, string subtypeId)
+        {
+            string type = typeId ?? "";
+            if (type.StartsWith("MyObjectBuilder_")) type = type.Substring("MyObjectBuilder_".Length);
+            return type + "/" + (subtypeId ?? "");
+        }
+
+        /// <summary>What to call a reference row in a failure message, since a subtype can be empty.</summary>
+        private static string Name(Vanilla.Block block)
+        {
+            return block.Subtype.Length > 0 ? block.Subtype : block.TypeId + " (no subtype)";
         }
 
         /// <summary>
@@ -150,15 +180,21 @@ namespace Thermodynamics.Tests
 
             foreach (Vanilla.Block reference in Vanilla.Reference)
             {
+                // Type and subtype together, for the reason the test above states: an empty
+                // subtype is thirteen different blocks.
                 GameBlocks.Definition installed = null;
                 foreach (GameBlocks.Definition block in GameBlocks.All())
                 {
-                    if (block.SubtypeId == reference.Subtype) { installed = block; break; }
+                    if (Key(block.TypeId, block.SubtypeId) == Key(reference.TypeId, reference.Subtype))
+                    {
+                        installed = block;
+                        break;
+                    }
                 }
 
                 if (installed == null)
                 {
-                    wrong.Add(reference.Subtype + " is no longer a block in the installed game");
+                    wrong.Add(Name(reference) + " is no longer a block in the installed game");
                     continue;
                 }
 
@@ -167,7 +203,7 @@ namespace Thermodynamics.Tests
 
                 if (Math.Abs(transcribed - installed.Mass) > 0.5f)
                 {
-                    wrong.Add(reference.Subtype + " components weigh " + transcribed
+                    wrong.Add(Name(reference) + " components weigh " + transcribed
                         + " in Vanilla.cs and " + installed.Mass + " in game");
                 }
             }
@@ -303,7 +339,7 @@ namespace Thermodynamics.Tests
         /// everything the definitions could do to the panel's surface. Measured now, plumbing is
         /// worth 73.5 K, doubling the area 48.7 K and lifting emissivity to 0.8 57.7 K — but
         /// quadrupling the area is worth 94.1 K and eight times is worth 135.3 K, so the sweep's
-        /// top rungs have passed it. `TheBoltJointConductsAsHardAsASinkFace` pins the mechanism.
+        /// top rungs have passed it. `ASinkFaceConductsSeveralTimesHarderThanABoltJoint` pins the mechanism.
         /// </para>
         ///
         /// <para>
@@ -350,34 +386,43 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **A bolt joint now conducts as hard as a sink face, and that is the mechanism behind
-        /// every guidance figure `C24` moved.**
+        /// **A sink face carries about five times a bolt joint, which is the design statement this
+        /// mod's guidance rests on — restored, after two changes took it away and gave it back.**
         ///
         /// <para>
-        /// The sink face is a fluid against a wall — a convection coefficient times an area, which
-        /// no clock or conduction pace touches. A bolt joint is solid conduction, so it is
-        /// multiplied by `ConductionScale`, and at the 9.6 that ships it carries more W/K than the
-        /// sink does. The mod's own design statement — a sink face at 1,000 W/K against a bolt
-        /// joint's 167 — was written at a pace where the ratio was six to one.
+        /// The sink face is a fluid against a wall: a convection coefficient times an area, which no
+        /// clock or conduction pace touches. A bolt joint is solid conduction, multiplied by
+        /// `ConductionScale`. The mod's own statement — a sink face at 1,000 W/K against a bolt
+        /// joint's 167 — was written where that ratio was **six to one**.
         /// </para>
         ///
         /// <para>
-        /// Pinned rather than fixed. Whether the loop's coupling should be paced with conduction is
-        /// a balance decision with its own evidence to collect, and it is
-        /// backlog.md `C25`; what this test refuses is for the ratio to
-        /// move again without anybody noticing.
+        /// `C24` took `ConductionScale` to 9.6 and the bolt joint to 1,168 W/K, which made the two
+        /// **equal** and cost the guidance its rate argument; `C25` kept the pace anyway, on the
+        /// grounds that pacing a fluid with solid conduction would put a coefficient no fluid has
+        /// into the model, and rested the guidance on *reach* instead — a joint carries heat one
+        /// block and a ring carries it wherever the ring goes.
+        /// </para>
+        ///
+        /// <para>
+        /// **`C42` gave the ratio back, and not by pacing the fluid.** The pumped coefficient went
+        /// to 1,000 W/(m²·K) because a pumped water-glycol ring is forced convection and 160 was the
+        /// stagnant end of the range — a fidelity argument, decided by the pickup being the only
+        /// thing that says whether a big block can be cooled at all. A sink face is now 6,250 W/K
+        /// against the bolt joint's 1,168: **5.4 to one**, which is where the statement started.
+        /// The guidance still rests on reach, and now the rate agrees with it.
         /// </para>
         /// </summary>
         [Fact]
-        public void TheBoltJointConductsAsHardAsASinkFace()
+        public void ASinkFaceConductsSeveralTimesHarderThanABoltJoint()
         {
             List<BalanceLab.SensitivityRow> rows = BalanceLab.Sensitivity();
 
             BalanceLab.SensitivityRow bolted = rows.First(r => r.Dial == "(shipped)");
             BalanceLab.SensitivityRow coolant = rows.First(r => r.Dial == "coolant sink");
 
-            // Measured 2026-08-24: 1,168 W/K bolted against 1,000 W/K plumbed.
-            Assert.InRange(bolted.JointWattsPerKelvin / coolant.JointWattsPerKelvin, 0.8f, 1.5f);
+            // Measured 2026-08-26: 6,250 W/K plumbed against 1,168 W/K bolted.
+            Assert.InRange(coolant.JointWattsPerKelvin / bolted.JointWattsPerKelvin, 3f, 8f);
 
             // And the joint is solid conduction, which is why: it is the pace that moved it, not
             // the block. At the 2.4 the conversion calibrated to it carried a quarter of this.
@@ -419,9 +464,11 @@ namespace Thermodynamics.Tests
         /// <summary>
         /// A longer ring couples harder, and the block it cools ends up colder for it.
         ///
-        /// Restates <c>LongerRingsCoupleHarderAndCarryTheSameFluid</c> in the balance suite's terms
-        /// — as the delivered temperature rather than the coupling — because that is the figure the
-        /// build advice in blocks.md is written from.
+        /// **The only thing that asserts this**, and blocks.md's build advice is written from it.
+        /// It used to say it restated a second test, which stopped existing at some point and took
+        /// its half of the claim with it — the coupling column is checked here, as the ordering, and
+        /// nowhere else. That name also carried a claim that is no longer true: it said a longer
+        /// ring carries the same fluid, and the charge has been per *pipe* since.
         /// </summary>
         [Fact]
         public void LongerRingsDeliverColderBlocks()

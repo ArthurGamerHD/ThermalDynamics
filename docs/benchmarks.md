@@ -73,6 +73,11 @@ them is accuracy given up. In flight the gap is widest — see
 | 32,000 | 32,800 | 64,964 | 4.79 ms | 27.5 | 1.75 ns |
 | 125,000 | 126,731 | 247,350 | 16.7 ms | 23.6 | 1.86 ns |
 
+*The `build` column is the simulation's own build — surfaces, links, loops, rooms and exposure —
+on a hull dealt before the clock starts. From `C26` until 2026-08-26 it also carried the census
+generator's bolt search, at about ten times the build it fed; see
+[performance.md](performance.md#iteration-2--the-ladders-build-column-measured-the-hull-generator).*
+
 *Re-run 2026-08-24 at `C24`'s pair on the hull `C26` refreshed. **A hull has about a tenth fewer
 links** — the tiers carry the mount points of the blocks they stand for, so a shaped armour block
 joins on three or four faces rather than six — and the demand is what the two changes leave: four
@@ -1007,6 +1012,13 @@ report can be recovered for any row here by reading that file at the row's commi
 | 10 | 2026-08-22 | *(the standardisation pass)* | 1,533 | 2 m 36 s | +4: `EveryCheckCitedByTheRulesPageResolves`, `EveryRuleCitedByAPageExists`, `TheRulesPageIndexesEveryRuleItStates` and `NoDocCommentDescribesSomethingThatIsNotThere`. Documentation and comments only. **The duration is not comparable to rows 6–8** — this run was serialised under `maxParallelThreads: 1` and taken on a different machine — so it is recorded for the count beside it and nothing else. No shipped solver code changed, so there is no solver row below. |
 
 | 11 | 2026-08-22 | *(the profiles pass)* | 1,520 | 53 s | −13: the five settings profiles are gone and with them `ProfileTests`, replaced by `DefaultSettingsTests`. The mod ships one configuration. Shipped solver defaults moved, so there is a solver row below. |
+| — | | `131fc12..b146255` | | | **Many commits recorded no row.** The retune, the coolant consumable, the reach tests, the corpus reader fix and the rules pass all landed between rows 11 and 12. |
+| 12 | 2026-08-26 | *(the performance pass, tip)* | 2,001 | **1 m 22 s** | +478 across those commits and this pass's own suites. Taken on the optimised build in a held window on a machine two other projects were using; the fast lane is 4 s over 1,582 after the lane refresh, from 37 s before it. The rows above were taken on unoptimised builds, so this duration is not comparable to theirs ([performance.md](performance.md#iteration-1--the-harness-measured-unoptimised-code)). |
+| 13 | 2026-08-27 | *(the second performance pass, tip)* | 2,016 | **1 m 21 s** | +15: `StageLabTests`, `GridModelAdjacencyTests`, `ExposureFastPathTests`, `BlockInstanceOneCellTests` and the radix and scan pins in `RoomMapFreezeTests` and `RoomMapSnapshotTests`. No solver row: the pass moved no step figure, by design, and the stage instrument (`bench stages`) is where its figures live ([performance.md](performance.md#pass-2-iteration-10--what-the-pass-moved)). |
+| 15 | 2026-08-27 | *(the fifth performance pass, tip)* | 2,044 | **1 m 14 s** | +10: `StepPhaseLabTests` and `LinkSpanProbe` for the new step instruments, `HeatGainHoistTests` for the hoisted sum, and the occupancy-filtered walk, twice-built room air and lowest-critical bound pins added to `GridModelAdjacencyTests`, `RoomAirCanonicalTests` and `OverheatEventTests`. `BranchlessEnvironmentTests` came and went with the change it checked. **A solver row below**, for the first time since row 11: this pass moved the step. |
+| 16 | 2026-08-27 | *(the sixth and seventh performance passes, tip)* | 2,047 | **1 m 23 s** | +3, all of them `CanonicalLinkOrderTests`. **Two passes and one change kept**, which is the row's point: the sixth measured five rewrites of the link build's neighbour lookup and the seventh measured the sixth's designed fix, and every one was reverted ([performance.md](performance.md#pass-7--what-sixteen-iterations-on-one-stage-establish)). The tests each of those needed were reverted with them. No solver row: neither pass touched a step. |
+| 17 | 2026-08-27 | *(the eighth performance pass, tip)* | 2,048 | **1 m 26 s** | +1: `EveryStageStopsForAReasonItCanName`, which replaced a check that failed and passed on consecutive runs of unchanged code. `LinkWalkTests` came back with pass 6's halving, to be re-measured on the corrected instrument, and went again with it. **This pass changed the instrument, not the solver**: `bench stages` kept the fastest of a fixed fifteen for six passes and had never converged — three runs of one binary spread 48 %, 28 % and 67 % on the surface, room and link stages, against 3.5 % for the solver, which was quietly taking twenty times the samples. It repeats until its best is reproduced now. What that does to the figures already on this page is audited in [performance.md](performance.md#pass-8-iteration-7--which-published-figures-survive). |
+| 14 | 2026-08-27 | *(the fourth performance pass, tip)* | 2,034 | **1 m 14 s** | **+18 since row 13, across the third and fourth performance passes** — the third took no row of its own, which is why this one spans two. The fourth's own suites are `RoomAirCanonicalTests`, `RoomSpanFloodTests` and `GridOccupancyTests`, the rank pins in `CellBitsetTests`, and the store, hint and contiguity pins in `RoomCellStorageTests`; against them, five radix-sort cases went when the sort did. No solver row: this pass moved no step figure, by design, and its figures live in the stage instrument ([performance.md](performance.md#pass-4--what-the-pass-moved)). |
 
 ### The solver
 
@@ -1024,8 +1036,30 @@ flight unless the row says otherwise.
 | 7 | `c18e3e4` | 85.8 ms | 0.057 ms | 1.095 ms | 3.490 ms | 3.496 ms | 1.616 ms | 2.02 |
 | 8 | *(the 2026-08-22 pass)* | 84.0 ms | 0.075 ms | 1.085 ms | 3.461 ms | 3.510 ms | 1.636 ms | 2.02 |
 | 11 | *(the profiles pass)* | 105.9 ms | 0.123 ms | 2.134 ms | 6.719 ms | 6.583 ms | 3.093 ms | 2.09 |
+| 12 | *(the performance pass)* | 83.1 ms | 0.131 ms | 1.143 ms | 5.373 ms | 5.301 ms | 3.010 ms | — |
+| 15 | *(the fifth performance pass)* | 59.8 ms | 0.071 ms | 1.026 ms | 4.561 ms | — | 2.424 ms | — |
 
 Row 2 changed no shipped code, so its solver figures are row 1's.
+
+**Row 12 is the first row on this table taken on an optimised build, and nothing else on it is**
+(`M13`). It is not readable against its neighbours at all: the same commit measured both ways is
+3.4× apart. What it *is* readable against is the pass's own starting commit, measured in the same
+window on the same build — 286.2 ms calibration, 1.194 and 5.381 ms on the ladder, 5.431 ms with
+every feature on, 3.137 ms for isolated convection — which is to say **the pass moved no step
+figure**, by design: nothing in it touched the substep loop, and the columns above are its control.
+What the pass moved is the world load and the build, and those are in
+[performance.md](performance.md#what-the-pass-moved). The environment-pass column is left blank
+because that figure comes from `bench elements`, which this pass did not re-run.
+
+**Row 15 is the first row on this table where a step actually moved.** Rows 13 and 14 took no solver
+row because their passes moved no step figure; the fifth pass moved it, and this is where a step
+figure lives. Against row 12 — the only other optimised row — the ladder reads 1.026 against 1.143
+at 8,000 blocks and 4.561 against 5.373 at 32,000. **Read those as corroboration, not as the
+result**: the two rows are two windows on a shared machine, and the pass's own figure is the
+interleaved one, **0.86** at 505,566 blocks with three untouched stages as controls
+([performance.md](performance.md#pass-5--what-the-pass-moved)). *Every feature on* is blank because
+that case is not in `bench report`'s output any more, and the environment column for the same reason
+as row 12's.
 
 **Row 11's step columns doubled on purpose and its cost did not move.** `Frequency` went from eight
 steps a second to four, so a step covers twice as long and demands twice the substeps — 21.96 to
@@ -1121,6 +1155,9 @@ several times its neighbours' should be re-taken rather than explained.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | Recorded row 12 in both tables, from the 2026-08-26 performance pass, and marked it as the first solver row taken on an optimised build — which makes it unreadable against every row above it and readable only against the pass's own start (`M7`, `M13`). The pass moved no step figure and was not meant to: it is a load-path pass, and [performance.md](performance.md) carries what it did move. |
+| 2026-08-26 | The ladder's `build` column and the calibration row time the simulation's build alone. From `C26` both had the census generator's bolt search inside the clock — 1.0 s of a 1.1 s "build" at 32,800 blocks — so the calibration figure every cross-machine comparison divides by was mostly the generator. The key is unchanged because the column always meant the mod's build; the committed baseline's `build` rows predate `C26` and are the right scope. |
+| 2026-08-26 | **Every figure on this page before this date was measured on an unoptimised build.** The test tree set no `<Optimize>`, so the Debug assemblies `dotnet run` produces told the JIT to compile without optimising. Measured on one commit in one window: a step is 3.4× dearer unoptimised, and the ratio is not uniform — the row fill is 5× and the cost of being measured 7.7× — so every *share* of a step quoted here was taken on an instrument that exaggerated stores through fields. The tree compiles optimised in every configuration now; the figures on this page are left as they were taken and the committed baseline is not re-recorded, because its keys have not changed (`M6`). Argued on [performance.md](performance.md#iteration-1--the-harness-measured-unoptimised-code). |
 | 2026-08-24 | **Closed `A11`, and the suite corrected half of it within the hour.** `bench stagger` timed a fixed eight rounds at every fleet size, which is 32 grid-steps at four grids and 512 at sixty-four — two windows an order of magnitude apart, then divided by each other (`P6`). The window is 512 grid-steps at every rung now; the largest is unchanged, so no published figure moves. The *penalty* claim refuses a reading past a 30 % noise floor rather than failing, which is `M5` applied to a test. **The *lump* claim needed something else**: its failure mode is a steady cache bias against the larger working set, which a floor computed from repeat-to-repeat spread cannot see, and it failed at a 6 % floor an hour after the gate went in. It is held on the solver's work counters now — 38,633 element visits a grid-step at four grids and at sixty-four, identical on any machine — with the milliseconds printed beside it. |
 | 2026-08-24 | **Priced the element-visit allowance, in its own unit and in kelvin, and both halves were new.** `bench allowance` sweeps grid size, world and allowance through the host's frame-paced entry point — the one path where the bound is in force — and reports what a grid keeps of real time beside what a frame costs. **Two findings.** No published *ns per element visit* figure in this repository is in the unit the budget counts in: the ladder and the telemetry dump both divide by `nodes + links` where the budget counts `links + 4 × nodes`, about 2× apart, so the allowance had never been convertible into milliseconds at all. And it binds in **air**, not vacuum — a hull keeps 100 % of real time to 32,000 blocks in vacuum, 16,000 in atmosphere and 9,000 in flight — where [backlog.md](backlog.md) `C27` had measured only the vacuum column. What the lost rate costs is measured up a ladder rather than read off `F23`'s one point, because the curve is convex: 1.19 K standing at a 5 % deficit and 36.98 K at 60 %, the 10 % row reproducing the degraded-input sweep exactly. |
 | 2026-08-24 | **Re-ran the ladder and the environments at `C24`'s pair on the hull `C26` refreshed.** A hull carries about a tenth fewer links, because each census band now mounts the way the block it stands for does; the vacuum demand halved and the flight demand barely moved, which is the retune's shape — a convection-limited demand falls with the clock and a conduction-limited one rises with the pace. Cost per element visit is unmoved at 1.73–1.86 ns, which is what says the step got smaller rather than slower. Figures elsewhere on this page that are quoted from a particular run and not re-taken carry the date they were measured. |

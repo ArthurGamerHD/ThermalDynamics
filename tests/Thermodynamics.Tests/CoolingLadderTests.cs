@@ -75,12 +75,21 @@ namespace Thermodynamics.Tests
         /// saying so, because it is the claim two pages of documentation rest on.
         ///
         /// <para>
-        /// **The figure moved with `C24` and the claim did not.** This asked for under one per
-        /// cent, measured at 0.5 % when the conduction pace was 2.4; at the 9.6 that ships, a bolt
-        /// joint carries four times what it did and thirty-two radiators take **25.6 K off 890 K**,
-        /// which is 2.9 %. A reactor cooled by 2.9 % is a reactor that is still going to lose
-        /// itself, so what the page rests on is unchanged — but the bound is now three per cent and
-        /// says why, rather than reading as though nothing had moved (`E11`).
+        /// **The figure has moved twice and the claim has not.** This asked for under one per cent,
+        /// measured at 0.5 % when the conduction pace was 2.4; at the 9.6 that ships, a bolt joint
+        /// carries four times what it did and thirty-two radiators took 25.6 K off 890 K, or 2.9 %.
+        /// `C36` then raised the panel's emissivity from 0.35 to 0.85 and the same stack takes
+        /// **31.0 K off 890 K**, which is 3.5 %. A reactor cooled by 3.5 % is a reactor that is
+        /// still going to lose itself, so what the page rests on is unchanged — but the bound is
+        /// now four per cent and says why, rather than reading as though nothing had moved (`E11`).
+        /// </para>
+        ///
+        /// <para>
+        /// **The shape underneath the bound is the more useful reading.** One panel saves 27.6 K,
+        /// two save 29.9, eight save 31.0 — the stack is flat after the second. Multiplying the
+        /// panel's radiating power by 2.43 moved the first rung and left the saturation where it
+        /// was, which says the limit is not what the panel can emit but what the joint can carry
+        /// to it. That is the same wall the corpus retrofit hit, from the other side.
         /// </para>
         /// </summary>
         [Fact]
@@ -99,7 +108,7 @@ namespace Thermodynamics.Tests
             }
 
             Assert.True(best > 0f, "bolting radiators to the reactor did not cool it at all");
-            Assert.True(best < bare * 0.03f,
+            Assert.True(best < bare * 0.04f,
                 "thirty-two bolted radiators took " + best.ToString("n1") + " K off "
                 + bare.ToString("n0") + " K, which is more than a bolt joint should buy; if this is"
                 + " real then blocks.md's 'plumb it, do not bolt it' needs rewriting");

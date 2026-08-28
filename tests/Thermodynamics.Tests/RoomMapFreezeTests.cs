@@ -13,16 +13,18 @@ namespace Thermodynamics.Tests
     ///
     /// <para>
     /// Room cells were held twice: once per room, and once in a `Dictionary&lt;Vector3I, int&gt;`
-    /// costing about 31 bytes a cell — the one memory row that still climbs with grid size
-    /// (backlog.md `E3`). A map is written once and read for the life of
-    /// the grid, so when a pass completes the dictionary is replaced by a sorted `long[]` of cell
-    /// keys and a parallel `int[]` of rooms: twelve bytes a cell, and a binary search over
-    /// contiguous memory instead of a hash and a bucket chase.
+    /// costing about 31 bytes a cell — the one memory row that still climbed with grid size
+    /// (backlog.md `E3`). A map is written once and read for the life of the grid, so when a pass
+    /// completes it publishes instead: today, one room index per room cell, found through the rank
+    /// of that cell in the membership set the pass already filled. Four bytes a cell, no cell keys
+    /// held at all, and a query that is two loads and a popcount.
     /// </para>
     ///
     /// <para>
-    /// **The other copy is the oracle.** `Rooms` still holds each room's cells, so the frozen
-    /// lookup can be checked against the thing it was derived from, cell by cell (`D8`).
+    /// **The other copy is the oracle.** The rooms still hold their own cells, so the published
+    /// lookup can be checked against the thing it was derived from, cell by cell (`D8`) — and the
+    /// checks below are unchanged across all three forms it has taken, which is the point of
+    /// writing them against the answer rather than against the structure.
     /// </para>
     /// </summary>
     public class RoomMapFreezeTests
@@ -48,6 +50,83 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// The two sets `IsExternal` reads cover the same box, so one cell has one index in both.
+        /// Held over the box and outside it, since an index derived for the wrong box would answer
+        /// for a different cell — and outside the box both must refuse rather than wrap.
+        /// </summary>
+        [Fact]
+        public void TheSolidAndRoomSetsIndexACellTheSameWay()
+        {
+            CellBitset solid = new CellBitset();
+            CellBitset roomCells = new CellBitset();
+            Vector3I min = new Vector3I(-9, 4, -2);
+            Vector3I max = min + new Vector3I(11, 7, 5);
+            solid.Reset(min, max);
+            roomCells.Reset(min, max);
+
+            int inside = 0, outside = 0;
+            for (int x = min.X - 2; x < max.X + 2; x++)
+            for (int y = min.Y - 2; y < max.Y + 2; y++)
+            for (int z = min.Z - 2; z < max.Z + 2; z++)
+            {
+                Vector3I cell = new Vector3I(x, y, z);
+                Assert.Equal(solid.IndexOf(cell), roomCells.IndexOf(cell));
+                if (solid.IndexOf(cell) >= 0) inside++; else outside++;
+            }
+
+            Assert.Equal(11 * 7 * 5, inside);
+            Assert.True(outside > 0, "no cell outside the box, so the refusal is untested");
+
+            // And a bit set through one path reads back through the other.
+            Vector3I probe = min + new Vector3I(3, 2, 1);
+            Assert.True(roomCells.Add(probe));
+            Assert.True(roomCells.ContainsIndex(roomCells.IndexOf(probe)));
+            Assert.False(solid.ContainsIndex(solid.IndexOf(probe)));
+        }
+
+        /// <summary>
+        /// `IsExternal` answers a cell in no room from a membership bitset rather than from the
+        /// search over room keys, so the two must agree everywhere: over every cell of the search
+        /// box — room cells, solid cells, open air and the padding — the bitset says *in a room*
+        /// exactly when the search finds one (`D3`, two things that exist twice).
+        /// </summary>
+        [Fact]
+        public void MembershipAgreesWithTheSearchOverEveryCellOfTheBox()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.PlaceCensus(LoadShapes.Build("ship", 4000));
+            ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings());
+            RoomMap map = simulation.Rooms.Map;
+            Assert.True(map.RoomCount > 3, "the hull mapped only " + map.RoomCount + " rooms");
+
+            Vector3I min = simulation.Grid.Min - new Vector3I(2, 2, 2);
+            Vector3I max = simulation.Grid.Max + new Vector3I(2, 2, 2);
+
+            int inRoom = 0, external = 0, solid = 0;
+            for (int x = min.X; x <= max.X; x++)
+            for (int y = min.Y; y <= max.Y; y++)
+            for (int z = min.Z; z <= max.Z; z++)
+            {
+                Vector3I cell = new Vector3I(x, y, z);
+                int room = map.RoomIndexOf(cell);
+
+                // What IsExternal must say, derived from the search alone.
+                bool expected = !map.IsSolid(cell) && (room < 0 || map.IsVented(room));
+                Assert.True(expected == map.IsExternal(cell),
+                    cell + " is " + (map.IsExternal(cell) ? "external" : "not external")
+                    + " and the search says room " + room + ", solid " + map.IsSolid(cell));
+
+                if (map.IsSolid(cell)) solid++;
+                else if (room >= 0) inRoom++;
+                else external++;
+            }
+
+            Assert.True(inRoom > 0 && external > 0 && solid > 0,
+                "the box held " + inRoom + " room cells, " + external + " external and " + solid + " solid");
+            Assert.Equal(inRoom, map.RoomCellCount);
+        }
+
+        /// <summary>
         /// Every cell of every room resolves to the room that holds it, and nothing else does.
         /// </summary>
         [Fact]
@@ -59,10 +138,10 @@ namespace Thermodynamics.Tests
             Assert.True(map.RoomCount >= 2, "the rig built " + map.RoomCount + " rooms");
 
             int judged = 0;
-            for (int r = 0; r < map.Rooms.Count; r++)
+            for (int r = 0; r < map.RoomCount; r++)
             {
-                List<Vector3I> cells = map.Rooms[r];
-                Assert.NotEmpty(cells);
+                RoomMap.RoomCells cells = map.CellsOf(r);
+                Assert.NotEqual(0, cells.Count);
 
                 for (int i = 0; i < cells.Count; i++)
                 {
@@ -102,24 +181,24 @@ namespace Thermodynamics.Tests
 
             // A sealed room is not external; the cells above are. Both directions, or the test
             // passes on a map that answers "nothing" to everything.
-            Assert.False(map.IsExternal(map.Rooms[0][0]));
+            Assert.False(map.IsExternal(map.CellsOf(0)[0]));
             Assert.True(map.IsExternal(new Vector3I(4, 0, 0)));
         }
 
         /// <summary>
-        /// **The frozen answer is the dictionary's answer**, checked against one rebuilt from the
-        /// copy that remains — which is the code the arrays replaced.
+        /// **The published answer is the dictionary's answer**, checked against one rebuilt from
+        /// the copy that remains — which is the code it replaced.
         /// </summary>
         [Fact]
-        public void TheFrozenLookupAgreesWithTheDictionaryItReplaced()
+        public void ThePublishedLookupAgreesWithTheDictionaryItReplaced()
         {
             ThermalSimulation simulation = TwoRooms();
             RoomMap map = simulation.Rooms.Map;
 
             Dictionary<Vector3I, int> byCell = new Dictionary<Vector3I, int>(Vector3I.Comparer);
-            for (int r = 0; r < map.Rooms.Count; r++)
+            for (int r = 0; r < map.RoomCount; r++)
             {
-                List<Vector3I> cells = map.Rooms[r];
+                RoomMap.RoomCells cells = map.CellsOf(r);
                 for (int i = 0; i < cells.Count; i++) byCell[cells[i]] = r;
             }
 

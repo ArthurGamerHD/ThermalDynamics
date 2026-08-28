@@ -35,7 +35,14 @@ derived in [thermal-model.md](thermal-model.md#coolant-loops); the short version
 under a per cent of what the ring carries, where a heat pump pays a third.
 
 *Sink faces* are the sides that transfer heat between the coolant and the block pressed against
-them. A pipe with no sinks is plumbing only. Plumbing is declared per subtype in
+them. A pipe with no sinks is plumbing only.
+
+> **Sink faces are deliberately few, and that is a design constraint rather than an oversight.** A
+> pipe carries at most two, a pump carries none, and a plain pipe is plumbing. The loop is meant to
+> be a thing you route and commit space to, not a coating you wrap a hot block in until it stops
+> being a problem — so *add more sink faces* is not a balance lever, and the pickup is raised or
+> lowered through the coolant's own coefficient instead. See balance.md, *What a jump drive costs in
+> radiator*, where the difference decides whether a 6.4 MW block has an answer at all. Plumbing is declared per subtype in
 [ThermalCoolantShapes.cs](../Data/Scripts/Thermodynamics/Game/ThermalCoolantShapes.cs) as a
 `CoolantShape`: two link ports, any number of sink ports, and whether the block is a pump. **A new
 pipe subtype must be added there.** Ports carry the cell they sit on as well as their direction, so
@@ -77,14 +84,17 @@ Practical build advice:
 
 * Run the loop *through* your heat sources with sink faces against reactors, thrusters and
   batteries, then out to radiators or a cold hull section.
-* **Loop length does increase total transfer, and the fluid mass does not grow with it.** Each pipe
-  in the ring gets its own full-strength link to the fluid, so a 32-pipe ring couples at 32,000 W/K
-  against an 8-pipe ring's 8,000 W/K, while both carry the same 500 kg of coolant. A longer ring
-  therefore cools strictly better: measured with a single sink face on the same hot block, an
-  8-pipe ring took a 500 kW block to 752.6 K and a 28-pipe ring to 627.4 K, because the fixed fluid
-  mass is buffered by more pipe metal and so stays colder at the sink. Nothing divides by segment
-  count.
-  Pinned by `LongerRingsCoupleHarderAndCarryTheSameFluid`.
+* **Loop length increases both the transfer and the fluid**, and a longer ring cools strictly
+  better. Each pipe gets its own full-strength link to the fluid, so coupling grows with the ring —
+  measured with a single sink face on the same 500 kW block, 56,250 W/K at 8 pipes and 181,250 W/K
+  at 28, taking that block from **722.7 K to 577.5 K**. Nothing divides by segment count.
+  Pinned by `LongerRingsDeliverColderBlocks`.
+
+  > **This advice used to say the fluid mass does *not* grow with the ring, and that both a 32-pipe
+  > and an 8-pipe ring carry the same 500 kg.** That was true when the charge was per *loop*; it is
+  > per *pipe* now, so a longer ring is a bigger buffer as well as a harder coupling — which is why
+  > the reason given here is the coupling and not the mass. The coupling figures moved too, by the
+  > 6.25× `C42` put on the pickup coefficient.
 * A loop's temperature is saved and restored by member hash, so reloading cannot swap two loops'
   heat and rebuilding a ring does not reset it.
 * **Spread your sources around the ring; do not bother splitting it.** Four sources bunched into one
@@ -133,7 +143,7 @@ surface area scaler, so it radiates faster than any armour block of comparable m
 of light armour of the same shape on the same load it is about 26× better per tonne, which is what
 earns it its place.
 
-**Plumb it; do not bolt it.** A coolant sink face couples to the panel at about 1,000 W/K, and on
+**Plumb it; do not bolt it.** A coolant sink face couples to the panel at about 6,250 W/K, and on
 the same load plumbing a panel rather than bolting it is worth **73.5 K** — more than doubling its
 area, and more than any surface property a definition would reach for first. What a loop buys is
 *reach*: a joint carries heat one block, and a ring carries it wherever the ring goes.
@@ -144,7 +154,8 @@ area, and more than any surface property a definition would reach for first. Wha
 > little harder. **So a steel bolt out-couples a water-cooled plate, face for face, and that is
 > kept** (`C25`, decided 2026-08-24). It is a statement about this world's conduction pace rather
 > than about steel and water: solid conduction runs at 9.6× real materials because `G8`'s
-> significance window was bought with it, while the loop's coupling is 160 W/(m²·K), which is what
+> significance window was bought with it, while the loop's coupling is a heat transfer coefficient in
+> W/(m²·K) — 1,000 while the pump runs and 160 while it does not, since `C42` — which is what
 > the transfer physically is. Pacing the fluid with `ConductionScale` too would put a coefficient no
 > fluid has into the model and give the game back the second conduction pace `C20` removed — and it
 > was measured during `C12`: it recovers a coolant sink from 73.3 K to 108.2 K against the best
@@ -366,6 +377,7 @@ all, so it is the readout that works in any world.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | **The build advice on ring length was written against a model that has changed twice**, and every number in it was wrong. It said the fluid mass does not grow with the ring and that a 32-pipe and an 8-pipe ring carry the same 500 kg — true when the charge was per loop and false since it became per pipe — and it quoted 32,000 W/K against 8,000, which predates `C42`'s 6.25× on the pickup. It also cited `LongerRingsCoupleHarderAndCarryTheSameFluid`, a test that no longer exists. Re-measured: 56,250 W/K at 8 pipes and 181,250 at 28, taking a 500 kW block from **722.7 K to 577.5 K**, and the reason is the coupling rather than the mass. Pinned by `LongerRingsDeliverColderBlocks`, which is what actually asserts it. |
 | 2026-08-24 | **Re-quoted every measured figure on this page at `C24`'s pair**, which moved the ones a bolt joint is in. A radiator bolted to a source is worth 228.6 K where it was 42.9 K and 26× armour per tonne where it was 48×, because solid conduction runs four times faster: the stack now keeps paying to the eighth panel instead of saturating at the second. *Plumb it, do not bolt it* holds on **reach** rather than on rate — plumbing a panel is worth 73.5 K over bolting it, while the joint itself now carries 1,168 W/K against a sink face's 1,000 ([backlog.md](backlog.md) `C25`). Ring, layout and air-conditioning figures re-read from their own scenarios. |
 | 2026-08-23 | Re-quoted the `loop-layout` and `air-conditioning` figures after `C4`: the scenario catalogue's blocks derive from the ones they stand in for now, and the rigs state their load in watts of heat rather than in a reactor's output. Bunched-against-spread is 140 C against 91 C, four rings 93 C; the cabin settles at −60 C with the pump off and −106 C with it on. |
 | 2026-08-22 | Said that a coolant pump draws power — 50 kW large, 10 kW small, all of it becoming heat ([backlog.md](backlog.md) `C13`). It drew nothing until now. |

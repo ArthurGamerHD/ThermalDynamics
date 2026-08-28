@@ -62,6 +62,19 @@ namespace Thermodynamics.Harness
             { "GravityGenerator", 800f },
             { "Canvas", 15f },
             { "ZoneChip", 0.25f },
+
+            // The prototech family, priced because an oxygen generator is built from four of them
+            // and MassOf skips a component it cannot price — so a half-transcribed family does not
+            // fail, it makes a block lighter than it is and every temperature derived from it
+            // wrong in the safe-looking direction. All seven are here rather than the four in use,
+            // for the same reason.
+            { "PrototechFrame", 100f },
+            { "PrototechPanel", 30f },
+            { "PrototechCapacitor", 20f },
+            { "PrototechPropulsionUnit", 240f },
+            { "PrototechMachinery", 80f },
+            { "PrototechCircuitry", 60f },
+            { "PrototechCoolingUnit", 250f },
         };
 
         /// <summary>Total mass in kilograms of a component list, or 0 for an unknown component.</summary>
@@ -93,8 +106,22 @@ namespace Thermodynamics.Harness
             /// <summary>Rated electrical output, megawatts. Reactors and batteries.</summary>
             public float PowerOutputMegawatts;
 
-            /// <summary>Rated electrical draw, megawatts. Thrusters.</summary>
+            /// <summary>
+            /// Rated electrical draw, megawatts: `OperationalPowerConsumption` or its equivalents.
+            /// Thrusters and the oxygen generators.
+            /// </summary>
             public float PowerDrawMegawatts;
+
+            /// <summary>
+            /// Draw when the block is switched on and doing nothing, megawatts, from
+            /// `StandbyPowerConsumption`. Zero for a definition that does not state one.
+            ///
+            /// It is here because it is the only *low* draw the game itself states. A rig that
+            /// wants a lightly-loaded consumer would otherwise have to invent a duty cycle, and an
+            /// invented duty cycle inside a rig deciding an invented fraction is two opinions
+            /// multiplied together.
+            /// </summary>
+            public float StandbyDrawMegawatts;
 
             /// <summary>
             /// Build cost, as component name and count. Transcribed with the rest of this table,
@@ -146,7 +173,8 @@ namespace Thermodynamics.Harness
         }
 
         private static Block Row(string subtype, string typeId, bool large, int x, int y, int z,
-            float mass, int pcu, float buildSeconds, float outputMw, float drawMw, string components = "")
+            float mass, int pcu, float buildSeconds, float outputMw, float drawMw,
+            string components = "", float standbyMw = 0f)
         {
             List<string> names = new List<string>();
             List<int> counts = new List<int>();
@@ -177,15 +205,31 @@ namespace Thermodynamics.Harness
                 BuildSeconds = buildSeconds,
                 PowerOutputMegawatts = outputMw,
                 PowerDrawMegawatts = drawMw,
+                StandbyDrawMegawatts = standbyMw,
                 ComponentNames = names.ToArray(),
                 ComponentCounts = counts.ToArray(),
             };
         }
 
         /// <summary>
-        /// The comparison set: the two structural blocks a player builds hulls out of, and the
-        /// three families that put heat into a ship. Those are the only vanilla blocks a
-        /// thermal balance needs — the rest are neither the load nor the alternative.
+        /// The comparison set: the two structural blocks a player builds hulls out of, the three
+        /// families that put heat into a ship, and the one family whose waste fraction is still
+        /// being decided.
+        ///
+        /// <para>
+        /// **The oxygen generators are here to be measured rather than to be compared against.**
+        /// The other rows answer *is a radiator worth its mass* — a question about the mod's own
+        /// blocks against the vanilla ones they displace. These answer the last of `Cubes.xml`'s
+        /// unsourced waste fractions, which needs the family's whole spread because one has to hold for
+        /// 0.1 MW into eighteen small-grid cells and 1 MW into six large-grid ones.
+        /// </para>
+        ///
+        /// <para>
+        /// **The vanilla large generator's subtype is the empty string**, which is not a
+        /// transcription error: thirteen of the game's definitions carry no `SubtypeId` and this is
+        /// one of them. It is why the two drift tests match on type *and* subtype — matching on
+        /// subtype alone resolved it to a door.
+        /// </para>
         /// </summary>
         public static readonly Block[] Reference = new Block[]
         {
@@ -217,6 +261,19 @@ namespace Thermodynamics.Harness
                 "SteelPlate:1 Construction:1 LargeTube:1 Thrust:1 Construction:1 SteelPlate:1"),
             Row("SmallBlockLargeThrust", "Thrust", false, 3, 2, 4, 721f, 12, 20f, 0f, 2.4f,
                 "SteelPlate:1 Construction:1 LargeTube:5 Thrust:12 Construction:1 SteelPlate:4"),
+            Row("", "OxygenGenerator", true, 1, 2, 1, 2587f, 50, 22f, 0f, 0.5f,
+                "SteelPlate:110 Construction:5 LargeTube:2 Motor:4 Computer:5 SteelPlate:10", 0.001f),
+            Row("IrrigationSystem", "OxygenGenerator", true, 1, 1, 2, 2555f, 50, 20f, 0f, 0.25f,
+                "SteelPlate:80 Construction:20 LargeTube:10 Motor:6 Computer:5 SteelPlate:20", 0.001f),
+            Row("LargeBlockOxygenGeneratorLab", "OxygenGenerator", true, 1, 2, 2, 4157f, 50, 30f, 0f, 0.5f,
+                "SteelPlate:160 Construction:20 LargeTube:4 Motor:4 Computer:5 BulletproofGlass:40", 0.001f),
+            Row("LargeBlockPrototechOxygenGenerator", "OxygenGenerator", true, 3, 2, 1, 6574f, 50, 100f, 0f, 1f,
+                "PrototechFrame:1 PrototechPanel:100 Construction:40 PrototechCircuitry:10 LargeTube:10"
+                + " PrototechMachinery:10 Computer:20 PrototechPanel:50", 0.005f),
+            Row("OxygenGeneratorSmall", "OxygenGenerator", false, 3, 3, 2, 298.6f, 50, 14f, 0f, 0.1f,
+                "SteelPlate:6 Construction:8 LargeTube:2 Motor:1 Computer:3 SteelPlate:2", 0.001f),
+            Row("SmallBlockOxygenGeneratorLab", "OxygenGenerator", false, 2, 3, 3, 303.6f, 50, 14f, 0f, 0.1f,
+                "SteelPlate:6 Construction:8 LargeTube:2 Motor:1 Computer:3 BulletproofGlass:3", 0.001f),
         };
 
         /// <summary>The reference block with this subtype, or null.</summary>

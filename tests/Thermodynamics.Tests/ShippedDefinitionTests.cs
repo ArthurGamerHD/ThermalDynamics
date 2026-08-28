@@ -278,7 +278,7 @@ namespace Thermodynamics.Tests
                 // 1.0 since 2026-08-24: a lamp inside a hull heats it with everything it draws,
                 // because the light lands on the hull and is absorbed by it. It was 0.9, whose own
                 // note said the first law fixes this at 1.0 and called the tenth a balance choice
-                // (`C21`). ReflectorLight and Searchlight kept 0.9, and say why: they point out.
+                // (definitions.md, *Every waste fraction says where it came from*). ReflectorLight and Searchlight kept 0.9, and say why: they point out.
                 { "InteriorLight", new[] { 0f, 1f, 1f, 1f } },
                 { "ReflectorLight", new[] { 0f, 0.9f, 1f, 1f } },
                 { "Gyro", new[] { 0f, 0.15f, 1f, 1f } },

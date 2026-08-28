@@ -67,6 +67,21 @@ namespace Thermodynamics.Core
         /// </summary>
         public int NodeIndex = -1;
 
+        /// <summary>
+        /// Where this block sits in its grid's block list, or -1 when it is in none.
+        ///
+        /// <para>
+        /// **The block carries the slot instead of the grid carrying a second dictionary**, on the
+        /// same reasoning as <see cref="NodeIndex"/>: a `Dictionary&lt;long, int&gt;` from block key
+        /// to slot cost an insert per block at load and about thirty bytes a block to answer what
+        /// the block can hold in four. It is a hint and not an authority — one instance may be
+        /// registered with a second grid, which would overwrite what the first wrote — so every
+        /// reader checks that the slot it lands on holds this block before believing it.
+        /// See performance.md, Pass 3, Iteration 7.
+        /// </para>
+        /// </summary>
+        public int GridSlot = -1;
+
         private int[] gridSurfaces;
         private int[] gridStructuralSurfaces;
         private Vector3I[] gridCells;
@@ -225,17 +240,51 @@ namespace Thermodynamics.Core
 
             int count = Model.CellCount;
             gridCells = new Vector3I[count];
-            gridSurfaces = new int[count];
             gridStructuralSurfaces = new int[count];
 
+            // The live layer differs from the structural one only on a door that stands open. For
+            // every other block the two arrays would hold the same bits, so they are one array:
+            // a third of a block's surface allocations, and nothing reads them differently — both
+            // are written here in full and never written anywhere else. A refresh allocates afresh,
+            // which is what lets a caller keep the old references as a snapshot.
+            // See performance.md, Pass 2, Iteration 9.
+            bool shared = IsSealedByDoorState || !Model.HasOpenState;
+            gridSurfaces = shared ? gridStructuralSurfaces : new int[count];
+
+            // A one-cell block's only cell is its minimum corner in every orientation, and its
+            // local cell is the origin: no iterator, no re-anchoring, nothing to rotate but the
+            // surface bits. Same values the walk below produces, which BlockInstanceOneCellTests
+            // holds over every orientation. See performance.md, Pass 2, Iteration 6.
+            if (count == 1)
+            {
+                gridCells[0] = Min;
+                gridStructuralSurfaces[0] = RotateSurface(Model.LocalSurfaceState(Vector3I.Zero, true));
+                if (!shared) gridSurfaces[0] = RotateSurface(Model.LocalSurfaceState(Vector3I.Zero, false));
+                return;
+            }
+
+            BuildGridSurfacesWalkingTheCells();
+        }
+
+        /// <summary>
+        /// The general construction: every local cell through <see cref="LocalToGrid"/>, which
+        /// re-anchors the rotated box, and its surface bits rotated into grid space. Public so a
+        /// test can hold the one-cell path to it; a caller is expected to have sized the arrays.
+        /// </summary>
+        public void BuildGridSurfacesWalkingTheCells()
+        {
+            bool shared = ReferenceEquals(gridSurfaces, gridStructuralSurfaces);
             int i = 0;
             foreach (Vector3I local in Model.LocalCells())
             {
                 gridCells[i] = LocalToGrid(local);
                 gridStructuralSurfaces[i] = RotateSurface(Model.LocalSurfaceState(local, true));
-                gridSurfaces[i] = IsSealedByDoorState
-                    ? gridStructuralSurfaces[i]
-                    : RotateSurface(Model.LocalSurfaceState(local, false));
+                if (!shared)
+                {
+                    gridSurfaces[i] = IsSealedByDoorState
+                        ? gridStructuralSurfaces[i]
+                        : RotateSurface(Model.LocalSurfaceState(local, false));
+                }
                 i++;
             }
         }
@@ -243,6 +292,13 @@ namespace Thermodynamics.Core
         /// <summary>Rotates the six self-face bit pairs into grid space.</summary>
         private int RotateSurface(int localState)
         {
+            // Nothing to rotate: every face carries the same bits, and a rotation permutes faces.
+            if (localState == (CellSurface.SelfAirtightMask | CellSurface.SelfMountMask)
+                || localState == 0)
+            {
+                return localState;
+            }
+
             int rotated = 0;
             for (int face = 0; face < Face.Count; face++)
             {

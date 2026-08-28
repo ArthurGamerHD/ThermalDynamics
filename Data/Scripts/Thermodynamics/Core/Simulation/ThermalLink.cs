@@ -57,7 +57,17 @@ namespace Thermodynamics.Core
         /// </remarks>
         public static int CountContactFaces(BlockInstance a, BlockInstance b)
         {
-            int face = ContactFace(a, b);
+            return CountContactFaces(a, b, ContactFace(a, b));
+        }
+
+        /// <summary>
+        /// The same count for a caller that has already found the touching face — which the link
+        /// builder has, since it tests for one before asking. Finding it twice per pair was a
+        /// million redundant box overlaps on a large grid.
+        /// See performance.md, Pass 3, Iteration 4.
+        /// </summary>
+        public static int CountContactFaces(BlockInstance a, BlockInstance b, int face)
+        {
             if (face < 0) return 0;
 
             int shared = BoxGeometry.ContactCells(a.Min, a.MaxExclusive, b.Min, b.MaxExclusive, Face.Axis(face));

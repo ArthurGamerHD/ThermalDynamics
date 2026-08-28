@@ -253,5 +253,92 @@ namespace Thermodynamics.Tests
                 Assert.Contains(mustBeGuarded[i], body);
             }
         }
+
+        /// <summary>
+        /// **Every setting the solver has is copied into the solver.**
+        ///
+        /// <para>
+        /// `Settings.cs` is the world's copy and `ThermalSettings` is the solver's, and the bridge
+        /// between them is thirty-nine hand-written assignments. A field added to the core class and
+        /// not to that list is a setting that is documented, wired, named, clamped, replicated and
+        /// **left at its default in every world** — the tests all pass, because a test builds a
+        /// `ThermalSettings` directly and never goes through the bridge. `SettingsDialReachTests`
+        /// does not see it either: it asks whether the *core* field reaches the solver, and it does.
+        /// </para>
+        ///
+        /// <para>
+        /// This is the same shape as the two definition parsers (`D3`) — one thing that exists twice
+        /// and drifts in silence — and the list is checked rather than the drift found later.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EverySolverSettingIsCopiedFromTheWorldsCopy()
+        {
+            string source = Source();
+
+            // Fields the core class has that the world's copy deliberately does not carry across.
+            HashSet<string> exempt = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "Version",   // each side keeps its own; the world's gates a config migration
+            };
+
+            List<string> missing = new List<string>();
+            int checked_ = 0;
+
+            foreach (System.Reflection.FieldInfo field in typeof(Thermodynamics.Core.ThermalSettings)
+                .GetFields(System.Reflection.BindingFlags.Public
+                    | System.Reflection.BindingFlags.Instance))
+            {
+                Type type = field.FieldType;
+                if (type != typeof(bool) && type != typeof(int) && type != typeof(float)) continue;
+                if (exempt.Contains(field.Name)) continue;
+
+                checked_++;
+                if (source.Contains("core." + field.Name + " = ")) continue;
+
+                missing.Add(field.Name);
+            }
+
+            Assert.True(checked_ >= 30,
+                "only " + checked_ + " solver settings were found, so this test would pass on a"
+                + " class that had lost most of them");
+
+            missing.Sort(StringComparer.Ordinal);
+            Assert.True(missing.Count == 0,
+                "settings the solver has that Settings.cs never copies into it, so a world can"
+                + " never move them:\n  " + string.Join("\n  ", missing.ToArray()));
+        }
+
+        /// <summary>
+        /// **And nothing is copied that is not there**, which catches the other direction: a field
+        /// renamed on the core class leaves an assignment naming something that no longer exists,
+        /// and that is a compile error — but a field *removed* from the core class and left in the
+        /// world's copy is a setting a player can still move that reaches nothing at all.
+        /// </summary>
+        [Fact]
+        public void NothingIsCopiedIntoTheSolverThatTheSolverDoesNotHave()
+        {
+            HashSet<string> core = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (System.Reflection.FieldInfo field in typeof(Thermodynamics.Core.ThermalSettings)
+                .GetFields(System.Reflection.BindingFlags.Public
+                    | System.Reflection.BindingFlags.Instance))
+            {
+                core.Add(field.Name);
+            }
+
+            List<string> stray = new List<string>();
+            foreach (Match match in Regex.Matches(Source(), @"\bcore\.([A-Za-z0-9_]+)\s*="))
+            {
+                string name = match.Groups[1].Value;
+                if (core.Contains(name)) continue;
+                stray.Add(name);
+            }
+
+            stray.Sort(StringComparer.Ordinal);
+            Assert.True(stray.Count == 0,
+                "Settings.cs assigns to solver settings that do not exist:\n  "
+                + string.Join("\n  ", stray.ToArray()));
+        }
     }
 }

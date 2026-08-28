@@ -270,7 +270,7 @@ The tail is what moved. At 500k the p99 went from 173 ms to 29 ms against a medi
 median itself halved because a step is now bounded. What is left is a very tight distribution and
 one outlier: **the first step**, which pays for the first touch of every flat array and the first
 fill of every mirrored row. It is a warm-up, it happens once, and it happens immediately after a
-world load that took eleven seconds — so it is the least interesting stall on the page.
+world load that took twelve seconds — so it is the least interesting stall on the page.
 
 The worst call to each stage on those runs is topology 10.5 ms, rooms 10.4 ms, exposure below the
 timer's resolution, and the solver everything else. Nothing but the solver is above ten
@@ -611,10 +611,13 @@ on a station. It is budgeted now, so it costs ticks rather than a stall — 7,23
 converge at a million blocks, which is twenty minutes of a stale map. Bounded and wrong is better
 than unbounded, but it is still wrong.
 
-**World load is 11 seconds at a million blocks**, in one call, before the first tick. `RebuildAll`
-is deliberately one-shot because it is far cheaper than replaying the incremental path per block,
-and a loading screen is a better place for a stall than a session — but a blueprint pasted
-mid-session takes the same path.
+**World load is 2.2 seconds at a million blocks**, in one call, before the first tick — 500 ms
+placing and registering the blocks and 1.7 s in `RebuildAll`. It was **12.0 s** before the
+2026-08-26 performance pass, measured on the same machine in the same window with both builds
+optimised ([performance.md](performance.md#what-the-pass-moved)). `RebuildAll` is
+deliberately one-shot because it is far cheaper than replaying the incremental path per block, and
+a loading screen is a better place for a stall than a session — but a blueprint pasted mid-session
+takes the same path.
 
 **`SweepRoomPressure` is still per room per cadence**, with two game API calls each. Bounded by
 compartment count rather than block count, so it is small on a ship and unmeasured on a station
@@ -755,6 +758,10 @@ reasoning that produced it was sound and the premise was not.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | The fifth performance pass moved **the settled step** for the first time — 0.86 at 505,566 blocks — and the link build 0.84 ([performance.md](performance.md#pass-5--what-the-pass-moved)). It also gave a step its first per-stage instrument: at that size a step is environment 28.9 ms, conduction 28.0, apply 11.7, publish 5.3 and the row fill 4.1, and conduction is measurably at its memory floor. |
+| 2026-08-27 | The fourth performance pass took the room-mapping pass to **0.36** of what it was at 505,566 blocks and the exposure refresh to **0.53**, and gave the room air rebuild — the largest single thing on the load path, and until then unmeasured by anything — an instrument ([performance.md](performance.md#pass-4--what-the-pass-moved)). Building a million-block world reads **1.32 s** against 1.66 s at the pass's start, of which `RebuildAll` is 0.98 s against 1.33 s. |
+| 2026-08-27 | World load at a million blocks is **2.2 s**, from 3.2 s at the end of the first performance pass ([performance.md](performance.md#pass-2-iteration-10--what-the-pass-moved)): one-cell paths for the neighbour query, exposure and block construction, the interior scan skipping visited words, and the room map's publish sort by radix. The worst tick after a placement at 505,566 blocks is 70 ms, from 93. |
+| 2026-08-26 | World load at a million blocks is **3.2 s**, from 12.0 s (4.8 s before the cell tables were rekeyed on `GridMath.Key`), measured start-against-tip in one window with both builds optimised. The block half halved (an orientation is a table lookup rather than a matrix) and `RebuildAll` fell to 25 % (the room map reads a sealing snapshot and a bitset, the surface map holds one packed entry a cell, and every cell table is keyed on a `long`). The 11 s this page carried was taken on an unoptimised harness and is not comparable to either figure — see [performance.md](performance.md), `M13`. |
 | 2026-08-22 | Put the ten spike findings in the present tense: each is a property the code holds rather than a thing that was fixed, and the *fixed* marker on all ten of them said only that none was outstanding. Removed the struck-through *Removing a block still rebuilds the whole graph* from [What is still open](#what-is-still-open), which contradicted finding 6 four screens above it. |
 | 2026-08-22 | Corrected the figures in the sentence reading the ladder's own divergence: it quoted a tick of 42 ms against a full step of 103, which matches neither the current table (25.87 against 118.20) nor the pre-refresh one named two paragraphs later (55 against 623). A figure on a page comes from the dataset the page is about (`E5`). |
 | 2026-08-22 | Absorbed `field-tuning.md`: its three live runs are the field half of this page's question and now sit beside the lab half. Its decorative-block stiffness findings moved to [stiffness.md](stiffness.md) and its `Frequency` sweep to [configuration.md](configuration.md#frequency-is-not-the-cost-dial-it-looks-like), each to the page that already owned the subject. Added the standard header and this log. |

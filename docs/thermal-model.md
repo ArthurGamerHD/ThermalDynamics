@@ -106,7 +106,8 @@ what the transfer physically is — and no conduction pace touches it, because i
 a wall rather than a solid against a solid (`C20`). This paragraph said it was still the older 0…1
 quality against a 200 W/(m·K) reference until 2026-08-24, and pointed at a page that already said
 otherwise. One consequence is deliberate and is `C25`: a bolt joint carries 1,168 W/K where a sink
-face carries 1,000, so in this world a steel bolt out-couples a water-cooled plate face for face.
+face carried 1,000 before `C42` raised the pumped coefficient to 6,250, so a steel bolt used to
+out-couple a water-cooled plate face for face and no longer does.
 See [definitions.md](definitions.md#conductivity-is-in-real-wmk) and
 [blocks.md](blocks.md).
 
@@ -396,25 +397,40 @@ because a mixture is at one temperature and splitting it at that temperature con
 term by term.
 
 Both halves are needed and neither alone works. Taking the mixed temperature without the mass
-destroys `M_s / (M_n + M_s)` of the ring's heat — 67.9 % on a large-grid ring, where a pipe node
-holds 941 J/K against its parcel's 1,889 — which is the accident this replaced. Taking the mass
-without the temperature is the same energy at the wrong place. Pouring the parcel's energy into the
-node at its own capacity would conserve it and put a 900 K parcel's heat into a 941 J/K pipe as
-2,106 K, destroying the pipe: energy conserved by breaking boundedness, which is not a trade this
-solver makes anywhere else.
+destroys `M_s / (M_n + M_s)` of the ring's heat, which is the accident this replaced. Taking the
+mass without the temperature is the same energy at the wrong place. Pouring the parcel's energy into
+the node at its own capacity would conserve it and destroy the pipe: energy conserved by breaking
+boundedness, which is not a trade this solver makes anywhere else.
+
+**Both of those get worse as the fluid gets heavier, and `C43` made it ten times heavier.** A
+large-grid pipe node holds 941 J/K on the solver's clock; its parcel held 1,889 at the flat 50 kg
+charge and holds **19,479** at the density that ships. So the temperature-only spill destroyed
+67.9 % of a ring's heat then and would destroy **95.4 %** now, and the unbounded pour put a 900 K
+parcel into that pipe at 2,106 K then and at **12,854 K** now. The two figures this page carried
+were measured before the correction and are kept beside the current ones rather than replaced,
+because the ratio moving by an order of magnitude is the point: **a bound is worth what the thing
+it bounds is worth, and that is not a constant.**
 
 **What this predicts, written before it was run.** On the eight-pipe large-grid ring
 `HeatLaunderingTests` builds, with every parcel at 900 K and every pipe at ambient, popping one pipe
 and rewelding it must lose **one eighth** of the ring's heat above ambient — the parcel that left
-with the block — against the 67.9 % the mixed-temperature-only spill lost, and the loss must be
+with the block — against the 67.9 % the mixed-temperature-only spill lost at the coolant mass of the
+day, and the loss must be
 within a per cent of `1/N` for any ring length `N`. Breaking a ring into two rings, where no block
 leaves, must lose **nothing**. No pipe may end hotter than the parcel it absorbed. These are the
 falsifiers: a figure that is not `1/N`, a split that loses heat, or a pipe above its parcel.
 
 **It ran. Three of the four hold and the fourth could not be built.** The loss is `1/N` at ring
 lengths 8, 10 and 14 — 12.50 %, 10.00 % and 7.14 %, each of them 1,146,272 J to the joule, which is
-one parcel — and the hottest pipe after a spill is 698.19 K against the 900 K parcel it absorbed.
-The reweld returns the broken ring's heat exactly: 14,901,537 J before it and 14,901,539 J after.
+one parcel. The reweld returns the broken ring's heat exactly: 14,901,537 J before it and
+14,901,539 J after.
+
+> **The bound's own figure was read off the grind and belongs to a path a grind no longer takes.**
+> It was 698.19 K against a 900 K parcel, measured before `B44` made a broken ring vent and before
+> `C43` gave a large-grid pipe ten times the fluid. On the constructor that reaches the spill
+> today — switching the mechanism off, below — it is **872.0 K against 900 K**, and the form that
+> is not bounded would reach **12,854 K**. `TheBoundHoldsWhenTheMechanismIsTurnedOff` computes the
+> second rather than pinning it, so both move when the capacities do.
 
 **The split falsifier is not constructible and is withdrawn rather than quietly dropped.** Breaking
 a ring into two rings needs a pipe with three ports, and the shipped pipes have two — straight and
@@ -432,6 +448,154 @@ with the block, and it is the one loss on this path that is a decision rather th
 Radiators are ordinary blocks with high emissivity and a surface-area multiplier. A loop dumps heat
 into space by pressing a sink face against one: the panel takes the loop's heat by conduction and
 sheds it by radiation from its exposed faces.
+
+
+#### Coolant is a consumable: level, energy and fill rate
+
+[backlog.md](backlog.md) `B43` decided the currency — **joules and seconds, per pipe, with nothing
+to haul** — and `B44` fixed the constraints. This is the design that follows from both, written
+before it is built (`E1`). Three parts, and only the third is anybody's opinion.
+
+**1. A loop has a coolant level, and the level costs the integrator nothing.** `FillFraction` runs
+0 to 1 per ring. A part-full ring holds proportionally less coolant **and couples proportionally
+less**, because both the parcel capacity and every link's conductance scale with it:
+
+```
+SegmentThermalMass = fill × SpecificHeat × MassPerPipe(cell) / HeatTimeScale
+G_pipe, G_plate    = fill × (as above)
+```
+
+where `MassPerPipe(cell)` is `CoolantKilogramsPerCubicMetre × cell³` — a density times the volume of
+the cell the pipe occupies, so a 2.5 m pipe carries 515.6 kg and a 0.5 m one 4.1 kg — or a flat
+`CoolantMassPerPipe` where a definition or a world states one. It was a flat 50 kg at both sizes
+until `C43`, which is a gas in a large cell and outweighs the pipe block in a small one.
+
+**The point of scaling both is that their ratio is what the integrator sizes a substep from**, and
+the ratio is therefore invariant in fill:
+
+```
+demand = SegmentConductance / SegmentThermalMass          — unchanged at any level
+```
+
+That is `B44`'s stiffness cliff removed rather than avoided. Scaling capacity alone would make a
+5 %-full loop **twenty times stiffer** on an element that already competes to be a grid's worst,
+against a cap of 64. It is also the physical answer: half the fluid touching a wall carries half the
+heat through it. **A dry ring is still a ring** — it exists, holds nothing, transports nothing, and
+can be refilled, which is the state `B44` requires and the shape this area has failed in twice.
+
+**2. Refilling costs energy, and the amount is derived rather than chosen.** The pump draws it, and
+a pump's `ConsumerWasteEnergy` is **1** — *a circulator does no work that leaves the system* — so
+every joule spent refilling lands back in the ship as heat. That is what makes the exchange rate
+self-limiting without a single authored threshold, and it is why `B43` chose this currency.
+
+The energy to restore one kilogram is the heat that kilogram holds at a stated excess:
+
+```
+J/kg = SpecificHeat × LoopRefillEquivalentKelvin / HeatTimeScale
+```
+
+At the shipped 3,400 J/(kg·K), 100 K and 90, that is **3,778 J/kg** — so a large-grid pipe's 515.6 kg
+parcel costs **1,947,916 J** to restore. **That is exactly what venting it removes at 100 K above
+ambient**, measured on both sides of the same arithmetic by
+`VentingAndRefillingAtTheBreakEvenExcessIsNeutralInHeat`. So a vent-and-refill cycle at 100 K over is
+**exactly neutral in heat** and loses on power and time, which is the exploit benefit erased by
+construction rather than by a number picked to be large enough.
+
+> The figure was **188,889 J** before `C43`, when a pipe carried a flat 50 kg. The neutrality does
+> not depend on it: both sides are the same fluid at the same excess, so the identity holds at any
+> charge and only the size of the number moves.
+
+Above that excess venting still pays and below it costs, which is the behaviour to want: **dumping
+coolant is worth doing when the coolant is genuinely hot and worthless as a pump**. 100 K is not
+chosen here either — it is where `ThermalGlow` starts, the same excess this repository already
+treats as the point a block is worth telling the player about.
+
+**3. A fill rate, and this one is a choice.** `LoopRefillKilogramsPerSecond` bounds how fast a ring
+comes back, so the cycle cannot be run faster than the fill however many grinders are on the ship.
+At the shipped rate the pump draws `J/kg × kg/s` while filling and nothing when full.
+
+**What drives it.** A ring short of full advertises `RefillDemandWatts`, the pump adds it to what
+it asks the grid for, and the fill advances with the *step* rather than with the frame — coolant is
+a simulated quantity and a frame is not simulated time. **No *running* pump, no refill**: something
+has to drive the fluid in, so a pumpless ring holds coolant and fills none, and neither does a ring
+whose pumps are switched off or turned down to zero. **No power, no refill either**: a pump the grid
+could not supply fills by the share it was given, which is the rule every other draw in this mod
+follows. Measured on an empty eight-pipe large-grid ring, the pump draws **18,889 W** while filling
+and nothing when full — 38 % of a large-grid pump's own 50 kW rating, and nearly twice a small-grid
+pump's 10 kW.
+
+> **The pump did not actually add it to what it asks the grid for, until 2026-08-26.** The refill's
+> watts went onto the block's *drawn* power, which is what turns them into heat, and were never put
+> into the resource sink's request — so `PowerAvailable`, which is supplied over requested, was
+> computed against circulation alone and a ship with nothing to spare refilled anyway. **The hole
+> was widest where it mattered least to notice**: a pump switched *off* asks for nothing, a sink
+> asked for nothing reports full supply, and the ring refilled at full rate for free. Both halves
+> are closed — `HasDrivingPump` on the loop, the refill inside `DemandMegawatts` and inside the
+> sink's ceiling on the block — and this paragraph described the first of them for as long as the
+> feature has existed. See backlog.md `B44`.
+
+> **This paragraph described the intent and not the code, for as long as the feature has existed.**
+> The refill was called from the frame-paced update alone. That path is the game — but it is not the
+> lane any figure on [balance.md](balance.md) is read in: every lab, benchmark and scenario advances
+> through `StepExact`, and on that path a vented ring stayed empty for ever and the pump was never
+> charged. So the consumable worked in a session and did not exist in a measurement, which is the
+> worse half of the two, because the exploit `B43` was written to close was still open in every
+> number the mod is tuned against. Both paths call it now, and
+> `AVentedRingRefillsAcrossSteppedTimeAndThePumpPaysForIt` asserts the stepped one directly.
+> Found by `LoopDialReachTests`, which reported both refill dials as reaching nothing at all.
+
+#### A pump makes the ring conduct, not only circulate
+
+Fluid-to-wall transfer is convective, so it depends on the flow: a pumped ring is forced convection
+and a stopped one is natural convection against the same wall, which is most of an order of
+magnitude in any handbook. Nothing in the model expressed that. `HeatTransferCoefficient` applied
+whole whether or not anything was moving, so a pump earned its power by evening the ring out and
+never by making the ring conduct — and a ship whose pumps had all stopped lost its circulation and
+kept its coupling.
+
+`LoopStagnantTransferFraction` is the share that survives with nothing circulating, and it now
+scales every link the fluid has:
+
+```
+G_link = fill × StagnantTransferFraction^(flow == 0) × h · A
+```
+
+> **The field is older than this use and multiplied nothing before it.** It was authored for the
+> segment-to-segment transport, which `Advect` already stops dead by returning on zero flow, so as
+> written it could only ever be a no-op — a slider a player could move that did nothing, parsed from
+> XML, carried through settings, clamped, and read by no line of the simulation. `LoopDialReachTests`
+> enumerates the definition by reflection rather than reciting a list, which is what found it and
+> what will find the next one. Its name, its range and what the menu promises are unchanged.
+
+**It ships at 1**, so no ring behaves differently today. What it buys is a lever on the one leg the
+measurements say is binding — see [balance.md](balance.md), *The joint, not the panel* — and a
+reason for a pump to be switched on beyond mixing.
+
+**What triggers it.** A ring that dissolves **having lost a pipe** vents: a grinder opened a hole in
+a pressurised loop and the fluid left through it, taking its heat rather than spilling into the
+pipes. A ring that dissolves with all its pipes still on the grid does not — no fluid can have
+escaped, which is why `A12`'s spill is still the right answer there. **That is the coolant mechanism
+being switched off rather than a split**: a split needs a three-port pipe and there is none. The ring's
+signature carries the empty state across the rebuild, so welding the pipe back returns the ring to
+the signature it had **and to a fill of nothing**, which it then pays to restore.
+
+> **Measured end to end**: an eight-pipe ring at 100 K over holds 15,583,328 J, a grind drains all of
+> it, and refilling spends 15,583,425 J — **a ratio of 1.0000**. Before the vent a grind cost one
+> parcel, which is 1,947,916 J at the charge that ships and was 188,889 J at the flat 50 kg `B43`
+> priced it on. The exploit is not small now; it is nothing.
+>
+> **And `A12`'s bound lost its test to this, and has it back.** A spilled parcel must never heat
+> its pipe past itself, and the only dissolve that still spills is one that loses no pipe — which
+> is not a split, because the shipped pipes have two ports and no block a player can add opens a
+> closed ring. **It is the mechanism being switched off.** `EnableCoolantLoops = false` dissolves
+> every loop with every pipe still on the grid and nowhere for fluid to have gone, which is a thing
+> an admin does to a live world; the eight-pipe ring spills 14,025,000 J/K into its pipes and the
+> hottest reaches 872.0 K against 900 K of fluid. [backlog.md](backlog.md) `F28`, closed.
+
+**Venting is instant and refilling is not, and that asymmetry is the mechanic.** An emergency dump
+buys relief now and is paid back gradually while the radiators work — useful once, useless on a
+timer. It is the only part of this with no derivation under it, so it is a setting and it says so.
+
 
 ### Heat pumps
 
@@ -511,16 +675,19 @@ rectangles are. `BlockInstance` rotates them into grid space when a block is pla
 
 ### Two layers
 
-`SurfaceMap` keeps every cell twice.
+`SurfaceMap` answers about every cell twice, from one entry: the live state in the low half of a
+`long` and the structural one in the high half.
 
 | Layer | Doors read as | Asked by |
 | --- | --- | --- |
 | Live | whatever they are doing | exposure — an open doorway does radiate |
 | Structural | shut | the room mapper — a door swinging must not change the shape of the ship |
 
-Both are written from the same block in the same call, so they stay in step. **This split is what
-makes a door cheap:** rooms are a property of how the ship is *built*, so cycling a door does not
-invalidate them.
+Both are written from the same block in the same call, so they stay in step — and since 2026-08-26
+in the same *entry*, which is what makes them impossible to write independently
+([performance.md](performance.md#iteration-5--the-surface-maps-two-layers-in-one-dictionary)).
+**This split is what makes a door cheap:** rooms are a property of how the ship is *built*, so
+cycling a door does not invalidate them.
 
 ### Exposure
 
@@ -768,6 +935,13 @@ several tests compare against it so the differences stay pinned rather than reme
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | The two surface layers are one packed entry per cell rather than two dictionaries. Nothing about the model changes — the same two answers, written in the same call — and it is here because this page is where the split is described. |
+| 2026-08-26 | *Coolant is a consumable* restated at the charge that ships: a large-grid parcel costs **1,947,916 J** to restore rather than 188,889, and an eight-pipe ring holds **15,583,328 J** at 100 K over rather than 1,511,111. The neutrality is unchanged and cannot change — both sides are the same fluid at the same excess — which is now said, because the numbers moving without the conclusion moving is what makes the identity worth stating. |
+| 2026-08-26 | *Coolant loops* carried a pipe parcel at 1,889 J/K, which is what it held at the flat 50 kg charge; `C43`'s density makes it **19,479**. The two figures that ratio decides move with it — the temperature-only spill destroyed 67.9 % of a ring's heat and would now destroy **95.4 %**, and the unbounded pour reached 2,106 K and now reaches **12,854 K**. Both are stated beside the old ones rather than replacing them, because a bound is worth what the thing it bounds is worth. |
+| 2026-08-26 | **The refill's watts are inside what the pump asks the grid for**, which *Coolant is a consumable* had said since the feature existed and the code had never done ([backlog.md](backlog.md) `B44`). They were billed to the block's drawn power — which is what makes them heat — and never requested, so a ship with no power to spare refilled anyway; and a pump *switched off* asked for nothing at all, which a sink reports as full supply, so a ring whose pumps were off refilled at full rate and free. `HasDrivingPump` gates the loop side and the demand is inside `DemandMegawatts` and the sink's ceiling on the block side. |
+| 2026-08-26 | **`A12`'s boundedness bound is under test again, and the case that reaches it is the coolant mechanism being switched off** ([backlog.md](backlog.md) `F28`). Not a split — the shipped pipes have two ports, so no block a player can add opens a closed ring, which is why the split falsifier was withdrawn and why looking for one again found nothing. The 698.19 K on this page was read off a grind before `B44` made a broken ring vent and before `C43` changed the coolant's capacity; on the constructor that works it is 872.0 K against 900 K of fluid, where the unbounded form reaches 12,854 K. |
+| 2026-08-26 | A segment's thermal mass takes `MassPerPipe(cell)` — a density times the volume of the cell the pipe occupies — rather than a flat mass at both grid sizes. `C43`. |
+| 2026-08-26 | Corrected *Coolant is a consumable*, which described the refill advancing with the step when the code advanced it with the frame alone — so the consumable worked in a session and was invisible to every lab, benchmark and test, which is the lane every figure on balance.md is read in. Added *A pump makes the ring conduct, not only circulate*: fluid-to-wall transfer is convective and so depends on the flow, and nothing expressed that until `LoopStagnantTransferFraction` was wired to the leg it names. Both found by `LoopDialReachTests`. |
 | 2026-08-25 | **A broken ring keeps its coolant's heat, and the two thirds it used to destroy were an accident of two capacities** ([backlog.md](backlog.md) `A12`). The spill mixed each parcel into its pipe at `(T_n·M_n + T_s·M_s) / (M_n + M_s)` and then left the node at `M_n`, so `M_s / (M_n + M_s)` of the ring's heat — **67.9 %** on a large grid, 941 J/K of pipe against 1,889 of parcel — landed nowhere. The pipe now takes the parcel's heat capacity along with its temperature and hands both back when a ring re-forms through it, so grinding a pipe out of an eight-pipe ring costs **one eighth**, which is the parcel that left inside the block, and splitting a ring costs nothing. **Predicted before it was run** and the prediction stands at three ring lengths. Two further defects came out of the same code and are fixed with it: under `WellMixedCoolant` the spill handed *every* pipe the whole ring's fluid, and `SegmentTemperature`/`SetSegmentTemperature` bounded a **pipe** index by the **parcel** count, so in that model every pipe after the first read and wrote nothing. |
 | 2026-08-25 | Said what the friction expression is: drag power, with `FrictionScale` standing in for `½ C_d`. The model computes what the air takes from a ship's energy and returns none of it to the ship's motion — a median 5.05 MW on the published population at `reentry`, which is 16.8 kN never applied. Whether it should be is [backlog.md](backlog.md) `K1`, and the coefficient is why it is not obvious. |
 | 2026-08-25 | Stated the wind factor's floor as present-tense evidence rather than as what it *used to be* (`R12`), and absorbed the measured consequence — a 2 MW hull settling 0.9 K hotter in a 40 m/s wind — from the twelve-line comment in `ThermalSolver` that had been carrying it. The comment names this section now. |

@@ -98,14 +98,65 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// What it is asking for now, in the resource system's units. Linear in speed for the
-        /// reason `CoolantPump.DemandWatts` gives: a cubed affinity law against a square-root flow
-        /// makes ten idling pumps a hundredth the price of one working.
+        /// What refilling this pump's ring is asking for, W, published every step by
+        /// <c>ThermalGridSimulation</c> from <c>CoolantLoop.RefillDemandWatts</c>. Zero on a full
+        /// ring, and zero on every pump but the one the refill is charged to.
+        ///
+        /// <para>
+        /// **It has to be inside the request, not only inside the bill.** The refill's watts were
+        /// added to the block's *drawn* power — which is what turns them into heat through the
+        /// pump's own `ConsumerWasteEnergy` — and never asked of the distributor, so a ship with no
+        /// power to spare refilled its rings anyway and paid only in heat. See backlog.md `B44`.
+        /// </para>
+        /// </summary>
+        private float refillDemandWatts;
+
+        /// <summary>Sets what the ring's refill is asking for, W. The host's to publish.</summary>
+        public void SetRefillDemandWatts(float watts)
+        {
+            refillDemandWatts = watts > 0f ? watts : 0f;
+        }
+
+        /// <summary>What the refill is asking for, W, as the terminal and the tests read it.</summary>
+        public float RefillDemandWatts
+        {
+            get { return IsRunning ? refillDemandWatts : 0f; }
+        }
+
+        /// <summary>
+        /// What it is asking for now, in the resource system's units: circulation plus whatever the
+        /// ring's refill wants. Circulation is linear in speed for the reason
+        /// `CoolantPump.DemandWatts` gives — a cubed affinity law against a square-root flow makes
+        /// ten idling pumps a hundredth the price of one working.
+        ///
+        /// **A pump that is off asks for nothing and therefore refills nothing**, which is the
+        /// answer `CoolantLoop.HasDrivingPump` gives on the other side of the same rule.
         /// </summary>
         private float DemandMegawatts()
         {
             if (!IsRunning) return 0f;
-            return MaxPowerWatts * Clamp01(Speed) * ThermalConstants.WattsToMegawatts;
+
+            float watts = (MaxPowerWatts * Clamp01(Speed)) + refillDemandWatts;
+            return watts * ThermalConstants.WattsToMegawatts;
+        }
+
+        /// <summary>
+        /// The ceiling the sink is constructed with: full circulation plus the most a refill can
+        /// ask for. **A ceiling under the real request is a request the distributor quietly
+        /// trims**, and at the shipped fluid a refill is 18.9 kW — 38 % of a large-grid pump's
+        /// rating and nearly twice a small one's — far too much to leave outside it.
+        ///
+        /// Read from the world's own settings where they exist, because both halves are dials.
+        /// </summary>
+        private float MaxDrawMegawatts()
+        {
+            float clock = Settings.Instance == null
+                ? new ThermalSettings().HeatTimeScale
+                : Settings.Instance.HeatTimeScale;
+
+            float refill = LoopThermalProperties.Default().RefillWattsAt(clock);
+
+            return (MaxPowerWatts + refill) * ThermalConstants.WattsToMegawatts;
         }
 
         /// <summary>
@@ -126,7 +177,7 @@ namespace Thermodynamics
             MyResourceSinkInfo info = new MyResourceSinkInfo
             {
                 ResourceTypeId = MyResourceDistributorComponent.ElectricityId,
-                MaxRequiredInput = MaxPowerWatts * ThermalConstants.WattsToMegawatts,
+                MaxRequiredInput = MaxDrawMegawatts(),
                 RequiredInputFunc = DemandMegawatts,
             };
 

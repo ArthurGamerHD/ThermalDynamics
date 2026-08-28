@@ -500,7 +500,7 @@ voxel or texture, not block lattice). **Confirm both in game before committing.*
 
 If the lattice is 0.25 m, a 5 m block spans **20 × 20 × 20 = 8 000 lattice cells**. The current
 model stores one dictionary entry per occupied cell in `GridModel.blocksByCell` *and* one in
-`SurfaceMap.states`, and `BlockInstance` materialises a `Vector3I[]` of every cell it occupies.
+`SurfaceMap`'s cell table, and `BlockInstance` materialises a `Vector3I[]` of every cell it occupies.
 One 5 m block would cost 16 000 dictionary entries and an 8 000-element array.
 
 **Per-cell enumeration is not survivable in SE2.** That is the single constraint the redesign has

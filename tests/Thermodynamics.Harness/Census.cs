@@ -190,7 +190,7 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// The same quantities over **8,105 real workshop blueprints**, taken by <c>StiffnessLab</c>
+        /// The same quantities over **8,098 real workshop blueprints**, taken by <c>StiffnessLab</c>
         /// where <see cref="Field"/> is two ships from two vanished sessions. Quoted for a
         /// quarter-second step — <c>Frequency 4</c>, the basis <see cref="Field"/> used — in still
         /// sea-level air at noon, which is a *lower* bound.
@@ -216,16 +216,33 @@ namespace Thermodynamics.Harness
         /// hull, which is the environment term and is untouched; both say that at four times the
         /// conduction pace what sets a block's substep demand is its neighbours.
         /// </para>
+        /// <para>
+        /// **Re-walked 2026-08-25 after `A13`, and the interesting number is the one that did not
+        /// move.** The blueprint reader had been building eleven kinds of vanilla block as an
+        /// armour cube; corrected, the population's full-load *heat* rose **15.76 %** and its
+        /// stiffness rose by nothing at all — `AirP50`, `AirP90`, `AirMax` and every vacuum
+        /// percentile came back identical to the digit, and the constants below move only in their
+        /// last place. **Heat is a sum over blocks and stiffness is a maximum over them**, and the
+        /// corrected blocks are heavy: a gravity generator is eight tonnes of capacity, so it makes
+        /// megawatts and demands almost no substeps. What sets a hull's demand is still a
+        /// `SmallLight` or an armour cube, on 45 % and 31 % of ships. So a block-identity error can
+        /// be worth a sixth of a population's heat and nothing whatever to its cost.
+        /// </para>
         /// </summary>
         public static class Corpus
         {
-            /// <summary>Ships measured, of 8,144 blueprints; 39 are over the 64 MB reader cap.</summary>
-            public const int Ships = 8105;
+            /// <summary>
+            /// Ships measured, of 8,144 blueprints; 39 are over the 64 MB reader cap and **7 are
+            /// modded**, where none were before `A13`. Those seven hold an empty-subtype `Door` or
+            /// `GravityGenerator` on a small grid, which the game has only on large; they used to
+            /// resolve to a small armour cube and be walked as vanilla.
+            /// </summary>
+            public const int Ships = 8098;
 
             // In air. Was 4.26 / 6.61 / 33.09 / 34.45 before C24; the top of the distribution came
             // down with the clock while the bottom of it went up with the conduction pace, which is
             // the two modes closing.
-            public const float AirP10 = 6.20f;
+            public const float AirP10 = 6.22f;
             public const float AirP50 = 7.90f;
             public const float AirP90 = 18.42f;
             public const float AirMax = 22.41f;
@@ -235,7 +252,7 @@ namespace Thermodynamics.Harness
             /// barely softer at all. Was 4.79 / 6.34 / 8.64.
             /// </summary>
             public const float VacuumP50 = 7.40f;
-            public const float VacuumP90 = 10.01f;
+            public const float VacuumP90 = 10.03f;
             public const float VacuumMax = 13.35f;
 
             /// <summary>
@@ -251,11 +268,11 @@ namespace Thermodynamics.Harness
             /// this repository that refuse to quote one are the ones to re-read.
             /// </summary>
             public const float LitP50 = 16.83f;
-            public const float StructuralP50 = 7.23f;
-            public const float LitShare = 0.4496f;
+            public const float StructuralP50 = 7.25f;
+            public const float LitShare = 0.4474f;
 
             /// <summary>Share of ships between the two modes, 8 to 28 substeps. Was about 0.06.</summary>
-            public const float BetweenTheModes = 0.492f;
+            public const float BetweenTheModes = 0.491f;
 
             /// <summary>
             /// How much stiffer air makes the block that sets a hull's air peak: **the same block's**
@@ -318,10 +335,10 @@ namespace Thermodynamics.Harness
             /// tests that compare the two now say so rather than pretending to a like-for-like.
             /// </para>
             /// </summary>
-            public const float FlooredAtCap8 = 0.0092f;
-            public const float FlooredAtCap4 = 0.2322f;
-            public const float FlooredAtCap2 = 0.4033f;
-            public const float FlooredAtCap1 = 0.7589f;
+            public const float FlooredAtCap8 = 0.0087f;
+            public const float FlooredAtCap4 = 0.2318f;
+            public const float FlooredAtCap2 = 0.4022f;
+            public const float FlooredAtCap1 = 0.7529f;
         }
 
         private static BlockModel[] models;
@@ -450,14 +467,9 @@ namespace Thermodynamics.Harness
             BlockModel source = Producer();
 
             List<Vector3I> layout = new List<Vector3I>(cells);
-            int[] tierOf = new int[layout.Count];
-            HashSet<Vector3I> filled = new HashSet<Vector3I>(layout);
+            int[] tierOf = TiersFor(layout);
 
-            for (int i = 0; i < layout.Count; i++) tierOf[i] = TierAt(i);
-
-            SurfaceTheLightestTier(layout, tierOf, filled);
-
-            BlockOrientation[] orientations = Bolt(layout, tierOf, tiers, filled);
+            BlockOrientation[] orientations = Bolt(layout, tierOf, tiers);
 
             for (int i = 0; i < layout.Count; i++)
             {
@@ -478,10 +490,26 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
+        /// Which tier each cell of a layout holds, after the lightest tier has been moved onto the
+        /// surface. Public so a test can plan a hull the way <see cref="PlaceCensus"/> does and
+        /// hold <see cref="Bolt"/> against a reference over the same plan.
+        /// </summary>
+        public static int[] TiersFor(List<Vector3I> layout)
+        {
+            int[] tierOf = new int[layout.Count];
+            HashSet<Vector3I> filled = new HashSet<Vector3I>(layout);
+
+            for (int i = 0; i < layout.Count; i++) tierOf[i] = TierAt(i);
+
+            SurfaceTheLightestTier(layout, tierOf, filled);
+            return tierOf;
+        }
+
+        /// <summary>
         /// Moves the lightest tier onto the hull's surface, swapping it with whatever was there.
         ///
         /// <para>
-        /// **A real ship's stiffest block is one somebody could see.** Measured over 8,105 workshop
+        /// **A real ship's stiffest block is one somebody could see.** Measured over 8,098 workshop
         /// hulls, the block that sets a ship's substep demand in air has **3.46 exposed faces** on
         /// average and a light sets it on 45 % of them — a light hangs off a hull. The census hull
         /// deals its tiers out by a hash of a block's position in the layout, so its light fittings
@@ -549,99 +577,43 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// Turns every block so that it is bolted to something, and to as much as it can be.
-        ///
-        /// <para>
-        /// **The game will not let a player place a block that attaches to nothing**, and a hull
-        /// built out of blocks that mount on some of their faces has to respect that or it is not a
-        /// hull anybody could build. A `LargeBlockGyro` declares one mount point, on its bottom; a
-        /// `SmallLight` declares one. Placed at the identity they all point the same way, and a
-        /// block whose one mount face happens to look at another block that does not mount back has
-        /// **no joints at all** — a body with nothing to conduct to, cooling toward the sky on an
-        /// asymptote that never arrives. Two hulls run at different clocks then never agree about
-        /// it, which is a rig measuring its own hull rather than the input it is about (`E8`).
-        /// </para>
-        ///
-        /// <para>
-        /// So orientations are chosen in layout order: each block takes the one that joins the most
-        /// neighbours, counting a neighbour already placed only where it mounts back and one not
-        /// yet placed where it still could. Deterministic, so two hulls built alike are the same
-        /// ship, and what it cannot fix — a block every neighbour refuses — it reports rather than
-        /// hides.
-        /// </para>
+        /// The 24 legal orientations, in <see cref="PipeFitter.AllOrientations"/>'s order, with
+        /// each one's six rotated face directions resolved once. <see cref="Bolt"/> used to rotate
+        /// a face through a freshly built matrix for every candidate of every block — 144 matrices a
+        /// block, and a dictionary probe behind each — which put the hull generator at ten times
+        /// the cost of the simulation it was built to feed. See performance.md, Iteration 2.
         /// </summary>
-        private static BlockOrientation[] Bolt(
-            List<Vector3I> layout, int[] tierOf, BlockModel[] tiers, HashSet<Vector3I> filled)
+        private static BlockOrientation[] boltOrientations;
+
+        /// <summary>Grid-space face index of each local face, per orientation: <c>[orientation * 6 + face]</c>.</summary>
+        private static int[] boltRotatedFace;
+
+        /// <summary>Where the identity sits in the table; not first, since the enumeration starts at Forward/Left.</summary>
+        private static int boltIdentity;
+
+        private static void EnsureBoltTable()
         {
-            BlockOrientation[] chosen = new BlockOrientation[layout.Count];
-            Dictionary<Vector3I, int> at = new Dictionary<Vector3I, int>(layout.Count);
-            bool[] placed = new bool[layout.Count];
+            if (boltOrientations != null) return;
 
-            for (int i = 0; i < layout.Count; i++) at[layout[i]] = i;
+            List<BlockOrientation> all = new List<BlockOrientation>(PipeFitter.AllOrientations());
+            int[] rotated = new int[all.Count * Face.Count];
 
-            for (int i = 0; i < layout.Count; i++)
+            for (int o = 0; o < all.Count; o++)
             {
-                // A producer is a solid block and mounts everywhere; leave it at the identity.
-                if (ProducesHeatAt(i))
+                for (int face = 0; face < Face.Count; face++)
                 {
-                    chosen[i] = BlockOrientation.Identity;
-                    placed[i] = true;
-                    continue;
+                    rotated[(o * Face.Count) + face] = Face.IndexOf(all[o].Rotate(Face.Offsets[face]));
                 }
-
-                int state = tiers[tierOf[i]].LocalSurfaces[0];
-                int best = -1;
-
-                foreach (BlockOrientation candidate in Orientations())
-                {
-                    int joined = 0;
-
-                    for (int face = 0; face < Face.Count; face++)
-                    {
-                        if (!CellSurface.SelfMount(state, face)) continue;
-
-                        Vector3I toward = candidate.Rotate(Face.Offsets[face]);
-
-                        int neighbour;
-                        if (!at.TryGetValue(layout[i] + toward, out neighbour)) continue;
-
-                        // An unplaced neighbour still counts: it has not chosen a side yet and can
-                        // take one that mounts back. A placed one counts only if it did.
-                        if (!placed[neighbour] || MountsToward(tiers, tierOf, chosen, neighbour, -toward))
-                        {
-                            joined++;
-                        }
-                    }
-
-                    if (joined <= best) continue;
-
-                    best = joined;
-                    chosen[i] = candidate;
-                }
-
-                placed[i] = true;
             }
 
-            return chosen;
-        }
-
-        /// <summary>Whether a placed block carries a mount point on the grid direction given.</summary>
-        private static bool MountsToward(
-            BlockModel[] tiers, int[] tierOf, BlockOrientation[] chosen, int index, Vector3I toward)
-        {
-            int state = tiers[tierOf[index]].LocalSurfaces[0];
-
-            for (int face = 0; face < Face.Count; face++)
-            {
-                if (!CellSurface.SelfMount(state, face)) continue;
-                if (chosen[index].Rotate(Face.Offsets[face]) == toward) return true;
-            }
-
-            return false;
+            boltRotatedFace = rotated;
+            boltIdentity = all.IndexOf(BlockOrientation.Identity);
+            if (boltIdentity < 0) throw new InvalidOperationException("the orientation table holds no identity");
+            boltOrientations = all.ToArray();
         }
 
         /// <summary>
-        /// Turns a block so the faces it mounts on are faces that have something to mount to.
+        /// Turns every block so the faces it mounts on are faces that have something to mount to.
         ///
         /// <para>
         /// **A block that mounts on one face is bolted to something with it.** A light hangs off a
@@ -654,53 +626,108 @@ namespace Thermodynamics.Harness
         /// </para>
         ///
         /// <para>
-        /// So the orientation is chosen per cell: the candidate whose mount faces cover the most
-        /// occupied neighbours, ties going to the first in a fixed order so two hulls built alike
-        /// are the same ship. It is what a builder does without thinking about it.
+        /// So the orientation is chosen per cell, in layout order: the candidate whose mount faces
+        /// cover the most neighbours that either mount back or have not yet chosen, ties going to
+        /// the first in a fixed order so two hulls built alike are the same ship. Producers are
+        /// solid and mount everywhere, so they stay at the identity. `CensusBoltTests` holds this
+        /// against the search it replaced, orientation for orientation.
         /// </para>
         /// </summary>
-        private static BlockOrientation FacingItsNeighbours(
-            BlockModel model, Vector3I cell, HashSet<Vector3I> filled)
+        public static BlockOrientation[] Bolt(IList<Vector3I> layout, int[] tierOf, BlockModel[] tiers)
         {
-            int state = model.LocalSurfaces[0];
-            int best = -1;
-            BlockOrientation chosen = BlockOrientation.Identity;
+            EnsureBoltTable();
 
-            foreach (BlockOrientation candidate in Orientations())
+            int count = layout.Count;
+            BlockOrientation[] chosen = new BlockOrientation[count];
+            int[] chosenIndex = new int[count];
+            bool[] placed = new bool[count];
+
+            Dictionary<Vector3I, int> at = new Dictionary<Vector3I, int>(count, Vector3I.Comparer);
+            for (int i = 0; i < count; i++) at[layout[i]] = i;
+
+            // The mount faces of each tier, as a bit per local face, read once rather than per candidate.
+            int[] mounts = new int[tiers.Length];
+            for (int t = 0; t < tiers.Length; t++)
             {
-                int joined = 0;
-
+                int state = tiers[t].LocalSurfaces[0];
                 for (int face = 0; face < Face.Count; face++)
                 {
-                    if (!CellSurface.SelfMount(state, face)) continue;
-                    if (filled.Contains(cell + candidate.Rotate(Face.Offsets[face]))) joined++;
+                    if (CellSurface.SelfMount(state, face)) mounts[t] |= 1 << face;
+                }
+            }
+
+            int[] neighbourAt = new int[Face.Count];
+            int orientations = boltOrientations.Length;
+            int[] rotatedFace = boltRotatedFace;
+
+            for (int i = 0; i < count; i++)
+            {
+                // A producer is a solid block and mounts everywhere; leave it at the identity.
+                if (ProducesHeatAt(i))
+                {
+                    chosen[i] = BlockOrientation.Identity;
+                    chosenIndex[i] = boltIdentity;
+                    placed[i] = true;
+                    continue;
                 }
 
-                if (joined <= best) continue;
+                // Six probes per block, not six per candidate.
+                Vector3I cell = layout[i];
+                for (int d = 0; d < Face.Count; d++)
+                {
+                    int neighbour;
+                    neighbourAt[d] = at.TryGetValue(cell + Face.Offsets[d], out neighbour) ? neighbour : -1;
+                }
 
-                best = joined;
-                chosen = candidate;
+                int mount = mounts[tierOf[i]];
+                int best = -1;
+
+                for (int o = 0; o < orientations; o++)
+                {
+                    int joined = 0;
+                    int b = o * Face.Count;
+
+                    for (int face = 0; face < Face.Count; face++)
+                    {
+                        if ((mount & (1 << face)) == 0) continue;
+
+                        int toward = rotatedFace[b + face];
+                        int neighbour = neighbourAt[toward];
+                        if (neighbour < 0) continue;
+
+                        // An unplaced neighbour still counts: it has not chosen a side yet and can
+                        // take one that mounts back. A placed one counts only if it did.
+                        if (!placed[neighbour]
+                            || MountsToward(mounts[tierOf[neighbour]], chosenIndex[neighbour], Face.Opposite(toward)))
+                        {
+                            joined++;
+                        }
+                    }
+
+                    if (joined <= best) continue;
+
+                    best = joined;
+                    chosenIndex[i] = o;
+                }
+
+                chosen[i] = boltOrientations[chosenIndex[i]];
+                placed[i] = true;
             }
 
             return chosen;
         }
 
-        /// <summary>The twenty-four ways a block can be turned, in a fixed order.</summary>
-        private static IEnumerable<BlockOrientation> Orientations()
+        /// <summary>Whether a placed block, at its chosen orientation, carries a mount point on a grid-space face.</summary>
+        private static bool MountsToward(int mount, int orientation, int towardFace)
         {
-            Array directions = Enum.GetValues(typeof(Base6Directions.Direction));
-
-            foreach (Base6Directions.Direction forward in directions)
+            int b = orientation * Face.Count;
+            for (int face = 0; face < Face.Count; face++)
             {
-                foreach (Base6Directions.Direction up in directions)
-                {
-                    Vector3 f = Base6Directions.GetVector(forward);
-                    Vector3 u = Base6Directions.GetVector(up);
-                    if (Math.Abs(Vector3.Dot(f, u)) > 0.001f) continue;
-
-                    yield return new BlockOrientation(forward, up);
-                }
+                if ((mount & (1 << face)) == 0) continue;
+                if (boltRotatedFace[b + face] == towardFace) return true;
             }
+
+            return false;
         }
 
         /// <summary>How many of a cell's six faces have nothing bolted to them.</summary>

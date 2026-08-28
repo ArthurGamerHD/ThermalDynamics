@@ -38,7 +38,7 @@ namespace Thermodynamics
         /// Incremented whenever the file's shape changes. A file at a different version is replaced
         /// with defaults rather than partially applied.
         /// </summary>
-        public const int CurrentVersion = 6;
+        public const int CurrentVersion = 7;
 
         public static Settings Instance;
 
@@ -282,8 +282,35 @@ namespace Thermodynamics
         // Loops.xml as world settings. A value still equal to the shipped one is left alone rather
         // than written over the definition; move one and it wins from then on.
 
-        /// <summary>Coolant carried by one pipe block, kg. More is more capacity for the same coupling.</summary>
-        [ProtoMember(85)] public float LoopCoolantMassPerPipe = 50f;
+        /// <summary>
+        /// Coolant per cubic metre of the cell a pipe occupies, kg/m³ — the charge a ring is filled
+        /// from, and the reason a small-grid pipe no longer carries more fluid than it weighs.
+        /// </summary>
+        [ProtoMember(133)] public float LoopCoolantKilogramsPerCubicMetre = 33f;
+
+        /// <summary>
+        /// A flat coolant mass per pipe block, kg, or **zero to charge from
+        /// <see cref="LoopCoolantKilogramsPerCubicMetre"/> and the cell**, which is what ships.
+        ///
+        /// <para>
+        /// **The name is kept rather than repurposed** (`P15`): a world that moved this dial moved
+        /// kilograms in a pipe, and reading the same number as a density would give it sixteen times
+        /// the fluid on a large grid. It shipped at 50 until `C43`; a config still carrying that is
+        /// replaced wholesale rather than reinterpreted, because <see cref="CurrentVersion"/> moved
+        /// with it.
+        /// </para>
+        /// </summary>
+        [ProtoMember(85)] public float LoopCoolantMassPerPipe = 0f;
+
+        /// <summary>
+        /// The excess a refill is priced at, K: restoring a kilogram costs the heat that kilogram
+        /// holds this far above ambient, so it is the excess at which venting and refilling exactly
+        /// break even. Above it dumping coolant pays, below it costs.
+        /// </summary>
+        [ProtoMember(131)] public float LoopRefillEquivalentKelvin = 100f;
+
+        /// <summary>How fast a vented ring refills, kg/s. Bounds the cycle whatever is aboard.</summary>
+        [ProtoMember(132)] public float LoopRefillKilogramsPerSecond = 5f;
 
         /// <summary>
         /// How well heat crosses between the coolant and the wall it touches, W/(m²·K).
@@ -294,7 +321,7 @@ namespace Thermodynamics
         /// quality out of 86 and is migrated rather than silently reinterpreted as a coefficient of
         /// one.
         /// </summary>
-        [ProtoMember(125)] public float LoopHeatTransferCoefficient = 160f;
+        [ProtoMember(125)] public float LoopHeatTransferCoefficient = 1000f;
 
         /// <summary>
         /// **Retired.** The 0…1 quality this used to be, kept so a world saved with it moved can be
@@ -319,7 +346,7 @@ namespace Thermodynamics
         [ProtoMember(91)] public float LoopSmallGridFlowRate = 10f;
 
         /// <summary>What a stopped ring still carries between neighbouring parcels, 0..1.</summary>
-        [ProtoMember(92)] public float LoopStagnantTransferFraction = 1f;
+        [ProtoMember(92)] public float LoopStagnantTransferFraction = 0.16f;
 
         // ---- planet climate ----------------------------------------------------------------
         //
@@ -571,8 +598,22 @@ namespace Thermodynamics
             LegacyLoopConductivity = -1f;
         }
 
-        /// <summary>What the old quality of one came to on a large grid, W/(m²·K).</summary>
-        private const float ShippedLoopCoefficient = 160f;
+        /// <summary>
+        /// What a legacy quality of one now means, W/(m²·K) — which is the shipped coefficient
+        /// rather than a frozen number.
+        ///
+        /// <para>
+        /// **A quality of one meant *the default*, so it has to keep meaning the default.** It was
+        /// 160 when the dial was converted, and `C42` moved the shipped value to 1,000 because at
+        /// 160 the pickup forced a 6.4 MW block to sit 6,400 K above its surroundings and no
+        /// realistic plumbing could cool it. Leaving this at 160 would migrate every world saved
+        /// before the conversion onto a coefficient that is no longer the default and that this
+        /// repository has measured as unable to cool the block carrying two thirds of a fleet's
+        /// heat — preserving a defect in the name of preserving a setting. A world that moved the
+        /// old dial still gets the same *relative* change, which is what the migration promised.
+        /// </para>
+        /// </summary>
+        private const float ShippedLoopCoefficient = 1000f;
 
         private void Clamp()
         {
@@ -863,8 +904,10 @@ namespace Thermodynamics
                 "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes",
 
                 "LoopLargeGridFlowRate", "LoopSmallGridFlowRate", "LoopCoolantMassPerPipe",
+                "LoopCoolantKilogramsPerCubicMetre",
                 "LoopSpecificHeat", "LoopHeatTransferCoefficient", "LoopPipeContactMultiplier",
                 "LoopSinkContactMultiplier", "LoopStagnantTransferFraction",
+                "LoopRefillEquivalentKelvin", "LoopRefillKilogramsPerSecond",
 
                 "PlanetDayTemperature", "PlanetNightTemperature", "PlanetPoleTemperatureDrop",
                 "PlanetAmbientLapseRate", "PlanetAmbientLagSeconds", "PlanetConvectionCoefficient",
@@ -955,6 +998,9 @@ namespace Thermodynamics
                 case "TelemetryPlanetProbes": return TelemetryPlanetProbes;
 
                 case "LoopCoolantMassPerPipe": return LoopCoolantMassPerPipe;
+                case "LoopCoolantKilogramsPerCubicMetre": return LoopCoolantKilogramsPerCubicMetre;
+                case "LoopRefillEquivalentKelvin": return LoopRefillEquivalentKelvin;
+                case "LoopRefillKilogramsPerSecond": return LoopRefillKilogramsPerSecond;
                 case "LoopHeatTransferCoefficient": return LoopHeatTransferCoefficient;
                 case "LoopSpecificHeat": return LoopSpecificHeat;
                 case "LoopPipeContactMultiplier": return LoopPipeContactMultiplier;
@@ -1068,6 +1114,10 @@ namespace Thermodynamics
                 case "TelemetryPlanetProbes": TelemetryPlanetProbes = (int)value; return true;
 
                 case "LoopCoolantMassPerPipe": LoopCoolantMassPerPipe = value; return true;
+                case "LoopCoolantKilogramsPerCubicMetre":
+                    LoopCoolantKilogramsPerCubicMetre = value; return true;
+                case "LoopRefillEquivalentKelvin": LoopRefillEquivalentKelvin = value; return true;
+                case "LoopRefillKilogramsPerSecond": LoopRefillKilogramsPerSecond = value; return true;
                 case "LoopHeatTransferCoefficient": LoopHeatTransferCoefficient = value; return true;
                 case "LoopSpecificHeat": LoopSpecificHeat = value; return true;
                 case "LoopPipeContactMultiplier": LoopPipeContactMultiplier = value; return true;

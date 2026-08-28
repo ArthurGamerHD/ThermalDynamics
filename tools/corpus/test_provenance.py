@@ -12,6 +12,9 @@ that moving one without the other fails.
 """
 import os
 import sys
+import hashlib
+import shutil
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -19,7 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import provenance
 
 # The same four numbers AuthoredWasteTests.TheProvenanceOfEveryFractionIsCounted asserts.
-PINNED = {"sourced": 42, "derived": 1, "unreachable": 108, "invented": 77}
+PINNED = {"sourced": 43, "derived": 1, "unreachable": 108, "invented": 76}
 
 
 class BothReadersOfTheGrammarCountTheSame(unittest.TestCase):
@@ -49,6 +52,85 @@ class BothReadersOfTheGrammarCountTheSame(unittest.TestCase):
         self.assertEqual("invented", by_type["Reactor"])
         self.assertEqual("derived", by_type["JumpDrive"])
         self.assertEqual("sourced", by_type["MotorSuspension"])
+
+        # The generator produces nothing, so its type resolves through the consumer side — which
+        # is the side the last unsourced fraction moved on 2026-08-25.
+        self.assertEqual("sourced", by_type["OxygenGenerator"])
+
+    def test_one_type_s_share_of_its_own_ships_is_not_its_share_of_the_fleet(self):
+        """The two questions provenance.py answers, on a composition it builds itself.
+
+        Two ships: one carries a generator and little else, one carries a drive an order of
+        magnitude larger and no generator. The fleet share is a tenth; the median share of the
+        ships that carry one is nine tenths. Both are right and they are not the same statistic.
+        """
+        import csv
+        import tempfile
+
+        rows = [
+            {"ship": "a", "workshop_id": "1", "subtype": "x", "type_id": "OxygenGenerator",
+             "count": "1", "waste_full_w": "90", "share_of_waste": "0.9"},
+            {"ship": "a", "workshop_id": "1", "subtype": "y", "type_id": "Reactor",
+             "count": "1", "waste_full_w": "10", "share_of_waste": "0.1"},
+            {"ship": "b", "workshop_id": "2", "subtype": "z", "type_id": "JumpDrive",
+             "count": "1", "waste_full_w": "900", "share_of_waste": "1"},
+        ]
+
+        with tempfile.NamedTemporaryFile("w", suffix=".csv", newline="", delete=False) as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()))
+            writer.writeheader()
+            for row in rows:
+                writer.writerow(row)
+            path = handle.name
+
+        try:
+            ships, instances, shares = provenance.per_ship(path, "OxygenGenerator")
+        finally:
+            os.unlink(path)
+
+        self.assertEqual(2, ships)
+        self.assertEqual(1, instances)
+        self.assertEqual([0.9], shares)
+        self.assertAlmostEqual(0.09, 90 / 1000.0)
+
+
+class ARestatementAppliesOnlyToADatasetThatPredatesTheChange(unittest.TestCase):
+    """A census taken against today's `Cubes.xml` must not be corrected to today's `Cubes.xml`.
+
+    The restatement exists because every dataset on disk was older than the fractions that ship.
+    The day one was re-taken it was still being discounted, which halves a type's heat twice. The
+    dataset says which file it saw; this is that lookup.
+    """
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix="provenance-")
+
+    def tearDown(self):
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def cubes_hash(self):
+        digest = hashlib.sha256()
+        with open(os.path.join(provenance.repo_root(), "Data", "Cubes.xml"), "rb") as handle:
+            for block in iter(lambda: handle.read(65536), b""):
+                digest.update(block)
+        return digest.hexdigest()[:16]
+
+    def write(self, recorded):
+        path = os.path.join(self.root, "composition.csv")
+        open(path, "w").write("ship,workshop_id,subtype,type_id,count,waste_full_w,share_of_waste\n")
+        if recorded is not None:
+            open(os.path.join(self.root, "provenance.txt"), "w").write(
+                "walk census started now\ncommit abc\nCubes.xml " + recorded + "\n")
+        return path
+
+    def test_no_provenance_reads_as_older_and_is_restated(self):
+        self.assertIsNone(provenance.measured_current_definitions(self.write(None)))
+
+    def test_a_recorded_hash_that_matches_means_do_not_restate(self):
+        self.assertIs(True, provenance.measured_current_definitions(self.write(self.cubes_hash())))
+
+    def test_a_recorded_hash_that_differs_means_restate(self):
+        self.assertIs(False, provenance.measured_current_definitions(self.write("0" * 16)))
 
 
 if __name__ == "__main__":

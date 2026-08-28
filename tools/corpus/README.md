@@ -18,6 +18,8 @@ each of these prints what it found and renders without the parts that are absent
 python3 tools/corpus/verdict.py out/corpus-2026-08-21     # the criteria, on the terminal
 python3 tools/corpus/cap.py out/cap-2026-08-25            # C3: what a per-block cap buys and costs
 python3 tools/corpus/reproduce.py out/cap-2026-08-24 out/cap-2026-08-25  # did a restart reproduce?
+python3 tools/corpus/censusdiff.py out/census-2026-08-21 out/census-2026-08-25 \
+    --expect waste_full_w=8:10 --expect ships=0:0            # A13: did the re-take do what was predicted?
 python3 tools/corpus/pace.py out/cap-2026-08-25/progress.txt \
     --reference out/air-corpus-2026-08-24/progress.txt \
     --outcomes  out/air-corpus-2026-08-24/outcomes.csv   # what a running walk will cost
@@ -416,6 +418,20 @@ Seconds, on a census that already exists. A block that generates power is weight
 fraction and everything else by its consumer one, which is the difference between a hydrogen engine
 reading as sourced and as invented — six per cent of the corpus's waste heat.
 
+**`cellsize.py` asks which cell size is the harder one to cool**, which this repository had
+answered from the arithmetic of a cell face rather than from any ship. It splits a census `census.csv`
+by the `large` flag and reports every column that bears on it, with the hull path read *per kilowatt*
+— a small-grid ship's hottest block has 0.77× the conductance a large one's has and a tenth of the
+heat, so the raw column says *behind* about a term it is **19.75×** ahead on.
+
+```
+python3 tools/corpus/cellsize.py out/census-2026-08-25/census.csv
+```
+
+Seconds, on a census that already exists, and it adds nothing to the census's basis. `CellSizeLab`
+is the other half — per block, from the definitions — and [balance.md](../../docs/balance.md#what-a-small-cell-is-behind-on-and-what-it-is-not)
+holds the finding the two make together.
+
 ```
 python3 -m unittest discover -s tools/corpus -p 'test_*.py'
 ```
@@ -429,7 +445,9 @@ turned *three commits touched the harness and none was checked for behaviour* fr
 into a measurement. It reports rows only one side has rather than dropping them, because two
 datasets with nothing in common otherwise print a perfect reproduction.
 
-`test_scoring.py` pins that rule and the two thresholds `G8` is scored at, `test_provenance.py`
+`test_cellsize.py` pins the one thing a bug in `cellsize.py` could invert without a symptom — which
+cell size a column favours — on rows written to know the answer, including the hull-path column whose
+obvious reading is the wrong way round. `test_scoring.py` pins that rule and the two thresholds `G8` is scored at, `test_provenance.py`
 pins the four provenance counts against the ones `AuthoredWasteTests` pins, so the two readers of
 one grammar cannot drift apart quietly (`D3`), `test_pace.py` pins what a progress file can be
 asked — that a repeated final line is not a stall, that the ratio is taken over the files two walks
@@ -451,6 +469,13 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | **`verdict.py` says when a dataset is partial**, which `E4` has asked for since it was written and nothing did. It counts the corpus's blueprints — recursively, because a workshop item can be a collection of several and counting one level deep misses fourteen of this corpus's and reports a population *smaller* than the walk that covered it — and prints `*** PARTIAL: n of m ***` above everything else. Where the corpus is not on the machine it says the population is **unknown** rather than assuming the dataset is whole; `--population <n>` states it. The threshold is 95 %, because the blueprint filters reject about one hull in a thousand and demanding equality would call every finished walk partial. |
+| 2026-08-26 | Added [`cellsize.py`](cellsize.py) and `test_cellsize.py`: which cell size is the harder one to cool, split off a census rather than argued off a cell face. Every column favours small grids — 2.47× the exposed skin per kilowatt, a fifth as much of it buried, **19.75×** the hull path per watt for the hottest block — which is the opposite of what [balance.md](../../docs/balance.md) had written down and what `C43` was blocked on. The hull path is read per kilowatt because the raw column says the reverse, and the test is built around that one column. |
+| 2026-08-25 | `verdict.py` refuses to score a criterion its dataset is too coarse to state, and `scoring.resolves` is the rule. A criterion given as a share of the corpus needs a corpus that can tell its two sides apart: on the thirteen ships of a partial survey slice one ship is 7.7 %, so *nothing critical* and *one per cent critical* are the same reading, and `G1` came back `[HOLDS]`. It reads `[  ?  ]` now, with what the dataset would need. It is a resolution test rather than a confidence one and says so — a partial walk that passes it is still a partial walk. The 8,142-ship dataset is unaffected. |
+| 2026-08-25 | `panel.py`'s per-type rules key on `type_id` rather than on a substring of the subtype, and print each pool's size so an empty one is said rather than inferred (`E8`). No vanilla reactor's subtype contains the word *reactor*, so `reactor-heavy` had been choosing from 12 ships out of 5,728 — and the twelve were `LargePrototechReactor`, which the game types as a `HydrogenEngine` and which wastes 0.60 where that rule's own note says 0.01. Added `oxygen-heavy`; dropped the dead `thrust` share, since `thrust-heavy` reads the census's `thrust_n`. `test_panel.py` holds the mapping. `panel.csv` is unchanged until a survey is re-run against the corrected census. |
+| 2026-08-25 | `provenance.py` restates a census only when the census predates the change, read from the `provenance.txt` beside it rather than assumed. Every dataset on disk was older than the fractions that ship, so restating unconditionally was right until the day one was re-taken — and then it discounted the oxygen generator twice, on a census that had already measured 0.40. A dataset with no provenance still reads as older, which is what every dataset taken before that file existed is. |
+| 2026-08-25 | Added `censusdiff.py` and `test_censusdiff.py`. `reproduce.py` asks whether two walks that saw the same ship wrote the same row; this asks the opposite question, for a census re-taken because something was *meant* to move — per column, per block type, and scored against bands given on the command line so a registered prediction is computed rather than read off by eye (`E5`). Ships only one side holds are reported rather than dropped, because a re-take that lost half the population would otherwise print a clean delta over the half it kept, and the tests cover that case rather than the subtraction. |
+| 2026-08-25 | `provenance.py` takes `--type <TypeId>` and reports that type's share of the waste of the ships that carry it, because the share it already printed was answering a different question. The oxygen generator is **0.38 %** of a loaded fleet's waste and a median **48.1 %** of the waste of the 2,277 census ships that carry one — a ratio of aggregates against an aggregate of ratios (`E6`), and only the second is about the player who built the block. The restatement table is now applied in one place and covers that type's 0.6 to 0.40. |
 | 2026-08-25 | Wrote down that a full sweep is rare by intent and that the smallest run which answers the question comes first, with the three levers and which is actually worth reaching for. The measured part is that **selection is the weakest of them**: cutting the floor walk's 294 ships to the 98 over 60,000 blocks — the only band where the floor's error exceeds 1 K — drops two thirds of the ships and 34 % of the work, because cost goes with blocks. Stopping early is the strong lever, since largest-first puts the informative hulls at the front. |
 | 2026-08-25 | Recorded the `pgrep` half of the pattern-matching trap beside the `pkill` half: a shell loop that waits on a walk by name contains the name, so it matches itself, never exits, and makes a later `pgrep` answer that the walk is still running after it has finished. |
 | 2026-08-25 | `cap.py` splits its cost figure on whether the control had actually stopped moving, beside the registered statistic. The settle test is an average over a chunk and tolerates 0.25 K a minute; the split uses the instantaneous rate at the end. On the cap walk's first 360 ships the two differ by two orders of magnitude, which is a statement about the instrument rather than about the cap. |

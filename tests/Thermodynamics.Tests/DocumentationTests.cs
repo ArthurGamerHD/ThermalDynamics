@@ -12,6 +12,7 @@ namespace Thermodynamics.Tests
     /// one, because it reads as though somebody checked**. Textual and cheap.
     /// Holds `R7`, `R10`, `R12`, `R13` and half of `E5`.
     /// </summary>
+    [Trait("speed", "slow")]
     public class DocumentationTests
     {
         private static string RepoRoot()
@@ -275,8 +276,17 @@ namespace Thermodynamics.Tests
         /// no count is written into prose by hand when the data behind it can be read. The balance
         /// bench said 36 panel ships for as long as the panel had 50, because the header had been
         /// typed rather than generated — and a reader who catches one wrong count stops believing
-        /// the right ones. This pass found two more: 432 authored values against 654, and 135 test
-        /// classes against a suite that had grown past 160.
+        /// the right ones. The pass that added this found two more of the same shape, a count of the
+        /// authored values and a count of the suite's own classes, both stated at roughly two
+        /// thirds of the truth.
+        ///
+        /// <para>
+        /// **The figures they were wrong by are deliberately not repeated here.** Once this check
+        /// reads comments as well as pages, a comment quoting a stale count to illustrate stale
+        /// counts is indistinguishable from one making the claim — and the sentence splitter cannot
+        /// see a correction three sentences away. A history that has to be quoted belongs in a
+        /// change log, which is what `R12` gives pages and comments do not have.
+        /// </para>
         /// </summary>
         private class QuotedCount
         {
@@ -385,6 +395,22 @@ namespace Thermodynamics.Tests
         /// 50" — and a page that names the right number beside the wrong one is not making the
         /// claim, it is recording it.
         /// </para>
+        ///
+        /// <para>
+        /// **It reads source comments as well as pages, and it did not until 2026-08-25.** The
+        /// panel grew from 36 ships to 50, every page was corrected, and `KnobSweep`'s own summary
+        /// went on saying 36 for a day — in the file a reader opens to find out what the sweep
+        /// does. A comment is documentation with no reader watching it, which makes it the more
+        /// likely of the two to drift, not the less.
+        /// </para>
+        ///
+        /// <para>
+        /// **It still checks one phrasing, and that is a limit rather than an oversight.** Matching
+        /// `36-ship panel` too was tried and withdrawn: the tree writes that form to *scope a past
+        /// measurement* — "measured on the same 49-ship panel" — which is `P1` being obeyed, not a
+        /// claim about the file as it stands. A check cannot tell the two apart from the phrasing,
+        /// and one that guessed would fail every correctly-scoped figure in the repository.
+        /// </para>
         /// </summary>
         [Fact]
         public void EveryQuotedDatasetCountIsCurrent()
@@ -402,7 +428,7 @@ namespace Thermodynamics.Tests
                 int slack = (int)(actual * quoted.Tolerance);
                 Regex pattern = new Regex(@"([\d][\d,]*)\s+" + Regex.Escape(quoted.Noun));
 
-                foreach (string file in MarkdownFiles())
+                foreach (string file in Documented())
                 {
                     foreach (string sentence in Sentences(PresentTense(File.ReadAllText(file))))
                     {
@@ -432,6 +458,23 @@ namespace Thermodynamics.Tests
             Assert.True(wrong.Count == 0,
                 "counts that no longer match what they describe:\n  "
                 + string.Join("\n  ", wrong.ToArray()));
+        }
+
+        /// <summary>
+        /// Every file in the tree that carries prose a reader relies on: the pages, and the source
+        /// comments. A comment is documentation nobody is watching, which is why it drifts first.
+        /// </summary>
+        private static IEnumerable<string> Documented()
+        {
+            foreach (string file in MarkdownFiles()) yield return file;
+            foreach (string file in SourceFiles())
+            {
+                string relative = Relative(file);
+                if (relative.Contains("RichHudFramework")) continue;
+                if (relative.Contains("NetworkAPI")) continue;
+
+                yield return file;
+            }
         }
 
         /// <summary>
@@ -1391,6 +1434,93 @@ namespace Thermodynamics.Tests
             }
 
             return cases;
+        }
+
+        /// <summary>
+        /// **Every page that says a claim is pinned names something that exists.**
+        ///
+        /// <para>
+        /// rules.md's *Checked by* fields are covered by
+        /// <see cref="EveryCheckCitedByTheRulesPageResolves"/>, and that is one page. Every other
+        /// page cites its evidence in prose — *Pinned by `X`*, *Checked by `X`*, *measured by `X`* —
+        /// and until this existed nothing read those.
+        /// </para>
+        ///
+        /// <para>
+        /// **It was written after one went dead unnoticed.** blocks.md's build advice on ring length
+        /// ended with a *Pinned by* naming a test that had stopped existing, and the paragraph above
+        /// it was three model changes out of date — which is the shape: a citation dies when the test
+        /// it names is rewritten, and the prose it was holding up stays exactly where it was.
+        /// <see cref="NoPageNamesATestThatHasBeenRenamed"/> did not catch it, because it only reports
+        /// a name whose first three camel words match a live one and the rename changed the third.
+        ///
+        /// <para>
+        /// **The dead name is not written here on purpose.** A citation resolves if the code
+        /// mentions it anywhere twice, so spelling it in this comment would have made the very
+        /// citation this test exists for resolve — which it did, on the first attempt to prove the
+        /// check catches it.
+        /// </para>
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryClaimAPageSaysIsPinnedNamesSomethingThatExists()
+        {
+            HashSet<string> live = LiveCases();
+            string code = CodeText();
+
+            Assert.True(live.Count > 500,
+                "only " + live.Count + " live test names were found, so this test is not reading"
+                + " the suite and would pass on a citation to nothing");
+
+            // The phrase, then everything up to the end of its paragraph: a citation is often a
+            // sentence of its own on the line after the claim it supports.
+            Regex citation = new Regex(
+                "\\b(?:[Pp]inned|[Cc]hecked|[Aa]sserted|[Mm]easured) by(.{0,400}?)"
+                + "(?:\\r?\\n\\r?\\n|\\z)",
+                RegexOptions.Singleline);
+
+            // An identifier written the way this repository writes a test name. A rule or backlog
+            // id — `C43`, `E1` — is a letter and digits and is not one.
+            Regex identifier = new Regex(@"^[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*$");
+
+            List<string> unresolved = new List<string>();
+            int cited = 0;
+
+            foreach (string file in MarkdownFiles())
+            {
+                if (Relative(file) == "docs/rules.md") continue;      // its own, stricter check
+
+                foreach (Match match in citation.Matches(File.ReadAllText(file)))
+                {
+                    foreach (Match name in Regex.Matches(match.Groups[1].Value, @"`([^`\r\n]+)`"))
+                    {
+                        string cite = name.Groups[1].Value;
+                        if (!identifier.IsMatch(cite)) continue;
+
+                        cited++;
+                        if (live.Contains(cite)) continue;
+
+                        // A type or member the code refers to somewhere other than where it is
+                        // declared — a lab, a harness class, a shipped method.
+                        if (Regex.Matches(code, @"\b" + Regex.Escape(cite) + @"\b").Count > 1) continue;
+
+                        unresolved.Add(Relative(file) + ": " + cite);
+                    }
+                }
+            }
+
+            // Twenty-six outside rules.md when this was written. The floor is what says the parse
+            // still works: a regex that stopped matching would report every page as clean.
+            Assert.True(cited >= 15,
+                "only " + cited + " pinned-by citations were read across the tree, so this test is"
+                + " parsing them wrongly and would pass on a page citing nothing");
+
+            unresolved.Sort(StringComparer.Ordinal);
+            Assert.True(unresolved.Count == 0,
+                "claims a page says are pinned, naming something that does not exist:\n  "
+                + string.Join("\n  ", unresolved.ToArray())
+                + "\nA citation dies when the test it names is rewritten, and the prose it was"
+                + " holding up stays where it was — check the paragraph as well as the name.");
         }
 
         /// <summary>

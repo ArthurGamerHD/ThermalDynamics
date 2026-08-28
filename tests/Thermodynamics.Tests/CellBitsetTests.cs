@@ -149,5 +149,109 @@ namespace Thermodynamics.Tests
             Assert.False(set.Contains(new Vector3I(5, 5, 5)));
             Assert.Equal(0, set.Count);
         }
+
+        /// <summary>
+        /// **A member's rank is its position among the members, in index order** — which is what
+        /// lets a caller hold one value per member in a flat array instead of a key per member in
+        /// a sorted one.
+        ///
+        /// Checked against counting, which is not how ranking is implemented (`E7`): the rank of
+        /// the nth member found by walking the box in order must be n, for every member, on a box
+        /// wide enough that ranks cross word boundaries in both directions.
+        /// </summary>
+        [Fact]
+        public void ARanksMemberIsItsPositionAmongTheMembers()
+        {
+            CellBitset set = Over(new Vector3I(-3, -3, -3), new Vector3I(14, 12, 9));
+
+            // A scatter with runs and gaps, so words come out full, empty and partial.
+            uint state = 0x9E3779B9u;
+            for (int z = -3; z < 9; z++)
+            {
+                for (int y = -3; y < 12; y++)
+                {
+                    for (int x = -3; x < 14; x++)
+                    {
+                        state ^= state << 13; state ^= state >> 17; state ^= state << 5;
+                        if ((state & 3u) != 0u) set.Add(new Vector3I(x, y, z));
+                    }
+                }
+            }
+
+            Assert.True(set.Count > 64, "the scatter set " + set.Count + " cells, too few to cross words");
+
+            set.BuildRanks();
+            Assert.True(set.IsRanked);
+
+            int expected = 0;
+            int judged = 0;
+            for (int z = -3; z < 9; z++)
+            {
+                for (int y = -3; y < 12; y++)
+                {
+                    for (int x = -3; x < 14; x++)
+                    {
+                        Vector3I cell = new Vector3I(x, y, z);
+                        if (!set.Contains(cell)) continue;
+
+                        Assert.Equal(expected, set.RankOfIndex(set.IndexOf(cell)));
+                        expected++;
+                        judged++;
+                    }
+                }
+            }
+
+            Assert.Equal(set.Count, judged);
+            Assert.Equal(set.Count, expected);
+        }
+
+        /// <summary>
+        /// The ranks are put away by any change to the set, and a rank read from a set that has
+        /// moved on answers −1 rather than a stale position. A stale rank is the worst failure this
+        /// structure can have: it is a plausible number, and it indexes the wrong thing.
+        /// </summary>
+        [Fact]
+        public void AChangeToTheSetPutsTheRanksAway()
+        {
+            CellBitset set = Over(new Vector3I(0, 0, 0), new Vector3I(8, 8, 8));
+            set.Add(new Vector3I(1, 1, 1));
+            set.Add(new Vector3I(2, 2, 2));
+
+            set.BuildRanks();
+            Assert.True(set.IsRanked);
+            Assert.Equal(0, set.RankOfIndex(set.IndexOf(new Vector3I(1, 1, 1))));
+            Assert.Equal(1, set.RankOfIndex(set.IndexOf(new Vector3I(2, 2, 2))));
+
+            // A cell that sorts before both of them, so every rank after it would shift.
+            Assert.True(set.Add(new Vector3I(0, 0, 0)));
+            Assert.False(set.IsRanked);
+            Assert.Equal(-1, set.RankOfIndex(set.IndexOf(new Vector3I(2, 2, 2))));
+
+            set.BuildRanks();
+            Assert.Equal(0, set.RankOfIndex(set.IndexOf(new Vector3I(0, 0, 0))));
+            Assert.Equal(2, set.RankOfIndex(set.IndexOf(new Vector3I(2, 2, 2))));
+
+            // And a reset takes them away too, even though it leaves the array in place.
+            set.Reset(new Vector3I(0, 0, 0), new Vector3I(8, 8, 8));
+            Assert.False(set.IsRanked);
+        }
+
+        /// <summary>
+        /// Ranking a set with a full word in it, which is the case the popcount has to get right at
+        /// both ends: bit 0 and bit 63 of the same word.
+        /// </summary>
+        [Fact]
+        public void AFullWordRanksAtBothEnds()
+        {
+            CellBitset set = Over(new Vector3I(0, 0, 0), new Vector3I(128, 1, 1));
+            for (int x = 0; x < 128; x++) set.Add(new Vector3I(x, 0, 0));
+
+            set.BuildRanks();
+
+            Assert.Equal(0, set.RankOfIndex(0));
+            Assert.Equal(63, set.RankOfIndex(63));
+            Assert.Equal(64, set.RankOfIndex(64));
+            Assert.Equal(127, set.RankOfIndex(127));
+        }
     }
 }

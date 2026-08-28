@@ -166,6 +166,20 @@ namespace Thermodynamics.Tests
                 { "Thermodynamics.Core.ThermalSolver+SubstepProfile.DemandEdges", "read-only table" },
                 { "Thermodynamics.Core.ThermalSolver+SubstepProfile.ProjectedCaps", "read-only table" },
 
+                // The names of a step's own stages, for a lab to label its rows with.
+                { "Thermodynamics.Core.ThermalSolver+StepPhaseProfile.Names", "read-only table" },
+
+                // Empty arrays: zero length, so there is nothing to share. They exist so an unfilled
+                // room map hands out windows onto something rather than onto null.
+                { "Thermodynamics.Core.CellBitset.EmptyPrefix", "empty array" },
+                { "Thermodynamics.Core.RoomMap.EmptyCells", "empty array" },
+                { "Thermodynamics.Core.RoomMap.EmptyRanges", "empty array" },
+
+                // Which face index points along which axis, derived once from the offsets below.
+                { "Thermodynamics.Core.RoomMapper.MinusX", "geometry constant" },
+                { "Thermodynamics.Core.RoomMapper.PlusX", "geometry constant" },
+                { "Thermodynamics.Core.RoomMapper.LateralFaces", "geometry constant" },
+
                 // Geometry constants: the six faces and the unit cube, as arrays because C# has no
                 // array literal a const can hold.
                 { "Thermodynamics.Core.Face.Offsets", "geometry constant" },
@@ -185,6 +199,15 @@ namespace Thermodynamics.Tests
                 { "Thermodynamics.Core.ReferenceMaterials.Copper", "value constant" },
                 { "Thermodynamics.Core.ReferenceMaterials.SodaLimeGlass", "value constant" },
                 { "Thermodynamics.Core.WeatherResponse.Calm", "value constant" },
+
+                // Built once by the static constructor from the matrix path and never written
+                // after: the same signed permutation for every grid on every thread.
+                { "Thermodynamics.Core.BlockOrientation.rotatedAxes", "table built once, never written after" },
+                { "Thermodynamics.Core.BlockOrientation.rotatedFaces", "table built once, never written after" },
+                { "Thermodynamics.Core.BlockOrientation.legal", "table built once, never written after" },
+
+                // Built once from Face.Offsets: what a key changes by along each face.
+                { "Thermodynamics.Core.GridMath.KeyByFace", "table built once, never written after" },
 
                 // The lock the mutable pair below is taken under, which is shared on purpose.
                 { "Thermodynamics.Core.ThermalValidation.Lock", "the lock itself" },

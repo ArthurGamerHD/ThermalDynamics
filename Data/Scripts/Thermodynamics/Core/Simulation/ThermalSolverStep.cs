@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 
 namespace Thermodynamics.Core
 {
@@ -37,6 +38,68 @@ namespace Thermodynamics.Core
 
         private StepStage stage = StepStage.Idle;
         private int stageCursor;
+
+        /// <summary>
+        /// Ticks spent in each stage of a step, and element visits charged to each, when
+        /// <see cref="ProfileStepPhases"/> is on.
+        ///
+        /// <para>
+        /// **A step has never been measured by its parts.** Three passes have reported it as one
+        /// number — 80 ms at half a million blocks, unmoved by any of them — and two of those
+        /// passes tried layout changes on the strength of a guess about which part of it was
+        /// expensive. Both guesses were wrong, and both were expensive to find out. A per-stage
+        /// clock costs a timestamp per slice, not per element: the stages run over ranges, so there
+        /// are a few hundred readings in a step and not a few million.
+        /// See performance.md, Pass 5, Iteration 1.
+        /// </para>
+        /// </summary>
+        public class StepPhaseProfile
+        {
+            public readonly long[] Ticks = new long[PhaseCount];
+            public readonly long[] Visits = new long[PhaseCount];
+            public readonly long[] Slices = new long[PhaseCount];
+
+            /// <summary>
+            /// One more than the stages, because Begin is a stage the switch runs too — and one
+            /// more again, because the environment stage is two different pieces of work and
+            /// reporting them together answers nothing. The first substep of a step *fills* the
+            /// per-node rows (face weights against sun and wind, solar, friction, convection
+            /// coefficients); the other twenty-three read them. Which of those two is the 46 % is
+            /// the whole question.
+            /// </summary>
+            public const int PhaseCount = 7;
+
+            public static readonly string[] Names =
+                { "begin", "environment", "conduction", "coupled", "apply", "publish", "env fill" };
+
+            /// <summary>Where the environment stage's row-filling substep is charged, apart from the rest.</summary>
+            public const int EnvironmentFill = 6;
+
+            public void Reset()
+            {
+                for (int i = 0; i < PhaseCount; i++)
+                {
+                    Ticks[i] = 0;
+                    Visits[i] = 0;
+                    Slices[i] = 0;
+                }
+            }
+
+            public double MillisecondsOf(int phase)
+            {
+                return Ticks[phase] * 1000d / Stopwatch.Frequency;
+            }
+        }
+
+        /// <summary>
+        /// Whether to time each stage of a step. Off by default and off in the game: it costs two
+        /// timestamps a slice, which is nothing against a slice, but a shipped path carries no
+        /// instrument it does not need.
+        /// </summary>
+        public bool ProfileStepPhases;
+
+        /// <summary>Where <see cref="ProfileStepPhases"/> puts its readings.</summary>
+        public readonly StepPhaseProfile StepPhases = new StepPhaseProfile();
 
         private EnvironmentState stepEnvironment;
         private EnvironmentPlan stepPlan;
@@ -279,6 +342,18 @@ namespace Thermodynamics.Core
             {
                 long remaining = workBudget - spent;
 
+                int phase = (int)stage - 1;
+
+                // A substep that fills the environment rows is a different piece of work from one
+                // that reads them, and they are the same stage.
+                if (stage == StepStage.Environment && (!environmentRowsValid || !PrecomputeEnvironment))
+                {
+                    phase = StepPhaseProfile.EnvironmentFill;
+                }
+
+                long started = ProfileStepPhases ? Stopwatch.GetTimestamp() : 0L;
+                long before = spent;
+
                 switch (stage)
                 {
                     case StepStage.Begin:
@@ -304,6 +379,13 @@ namespace Thermodynamics.Core
                     default:
                         spent += AdvancePublish(remaining);
                         break;
+                }
+
+                if (ProfileStepPhases && phase >= 0 && phase < StepPhaseProfile.PhaseCount)
+                {
+                    StepPhases.Ticks[phase] += Stopwatch.GetTimestamp() - started;
+                    StepPhases.Visits[phase] += spent - before;
+                    StepPhases.Slices[phase]++;
                 }
             }
 

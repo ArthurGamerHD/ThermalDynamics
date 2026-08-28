@@ -3,7 +3,7 @@
 What every block this mod ships is worth against the vanilla blocks it competes with, and what a
 population of 8,132 real ships says about whether the balance targets hold.
 
-> The rules argued here are stated canonically in [rules.md](rules.md): `E3` `E4` `E5` `E9` `M10`.
+> The rules argued here are stated canonically in [rules.md](rules.md): `E1` `E3` `E4` `E5` `E9` `E11` `M10` `P1` `P2`.
 
 | Looking for | Go to |
 | --- | --- |
@@ -16,6 +16,8 @@ population of 8,132 real ships says about whether the balance targets hold.
 cd tests
 dotnet run --project Thermodynamics.Sim -- balance             # the per-block report
 dotnet run --project Thermodynamics.Sim -- balance --csv out/  # also a diffable table
+dotnet run --project Thermodynamics.Sim -- reactors            # the reactor waste fraction sweep
+dotnet run --project Thermodynamics.Sim -- oxygen              # the same, for the oxygen generator
 dotnet run --project Thermodynamics.Sim -- coolers             # the whole-game cooling ladder
 python3 tools/corpus/verdict.py out/corpus-2026-08-21          # the population criteria
 ```
@@ -25,7 +27,7 @@ python3 tools/corpus/verdict.py out/corpus-2026-08-21          # the population 
 ## The three findings
 
 1. **A coolant sink face is the stiffest way to move heat into a panel, and nothing else is
-   close.** A bolt joint carries 167 W/K; a sink face carries 1,000 W/K. Every surface property of
+   close.** A bolt joint carries 167 W/K; a sink face carries 6,250 W/K. Every surface property of
    the radiator put together is worth a quarter of what plumbing it is worth. **The radiator is not
    a block you bolt to a hot thing — it is a block you plumb.**
 2. **Nothing in the game solves a reactor by being bolted to it**, and two common blocks make it
@@ -48,9 +50,12 @@ Nothing here is transcribed except the vanilla figures, and those are checked.
 | [`ShippedBlocks`](../tests/Thermodynamics.Harness/ShippedBlocks.cs) | The mod's own blocks, read from `Data/CubeBlocks/*.sbc` and `Data/Cubes.xml` at run time — size, mount faces, components, thermal properties |
 | [`Vanilla`](../tests/Thermodynamics.Harness/Vanilla.cs) | Component masses and the comparison blocks, transcribed from Space Engineers' own `Content/Data` |
 | [`BalanceLab`](../tests/Thermodynamics.Harness/BalanceLab.cs) | The measurements |
+| [`SoloBlockRig`](../tests/Thermodynamics.Harness/SoloBlockRig.cs) | One block alone in shadow, bare or under one cell of armour — the two bounds both fraction sweeps are decided on |
 | [`ReactorLab`](../tests/Thermodynamics.Harness/ReactorLab.cs) | The reactor waste fraction sweep |
+| [`OxygenGeneratorLab`](../tests/Thermodynamics.Harness/OxygenGeneratorLab.cs) | The same, for a consumer: the oxygen generator's fraction |
 | [`BalanceTests`](../tests/Thermodynamics.Tests/BalanceTests.cs) | The conclusions, pinned |
 | [`ReactorWasteHeatTests`](../tests/Thermodynamics.Tests/ReactorWasteHeatTests.cs) | The reactor conclusions, pinned |
+| [`OxygenGeneratorWasteHeatTests`](../tests/Thermodynamics.Tests/OxygenGeneratorWasteHeatTests.cs) | The oxygen generator conclusions, pinned |
 
 **A block's mass is the sum of its components**, priced through `Vanilla.ComponentMasses`. That
 matters more than it looks: heat capacity is `mass × specific heat`, so a wrong mass scales every
@@ -138,26 +143,390 @@ Against a slab of ordinary light armour of the same shape, in the same position,
 | Fit | Count | Settles | Saved | Mass | K per tonne |
 | --- | --- | --- | --- | --- | --- |
 | bare source | 0 | 783.2 K | — | — | — |
-| radiators | 1 | 554.6 K | 228.6 K | 600 kg | 381.0 |
-| radiators | 8 | 491.0 K | 292.1 K | 4,800 kg | 60.9 |
+| radiators | 1 | 492.8 K | 290.4 K | 600 kg | 484.0 |
+| radiators | 2 | 463.5 K | 319.7 K | 1,200 kg | 266.4 |
+| radiators | 8 | 442.3 K | 340.9 K | 4,800 kg | 71.0 |
 | armour slab | 1 | 710.9 K | 72.3 K | 5,000 kg | 14.5 |
 | armour slab | 8 | 690.9 K | 92.3 K | 40,000 kg | 2.3 |
 
-Three times the cooling for an eighth of the mass — about **26× better per tonne**, pinned by
-`TheRadiatorBeatsTheArmourItDisplaces`. The second radiator is worth 34 K and the eighth is worth
-8 K: one joint feeds them all, and how much that joint carries is what decides where the stack
+Four times the cooling for an eighth of the mass — about **33× better per tonne**, pinned by
+`TheRadiatorBeatsTheArmourItDisplaces`. The second radiator is worth 29 K and the eighth is worth
+5 K: one joint feeds them all, and how much that joint carries is what decides where the stack
 saturates.
 
-> **Re-measured 2026-08-24 at `C24`'s pair**, and the whole table moved because the joint did. At
-> the pace the conversion calibrated to, one radiator took 42.9 K off this source and eight took
-> 46.6 K — 48× better per tonne than armour, and saturated by the second panel. A bolt joint is
-> solid conduction, so four times the pace lets four times as much reach the panel: the first one is
-> worth five times what it was, the stack keeps paying to the eighth, and armour gained with it,
-> which is why the margin per tonne narrowed while every figure in the column grew.
+> **This table has moved twice, both times because the panel changed and not the ladder.** At
+> `C24`'s conduction pace the first panel was worth 228.6 K; the pace went to 9.6 and it became
+> 290.4 K at `C36`'s emissivity. The column that has never moved is the shape: the second panel is
+> worth an eighth of the first and the eighth is worth a fiftieth, at every setting either dial has
+> been read at. That is the finding — see below.
 
-**Past a certain load the radiator turns negative.** At 2 MW into one cell, bolting panels on makes
-the source 33 K *hotter*, because they cover faces that were radiating and cannot carry away what
-they blocked.
+**Past a certain load the radiator turns negative.** At 2 MW into one cell the panels still help —
+130 K for the first — but the *armour* goes negative, costing 8.4 K, because it covers faces that
+were radiating and cannot carry away what it blocked.
+
+#### The joint, not the panel
+
+`balance`'s block table sheds a large radiator at **1,561,621 W** at 600 K and carries **2,336 W/K**
+across its mounts. Those pair as `shed/reach = 6.7`: across a 100 K gradient the panel can throw
+away nearly seven times what the joint it is bolted through can deliver to it. Everything else on
+this page follows from that ratio:
+
+| Change to one panel on a 200 kW source | Source K | Gain | Through the joint |
+| --- | ---: | ---: | ---: |
+| as built | 492.8 K | — | 173,872 W |
+| emissivity 0.85 → 1.00 | 482.0 K | 10.8 K | 176,080 W |
+| fake surface ×8 | 373.3 K | 119.5 K | 191,392 W |
+| mount on 6 faces, not 2 | 492.8 K | 0.0 K | 173,872 W |
+| fed by a coolant loop, not bolted | 441.3 K | 51.5 K | — |
+
+The joint carries about 174 kW and no surface dial moves it by a tenth. `C36` multiplied the
+radiator's emitting power by 2.43 and the first rung of the ladder rose while the saturation point
+stayed at two panels; the corpus retrofit, bolting panels onto real hulls, moved the median ship
+**0.1 %** for the same change. Two labs and a population all report the same wall. **Emission was
+never the limit. Transport is** — which is what `F27` found for bases from the other end, and what
+`blocks.md`'s *plumb it, do not bolt it* has been saying without a number on it.
+
+#### What the loop can be worth, and what it costs
+
+> **This section is how the decision was reached, and its *shipped* column is now history.** It
+> sweeps upward from `h` 160, which was the coefficient when it was written; `C42` shipped 1,000
+> while the pump runs, with 160 kept as the stopped value. The sweep is left as it was taken because
+> the argument is the shape of it — see *What a jump drive costs in radiator* below for what
+> decided it, and the change log for what moved.
+
+The last row above is the only one that moves the joint, so the dials under it are the ones with
+room. A sink face carries `h · A`, and on a large grid `160 × 6.25` was that 1,000 W/K exactly.
+Swept on the same source, the same panel and the same ring:
+
+| The loop feeding one panel | Source K | Gain | Sink W/K | Drop across it | Substeps |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| shipped, `h` 160 | 441.3 K | 51.5 K | 1,000 | 117.2 K | 11.88 |
+| `h` 400 | 410.6 K | 82.2 K | 2,500 | 81.2 K | 12.68 |
+| `h` 1,000 | 386.0 K | 106.8 K | 6,250 | 52.9 K | 14.67 |
+| `h` 2,000 | 374.6 K | 118.2 K | 12,500 | 40.3 K | 17.99 |
+| `h` 1,000, 515 kg/pipe | 376.3 K | 116.5 K | 6,250 | 42.5 K | 14.67 |
+
+**The drop across the sink falls from 117 K to 40 K while the panel runs hotter**, which is the
+signature worth trusting: the loop is ceasing to be the resistance and the panel is being fed enough
+to work. 160 W/(m²·K) is a slow flow — the definition says so — and a pumped water-glycol ring is
+forced convection, which any handbook puts in the low thousands. The dial's own in-game slider
+already goes to 2,000.
+
+**The coolant mass is a transport term, not a buffer**, which is not obvious and is why it is in the
+table. A ring carries `ṁ·c_p` past a point, so the loop is two resistances in series — the sink face
+and the ring's carrying rate — and at the shipped `h` the sink binds so hard that quadrupling the
+coolant is worth 0.9 K. Fix the sink and the carrying rate becomes the limit: at `h` 1,000 the same
+change is worth **9.7 K**, and it costs the integrator nothing at all, because a segment's substep is
+sized from `SegmentConductance / SegmentThermalMass` and this moves only the denominator.
+
+It saturates by about 500 kg, and 515 kg is where the derivation lands independently: a bore one
+fifth of the cell across, down the middle of a 2.5 m cube, is 0.49 m³ of water-glycol. **It shipped
+as a flat 50 kg with no grid size in it** — 3.2 kg/m³ in a large cell, which is a gas, against
+400 kg/m³ in a small one, which is a liquid — and `C43` replaced that with a density of 33 kg/m³, the
+same correction `HeatTransferCoefficient` had already had. `CoolantKilogramsPerCubicMetre` is the
+dial; `CoolantMassPerPipe` is still read and still means kilograms in a pipe, for a file that states
+one.
+
+> **The cost column is honest and narrow.** +23 % substeps at `h` 1,000 is paid by the block the
+> sink touches, not by the fluid, so more coolant cannot buy it back. It also lands only on grids
+> that build a loop — the corpus is vanilla-only and carries none — so no population figure on this
+> page moves with these dials. That is the vanilla and modded lanes doing their job, and it is also
+> the reason `G3` has never been measured on a real hull.
+
+#### The bound that closes this line
+
+Measured on the hulls rather than the bench, the package is worth **nothing**: `carried` and
+`plumbed` come back identical at every quantile, while the instrument says it applied exactly as
+designed — worst sink 40 W/K to **250 W/K**, every ring circulating. The bench said the sink face
+binds. On a ship it does not, and the reason is one number:
+
+| On a plumbed hull, at the hottest block | |
+| --- | ---: |
+| already sheds into the hull it is welded to | **1,457 W/K** |
+| the shipped loop adds | 40 W/K |
+| the candidate adds | 250 W/K |
+| stands above the median block on its own grid | **39.2 K** |
+
+**A block on a finished ship is already welded to a hull that conducts.** The reference rig has no
+hull — its source is isolated, so the loop is the only path it has and improving that path is worth
+65 K. A real hot block has 1,457 W/K of alternatives before any cooling is fitted, so a sink face is
+a 3 % change to its conductance at the shipped figure and a 17 % change under the candidate, against
+a background that was already carrying the heat away.
+
+**And the heat has nowhere to go.** The hot block stands 39.2 K above the median block on its own
+grid, so equalising it with its own hull — which is the most that *any* path moving heat inside the
+grid can ever achieve — is worth **9.13 % of the peak**. The plumbed ring gets 2.43 % of that bound.
+
+> **The bound is the finding, not the shortfall.** A perfect internal path is still single figures.
+> It does not matter how much the loop is improved, because the ship is nearly as hot as the block
+> and there is nowhere inside the grid left to put the heat. That is why three independent levers
+> this session — the panel's emissivity, the fluid's coupling, the coolant's mass — all measured
+> large on a bench and nothing on a hull. **They are all internal, and internal is bounded at 9 %.**
+
+What is not bounded that way is **area to the sky**, which is the only thing that takes heat off the
+grid entirely — and the bolted arm, which adds exactly that, is the only one that ever reaches 7.9 %.
+Even that is single figures, because these ships make far more heat than any bolt-on can shed: it is
+`C34`'s finding from the fitting end, where a block that cannot cool itself threefold is not going to
+be saved by a panel bolted beside it.
+
+**So `G3` cannot be met by retrofitting.** That is not a defeat — it is
+[document-of-intent.md](document-of-intent.md)'s stated position, *cooling designed in*, arriving as
+a measurement rather than as a preference.
+
+#### And designed in, it works
+
+Every rig this repository owned had an **exposed** source, which is why nothing could see the
+difference: a panel bolted to a source standing in the open radiates wherever it is put. Bury the
+source in solid armour — which is how one is installed — and a bolted panel is buried with it.
+
+200 kW into the centre cell of a 7-cube of light armour, in shadow, **both fits carrying the same
+two panels** (`designed`):
+
+| Fit | Source settles | Saved | Panels | On the skin |
+| --- | ---: | ---: | ---: | ---: |
+| buried, bare | 375.4 K | — | 0 | 0 |
+| bolted, buried | 387.8 K | **−12.4 K** | 2 | 0 |
+| plumbed, to the skin | 307.9 K | **+67.5 K** | 2 | 2 |
+
+**A panel bolted to a buried source is worse than no panel at all.** It displaces armour that was
+conducting heat away and puts in its place a block whose one talent it cannot use, having no face on
+the sky. And a ring carrying that same heat out to the hull, with the same two panels on the outside
+of it, takes **18 % of the peak** off — twice the ceiling on everything that stays inside the grid,
+because it is the one fit that takes heat *off* the grid rather than moving it about.
+
+> **This is the whole mod in one table**, and it had never been measured. `blocks.md`'s *plumb it, do
+> not bolt it* is right — but for a reason no previous rig could show, and not the reason the page
+> gave: the loop's virtue is not that its joint carries more than a bolt joint, it is that the joint
+> can be somewhere else. `DesignedHullTests` pins the sign of both rows, and levels the panel count
+> between the arms so the comparison is about *where* the heat is put and nothing else (`P6`).
+
+#### What a jump drive costs in radiator, and why the shipped loop cannot pay it
+
+`C34` named the runaway blocks by *self index* — heat made over what their own skin sheds — and the
+jump drive leads the fleet at 9.9, settling at 1,211 K against a 689 K rating on 2,254 ships. The
+triage table's other column is the one that says whether anything can be done: a block's **index**,
+against every face radiating and a path to armour at ambient, is **0.27** for the jump drive and
+below one for all but one of 323 heat-making blocks. **So the runaways are coolable in principle**,
+and the question is what it costs.
+
+6.4 MW buried in the same 7-cube, in shadow, against a 689 K rating (`designed --sweep`):
+
+| Loop | Sink W/K | Gradient it forces | Source, 3 panels |
+| --- | ---: | ---: | ---: |
+| none | — | — | 2,047.8 K |
+| shipped, 1 sink face | 1,000 | **6,400 K** | 1,496.0 K |
+| shipped, 3 sink faces | 3,000 | 2,133 K | 1,386.0 K |
+| candidate, 1 sink face | 6,250 | 1,024 K | 1,163.8 K |
+| candidate, 3 sink faces | **18,750** | **341 K** | 979.3 K |
+
+**Watts over the pickup is the gradient the source is forced to sit at**, whatever is hung off the
+other end — and that single quantity decides whether a fit can work at all. At the shipped
+coefficient one sink face forces **6,400 K** on a 6.4 MW block, ten times its rating, so no amount of
+radiator can help and the panel column duly saturates: panels 2 to 8 are worth 100 K between them
+against the first panel's 506 K. **A 6.4 MW block is uncoolable as the mod ships, at any radiator
+count.** Three sink faces and the `C38` package together take that forced gradient to 341 K, below
+the rating, and only then do panels start earning again.
+
+> **This is the case for the package, and it is the opposite of the retrofit's.** On a fitted hull
+> `C38` was worth nothing, because the block had 1,457 W/K of hull to conduct into and the sink was a
+> rounding error beside it. On a buried source the sink is the *only* path there is, so the same
+> change is the difference between a block that cannot be cooled and one that can. Both measurements
+> are right; they are about different ships.
+
+**It still does not save the drive.** Run out to twelve skin panels the best arm reaches 807.7 K,
+with each panel worth less than the last — 59 K for the second, 11 K for the twelfth — as the limit
+moves once more, to what the ring can carry to panels far along it. What cooling design buys a jump
+drive is **2,047.8 K down to about 808 K**: not survival, but the difference between a block that is
+197 % over its rating and one that is 17 % over, which is the difference between losing it at once
+and taking slow damage a player can see coming and decide about.
+
+> **The face count is not a lever, by design.** A pipe carries at most two sink faces, a pump none,
+> and the loop is meant to be routed and paid for in space rather than wrapped around a hot block
+> until it stops being one — see [blocks.md](blocks.md#coolant-pipes). The three-face row above is
+> what a ring already gives you for free when a rectangle runs past a one-cell source; it is a
+> measurement of the geometry, not a proposal to loosen it. **So the pickup has exactly one dial,
+> the coolant's coefficient**, and the table says what that dial decides.
+
+Taking the constraint as fixed and reading the same arithmetic the other way — what a realistic run
+of one to four sink faces can carry against a 6.4 MW block rated 689 K:
+
+| Sink faces | Shipped, W/K | Forces | Candidate, W/K | Forces |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 1,000 | 6,400 K | 6,250 | 1,024 K |
+| 2 | 2,000 | 3,200 K | 12,500 | 512 K |
+| 3 | 3,000 | 2,133 K | 18,750 | 341 K |
+| 4 | 4,000 | 1,600 K | 25,000 | 256 K |
+
+**At `h` 160 no realistic plumbing brought a 6.4 MW block under its rating** — four sink faces still
+forced 1,600 K against 689 K, and wrapping a one-cell source in all six it geometrically has only
+reached 1,067 K. At 1,000, two faces are enough for the pickup to stop being what binds.
+
+#### What was decided, and what it cost
+
+**`h` is now 1,000 while the ring circulates and `StagnantTransferFraction` is 0.16, so a stopped
+ring carries `1000 × 0.16 = 160` — exactly what every ring in this mod carried before.** The pair is
+pinned as a product by `AStoppedRingCarriesWhatEveryRingCarriedBeforeTheRetune`, because moving one
+without the other silently makes a stopped ring better or worse than it has ever been.
+
+It was decided on one argument. The pickup has a single dial, since the sink-face count is fixed by
+design; watts over the pickup is the gradient a buried source is forced to sit at whatever is hung
+off the far end; and at 160 that gradient was **ten times the rating** of the block carrying 65.5 %
+of a loaded fleet's heat on 2,254 published ships. A block with no answer at any radiator count is a
+permanent runaway, and avoiding runaways is what the mod is for — so the shipped value contradicted
+the goal, and the design thesis `C41` measured could not actually be built.
+
+Measured after the change, on the same rigs:
+
+| | Before | After |
+| --- | ---: | ---: |
+| sink face, large grid | 1,000 W/K | **6,250 W/K** |
+| gradient forced on 6.4 MW, one face | 6,400 K | **1,024 K** |
+| that block under four skin panels | 1,480.7 K | **1,285.8 K** |
+| a stopped ring, any grid | 160 W/(m²·K) | **160 W/(m²·K)** |
+| corpus retrofit, plumbed p50 | 2.43 % | **2.44 %** |
+| 500 kW block, 28-pipe ring | 740.9 K | **588.3 K** |
+
+**The population did not move**, which is the point rather than a disappointment: `C40` bounded every
+internal path at 9 % of a hull's peak, and a retrofit is an internal path. What changed is what a
+player who plumbs deliberately can build — and, at the other end, nothing at all for a ship whose
+pumps are off.
+
+> **What it does not do is save the drive.** 1,024 K is still above 689 K, and twelve skin panels
+> reached 807.7 K in the sweep that argued for this. The block goes from *no answer exists* to *an
+> answer exists and costs a lot of plumbing*, which is the difference the mod is about.
+
+#### The coolant mass is doing an undeclared job, and the measurement that said so was wrong
+
+The coolant charge shipped as a flat 50 kg a pipe with no grid size in it — **3.2 kg/m³ in a 2.5 m
+cube, which is a gas, against 400 kg/m³ in a 0.5 m one, which is a liquid**, and on a small grid it
+is more fluid than the 32 kg pipe block carrying it weighs. That is the same defect the coefficient
+was corrected for when it stopped being a conductivity divided by half a cell, and correcting it the
+same way means a fixed density with the mass following the cell: 33 kg/m³ is a bore a fifth of the
+cell across, filled with water-glycol, which gives 515.6 kg on a large grid and 4.1 kg on a small
+one. **That is `CoolantKilogramsPerCubicMetre`, and it ships**; `CoolantMassPerPipe` is still read
+and still means kilograms in a pipe, for a file or a world that states one (`P15`).
+
+**The four figures this section published for that correction were readings of a ramp.** They were
+taken on a ring with a 125 kW source, the environment disabled and nothing else — so the rig had a
+heat source and no sink of any kind, nothing settled, and every arm climbed linearly and forever.
+Read at step 400 they said 715.5 K and 387.0 K on a large grid and 661.5 K and 912.1 K on a small
+one. Read at step 25,600 the same arms say 26,836 K and 5,908 K. What that rig measured was the
+ratio of two heat capacities, which is exactly what coolant mass *is* — so the answer looked like
+physics and was a stopwatch reading, and it looked like a 328 K gain and a 250 K loss because more
+fluid warms more slowly (`P2`).
+
+With the environment on the ring radiates and every arm settles by about step 1,600. Measured there,
+on the same rig:
+
+| | Coolant | Ring mean | Hottest segment | Swing | Substeps |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| large grid, the flat charge | 50 kg | 767.7 K | 836.6 K | 100.2 K | 14.51 |
+| large grid, **as it ships** | 515.6 kg | **774.6 K** | **779.9 K** | **10.0 K** | 14.51 |
+| small grid, the flat charge | 50 kg | 1,551.9 K | 1,558.1 K | 7.7 K | 2.38 |
+| small grid, **as it ships** | 4.1 kg | **1,552.7 K** | **1,630.6 K** | **94.6 K** | 2.38 |
+
+*Mean and swing at ten times the reference load, where a swing is large enough to read; the substep
+columns are at 125 kW. `LoopCoolantMassTests` holds all of it.*
+
+**Coolant mass buffers a ring; it does not decide where the ring runs.** At steady state the mean is
+set by what comes in against what radiates out, and a capacity that has finished charging is in
+neither — the mean moves 6.9 K on a large grid and 0.8 K on a small one. What moves is the *swing*
+between the sink face and the far side of the ring, and it moves the way a fixed density has to move
+it: a large pipe gains fluid and buffers ten times better, a small one loses fluid and buffers twelve
+times worse. That is the correction's real effect, and it is the half a player can see, because the
+hottest segment is the face a bolted block is coupled to.
+
+**So the objection that blocked it is gone, and it is applied.** The objection was *half of this is a
+regression on the grid size that is already the harder case*, and both halves of that are measured
+false: the loss is 12.6 K at the reference load rather than 250 K, and the harder case is the next
+section.
+
+#### What a small cell is behind on, and what it is not
+
+This page argued, from the arithmetic of a cell face alone, that "the arithmetic that decides
+everything else on this page is against small grids by about 2.5×": a small cell face is 0.25 m²
+against 2.5 m², so the pickup is 25× worse, while a small-grid block makes perhaps a tenth of what
+its large counterpart does. **The first half is exact, the guess in the second half is very nearly
+right — the median paired block makes a *eleventh* — and the conclusion drawn from the two is wrong**,
+because every path heat takes off a block scales with a different power of the cell edge and the
+sentence quietly applied one of them to all of them.
+
+Measured per block over the eighty families the game ships at both sizes, from the definitions alone
+(`CellSizeLab`), as a handicap per watt where 1 is parity and above 1 is behind:
+
+| Term | Scales as | Small-grid handicap |
+| --- | --- | ---: |
+| a block's own radiating skin | `g²` | 2.12 |
+| the loop pickup, `h·A` over a sink face | `g²` | **2.28** |
+| conduction into the hull, `kA/L` | `g` | **0.41** |
+
+**The area terms are behind by about 2.2× and the conduction term is 2.5× ahead**, and conduction is
+the path the shipped mod actually uses: a block exports into the hull it is welded to, and the hull
+radiates. `tools/corpus/cellsize.py` reads the other half off the 8,137-ship census and says the same
+thing louder — every column favours the small grid.
+
+| Over 4,061 small-grid and 4,076 large-grid ships | small p50 | large p50 | small/large |
+| --- | ---: | ---: | ---: |
+| exposed area per kilowatt, m² | 7.94 | 3.21 | **2.47×** |
+| flux over that skin, W/m² | 124.5 | 283.1 | 0.44× |
+| share of blocks with no exposed face | 0.048 | 0.211 | 0.23× |
+| cells from the deepest heat source to air | 1 | 3 | 0.33× |
+| the hottest block's path to its hull, W/K per kW wasted | 18.76 | 0.95 | **19.75×** |
+
+*Basis: the census's own — full electrical load, every jump drive charging, no thrust, stores in
+reserve. Nothing restated.*
+
+**A small-grid ship carries two and a half times the skin per kilowatt, buries a fifth as much of its
+heat behind it, and gives its hottest block twenty times the path out per watt.** The last row is the
+one worth reading twice, and it is the trap the original sentence fell into: the raw conductance
+column says 0.77× and reads as *small grids behind*, because it is a ratio of two things that scale
+differently. Per watt it is the reverse by a factor of twenty.
+
+#### So small grids do not get their own pickup coefficient
+
+The handicap that survives is the pickup's, and `C42` fixed the test for whether it matters: watts
+over the pickup is the gradient a block is forced to sit at whatever is hung off the far end, and a
+gradient past its own rating is a block no radiator count can reach.
+
+| Sink faces | Small-grid families with no answer | Large-grid |
+| ---: | ---: | ---: |
+| 1 | 9 | 3 |
+| 2 | 5 | 0 |
+| **3** | **1** | **0** |
+
+Three is what a routed rectangle gives past a one-cell source — `C42`'s figure, and not a proposal to
+loosen anything, since a pipe carries at most two sink faces and a pump none. **At that face count 79
+of the 80 paired families have a cooling answer on a small grid exactly where they have one on a
+large grid.** The exception is the small prototech jump drive, whose large twin is this page's
+standing example of a block that survives only as slow damage.
+
+**Buying that one block costs a ×5.63 coefficient on every small-grid loop in the game**, against a
+median block that needs ×2.28 — so it overshoots parity by two and a half times for everything else.
+And the handicap is not a grid-size effect to begin with: it runs from **0.83 to 25** across the
+paired families, because it tracks how much less heat the game's authors gave each small variant. The
+small reactor is already *better* off than the large one; the small battery is eight times worse. A
+grid-size dial cannot fix a per-block spread.
+
+> **The one rung here that is honest physics is worth nothing, and is refused on that.** Fluid-to-wall
+> transfer goes as `Nu·k/D`, and under Dittus-Boelter at the flow the mod ships that is `h ∝ D^-0.2`;
+> a small-grid bore is a fifth of a large one, so its coefficient is `5^0.2` = **1.38× larger for the
+> same fluid**. Applied, it takes the families with no answer at one sink face from nine to eight and
+> changes no verdict at three. Unobservable fidelity is cost (`P14`), so it is priced here and not
+> built. `CellSizeTests` holds the derivation and the count.
+
+#### Where the balance work goes
+
+A retrofit is bounded at 9 % and a design is not, so the lever with headroom is whatever makes
+players build the loop — installability, and what it is worth once built — rather than any dial on
+the fluid's *transport*. But the fluid's **coefficient** is a different matter: with the face count
+fixed by design, it is the only thing that sets the pickup, and the pickup is what decides whether a
+block has an answer at all.
+
+**A pump should be what makes this true.** Fluid-to-wall transfer is convective, so it depends on
+the flow, and nothing in the model expressed that until `C37`: the coefficient applied whole whether
+or not anything circulated. `LoopStagnantTransferFraction` now scales it, so a raised `h` can be the
+*pumped* number with today's 160 as the stopped one, and a pump earns its power by making the ring
+conduct rather than only by mixing it. It ships at 1 and nothing behaves differently yet.
 
 ### What a selective surface is worth
 
@@ -165,7 +534,7 @@ A surface is not obliged to absorb what it emits, and a radiator is the one bloc
 most: its job is to emit in the infrared without collecting in the visible. Real ones are finished
 for exactly that — a second-surface mirror runs `α ≈ 0.08` against `ε ≈ 0.8`, white paint about 0.2
 against 0.9. The mod's radiator was authored at `ε 0.35` with no absorptivity, so it absorbed a
-third of the sunlight that landed on it.
+third of the sunlight that landed on it. Both halves are now authored: `α 0.10`, `ε 0.85`.
 
 Measured on a source under eight radiators, 75 kW of heat, sun across the stack against the same rig
 in shadow — `dotnet run --project tests/Thermodynamics.Sim -- bench surface`:
@@ -178,9 +547,11 @@ in shadow — `dotnet run --project tests/Thermodynamics.Sim -- bench surface`:
 | emissive only | 0.80 | *follows* | 353.7 K | 310.8 K | 42.8 K |
 
 **The selective finish is worth 10.9 K in sunlight and exactly nothing in shadow**, which is what
-says the rig is measuring the surface rather than the geometry. It is authored on both radiators:
-emissivity is untouched, so the block emits precisely what it emitted and stops absorbing sunlight a
-real one would not.
+says the rig is measuring the surface rather than the geometry. It is authored on both radiators, so
+the block stops absorbing sunlight a real one would not.
+
+> The table's `shipped, now` row was taken when only the absorptivity had been authored. The
+> shipped block is the `second-surface mirror` row to within the 0.05 between them.
 
 **The last row is the one worth reading twice.** Raising emissivity alone — making the radiator a
 better *emitter*, which is the obvious improvement — buys 8.2 K in shadow and **1.9 K in sunlight**,
@@ -188,10 +559,25 @@ because a better emitter that is also a better absorber gives almost all of it b
 penalty rises from 36.5 K to 42.8 K. The two changes are complementary rather than additive, and
 doing only the obvious one is nearly worthless where a radiator is most often used.
 
-**What is not authored is the emissivity.** 0.35 is low for a radiator and 0.8 is what a real one
-reaches; the table says that is worth 8.2 K in shadow and 9.4 K in sun on top of the finish. That is
-a balance change to the mod's own block rather than a fidelity correction, so it stays a decision
-with a number on it. `SelectiveSurfaceTests` pins both halves.
+**The emissivity is now authored too, at `C36`.** It was the last line of this section for two
+passes — *0.35 is low for a radiator and 0.8 is what a real one reaches* — held back as a balance
+change rather than a fidelity correction. It is both, and the fidelity half decided it: a selective
+surface is low-α **and** high-ε, the definition already named the two finishes it is modelled on,
+and it had taken the absorptivity from them while leaving emissivity at a number nearer bare
+aluminium. The block was emitting 41 % of what its own stated finish emits. It ships at **0.85**.
+
+What it bought, measured rather than argued:
+
+| Where | Before | After |
+| --- | ---: | ---: |
+| one panel on the 200 kW source | 228.6 K saved | 290.4 K saved |
+| one panel on the ladder's reactor | 20.9 K saved | 27.6 K saved |
+| thirty-two panels on that reactor | 25.6 K | 31.0 K |
+| corpus hulls, bolted retrofit, p50 | −0.32 % | −0.20 % |
+
+A third more cooling per panel on a synthetic source, and a tenth of a per cent on a real hull. That
+gap is the finding, not the gain — see *The joint, not the panel* above. `SelectiveSurfaceTests`
+pins both halves.
 
 ### The heat pump
 
@@ -214,14 +600,24 @@ A 500 kW block with one sink face, rings of rising size:
 
 | Pipes | Coupling | Settles |
 | --- | --- | --- |
-| 8 | 9,000 W/K | 857.2 K |
-| 12 | 13,000 W/K | 811.6 K |
-| 20 | 21,000 W/K | 768.5 K |
-| 28 | 29,000 W/K | 740.9 K |
+| 8 | 56,250 W/K | 722.7 K |
+| 12 | 81,250 W/K | 667.0 K |
+| 20 | 131,250 W/K | 613.3 K |
+| 28 | 181,250 W/K | 577.5 K |
 
-Each pipe adds 1,000 W/K of its own and the fluid mass does not grow, so **a longer ring is strictly
-better**. Pinned by `LongerRingsDeliverColderBlocks` and
-`LongerRingsCoupleHarderAndCarryTheSameFluid`.
+Each pipe adds 6,250 W/K of its own **and its own charge of fluid**, so a longer ring is a harder
+coupling and a bigger buffer at once and **is strictly better**. Pinned by
+`LongerRingsDeliverColderBlocks`.
+
+> **Re-measured twice.** `C42` multiplied the pumped coefficient by 6.25 and took the whole table
+> with it: the same rings were 9,000 to 29,000 W/K settling at 857.2 K down to 740.9 K. `C43` then
+> gave a large-grid pipe 10.31× the coolant, which **left the coupling column identical** — mass is
+> not in a conductance — and moved the settled column by 4.4 K at eight pipes and 10.8 K at
+> twenty-eight, from 727.1/673.0/622.1/588.3. The shape is unchanged through both, and it is the
+> shape the claim rests on.
+>
+> The sentence above used to read *the fluid mass does not grow*, which was true when the charge was
+> per loop and has not been since it became per pipe. Nothing about the conclusion depended on it.
 
 ### What the real-unit conversion moved
 
@@ -386,6 +782,14 @@ chosen against a 33 MW draw, so it is measured in two rigs that bracket the answ
   fraction the skinned rig survives at full rating is a fraction nobody ever has to cool. **This
   sets the floor.**
 
+> **Ceiling and floor are true of a reactor and not of the rig** (corrected 2026-08-25, `E10`). At
+> a 300 MW reactor's watts the conductance out of the block is the bottleneck, so one cell of armour
+> traps more than it sheds and skinned is the hotter of the two. Three orders of magnitude down, it
+> is not: an oxygen generator at rated draw settles **267 K cooler** skinned than bare, because the
+> shell is a radiator several times the block's own area and conduction into it is nowhere near
+> binding. The rigs are *no hull* and *one cell of hull*; which is hotter is a property of the block
+> under test. See [Oxygen generator waste heat](#what-it-did-the-invention-was-the-value-that-could-not-be-built-and-two-of-four-predictions-fail).
+
 Both rigs at four candidate fractions, at full rating, against a 1,200 K critical temperature. Bold
 is past critical:
 
@@ -451,6 +855,165 @@ they should, which is the honest way round when one of the two inputs is already
 > a round number — and at 0.02 the two smaller reactors then cook themselves bare in vacuum, which
 > is a state no build can improve on. A balance figure resting on a number nobody had checked is not
 > a balance figure.
+
+### Oxygen generator waste heat, written before it is measured
+
+`C21` gave every waste fraction in `Cubes.xml` a provenance and left three inventions with a real
+figure sitting beside them. One of the three closed on 2026-08-24 and one — the reactor's — was
+decided and kept by `C28`. **The third is the largest gap in the file and is open**: an oxygen
+generator wastes **0.6** of what it draws where water electrolysis runs 0.60–0.80 efficient and the
+sourced figure is **0.20–0.40**. The question, the instrument, the decision rule and the numbers
+that would falsify each prediction go here before the run (`E1`, `E11`).
+
+**The question.** Should `OxygenGenerator.ConsumerWasteEnergy` move from the invented 0.6 into the
+sourced band, and if so to which value in it?
+
+**The instrument is the reactor rig pointed at a consumer.** `OxygenGeneratorLab` runs the same two
+bounds — **bare**, one generator alone in shadow with every face radiating to a 2.7 K sky, and
+**skinned**, the same block under one cell of light armour — because the same two bounds are what
+decide it: a fraction that cooks bare cooks in every build, and a fraction the skinned rig survives
+at full draw is one nobody ever has to cool. What changes is where the watts come from. A reactor's
+heat is a fraction of what it *produces*; a generator's is a fraction of what it *draws*, and the
+game states that draw per definition as `OperationalPowerConsumption` — 0.5 MW for the large-grid
+block, into two cells.
+
+**Three draws, and only one of them is invented.** `standby` and `operational` are both figures the
+game's own definition states, so they bracket the block without an authored duty cycle in between.
+The third is `observed` — the mean draw across 346 large oxygen generators in the 2026-08-21 field
+dump, **31.5 kW of a 500 kW rating, a duty of 6.3 %** — which is one sample of what players
+actually run and is labelled as one sample wherever it is quoted.
+
+**Four predictions, each with what would falsify it.**
+
+| | prediction | falsified by |
+| --- | --- | --- |
+| the ceiling | at 0.6 and operational draw the large-grid generator sits **within 100 K of its own critical temperature bare** | a bare margin over 100 K |
+| the install | at 0.6 the same block is **past critical skinned** | a skinned margin at or above 0 K |
+| the relief | at 0.30 it clears critical **skinned by more than 100 K** | a skinned margin under 100 K |
+| the population | on the census ships that carry one, the generator is **under 5 % of that ship's full-load waste** at the median | a median at or above 5 % |
+
+100 K is not a round number chosen here: it is where `ThermalGlow` starts, so it is the temperature
+at which a block stops being a detail and starts telling the player about itself. A margin inside it
+is a block a player watches.
+
+**The decision rule, fixed now.** It has to settle both halves — whether to move, and where to — and
+the two precedents in this repository point opposite ways. `C21`'s computer third **moved** because
+the sourced value changed nothing a player could see: 0.9 to 1.0 over twenty-seven types was worth
+0.025 % of a loaded fleet's waste. `C28` **kept** an unsourced 0.01 because the sourced figure made
+every large reactor destroy itself in a build no player could improve.
+
+1. **Unbuildable beats sourced and beats balance.** If 0.6 puts the block past critical *bare* at
+   operational draw, it is not a balance choice but a block that cannot be built, and it moves
+   whatever else holds — to the **highest** value in the sourced band that survives both rigs.
+2. **Otherwise, provenance wins unless the move removes a decision.** It moves to **0.30**, the
+   band's midpoint, chosen as the centre because the source gives a range and nothing distinguishes
+   a point inside it.
+3. **The move removes a decision** — and 0.6 is kept, with the reason recorded here as `C28`'s was —
+   if at operational draw 0.6 is within 100 K of critical *skinned* and 0.30 is not. That is the
+   case where where a generator is installed decides whether it survives at 0.6 and stops deciding
+   anything at 0.30.
+
+**What this rig cannot say.** It is four blocks in two synthetic arrangements: it says what a
+generator does to itself, not what the population does with it, and the population half is the
+census's alone. Neither half is a corpus walk, and no corpus walk is being run for this row —
+`reactor-waste` swept sixteen-fold moved the corpus peak p50 by 3 % on a type carrying **3.65 %** of
+a loaded fleet's waste, and the oxygen generator carries **0.38 %** with a change of half of that, so
+a walk would be spending hours to measure a number smaller than the one already measured as very
+nearly inert (`P2` — this is what the instrument was not asked, stated rather than hidden).
+
+### What it did: the invention was the value that could not be built, and two of four predictions fail
+
+**The fraction is 0.40 and the provenance is `waste: water electrolysis`.** The rule's first clause
+fired, and it fired on something nobody was looking for: **at 0.6, two of the six vanilla oxygen
+generators are past their own critical temperature bare, at the draw their own definition rates
+them at.** `OxygenGeneratorSmall` and `SmallBlockOxygenGeneratorLab` settle at **905.3 K** against
+criticals of 862.8 K and 848.6 K, alone in shadow with every face on a 2.7 K sky. There is no
+cooler arrangement, so no build improves on it and no plumbing reaches it. That is the *unbuildable*
+bound `C28` named for the reactor, arrived at from the other side: there the sourced figure was the
+one that cooked and the invention was kept; here the invention was the one that cooked.
+
+0.40 rather than the midpoint because the rule says the **highest** value in the band that survives
+both rigs, and 0.40 does — with 30.5 K and 44.8 K on the two small-grid blocks and 99.9 K on the
+vanilla large one. Those margins are inside the hundred kelvin `ThermalGlow` starts at, so a
+generator run flat out glows. That is the outcome to want: the block tells the player it is working
+hard, and does not then destroy itself.
+
+At the shipped 0.40, one generator at its own rated draw, four hours to steady state:
+
+| Block | cells | rated | bare K | margin | skinned K | margin |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `OxygenGenerator` (no subtype) | 2 | 0.50 MW | 783.2 | 99.9 | 533.8 | 349.3 |
+| `IrrigationSystem` | 2 | 0.25 MW | 658.6 | 215.9 | 441.1 | 433.3 |
+| `LargeBlockOxygenGeneratorLab` | 4 | 0.50 MW | 696.4 | 178.7 | 504.6 | 370.5 |
+| `LargeBlockPrototechOxygenGenerator` | 6 | 1.00 MW | 643.1 | 722.1 | 577.6 | 787.6 |
+| `OxygenGeneratorSmall` | 18 | 0.10 MW | 818.1 | 44.8 | 653.6 | 209.2 |
+| `SmallBlockOxygenGeneratorLab` | 18 | 0.10 MW | 818.1 | 30.5 | 654.3 | 194.3 |
+
+**Two of the four predictions hold and the two that fail are the interesting ones.**
+
+| | prediction | outcome |
+| --- | --- | --- |
+| the ceiling | within 100 K of critical bare at 0.6 | **holds**, at **16.4 K** — and the prediction was aimed at the wrong block: two others were already past it |
+| the install | past critical *skinned* at 0.6 | **falsified**, and inverted: skinned is **267 K cooler** than bare, not hotter |
+| the relief | clears critical skinned by more than 100 K at 0.30 | **holds** at 390.4 K, trivially, once the install prediction inverted |
+| the population | under 5 % of its ship's full-load waste at the median | **falsified by an order of magnitude**: the median is **48.1 %** |
+
+**A skin cools a small heat source and cooks a large one, and this page said otherwise.** *Reactor
+waste heat* above calls bare the ceiling and skinned the floor, and that reading is true of the
+block it was measured on and not of the rig. At a 300 MW reactor's watts the block-to-block
+conductance out of the block is the bottleneck, so one cell of armour traps more than it sheds. An
+oxygen generator wastes three orders of magnitude less, conduction into the shell is nowhere near
+binding, and the shell is a radiator with several times the block's own area — so it sheds. **The
+two rigs are *no hull* and *one cell of hull*; which of them is hotter is a property of the block
+under test.** `SkinningASmallHeatSourceCoolsItWhereSkinningAReactorDoesNot` pins it, because a
+falsification that lives only in prose is one the next reader repeats.
+
+**The population prediction failed because it was asked of the fleet and answered by the ship.** The
+oxygen generator is **0.38 %** of a loaded fleet's full-load waste — the figure
+[definitions.md](definitions.md#every-waste-fraction-says-where-it-came-from-and-most-of-them-say-invented)
+quotes, and the reason this looked like a rounding error worth correcting rather than a balance
+move. Asked of the ships that carry one, it is not: a ratio of aggregates has a charging jump drive
+for three quarters of its denominator, and an aggregate of ratios over carriers only is the figure
+about the player who built the block (`E6`). That much is the finding and it stands.
+
+> **The figures this paragraph first carried were 48.1 % over 2,277 census ships, and they were
+> measured through an instrument that could not see the block** (corrected 2026-08-25, `E10`).
+> `Blueprints` resolved every empty `SubtypeName` to an armour cube, and the vanilla large oxygen
+> generator is one of thirteen definitions the game gives no subtype — so **not one of them exists
+> anywhere in the census**, and the 2,277 "carriers" were the ships carrying a small-grid or DLC
+> generator instead. That is `A13`, fixed the same day and pinned by
+> `ABlockWithNoSubtypeNameIsItsOwnTypesBaseVariantRatherThanArmour`. **The corpus was re-censused
+> the same day** — 8,137 ships, taken twice and reproducing — and on the population: **5,184 of
+> 8,032 ships carry a generator, 64.5 %, not 28.5 %**, and their median share is **14.4 %**, p75
+> **43.4 %**, p90 **80.8 %**, p99 95.6 %. The 400-ship stride sample this was first corrected to
+> agreed on the carrier share to the decimal and put the median at 10.4 %, a third low; the sample
+> figures are superseded rather than wrong, and balance-lab.md records why a sample of 400 missed
+> it. The claim that first stood here — *on an ordinary ship with no drive, an oxygen generator is
+> most of the heat there is* — is **withdrawn**: it is most of the heat for the top tenth and a
+> seventh of it in the middle.
+
+So this is a balance change rather than the correction the row was filed as, and it is smaller than
+the first reading of it said: **a third off a block that is a seventh of the median carrier's
+full-load waste and four fifths of the top tenth's**.
+`python3 tools/corpus/provenance.py out/census-2026-08-25/composition.csv --type OxygenGenerator`
+computes it, and `Thermodynamics.Sim -- basevariants --ships 400 --type OxygenGenerator` is the
+parse that answered it before the census was re-taken.
+
+**The registration's reason for not running a walk was wrong, and it is left standing above.** It
+argued that a type carrying 0.38 % of a fleet's waste cannot be worth hours of the machine when a
+type carrying 3.65 % was measured as very nearly inert — and that is the fleet statistic this
+section has just shown is the wrong one to reason from. The paragraph is not edited, because a
+criterion and its reasoning are what a run is judged against and rewriting them afterwards is how
+`E1` is defeated slowly (`E11`). **The walk is now an open row rather than a refused one**:
+[backlog.md](backlog.md) `C31`, which also records that the standing panel cannot answer it —
+6 of its 50 ships carry a generator by the census's reckoning, and the census cannot see the type's
+largest member at all (`A13`), so the panel has to be rebuilt before it can be swept.
+
+**What this did not measure.** No corpus walk was run, and
+the census figures above are a *composition* rather than a simulation — they say what a ship's
+blocks would waste at full electrical load, not what any hull settles at. The peaks are the rig's
+six blocks alone in shadow and nothing else. Whether a third off a median 48 % moves `G2` on the
+population is unmeasured and is the one question a walk would answer.
 
 ---
 
@@ -717,7 +1280,7 @@ every face bolted to armour held at ambient, both at once.
 * **self index** — against its own skin alone. Above 1 the block cannot cool itself and depends
   entirely on exporting into the hull, which is a much weaker position than it sounds.
 
-**Four of the game's 323 heat-making blocks are impossible, and 72 cannot cool themselves.** Banded
+**One of the game's 323 heat-making blocks is impossible, and 70 cannot cool themselves** (re-read 2026-08-26; it was four and 72 before `C21` and `C24`). `Thermodynamics.Sim -- triage` prints them ranked by severity against the share of a censused fleet's heat the type carries, which is the order a balance pass should work in — the one impossible block is `LargePrototechReactor` at an index of **6.33**, and almost nobody builds one, while a jump drive is survivable and is **65.5 %** of a loaded fleet's waste. Banded
 against the corpus, the index predicts the outcome well enough to use as a gate:
 
 | Worst index on the ship | Ships | Lose a block |
@@ -747,6 +1310,189 @@ taking the rest. **The hull never does.** Of the corpus ships carrying one, 909 
 block**, because total hull area is irrelevant when the heat cannot travel: block-to-block
 conductance is about 112 W/K, so moving megawatts even one block needs thousands of kelvin. **Area
 has to be *near* the source to count.**
+
+### What refilling a coolant loop has to cost, written before it is measured
+
+[backlog.md](backlog.md) `B43` is a decision with three routes and no evidence under it: a conveyor
+port and ice, a coolant component eaten from the build list, or energy and time. `B44` already
+settled what is true of all three — an empty loop stays a loop, the cost is **per pipe** so the
+exchange rate does not depend on ring size, and fill is binary so a half-empty loop never presents
+a small capacity to the integrator. What is missing is the number that says which currency can
+carry it, and that number is **the rate the exploit runs at** (`E1`).
+
+**The question.** Grinding a pipe out of a live ring takes that pipe's coolant parcel out of the
+world, and rewelding it brings the block back at ambient. What is that worth per second of welding,
+and can an energy price cancel it?
+
+**Why the rate rather than the joules.** `HeatLaunderingTests` already measures the joules exactly —
+one parcel per grind, neither more nor less. A quantity of heat is not an exploit; a quantity of
+heat *per second* competes with a radiator, and that is the comparison the decision turns on.
+
+**Three predictions, each with what would falsify it.**
+
+| | prediction | falsified by |
+| --- | --- | --- |
+| the size | one grind of an eight-pipe large-grid ring at 100 K above ambient removes **over 1 MJ** | under 1 MJ |
+| the rate | at one welder — the pipe's own `BuildTimeSeconds` of 8 s — that is **over 3 MW**, which is what the game's largest reactor makes at the fraction this mod ships | under 3 MW |
+| the currency | the refill power needed to cancel it **exceeds the installed electrical power of the median corpus ship**, so route 3 cannot carry the cost on its own | a required power the median ship could supply |
+
+**The decision rule, fixed now.**
+
+* **If the rate is under what the mod's own cooling achieves**, the row is tidiness and the
+  smallest route wins — route 3, energy and time, no component and nothing to haul.
+* **If the rate is over it and the cancelling power is one a ship can spend**, route 3 still wins,
+  because it is the only route that needs no new block surface, and the physics is already right:
+  a pump's waste fraction is 1, so the energy spent refilling lands back in the ship as heat.
+* **If the cancelling power is one no ship can spend**, energy cannot be the currency at the rate
+  the exploit runs, and the cost has to be a material the player hauls — route 1, ice through an
+  inventory the pump attaches in code, exactly as it already attaches its power sink.
+
+**What this cannot settle.** Whether a conveyor port is the right shape for an
+`UpgradeModuleDefinition`, and what a player thinks of hauling ice — both are game-side and neither
+is a number. The rule above chooses a currency; it does not choose an interface.
+
+### What it did: the exploit was priced out by a fix aimed at something else
+
+**All three predictions fail, in the same direction and by two orders of magnitude.** Grinding one
+pipe out of a warm eight-pipe ring removes **188,889 J**, and at the pipe's own 8-second build time
+that is **23,611 W** — **0.79 %** of what the game's largest reactor makes at the fraction this mod
+ships. On a ship already at 900 K it is **143,284 W**, 4.78 %.
+
+> **Every figure in this section is at the flat 50 kg a pipe carried when it was measured, and
+> `C43` multiplied that by 10.31.** At the density that ships a parcel is 1,947,916 J and the grind
+> is **243,490 W**, which is 8.15 % of that reactor rather than 0.79 % — an exploit ten times the
+> size of the one this section priced. **It is left as it was measured** (`E10`), because the
+> conclusion it reached does not depend on the size: `B44`'s vent takes the whole ring rather than
+> one parcel, and a ring that has to be refilled at the break-even excess is neutral in heat at any
+> charge. The prediction table below is a record of what was registered against what was measured,
+> and rewriting its numbers would make it a record of neither.
+
+| | prediction | outcome |
+| --- | --- | --- |
+| the size | over 1 MJ per grind | **fails at 0.19 MJ** |
+| the rate | over 3 MW at one welder | **fails at 0.024 MW** |
+| the currency | the cancelling power exceeds the median ship's installed power | **fails**: 23,611 W against a median **14,750,000 W**, which is 0.16 % of it |
+
+**The reason is `A12`, and it was a fix aimed at something else.** `B42` was written against a
+**190 MJ** case where grinding a *pump* dissolved a whole loop and dumped its heat. A ring now
+spills into its pipes and a pipe keeps the parcel it absorbed, so **a grind costs one parcel** —
+one eighth of an eight-pipe ring, and one fourteenth of a fourteen-pipe one. The exploit the row
+exists to price was priced out before the row was decided.
+
+**And it cannot be scaled**, which is what makes this a bound rather than a reading. A grind costs
+one parcel *whatever the ring's length*, so the rate is capped at one parcel per pipe-build-time per
+grinder however much coolant a ship carries. Building a bigger loop buys the exploit nothing; it
+only buys more heat that stays put.
+
+**The decision: route 3, energy and time.** The registered rule's second branch fires — the rate is
+far under what the mod's own cooling has to handle, and the power that cancels it is 23,611 W,
+which the median ship supplies six hundred times over. So the cost is a number of joules and a
+number of seconds, per pipe (`B44`), and no route needs a conveyor port, a component in a build
+list, or ice to haul.
+
+**What that leaves for the implementation.** The physics is already right and needs nothing new: a
+pump's waste fraction is **1** — *a circulator does no work that leaves the system* — so the energy
+a refill spends lands back in the ship as heat, and the exchange rate is self-limiting without a
+single authored threshold. Venting is still the smaller change `B44` describes, zeroing
+`HeldCoolantCapacity` for the pipes of a ring a grinder opened.
+
+> **This closes `B43`'s currency and not `B42`.** `B42` asks that mass ejection cost something; what
+> this says is that the *coolant* case is worth kilowatts rather than megawatts, so the cost can be
+> small. It says nothing about jettisoning a hot block that is not a pipe, which is the general case
+> and is still free.
+
+### What actually runs away, and the one number that predicts it
+
+**Runaway is the failure that matters**, and it turns out to be predictable from a definition alone.
+Crossing the block index against the 2026-08-21 population, 7,994 ships, by the **worst self index**
+any block on the ship carries — heat made over what that block's own skin can shed at its rating:
+
+| worst self index on the ship | ships | peak over 1,500 K | never recovers |
+| --- | ---: | ---: | ---: |
+| under 1 — cools itself | 1,338 | **0.4 %** | 1.3 % |
+| 1 – 3 | 1,627 | **1.4 %** | 0.5 % |
+| 3 – 10 | 4,230 | **19.0 %** | 3.9 % |
+| over 10 | 799 | **64.2 %** | 6.4 % |
+
+**A ship runs away if and only if it carries a block that cannot cool itself by a factor of about
+three.** Below that the rate is one per cent and indistinguishable from nothing; above ten it is two
+ships in three. The index is computed from the definition with no simulation at all, so **this is a
+runaway predictor that costs nothing to evaluate** and can be read before a ship is ever built.
+
+**And it names the blocks.** Of everything with a self index over 3 that real fleets actually carry:
+
+| block | self | settles bare | its rating | share of fleet heat | ships |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `SmallPrototechJumpDrive` | 23.6 | 1,892 K | 862 K | 65.5 % | 2,254 |
+| `LargeJumpDrive` | 9.9 | 1,211 K | 689 K | 65.5 % | 2,254 |
+| `LargePrototechReactor` | 46.0 | 3,033 K | 1,166 K | 5.8 % | 1,361 |
+| `LargeHydrogenEngine` | 10.7 | 1,541 K | 856 K | 5.8 % | 1,361 |
+
+**So the runaway problem is the jump drive and the hydrogen engine, and almost nothing else.** Both
+are on thousands of published ships, both settle hundreds of kelvin past their own rating with every
+face on open space, and between them they are three quarters of a loaded fleet's waste heat. This
+page already said the drive *lives or dies on the hull taking the rest, and the hull never does* —
+what is new is that the same sentence, applied across the population, accounts for essentially every
+runaway in it.
+
+> **The clock is the wrong dial for this.** `HeatTimeScale` sets how fast a block reaches where it
+> is going and changes nothing about where that is: a self index above one is a steady state above
+> critical, and slowing the approach buys time without changing the destination. The clock is `G8`'s
+> and `G11`'s dial. **Runaway is a definition problem** — watts made, area, emissivity, and the
+> temperature the block is rated to — and it is fixed per block or not at all.
+
+*Population: the 8,132-ship survey of 2026-08-21, which predates `C24` and `A13`; the paired read on
+the hulls the new survey has reached says the model got cooler, so these rates are an upper bound
+rather than a current reading. The **structure** — self index predicting runaway — is a property of
+the model rather than of the run.*
+
+### The runaway and the retrofit are the same block, and the lever follows from `P7`
+
+Two lines arrived at the jump drive from opposite ends and neither knew about the other.
+
+**From the cooling side**, above: a retrofit is *either unnecessary or impossible, with almost
+nothing in between* — 57.7 % of ships need one radiator or fewer and 19.2 % need more than sixteen —
+and the factor of 17.6 between p50 and p75 is the drive. **From the runaway side** (`C34`): a ship
+runs away if and only if it carries a block that cannot cool itself threefold, and the drive is that
+block on 2,254 ships.
+
+**Measured on real hulls, cooling does not currently answer either.** `retrofit` over 16 corpus
+ships under full electrical load in shadow:
+
+| fit | ships | no room | p10 | p50 | p90 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| bolted | 13 | 0 | −1.32 % | **−0.32 %** | 1.25 % |
+| plumbed | 4 | **9** | 0.03 % | 0.15 % | 4.32 % |
+
+A bolted fit takes **nothing** off the median hull and makes some *worse*; a plumbed one **cannot be
+installed at all on nine of thirteen**. So `G3` does not merely lack a measurement — the measurement
+it lacks looks like a failure. *(16 ships, a stride sample, one run — a direction rather than a
+population figure.)*
+
+**Which means the runaway is not a bug to nerf away.** Heat mattering is the point, and a vanilla
+ship that has never heard of this mod overheating under full load is the mod working. What is broken
+is that **the player has no answer** — and the answer is blocked by the same block.
+
+**The lever follows from `P7`, and it rules out three of the four.**
+
+* **Exposed surface ×3.3 — out.** The radiator, whose entire job is surface, uses **1.25**. A jump
+  drive more finned than the radiator is not a claim this mod can make.
+* **Emissivity ×3.3 — out, and for the same reason.** `emissivity` and `exposed-surface` are
+  measured on this page as *the same dial*, and the radiator's own emissivity is **0.35**. A drive at
+  0.66 is twice as radiative as the block built to radiate.
+* **Waste ÷3.3 — out on `P7`.** The drive's 0.2 is *derived from the game's own* `PowerEfficiency`
+  of 0.8. Overriding it says the game is wrong about its own block, which is the one thing this
+  repository does not get to say.
+* **Critical temperature ×1.35 — the honest one.** 689 K to **928 K**. It is the mildest move of the
+  four by a wide margin because the law is quartic, and — the reason it wins — **the game has no
+  block temperatures at all**. A rating is the mod's own invention end to end, so tuning it
+  contradicts nothing the game states. It is the only one of the four levers that is not an argument
+  with Space Engineers.
+
+**What would falsify it.** If the drive at 928 K does not move the population's runaway rate, the
+self index is a correlate rather than a cause. And if it moves the runaway rate but leaves the
+retrofit distribution as bimodal as it is now, then the drive was never what stood between a player
+and a working radiator, and the cooling blocks themselves are the row.
 
 ### What the mod's blocks cost to build
 
@@ -1359,8 +2105,8 @@ Conduction ×4 departs from a pace that is already an admitted 2.4× the world's
 `ConductionScale` is for.
 
 **What shipping it costs, sized by attempting it, and the attempt is what the three levers turn out
-to mean.** Setting `ConductionScale` to 9.6 and `HeatTimeScale` to 90 fails **52 of 1,826 tests**
-across 28 classes. Reading them rather than counting them, most are figures that legitimately move
+to mean.** Setting `ConductionScale` to 9.6 and `HeatTimeScale` to 90 failed **52 checks across 28
+classes** when it was attempted on 2026-08-24. Reading them rather than counting them, most are figures that legitimately move
 with the pair — and four are the mod's own guidance failing, each in the words its own test uses:
 
 * *"a coolant sink bought 73.5 K and the best surface dial bought 135.3 K; the surface dials have
@@ -1509,6 +2255,20 @@ five ways a full sweep dies, and [backlog.md](backlog.md) for what is still open
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | *Coolant rings* re-measured after `C43`: the coupling column is **identical**, because mass is not in a conductance, and the settled column moved 4.4 K to 10.8 K. Corrected the sentence under it, which said the fluid mass does not grow with the ring — true when the charge was per loop, false since it became per pipe — and dropped a citation to `LongerRingsCoupleHarderAndCarryTheSameFluid`, a test that no longer exists. |
+| 2026-08-26 | Noted on *What it did: the exploit was priced out by a fix aimed at something else* that every figure in it is at the flat 50 kg a pipe carried when it was measured, and that `C43` multiplied that by **10.31**: the grind is 243,490 W rather than 23,611 W, 8.15 % of the largest reactor rather than 0.79 %. **Left as measured** (`E10`) — the section is a record of registered predictions against outcomes, and the conclusion does not depend on the size, because `B44`'s vent takes the whole ring and a refill at the break-even excess is neutral at any charge. |
+| 2026-08-26 | **The coolant density is applied** (`C43`). `CoolantKilogramsPerCubicMetre` is 33 kg/m³ — 515.6 kg a pipe on a large grid, 4.1 kg on a small one — and `CoolantMassPerPipe` stays as a flat-mass override defaulting to zero, so nothing that states a per-pipe mass is reinterpreted (`P15`). It moves a settled ring's mean by 6.9 K and 0.8 K, costs no substeps, and rights the swing between the sink face and the far side of the loop. `LoopCandidate` becomes `LoopBefore`: all three of its dials have shipped, and a candidate identical to the default is a lab arm that reports its own package as worthless. |
+| 2026-08-26 | **The correction that blocked `C43` was measured on a rig with no sink.** *The coolant mass is doing an undeclared job* published four temperatures off a ring with a 125 kW source and the environment disabled — nothing settled, every arm climbed linearly, and at step 25,600 the same arms read 26,836 K and 5,908 K rather than the 715.5 K and 387.0 K printed at step 400. It measured a ratio of heat capacities and looked like a temperature. Re-taken with the ring radiating, the density correction moves the **mean** 6.9 K on a large grid and 0.8 K on a small one and the **swing** 100.2 K → 10.0 K and 7.7 K → 94.6 K: coolant mass buffers a ring, it does not decide where the ring runs. `LoopCoolantMassTests` now asserts the rig settles before reading anything off it. |
+| 2026-08-26 | **Small grids are not the harder case, and this page had said they were on arithmetic rather than on evidence.** Per block over the eighty families the game ships at both sizes, a small variant is 2.12× behind on its own skin and 2.28× behind on the loop pickup and **2.5× ahead on conduction into the hull**; over the 8,137-ship census every column favours it, including **19.75×** the hull path per watt for the hottest block. Added *What a small cell is behind on, and what it is not* and *So small grids do not get their own pickup coefficient*: at three sink faces 79 of 80 families match large-grid answerability, closing the last one costs ×5.63 against a median need of ×2.28, and the handicap runs 0.83 to 25 because it tracks the game's per-block waste authoring rather than the cell. `CellSizeLab`, `CellSizeTests` and `tools/corpus/cellsize.py`. |
+| 2026-08-26 | **Raised the coolant's pumped coefficient to 1,000 W/(m²·K) and made 160 the stopped value** (`C42`). The pickup — sink faces times `h · A` — is the only thing deciding whether a buried block has an answer, the face count is fixed by design, and at 160 a 6.4 MW jump drive was forced 6,400 K above its surroundings against a 689 K rating: no answer at any radiator count, on the block carrying 65.5 % of a loaded fleet's heat. A sink face now carries **6,250 W/K**, the forced gradient is **1,024 K**, and `StagnantTransferFraction` 0.16 keeps a stopped ring at exactly the 160 it always had, so nothing anywhere is worse. The corpus retrofit does not move (p50 2.43 % to 2.44 %), because `C40` bounds every internal path at 9 % — what changed is what a deliberate plumbing job can build. Re-measured the ring table, the bolt-to-sink ratio and every published sink figure. |
+| 2026-08-26 | **Authored the radiator's emissivity at 0.85 and measured what it did not fix.** The block was a selective surface with only its low half; `What a selective surface is worth` had carried the missing half as an open decision for two passes and it is now taken, on fidelity grounds its own definition already stated. It multiplies the panel's radiating power by 2.43 and is worth a third more cooling per panel — and **0.1 %** to the median corpus hull. Added [The joint, not the panel](#the-joint-not-the-panel): a large radiator sheds 1.56 MW at 600 K through a joint carrying 2,336 W/K, and every surface dial in the sensitivity table leaves the ~174 kW crossing that joint within a tenth of where it was, while feeding the same panel from a coolant loop is worth 51.5 K. Re-measured the armour comparison and the ladder against the new panel; the saturation point is unchanged at two panels, which is the finding. |
+| 2026-08-26 | Added `triage`, which ranks every heat-making block by severity times reach — the block index says whether a block is wrong and a census says whether being wrong matters, and the two had never been put together. Re-read the index while doing it: **one** block is impossible and **70** cannot cool themselves, where this page said four and 72 (`E10`). Three goals were also turned into criteria with a reading each — `G9`, `G10` and `G11` on [balance-lab.md](balance-lab.md) — and the one in doubt is `G11`, the time a warning buys.
+
+| 2026-08-25 | **Decided `B43`'s currency: energy and time, because the exploit is worth 23,611 W.** All three registered predictions fail by two orders of magnitude and in the same direction. Grinding a pipe from a warm eight-pipe ring removes 188,889 J, which at the pipe's 8-second build time is **0.79 %** of the largest reactor's waste; on a ship at 900 K it is 4.78 %. The power that cancels it is 0.16 % of the median corpus ship's installed power. **`A12` priced the exploit out** — the row was written against a 190 MJ pump grind, and a grind now costs one parcel — and the rate cannot be scaled by building a bigger ring, since a grind costs one parcel whatever the length. So no component, no conveyor and no ice. |
+| 2026-08-25 | **Put the oxygen generator's population figures on the re-censused population**, replacing the 400-ship parse that stood in while the census was broken: **64.5 % of ships carry one — the sample had that exactly — and their median share is 14.4 %** rather than 10.4 %, with p90 at 80.8 %. The sample was representative of carriers and not of the middle of the distribution; balance-lab.md carries why. |
+| 2026-08-25 | **Corrected this page's oxygen-generator population figures in place, because the instrument behind them could not see the block** (`E10`). `Blueprints` built every empty-`SubtypeName` block as an armour cube, and the vanilla large oxygen generator is one of the thirteen definitions the game gives no subtype — so the census holds none of them and the *2,277 carriers, median 48.1 %* was measured over the ships carrying some other generator. Through the fixed resolver, on a 400-ship stride sample: **64.5 % of ships carry one and their median share is 10.4 %**, p90 61.4 %. *An oxygen generator is most of the heat there is on an ordinary ship* is withdrawn. The decision itself is untouched — it was made on the rig, which builds its blocks from the definitions and never went through the blueprint reader. The defect is `A13`. |
+| 2026-08-25 | **Decided `C21`'s last open invention on the rig, and it went the opposite way to `C28`: the oxygen generator's fraction is 0.40, sourced.** The registered rule's first clause fired on a finding nobody was looking for — at the 0.6 that shipped, two of the six vanilla generators are past their own critical temperature *bare* at the draw their own definition rates, which is a block that cannot be built rather than a balance choice. 0.40 is the top of the band electrolysis sources and the highest value where all six survive both rigs. **Two of four predictions fail.** A skin *cools* a small heat source where it cooks a reactor, so this page's *ceiling and floor* is corrected in place (`E10`); and the population half was asked of the fleet and answered by the ship — 0.38 % of a loaded fleet's waste, a **median 48.1 %** of the waste of the 2,277 ships that carry one, and 60.0 % of the 2,003 carriers with no jump drive (`E6`). So it is a balance change and not the correction the row was filed as. |
+| 2026-08-25 | **Registered the criterion for `C21`'s last open invention before measuring it**, in [Oxygen generator waste heat](#oxygen-generator-waste-heat-written-before-it-is-measured) (`E1`, `E11`). An oxygen generator wastes 0.6 of what it draws where electrolysis sources 0.20-0.40, which is the largest gap in `Cubes.xml`. The rule settles both halves — whether to move and where to — against the two precedents that point opposite ways, `C21`'s computer third that moved and `C28`'s reactor that did not, and four predictions carry the numbers that falsify them. Nothing has been run. |
 | 2026-08-25 | `G6`'s cost half was rescored on a walk that carries the link count rather than the joint count, over all 8,144 blueprints: step work p99 **7,293,904** against the 4,000,000 granted, **1.82× over**, with 733 of 32,575 runs past it. The demand half passes at p99 34.8 of 64 and reproduces `F11` exactly. A per-block cap of 6 would take the cost half to 0.55× and is not being shipped, for the reason in [backlog.md](backlog.md) `C3`. |
 | 2026-08-25 | Added [What the mod's blocks cost to build](#what-the-mods-blocks-cost-to-build), closing [backlog.md](backlog.md) `B33`. All eighteen `Cubes.xml` definitions sit inside the range the game prices its own 1,434 blocks over, on three shape-free ratios; PCU per cubic metre was a fourth and is now reported rather than judged, because it flagged only the large radiator and the vanilla blocks beneath it are vivariums and platforms. And a recipe reaches the transient and not the steady state: four times a radiator stack's mass moves the settled source by a hundredth of a kelvin and its settling time from 24 s to 112 s. |
 | 2026-08-25 | Added [What a hand tool would have to be worth](#what-a-hand-tool-would-have-to-be-worth), which the block index could answer all along and nobody had asked: 26 five-kilogram CO2 bottles to return the median cooking block to ambient, 20 at once to do it inside its own window, and 71 of 72 with no surplus at all in the best case. It closes [backlog.md](backlog.md) `B32`, and the comparison is in watts and joules so that `HeatTimeScale` cannot move it. |

@@ -492,6 +492,7 @@ namespace Thermodynamics.Harness
             }
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -524,6 +525,15 @@ namespace Thermodynamics.Harness
 
             /// <summary>Watts crossing that joint at equilibrium — what the panel is actually removing.</summary>
             public float ThroughJointWatts;
+
+            /// <summary>
+            /// Substeps the rig demands of the integrator at the shipped step, so a row's cost sits
+            /// beside its gain rather than a page away (`E6`). Zero where the row does not measure
+            /// it. The loop is the element this matters for: a segment's substep is sized from
+            /// `SegmentConductance / SegmentThermalMass`, so a dial that buys transport by raising
+            /// the conductance alone spends it here.
+            /// </summary>
+            public float SubstepDemand;
         }
 
         /// <summary>
@@ -552,8 +562,11 @@ namespace Thermodynamics.Harness
                     + "  (" + N(scaler, 2) + ")", Variant(shipped, t => t.ExposedSurfaceMultiplier = scaler), baseline));
             }
 
-            // The other surface dial the definitions already carry.
-            rows.Add(Row("Emissivity", "0.35 -> 0.80", Variant(shipped, t => t.Emissivity = 0.80f), baseline));
+            // The other surface dial the definitions already carry. Swept to 1.0, the ceiling a
+            // surface cannot pass, and labelled from what actually ships - a hand-typed "0.35 ->"
+            // survived the block being re-authored at 0.85 and read as a loss (`E5`).
+            rows.Add(Row("Emissivity", N(shipped.Thermal.Emissivity, 2) + " -> 1.00",
+                Variant(shipped, t => t.Emissivity = 1f), baseline));
 
             // Conduction, three ways. These are the ones the definitions cannot currently express.
             rows.Add(Row("mount faces", "2/6 -> 6/6", MountEverywhere(shipped), baseline));
@@ -563,7 +576,29 @@ namespace Thermodynamics.Harness
             // The other way to feed a panel, and the reason this table matters. A bolt joint and a
             // coolant sink face are two different couplings to the same panel, and the definitions
             // already carry a dial for one of them.
-            rows.Add(CoolantFed(baseline));
+            rows.Add(CoolantFed(baseline, 0f, 0f));
+
+            // **The dial under the sink face.** A sink carries `h · A`, and on a large grid that is
+            // `160 × 6.25 = 1,000 W/K` exactly - so the one number deciding whether a loop can move
+            // a source's heat is the fluid's convective coefficient. Swept to the ceiling the
+            // settings menu already offers, because the rows above say every surface dial leaves
+            // the joint where it found it and this is the only leg left.
+            foreach (float coefficient in new float[] { 400f, 1000f, 2000f })
+            {
+                rows.Add(CoolantFed(baseline, coefficient, 0f));
+            }
+
+            // **And the number underneath the cost.** `CoolantMassPerPipe` is a flat 50 kg with no
+            // grid size in it - 3.2 kg/m³ in a 2.5 m cube, which is a gas, against 400 kg/m³ in a
+            // 0.5 m one, which is a liquid. It is the same defect `HeatTransferCoefficient` was
+            // already corrected for, and it is the denominator of the substep a segment demands.
+            // 820 kg is a large cell 5 % full of water-glycol; the pair is the question this table
+            // exists to answer, because a loop that carries six times as much and asks the
+            // integrator for no more is a different proposition from one that asks for six times.
+            foreach (float mass in new float[] { 200f, 515f, 820f, 2000f })
+            {
+                rows.Add(CoolantFed(baseline, 1000f, mass));
+            }
 
             return rows;
         }
@@ -572,7 +607,13 @@ namespace Thermodynamics.Harness
         /// The same panel on the same load, reached through a coolant sink face instead of a bolt
         /// joint. Everything else is held: same source, same watts, same panel.
         /// </summary>
-        private static SensitivityRow CoolantFed(float baseline)
+        /// <param name="coefficient">
+        /// Fluid-to-wall convective coefficient, W/(m² K); zero leaves the shipped value alone.
+        /// </param>
+        /// <param name="massPerPipe">
+        /// Coolant carried by one pipe block, kg; zero leaves the shipped value alone.
+        /// </param>
+        private static SensitivityRow CoolantFed(float baseline, float coefficient, float massPerPipe)
         {
             GridBuilder builder = GridBuilder.Large();
 
@@ -597,6 +638,16 @@ namespace Thermodynamics.Harness
             PipeFitter.BuildRing(builder, ring, -1, sinks);
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+
+            if (coefficient > 0f || massPerPipe > 0f)
+            {
+                LoopThermalProperties properties = LoopThermalProperties.Default();
+                if (coefficient > 0f) properties.HeatTransferCoefficient = coefficient;
+                if (massPerPipe > 0f) properties.CoolantMassPerPipe = massPerPipe;
+                simulation.LoopProperties = properties;
+                simulation.RebuildAll();
+            }
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -619,14 +670,25 @@ namespace Thermodynamics.Harness
             return new SensitivityRow
             {
                 Dial = "coolant sink",
-                Change = "fed by a loop, not bolted",
+                Change = Describe(coefficient, massPerPipe),
                 SettledKelvin = sourceKelvin,
                 KelvinVersusShipped = baseline - sourceKelvin,
                 PanelKelvin = panelKelvin,
                 JointDropKelvin = sourceKelvin - panelKelvin,
                 JointWattsPerKelvin = coupling,
                 ThroughJointWatts = 0f,
+                SubstepDemand = simulation.Solver.RequiredSubsteps(new ThermalSettings().StepSeconds),
             };
+        }
+
+        /// <summary>Names a loop arm by what was changed in it, and nothing by what was not.</summary>
+        private static string Describe(float coefficient, float massPerPipe)
+        {
+            if (coefficient <= 0f && massPerPipe <= 0f) return "fed by a loop, not bolted";
+
+            string text = coefficient > 0f ? "h " + N(coefficient, 0) : "h shipped";
+            if (massPerPipe > 0f) text += ", " + N(massPerPipe, 0) + " kg/pipe";
+            return text;
         }
 
         private static SensitivityRow Row(string dial, string change, BlockModel model, float baseline)
@@ -738,6 +800,7 @@ namespace Thermodynamics.Harness
             BlockInstance placed = builder.Last;
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -851,6 +914,7 @@ namespace Thermodynamics.Harness
             List<BlockInstance> pipes = PipeFitter.BuildRing(builder, ring, -1, sinks);
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -939,15 +1003,17 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
             sb.AppendLine("SENSITIVITY  (200 kW source, one panel; which dial moves the answer)");
             sb.AppendLine();
-            sb.AppendLine(string.Format("{0,-20} {1,-28} {2,10} {3,8} {4,9} {5,8} {6,10} {7,11}",
-                "dial", "change", "source K", "gain K", "panel K", "drop K", "joint W/K", "through W"));
+            sb.AppendLine(string.Format("{0,-20} {1,-30} {2,10} {3,8} {4,9} {5,8} {6,10} {7,11} {8,9}",
+                "dial", "change", "source K", "gain K", "panel K", "drop K", "joint W/K", "through W",
+                "substeps"));
 
             foreach (SensitivityRow row in Sensitivity())
             {
-                sb.AppendLine(string.Format("{0,-20} {1,-28} {2,10} {3,8} {4,9} {5,8} {6,10} {7,11}",
+                sb.AppendLine(string.Format("{0,-20} {1,-30} {2,10} {3,8} {4,9} {5,8} {6,10} {7,11} {8,9}",
                     row.Dial, row.Change, N(row.SettledKelvin, 1), N(row.KelvinVersusShipped, 1),
                     N(row.PanelKelvin, 1), N(row.JointDropKelvin, 1),
-                    N(row.JointWattsPerKelvin, 0), N(row.ThroughJointWatts, 0)));
+                    N(row.JointWattsPerKelvin, 0), N(row.ThroughJointWatts, 0),
+                    row.SubstepDemand > 0f ? N(row.SubstepDemand, 2) : "-"));
             }
 
             sb.AppendLine();

@@ -76,12 +76,12 @@ namespace Thermodynamics.Harness
 
             double mapMs = watch.Elapsed.TotalMilliseconds;
 
-            IList<List<Vector3I>> rooms = simulation.Rooms.Map.Rooms;
+            RoomMap rooms = simulation.Rooms.Map;
 
             List<Vector3I> anchors = new List<Vector3I>();
-            for (int i = 0; i < rooms.Count; i++)
+            for (int i = 0; i < rooms.RoomCount; i++)
             {
-                if (rooms[i].Count > 0) anchors.Add(rooms[i][0]);
+                if (rooms.CellsInRoom(i) > 0) anchors.Add(rooms.CellsOf(i)[0]);
             }
 
             // Warm: the first pass through a room touches rows the later ones find in cache, and

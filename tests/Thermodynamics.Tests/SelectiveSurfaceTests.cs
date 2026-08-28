@@ -41,8 +41,17 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **The shipped radiator declares one**, which is the change itself: a block that emits
-        /// what it always emitted and no longer collects sunlight a real one would not.
+        /// **The shipped radiator declares one**, which is the change itself: a block that no
+        /// longer collects sunlight a real one would not.
+        ///
+        /// <para>
+        /// **`C36` supplied the other half.** A selective surface is high-emissivity *and*
+        /// low-absorptivity, and this block had only the low half — it shipped at the 0.35 of the
+        /// plate it is welded from while its own definition named second-surface mirror and white
+        /// paint, finishes measured at 0.8-0.9. Emissivity is now 0.85 and the pair finally
+        /// describes one surface rather than two. It bought a third more cooling per panel (20.9 K
+        /// to 27.6 K on the ladder's reactor) and moved a corpus hull by 0.1 %, which is the
+        /// finding: emission was never what limited a radiator here.
         /// </summary>
         [Fact]
         public void TheShippedRadiatorDeclaresASelectiveSurface()
@@ -52,7 +61,7 @@ namespace Thermodynamics.Tests
                 BlockThermalProperties thermal = ShippedBlocks.Get(subtype).Thermal;
 
                 Assert.Equal(0.1f, thermal.SolarAbsorptivity, 3);
-                Assert.Equal(0.35f, thermal.Emissivity, 3);
+                Assert.Equal(0.85f, thermal.Emissivity, 3);
                 Assert.True(thermal.EffectiveSolarAbsorptivity < thermal.Emissivity,
                     subtype + " absorbs at least as much as it emits, which is not a radiator");
             }

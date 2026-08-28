@@ -21,10 +21,10 @@ OUTCOMES = sys.argv[2] if len(sys.argv) > 2 else "out/corpus-2026-08-21/outcomes
 TARGET = sys.argv[3] if len(sys.argv) > 3 else "tools/corpus/panel.csv"
 
 # ships.csv is the only file carrying each blueprint's path, and the sweep needs it: without a
-# path it has to walk and fully parse all 9,981 corpus blueprints to find 36 ships, with 31
+# path it has to walk and fully parse every corpus blueprint to find the panel's ships, with 31
 # workers opening quarter-gigabyte files at once. That is the exact shape CorpusFixture documents
-# as how earlier runs died, and it wedged the first smoke test. With paths the sweep opens 36
-# files. Falls back to the survey's own directory when not given one.
+# as how earlier runs died, and it wedged the first smoke test. With paths the sweep opens one file
+# per panel ship. Falls back to the survey's own directory when not given one.
 SHIPS = os.path.join(os.path.dirname(OUTCOMES), "ships.csv")
 
 # The per-type dials need hulls that actually mount the type, or they measure nothing at all.
@@ -49,17 +49,42 @@ def key_of(row):
 census = {key_of(r): r for r in csv.DictReader(open(CENSUS))}
 
 # Which hulls carry each offending type, and how much of their heat it is.
+#
+# **Keyed on the type id, not on a substring of the subtype** (corrected 2026-08-25). The subtype
+# match was wrong in both directions and nothing said so, because a rule that selects the wrong
+# ships still selects ships. No vanilla reactor's subtype contains the word "reactor" — they are
+# `LargeBlockSmallGenerator` and its three siblings — so `reactor-heavy` chose from **12 candidate
+# ships out of 5,728**, and the twelve were `LargePrototechReactor`, which the game types as a
+# `HydrogenEngine` and which therefore wastes 0.60 rather than the 0.01 the rule's own note names.
+# The engine rule missed that same block for the opposite reason. A type id is what the waste
+# fraction is keyed on, so it is what a rule about a waste fraction must be keyed on.
+TYPES = {
+    "jumpdrive": "JumpDrive",
+    "engine": "HydrogenEngine",
+    "reactor": "Reactor",
+    "oxygen": "OxygenGenerator",
+}
+
 share = {}
+carriers = {name: 0 for name in TYPES}
 if os.path.exists(COMPOSITION):
     for r in csv.DictReader(open(COMPOSITION)):
         k = key_of(r)
         by_type = share.setdefault(k, {})
-        for name, match in (("jumpdrive", "JumpDrive"), ("engine", "HydrogenEngine"),
-                            ("reactor", "Reactor"), ("thrust", "Thrust")):
-            if match.lower() in r["subtype"].lower():
+        for name, type_id in TYPES.items():
+            if r["type_id"] == type_id:
+                if name not in by_type:
+                    carriers[name] += 1
                 by_type[name] = by_type.get(name, 0.0) + number(r, "waste_full_w")
 else:
     print(f"warning: {COMPOSITION} not found — the per-type rules will select nothing")
+
+# **A rule with an empty pool picks nothing and reports nothing** (`E8`). That is how the reactor
+# rule ran for as long as it did, so the pools are printed and an empty one is said out loud rather
+# than left to be inferred from a panel that is two ships shorter than it looks.
+for name in sorted(TYPES):
+    note = "" if carriers[name] else "   <-- NOTHING: this rule will select no ships"
+    print(f"  {name:<10} carried by {carriers[name]:>5,} ships{note}")
 
 paths = {}
 if os.path.exists(SHIPS):
@@ -203,6 +228,8 @@ take("engine-heavy", "most heat from hydrogen engines — hottest block on a thi
      by(carried("engine"), where=lambda k: carries("engine")(k) and affordable(k)), 2)
 take("reactor-heavy", "most heat from reactors — the dial that ships at 0.01",
      by(carried("reactor"), where=lambda k: carries("reactor")(k) and affordable(k)), 2)
+take("oxygen-heavy", "most heat from oxygen generators — the dial that moved to 0.40 on 2026-08-25",
+     by(carried("oxygen"), where=lambda k: carries("oxygen")(k) and affordable(k)), 2)
 
 # ---- how the heat is arranged, which is what a hot spot is about -------------------------------
 # The census measures clumping and burial depth; the panel carries the extremes of both so a dial

@@ -483,12 +483,23 @@ namespace Thermodynamics.Tests
             // better — so what is held is that it cannot go negative.
             LoopThermalProperties loop = new LoopThermalProperties
             {
-                CoolantMassPerPipe = 0f,
+                CoolantMassPerPipe = -4f,
+                CoolantKilogramsPerCubicMetre = -33f,
                 HeatTransferCoefficient = -9f,
             };
             loop.Clamp();
-            Assert.Equal(1f, loop.CoolantMassPerPipe, 5);
             Assert.Equal(0f, loop.HeatTransferCoefficient, 5);
+
+            // **Zero is a value here rather than an accident**: since `C43` a per-pipe mass of zero
+            // means "charge from the density and the cell", so the clamp catches a negative and
+            // leaves zero alone. It used to lift zero to 1 kg, which was right while the field was
+            // the charge and would now silently pin a ring at a kilogram of coolant.
+            Assert.Equal(0f, loop.CoolantMassPerPipe, 5);
+            Assert.Equal(0f, loop.CoolantKilogramsPerCubicMetre, 5);
+
+            // And with both at zero the derived mass falls to the solver's floor rather than to
+            // nothing, because a parcel with no thermal mass is a division by zero.
+            Assert.True(loop.MassPerPipe(2.5f) > 0f);
         }
     }
 

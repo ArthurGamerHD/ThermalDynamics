@@ -13,35 +13,63 @@ namespace Thermodynamics.Core
     /// </summary>
     public class SurfaceMap
     {
-        private readonly Dictionary<Vector3I, int> states = new Dictionary<Vector3I, int>(Vector3I.Comparer);
-
         /// <summary>
-        /// The same cells as <see cref="states"/> with every door read as shut, because exposure asks
-        /// what is sealing now and the room mapper asks how the grid is built. Written from the same
-        /// block in the same call, never independently. See thermal-model.md, Two layers.
+        /// Both layers of every occupied cell in one entry: the live state in the low 32 bits and the
+        /// structural state — every door read as shut — in the high 32. One dictionary rather than
+        /// two, because the two were keyed on the same cells and refreshed in the same call, so
+        /// every probe was made twice and every entry held twice. A cell's two states are still
+        /// written from the same block in the same call, never independently.
+        /// See thermal-model.md, Two layers, and performance.md, Iteration 5.
         /// </summary>
-        private readonly Dictionary<Vector3I, int> structure = new Dictionary<Vector3I, int>(Vector3I.Comparer);
+        private readonly Dictionary<long, long> cells = new Dictionary<long, long>();
+
+        /// <summary>The table is keyed on <see cref="GridMath.Key"/>, as the grid's is; see performance.md, Iteration 11.</summary>
+        private static long KeyOf(Vector3I cell)
+        {
+            return GridMath.Key(cell);
+        }
+
+        private const int StructuralShift = 32;
+        private const long LiveMask = 0xFFFFFFFFL;
+
+        private static long Pack(int live, int structural)
+        {
+            return (live & LiveMask) | ((long)structural << StructuralShift);
+        }
+
+        private static int Live(long packed)
+        {
+            return (int)(packed & LiveMask);
+        }
+
+        private static int Structural(long packed)
+        {
+            return (int)(packed >> StructuralShift);
+        }
 
         public int CellCount
         {
-            get { return states.Count; }
+            get { return cells.Count; }
         }
 
         public IEnumerable<Vector3I> Cells
         {
-            get { return states.Keys; }
+            get
+            {
+                foreach (long key in cells.Keys) yield return GridMath.FromKey(key);
+            }
         }
 
         /// <summary>Surface state of a cell, or 0 when the cell is empty.</summary>
         public int GetState(Vector3I cell)
         {
-            int state;
-            return states.TryGetValue(cell, out state) ? state : 0;
+            long packed;
+            return cells.TryGetValue(KeyOf(cell), out packed) ? Live(packed) : 0;
         }
 
         public bool HasCell(Vector3I cell)
         {
-            return states.ContainsKey(cell);
+            return cells.ContainsKey(KeyOf(cell));
         }
 
         /// <summary>Writes a block's cells into the map and refreshes the affected neighbours.</summary>
@@ -49,21 +77,22 @@ namespace Thermodynamics.Core
         {
             if (block == null) return;
 
-            Vector3I[] cells = block.Cells;
+            Vector3I[] blockCells = block.Cells;
             int[] self = block.SelfSurfaces;
 
             int[] structural = block.StructuralSurfaces;
 
-            for (int i = 0; i < cells.Length; i++)
+            for (int i = 0; i < blockCells.Length; i++)
             {
-                states[cells[i]] = CellSurface.SelfOnly(self[i]);
-                structure[cells[i]] = CellSurface.SelfOnly(structural == null ? self[i] : structural[i]);
+                cells[KeyOf(blockCells[i])] = Pack(
+                    CellSurface.SelfOnly(self[i]),
+                    CellSurface.SelfOnly(structural == null ? self[i] : structural[i]));
             }
 
-            for (int i = 0; i < cells.Length; i++)
+            for (int i = 0; i < blockCells.Length; i++)
             {
-                RefreshCell(cells[i]);
-                RefreshNeighboursOf(cells[i]);
+                RefreshCell(blockCells[i]);
+                RefreshNeighboursOf(blockCells[i]);
             }
         }
 
@@ -72,16 +101,15 @@ namespace Thermodynamics.Core
         {
             if (block == null) return;
 
-            Vector3I[] cells = block.Cells;
-            for (int i = 0; i < cells.Length; i++)
+            Vector3I[] blockCells = block.Cells;
+            for (int i = 0; i < blockCells.Length; i++)
             {
-                states.Remove(cells[i]);
-                structure.Remove(cells[i]);
+                cells.Remove(KeyOf(blockCells[i]));
             }
 
-            for (int i = 0; i < cells.Length; i++)
+            for (int i = 0; i < blockCells.Length; i++)
             {
-                RefreshNeighboursOf(cells[i]);
+                RefreshNeighboursOf(blockCells[i]);
             }
         }
 
@@ -91,53 +119,81 @@ namespace Thermodynamics.Core
         /// </summary>
         public void Rebuild(GridModel grid)
         {
-            states.Clear();
-            structure.Clear();
+            cells.Clear();
             if (grid == null) return;
 
             IList<BlockInstance> blocks = grid.Blocks;
             for (int b = 0; b < blocks.Count; b++)
             {
                 BlockInstance block = blocks[b];
-                Vector3I[] cells = block.Cells;
+                Vector3I[] blockCells = block.Cells;
                 int[] self = block.SelfSurfaces;
                 int[] structural = block.StructuralSurfaces;
-                for (int i = 0; i < cells.Length; i++)
+                for (int i = 0; i < blockCells.Length; i++)
                 {
-                    states[cells[i]] = CellSurface.SelfOnly(self[i]);
-                    structure[cells[i]] = CellSurface.SelfOnly(structural == null ? self[i] : structural[i]);
+                    cells[KeyOf(blockCells[i])] = Pack(
+                        CellSurface.SelfOnly(self[i]),
+                        CellSurface.SelfOnly(structural == null ? self[i] : structural[i]));
                 }
             }
 
-            List<Vector3I> keys = new List<Vector3I>(states.Keys);
-            for (int i = 0; i < keys.Count; i++)
+            // Snapshotted as keys *and* self states, so the derived half of every cell is computed
+            // from the array rather than by asking the dictionary for what was just put in it, and
+            // written back exactly once. A neighbour's key is this cell's plus a constant
+            // (`GridMath.KeyByFace`), so no cell is converted to a key or back inside the loop.
+            int count = cells.Count;
+            long[] keys = new long[count];
+            long[] selves = new long[count];
+            int at = 0;
+            foreach (KeyValuePair<long, long> entry in cells)
             {
-                RefreshCell(keys[i]);
+                keys[at] = entry.Key;
+                selves[at] = entry.Value;
+                at++;
+            }
+
+            long[] byFace = GridMath.KeyByFace;
+            for (int i = 0; i < count; i++)
+            {
+                long key = keys[i];
+                int live = CellSurface.SelfOnly(Live(selves[i]));
+                int structural = CellSurface.SelfOnly(Structural(selves[i]));
+
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    long neighbour;
+                    if (!cells.TryGetValue(key + byFace[face], out neighbour)) continue;
+
+                    live |= CellSurface.NeighbourContribution(Live(neighbour), face);
+                    structural |= CellSurface.NeighbourContribution(Structural(neighbour), face);
+                }
+
+                cells[key] = Pack(live, structural);
             }
         }
 
-        /// <summary>Recomputes the derived neighbour half of one cell.</summary>
+        /// <summary>Recomputes the derived neighbour half of one cell, in both layers, from one probe per neighbour.</summary>
         public void RefreshCell(Vector3I cell)
         {
-            Refresh(states, cell);
-            Refresh(structure, cell);
-        }
+            long packed;
+            long key = KeyOf(cell);
+            if (!cells.TryGetValue(key, out packed)) return;
 
-        private static void Refresh(Dictionary<Vector3I, int> layer, Vector3I cell)
-        {
-            int state;
-            if (!layer.TryGetValue(cell, out state)) return;
+            int live = CellSurface.SelfOnly(Live(packed));
+            int structural = CellSurface.SelfOnly(Structural(packed));
 
-            state = CellSurface.SelfOnly(state);
+            long[] byFace = GridMath.KeyByFace;
             for (int face = 0; face < Face.Count; face++)
             {
-                int neighbourState;
-                if (layer.TryGetValue(cell + Face.Offsets[face], out neighbourState))
+                long neighbour;
+                if (cells.TryGetValue(key + byFace[face], out neighbour))
                 {
-                    state |= CellSurface.NeighbourContribution(neighbourState, face);
+                    live |= CellSurface.NeighbourContribution(Live(neighbour), face);
+                    structural |= CellSurface.NeighbourContribution(Structural(neighbour), face);
                 }
             }
-            layer[cell] = state;
+
+            cells[key] = Pack(live, structural);
         }
 
         private void RefreshNeighboursOf(Vector3I cell)
@@ -169,8 +225,8 @@ namespace Thermodynamics.Core
         /// <summary>Structural state of a cell, with every door read as shut, or 0 when empty.</summary>
         public int GetStructuralState(Vector3I cell)
         {
-            int state;
-            return structure.TryGetValue(cell, out state) ? state : 0;
+            long packed;
+            return cells.TryGetValue(KeyOf(cell), out packed) ? Structural(packed) : 0;
         }
 
         /// <summary>
@@ -193,6 +249,37 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Writes each occupied cell's six structural self-airtight bits into a dense box, one byte a
+        /// cell, indexed <c>((z * sizeY) + y) * sizeX + x</c> from <paramref name="min"/>. Cells outside
+        /// the box are skipped and empty cells stay zero, which is what <see cref="GetStructuralState"/>
+        /// answers for them. The room mapper walks this instead of probing the dictionary twice per
+        /// face of every cell in the bounding volume. See performance.md, Iteration 4.
+        /// </summary>
+        public void CopyStructuralSealing(Vector3I min, Vector3I maxExclusive, byte[] sealing)
+        {
+            if (sealing == null) return;
+
+            int sizeX = maxExclusive.X - min.X;
+            int sizeY = maxExclusive.Y - min.Y;
+            int sizeZ = maxExclusive.Z - min.Z;
+            if (sizeX <= 0 || sizeY <= 0 || sizeZ <= 0) return;
+
+            foreach (KeyValuePair<long, long> entry in cells)
+            {
+                Vector3I at = GridMath.FromKey(entry.Key);
+                int x = at.X - min.X;
+                int y = at.Y - min.Y;
+                int z = at.Z - min.Z;
+                if (x < 0 || x >= sizeX || y < 0 || y >= sizeY || z < 0 || z >= sizeZ) continue;
+
+                long index = (((long)z * sizeY) + y) * sizeX + x;
+                if (index >= sealing.Length) continue;
+
+                sealing[index] = (byte)(Structural(entry.Value) & CellSurface.SelfAirtightMask);
+            }
+        }
+
+        /// <summary>
         /// Counts, per face direction, how many of a block's cell faces are open to the outside: on the
         /// boundary, external beyond, and not sealed against. A mount joint is deliberately not a
         /// rejection. See thermal-model.md, Exposure.
@@ -206,6 +293,35 @@ namespace Thermodynamics.Core
 
             Array.Clear(resultsByFace, 0, Face.Count);
             if (block == null) return;
+
+            // A one-cell block has one cell face per face, so the slab walk below is six tests on
+            // one cell state, read once rather than once a face. Same faces, same two questions in
+            // the same order; ExposureFastPathTests holds the two paths together.
+            // See performance.md, Pass 2, Iteration 3.
+            if (block.CellCount == 1)
+            {
+                Vector3I cell = block.Min;
+                int state = GetState(cell);
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    if (CellSurface.NeighbourAirtight(state, face)) continue;
+                    if (rooms != null && !rooms.IsExternal(cell + Face.Offsets[face])) continue;
+                    resultsByFace[face] = 1;
+                }
+                return;
+            }
+
+            GetExposedFacesWalkingTheBoundary(block, rooms, resultsByFace);
+        }
+
+        /// <summary>
+        /// The general count: every cell on each face of the block's box, which a multi-cell block
+        /// needs and a one-cell block does not. Public so a test can hold the one-cell path to it.
+        /// The caller has cleared <paramref name="resultsByFace"/>.
+        /// </summary>
+        public void GetExposedFacesWalkingTheBoundary(BlockInstance block, RoomMap rooms, int[] resultsByFace)
+        {
+            if (block == null || resultsByFace == null) return;
 
             Vector3I min = block.Min;
             Vector3I maxExclusive = block.MaxExclusive;
@@ -323,8 +439,7 @@ namespace Thermodynamics.Core
 
         public void Clear()
         {
-            states.Clear();
-            structure.Clear();
+            cells.Clear();
         }
     }
 }

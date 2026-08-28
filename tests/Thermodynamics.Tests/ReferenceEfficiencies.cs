@@ -12,7 +12,7 @@ namespace Thermodynamics.Tests
     /// half of a block's definition. A conductivity claiming aluminium is checked; a
     /// `ConsumerWasteEnergy` claimed nothing at all until this existed, which is how the jump drive
     /// sat at 0.15 by assertion while its own definition stated an efficiency. See
-    /// backlog.md `C21`.
+    /// definitions.md, *Every waste fraction says where it came from*.
     /// </para>
     ///
     /// <para>
@@ -90,6 +90,16 @@ namespace Thermodynamics.Tests
             "wall-plug efficiency 0.10-0.50 across lamp-pumped, diode-pumped and fibre lasers");
 
         /// <summary>
+        /// Splitting water into hydrogen and oxygen. Alkaline and PEM electrolysers run 0.60 to
+        /// 0.80 efficient against the higher heating value of the hydrogen they make, so 0.20 to
+        /// 0.40 of the electrical input stays behind as ohmic, activation and thermal-management
+        /// heat. The rest leaves the machine as chemical energy in the gas, which is why this is
+        /// not <see cref="AllOfIt"/>.
+        /// </summary>
+        public static readonly Reference WaterElectrolysis = Band(0.2f, 0.4f,
+            "alkaline and PEM electrolysers, 0.60-0.80 efficient against hydrogen's higher heating value");
+
+        /// <summary>
         /// Everything, by the first law: a device that does no work outside itself and radiates
         /// nothing away turns every watt it draws into heat where it stands. It is a bound rather
         /// than a measurement, which is why the band has no width.
@@ -118,6 +128,7 @@ namespace Thermodynamics.Tests
             t["combustion engine"] = CombustionEngine;
             t["radio transmitter"] = RadioTransmitter;
             t["solid-state laser"] = SolidStateLaser;
+            t["water electrolysis"] = WaterElectrolysis;
             t["all of it"] = AllOfIt;
 
             return t;

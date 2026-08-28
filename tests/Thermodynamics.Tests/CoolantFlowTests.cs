@@ -563,9 +563,15 @@ namespace Thermodynamics.Tests
             float halved = SpreadAcrossAHeatedRing(1f, halfWay);
             float refused = SpreadAcrossAHeatedRing(1f, hard);
 
-            // Orderly at about 4.5x over-subscribed: a third more spread, not a different kind of
-            // number.
-            Assert.True(halved < granted * 1.5f,
+            // **Orderly at about 4.5x over-subscribed: nearly twice the spread, not a different kind
+            // of number.** The bound was a third more, measured when the ring's fluid coupling was
+            // 160 W/(m²·K). `C42` made the pumped coefficient 1,000, and a stiffer element refused
+            // the same fraction of its demand degrades further - which is physics rather than a
+            // regression: the substep it wanted was shorter, so the one it got is further from it.
+            // Measured 2026-08-26 at 10.6 K against 5.96 K granted in full, so 1.78x; the bound is
+            // 2x and says why, rather than being widened until it passed (`E11`). What it is still
+            // pinning is the *kind* of number - the divergence bound below is untouched and holds.
+            Assert.True(halved < granted * 2f,
                 "granting " + halfWay + " substeps of " + withRing + " left the ring at "
                 + halved + " K against "
                 + granted + " K granted in full, which is not the approximation this pins");
