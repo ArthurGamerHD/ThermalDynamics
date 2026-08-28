@@ -2626,16 +2626,6 @@ namespace Thermodynamics.Harness
             return a.X.CompareTo(b.X);
         }
 
-        /// <summary>Faces of this cell with no block on the other side, from the shape alone.</summary>
-        private static int OpenSides(HashSet<Vector3I> occupied, Vector3I cell)
-        {
-            int open = 0;
-            for (int face = 0; face < Face.Count; face++)
-            {
-                if (!occupied.Contains(cell + Face.Offsets[face])) open++;
-            }
-            return open;
-        }
 
         private static ScenarioResult Result(string name, ScenarioRunner runner, string summary)
         {

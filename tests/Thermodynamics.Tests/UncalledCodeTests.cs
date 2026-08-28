@@ -1,0 +1,133 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Thermodynamics.Harness;
+using Xunit;
+
+namespace Thermodynamics.Tests
+{
+    /// <summary>
+    /// **The highest-yield defect class here is a thing that exists, is described accurately, and is
+    /// called by nothing** (`D2`), and until now the one place nothing looked was the test tree
+    /// itself.
+    ///
+    /// <para>
+    /// rules.md said so in as many words: *nothing yet scans the test project for an uncalled
+    /// `internal static` invariant, which is how the four above survived*. The compiler will not do
+    /// it — an unused private method is not a warning, unlike an unused private field — so a lab
+    /// helper written for a measurement that was then taken another way stays in the tree, keeps
+    /// compiling, keeps being maintained, and reads to the next person as something the suite
+    /// relies on. This found `Scenarios.OpenSides` on its first run.
+    /// </para>
+    ///
+    /// <para>
+    /// **Two limits, stated rather than discovered.** A name is counted across every identifier in
+    /// `Data/` and `tests/`, so an *overload* of a name something else calls is invisible here; and
+    /// a helper reached only through a string literal — an xUnit `MemberData("Name")` — would be
+    /// reported. Both are deliberate: the second is a reason to write `nameof`, and the first is the
+    /// same false negative the rules page already names for a misspelled declaration.
+    /// </para>
+    /// </summary>
+    public class UncalledCodeTests
+    {
+        /// <summary>Every `.cs` this repository maintains, generated files excluded.</summary>
+        private static List<string> SourceFiles()
+        {
+            List<string> files = new List<string>();
+            string root = ShippedBlocks.RepoRoot();
+
+            foreach (string folder in new[] { "Data", "tests" })
+            {
+                foreach (string path in Directory.GetFiles(Path.Combine(root, folder), "*.cs",
+                    SearchOption.AllDirectories))
+                {
+                    string relative = path.Substring(root.Length).TrimStart('/', '\\').Replace('\\', '/');
+                    if (relative.Contains("/obj/") || relative.Contains("/bin/")) continue;
+                    files.Add(path);
+                }
+            }
+
+            return files;
+        }
+
+        [Fact]
+        public void NoHelperInTheTestTreeIsCalledByNothing()
+        {
+            string root = ShippedBlocks.RepoRoot();
+            List<string> files = SourceFiles();
+
+            // Every identifier anywhere, counted once. A declaration contributes one occurrence of
+            // its own name, so a name seen once is a name nothing else mentions.
+            Dictionary<string, int> mentions = new Dictionary<string, int>(StringComparer.Ordinal);
+            Dictionary<string, SyntaxNode> roots = new Dictionary<string, SyntaxNode>(StringComparer.Ordinal);
+
+            foreach (string path in files)
+            {
+                SyntaxNode tree = CSharpSyntaxTree.ParseText(File.ReadAllText(path)).GetRoot();
+                roots[path] = tree;
+
+                foreach (SyntaxToken token in tree.DescendantTokens())
+                {
+                    if (!token.IsKind(SyntaxKind.IdentifierToken)) continue;
+
+                    int seen;
+                    mentions.TryGetValue(token.ValueText, out seen);
+                    mentions[token.ValueText] = seen + 1;
+                }
+            }
+
+            List<string> uncalled = new List<string>();
+
+            foreach (string path in files)
+            {
+                string relative = path.Substring(root.Length).TrimStart('/', '\\').Replace('\\', '/');
+                if (!relative.StartsWith("tests/", StringComparison.Ordinal)) continue;
+
+                foreach (MethodDeclarationSyntax method in roots[path].DescendantNodes()
+                    .OfType<MethodDeclarationSyntax>())
+                {
+                    if (!IsPrivateOrInternalStatic(method)) continue;
+
+                    string name = method.Identifier.ValueText;
+                    if (mentions[name] > 1) continue;
+
+                    uncalled.Add(relative + ":"
+                        + (method.GetLocation().GetLineSpan().StartLinePosition.Line + 1)
+                        + " " + name);
+                }
+            }
+
+            Assert.True(uncalled.Count == 0,
+                "these are declared in the test tree and mentioned nowhere else, so nothing calls"
+                + " them — delete them, or give them the caller they were written for (`D2`): "
+                + string.Join(", ", uncalled.ToArray()));
+        }
+
+        /// <summary>
+        /// A method the compiler will not complain about and nothing outside its own file can reach:
+        /// static, and neither public nor protected. `partial` and `extern` declarations are bodies
+        /// somewhere else and are left alone.
+        /// </summary>
+        private static bool IsPrivateOrInternalStatic(MethodDeclarationSyntax method)
+        {
+            bool isStatic = false;
+            bool isReachableFromOutside = false;
+            bool isElsewhere = false;
+
+            foreach (SyntaxToken modifier in method.Modifiers)
+            {
+                if (modifier.IsKind(SyntaxKind.StaticKeyword)) isStatic = true;
+                if (modifier.IsKind(SyntaxKind.PublicKeyword)
+                    || modifier.IsKind(SyntaxKind.ProtectedKeyword)) isReachableFromOutside = true;
+                if (modifier.IsKind(SyntaxKind.PartialKeyword)
+                    || modifier.IsKind(SyntaxKind.ExternKeyword)) isElsewhere = true;
+            }
+
+            return isStatic && !isReachableFromOutside && !isElsewhere;
+        }
+    }
+}
