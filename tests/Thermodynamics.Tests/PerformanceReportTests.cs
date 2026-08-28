@@ -1,5 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
 
@@ -25,6 +30,146 @@ namespace Thermodynamics.Tests
         {
             PerformanceReport.Repeats = 1;
             return PerformanceReport.Run("ship", 600, 2, new int[] { 600 });
+        }
+
+        /// <summary>
+        /// **Every stopwatch in the report is inside a repeat loop.**
+        ///
+        /// <para>
+        /// benchmarks.md states the report's method in one sentence —
+        /// *every case is timed three times and the fastest kept* — and two of its figures were not:
+        /// the ladder's `build` column, which is what a load-path change is judged by, and the
+        /// `calibration` row, which is the divisor two machines' reports are compared through. Both
+        /// had been single samples since the day they were written, and both looked exactly like
+        /// every other row.
+        /// </para>
+        ///
+        /// <para>
+        /// Fixing the two is not the check; a third would arrive the same way. This asserts the
+        /// shape instead — a `Stopwatch.StartNew()` with no enclosing loop over `Repeats` is a
+        /// single sample, whatever it is called — which is the only form of this that a new column
+        /// cannot walk past. It reads the source rather than the report, because a single sample
+        /// and a fastest-of-three produce the same kind of number and that is the whole problem
+        /// (`P2`).
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryTimedCaseInTheReportIsRepeated()
+        {
+            string path = Path.Combine(ShippedBlocks.RepoRoot(),
+                "tests", "Thermodynamics.Harness", "PerformanceReport.cs");
+
+            SyntaxNode root = CSharpSyntaxTree.ParseText(File.ReadAllText(path)).GetRoot();
+            List<string> single = new List<string>();
+
+            foreach (InvocationExpressionSyntax call in root.DescendantNodes()
+                .OfType<InvocationExpressionSyntax>())
+            {
+                MemberAccessExpressionSyntax member = call.Expression as MemberAccessExpressionSyntax;
+                if (member == null || member.Name.Identifier.Text != "StartNew") continue;
+                if ((member.Expression as IdentifierNameSyntax)?.Identifier.Text != "Stopwatch") continue;
+
+                if (!InsideARepeatLoop(call))
+                {
+                    single.Add("line "
+                        + (call.GetLocation().GetLineSpan().StartLinePosition.Line + 1));
+                }
+            }
+
+            Assert.True(single.Count == 0,
+                "PerformanceReport.cs times something once and keeps it, at "
+                + string.Join(", ", single.ToArray())
+                + " — benchmarks.md says every case is timed " + PerformanceReport.Repeats
+                + " times and the fastest kept, and a single sample is indistinguishable from one"
+                + " in the report it lands in");
+        }
+
+        /// <summary>
+        /// Whether a node sits inside a `for` whose condition counts against `Repeats` — the
+        /// report's own dial, by either the field's name or a local copy of it, which is how the
+        /// loops that clamp it to at least one are written.
+        /// </summary>
+        private static bool InsideARepeatLoop(SyntaxNode node)
+        {
+            for (SyntaxNode up = node.Parent; up != null; up = up.Parent)
+            {
+                ForStatementSyntax loop = up as ForStatementSyntax;
+                if (loop == null || loop.Condition == null) continue;
+
+                foreach (IdentifierNameSyntax name in loop.Condition.DescendantNodesAndSelf()
+                    .OfType<IdentifierNameSyntax>())
+                {
+                    if (string.Equals(name.Identifier.Text, "Repeats",
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// **The ladder's build column is the fastest of `Repeats` builds, like every other case.**
+        ///
+        /// <para>
+        /// It was one stopwatch from the day the report was written, under a page that states the
+        /// method as *every case is timed three times and the fastest kept* — and the build column
+        /// is the one a reader compares between two runs to say a load-path change worked. A single
+        /// sample carries a whole sample's noise, and nothing in the report said which columns were
+        /// which (`D3`).
+        /// </para>
+        ///
+        /// <para>
+        /// The count is asserted, not the timing: whether three builds are faster than one is a
+        /// property of the machine, and a test that demanded it would fail on a busy one. What can
+        /// be asserted is that the repeat happened, that the kept figure is the smallest of the
+        /// ones taken, and that the repeats built the same graph — which is the guard that makes
+        /// keeping the fastest mean anything.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheLaddersBuildColumnIsTheFastestOfSeveralBuilds()
+        {
+            int repeats = PerformanceReport.Repeats;
+            try
+            {
+                GridBuilder hull = GridBuilder.Large();
+                hull.PlaceCensus(LoadShapes.Build("ship", 600));
+
+                PerformanceReport.Repeats = 3;
+                PerformanceReport.BuiltHull thrice =
+                    PerformanceReport.RepeatBuild(new ThermalSettings(), hull);
+
+                Assert.Equal(3, thrice.Builds);
+                Assert.True(thrice.BuildMs > 0d, "the build was not timed");
+                Assert.NotNull(thrice.Simulation);
+                Assert.True(thrice.Simulation.Solver.Nodes.Count > 100,
+                    "the rung built " + thrice.Simulation.Solver.Nodes.Count + " nodes, so it"
+                    + " would agree with itself for the wrong reason");
+
+                // One repeat is still one build, and still a figure — the report is run at
+                // `Repeats = 1` by every test above, and that must remain a report rather than an
+                // exception or a zero.
+                PerformanceReport.Repeats = 1;
+                PerformanceReport.BuiltHull once =
+                    PerformanceReport.RepeatBuild(new ThermalSettings(), hull);
+
+                Assert.Equal(1, once.Builds);
+                Assert.True(once.BuildMs > 0d);
+
+                // Three builds of one hull are three builds of the same graph, which `RepeatBuild`
+                // throws over rather than quietly reporting the fastest of two different walks.
+                Assert.Equal(once.Simulation.Solver.Nodes.Count,
+                    thrice.Simulation.Solver.Nodes.Count);
+                Assert.Equal(once.Simulation.Solver.Links.Count,
+                    thrice.Simulation.Solver.Links.Count);
+            }
+            finally
+            {
+                PerformanceReport.Repeats = repeats;
+            }
         }
 
         /// <summary>

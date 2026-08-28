@@ -1015,6 +1015,13 @@ namespace Thermodynamics.Sim
                     if (ladder.Count == 0) ladder.Add(max);
 
                     int reportTicks = ticks > 0 ? ticks : 20;
+
+                    // How many times each case is timed. Exposed so a session can ask what the
+                    // repeat is worth on this machine rather than trusting that three is enough;
+                    // the report's own default stands when it is not given.
+                    PerformanceReport.Repeats = Math.Max(1,
+                        OptionInt(args, "--repeats", PerformanceReport.Repeats));
+
                     string baseline = Option(args, "--baseline", null);
                     string outDir = csvDirectory ?? "out";
 
@@ -1753,7 +1760,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench parallel --size N one grid per thread: does a fleet pay for it");
             Console.WriteLine("  bench surface           what a selective surface on the radiator is worth");
             Console.WriteLine("  bench stagger --size N  whole steps against spread ones: what locality costs");
-            Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare");
+            Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare; --repeats N per case");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
             Console.WriteLine("  bench stages            one stage of a grid's life on its own clock, fastest of a settled sample; --stages a,b; --repeats N (the floor); --trace");
