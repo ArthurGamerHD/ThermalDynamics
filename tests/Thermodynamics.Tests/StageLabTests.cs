@@ -58,23 +58,23 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **Every stage stops because its fastest reading was reproduced, not because it ran out
-        /// of patience.** A figure confirmed once is a fluke; the lab keeps sampling until several
-        /// readings agree with the best to within two per cent, and gives up at a cap. A row that
-        /// hit the cap is a row whose best was never confirmed, and its number should not be
-        /// compared with anything.
+        /// **Every stage stops for a reason it can name.** A figure confirmed once is a fluke, so
+        /// the lab keeps sampling until several readings agree with the best to within two per
+        /// cent, and gives up at a cap. A row that hit the cap is a row whose best was never
+        /// confirmed, and its number should not be compared with anything — so the two must be
+        /// distinguishable, and every row must be one or the other.
         ///
         /// <para>
-        /// **The bar is lowered here, and that is the point of the test rather than a concession.**
+        /// **What this does not assert is that the readings are stable**, and that is deliberate.
         /// This suite runs eight ways in parallel, which is exactly the contention that makes a
-        /// fast repeat rare — asking for five agreeing readings under it would test the machine.
-        /// What is checked is the mechanism: that agreement is counted, that the loop stops on it,
-        /// and that stopping at the cap is distinguishable from stopping at an answer. The figure
-        /// the shipped default produces is in performance.md, measured on a machine that was held.
+        /// fast repeat rare; a test demanding convergence under it failed and passed on
+        /// consecutive runs of unchanged code, which is worse than no test. The stability the rule
+        /// buys — three runs within 2 %, 3 % and 7 % where fifteen repeats gave 48 %, 67 % and
+        /// 28 % — is measured on a held machine and recorded in performance.md, Pass 8.
         /// </para>
         /// </summary>
         [Fact]
-        public void EveryStageConfirmsItsBest()
+        public void EveryStageStopsForAReasonItCanName()
         {
             int repeats = StageLab.Repeats;
             int confirming = StageLab.ConfirmingRepeats;
@@ -85,18 +85,30 @@ namespace Thermodynamics.Tests
             {
                 List<StageLab.Row> rows = StageLab.Run("ship", 2000, StageLab.Stages);
 
+                int confirmed = 0;
                 for (int i = 0; i < rows.Count; i++)
                 {
                     StageLab.Row row = rows[i];
 
-                    Assert.True(row.ConfirmedBest >= StageLab.ConfirmingRepeats,
-                        row.Stage + " stopped after " + row.Repeats + " repeats with its best"
-                        + " confirmed only " + row.ConfirmedBest + " times, so it reached the cap"
-                        + " rather than an answer");
+                    Assert.True(row.Repeats >= StageLab.Repeats,
+                        row.Stage + " stopped after " + row.Repeats + " repeats, below the floor of "
+                        + StageLab.Repeats);
 
-                    Assert.True(row.Repeats < StageLab.MaxRepeats,
-                        row.Stage + " ran to the cap of " + StageLab.MaxRepeats + " repeats");
+                    Assert.True(row.ConfirmedBest >= StageLab.ConfirmingRepeats
+                        || row.Repeats >= StageLab.MaxRepeats,
+                        row.Stage + " stopped after " + row.Repeats + " repeats with its best"
+                        + " confirmed " + row.ConfirmedBest + " times — neither a confirmation nor"
+                        + " the cap, so the rule that ended it is not the rule as written");
+
+                    Assert.True(row.ConfirmedBest >= 1,
+                        row.Stage + " never counted its own best as confirming itself");
+
+                    if (row.ConfirmedBest >= StageLab.ConfirmingRepeats) confirmed++;
                 }
+
+                Assert.True(confirmed > 0,
+                    "not one stage of " + rows.Count + " confirmed its best, so either the counting"
+                    + " is broken or the cap is being reached every time");
             }
             finally
             {
