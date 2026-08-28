@@ -2291,6 +2291,7 @@ next by the same measure. This pass starts there.
 | 6 | The exposure stage's six writes packed into one | **kept** — the stage's median falls 19.5 % | [Iteration 6](#pass-9-iteration-6--the-one-write-exposure-change-and-the-session-it-was-measured-in) |
 | 6 | Cleanup: the mod project had not built for three commits | **kept** — `ProjectFileTests` | [Iteration 6](#pass-9-iteration-6--the-one-write-exposure-change-and-the-session-it-was-measured-in) |
 | 7 | An exposure refresh that changed nothing writing nothing | **kept, and not for the reason it was proposed** — worth nothing on the stage, 2.0 ms on the step after a remap | [Iteration 7](#pass-9-iteration-7--the-skip-is-worthless-where-it-was-aimed-and-worth-two-milliseconds-where-it-was-not) |
+| 8 | The ladder's `build` column, which the page says is fastest-of-three | **kept** — it was one stopwatch | [Iteration 8](#pass-9-iteration-8--the-one-column-a-load-path-change-is-judged-by-was-a-single-sample) |
 
 ## Pass 9, iteration 1 — two thirds of the exposure stage is writing the answer down
 
@@ -2739,12 +2740,70 @@ left in that state would otherwise skip and keep a stale radiating area, which i
 rather than a slow one. It has no caller under `Data/Scripts` and the comparison costs one integer,
 which is the right price for not having to reason about it again.
 
+## Pass 9, iteration 8 — the one column a load-path change is judged by was a single sample
+
+[benchmarks.md](benchmarks.md) states the report's method in one sentence: *every case is timed
+three times and the fastest kept*. Two of its figures were not, and both had been single samples
+since the day they were written.
+
+**The ladder's `build` column** is the figure a load-path change is judged by — every load pass in
+this document quotes it — and it was one stopwatch around one build. **The `calibration` row** is
+worse placed: it is the divisor two machines' reports are compared through, so a single sample there
+puts a whole sample's noise into every cross-machine figure, twice, once from each side.
+
+Both now repeat `Repeats` times and keep the fastest, and `bench report --repeats N` exposes the
+dial so the claim can be put to the question instead of believed. This is what it was worth:
+
+| rung | as it was, spread of 4 runs | as it is, spread of 4 runs | median |
+| --- | ---: | ---: | ---: |
+| 8,000 | 0.9 % | 7.4 % | −0.2 % |
+| 32,000 | 28.3 % | 23.0 % | **−11.2 %** |
+| 125,000 | 8.4 % | 18.8 % | −2.9 % |
+| 500,000 | **19.0 %** | **3.4 %** | −3.9 % |
+| 1,000,000 | 6.8 % | **1.1 %** | −8.8 % |
+
+*Eight runs of one pinned binary alternating `--repeats 1` and `--repeats 3`, one held window
+(`M7`). `median` is the change in the middle of four runs.*
+
+**It does what it is supposed to at the rungs where the build is large enough to matter, and
+nothing at the ones where it is not.** At half a million and a million blocks the spread between
+runs falls from 19.0 % to 3.4 % and from 6.8 % to 1.1 %; below that it moves either way, which is
+what four draws of a small quantity do. The median falls at every rung — a minimum of three cannot
+be higher than a minimum of one, on average — most at 32,000 and 1,000,000, which says how high the
+single sample had been sitting.
+
+**The consequence for what is already published is bounded and worth stating.** A `build` column
+whose between-run spread is 19 % cannot resolve a change smaller than a fifth, so every load-path
+figure quoted off the 500,000 rung was carrying that, and the figures themselves were biased high by
+a few per cent. What is *not* affected is anything measured by `bench stages`, which has had a
+settling rule since pass 8 and both statistics since iteration 5.
+
+*(One caveat the pass's own rules require: four runs is a thin basis for a spread, and all eight
+were inside one window, so what is measured here is the within-window spread only — iteration 6's
+between-session component is not in these numbers and cannot be removed by a repeat.)*
+
+### Fixing the two is not the check
+
+A third single-sample column would arrive exactly the way these two did: as a row that looks like
+every other row. `EveryTimedCaseInTheReportIsRepeated` parses `PerformanceReport.cs` and fails on
+any `Stopwatch.StartNew()` with no enclosing loop over `Repeats` — the shape, not the instance. It
+reads the source rather than the report, because a single sample and a fastest-of-three produce the
+same kind of number and that is the whole problem (`P2`). Verified by reintroducing the exact
+defect: it names the line.
+
+`RepeatBuild` also asserts what a repeat makes assertable. Two builds of one dealt hull must be two
+builds of the same graph, or the fastest of them is the fastest of two different measurements; it
+throws with both counts rather than reporting a figure. The hull is dealt once and built from
+repeatedly, because dealing it is the census generator at about ten times the build it feeds
+(`C26`) and is not what the column is about.
+
 ---
 
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **The ladder's `build` column and the `calibration` row were single samples**, under a page that says every case is timed three times and the fastest kept. One is what a load-path change is judged by and the other is the divisor two machines are compared through. Repeated now: the between-run spread at 500,000 blocks falls from **19.0 % to 3.4 %** and at a million from 6.8 % to 1.1 %, and the figure falls a few per cent at every rung. `EveryTimedCaseInTheReportIsRepeated` fails on any stopwatch in the report with no repeat loop around it, because a third would arrive the same way. |
 | 2026-08-27 | **An exposure refresh that changed nothing writes nothing, which is worth nothing where it was aimed.** The stage does not move — the two legs' ranges overlap on both statistics, because iteration 6 had already removed the six writes a skip would skip. What it is worth is the full, unsliced `SyncNodeState` it stopped forcing onto the step after every room remap: **2.13 ms against 0.145** to mirror 126,731 rows. That is `load-and-hitching.md`'s property 8 one level down, and it is property 11 there now. |
 | 2026-08-27 | **`M7` is scoped to any two figures compared, not to a pass.** The exposure stage's six per-face writes became one, worth **19.5 % of the stage's median** over twelve alternating processes of one window against a flat control — and measuring it found that the same code read 2.2× slower in iteration 5's session, with the source, the instrument, the build configuration and the stage order each eliminated. The minimum roughly travels between sessions and the median does not, which inverts iteration 5's assignment for this stage and makes that whole table a within-window measurement. Artefacts carry `taken_utc` now and `bench samplestats` says whether its runs are one window. |
 | 2026-08-27 | The mod project had not built for three commits: iteration 4's own explanatory comment contained a `--`, so MSBuild refused `Generic.csproj` and it left the build instead of failing it. `ProjectFileTests` asserts every MSBuild file in the tree parses. |

@@ -164,17 +164,31 @@ namespace Thermodynamics.Harness
 
             // The hull is dealt before the clock starts, for the same reason as the ladder's build column.
             GridBuilder hull = Hull("ship", 4000);
-            Stopwatch watch = Stopwatch.StartNew();
-            ThermalSimulation calibration = Build(Configure(0, true), hull);
-            LoadBenchmarks.SeedSpread(calibration);
 
-            EnvironmentState state = EnvironmentSolver.Solve(
-                calibration.Settings, calibration.Planet, Worst());
+            // **Timed `Repeats` times like every other case, and this one is the divisor.** Two
+            // machines' reports are compared by dividing each by its own calibration, so a single
+            // sample here puts a whole sample's noise into every cross-machine figure twice over —
+            // and it was a single sample from the day this row was written. Found while fixing the
+            // ladder's `build` column, which had the same defect; see performance.md, Pass 9,
+            // Iteration 8.
+            double best = double.MaxValue;
 
-            for (int i = 0; i < 20; i++) calibration.Solver.Step(calibration.Settings.StepSeconds, state);
-            watch.Stop();
+            for (int r = 0; r < (Repeats < 1 ? 1 : Repeats); r++)
+            {
+                Stopwatch watch = Stopwatch.StartNew();
+                ThermalSimulation calibration = Build(Configure(0, true), hull);
+                LoadBenchmarks.SeedSpread(calibration);
 
-            Add(rows, "machine", "calibration", "4k ship, 20 steps", watch.Elapsed.TotalMilliseconds, "ms");
+                EnvironmentState state = EnvironmentSolver.Solve(
+                    calibration.Settings, calibration.Planet, Worst());
+
+                for (int i = 0; i < 20; i++) calibration.Solver.Step(calibration.Settings.StepSeconds, state);
+                watch.Stop();
+
+                if (watch.Elapsed.TotalMilliseconds < best) best = watch.Elapsed.TotalMilliseconds;
+            }
+
+            Add(rows, "machine", "calibration", "4k ship, 20 steps", best, "ms");
         }
 
         /// <summary>
@@ -207,6 +221,80 @@ namespace Thermodynamics.Harness
             Add(rows, "machine", "noise", "as a share of a step", least <= 0 ? 0 : (most - least) / least, "");
         }
 
+        /// <summary>One rung's build, timed the number of times every other case is.</summary>
+        public struct BuiltHull
+        {
+            /// <summary>The fastest of <see cref="Repeats"/> builds, in milliseconds.</summary>
+            public double BuildMs;
+
+            /// <summary>Builds actually timed, so a caller can assert the repeat happened.</summary>
+            public int Builds;
+
+            /// <summary>The last one, which is what the caller steps.</summary>
+            public ThermalSimulation Simulation;
+        }
+
+        /// <summary>
+        /// **Builds one dealt hull <see cref="Repeats"/> times and keeps the fastest**, like every
+        /// other case in this report.
+        ///
+        /// <para>
+        /// The ladder's `build` column was one stopwatch for the life of this report, under a page
+        /// that says every case is timed three times and the fastest kept — so the one column a
+        /// reader is most likely to compare between two runs was the one carrying a whole sample's
+        /// worth of noise, and nothing said so (`D3`). See performance.md, Pass 9, Iteration 8.
+        /// </para>
+        ///
+        /// <para>
+        /// The hull is dealt once and built from repeatedly. Dealing it is the census generator,
+        /// which is about ten times the build it feeds (`C26`) and is not what this column is
+        /// about; that two builds of one hull are two builds of the *same graph* is checked here
+        /// rather than assumed, because only a repeat can check it (`P6`).
+        /// </para>
+        /// </summary>
+        public static BuiltHull RepeatBuild(ThermalSettings settings, GridBuilder hull)
+        {
+            BuiltHull built = new BuiltHull();
+            built.BuildMs = double.MaxValue;
+
+            int nodes = 0;
+            int links = 0;
+
+            for (int r = 0; r < (Repeats < 1 ? 1 : Repeats); r++)
+            {
+                Stopwatch build = Stopwatch.StartNew();
+                ThermalSimulation candidate = Build(settings, hull);
+                build.Stop();
+
+                if (r == 0)
+                {
+                    nodes = candidate.Solver.Nodes.Count;
+                    links = candidate.Solver.Links.Count;
+                }
+                else if (candidate.Solver.Nodes.Count != nodes
+                    || candidate.Solver.Links.Count != links)
+                {
+                    throw new InvalidOperationException(
+                        "repeat " + r + " built " + candidate.Solver.Nodes.Count + " nodes and "
+                        + candidate.Solver.Links.Count + " links against " + nodes + " and " + links
+                        + " the first time, so these are readings of different builds");
+                }
+
+                if (build.Elapsed.TotalMilliseconds < built.BuildMs)
+                {
+                    built.BuildMs = build.Elapsed.TotalMilliseconds;
+                }
+
+                built.Builds++;
+
+                // The last one stands, so what the caller steps is a simulation nothing else has
+                // touched.
+                built.Simulation = candidate;
+            }
+
+            return built;
+        }
+
         private static void Ladder(List<ReportRow> rows, string shape, IList<int> sizes, int ticks,
             Action<string> log)
         {
@@ -218,15 +306,14 @@ namespace Thermodynamics.Harness
                 ThermalSettings settings = Configure(0, true);
                 GridBuilder hull = Hull(shape, size);
 
-                Stopwatch build = Stopwatch.StartNew();
-                ThermalSimulation simulation = Build(settings, hull);
-                build.Stop();
+                BuiltHull built = RepeatBuild(settings, hull);
+                ThermalSimulation simulation = built.Simulation;
 
                 string name = size.ToString("n0");
 
                 Add(rows, "ladder", name, "blocks", simulation.Solver.Nodes.Count, "");
                 Add(rows, "ladder", name, "links", simulation.Solver.Links.Count, "");
-                Add(rows, "ladder", name, "build", build.Elapsed.TotalMilliseconds, "ms");
+                Add(rows, "ladder", name, "build", built.BuildMs, "ms");
 
                 Sample sample = Measure(settings, shape, size, ticks, simulation);
 
