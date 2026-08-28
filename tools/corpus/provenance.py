@@ -87,14 +87,11 @@ def measured_current_definitions(composition):
     if not os.path.exists(path):
         return None
 
-    recorded = None
-    with open(path, encoding="utf-8") as handle:
-        for line in handle:
-            if line.startswith("Cubes.xml "):
-                recorded = line.split()[1]
-
-    if recorded is None:
+    seen = definition_hashes(directory, "Cubes.xml")
+    if not seen:
         return None
+
+    recorded = seen[-1]
 
     cubes = os.path.join(repo_root(), "Data", "Cubes.xml")
     if not os.path.exists(cubes):
@@ -106,6 +103,51 @@ def measured_current_definitions(composition):
             digest.update(block)
 
     return digest.hexdigest()[:16] == recorded
+
+
+def definition_hashes(directory, definition="Cubes.xml"):
+    """Every distinct hash `provenance.txt` records for one definition file, in the order seen.
+
+    **A walk resumed across a definition change writes one line per slice, and the file has always
+    said so.** The survey of 2026-08-25 ran in five slices and its provenance records two different
+    `Cubes.xml` hashes, because `C36` moved the radiator's emissivity between the fourth and the
+    fifth. Reading only the last line — which is what this module did until 2026-08-28 — reports
+    such a dataset as measured against the current file, which it half was.
+
+    Whether that matters is a separate question and this does not answer it: for that survey it did
+    not, because the two radiators are the mod's own blocks and no vanilla corpus ship carries one.
+    But *the dataset spans two definition sets* is a fact about the dataset, and a reader who is not
+    told it cannot ask the question at all (`P2`).
+    """
+    path = os.path.join(directory, "provenance.txt")
+    if not os.path.exists(path):
+        return []
+
+    prefix = definition + " "
+    seen = []
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            if not line.startswith(prefix):
+                continue
+            digest = line.split()[1]
+            if digest not in seen:
+                seen.append(digest)
+
+    return seen
+
+
+def spans_several_definitions(directory):
+    """The definition files this dataset saw more than one version of, with the versions.
+
+    Empty when every slice of the walk saw the same files, which is what a dataset taken in one
+    run always looks like.
+    """
+    split = {}
+    for definition in ("Cubes.xml", "Loops.xml", "Planets.xml"):
+        seen = definition_hashes(directory, definition)
+        if len(seen) > 1:
+            split[definition] = seen
+    return split
 
 
 def classify(note):
@@ -266,6 +308,20 @@ def main(argv):
             print(f"  {name:>12} {tally[name]:4d}  {tally[name] / total * 100:5.1f} %")
 
     current = measured_current_definitions(argv[1])
+
+    # **Said before the figures, because it decides what they are figures about.** A walk resumed
+    # across a definition change carries rows from both, and reading only the last line of
+    # `provenance.txt` reports it as one dataset.
+    split = spans_several_definitions(os.path.dirname(os.path.abspath(argv[1])))
+    if split:
+        print()
+        for definition in sorted(split):
+            print(f"SPANS {len(split[definition])} VERSIONS of {definition}:"
+                  f" {', '.join(split[definition])}")
+        print("  This dataset was walked in slices and the definitions moved under it. Whether that"
+              " reaches these figures depends on which blocks changed and whether the population"
+              " carries them; nothing here can answer that, and every figure below is over both.")
+
     rows, measured, restated, unsourced = heat(argv[1], table, restate=current is not True)
     measured_total = sum(measured.values()) or 1.0
     restated_total = sum(restated.values()) or 1.0

@@ -21,7 +21,17 @@ namespace Thermodynamics.Tests
     internal static class CorpusRecord
     {
         private static readonly object Gate = new object();
-        private static readonly HashSet<string> Started = new HashSet<string>(StringComparer.Ordinal);
+        /// <summary>
+        /// What this process has already written a header or a provenance block for.
+        ///
+        /// <para>
+        /// Per process, which is the whole point: a *resumed* walk is a new process and appends a
+        /// second block, so a dataset assembled across two builds says so rather than claiming the
+        /// second. `CorpusProvenanceTests` clears this to exercise that, which is the only way to
+        /// reach a second process's behaviour from one.
+        /// </para>
+        /// </summary>
+        internal static readonly HashSet<string> Started = new HashSet<string>(StringComparer.Ordinal);
 
         /// <summary>
         /// The directory to write into, or null when recording is off.

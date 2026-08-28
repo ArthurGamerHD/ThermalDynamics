@@ -138,12 +138,39 @@ the other is the finding, not a gap to be joined away.
 
 **Every dataset says what build it came from.** `provenance.txt` is written beside the outcomes on a
 walk's first batch: the walk's name and start, the commit `HEAD` pointed at, and a digest of
-`Cubes.xml` and `Materials.xml` — the two files whose contents decide what a walk measures and which
-a commit hash says nothing about when they are edited and not committed. A resumed walk appends a
-second block rather than overwriting, so a dataset assembled across two builds says so.
+`Cubes.xml`, `Loops.xml` and `Planets.xml` — the three files whose contents decide what a walk
+measures and which a commit hash says nothing about when they are edited and not committed. A
+resumed walk appends a second block rather than overwriting, so a dataset assembled across two
+builds says so.
 
 `verdict.py` prints it and `--csv` records it, so a figure quoted from a committed summary carries
 the world it was measured in. A dataset with no such file says so rather than being assumed current.
+
+**And a reader has to read all of it, which took until 2026-08-28.** The writer had appended
+correctly since the day it was written and its own summary said so; `provenance.py` read only the
+*last* `Cubes.xml` line, so a walk resumed across a definition change reported as measured against
+the current file — which it half was. The 2026-08-25 survey ran in five slices and records two
+`Cubes.xml` hashes and two `Loops.xml` hashes, because `C36`, `C42` and `C43` landed between the
+fourth and the fifth. One format, two readers, and they had drifted (`D3`).
+
+`provenance.py` now prints `SPANS n VERSIONS of <file>` above its figures, and
+`spans_several_definitions` is the lookup. It says the dataset is mixed; it does not say whether
+that reaches the figures, because that depends on which blocks moved and whether the population
+carries them. For that survey it does not: the only `Cubes.xml` change in the window is the
+emissivity of `Gauge_SG_Radiator` and `Gauge_LG_Radiator`, and **no ship in the corpus carries a
+radiator, a coolant pipe, a pump or a heat pump**. `Loops.xml` describes coolant, which is the same
+argument. Both halves of the dataset are comparable, and now a reader can see the question rather
+than having to think of it.
+
+That last claim is a measurement, not an argument from what a workshop blueprint ought to contain —
+`Ship.IsVanilla` means every block named a definition, and the mod's blocks *are* definitions, so it
+would not have caught one. It is 207 distinct types across the whole census and none of them one
+this mod adds:
+
+```bash
+cut -d, -f4 out/census-2026-08-25/composition.csv | tr -d '"' | sort -u \
+    | grep -icE 'radiator|coolant|heatpump'      # 0, of 207 distinct types
+```
 
 It exists because the alternative was paid for once. The 2026-08-24 air walk finished **one minute
 after** a commit that took twenty-seven `ConsumerWasteEnergy` fractions from 0.9 to 1.0, and
@@ -469,6 +496,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **A dataset that spans two builds says so, and the reader that could not see it is fixed.** `provenance.txt` has appended a block per slice since it was written, and its writer's summary said as much; `provenance.py` read only the last `Cubes.xml` line, so the 2026-08-25 survey — five slices, two `Cubes.xml` hashes, two `Loops.xml` hashes — reported as measured against the current file. One format, two readers, drifted (`D3`). `spans_several_definitions` is the lookup and the report prints it. **It does not decide whether the split matters**: for that survey it does not, because the only change in the window is the two radiators' emissivity and no corpus ship carries a radiator or any other block the mod adds. Also corrected: this page named `Materials.xml` as the second hashed file for months, and the three the code hashes are `Cubes.xml`, `Loops.xml` and `Planets.xml`. |
 | 2026-08-26 | **`verdict.py` says when a dataset is partial**, which `E4` has asked for since it was written and nothing did. It counts the corpus's blueprints — recursively, because a workshop item can be a collection of several and counting one level deep misses fourteen of this corpus's and reports a population *smaller* than the walk that covered it — and prints `*** PARTIAL: n of m ***` above everything else. Where the corpus is not on the machine it says the population is **unknown** rather than assuming the dataset is whole; `--population <n>` states it. The threshold is 95 %, because the blueprint filters reject about one hull in a thousand and demanding equality would call every finished walk partial. |
 | 2026-08-26 | Added [`cellsize.py`](cellsize.py) and `test_cellsize.py`: which cell size is the harder one to cool, split off a census rather than argued off a cell face. Every column favours small grids — 2.47× the exposed skin per kilowatt, a fifth as much of it buried, **19.75×** the hull path per watt for the hottest block — which is the opposite of what [balance.md](../../docs/balance.md) had written down and what `C43` was blocked on. The hull path is read per kilowatt because the raw column says the reverse, and the test is built around that one column. |
 | 2026-08-25 | `verdict.py` refuses to score a criterion its dataset is too coarse to state, and `scoring.resolves` is the rule. A criterion given as a share of the corpus needs a corpus that can tell its two sides apart: on the thirteen ships of a partial survey slice one ship is 7.7 %, so *nothing critical* and *one per cent critical* are the same reading, and `G1` came back `[HOLDS]`. It reads `[  ?  ]` now, with what the dataset would need. It is a resolution test rather than a confidence one and says so — a partial walk that passes it is still a partial walk. The 8,142-ship dataset is unaffected. |

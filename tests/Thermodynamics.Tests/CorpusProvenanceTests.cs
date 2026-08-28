@@ -60,6 +60,27 @@ namespace Thermodynamics.Tests
                 // gains a block of provenance for every batch it writes.
                 CorpusRecord.Provenance("a-walk-that-does-not-exist");
                 Assert.Equal(text, File.ReadAllText(path));
+
+                // **And a resumed walk appends rather than overwrites**, which is a different
+                // claim: the guard above is per process, and a resume is a new one. The record is
+                // the only thing that can say a dataset was assembled across two builds — the
+                // 2026-08-25 survey ran in five slices and the radiator's emissivity moved between
+                // the fourth and the fifth — and a writer that overwrote would leave it claiming
+                // the last build for rows taken under the first.
+                //
+                // Nothing asserted this until 2026-08-28, and the reader on the other side of the
+                // format had drifted to match: `tools/corpus/provenance.py` read only the last
+                // `Cubes.xml` line and reported a split dataset as one (`D3`).
+                CorpusRecord.Started.Clear();
+                CorpusRecord.Provenance("a-walk-that-does-not-exist");
+
+                string appended = File.ReadAllText(path);
+                Assert.StartsWith(text, appended);
+                Assert.True(appended.Length > text.Length,
+                    "a resumed walk overwrote its provenance instead of appending, so a dataset"
+                    + " assembled across two builds would claim only the second");
+                Assert.Equal(2, Occurrences(appended, "walk a-walk-that-does-not-exist"));
+                Assert.Equal(2, Occurrences(appended, "Cubes.xml "));
             }
             finally
             {
@@ -72,6 +93,18 @@ namespace Thermodynamics.Tests
                 {
                 }
             }
+        }
+
+        /// <summary>How many times one string occurs, which is what says a block was added rather than replaced.</summary>
+        private static int Occurrences(string text, string needle)
+        {
+            int count = 0;
+            for (int i = text.IndexOf(needle, StringComparison.Ordinal); i >= 0;
+                i = text.IndexOf(needle, i + needle.Length, StringComparison.Ordinal))
+            {
+                count++;
+            }
+            return count;
         }
     }
 }

@@ -132,6 +132,50 @@ class ARestatementAppliesOnlyToADatasetThatPredatesTheChange(unittest.TestCase):
     def test_a_recorded_hash_that_differs_means_restate(self):
         self.assertIs(False, provenance.measured_current_definitions(self.write("0" * 16)))
 
+    def slices(self, *hashes):
+        """A provenance file as a resumed walk writes it: one block of lines per slice."""
+        path = os.path.join(self.root, "composition.csv")
+        open(path, "w").write("ship,workshop_id,subtype,type_id,count,waste_full_w,share_of_waste\n")
+        with open(os.path.join(self.root, "provenance.txt"), "w") as handle:
+            for i, digest in enumerate(hashes):
+                handle.write(f"walk survey started slice {i}\ncommit abc\n")
+                handle.write(f"Cubes.xml {digest}\nLoops.xml aaaa\nPlanets.xml bbbb\n")
+        return path
+
+    def test_a_walk_taken_in_one_run_spans_one_version(self):
+        self.slices("1111111111111111", "1111111111111111", "1111111111111111")
+        self.assertEqual(["1111111111111111"],
+                         provenance.definition_hashes(self.root, "Cubes.xml"))
+        self.assertEqual({}, provenance.spans_several_definitions(self.root))
+
+    def test_a_walk_resumed_across_a_definition_change_says_so(self):
+        """**The failure this exists to prevent is a mixed dataset reading as one.**
+
+        The survey of 2026-08-25 ran in five slices and `C36` moved the radiator's emissivity
+        between the fourth and the fifth, so its provenance records two `Cubes.xml` hashes.
+        Reading only the last line — which is what this module did — reports it as measured
+        against the current file, which it half was.
+        """
+        self.slices("1111111111111111", "1111111111111111", "2222222222222222")
+
+        self.assertEqual(["1111111111111111", "2222222222222222"],
+                         provenance.definition_hashes(self.root, "Cubes.xml"))
+
+        split = provenance.spans_several_definitions(self.root)
+        self.assertIn("Cubes.xml", split)
+        self.assertEqual(["1111111111111111", "2222222222222222"], split["Cubes.xml"])
+
+        # The files that did not move are not reported, or every split dataset would name all
+        # three and the one that matters would be lost among them.
+        self.assertNotIn("Loops.xml", split)
+        self.assertNotIn("Planets.xml", split)
+
+    def test_a_dataset_with_no_provenance_spans_nothing_rather_than_failing(self):
+        """Every dataset taken before `provenance.txt` existed has none, and that is not a split."""
+        self.write(None)
+        self.assertEqual([], provenance.definition_hashes(self.root, "Cubes.xml"))
+        self.assertEqual({}, provenance.spans_several_definitions(self.root))
+
 
 if __name__ == "__main__":
     unittest.main()
