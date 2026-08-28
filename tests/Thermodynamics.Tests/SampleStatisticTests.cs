@@ -180,6 +180,119 @@ namespace Thermodynamics.Tests
             }
         }
 
+        /// <summary>
+        /// **Two runs an hour apart are not one measurement, and the artefact now says so.**
+        ///
+        /// <para>
+        /// Every spread this lab reports is a spread between runs; Pass 9, Iteration 6 found the
+        /// same exposure code measuring 4.75 ms across twelve processes of one window and 11.40 in
+        /// a session two days earlier, so a comparison that silently spans sessions reports session
+        /// drift as if it were the statistic's own irreproducibility. The window is asserted at the
+        /// boundary in both directions, because a threshold checked on one side only is a threshold
+        /// that can be off by any amount on the other.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void RunsAreOneWindowOnlyIfTheyWereTakenInsideOne()
+        {
+            List<SampleStatisticLab.Series> inside = new List<SampleStatisticLab.Series>
+            {
+                Stamped("run1", "2026-08-27T10:00:00Z"),
+                Stamped("run2", "2026-08-27T10:59:00Z"),
+            };
+
+            SampleStatisticLab.WindowSpan span = SampleStatisticLab.Window(inside);
+            Assert.True(span.IsOneWindow);
+            Assert.Equal(0, span.Unstamped);
+            Assert.Equal("2026-08-27T10:00:00Z", span.Earliest);
+            Assert.Equal("2026-08-27T10:59:00Z", span.Latest);
+            Assert.Equal(59d, span.Elapsed.TotalMinutes);
+
+            // Exactly the boundary is still one window; a minute past it is not.
+            inside[1] = Stamped("run2", "2026-08-27T11:00:00Z");
+            Assert.True(SampleStatisticLab.Window(inside).IsOneWindow);
+
+            inside[1] = Stamped("run2", "2026-08-27T11:01:00Z");
+            Assert.False(SampleStatisticLab.Window(inside).IsOneWindow);
+
+            // The order the runs are given in cannot change the answer.
+            inside.Reverse();
+            Assert.False(SampleStatisticLab.Window(inside).IsOneWindow);
+            Assert.Equal("2026-08-27T10:00:00Z", SampleStatisticLab.Window(inside).Earliest);
+        }
+
+        /// <summary>
+        /// A run that carries no stamp, or one nothing can read, is not one window with anything.
+        /// The failure this exists to prevent is the quiet one: an unstamped artefact read as
+        /// *taken together*, which is the state every artefact written before the stamp is in.
+        /// </summary>
+        [Fact]
+        public void ARunWithNoReadableStampIsNotOneWindowWithAnything()
+        {
+            List<SampleStatisticLab.Series> runs = new List<SampleStatisticLab.Series>
+            {
+                Stamped("run1", "2026-08-27T10:00:00Z"),
+                Stamped("run2", string.Empty),
+            };
+
+            SampleStatisticLab.WindowSpan span = SampleStatisticLab.Window(runs);
+            Assert.False(span.IsOneWindow);
+            Assert.Equal(1, span.Unstamped);
+
+            runs[1] = Stamped("run2", "not a time");
+            Assert.False(SampleStatisticLab.Window(runs).IsOneWindow);
+            Assert.Equal(1, SampleStatisticLab.Window(runs).Unstamped);
+
+            // One run's several stages are one run, not several.
+            List<SampleStatisticLab.Series> oneRun = new List<SampleStatisticLab.Series>
+            {
+                Stamped("run1", string.Empty, "place"),
+                Stamped("run1", string.Empty, "rooms"),
+            };
+            Assert.Equal(1, SampleStatisticLab.Window(oneRun).Unstamped);
+        }
+
+        /// <summary>
+        /// The stamp survives the artefact. `SamplesCsv` writes it and `Read` recovers it, which is
+        /// the pair the window check actually runs on — an in-memory `Series` would prove nothing
+        /// about the column (`D3`).
+        /// </summary>
+        [Fact]
+        public void TheStampIsWrittenToTheArtefactAndReadBackFromIt()
+        {
+            StageLab.Row row = new StageLab.Row();
+            row.Stage = "exposure";
+            row.Blocks = 10;
+            row.Samples.AddRange(new[] { 1d, 2d, 3d });
+
+            string path = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(path, StageLab.SamplesCsv(new List<StageLab.Row> { row }));
+
+                Assert.Contains("taken_utc", File.ReadAllLines(path)[0]);
+
+                List<SampleStatisticLab.Series> read = SampleStatisticLab.Read(path, "run1");
+                Assert.Single(read);
+                Assert.Equal(StageLab.TakenUtc, read[0].TakenUtc);
+                Assert.Equal(3, read[0].Samples.Count);
+                Assert.Equal(0, SampleStatisticLab.Window(read).Unstamped);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        private static SampleStatisticLab.Series Stamped(string run, string takenUtc, string stage = "exposure")
+        {
+            SampleStatisticLab.Series series = new SampleStatisticLab.Series();
+            series.Run = run;
+            series.Stage = stage;
+            series.TakenUtc = takenUtc;
+            return series;
+        }
+
         private static SampleStatisticLab.Series Series(string run, string stage, double[] samples)
         {
             SampleStatisticLab.Series series = new SampleStatisticLab.Series();

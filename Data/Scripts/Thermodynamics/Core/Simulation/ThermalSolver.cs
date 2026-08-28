@@ -702,11 +702,7 @@ namespace Thermodynamics.Core
             Work.ExposureNodeVisits++;
 
             surfaces.GetExposedFaces(block, rooms, exposureScratch);
-            for (int f = 0; f < Face.Count; f++)
-            {
-                node.SetExposedFaces(f, exposureScratch[f]);
-            }
-            node.RefreshExposure();
+            node.SetExposedFaces(exposureScratch);
         }
 
         /// <summary>
@@ -1468,11 +1464,7 @@ namespace Thermodynamics.Core
             {
                 ThermalNode node = nodes[i];
                 surfaces.GetExposedFaces(node.Block, exposureMap, exposureScratch);
-                for (int f = 0; f < Face.Count; f++)
-                {
-                    node.SetExposedFaces(f, exposureScratch[f]);
-                }
-                node.RefreshExposure();
+                node.SetExposedFaces(exposureScratch);
             }
 
             exposureCursor = end;
@@ -1537,11 +1529,7 @@ namespace Thermodynamics.Core
                 if (node == null) continue;
 
                 surfaces.GetExposedFaces(block, rooms, exposureScratch);
-                for (int f = 0; f < Face.Count; f++)
-                {
-                    node.SetExposedFaces(f, exposureScratch[f]);
-                }
-                node.RefreshExposure();
+                node.SetExposedFaces(exposureScratch);
             }
         }
 

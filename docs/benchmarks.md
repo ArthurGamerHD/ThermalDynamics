@@ -989,6 +989,12 @@ belong to the machine that took them; a row taken elsewhere is not comparable to
 calibration and noise columns are what say whether two rows may be read against each other at all —
 a run taken at several times the usual noise moves the smallest figures by several per cent.
 
+**A row belongs to its *session*, not only to its machine, and the two rows are further apart than
+they look.** Pass 9's sixth iteration measured bit-identical code at a stage median of 4.75 ms in one
+held window and 11.40 in another on the same machine, and the calibration and noise columns did not
+see it — what moved was the shape of the distribution rather than its floor. Two rows of this log
+are a trend, not a measurement; a measurement is two legs alternated inside one window (`M7`).
+
 The benchmark baseline itself is versioned at
 [`tests/benchmarks/performance.csv`](../tests/benchmarks/performance.csv), so any figure in the
 report can be recovered for any row here by reading that file at the row's commit.
@@ -1155,6 +1161,7 @@ several times its neighbours' should be re-taken rather than explained.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Said what a row of the iteration log is and is not. The log's caution was *a row belongs to the machine that took it*, with the calibration and noise columns as the guard; pass 9's sixth iteration measured bit-identical code 2.2× apart between two sessions of one machine, invisibly to both columns, because what moved was the distribution's shape rather than its floor. Two rows are a trend; a measurement is two legs alternated inside one window (`M7`). |
 | 2026-08-26 | Recorded row 12 in both tables, from the 2026-08-26 performance pass, and marked it as the first solver row taken on an optimised build — which makes it unreadable against every row above it and readable only against the pass's own start (`M7`, `M13`). The pass moved no step figure and was not meant to: it is a load-path pass, and [performance.md](performance.md) carries what it did move. |
 | 2026-08-26 | The ladder's `build` column and the calibration row time the simulation's build alone. From `C26` both had the census generator's bolt search inside the clock — 1.0 s of a 1.1 s "build" at 32,800 blocks — so the calibration figure every cross-machine comparison divides by was mostly the generator. The key is unchanged because the column always meant the mod's build; the committed baseline's `build` rows predate `C26` and are the right scope. |
 | 2026-08-26 | **Every figure on this page before this date was measured on an unoptimised build.** The test tree set no `<Optimize>`, so the Debug assemblies `dotnet run` produces told the JIT to compile without optimising. Measured on one commit in one window: a step is 3.4× dearer unoptimised, and the ratio is not uniform — the row fill is 5× and the cost of being measured 7.7× — so every *share* of a step quoted here was taken on an instrument that exaggerated stores through fields. The tree compiles optimised in every configuration now; the figures on this page are left as they were taken and the committed baseline is not re-recorded, because its keys have not changed (`M6`). Argued on [performance.md](performance.md#iteration-1--the-harness-measured-unoptimised-code). |

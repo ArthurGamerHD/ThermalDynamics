@@ -258,7 +258,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **M4** | Keep the fastest of N and the median, and publish the noise floor | absolute | P2 | `PerformanceReportTests` `StageLabTests` |
 | **M5** | A figure inside the noise floor has not moved | absolute | P2 | `PerformanceReportTests` |
 | **M6** | The case key is the contract | absolute | P5 | `BenchmarkBaselineTests` |
-| **M7** | Measure a pass against its own start | absolute | P6 | — |
+| **M7** | Two figures are comparable only if they were taken in one window | absolute | P6 | `SampleStatisticTests` |
 | **M8** | A scenario earns its place by answering what nothing else answers | absolute | P14 | — |
 | **M9** | A scenario's conclusion is pinned so it cannot invert | absolute | P3 | `ScenarioClaimTests` |
 | **M10** | Specimens are chosen by coverage, and every pick names its rule | absolute | P1 | `panel.csv` carries the rule |
@@ -535,6 +535,14 @@ So **a stage reports its minimum and its median, and a ratio is believed only wh
 on both.** The one-sided-noise argument still holds and still rules out the mean; what it does not
 establish is that the minimum of a *bimodal* sample is reproducible, and that was assumed for nine
 passes rather than measured.
+
+**And which of the two reproduces is a property of the session, not of the stage — a sixth pass on
+this rule.** The four runs above were one window. Two days later, twelve runs of bit-identical
+exposure code in one held window put its minimum within 20–30 % of the earlier session's and its
+median at **less than half**: `best/med` was 0.45 then and 0.81–0.87 now. The stage that the table
+above assigns the median is the stage whose median is the figure that did not survive the session.
+That is why the rule is *report both and refuse marginal ratios* rather than *read this column for
+this stage*, and it is why `M7` is scoped to any two figures compared rather than to a pass.
 
 *Applies to:* every millisecond in a report.
 *Checked by:* `PerformanceReportTests`, and `StageLabTests.EveryStageStopsForAReasonItCanName` and
@@ -1077,17 +1085,39 @@ taken in parallel is a different one, and nothing in the number says which it is
 *Checked by:* `ParallelAndLinearProduceTheSameMatrix`, which fails when shared state returns.
 *From:* [balance-lab.md](balance-lab.md).
 
-#### M7 — Measure a pass against its own start
+#### M7 — Two figures are comparable only if they were taken in one window
 
-**To say what a pass cost, take a report at the pass's starting commit and one at its tip,
-minutes apart on one idle machine.**
+**Any two timings put in a ratio are taken minutes apart on one held machine — which for a pass
+means a report at its starting commit and one at its tip, and for an A/B means the two legs
+alternated inside a single window.**
 
 The committed baseline is pinned at an old commit, so a diff against it spans every commit since
-and attributes all of them to whoever ran it.
+and attributes all of them to whoever ran it. That was the whole of this rule until the session
+became measurable. **It is now the smaller half.** The same exposure code, the same machine, the
+same command, two days apart: a stage median of 11.40 ms and one of 4.75, with the source, the
+instrument, the build configuration and the stage order each eliminated in turn. Nothing inside a
+window can see that — every run of a session is on the same side of it — so it is not a thing more
+repeats or more processes will fix, and a *before* and an *after* quoted from two days' tables is
+not a measurement however carefully each was taken. Pass 4 saw the same effect at thirty per cent
+on a commit that was the *after* leg of one iteration and the *before* leg of the next, and left it
+as a caution in prose; five passes on it is a factor of two and it has been silently re-deciding
+which statistic a stage is read with, which is why it is a rule with an artefact behind it now.
 
-*Applies to:* the per-pass figures in the iteration log.
-*Checked by:* — procedure.
-*From:* [benchmarks.md](benchmarks.md#the-iteration-log).
+The corollary is the useful one: a ratio taken as a pair inside one window is unharmed, because
+whatever the session is doing is doing it to both legs. Alternate the legs rather than blocking
+them, so drift within the window is common to both as well, and carry an untouched stage as a
+control.
+
+*Applies to:* any two timings put in a ratio — a pass against its start, an A/B's two legs, a
+figure on a page against a figure on another.
+*Checked by:* `SampleStatisticTests` — `RunsAreOneWindowOnlyIfTheyWereTakenInsideOne`,
+`ARunWithNoReadableStampIsNotOneWindowWithAnything` and
+`TheStampIsWrittenToTheArtefactAndReadBackFromIt`. Every artefact `bench stages` writes carries the
+stamp those read, and `bench samplestats` says above its table whether the runs it is comparing are
+one window, how far apart they were taken, or that they are unstamped. Whether a human then compares
+two windowed figures anyway is procedure.
+*From:* [benchmarks.md](benchmarks.md#the-iteration-log),
+[performance.md](performance.md#pass-9-iteration-6--the-one-write-exposure-change-and-the-session-it-was-measured-in).
 
 ### P7 — The game is the authority
 
@@ -1774,6 +1804,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **`M7` is now *two figures are comparable only if they were taken in one window*, and `M4` says which statistic to read is a property of the session.** The same exposure code measured a 4.75 ms median in one held window and 11.40 two days earlier — `best/med` 0.83 against 0.45 — with the source, the instrument, the build configuration and the stage order each eliminated in turn. The minimum roughly travels between sessions and the median does not, which is the reverse of what `M4`'s within-window table assigns this stage. Pass 4 saw the same effect at thirty per cent and left it as prose; it has an artefact behind it now, `taken_utc` on every run the stage lab writes. |
 | 2026-08-27 | **`M4` takes the median as well as the fastest, and says the reproducibility is not checkable.** Four runs of one binary at 126,731 blocks, four hundred repeats a stage, every candidate summary compared: the minimum reproduces to 4.5 % on the room pass and 97 % on `register`; the median to 0.9 % on exposure where the minimum manages 30 %. No summary is best for more than three of the eight and two have none. Pass 8's fix — sample until the best is reproduced — was right and does not reach a stage whose best is a rare draw. Unchecked rules: eighteen, unchanged. |
 | 2026-08-27 | **`R14` is checked by the compiler.** Turning on `GenerateDocumentationFile` and making `CS1574` and its family errors makes every `<see cref>`, `<param>` and `<paramref>` in this tree resolve to something that exists — real name binding, which no test here could do without reimplementing it, and which had never been asked for. Twenty-five failures were waiting, four in the shipped mod, including a `[ProtoMember]` whose comment described a deleted field and a method's parameters documented onto the constant inserted above it. `CS1570` and `CS1572` stay warnings in `Generic.csproj` alone, for the five a vendored file carries and `R6` forbids fixing. Unchecked rules: eighteen, unchanged — `R14` was already cited to a test, and now has the stronger check in front of it. |
 | 2026-08-27 | `M4` says what makes N enough: the fastest reading has to have been reproduced. Keeping the fastest of a fixed fifteen had not converged for any stage but the solver — three runs of one binary spread 48 %, 28 % and 67 % — and two passes of optimisations were judged at effect sizes smaller than that. |

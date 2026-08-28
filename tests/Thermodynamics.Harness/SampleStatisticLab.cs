@@ -52,7 +52,94 @@ namespace Thermodynamics.Harness
         {
             public string Run;
             public string Stage;
+
+            /// <summary>
+            /// When the process that took these repeats started, from the artefact's `taken_utc`
+            /// column; empty for a file written before <see cref="StageLab.TakenUtc"/> existed.
+            /// See <see cref="WindowSpan"/> for what it is for.
+            /// </summary>
+            public string TakenUtc = string.Empty;
+
             public readonly List<double> Samples = new List<double>();
+        }
+
+        /// <summary>
+        /// How far apart the runs being compared were taken, and whether that is one window.
+        ///
+        /// <para>
+        /// **Every spread this lab reports is a spread between runs, and a spread between runs of
+        /// two sessions is not the same measurement as a spread between runs of one.** Pass 9,
+        /// Iteration 6 measured bit-identical exposure code at a 4.75 ms median across twelve
+        /// processes of one held window — agreeing to 1.3 % — against the 11.40 ms of a session two
+        /// days earlier. Nothing in the artefacts said they were different sessions, and no
+        /// summary of the repeats could have: what moved was the whole distribution.
+        /// </para>
+        /// </summary>
+        public class WindowSpan
+        {
+            public string Earliest = string.Empty;
+            public string Latest = string.Empty;
+
+            /// <summary>Runs whose artefact carried no stamp, which cannot be placed in a window at all.</summary>
+            public int Unstamped;
+
+            public TimeSpan Elapsed;
+
+            /// <summary>
+            /// Whether the runs are close enough together to be read as one window.
+            ///
+            /// <para>
+            /// **An hour, and it is a heuristic rather than a law.** `heavy` windows are capped in
+            /// tens of minutes and a pairing's legs are taken inside one, so runs an hour apart were
+            /// not taken together whatever else is true; runs inside an hour usually were. An
+            /// unstamped run is not one window with anything, because nothing says where it sits.
+            /// </para>
+            /// </summary>
+            public static readonly TimeSpan OneWindow = TimeSpan.FromHours(1d);
+
+            public bool IsOneWindow
+            {
+                get { return Unstamped == 0 && Elapsed <= OneWindow; }
+            }
+        }
+
+        /// <summary>
+        /// The window the given runs were taken in. Stamps that do not parse are counted as
+        /// unstamped rather than skipped, because a stamp nobody can read is not evidence that two
+        /// runs were taken together (`E8`).
+        /// </summary>
+        public static WindowSpan Window(IList<Series> series)
+        {
+            WindowSpan span = new WindowSpan();
+            List<DateTime> stamps = new List<DateTime>();
+            HashSet<string> seenRuns = new HashSet<string>(StringComparer.Ordinal);
+            HashSet<string> unstampedRuns = new HashSet<string>(StringComparer.Ordinal);
+
+            for (int i = 0; i < series.Count; i++)
+            {
+                Series one = series[i];
+                if (!seenRuns.Add(one.Run + "\u0000" + one.TakenUtc)) continue;
+
+                DateTime stamp;
+                if (string.IsNullOrEmpty(one.TakenUtc)
+                    || !DateTime.TryParse(one.TakenUtc, CultureInfo.InvariantCulture,
+                        DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out stamp))
+                {
+                    unstampedRuns.Add(one.Run);
+                    continue;
+                }
+
+                stamps.Add(stamp);
+            }
+
+            span.Unstamped = unstampedRuns.Count;
+            if (stamps.Count == 0) return span;
+
+            stamps.Sort();
+            span.Earliest = stamps[0].ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+            span.Latest = stamps[stamps.Count - 1].ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+            span.Elapsed = stamps[stamps.Count - 1] - stamps[0];
+            return span;
         }
 
         /// <summary>What one stage's runs say about one candidate statistic.</summary>
@@ -115,6 +202,9 @@ namespace Thermodynamics.Harness
                     stage = new Series();
                     stage.Run = run;
                     stage.Stage = parts[0];
+                    // Absent in artefacts written before the stamp existed, which is why its
+                    // absence is reported rather than treated as agreement.
+                    stage.TakenUtc = parts.Length > 4 ? parts[4].Trim() : string.Empty;
                     byStage[parts[0]] = stage;
                     series.Add(stage);
                 }

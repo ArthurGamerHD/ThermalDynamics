@@ -1192,6 +1192,36 @@ namespace Thermodynamics.Sim
                     Console.WriteLine("  The one to keep is the one two runs of the same code agree"
                         + " on, which is the only property a comparison uses.");
                     Console.WriteLine();
+
+                    // Said before the table rather than after it, because it decides what the
+                    // table's spreads mean: runs of two sessions carry whatever moved between
+                    // them, and no column below can separate that from the statistic's own
+                    // reproducibility. See performance.md, Pass 9, Iteration 6.
+                    SampleStatisticLab.WindowSpan window = SampleStatisticLab.Window(series);
+                    if (window.Unstamped > 0)
+                    {
+                        Console.WriteLine("  " + window.Unstamped + " of these runs"
+                            + (window.Unstamped == 1 ? " carries" : " carry")
+                            + " no taken_utc, so nothing says whether they are one window; the"
+                            + " spreads below may be between sessions rather than between"
+                            + " processes.");
+                    }
+                    else if (window.IsOneWindow)
+                    {
+                        Console.WriteLine("  one window: " + window.Earliest + " to "
+                            + window.Latest + ", "
+                            + window.Elapsed.TotalMinutes.ToString("n0") + " minutes apart.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("  ACROSS SESSIONS: " + window.Earliest + " to "
+                            + window.Latest + ", "
+                            + window.Elapsed.TotalHours.ToString("n1") + " hours apart — the"
+                            + " spreads below include whatever moved between them, which for the"
+                            + " exposure stage has been a factor of two on identical code.");
+                    }
+
+                    Console.WriteLine();
                     Console.WriteLine(SampleStatisticLab.Table(statRows));
 
                     for (int i = 0; i < droppedStages.Count; i++)

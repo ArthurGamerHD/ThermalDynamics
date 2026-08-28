@@ -184,6 +184,16 @@ namespace Thermodynamics.Tests
                 Assert.Contains("repeats", csv.Split('\n')[0]);
                 Assert.Contains("confirmed_best", csv.Split('\n')[0]);
 
+                // **Which window a figure came from is part of the figure** (`M7`): the same code
+                // read 2.2x apart between two sessions of this machine, so a row that does not say
+                // when it was taken is a row that will be compared with one from another day. The
+                // stamp is asserted in the artefact rather than on the row, because the row is not
+                // what anybody reads a fortnight later.
+                Assert.Contains("taken_utc", csv.Split('\n')[0]);
+                Assert.Contains("host", csv.Split('\n')[0]);
+                Assert.Contains(StageLab.TakenUtc, csv);
+                Assert.Contains(StageLab.Host, csv);
+
                 for (int i = 0; i < rows.Count; i++)
                 {
                     StageLab.Row row = rows[i];

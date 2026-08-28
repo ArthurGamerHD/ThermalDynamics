@@ -2288,6 +2288,8 @@ next by the same measure. This pass starts there.
 | 3 | The lab that asks which summary of a stage's repeats reproduces | **kept** — `bench samplestats` | [Iteration 3](#pass-9-iteration-3--the-lab-that-asks-which-statistic-reproduces) |
 | 4 | Cleanup: whether a doc comment names something that is there | **kept** — the compiler does it, and found twenty-five | [Iteration 4](#pass-9-iteration-4--the-compiler-was-never-asked-whether-a-comment-names-something-that-is-there) |
 | 5 | Which summary of a stage's repeats reproduces, measured | **kept** — none of them does for every stage; both are reported now | [Iteration 5](#pass-9-iteration-5--no-single-statistic-reproduces-and-two-stages-have-none) |
+| 6 | The exposure stage's six writes packed into one | **kept** — the stage's median falls 19.5 % | [Iteration 6](#pass-9-iteration-6--the-one-write-exposure-change-and-the-session-it-was-measured-in) |
+| 6 | Cleanup: the mod project had not built for three commits | **kept** — `ProjectFileTests` | [Iteration 6](#pass-9-iteration-6--the-one-write-exposure-change-and-the-session-it-was-measured-in) |
 
 ## Pass 9, iteration 1 — two thirds of the exposure stage is writing the answer down
 
@@ -2540,12 +2542,139 @@ of the stage, and a lab that hard-codes which column to read for `roomair` is a 
 first time the answer changes. Reporting both and refusing marginal ratios costs a column and
 assumes nothing.
 
+## Pass 9, iteration 6 — the one-write exposure change, and the session it was measured in
+
+Iteration 1's ablation put **4.52 ms of the exposure stage's 6.56 into writing the answer down**:
+six read-modify-writes of one packed field, one per face, followed by a second pass that unpacked
+all six to total them. The change that follows from it is small and was built at the time — pack the
+six counts into a local, store once, and let the total fall out of the same walk — and it went
+unmeasured, because iterations 2 to 5 were spent establishing that the instrument could not have
+judged it.
+
+**It is 19.5 % of the stage, and the measurement is the interesting half.**
+
+| | base | change | |
+| --- | ---: | ---: | ---: |
+| exposure, best of 400 | 3.924 ms | 3.589 ms | −8.5 % |
+| exposure, **median of 400** | **4.755 ms** | **3.829 ms** | **−19.5 %** |
+| exposure, `best/med` | 0.82 | 0.94 | |
+| exposure, ns a node | 37.5 | 30.2 | |
+| rooms *(control)*, best | 13.550 ms | 13.774 ms | +1.7 % |
+| rooms *(control)*, median | 14.514 ms | 14.209 ms | −2.1 % |
+
+*Twelve processes in one held window, **alternating** base, change, base, change — six of each —
+at 126,731 blocks, four hundred repeats a stage. Each column is the median of its six processes.
+`rooms` rides along untouched as the control.*
+
+**Every one of the six change readings is below every one of the six base readings, on both
+statistics, and the two legs never overlap.** The base's six medians span 4.704–4.761 and the
+change's 3.812–3.861; the control's twelve interleave completely. Node visits are 126,731 in every
+run of both legs, so the change moved no work — which is the claim, since it removes writes and not
+predicates.
+
+**Alternating rather than blocking the two legs is what iteration 5 bought.** That iteration found
+a process can sit in a slow mode for its whole life, so six of one leg run back to back would
+confound the leg with the window's own drift; interleaving them makes any drift common to both.
+
+**The two statistics disagree by more than a factor of two on the size of the win, and the median is
+the one to believe.** The base's `best/med` is 0.82 — its fastest repeat sits well outside its own
+bulk, in a mode it visits a handful of times in four hundred, which is exactly the shape iteration 5
+said not to trust. The change's is 0.94: its minimum is in its bulk. So the *base's* minimum is the
+unrepresentative figure, the 8.5 % it produces understates the change, and reading only the minimum
+would have priced this at less than half its worth. One base run of six capped — never reproduced
+its own best — while all six change runs confirmed.
+
+### The figures are not the ones iteration 5 published, and the code is identical
+
+Iteration 5 measured this same stage, on this same machine, from the same commit, and recorded a
+**minimum of 5.08 ms and a median of 11.40**. This window puts the minimum at 3.88–4.71 and the
+median at 3.83–5.39. The minimum is 20–30 % apart. **The median is a factor of 2.2.** That was
+chased before the A/B above was believed.
+
+| Eliminated | How |
+| --- | --- |
+| The source moved | `git diff a4e4f9b pass9 -- Data/` is doc comments only; not one line the exposure walk executes |
+| The instrument moved | `StageLab`'s 180 changed lines are the median, the samples list, the stopping reason and the CSV columns — none of them inside a stopwatch |
+| The build configuration | Debug and Release, three runs each, one window: exposure medians 4.769 / 4.765 / 4.770 against 4.758 / 4.753 / 4.774. `M13` holds |
+| The stage order | All eight stages forward and reversed, four hundred repeats, two processes each way. Six of the eight agree on their minimum to within 3 %; the two that move most are exposure at 13.9 % and `roomair` at 5.1 %, both *cheaper* when run earlier. Nothing like a factor of two, and not positional — `place` moved from first to last for 1.9 % and `solver` from last to first for 3.0 % |
+
+*(The order experiment is worth one more sentence, because it did not come back empty. `StageLab.Run`
+settles the heap before every stage and each stage builds its own simulation, so the list's order is
+*designed* not to carry, and it very nearly does not — but exposure is 14 % cheaper measured third
+than measured sixth, which is a real effect that had never been looked for. It is a seventh of what
+is being explained here and is left where this iteration found it.)*
+
+What is left is the session, and **what moved between sessions is the shape of the distribution
+rather than its position.** Iteration 5's exposure `best/med` was 5.08 / 11.40 = **0.45**; every base
+run in this window is 0.81–0.87. The minimum stayed roughly where it was and the body of the
+distribution came down to meet it.
+
+**That is the reverse of iteration 5's conclusion for this stage, and it is the finding.** Iteration
+5 assigned exposure the *median*, because across its four runs the median agreed to 0.9 % where the
+minimum spread 30 %. Both of those are true, and all four of those runs were inside one window.
+Across windows it is the median that moves by a factor of two and the minimum that roughly holds.
+
+> **A statistic's reproducibility, measured inside one window, is not a property of the stage.** It
+> is a property of the stage *in that session*, and iteration 5's table should be read as one.
+
+**This is not the first sighting, and the earlier one is why the rule is worth strengthening rather
+than writing.** Pass 4's iterations 1 and 2 shared a commit — `321c062` was the *after* leg of one
+and the *before* leg of the other — and it read 193 ms in the first window and 149 in the second,
+thirty per cent apart, with the caution *milliseconds do not survive leaving their window* recorded
+under it. That was right, it was left as a caution, and nothing was built to enforce it. Five passes
+later the same effect is a factor of 2.2 and it has been quietly re-deciding which statistic a stage
+is read with.
+
+**Three levels of the same problem, and this is the one that cannot be sampled away.** Pass 8 found
+too few repeats within a process. Iteration 5 found modes between processes of a session. This finds
+a level between sessions, and no number of repeats and no number of processes inside one window will
+reveal it — every measurement that could is on the wrong side of the boundary.
+
+> **A stage figure is comparable only with one taken in the same window.** Ratios taken as a pair
+> inside one window travel; absolute milliseconds do not, and neither does the choice of which
+> statistic to read them with. Every A/B in passes 1 to 9 taken as a pair inside one window is
+> unaffected — which is all of them, by `M4`. Every *before and after* quoted across two tables of
+> different days, including this pass's own start table against anything below it, is not a
+> measurement.
+
+**What changes.** `stages.csv` and `samples.csv` carry `taken_utc`, and `stages.csv` the host;
+`bench samplestats` reads the stamp and says, above its table, whether the runs it is comparing are
+one window, how far apart they were taken, or that they carry no stamp at all — because an artefact
+that does not say which session it came from is one that will be compared with another by accident.
+`SampleStatisticTests` pins the boundary in both directions and pins that an unreadable or absent
+stamp is **not** one window, which is the state of every artefact written before today.
+
+**What is deliberately not done.** No cause is named. The machine is shared with three other
+projects; `heavy` serialises the heavy work and cannot serialise an editor, a language server or an
+incremental build, and nothing in this repository records what else the machine was doing two days
+ago. Naming frequency scaling or thermal state would be a story rather than a finding, and the rules
+above do not need one — they follow from the size of the effect and from where it is invisible, both
+of which are measured. **One limitation is worth stating plainly:** iteration 5's raw repeats are not
+on disk, so the comparison above is against its two published figures rather than against its
+samples. `taken_utc` is what makes the next such comparison better than that.
+
+### Cleanup: the mod project had not built for three commits
+
+Iteration 4's own explanatory comment in `Generic.csproj` contained a `--`, which XML comments
+cannot. MSBuild refuses the file, and a project file that does not parse does not fail the projects
+that reference it — **it leaves the build**. `dotnet build Thermodynamics.Tests.csproj` and `dotnet
+test --no-build` went on passing throughout.
+
+`C11` put the mod project in `tests/Thermodynamics.slnx` so a rename in `Core` cannot pass the suite
+while leaving the mod uncompilable, and it worked exactly as designed and caught nothing here: it is
+the check for a rename, because a rename makes the compile *fail*. `ProjectFileTests` is the check
+for a project that never reaches the compiler — every `.csproj`, `.props`, `.targets` and `.slnx`
+outside `obj` and `bin`, found rather than listed, asserted to parse. Verified by reintroducing the
+exact break.
+
 ---
 
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **`M7` is scoped to any two figures compared, not to a pass.** The exposure stage's six per-face writes became one, worth **19.5 % of the stage's median** over twelve alternating processes of one window against a flat control — and measuring it found that the same code read 2.2× slower in iteration 5's session, with the source, the instrument, the build configuration and the stage order each eliminated. The minimum roughly travels between sessions and the median does not, which inverts iteration 5's assignment for this stage and makes that whole table a within-window measurement. Artefacts carry `taken_utc` now and `bench samplestats` says whether its runs are one window. |
+| 2026-08-27 | The mod project had not built for three commits: iteration 4's own explanatory comment contained a `--`, so MSBuild refused `Generic.csproj` and it left the build instead of failing it. `ProjectFileTests` asserts every MSBuild file in the tree parses. |
 | 2026-08-27 | **`M4` takes the median as well as the fastest.** Four runs of one binary, four hundred repeats a stage: no summary reproduces for more than three of the eight stages, and `links` and `register` have none. The link stage's modes are *between processes* — one run of four never left 31 ms while two others found 15 in their first repeats — which revises pass 8's "not bimodal, under-sampled" and makes passes 6 and 7's seven rejections unjudgeable rather than merely unproven. |
 | 2026-08-27 | `R14` is checked by the compiler now, not only by a pattern test: twenty-five doc comments named something that was not there, four of them in the shipped mod. |
 | 2026-08-27 | Opened pass 9 on the stages the link build's twenty-six iterations crowded out, with an ablation that puts two thirds of the exposure stage in writing its answer down. |
