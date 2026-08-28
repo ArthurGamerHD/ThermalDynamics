@@ -153,7 +153,7 @@ namespace Thermodynamics.Tests
         /// The scan finds what it claims to. Every pattern is checked against a value of its own
         /// shape and against the thing this repository legitimately writes that most resembles it —
         /// a scan that fires on nothing is indistinguishable from a clean tree (`E8`), and one that
-        /// fires on `--key <key>` would be turned off within a week.
+        /// fires on `--key &lt;key&gt;` would be turned off within a week.
         /// </summary>
         [Fact]
         public void TheScanFiresOnKeysAndNotOnTheWordKey()

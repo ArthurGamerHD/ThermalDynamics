@@ -11,6 +11,29 @@
     <LangVersion>6</LangVersion>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
+    <!--
+      This project compiles every file the game compiles (C11), which is the only build that sees
+      the whole mod, so it is the one that can resolve a doc comment's cref against all of it. Two
+      of the four dangling references pass 9 found were in Game files, pointing at types the test
+      projects do not compile: correct in the game's build and unresolvable in theirs. The rule and
+      the reasoning are in tests/Directory.Build.props; the game's own script compiler does not
+      report these, so the check has to live here.
+      See docs/performance.md, Pass 9, Iteration 4.
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CS1573;CS0419</NoWarn>
+    <!--
+      **Two of the nine are warnings here and errors in tests/Directory.Build.props, and the
+      difference is the vendored code.** No test project compiles a vendored file; this project
+      compiles all three, and Draygo's client carries four CS1570s and one CS1572 that R6 forbids
+      fixing. There is no way to exempt one file: `.editorconfig` severities are overridden by
+      WarningsAsErrors, which was tried and measured to change nothing, so the choice is a rule
+      nobody may satisfy or a narrower rule here. The seven that no vendored file trips stay errors
+      in both, and the two that one does are errors wherever they can be met -- which is every file
+      this repository actually maintains except the top-level Game and Definitions sources.
+    -->
+    <NoWarn>$(NoWarn);CS1570;CS1572</NoWarn>
+    <WarningsAsErrors>$(WarningsAsErrors);CS1574;CS1580;CS1581;CS1584;CS1587;CS1710;CS1734</WarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>

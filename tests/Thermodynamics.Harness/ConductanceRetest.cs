@@ -14,6 +14,7 @@ namespace Thermodynamics.Harness
     /// possible was that at a scale of 2.4 mild steel landed exactly where it had been: 0.6 × 200 =
     /// 120, and 50 × 2.4 = 120. Everything else moved, and what the moves did to a player's ship was
     /// argued rather than measured — backlog `C2`.
+    /// </para>
     ///
     /// <para>
     /// **The pace has moved since, and the counterfactual moves with it** (`C24` took the scale to

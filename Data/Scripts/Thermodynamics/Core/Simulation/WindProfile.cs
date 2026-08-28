@@ -27,20 +27,6 @@ namespace Thermodynamics.Core
         public const float MinimumHeight = 0.5f;
 
         /// <summary>
-        /// Wind at a height above the ground, as a multiple of the wind at
-        /// <see cref="ReferenceHeight"/>.
-        /// </summary>
-        /// <param name="height">Metres above the ground, not above sea level.</param>
-        /// <param name="roughness">
-        /// Roughness length z₀, m. About a tenth of the height of what covers the ground: 0.0002 for
-        /// open water, 0.03 for open grassland, 0.1 for scattered obstacles, 0.5 for forest or a
-        /// built-up area.
-        /// </param>
-        /// <param name="gradientHeight">
-        /// Height at which the profile stops climbing, m — the top of the boundary layer. Several
-        /// hundred metres over open country, higher over rough ground.
-        /// </param>
-        /// <summary>
         /// The boundary layer's top, where the air runs out first.
         ///
         /// <para>
@@ -67,6 +53,20 @@ namespace Thermodynamics.Core
             return airAboveGround < ReferenceHeight ? ReferenceHeight : airAboveGround;
         }
 
+        /// <summary>
+        /// Wind at a height above the ground, as a multiple of the wind at
+        /// <see cref="ReferenceHeight"/>.
+        /// </summary>
+        /// <param name="height">Metres above the ground, not above sea level.</param>
+        /// <param name="roughness">
+        /// Roughness length z₀, m. About a tenth of the height of what covers the ground: 0.0002 for
+        /// open water, 0.03 for open grassland, 0.1 for scattered obstacles, 0.5 for forest or a
+        /// built-up area.
+        /// </param>
+        /// <param name="gradientHeight">
+        /// Height at which the profile stops climbing, m — the top of the boundary layer. Several
+        /// hundred metres over open country, higher over rough ground.
+        /// </param>
         public static float Multiplier(float height, float roughness, float gradientHeight)
         {
             if (roughness <= 0f) roughness = 0.0002f;
