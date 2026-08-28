@@ -10,10 +10,12 @@ that moving one without the other fails.
 
     python3 -m unittest discover -s tools/corpus -p 'test_*.py'
 """
-import os
-import sys
+import csv
 import hashlib
+import os
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -169,6 +171,44 @@ class ARestatementAppliesOnlyToADatasetThatPredatesTheChange(unittest.TestCase):
         # three and the one that matters would be lost among them.
         self.assertNotIn("Loops.xml", split)
         self.assertNotIn("Planets.xml", split)
+
+    def test_verdict_records_the_split_in_the_summary_it_commits(self):
+        """**The committed summary is the artefact every quoted figure is checked against.**
+
+        `verdict.py --csv` recorded one row per provenance line, so six slices wrote
+        `provenance Cubes.xml` six times and the last won: the file said the dataset was measured
+        against one build when it was measured against two. This runs the real script over a
+        dataset whose provenance is split and asserts the summary carries the split — which is the
+        one place it has to, because the summary outlives the directory it came from.
+        """
+        data = os.path.join(self.root, "dataset")
+        os.makedirs(data)
+        with open(os.path.join(data, "provenance.txt"), "w", encoding="utf-8") as handle:
+            for i, digest in enumerate(("1111111111111111", "2222222222222222")):
+                handle.write(f"walk survey started slice {i}\ncommit abc{i}\n")
+                handle.write(f"Cubes.xml {digest}\nLoops.xml aaaa\nPlanets.xml bbbb\n")
+
+        open(os.path.join(data, "outcomes.csv"), "w").write("ship,scenario,peak_k\n")
+        open(os.path.join(data, "ships.csv"), "w").write("ship,blocks\n")
+
+        summary = os.path.join(self.root, "summary.csv")
+        script = os.path.join(os.path.dirname(os.path.abspath(provenance.__file__)), "verdict.py")
+        subprocess.run([sys.executable, script, data, "--csv", summary],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+
+        self.assertTrue(os.path.exists(summary), "verdict.py wrote no summary")
+        rows = dict((r[0], r[1]) for r in csv.reader(open(summary, encoding="utf-8")) if len(r) > 1)
+
+        self.assertEqual("2", rows.get("provenance Cubes.xml versions"))
+        self.assertEqual("1111111111111111 2222222222222222", rows.get("provenance Cubes.xml all"))
+
+        # The last value is still recorded under the plain key, so a reader that only wants "what
+        # was it finished on" is unaffected.
+        self.assertEqual("2222222222222222", rows.get("provenance Cubes.xml"))
+
+        # And a file that did not move carries no versions row, or every summary would carry three
+        # and the one that matters would be lost among them.
+        self.assertIsNone(rows.get("provenance Planets.xml versions"))
 
     def test_a_dataset_with_no_provenance_spans_nothing_rather_than_failing(self):
         """Every dataset taken before `provenance.txt` existed has none, and that is not a split."""
