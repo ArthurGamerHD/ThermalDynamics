@@ -40,33 +40,6 @@ namespace Thermodynamics.Tests
                 / (Math.Exp(exponent) - 1d);
         }
 
-        /// <summary>
-        /// The CIE photopic response, from the Gaussian fit in Wyman, Sloan and Shirley (2013).
-        /// Wavelength in micrometres.
-        /// </summary>
-        private static double Photopic(double micrometres)
-        {
-            double d = micrometres - 0.559d;
-            return 1.019d * Math.Exp(-285.4d * d * d);
-        }
-
-        /// <summary>Luminance of a black body over the visible band, arbitrary units.</summary>
-        private static double Luminance(double kelvin)
-        {
-            const int steps = 800;
-            const double low = 380e-9;
-            const double high = 780e-9;
-
-            double sum = 0d;
-            for (int i = 0; i <= steps; i++)
-            {
-                double metres = low + ((high - low) * i / steps);
-                double weight = (i == 0 || i == steps) ? 0.5d : 1d;
-                sum += weight * Spectral(metres, kelvin) * Photopic(metres * 1e6d);
-            }
-
-            return sum * (high - low) / steps;
-        }
 
         /// <summary>
         /// The ramp is nothing a hundred kelvin below a block's rating, full at it, and a straight

@@ -812,10 +812,23 @@ five retired lab invariants sit in the suite with no caller at all. Anything dec
 mentioned nowhere else is the place to look, and a name-frequency scan finds them in seconds —
 though it gives a false negative on a misspelled declaration.
 
+**And a machine looks for it now, which nothing did until 2026-08-27.** This entry used to end by
+naming that gap in the test project, and closing it found two on the first run:
+`Scenarios.OpenSides`, a documented six-face count nothing called, and `IncandescenceTests.
+Luminance`, a photopic integration written from first principles and then never run — which took
+`Photopic` with it. The compiler cannot do this: an unused private *field* is a warning and an
+unused private *method* is not, so these compile, get maintained, and read to the next person as
+something the suite relies on. **The shipped code is scanned on the same terms and is clean**, which
+is a result rather than an omission — every private helper under `Data/Scripts` is reached — with
+the vendored framework excluded because `R6` forbids editing the one uncalled method in it.
+
 *Applies to:* every pass over the repository.
 *Checked by:* `SimCommandTests` — including `EveryLabThatProducesAReportIsReachable` —
-`DocumentationTests`, and `EverySettingIsReadBySomething`. Nothing yet scans the test project for
-an uncalled `internal static` invariant, which is how the four above survived.
+`DocumentationTests`, `EverySettingIsReadBySomething`, and
+`UncalledCodeTests.NoPrivateHelperInTheTreeIsCalledByNothing` over every private helper in the
+tree. That last one counts identifiers across `Data/` and `tests/`, so an *overload* of a name something else
+calls is still invisible to it — the same false negative as a misspelled declaration, and the same
+reason a pass still has to look.
 *From:* the defect record kept with the session notes; [backlog.md](backlog.md) A19.
 
 #### D3 — Where one thing exists twice, a test compares the two
@@ -1804,6 +1817,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **`D2`'s own stated gap is closed: the test tree scans itself.** The entry ended by saying nothing looked for an uncalled `internal static` invariant in the test project, which is how four survived a pass. `UncalledCodeTests` looks now — over the shipped code as well, where it comes back clean — and found two on its first run — a documented six-face count in `Scenarios` and a photopic luminance integration in `IncandescenceTests` that was written from first principles and never called. The compiler cannot find these: an unused private field is a warning and an unused private method is not. |
 | 2026-08-27 | **`M7` is now *two figures are comparable only if they were taken in one window*, and `M4` says which statistic to read is a property of the session.** The same exposure code measured a 4.75 ms median in one held window and 11.40 two days earlier — `best/med` 0.83 against 0.45 — with the source, the instrument, the build configuration and the stage order each eliminated in turn. The minimum roughly travels between sessions and the median does not, which is the reverse of what `M4`'s within-window table assigns this stage. Pass 4 saw the same effect at thirty per cent and left it as prose; it has an artefact behind it now, `taken_utc` on every run the stage lab writes. |
 | 2026-08-27 | **`M4` takes the median as well as the fastest, and says the reproducibility is not checkable.** Four runs of one binary at 126,731 blocks, four hundred repeats a stage, every candidate summary compared: the minimum reproduces to 4.5 % on the room pass and 97 % on `register`; the median to 0.9 % on exposure where the minimum manages 30 %. No summary is best for more than three of the eight and two have none. Pass 8's fix — sample until the best is reproduced — was right and does not reach a stage whose best is a rare draw. Unchecked rules: eighteen, unchanged. |
 | 2026-08-27 | **`R14` is checked by the compiler.** Turning on `GenerateDocumentationFile` and making `CS1574` and its family errors makes every `<see cref>`, `<param>` and `<paramref>` in this tree resolve to something that exists — real name binding, which no test here could do without reimplementing it, and which had never been asked for. Twenty-five failures were waiting, four in the shipped mod, including a `[ProtoMember]` whose comment described a deleted field and a method's parameters documented onto the constant inserted above it. `CS1570` and `CS1572` stay warnings in `Generic.csproj` alone, for the five a vendored file carries and `R6` forbids fixing. Unchecked rules: eighteen, unchanged — `R14` was already cited to a test, and now has the stronger check in front of it. |
