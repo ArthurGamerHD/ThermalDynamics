@@ -95,7 +95,7 @@ scenario; the capped arm cannot stop there, because it has to stop where its own
 see that a walk works before committing the hours — the sample for this one was 320 runs in 77 s.
 
 **A walk's cost is a property of the build, not just of the corpus.** The 2026-08-28 air re-take is
-**1.78x per file** over the same file range as the 2026-08-24 walk it replaces — about 3.1 hours
+**3.05x per file** over the same file range as the 2026-08-24 walk it replaces — about 5.3 hours
 against 104 minutes — and the reason is `A13`: the eleven block kinds that reader built as armour
 are oxygen generators, gravity generators, doors and turrets now, and this walk runs to equilibrium.
 **A dataset taken through a broken reader was cheaper to collect than the truth.** So the 1.95x
@@ -513,6 +513,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **`pace.py` reads a walk taken in slices.** Relaunching to resume is the documented normal path and it writes many blocks into one progress file, each restarting its own file count; read literally, the air re-take's ninetieth file of its sixth slice sat at 272 minutes after the first slice's first mark, and the file written to refuse a bad estimate reported **9.45x** per file where the honest figure is 3.05x. Counts continue from the resume line, the gap between slices is not walked time, and a slice's clock starts at its resume line — the work before a slice's first mark is real walking at the walk's own rate, sixty-four minutes of it over five boundaries. Pinned by a sliced fixture and the same walk in one run reporting the same elapsed and the same ratio. |
 | 2026-08-28 | Added the sixth way a sweep dies, which costs the dataset rather than the run: **do not rebuild Release while a walk is slicing.** Slices load `--no-build`, so a build between two of them gives the dataset's halves different builds. `provenance.txt` makes that visible rather than harmless, which is the only reason it is recoverable. |
 | 2026-08-28 | Said that a walk's cost belongs to the build as well as to the corpus. The `A13` air re-take is **1.78x per file** over the walk it replaces, because the blocks that reader built as armour are generators and doors now and this walk runs to equilibrium — so the 1.95x cap-to-air ratio is a ratio *within one build* and understates the cap walk's cost across a build that changed what the corpus contains. |
 | 2026-08-28 | **A dataset that spans two builds says so, and the reader that could not see it is fixed.** `provenance.txt` has appended a block per slice since it was written, and its writer's summary said as much; `provenance.py` read only the last `Cubes.xml` line, so the 2026-08-25 survey — five slices, two `Cubes.xml` hashes, two `Loops.xml` hashes — reported as measured against the current file. One format, two readers, drifted (`D3`). `spans_several_definitions` is the lookup and the report prints it. **It does not decide whether the split matters**: for that survey it does not, because the only change in the window is the two radiators' emissivity and no corpus ship carries a radiator or any other block the mod adds. Also corrected: this page named `Materials.xml` as the second hashed file for months, and the three the code hashes are `Cubes.xml`, `Loops.xml` and `Planets.xml`. |

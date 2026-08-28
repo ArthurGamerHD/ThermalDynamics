@@ -23,6 +23,15 @@ this prints.
         --reference out/air-corpus-2026-08-24/progress.txt \
         --outcomes  out/air-corpus-2026-08-24/outcomes.csv
 
+**A walk taken in slices is read as one walk**, which it was not until 2026-08-28. Relaunching to
+resume is the documented normal path and a sliced walk writes many blocks into one progress file,
+each restarting its own file count; read literally, the air re-take's ninetieth file of its sixth
+slice sat at 272 minutes after the first slice's first mark, and this file — which exists to refuse
+a bad estimate — reported **9.45x** per file where the honest figure was 3.05x. Counts continue
+from the resume line above them, the gap between slices is not walked time, and a slice's clock
+starts at its resume line rather than at its first mark, because a mark is ten files and the work
+before the first one is real.
+
 The rules argued here are stated canonically in [rules.md](../../docs/rules.md): `P2` `P4` `E2`.
 """
 import argparse
@@ -38,40 +47,88 @@ CORPUS = os.path.expanduser(
 
 
 def marks(path):
-    """`(time, files)` for every batch line a walk wrote, earliest first.
+    """`(minutes walked, files done)` for every batch line a walk wrote, earliest first.
 
     A walk writes a line every ten files and repeats its last line at the end, so a mark is kept
     only the first time its count is seen — a repeat would otherwise read as a stall.
+
+    **A resumed walk restarts both counters, and reading it as one run is how this file came to
+    produce the estimate it exists to refuse.** Relaunching to resume is the documented normal path,
+    and a walk sliced so a shared machine can be given back writes many blocks into one progress
+    file: each begins `air: resuming, N blueprints already finished`, and every `files` count after
+    it is a count *within that slice*. Read literally, the 2026-08-28 air walk's ninetieth file of
+    its sixth slice sat at 272 minutes after the first slice's first mark — 9.45x per file against
+    its reference, where the honest figure over the same file range is a fifth of that.
+
+    So a count is made cumulative from the resume line above it, and the gap between one slice's
+    last mark and the next slice's first is **not** counted: the walk was not running in it, and
+    on a shared machine that gap is mostly somebody else's job. What this returns is minutes the
+    walk was walking, which is the only thing a per-file cost can be built on.
     """
     seen = {}
     order = []
 
+    finished = 0            # what earlier slices had already done, from the resume line
+    walked = 0.0            # minutes this walk has actually been walking
+    slice_start = None      # when the current slice's first mark landed
+    slice_last = None       # and its most recent one
+
     with open(path, encoding="utf-8") as handle:
         for line in handle:
             parts = line.split()
-            if len(parts) < 4 or parts[2] != "batch":
+            if len(parts) < 3:
+                continue
+
+            if parts[2] == "resuming," and len(parts) > 3:
+                # Bank the slice that just ended and start a new one; its marks begin from zero.
+                if slice_start is not None and slice_last is not None:
+                    walked += (slice_last - slice_start).total_seconds() / 60.0
+
+                # **The new slice's clock starts here, not at its first mark.** A mark is every ten
+                # files, so the work before the first one is real walking — for the first slice
+                # that is excluded by the convention this file has always used, and repeating that
+                # exclusion once per slice would undercount a sliced walk by a mark's worth each
+                # time. The cost of restarting the process is inside this and is part of what
+                # slicing costs.
+                slice_start = datetime.datetime.strptime(parts[0], "%H:%M:%S")
+                slice_last = slice_start
+                try:
+                    finished = int(parts[3])
+                except ValueError:
+                    pass
+                continue
+
+            if parts[2] != "batch":
                 continue
 
             when = datetime.datetime.strptime(parts[0], "%H:%M:%S")
-            files = int(parts[3].split("/")[0])
+            if slice_start is None:
+                slice_start = when
+            slice_last = when
+
+            files = finished + int(parts[3].split("/")[0])
             if files in seen:
                 continue
 
-            seen[files] = when
-            order.append((when, files))
+            minutes = walked + (when - slice_start).total_seconds() / 60.0
+            seen[files] = minutes
+            order.append((minutes, files))
 
     return order
 
 
 def elapsed(order, files):
-    """Minutes from the first mark to the mark at `files`, or None where there is no such mark."""
+    """Minutes walked up to the mark at `files`, or None where there is no such mark.
+
+    Minutes *walked*, not minutes since the first mark: see `marks`. On a walk taken in one run the
+    two are the same number, which is why nothing noticed.
+    """
     if not order:
         return None
 
-    start = order[0][0]
-    for when, count in order:
+    for minutes, count in order:
         if count == files:
-            return (when - start).total_seconds() / 60.0
+            return minutes - order[0][0]
 
     return None
 
@@ -153,11 +210,11 @@ def block_share_estimate(order, shares):
     start = order[0][0]
     previous = None
 
-    for when, files in order:
+    for walked, files in order:
         if files > len(shares):
             continue
 
-        minutes = (when - start).total_seconds() / 60.0
+        minutes = walked - start
         covered = shares[files - 1]
 
         if previous is not None and minutes > previous[0]:
@@ -194,16 +251,16 @@ def ratio(subject, reference):
     Measured over the same files rather than the same time, which is the whole of why it is a
     comparison and not two readings (`P6`). Returns `(ratio, first mark, last mark)`.
     """
-    mine = {files: when for when, files in subject}
-    theirs = {files: when for when, files in reference}
+    mine = {files: walked for walked, files in subject}
+    theirs = {files: walked for walked, files in reference}
 
     shared = sorted(set(mine) & set(theirs))
     if len(shared) < 2:
         return None, None, None
 
     first, last = shared[0], shared[-1]
-    span_subject = (mine[last] - mine[first]).total_seconds()
-    span_reference = (theirs[last] - theirs[first]).total_seconds()
+    span_subject = mine[last] - mine[first]
+    span_reference = theirs[last] - theirs[first]
 
     if span_reference <= 0:
         return None, first, last
