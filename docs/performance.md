@@ -2867,6 +2867,17 @@ and fails on an element assignment whose target is `Cells`, `SelfSurfaces` or `S
 That is the same shape as iteration 8's check and for the same reason: the instance is not the
 problem, the next one is.
 
+**And the interning put a landmine under its own oracle, which is worth recording because the
+review that found it was a re-read rather than a failing test.**
+`BuildGridSurfacesWalkingTheCells` is the walk the one-cell fast path is pinned against, and it
+writes its answer *into* the arrays the instance holds — which for a one-cell block are now the
+shared ones. It writes equal values today, so everything passed. But if the walk ever disagreed
+with the fast path it would overwrite the value it exists to disagree with, and the comparison that
+followed would be of one array against itself: **a check that passes exactly when it should fail**,
+and a cache corrupted for every other block of that model and orientation in the session. The walk
+detaches its arrays first now, and the pinning test asserts the two sides are two sides —
+`Assert.NotSame` before `Assert.Equal`, verified by removing the detach.
+
 The race is benign and is stated where the cache lives. Two threads filling one slot compute the
 same value — the bits depend on nothing else — and a reference write is atomic, so the loser's array
 is garbage rather than a wrong answer. It is the same shape as `fractionsByOrientation`, which has

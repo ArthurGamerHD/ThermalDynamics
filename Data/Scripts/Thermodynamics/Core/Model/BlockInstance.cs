@@ -280,6 +280,8 @@ namespace Thermodynamics.Core
         /// </summary>
         public void BuildGridSurfacesWalkingTheCells()
         {
+            DetachInternedSurfaces();
+
             bool shared = ReferenceEquals(gridSurfaces, gridStructuralSurfaces);
             int i = 0;
             foreach (Vector3I local in Model.LocalCells())
@@ -294,6 +296,37 @@ namespace Thermodynamics.Core
                 }
                 i++;
             }
+        }
+
+        /// <summary>
+        /// Gives this block its own copy of any surface array it is sharing, before something
+        /// writes into one.
+        ///
+        /// <para>
+        /// **The walk above is the oracle the one-cell fast path is pinned against (`D8`), and a
+        /// one-cell block's surface arrays are interned per model, orientation and layer.** Writing
+        /// the walk's answer through the cache would overwrite the very value it exists to disagree
+        /// with, and the comparison that followed would be of one array against itself — a check
+        /// that passes exactly when it should fail. It would also change every other block of that
+        /// model and orientation in the session.
+        /// </para>
+        ///
+        /// <para>
+        /// Only the one-cell path interns, so only it detaches; every other block already owns its
+        /// arrays. The shared-layer relationship is preserved, because whether the two layers are
+        /// one array is what the walk reads to decide whether to write the live one.
+        /// </para>
+        /// </summary>
+        private void DetachInternedSurfaces()
+        {
+            if (Model.CellCount != 1) return;
+
+            bool shared = ReferenceEquals(gridSurfaces, gridStructuralSurfaces);
+            int[] structural = { gridStructuralSurfaces[0] };
+            int[] live = shared ? structural : new[] { gridSurfaces[0] };
+
+            gridStructuralSurfaces = structural;
+            gridSurfaces = live;
         }
 
         /// <summary>
