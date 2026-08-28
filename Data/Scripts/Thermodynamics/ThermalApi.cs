@@ -78,39 +78,97 @@ namespace Thermodynamics
             MyAPIGateway.Utilities.SendModMessage(ChannelId, methods);
         }
 
+        /// <summary>
+        /// Wraps an entry so that nothing it does reaches the caller as an exception: a failure
+        /// comes back as the return type's default — `false`, `0`, `NaN`, an empty tuple — and is
+        /// recorded here instead.
+        ///
+        /// <para>
+        /// **`W4` said this was discipline, and discipline had already missed one.** `GetSetting`
+        /// read `Settings.Instance.GetValue(name)` with no guard while `SetSetting`, four lines
+        /// below it in the same table, returned `false` when the instance was not there yet — so a
+        /// consumer that asked for a setting before this mod had loaded its own got a
+        /// `NullReferenceException` with this mod's name on it, which is the exact thing the rule
+        /// exists to prevent. Auditing eighteen bodies is how that happened; wrapping the table is
+        /// how it stops.
+        /// </para>
+        ///
+        /// <para>
+        /// The cost is a try/catch on a call nothing makes per frame, and it does not hide
+        /// anything: the same `Telemetry.Exception` that `RaiseThreshold` uses records what
+        /// happened and where. One overload per arity the table uses, because a delegate cannot be
+        /// wrapped generically without knowing its shape and this project is C# 6 (`C1`).
+        /// </para>
+        /// </summary>
+        private static Func<TResult> Guard<TResult>(Func<TResult> call, string name)
+        {
+            return () =>
+            {
+                try { return call(); }
+                catch (Exception e) { Telemetry.Exception("ThermalApi." + name, e); return default(TResult); }
+            };
+        }
+
+        private static Func<T1, TResult> Guard<T1, TResult>(Func<T1, TResult> call, string name)
+        {
+            return a =>
+            {
+                try { return call(a); }
+                catch (Exception e) { Telemetry.Exception("ThermalApi." + name, e); return default(TResult); }
+            };
+        }
+
+        private static Func<T1, T2, TResult> Guard<T1, T2, TResult>(Func<T1, T2, TResult> call, string name)
+        {
+            return (a, b) =>
+            {
+                try { return call(a, b); }
+                catch (Exception e) { Telemetry.Exception("ThermalApi." + name, e); return default(TResult); }
+            };
+        }
+
+        private static Func<T1, T2, T3, TResult> Guard<T1, T2, T3, TResult>(
+            Func<T1, T2, T3, TResult> call, string name)
+        {
+            return (a, b, c) =>
+            {
+                try { return call(a, b, c); }
+                catch (Exception e) { Telemetry.Exception("ThermalApi." + name, e); return default(TResult); }
+            };
+        }
+
         private static void Build()
         {
             methods = new Dictionary<string, Delegate>();
 
-            methods["ApiVersion"] = new Func<int>(() => Version);
+            methods["ApiVersion"] = Guard(new Func<int>(() => Version), "ApiVersion");
 
             // ---- reading ------------------------------------------------------------------
-            methods["GetBlockTemperature"] = new Func<IMySlimBlock, float>(GetBlockTemperature);
-            methods["GetBlockThermals"] = new Func<IMySlimBlock, MyTuple<float, float, float, int>>(GetBlockThermals);
-            methods["GetGridSummary"] = new Func<IMyCubeGrid, MyTuple<float, float, int, int>>(GetGridSummary);
-            methods["GetRoom"] = new Func<IMyCubeGrid, Vector3I, MyTuple<bool, float, float, float>>(GetRoom);
-            methods["GetGridHeatBalance"] = new Func<IMyCubeGrid, MyTuple<float, float>>(GetGridHeatBalance);
+            methods["GetBlockTemperature"] = Guard(new Func<IMySlimBlock, float>(GetBlockTemperature), "GetBlockTemperature");
+            methods["GetBlockThermals"] = Guard(new Func<IMySlimBlock, MyTuple<float, float, float, int>>(GetBlockThermals), "GetBlockThermals");
+            methods["GetGridSummary"] = Guard(new Func<IMyCubeGrid, MyTuple<float, float, int, int>>(GetGridSummary), "GetGridSummary");
+            methods["GetRoom"] = Guard(new Func<IMyCubeGrid, Vector3I, MyTuple<bool, float, float, float>>(GetRoom), "GetRoom");
+            methods["GetGridHeatBalance"] = Guard(new Func<IMyCubeGrid, MyTuple<float, float>>(GetGridHeatBalance), "GetGridHeatBalance");
 
             // ---- writing ------------------------------------------------------------------
-            methods["SetBlockTemperature"] = new Func<IMySlimBlock, float, bool>(SetBlockTemperature);
-            methods["AddBlockHeat"] = new Func<IMySlimBlock, float, bool>(AddBlockHeat);
-            methods["SetRoomPressure"] = new Func<IMyCubeGrid, Vector3I, float, bool>(SetRoomPressure);
+            methods["SetBlockTemperature"] = Guard(new Func<IMySlimBlock, float, bool>(SetBlockTemperature), "SetBlockTemperature");
+            methods["AddBlockHeat"] = Guard(new Func<IMySlimBlock, float, bool>(AddBlockHeat), "AddBlockHeat");
+            methods["SetRoomPressure"] = Guard(new Func<IMyCubeGrid, Vector3I, float, bool>(SetRoomPressure), "SetRoomPressure");
 
             // ---- heat sources -------------------------------------------------------------
-            methods["AddHeatSource"] = new Func<IMyEntity, float, float, int>(ThermalHeatSources.Add);
-            methods["AddHeatSourceAt"] = new Func<Vector3D, float, float, int>(ThermalHeatSources.Add);
-            methods["UpdateHeatSource"] = new Func<int, float, bool>(ThermalHeatSources.Update);
-            methods["RemoveHeatSource"] = new Func<int, bool>(ThermalHeatSources.Remove);
+            methods["AddHeatSource"] = Guard(new Func<IMyEntity, float, float, int>(ThermalHeatSources.Add), "AddHeatSource");
+            methods["AddHeatSourceAt"] = Guard(new Func<Vector3D, float, float, int>(ThermalHeatSources.Add), "AddHeatSourceAt");
+            methods["UpdateHeatSource"] = Guard(new Func<int, float, bool>(ThermalHeatSources.Update), "UpdateHeatSource");
+            methods["RemoveHeatSource"] = Guard(new Func<int, bool>(ThermalHeatSources.Remove), "RemoveHeatSource");
 
             // ---- thresholds ---------------------------------------------------------------
-            methods["AddThreshold"] =
-                new Func<float, int, Action<IMySlimBlock, int, float, float, bool>, int>(AddThreshold);
-            methods["RemoveThreshold"] = new Func<int, bool>(RemoveThreshold);
+            methods["AddThreshold"] = Guard(new Func<float, int, Action<IMySlimBlock, int, float, float, bool>, int>(AddThreshold), "AddThreshold");
+            methods["RemoveThreshold"] = Guard(new Func<int, bool>(RemoveThreshold), "RemoveThreshold");
 
             // ---- settings -----------------------------------------------------------------
-            methods["GetSetting"] = new Func<string, float>(name => Settings.Instance.GetValue(name));
-            methods["SetSetting"] = new Func<string, float, bool>(SetSetting);
-            methods["ListSettings"] = new Func<List<string>>(Settings.Names);
+            methods["GetSetting"] = Guard(new Func<string, float>(GetSetting), "GetSetting");
+            methods["SetSetting"] = Guard(new Func<string, float, bool>(SetSetting), "SetSetting");
+            methods["ListSettings"] = Guard(new Func<List<string>>(Settings.Names), "ListSettings");
         }
 
         // ---- implementations ---------------------------------------------------------------
@@ -244,6 +302,30 @@ namespace Thermodynamics
 
             if (thermals == null || thermals.Simulation == null) return false;
             return thermals.Simulation.SetRoomPressure(cell, pressure);
+        }
+
+        /// <summary>
+        /// One setting's value, or zero where there is no such setting.
+        ///
+        /// <para>
+        /// **`Settings.EnsureLoaded` rather than `Settings.Instance`, because a consumer cannot be
+        /// asked to call in the right order.** That method exists for exactly this — its own
+        /// summary says a mod cannot control load order — and it falls back to the defaults where
+        /// the world storage is not readable yet, which is a better answer than zero: zero is what
+        /// an unknown *name* returns, so returning it for *not loaded* would make the two
+        /// indistinguishable.
+        /// </para>
+        ///
+        /// <para>
+        /// This was `name => Settings.Instance.GetValue(name)` until 2026-08-28, four lines above a
+        /// `SetSetting` that guarded the same field and returned `false` — so the writer was safe
+        /// to call early and the reader threw into its caller (`W4`).
+        /// </para>
+        /// </summary>
+        private static float GetSetting(string name)
+        {
+            Settings settings = Settings.EnsureLoaded();
+            return settings == null ? 0f : settings.GetValue(name);
         }
 
         private static bool SetSetting(string name, float value)

@@ -286,7 +286,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **C9** | The game's own answer is read, never overridden | absolute | P7 | `RoomPressureTests` |
 | **C10** | The server is authoritative over damage | absolute | P7 | — |
 | **W3** | An authority check reads what the engine supplies, never what the sender wrote | absolute | P7 | — |
-| **W4** | No call across the mod's API throws into its caller | absolute | P9 | — |
+| **W4** | No call across the mod's API throws into its caller | absolute | P9 | `ModApiShapeTests` |
 | **W1** | A saved world loads on the build that wrote it, and on the ones either side | absolute | P15 | `StorageAndSettingsTests` |
 | **W2** | A name something outside this repository addresses is never repurposed | absolute | P15 | `TheRetiredPropertyNamesAreStillRead` `NoSettingReusesANumberThatWasDeliberatelyRetired` |
 | **W5** | A measurement holds the machine | absolute | P1 | `heavy log` |
@@ -1374,10 +1374,21 @@ and the caller cannot catch what it did not know it was calling. The same reason
 way for the callbacks this mod invokes: one misbehaving consumer of a threshold must not stop heat
 moving for everything else in the world, so `RaiseThreshold` catches, records and unsubscribes.
 
+**Discipline was the check until 2026-08-28, and it had already missed one.** `GetSetting` was
+`name => Settings.Instance.GetValue(name)`, four lines above a `SetSetting` that guarded the same
+field and returned `false` — so the writer was safe to call before this mod had loaded its settings
+and the reader threw a `NullReferenceException` into whoever asked. Nothing would have reported it:
+an exception crossing a mod boundary lands in somebody else's session. **Every entry goes through
+`ThermalApi.Guard` now**, which returns the type's default and records the failure through the same
+`Telemetry.Exception` that `RaiseThreshold` uses, so the property is structural rather than a
+promise about eighteen bodies. `GetSetting` itself reads through `Settings.EnsureLoaded`, which is
+the method written for callers who cannot control load order.
+
 *Applies to:* every delegate in the table, and every callback the mod invokes.
-*Checked by:* — nothing. `ModApiShapeTests` pins the table's *shape*; that no entry throws is
-discipline, and the closest thing to a check is that every implementation null-guards its way to a
-return value.
+*Checked by:* `ModApiShapeTests.EveryEntryInTheTableIsWrappedSoItCannotThrowIntoItsCaller`, which
+reads the source because the table binds game types no test project references. It checks that
+everything is inside a `Guard`, not that each body is careful — one thing to see, and it cannot be
+true of seventeen entries and false of the eighteenth without saying which.
 *From:* [api.md](api.md#guarantees).
 
 ### P10 — The solver's three invariants are the definition of correctness
@@ -1827,6 +1838,7 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **`W4` is checked now, and closing it found the defect it was written about.** Its *Checked by* field read "— nothing… that is discipline", and discipline had missed `GetSetting`: `name => Settings.Instance.GetValue(name)`, four lines above a `SetSetting` guarding the same field, so a consumer asking for a setting before this mod loaded its own got a `NullReferenceException` in their session with this mod's name on it. Every table entry goes through `ThermalApi.Guard` now — structure rather than a promise about eighteen bodies — and `GetSetting` reads through `Settings.EnsureLoaded`. |
 | 2026-08-28 | **`M7` gains the half that was luck rather than method: a control the change can reach is not a control.** Pass 9's tenth iteration measured a stage nothing had touched moving 4.5 % between two binaries — and 0.3 % when run on its own. Settling between stages reclaims the garbage and leaves the heap it was allocated into, so a stage carries its predecessors' allocation, and the change under test had cut exactly that. `bench stages --isolate` gives each stage its own process. |
 | 2026-08-27 | **`D2`'s own stated gap is closed: the test tree scans itself.** The entry ended by saying nothing looked for an uncalled `internal static` invariant in the test project, which is how four survived a pass. `UncalledCodeTests` looks now — over the shipped code as well, where it comes back clean — and found two on its first run — a documented six-face count in `Scenarios` and a photopic luminance integration in `IncandescenceTests` that was written from first principles and never called. The compiler cannot find these: an unused private field is a warning and an unused private method is not. |
 | 2026-08-27 | **`M7` is now *two figures are comparable only if they were taken in one window*, and `M4` says which statistic to read is a property of the session.** The same exposure code measured a 4.75 ms median in one held window and 11.40 two days earlier — `best/med` 0.83 against 0.45 — with the source, the instrument, the build configuration and the stage order each eliminated in turn. The minimum roughly travels between sessions and the median does not, which is the reverse of what `M4`'s within-window table assigns this stage. Pass 4 saw the same effect at thirty per cent and left it as prose; it has an artefact behind it now, `taken_utc` on every run the stage lab writes. |

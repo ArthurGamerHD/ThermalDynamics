@@ -73,6 +73,61 @@ namespace Thermodynamics.Tests
             return shapes;
         }
 
+        /// <summary>
+        /// **Every entry in the table is wrapped, so no call across this mod's API can throw into
+        /// its caller** (`W4`).
+        ///
+        /// <para>
+        /// That rule's *Checked by* field read "— nothing… that is discipline", and discipline had
+        /// already missed one: `GetSetting` was `name => Settings.Instance.GetValue(name)` four
+        /// lines above a `SetSetting` that guarded the same field and returned `false`. A consumer
+        /// asking for a setting before this mod had loaded its own got a `NullReferenceException`
+        /// with this mod's name on it, which is the one outcome the rule exists to prevent, and
+        /// nothing anywhere would have said so — an exception crossing a mod boundary lands in
+        /// somebody else's session.
+        /// </para>
+        ///
+        /// <para>
+        /// Eighteen bodies audited by eye is how that happened, so the check is not "each body
+        /// guards its arguments" — it is that every entry goes through `Guard`, which is one thing
+        /// to see and cannot be true of seventeen entries and false of the eighteenth without this
+        /// naming it. What `Guard` does is the mod's business; that everything is inside one is
+        /// this test's.
+        /// </para>
+        ///
+        /// <para>
+        /// It reads the source rather than the table, for the same reason `Declared` does: the
+        /// table binds game types this project does not reference, so nothing here can build one.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryEntryInTheTableIsWrappedSoItCannotThrowIntoItsCaller()
+        {
+            string source = File.ReadAllText(Path.Combine(RepoRoot(),
+                "Data", "Scripts", "Thermodynamics", "ThermalApi.cs"));
+
+            List<string> bare = new List<string>();
+
+            foreach (Match match in Regex.Matches(source,
+                @"methods\[""(\w+)""\]\s*=\s*(?<value>[^;]+);", RegexOptions.Singleline))
+            {
+                if (!match.Groups["value"].Value.TrimStart().StartsWith("Guard(", StringComparison.Ordinal))
+                {
+                    bare.Add(match.Groups[1].Value);
+                }
+            }
+
+            Assert.True(bare.Count == 0,
+                "these API entries are not wrapped in Guard, so an exception inside one reaches the"
+                + " consumer that called it (`W4`): " + string.Join(", ", bare.ToArray()));
+
+            // And the assertion means nothing if the table is empty or the pattern stopped
+            // matching, which is `E8` at the place it is least visible.
+            Assert.True(Declared().Count >= 15,
+                "only " + Declared().Count + " entries were found in the table, so this judged"
+                + " almost nothing");
+        }
+
         /// <summary>Every `| `Name` | `Func&lt;…&gt;` |` row of the API page's tables.</summary>
         private static Dictionary<string, string> Documented()
         {
