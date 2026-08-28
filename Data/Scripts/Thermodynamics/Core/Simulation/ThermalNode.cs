@@ -266,7 +266,12 @@ namespace Thermodynamics.Core
         /// </para>
         /// </summary>
         /// <param name="countsByFace">At least <see cref="Face.Count"/> counts, indexed by face.</param>
-        public void SetExposedFaces(int[] countsByFace)
+        /// <returns>
+        /// Whether anything moved. The caller counts these — see
+        /// <c>SimulationWork.ExposureNodeWrites</c> — because *the skip engaged* is the claim the
+        /// A/B behind it rests on, and a gate that never fires makes two runs agree perfectly.
+        /// </returns>
+        public bool SetExposedFaces(int[] countsByFace)
         {
             if (countsByFace == null || countsByFace.Length < Face.Count)
             {
@@ -286,8 +291,22 @@ namespace Thermodynamics.Core
                 total += count;
             }
 
+            // **A node whose faces did not move is not a node that changed.** The solver refreshes
+            // exposure over every node whenever the room map republishes, and on a hull that is not
+            // being built the answer is the same one it had — so the writes below are the same
+            // values, and `StateDirty` on all of them makes the next `SyncNodeState` mirror the
+            // whole grid and, on a server, resend it. See performance.md, Pass 9, Iteration 7.
+            //
+            // The total is compared as well as the packing, and that is not redundant: the
+            // single-face `SetExposedFaces` writes the packing without touching what it derives, so
+            // packing alone would let a node skip with a stale area. It has no caller under
+            // `Data/Scripts` and the guard costs one comparison, which is the right price for not
+            // depending on that.
+            if (exposedFaces == packed && TotalExposedFaces == total) return false;
+
             exposedFaces = packed;
             SetTotalAndDerived(total);
+            return true;
         }
 
         /// <summary>

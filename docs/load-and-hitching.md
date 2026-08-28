@@ -462,6 +462,35 @@ The two columns are different units on purpose: before, a tick was the only thin
 and it happened every ten frames. What is comparable is that ten frames' worth of the new figure
 is about 13 ms against 24 ms of the old, and none of it arrives in a lump.
 
+### 11. An exposure pass that changed nothing does not ask for the grid to be re-mirrored
+
+The same shape as 8, one level further down. The exposure refresh is budgeted (3) and its cost is
+spread across frames; what was not budgeted was the work it *asked for afterwards*. Every node it
+visited was written and marked `StateDirty`, and the next step's `SyncNodeState` rewrote all
+126,731 mirrored rows in one unsliced pass at the top of the step — for an answer that, on a hull
+nobody is building, was identical to the one already there.
+
+**A room-mapping pass completes on any structural or venting change**, and each completion starts a
+full exposure pass, so this arrived as a hitch on the step after every remap. A node whose faces did
+not move is no longer written, so the flag is not set and the pass has nothing to do:
+
+| at 126,731 blocks | mirror every node | mirror none |
+| --- | ---: | ---: |
+| minimum of 400 | 1.695 ms | **0.124 ms** |
+| median of 400 | 2.133 ms | **0.145 ms** |
+| per node | 16.8 ns | 1.1 ns |
+
+*`bench stages --stages syncdirty,syncclean`, four processes in one held window (`M7`). Each column
+is the median of the four; the legs never come near overlapping — the slowest *mirror none* reading
+is 0.157 ms against a fastest *mirror every node* of 1.302 — which is what makes a pair whose runs
+spread 25–33 % between them safe to read.*
+
+**The saving is on the event, not on a stage.** The exposure refresh itself is unchanged — measured,
+and worth nothing, because the writes it would have skipped were already removed in iteration 6 —
+so what a remap costs falls from about 5.6 ms to 4.1 ms, and the part that stops arriving is the
+unsliced part. `ExposureSkipTests` asserts the answers are bit-identical and that the skip engages
+on every node of an unchanged hull; `SimulationWork.ExposureNodeWrites` is what says so at runtime.
+
 ## Catching it again
 
 The load tests in `tests/Thermodynamics.Tests/LoadTests.cs` run with the ordinary suite and assert
@@ -758,6 +787,7 @@ reasoning that produced it was sound and the premise was not.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | Added property 11: **an exposure pass that changed nothing no longer asks for the grid to be re-mirrored.** The refresh is budgeted and sliced; the full, unsliced `SyncNodeState` it forced onto the next step was not, and it arrived after every room remap for an answer identical to the one already there. Mirroring 126,731 rows is 2.13 ms against 0.145 for mirroring none. The same shape as property 8, and found while measuring something else. |
 | 2026-08-27 | The fifth performance pass moved **the settled step** for the first time — 0.86 at 505,566 blocks — and the link build 0.84 ([performance.md](performance.md#pass-5--what-the-pass-moved)). It also gave a step its first per-stage instrument: at that size a step is environment 28.9 ms, conduction 28.0, apply 11.7, publish 5.3 and the row fill 4.1, and conduction is measurably at its memory floor. |
 | 2026-08-27 | The fourth performance pass took the room-mapping pass to **0.36** of what it was at 505,566 blocks and the exposure refresh to **0.53**, and gave the room air rebuild — the largest single thing on the load path, and until then unmeasured by anything — an instrument ([performance.md](performance.md#pass-4--what-the-pass-moved)). Building a million-block world reads **1.32 s** against 1.66 s at the pass's start, of which `RebuildAll` is 0.98 s against 1.33 s. |
 | 2026-08-27 | World load at a million blocks is **2.2 s**, from 3.2 s at the end of the first performance pass ([performance.md](performance.md#pass-2-iteration-10--what-the-pass-moved)): one-cell paths for the neighbour query, exposure and block construction, the interior scan skipping visited words, and the room map's publish sort by radix. The worst tick after a placement at 505,566 blocks is 70 ms, from 93. |

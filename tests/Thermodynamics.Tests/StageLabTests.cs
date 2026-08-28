@@ -40,8 +40,14 @@ namespace Thermodynamics.Tests
             StageLab.Repeats = 3;
             try
             {
-                List<StageLab.Row> rows = StageLab.Run("ship", 2000, StageLab.Stages);
-                Assert.Equal(StageLab.Stages.Length, rows.Count);
+                // Both lists, because a stage nobody names in `Stages` is a stage nothing here
+                // would run — which is how a lab comes to have a case in its switch and no
+                // coverage at all (`D2`).
+                List<string> all = new List<string>(StageLab.Stages);
+                all.AddRange(StageLab.ExtraStages);
+
+                List<StageLab.Row> rows = StageLab.Run("ship", 2000, all);
+                Assert.Equal(all.Count, rows.Count);
 
                 for (int i = 0; i < rows.Count; i++)
                 {
@@ -50,11 +56,34 @@ namespace Thermodynamics.Tests
                     Assert.True(row.BestMs > 0d && row.BestMs <= row.WorstMs, row.Stage + " has no usable time");
                     Assert.True(row.Blocks > 1000, row.Stage + " ran on " + row.Blocks + " blocks");
                 }
+
+                // **The two sync rows must not be the same row.** They exist to price a dirty flag
+                // and they differ only in that flag, so a `syncclean` that quietly mirrored every
+                // node anyway — or a `syncdirty` that marked none — would still report a time and a
+                // work count and would price nothing (`E8`). At 2,000 blocks the gap is small; that
+                // it exists at all is what is asserted here, and performance.md carries its size.
+                StageLab.Row dirty = Find(rows, "syncdirty");
+                StageLab.Row clean = Find(rows, "syncclean");
+                Assert.Equal(dirty.Work, clean.Work);
+                Assert.True(dirty.BestMs > clean.BestMs,
+                    "mirroring every node took " + dirty.BestMs.ToString("n4")
+                    + " ms and mirroring none took " + clean.BestMs.ToString("n4")
+                    + ", so this pair prices nothing");
             }
             finally
             {
                 StageLab.Repeats = repeats;
             }
+        }
+
+        private static StageLab.Row Find(IList<StageLab.Row> rows, string stage)
+        {
+            for (int i = 0; i < rows.Count; i++)
+            {
+                if (rows[i].Stage == stage) return rows[i];
+            }
+
+            throw new System.InvalidOperationException("no row for " + stage);
         }
 
         /// <summary>
