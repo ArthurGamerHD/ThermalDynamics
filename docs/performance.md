@@ -2276,6 +2276,14 @@ machine is the one [named above](#performance-work); `heavy run` held it.*
 > the ranking here — *which stage is largest* — is not safe as it stands. What the pass did with it
 > is unaffected: it went to the stage that had had the least work, and the ablation that followed is
 > a ratio inside one window against a flat control (`E10`).
+>
+> **And a second, larger reason, found in
+> [iteration 6](#pass-9-iteration-6--the-one-write-exposure-change-and-the-session-it-was-measured-in):
+> these figures belong to the session that took them.** The exposure row here reads 11.33 ms where
+> twelve processes of a later window read 3.8–5.6 for bit-identical code. So no number in this table
+> may be read against a number anywhere else on this page — including against this pass's own
+> results — and the milliseconds are kept only because the *ranking* is what the pass used them for.
+> `M7`.
 
 **Exposure is the largest stage with the least work behind it** — one optimisation, in pass 4, and
 eighty-nine nanoseconds a node to answer a question about six faces. `register` and `place` are
