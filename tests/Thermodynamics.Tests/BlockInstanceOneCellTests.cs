@@ -231,6 +231,16 @@ namespace Thermodynamics.Tests
                         walked.RefreshSurfaces();
                         walked.BuildGridSurfacesWalkingTheCells();
 
+                        // **The oracle must not have written through the cache the fast path
+                        // reads.** A one-cell block's surface arrays are interned per model and
+                        // orientation, so without the detach in
+                        // `BuildGridSurfacesWalkingTheCells` the walk would write its answer into
+                        // the array `fast` is holding — and the comparison below would be of that
+                        // array against itself, which passes for any two values whatsoever. This is
+                        // the assertion that the two sides are two sides.
+                        Assert.NotSame(fast.StructuralSurfaces, walked.StructuralSurfaces);
+                        Assert.NotSame(fast.SelfSurfaces, walked.SelfSurfaces);
+
                         Assert.Equal(1, fast.CellCount);
                         Assert.Equal(walked.Cells[0], fast.Cells[0]);
                         Assert.Equal(at, fast.Cells[0]);
