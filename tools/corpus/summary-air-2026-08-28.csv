@@ -1,0 +1,62 @@
+statistic,value,unit
+dataset population,8144,blueprints
+dataset partial,0,
+dataset outcome rows,32548,
+dataset ships,8137,
+dataset ships.csv rows,0,
+dataset scenarios,4,
+provenance walk,air started 2026-08-28 20:04:20,
+provenance walk versions,9,
+provenance walk all,air started 2026-08-28 09:48:36 air started 2026-08-28 10:28:50 air started 2026-08-28 11:08:50 air started 2026-08-28 11:48:51 air started 2026-08-28 12:28:51 air started 2026-08-28 13:43:51 air started 2026-08-28 14:53:51 air started 2026-08-28 16:22:08 air started 2026-08-28 20:04:20,
+provenance commit,fa65c88ad18a511d71b5d44ba7ae458cbbb39794,
+provenance commit versions,5,
+provenance commit all,93bf7bf115dbe524174cdcd35b073763822da27c 6fbd1a0513b84021d08c8502edd7b8fedeea9d45 f952caaeaf1f5c56a29b06a3c4e0b9ec1cee8b35 3776c698b5654c3341b8e91c1207047525027b2f fa65c88ad18a511d71b5d44ba7ae458cbbb39794,
+provenance Cubes.xml,3cdf7e20633c2c3c,
+provenance Loops.xml,ea59e1f282c2ba29,
+provenance Planets.xml,da93b8fdd826e7cf,
+G1 idle critical share,0.0737,%
+G1 verdict,holds,
+G2 verdict,unanswered,
+G5 verdict,unanswered,
+G6 demand p50,7.888,substeps
+G6 demand p95,30.195,substeps
+G6 demand p99,34.779,substeps
+G6 demand max,36.614,substeps
+G6 substep cap,64,substeps
+G6 work p50,60660,element visits
+G6 work p95,2000004,element visits
+G6 work p99,7199204,element visits
+G6 work max,122261809,element visits
+G6 visit allowance,4000000,element visits
+G6 runs over the allowance,712,
+G6 verdict,fails,
+G6 reentry demand p10,6.583,substeps
+G6 reentry demand p50,9.218,substeps
+G6 reentry demand p90,34.446,substeps
+G6 reentry demand p99,34.782,substeps
+G6 reentry demand max,36.614,substeps
+G6 reentry work p99,10544511,element visits
+G6 reentry runs over the allowance,283,
+G6 storm-parked demand p10,6.523,substeps
+G6 storm-parked demand p50,8.773,substeps
+G6 storm-parked demand p90,29.742,substeps
+G6 storm-parked demand p99,30.335,substeps
+G6 storm-parked demand max,31.907,substeps
+G6 storm-parked work p99,9214679,element visits
+G6 storm-parked runs over the allowance,233,
+G6 surface-hot-noon demand p10,6.228,substeps
+G6 surface-hot-noon demand p50,7.898,substeps
+G6 surface-hot-noon demand p90,18.423,substeps
+G6 surface-hot-noon demand p99,19.263,substeps
+G6 surface-hot-noon demand max,22.408,substeps
+G6 surface-hot-noon work p99,6041049,element visits
+G6 surface-hot-noon runs over the allowance,144,
+G6 vacuum-shadow demand p10,5.84,substeps
+G6 vacuum-shadow demand p50,7.386,substeps
+G6 vacuum-shadow demand p90,10.029,substeps
+G6 vacuum-shadow demand p99,11.454,substeps
+G6 vacuum-shadow demand max,13.215,substeps
+G6 vacuum-shadow work p99,3225316,element visits
+G6 vacuum-shadow runs over the allowance,52,
+G3 verdict,unanswered,
+G4 verdict,unanswered,
