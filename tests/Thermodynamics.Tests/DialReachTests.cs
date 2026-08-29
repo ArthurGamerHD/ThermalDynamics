@@ -88,6 +88,14 @@ namespace Thermodynamics.Tests
             Charging(builder, material, "LargeJumpDrive", new Vector3I(1, 2, 1));
             Charging(builder, material, "LargeHydrogenEngine", new Vector3I(2, 2, 1));
 
+            // **And a generator, for `oxygen-waste`, added the day that dial was.** It is a
+            // *consumer* — it draws power rather than making it, and `Charging` already tells the
+            // two apart — which is why the dial moves `ConsumerWasteEnergy` where the reactor's and
+            // the engine's move the producer side. The rig refused the dial as inert before this
+            // block existed, which is the check working: `C31` is a row about a type that is
+            // 14.4 % of a real ship's waste and 0 % of what the instruments carried.
+            Charging(builder, material, "LargeBlockOxygenGeneratorLab", new Vector3I(1, 1, 2));
+
             return builder.BuildSimulation(settings ?? new ThermalSettings());
         }
 
@@ -100,8 +108,26 @@ namespace Thermodynamics.Tests
             Func<string, string, BlockThermalProperties, BlockThermalProperties> material,
             string subtype, Vector3I at)
         {
+            Dictionary<string, GameBlocks.Definition> bySubtype = GameBlocks.BySubtype();
+
             GameBlocks.Definition definition;
-            if (!GameBlocks.BySubtype().TryGetValue(subtype, out definition)) return;
+            if (!bySubtype.TryGetValue(subtype, out definition))
+            {
+                // **A rig block that is not there is a dial that reads as inert**, which is the one
+                // thing this test exists to tell apart — and this returned silently until
+                // 2026-08-28, when `oxygen-waste` was added as `LargeBlockOxygenGenerator` and the
+                // subtype is `OxygenGenerator`. The dial reported *moved nothing*, which was true
+                // of the rig and said nothing about the mod (`E8`).
+                //
+                // An empty table is a machine with no game installed and is left alone: that is the
+                // condition the silent return was for, and it is not the same as a name that is
+                // wrong.
+                if (bySubtype.Count == 0) return;
+
+                throw new InvalidOperationException("the reach rig asks for \"" + subtype
+                    + "\", which is not a subtype the game defines — a block that is not placed"
+                    + " makes every dial acting only on it read as inert");
+            }
 
             BlockThermalProperties thermal = ShippedBlocks.DeriveWithFunction(
                 definition.Components, definition.TypeId, definition.PowerEfficiency);
