@@ -197,6 +197,80 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Hands a departing node's stored energy to the neighbours it was bolted to, and returns
+        /// what was handed over in joules.
+        ///
+        /// <para>
+        /// **This is the difference between losing a block and using one as a bin.** Heat leaving
+        /// the world with a departing block is a deliberate limit — see known-issues.md — and the
+        /// reason it is deliberate is that conserving it on *every* removal means a grinder that
+        /// heats the ship around it, a mechanism no player would connect to a cause. That argument
+        /// is about a block a player takes away. It is not about a block that **failed in place**,
+        /// which is what a node above its critical temperature is: it did not leave, it cooked, and
+        /// the hull it was welded to is what it cooked against (backlog.md `B42`).
+        /// </para>
+        ///
+        /// <para>
+        /// **Spread by heat capacity, so every neighbour ends at one temperature rise.** The
+        /// energy `E` divided by the total mirrored capacity of the neighbours is the rise they all
+        /// take, which is where conduction would have carried them anyway given time — the mixing
+        /// answer rather than a guess at a rate. Spreading by *conductance* instead would put more
+        /// into whichever neighbour happened to have the fattest joint, which is a statement about
+        /// the path rather than about where the energy ends up.
+        /// </para>
+        ///
+        /// <para>
+        /// **A node with no neighbours keeps today's behaviour**, because there is nowhere for the
+        /// energy to go: a single unattached block that cooks itself really does take its heat with
+        /// it, and inventing a recipient would be worse than the limit. The caller is told nothing
+        /// moved by the returned nought.
+        /// </para>
+        /// </summary>
+        private float SpillEnergyOf(ThermalNode node)
+        {
+            int index = node.Index;
+
+            float capacity = 0f;
+            spillTargets.Clear();
+
+            for (int link = nodeFirstLink[index]; link != -1; link = NextLink(link, index))
+            {
+                ThermalLink edge = links[link];
+                int other = edge.NodeA == index ? edge.NodeB : edge.NodeA;
+                if (other == index) continue;
+
+                ThermalNode neighbour = nodes[other];
+                if (neighbour.ThermalMass <= 0f) continue;
+
+                spillTargets.Add(neighbour);
+                capacity += neighbour.ThermalMass;
+            }
+
+            if (capacity <= 0f || spillTargets.Count == 0) return 0f;
+
+            float energy = node.Energy;
+            if (energy <= 0f) return 0f;
+
+            float rise = energy / capacity;
+            for (int i = 0; i < spillTargets.Count; i++)
+            {
+                ThermalNode neighbour = spillTargets[i];
+                neighbour.Temperature += rise;
+                neighbour.StateDirty = true;
+            }
+
+            // The node is about to be removed, and leaving its energy on it as well as on its
+            // neighbours would double it for anything that reads the total in between.
+            node.Temperature = 0f;
+            node.StateDirty = true;
+
+            return energy;
+        }
+
+        /// <summary>Scratch for <see cref="SpillEnergyOf"/>; a field so a removal allocates nothing.</summary>
+        private readonly List<ThermalNode> spillTargets = new List<ThermalNode>();
+
+        /// <summary>
         /// Removes a node and every link touching it, without a rebuild. Links go first in descending
         /// index order, so the link moved into each hole is never one still waiting to be removed.
         /// Every holder of a node index is then repaired by <see cref="RepointNode"/>, which any new

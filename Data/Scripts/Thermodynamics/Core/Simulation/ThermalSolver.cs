@@ -609,6 +609,15 @@ namespace Thermodynamics.Core
             return node;
         }
 
+        /// <summary>
+        /// Energy the last <see cref="RemoveBlock"/> handed to the departing node's neighbours, J.
+        ///
+        /// Nought when the block left below its critical temperature, when it had no neighbours to
+        /// take it, or when no block has been removed. Read by tests and by the telemetry that
+        /// reports what a fire cost a hull; it is a diagnostic and nothing steers on it.
+        /// </summary>
+        public float SpilledEnergy { get; private set; }
+
         public bool RemoveBlock(BlockInstance block)
         {
             if (block == null) return false;
@@ -619,6 +628,43 @@ namespace Thermodynamics.Core
             // A removal moves another node into the hole, so a step in flight would be summing
             // watts against indices that no longer refer to the same blocks.
             AbandonStep();
+
+            // **A block that leaves above its critical temperature leaves its heat behind.**
+            //
+            // Heat departing with a departing block is a deliberate limit (known-issues.md) and the
+            // argument for it is about a block a *player* takes away: conserving that means a
+            // grinder that heats the ship around it. A node past critical is a different event — it
+            // did not leave, it failed in place, and the mod destroyed it. Letting its energy go
+            // makes overheating a **reward**: cook a cheap block and the world is that much cooler
+            // for free, repeatably, which is the exploit backlog.md `B42` is about and the one half
+            // of it the coolant consumable does not price.
+            //
+            // The test is the temperature rather than the cause, because the cause is not knowable
+            // here: the game removes a block and the mod is told, with nothing to say whether a
+            // grinder or a fire did it. Reading the temperature answers all three variants the row
+            // names at once — the sacrificial block cooked to death, the grind-and-reweld timer on
+            // a glowing block, and the crudest version that needs no grinder — and leaves a cool
+            // block ground off exactly as it was.
+            SpilledEnergy = 0f;
+            float critical = node.Thermal.CriticalTemperature;
+            if (critical > 0f && node.Temperature >= critical)
+            {
+                // **The graph has to be current or the neighbours are the wrong ones.** A node's
+                // links are an intrusive chain of indices, and a stale chain does not read as
+                // empty — it reads as somebody else's neighbours, which would put the energy on
+                // blocks that are not touching. Building here is bounded rather than per-removal:
+                // a rebuild clears the flag, so a cascade of failures pays for one and the rest
+                // take the chain as it stands.
+                //
+                // Skipping the spill instead would have been the silent option — a block that
+                // happened to die while a rebuild was pending would leak its heat and nothing
+                // would say which ones had (`E4`).
+                BuildLinksIfNeeded();
+
+                EnsureBuffers();
+                EnsureNodeChainCapacity(nodes.Count);
+                SpilledEnergy = SpillEnergyOf(node);
+            }
 
             block.NodeIndex = -1;
 
