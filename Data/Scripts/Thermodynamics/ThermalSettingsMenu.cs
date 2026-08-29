@@ -1034,7 +1034,7 @@ namespace Thermodynamics
                 TerminalCheckbox box = new TerminalCheckbox
                 {
                     Name = entry.Label,
-                    ToolTip = Tip(entry.Tip),
+                    ToolTip = Tip(entry.Tip + FidelityEnds.Sentence(name)),
                     Enabled = enabled,
                     Value = Settings.Instance.GetValue(name) > 0.5f,
                     CustomValueGetter = () => Settings.Instance.GetValue(name) > 0.5f,
@@ -1059,7 +1059,7 @@ namespace Thermodynamics
             TerminalSlider slider = new TerminalSlider
             {
                 Name = entry.Label,
-                ToolTip = Tip(entry.Tip),
+                ToolTip = Tip(entry.Tip + FidelityEnds.Sentence(name)),
                 Enabled = enabled,
                 Min = entry.Min,
                 Max = entry.Max,
@@ -1090,7 +1090,7 @@ namespace Thermodynamics
             TerminalDropdown<int> dropdown = new TerminalDropdown<int>
             {
                 Name = entry.Label,
-                ToolTip = Tip(entry.Tip),
+                ToolTip = Tip(entry.Tip + FidelityEnds.Sentence(name)),
                 Enabled = enabled,
             };
 
@@ -1113,6 +1113,8 @@ namespace Thermodynamics
 
         private static TerminalControlBase OverlayDropdown(Entry entry, bool enabled)
         {
+            // No setting name here: the overlay dropdown is a view chooser rather than a dial, so
+            // there is no faithful end to name.
             TerminalDropdown<int> dropdown = new TerminalDropdown<int>
             {
                 Name = entry.Label,
@@ -1192,7 +1194,8 @@ namespace Thermodynamics
             TerminalTextField field = new TerminalTextField
             {
                 Name = entry.Label,
-                ToolTip = Tip(entry.Tip + "\n\nTyped, because a slider cannot divide this range."
+                ToolTip = Tip(entry.Tip + FidelityEnds.Sentence(name)
+                    + "\n\nTyped, because a slider cannot divide this range."
                     + " Usual values run from " + Number(entry.Min, entry)
                     + " to " + Number(entry.Max, entry) + "."),
                 Enabled = enabled,

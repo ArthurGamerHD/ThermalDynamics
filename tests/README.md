@@ -158,6 +158,26 @@ THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=out/survey-2026-08-25 \
 
 Do not delete the data directory between slices — that is what starts the walk over.
 
+**Or walk the core corpus and finish inside one hold.** `tools/corpus/core.py` draws a weighted
+sample that costs a tenth of the corpus — **36 minutes in air, 78 in the cap walk** — and answers
+`G6`'s percentiles, the demand half and the medians to within a few per cent, measured out of
+sample. It does not answer a maximum or a rate under about half a per cent, and it is read with
+`core.py --score` rather than `verdict.py`, which has no weights and stops rather than printing a
+sampled dataset as a population.
+
+```bash
+python3 tools/corpus/core.py out/air-2026-08-28 --out $PWD/out/core-selection.txt
+THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/core-2026-08-28 \
+  THERMAL_CORPUS_ONLY=$PWD/out/core-selection.txt \
+  heavy run --minutes 45 -- dotnet test --filter CorpusAirWalk
+python3 tools/corpus/core.py --score out/core-2026-08-28
+```
+
+The whole corpus stays on disk and a full walk is one variable away; see
+[tools/corpus/README.md](../tools/corpus/README.md#the-core-corpus--a-walk-of-the-population-in-an-hour-instead-of-eleven)
+for what the sample can and cannot answer, and why dropping the giants outright would have deleted
+`G6`'s finding rather than made it cheaper.
+
 **A slice shorter than one blueprint does no durable work.** A path is recorded only when it is
 finished, so a slice killed part-way through a hull loses that hull's work entirely — and with 31
 workers in flight, a slice shorter than the batch loses all of them. Measured on 2026-08-25: the
@@ -644,15 +664,15 @@ hold — `A13` was a change to how *vanilla* blocks are read, and it moved the p
 | **Heat sources, damage and thresholds** | `HeatGenerationTests` `DamageTests` `CriticalTemperatureTests` `CriticalTemperatureMirrorTests` `OverheatEventTests` `SuitThermalTests` `IncandescenceTests` `HeatWarningTests` `HeatCueScanTests` `ThresholdTests` `HeatSourceTests` `HeatSourceMathTests` `HeatSourceCommandTests` `CustomHeatSourceTests` `MultiCellAndDamageTests` `ReactorWasteHeatTests` `GridHeatBalanceTests` `HottestNodeTests` `GlowGeometryTests` |
 | **Coolant loops and heat pumps** | `CoolantFillTests` `CoolantLoopTests` `PumpPowerTests` `CoolantFlowTests` `CoolantFaultTests` `HeatLaunderingTests` `PipeFitterTests` `HeatPumpTests` `CoolingScenarioClaimTests` |
 | **What a step costs, and what it must not change** | `LoadTests` `StepBudgetTests` `AllowanceTests` `CapVersusAllowanceTests` `StepWorkUnitTests` `PairedRunTests` `FrankenHullTests` `StepFixedCostTests` `StepPacingTests` `StepTermsTests` `SpreadStepTests` `StaggerTests` `PaceEquivalenceTests` `SweepSliceTests` `BufferGrowthTests` `IncrementalTopologyTests` `BlockRefreshTests` `CostRollupTests` `SolverReportingTests` `StressFindingsTests` |
-| **Bit-identity: an optimisation against what it replaced** | `PrecomputedEnvironmentTests` `HeatGainHoistTests` `CanonicalLinkOrderTests` `FixedSourceRowTests` `WattsClearFusionTests` `ConductionClampGateTests` `DiagnosticBatchingTests` |
+| **Bit-identity: an optimisation against what it replaced** | `PrecomputedEnvironmentTests` `HeatGainHoistTests` `CanonicalLinkOrderTests` `FixedSourceRowTests` `WattsClearFusionTests` `ConductionClampGateTests` `DiagnosticBatchingTests` `ExposureSkipTests` |
 | **Settings, storage and definitions** | `DialReachTests` `SettingsDialReachTests` `LoopDialReachTests` `PlanetDialReachTests` `BlockDialReachTests` `LoopBeforeTests` `LoopCoolantMassTests` `CellSizeTests` `DesignedHullTests` `SettingsTests` `SettingsDefaultsTests` `SettingsWiringTests` `ShippedIdentityTests` `ValidationReportingTests` `StorageCodecTests` `SchedulerTests` `DefinitionTests` `DefinitionFileTests` `ShippedDefinitionTests` `AuthoredMaterialTests` `AuthoredWasteTests` `BlockDerivationTests` `SolarAbsorptivityTests` `SelectiveSurfaceTests` `MaterialOverrideTests` `FeatureToggleTests` `DefaultSettingsTests` `ProfileSuiteTests` `ProfileClockTests` `WorldSettingsTests` |
 | **Readouts a player sees** | `TemperatureScaleTests` `UnitsTests` |
-| **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` `OptimisedBuildTests` `CensusBoltTests` `StageLabTests` `StepPhaseLabTests` `LinkSpanProbe` |
+| **Telemetry, reports and overlays** | `RunningStatTests` `HistogramTests` `TimingStatTests` `TelemetryFormatTests` `TelemetryAnomalyTests` `SampleGateTests` `GridHealthTests` `AnomalyRegistryTests` `FrameCostTests` `ProfilerTests` `RescanGateTests` `OverlayBudgetTests` `PerformanceReportTests` `BenchmarkBaselineTests` `OptimisedBuildTests` `CensusBoltTests` `StageLabTests` `SampleStatisticTests` `StepPhaseLabTests` `LinkSpanProbe` `ProjectFileTests` `EnvironmentReadoutTests` |
 | **Field dumps: the mod checked against a world** | `DumpAuditTests` `FieldDumpTests` `CensusFidelityTests` |
 | **End to end, and the host boundary** | `SimulationIntegrationTests` `ScenarioTests` `ScenarioClaimTests` `HostAdapterTests` `CoreIsolationTests` `FleetParallelTests` `ParallelTickTests` |
 | **Balance, and the ships it is decided on** | `BalanceTests` `CoolingLadderTests` `RetrofitTests` `BlockHeatIndexTests` `HandCoolingTests` `BuildCostTests` `GlowChannelTests` `SuspendedRulesTests` `KnobBaselineTests` `LocalisationSurfaceTests` `CorpusProvenanceTests` `TimeToLossTests` `CatalogDriftTests` `ModHardwareRetestTests` `RetestSetTests` `SettleReadingTests` `DecorativeStiffnessTests` `ElementCostFitTests` `ScreeningTests` `BlueprintTests` `SubgridBridgeTests` `PrefabWalk` `CorpusCapWalk` `CorpusGuardTests` `CorpusArchiveTests` `CorpusRecordTests` `ClientDriftTests` `ClientInputTests` `HotTailTests` `HotTailSyncTests` `AirCostTests` `ConductionPaceTests` `LoadDialTests` `WorstCaseTests` `LabRunTests` `LabInvariantTests` |
 | **Corpus walks** (opt-in, `THERMAL_CORPUS_TESTS`) | `CorpusSurvey` `CorpusAirWalk` `CorpusFloorWalk` `CorpusCensus` `KnobSweep` `ConductanceRetestWalk` `PairSweep` `SunlightPanelWalk` `BlockAccountingWalk` `DeterminismWalk` |
-| **The documentation itself** | `DocumentationTests` `ModApiShapeTests` `ConfigurationDocTests` `SimCommandTests` `CredentialScanTests` `ScriptWhitelistTests` |
+| **The documentation itself** | `DocumentationTests` `ModApiShapeTests` `ConfigurationDocTests` `SimCommandTests` `CredentialScanTests` `ScriptWhitelistTests` `UncalledCodeTests` `FidelityEndTests` `CorpusConstantTests` |
 
 > **The bit-identity suites share one fixture.** Five of them pin an optimisation against the
 > thing it replaced — the precomputed environment rows, the fixed source row, the gated

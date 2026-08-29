@@ -38,7 +38,7 @@ namespace Thermodynamics
         private static readonly Dictionary<string, CoolantShape> Cache = new Dictionary<string, CoolantShape>();
 
         /// <summary>
-        /// Guards <see cref="Cache"/>. <see cref="ThermalBlockCatalog"/> deliberately builds outside its
+        /// Guards <see cref="Cache"/>. <c>ThermalBlockCatalog</c> deliberately builds outside its
         /// own lock, so this is reached from the worker threads the game pastes grids on.
         /// See known-issues.md, Block placement is not a main-thread-only path.
         /// </summary>

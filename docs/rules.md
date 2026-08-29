@@ -255,10 +255,10 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **M1** | Compare only runs that were stopped the same way | conditional | P6 | `SunlightPanelWalk` |
 | **M2** | Parallel for values, linear for durations | absolute | P6 | `ParallelAndLinearProduceTheSameMatrix` |
 | **M3** | The run is the unit of parallelism | conditional | P6 | `ParallelAndLinearProduceTheSameMatrix` |
-| **M4** | Keep the fastest of N, and publish the noise floor | absolute | P2 | `PerformanceReportTests` |
+| **M4** | Keep the fastest of N and the median, and publish the noise floor | absolute | P2 | `PerformanceReportTests` `StageLabTests` |
 | **M5** | A figure inside the noise floor has not moved | absolute | P2 | `PerformanceReportTests` |
 | **M6** | The case key is the contract | absolute | P5 | `BenchmarkBaselineTests` |
-| **M7** | Measure a pass against its own start | absolute | P6 | — |
+| **M7** | Two figures are comparable only if they were taken in one window | absolute | P6 | `SampleStatisticTests` |
 | **M8** | A scenario earns its place by answering what nothing else answers | absolute | P14 | — |
 | **M9** | A scenario's conclusion is pinned so it cannot invert | absolute | P3 | `ScenarioClaimTests` |
 | **M10** | Specimens are chosen by coverage, and every pick names its rule | absolute | P1 | `panel.csv` carries the rule |
@@ -286,7 +286,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **C9** | The game's own answer is read, never overridden | absolute | P7 | `RoomPressureTests` |
 | **C10** | The server is authoritative over damage | absolute | P7 | — |
 | **W3** | An authority check reads what the engine supplies, never what the sender wrote | absolute | P7 | — |
-| **W4** | No call across the mod's API throws into its caller | absolute | P9 | — |
+| **W4** | No call across the mod's API throws into its caller | absolute | P9 | `ModApiShapeTests` |
 | **W1** | A saved world loads on the build that wrote it, and on the ones either side | absolute | P15 | `StorageAndSettingsTests` |
 | **W2** | A name something outside this repository addresses is never repurposed | absolute | P15 | `TheRetiredPropertyNamesAreStillRead` `NoSettingReusesANumberThatWasDeliberatelyRetired` |
 | **W5** | A measurement holds the machine | absolute | P1 | `heavy log` |
@@ -306,7 +306,7 @@ That asymmetry is not closed and is recorded here rather than left implicit.
 | **R16** | A pointer in code is plain text, never a link | absolute | P5 | `NoPointerInCodeIsWrittenAsALink` |
 | **R12** | A page states its scope, describes the present, and logs its changes | absolute | P3 | partly |
 | **R13** | A standing rule is stated here once, and argued elsewhere | absolute | P5 | `EveryRuleCitedByAPageExists` |
-| **R14** | A comment names something that is there | absolute | P5 | `NoDocCommentDescribesSomethingThatIsNotThere` |
+| **R14** | A comment names something that is there | absolute | P5 | the build (`CS1574` and its family) `NoDocCommentDescribesSomethingThatIsNotThere` |
 | **O1** | Every long run is capped | absolute | P13 | — |
 | **O2** | A run with no bounded duration gets no hang timeout | conditional | P13 | — |
 | **O3** | Long sweeps resume, and progress is measured in bytes | absolute | P13 | — |
@@ -502,10 +502,10 @@ rest on those.
 *Checked by:* reported by `verdict.py`, which prints the censored share beside the criteria.
 *From:* [known-issues.md](known-issues.md#deliberate-limits).
 
-#### M4 — Keep the fastest of N, and publish the noise floor
+#### M4 — Keep the fastest of N and the median, and publish the noise floor
 
-**Every timed case is measured several times and the fastest kept, and every report opens with
-the spread between fastest and slowest of a repeated case.**
+**Every timed case is measured several times and both the fastest and the middle reading kept, and
+every report opens with the spread between fastest and slowest of a repeated case.**
 
 Timing noise is one-sided: a sample is the true cost plus whatever else the machine was doing, so
 averaging it in measures the operating system. Without the floor printed beside them, several
@@ -521,10 +521,36 @@ one that was checked — by requiring several readings to agree with the best ra
 a number. Two passes' worth of rejected optimisations were judged at effect sizes smaller than the
 uncertainty this hid.
 
+**And reproducing the fastest is not enough either, which took a fifth pass on this rule to find
+out.** Four runs of one binary at 126,731 blocks, four hundred repeats each, every candidate summary
+compared: the minimum reproduces to **4.5 %** on the room pass and to **97 %** on `register`, and
+the *median* reproduces to **0.9 %** on exposure where the minimum manages 30 %. **No summary is
+best for more than three of the eight stages, and for two of them nothing tried reproduces at all.**
+What separates them is whether a stage has a fast mode it reaches rarely: where the minimum sits at
+45 % of the median, best-of-N samples that mode to a depth that is an independent draw per run, and
+four hundred repeats do not fix it. Where the distribution is one mode with additive noise — the
+room pass, at 85 % — the minimum is right.
+
+So **a stage reports its minimum and its median, and a ratio is believed only where both legs agree
+on both.** The one-sided-noise argument still holds and still rules out the mean; what it does not
+establish is that the minimum of a *bimodal* sample is reproducible, and that was assumed for nine
+passes rather than measured.
+
+**And which of the two reproduces is a property of the session, not of the stage — a sixth pass on
+this rule.** The four runs above were one window. Two days later, twelve runs of bit-identical
+exposure code in one held window put its minimum within 20–30 % of the earlier session's and its
+median at **less than half**: `best/med` was 0.45 then and 0.81–0.87 now. The stage that the table
+above assigns the median is the stage whose median is the figure that did not survive the session.
+That is why the rule is *report both and refuse marginal ratios* rather than *read this column for
+this stage*, and it is why `M7` is scoped to any two figures compared rather than to a pass.
+
 *Applies to:* every millisecond in a report.
-*Checked by:* `PerformanceReportTests`, and `StageLabTests.EveryStageStopsForAReasonItCanName` for
-the sampling.
-*From:* [benchmarks.md](benchmarks.md), [performance.md](performance.md#pass-8-iteration-2--every-stage-but-one).
+*Checked by:* `PerformanceReportTests`, and `StageLabTests.EveryStageStopsForAReasonItCanName` and
+`EveryRowCarriesItsMedianAndItsShape` for the sampling. **The reproducibility itself is not checked
+and cannot usefully be**: it is a property of the machine, and a test demanding it inside an
+eight-way parallel suite failed and passed on consecutive runs of unchanged code. It is measured on
+a held machine with `bench samplestats`, which is what the figures above come from.
+*From:* [benchmarks.md](benchmarks.md), [performance.md](performance.md#pass-9-iteration-5--no-single-statistic-reproduces-and-two-stages-have-none).
 
 #### M5 — A figure inside the noise floor has not moved
 
@@ -754,9 +780,12 @@ which checks the fixture it built.
 
 **No count, share or total is written into prose by hand when the data behind it can be read.**
 
-The balance bench stated 36 panel ships for as long as the panel had 50, because the header had
-been typed rather than generated. A reader who catches one wrong count stops believing the right
-ones.
+The balance bench stated 36 panel ships for as long as the panel had 50 — it is 52 now — because
+the header had been typed rather than generated. A reader who catches one wrong count stops believing the right
+ones. *(The panel is 52 now — `C32` re-picked it on the corrected census. This sentence has to
+name the current figure as well as the historical one, or the check below excuses it forever:
+recording a wrong count is allowed, and only while the same sentence proves it knows the right
+one.)*
 
 *Applies to:* every page that reports on a dataset, including this one's own claims about the
 suite.
@@ -786,10 +815,23 @@ five retired lab invariants sit in the suite with no caller at all. Anything dec
 mentioned nowhere else is the place to look, and a name-frequency scan finds them in seconds —
 though it gives a false negative on a misspelled declaration.
 
+**And a machine looks for it now, which nothing did until 2026-08-27.** This entry used to end by
+naming that gap in the test project, and closing it found two on the first run:
+`Scenarios.OpenSides`, a documented six-face count nothing called, and `IncandescenceTests.
+Luminance`, a photopic integration written from first principles and then never run — which took
+`Photopic` with it. The compiler cannot do this: an unused private *field* is a warning and an
+unused private *method* is not, so these compile, get maintained, and read to the next person as
+something the suite relies on. **The shipped code is scanned on the same terms and is clean**, which
+is a result rather than an omission — every private helper under `Data/Scripts` is reached — with
+the vendored framework excluded because `R6` forbids editing the one uncalled method in it.
+
 *Applies to:* every pass over the repository.
 *Checked by:* `SimCommandTests` — including `EveryLabThatProducesAReportIsReachable` —
-`DocumentationTests`, and `EverySettingIsReadBySomething`. Nothing yet scans the test project for
-an uncalled `internal static` invariant, which is how the four above survived.
+`DocumentationTests`, `EverySettingIsReadBySomething`, and
+`UncalledCodeTests.NoPrivateHelperInTheTreeIsCalledByNothing` over every private helper in the
+tree. That last one counts identifiers across `Data/` and `tests/`, so an *overload* of a name something else
+calls is still invisible to it — the same false negative as a misspelled declaration, and the same
+reason a pass still has to look.
 *From:* the defect record kept with the session notes; [backlog.md](backlog.md) A19.
 
 #### D3 — Where one thing exists twice, a test compares the two
@@ -979,15 +1021,31 @@ that line.
 > carry an experiment's controls. Sorting summaries by length finds the careful ones.
 
 *Applies to:* every comment under `Data/Scripts` and `tests`, excluding vendored code.
-*Checked by:* `NoDocCommentDescribesSomethingThatIsNotThere`, which fails on **two signatures, and
-they are different faults**. *Closed then reopened* — a summary closed on one line and another
+*Checked by:* **the compiler first, and a test for what it cannot see.**
+
+The compiler resolves every `<see cref>`, `<param>` and `<paramref>` in this tree, because
+`GenerateDocumentationFile` is on and `CS1574`, `CS1580`, `CS1581`, `CS1584`, `CS1710`, `CS1572`,
+`CS1734`, `CS1587` and `CS1570` are errors. That is name binding, with generics, overloads and
+inherited members, which no test here could do without reimplementing it; it had simply never been
+asked. Twenty-five failures were in the tree when it was, four of them in the shipped mod — a
+`[ProtoMember]` whose comment described a deleted field, a method's parameters documented onto the
+constant that had been inserted above it, a `<paramref>` on a class. `CS1573` and `CS0419` are
+deliberately not errors: a missing param tag and an ambiguous overload reference are coverage and
+precision, not a name that resolves to nothing. `CS1570` and `CS1572` are errors everywhere except
+[Generic.csproj](../Generic.csproj), which is the only project that compiles the three vendored
+paths and where `R6` forbids fixing the five they carry; `.editorconfig` cannot narrow it, because
+`WarningsAsErrors` overrides those severities, which was tried and measured.
+
+And `NoDocCommentDescribesSomethingThatIsNotThere` for the orphan the compiler accepts, which fails
+on **two signatures, and they are different faults**. *Closed then reopened* — a summary closed on one line and another
 opened on the next — is a member that has gone, leaving its comment on the one below. *Opened
 twice* — a second summary opened before the first is closed — is a member **inserted into the middle
 of somebody else's comment**, which breaks two comments rather than one: the tail of the first now
 hangs under the newcomer and describes the member after it. Either way C# allows one summary per
 member, so neither shape can be innocent. It states rather than hides its limit: an orphan landing
-somewhere with no comment of its own is invisible to it. Nothing checks the length, which is
-judgement.
+somewhere with no comment of its own is invisible to it — though `CS1587` now takes the case where
+it lands on nothing at all, which is how two of the twenty-five were found. Nothing checks the
+length, which is judgement.
 *From:* [document-of-intent.md](document-of-intent.md#what-a-code-comment-is-for).
 
 #### R15 — An identifier cited anywhere resolves to something that exists
@@ -1043,17 +1101,49 @@ taken in parallel is a different one, and nothing in the number says which it is
 *Checked by:* `ParallelAndLinearProduceTheSameMatrix`, which fails when shared state returns.
 *From:* [balance-lab.md](balance-lab.md).
 
-#### M7 — Measure a pass against its own start
+#### M7 — Two figures are comparable only if they were taken in one window
 
-**To say what a pass cost, take a report at the pass's starting commit and one at its tip,
-minutes apart on one idle machine.**
+**Any two timings put in a ratio are taken minutes apart on one held machine — which for a pass
+means a report at its starting commit and one at its tip, and for an A/B means the two legs
+alternated inside a single window.**
 
 The committed baseline is pinned at an old commit, so a diff against it spans every commit since
-and attributes all of them to whoever ran it.
+and attributes all of them to whoever ran it. That was the whole of this rule until the session
+became measurable. **It is now the smaller half.** The same exposure code, the same machine, the
+same command, two days apart: a stage median of 11.40 ms and one of 4.75, with the source, the
+instrument, the build configuration and the stage order each eliminated in turn. Nothing inside a
+window can see that — every run of a session is on the same side of it — so it is not a thing more
+repeats or more processes will fix, and a *before* and an *after* quoted from two days' tables is
+not a measurement however carefully each was taken. Pass 4 saw the same effect at thirty per cent
+on a commit that was the *after* leg of one iteration and the *before* leg of the next, and left it
+as a caution in prose; five passes on it is a factor of two and it has been silently re-deciding
+which statistic a stage is read with, which is why it is a rule with an artefact behind it now.
 
-*Applies to:* the per-pass figures in the iteration log.
-*Checked by:* — procedure.
-*From:* [benchmarks.md](benchmarks.md#the-iteration-log).
+The corollary is the useful one: a ratio taken as a pair inside one window is unharmed, because
+whatever the session is doing is doing it to both legs. Alternate the legs rather than blocking
+them, so drift within the window is common to both as well, and carry an untouched stage as a
+control.
+
+**And the control has to be somewhere the change cannot reach, which is narrower than it sounds.**
+A stage that runs *after* the changed stage in the same process is not a control: settling between
+stages reclaims the garbage and leaves the heap it was allocated into, so a stage carries its
+predecessors' allocation history. Measured — the room pass reads 4.5 % apart between two binaries
+when two stages ran before it, and **0.3 % apart when it runs alone**, and what differed between the
+binaries was how much the first of those stages allocates. Give each stage its own process
+(`bench stages --isolate`), or put the control before the change.
+
+*Applies to:* any two timings put in a ratio — a pass against its start, an A/B's two legs, a
+figure on a page against a figure on another.
+*Checked by:* `StageLabTests.ARowSurvivesBeingWrittenAndReadBack` and
+`AnArtefactMissingAColumnIsRefusedRatherThanMisread` for the isolation the second half needs, and
+`SampleStatisticTests` — `RunsAreOneWindowOnlyIfTheyWereTakenInsideOne`,
+`ARunWithNoReadableStampIsNotOneWindowWithAnything` and
+`TheStampIsWrittenToTheArtefactAndReadBackFromIt`. Every artefact `bench stages` writes carries the
+stamp those read, and `bench samplestats` says above its table whether the runs it is comparing are
+one window, how far apart they were taken, or that they are unstamped. Whether a human then compares
+two windowed figures anyway is procedure.
+*From:* [benchmarks.md](benchmarks.md#the-iteration-log),
+[performance.md](performance.md#pass-9-iteration-6--the-one-write-exposure-change-and-the-session-it-was-measured-in).
 
 ### P7 — The game is the authority
 
@@ -1287,10 +1377,21 @@ and the caller cannot catch what it did not know it was calling. The same reason
 way for the callbacks this mod invokes: one misbehaving consumer of a threshold must not stop heat
 moving for everything else in the world, so `RaiseThreshold` catches, records and unsubscribes.
 
+**Discipline was the check until 2026-08-28, and it had already missed one.** `GetSetting` was
+`name => Settings.Instance.GetValue(name)`, four lines above a `SetSetting` that guarded the same
+field and returned `false` — so the writer was safe to call before this mod had loaded its settings
+and the reader threw a `NullReferenceException` into whoever asked. Nothing would have reported it:
+an exception crossing a mod boundary lands in somebody else's session. **Every entry goes through
+`ThermalApi.Guard` now**, which returns the type's default and records the failure through the same
+`Telemetry.Exception` that `RaiseThreshold` uses, so the property is structural rather than a
+promise about eighteen bodies. `GetSetting` itself reads through `Settings.EnsureLoaded`, which is
+the method written for callers who cannot control load order.
+
 *Applies to:* every delegate in the table, and every callback the mod invokes.
-*Checked by:* — nothing. `ModApiShapeTests` pins the table's *shape*; that no entry throws is
-discipline, and the closest thing to a check is that every implementation null-guards its way to a
-return value.
+*Checked by:* `ModApiShapeTests.EveryEntryInTheTableIsWrappedSoItCannotThrowIntoItsCaller`, which
+reads the source because the table binds game types no test project references. It checks that
+everything is inside a `Guard`, not that each body is careful — one thing to see, and it cannot be
+true of seventeen entries and false of the eighteenth without saying which.
 *From:* [api.md](api.md#guarantees).
 
 ### P10 — The solver's three invariants are the definition of correctness
@@ -1740,6 +1841,12 @@ right and this page is stale**; say so and fix it here.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **`W4` is checked now, and closing it found the defect it was written about.** Its *Checked by* field read "— nothing… that is discipline", and discipline had missed `GetSetting`: `name => Settings.Instance.GetValue(name)`, four lines above a `SetSetting` guarding the same field, so a consumer asking for a setting before this mod loaded its own got a `NullReferenceException` in their session with this mod's name on it. Every table entry goes through `ThermalApi.Guard` now — structure rather than a promise about eighteen bodies — and `GetSetting` reads through `Settings.EnsureLoaded`. |
+| 2026-08-28 | **`M7` gains the half that was luck rather than method: a control the change can reach is not a control.** Pass 9's tenth iteration measured a stage nothing had touched moving 4.5 % between two binaries — and 0.3 % when run on its own. Settling between stages reclaims the garbage and leaves the heap it was allocated into, so a stage carries its predecessors' allocation, and the change under test had cut exactly that. `bench stages --isolate` gives each stage its own process. |
+| 2026-08-27 | **`D2`'s own stated gap is closed: the test tree scans itself.** The entry ended by saying nothing looked for an uncalled `internal static` invariant in the test project, which is how four survived a pass. `UncalledCodeTests` looks now — over the shipped code as well, where it comes back clean — and found two on its first run — a documented six-face count in `Scenarios` and a photopic luminance integration in `IncandescenceTests` that was written from first principles and never called. The compiler cannot find these: an unused private field is a warning and an unused private method is not. |
+| 2026-08-27 | **`M7` is now *two figures are comparable only if they were taken in one window*, and `M4` says which statistic to read is a property of the session.** The same exposure code measured a 4.75 ms median in one held window and 11.40 two days earlier — `best/med` 0.83 against 0.45 — with the source, the instrument, the build configuration and the stage order each eliminated in turn. The minimum roughly travels between sessions and the median does not, which is the reverse of what `M4`'s within-window table assigns this stage. Pass 4 saw the same effect at thirty per cent and left it as prose; it has an artefact behind it now, `taken_utc` on every run the stage lab writes. |
+| 2026-08-27 | **`M4` takes the median as well as the fastest, and says the reproducibility is not checkable.** Four runs of one binary at 126,731 blocks, four hundred repeats a stage, every candidate summary compared: the minimum reproduces to 4.5 % on the room pass and 97 % on `register`; the median to 0.9 % on exposure where the minimum manages 30 %. No summary is best for more than three of the eight and two have none. Pass 8's fix — sample until the best is reproduced — was right and does not reach a stage whose best is a rare draw. Unchecked rules: eighteen, unchanged. |
+| 2026-08-27 | **`R14` is checked by the compiler.** Turning on `GenerateDocumentationFile` and making `CS1574` and its family errors makes every `<see cref>`, `<param>` and `<paramref>` in this tree resolve to something that exists — real name binding, which no test here could do without reimplementing it, and which had never been asked for. Twenty-five failures were waiting, four in the shipped mod, including a `[ProtoMember]` whose comment described a deleted field and a method's parameters documented onto the constant inserted above it. `CS1570` and `CS1572` stay warnings in `Generic.csproj` alone, for the five a vendored file carries and `R6` forbids fixing. Unchecked rules: eighteen, unchanged — `R14` was already cited to a test, and now has the stronger check in front of it. |
 | 2026-08-27 | `M4` says what makes N enough: the fastest reading has to have been reproduced. Keeping the fastest of a fixed fifteen had not converged for any stage but the solver — three runs of one binary spread 48 %, 28 % and 67 % — and two passes of optimisations were judged at effect sizes smaller than that. |
 | 2026-08-27 | `C4` is asserted rather than measured. *Nothing allocates on the stepping path* was checked by reading a benchmark, which for a quantity whose correct value is **zero** is not a check at all: any figure at all reads as a small number. `StageLabTests` reads `GC.GetTotalAllocatedBytes` around a settled step of a census hull and fails above four kilobytes. Unchecked rules: eighteen, unchanged — this one was cited to a report and is now cited to a test. |
 | 2026-08-26 | **Added `M13` — a timing is taken on the build that ships — after finding that no timing ever had been.** Nothing under `tests/` set `<Optimize>`, and every command this repository runs builds `Debug`, which tells the JIT not to optimise. A step is 3.4× dearer that way and the factor is not uniform — 5× on the row fill, 7.7× on the diagnostics surcharge, 2.6× on the clamped conduction loop — so the *shares* this repository published were wrong as well as the absolutes, and they were wrong in favour of exactly the work an optimisation pass looks at. It lands under `P1` because it is the same failure as a duration quoted without its machine: the figure's stated scope was untrue. Unchecked rules: eighteen, unchanged — `M13` arrived with `OptimisedBuildTests`. |

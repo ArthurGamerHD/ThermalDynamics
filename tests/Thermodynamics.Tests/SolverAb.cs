@@ -72,7 +72,7 @@ namespace Thermodynamics.Tests
 
         /// <summary>
         /// Bit-identity, with the label of each side named so a failure says which way round it
-        /// is. <paramref name="element"/> names what an index is — "block", or "block 3 solar".
+        /// is. <paramref name="perElement"/> names what an index is — "block", or "block 3 solar".
         /// </summary>
         public static void AssertIdentical(float[] expected, float[] actual,
             string what, string expectedIs, string actualIs, IList<string> perElement = null)

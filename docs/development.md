@@ -34,6 +34,14 @@ dotnet build tests/Thermodynamics.slnx      # everything, mod project included
 dotnet build Generic.csproj -c Release      # the mod project alone
 ```
 
+**Solution membership is the check for a rename, and it is not the check for a malformed project
+file.** A `.csproj` MSBuild cannot parse does not fail the projects that reference it — it leaves
+the build, and `dotnet build Thermodynamics.Tests.csproj` and `dotnet test --no-build` both go on
+succeeding. Pass 9's fourth iteration wrote a `--` into an XML comment here and the mod project did
+not build for three commits while the suite passed. `ProjectFileTests` reads every `.csproj`,
+`.props`, `.targets` and `.slnx` in the tree and asserts it parses, so the failure is in the suite
+everybody runs rather than in the one command a session may not have run.
+
 Every `<HintPath>` resolves through `$(SEBinPath)`, which
 [Directory.Build.props](../Directory.Build.props) locates: `SE_BIN` if it is set, then the default
 Steam install on Linux, then the one on Windows. If none of them exists the build says so by name
@@ -313,6 +321,7 @@ already parameterises the game location.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-27 | **The mod project had not built for three commits and nothing said so.** Pass 9's fourth iteration wrote a `--` into an XML comment in `Generic.csproj`; MSBuild refuses the file, so it left the build rather than failing it, and every other command kept passing. Fixed, and `ProjectFileTests` now asserts that every MSBuild file in the tree parses — `C11`'s solution membership catches a rename, not an unreadable project. |
 | 2026-08-22 | Added the comment convention to [Documentation conventions](#documentation-conventions): a comment names a definition and points at the page that argues it, and the pointer is plain text rather than a relative markdown link, because a link inside a `.cs` renders nowhere and nothing checks it. Both of the two that existed had rotted. |
 | 2026-08-22 | Corrected the multiplayer row, which said no commands were registered on the network channel; three replicated properties and a second secure channel exist. |
 | 2026-08-22 | Added the standard header and this change log. The documentation conventions this repository follows are stated in [Documentation conventions](#documentation-conventions) below. |

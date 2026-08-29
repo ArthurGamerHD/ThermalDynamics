@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using Thermodynamics.Harness;
 
 namespace Thermodynamics.Tests
@@ -40,8 +42,14 @@ namespace Thermodynamics.Tests
             StageLab.Repeats = 3;
             try
             {
-                List<StageLab.Row> rows = StageLab.Run("ship", 2000, StageLab.Stages);
-                Assert.Equal(StageLab.Stages.Length, rows.Count);
+                // Both lists, because a stage nobody names in `Stages` is a stage nothing here
+                // would run — which is how a lab comes to have a case in its switch and no
+                // coverage at all (`D2`).
+                List<string> all = new List<string>(StageLab.Stages);
+                all.AddRange(StageLab.ExtraStages);
+
+                List<StageLab.Row> rows = StageLab.Run("ship", 2000, all);
+                Assert.Equal(all.Count, rows.Count);
 
                 for (int i = 0; i < rows.Count; i++)
                 {
@@ -50,10 +58,311 @@ namespace Thermodynamics.Tests
                     Assert.True(row.BestMs > 0d && row.BestMs <= row.WorstMs, row.Stage + " has no usable time");
                     Assert.True(row.Blocks > 1000, row.Stage + " ran on " + row.Blocks + " blocks");
                 }
+
+                // **The two sync rows must not be the same row.** They exist to price a dirty flag
+                // and they differ only in that flag, so a `syncclean` that quietly mirrored every
+                // node anyway — or a `syncdirty` that marked none — would still report a time and a
+                // work count and would price nothing (`E8`). At 2,000 blocks the gap is small; that
+                // it exists at all is what is asserted here, and performance.md carries its size.
+                StageLab.Row dirty = Find(rows, "syncdirty");
+                StageLab.Row clean = Find(rows, "syncclean");
+                Assert.Equal(dirty.Work, clean.Work);
+                Assert.True(dirty.BestMs > clean.BestMs,
+                    "mirroring every node took " + dirty.BestMs.ToString("n4")
+                    + " ms and mirroring none took " + clean.BestMs.ToString("n4")
+                    + ", so this pair prices nothing");
             }
             finally
             {
                 StageLab.Repeats = repeats;
+            }
+        }
+
+        /// <summary>
+        /// **A row survives the round trip through the artefact**, which is what lets a stage be
+        /// timed in a process of its own and still appear in one table.
+        ///
+        /// <para>
+        /// `--isolate` exists because settling the heap between stages is not enough: pass 9's
+        /// tenth iteration measured the room pass moving 4.5 % between two binaries when `place`
+        /// and `exposure` ran before it in the same process, and 0.3 % when it ran alone. The child
+        /// process writes `stages.csv` and the parent reads it back, so what is asserted here is
+        /// that reading it back loses nothing a comparison uses — including the stopping reason,
+        /// because a capped row that came back as a confirmed one would be compared with things it
+        /// must not be.
+        /// </para>
+        ///
+        /// <para>
+        /// Columns are found by name, so this also pins that a column added in the middle cannot
+        /// silently shift the rest — the failure that reads as a plausible number rather than as an
+        /// error (`D3`).
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ARowSurvivesBeingWrittenAndReadBack()
+        {
+            int repeats = StageLab.Repeats;
+            StageLab.Repeats = 3;
+            try
+            {
+                List<StageLab.Row> written = StageLab.Run("ship", 2000,
+                    new List<string> { "place", "rooms" });
+
+                string path = Path.Combine(Path.GetTempPath(),
+                    "stagelab-" + Guid.NewGuid().ToString("n") + ".csv");
+                try
+                {
+                    File.WriteAllText(path, StageLab.Csv(written));
+                    List<StageLab.Row> read = StageLab.ReadCsv(path);
+
+                    Assert.Equal(written.Count, read.Count);
+                    for (int i = 0; i < written.Count; i++)
+                    {
+                        Assert.Equal(written[i].Stage, read[i].Stage);
+                        Assert.Equal(written[i].Blocks, read[i].Blocks);
+                        Assert.Equal(written[i].BestMs, read[i].BestMs);
+                        Assert.Equal(written[i].MedianMs, read[i].MedianMs);
+                        Assert.Equal(written[i].WorstMs, read[i].WorstMs);
+                        Assert.Equal(written[i].Repeats, read[i].Repeats);
+                        Assert.Equal(written[i].ConfirmedBest, read[i].ConfirmedBest);
+                        Assert.Equal(written[i].Stop, read[i].Stop);
+                        Assert.Equal(written[i].Work, read[i].Work);
+                        Assert.Equal(written[i].WorkUnit, read[i].WorkUnit);
+                        Assert.Equal(written[i].AllocatedBytes, read[i].AllocatedBytes);
+                        Assert.Equal(written[i].FastModeShare, read[i].FastModeShare);
+                    }
+                }
+                finally
+                {
+                    File.Delete(path);
+                }
+            }
+            finally
+            {
+                StageLab.Repeats = repeats;
+            }
+        }
+
+        /// <summary>
+        /// A file this lab did not write is refused by name rather than parsed into a plausible
+        /// row. The case that matters is a `stages.csv` from before a column existed — the pass's
+        /// own starting binary writes one — which positional parsing would read as a row of
+        /// numbers in the wrong columns.
+        /// </summary>
+        [Fact]
+        public void AnArtefactMissingAColumnIsRefusedRatherThanMisread()
+        {
+            string path = Path.Combine(Path.GetTempPath(),
+                "stagelab-old-" + Guid.NewGuid().ToString("n") + ".csv");
+            try
+            {
+                // The header this lab wrote before pass 9's second iteration: no median, no
+                // stopping reason, no repeats.
+                File.WriteAllText(path,
+                    "stage,blocks,best_ms,worst_ms,spread_percent,work,work_unit,ns_per_unit,allocated_bytes"
+                    + Environment.NewLine
+                    + "rooms,126731,13.6,69.4,409,1651592,cells visited,8.3,4882720"
+                    + Environment.NewLine);
+
+                InvalidOperationException failure =
+                    Assert.Throws<InvalidOperationException>(() => StageLab.ReadCsv(path));
+                Assert.Contains("median_ms", failure.Message);
+
+                // And a file with a header and nothing under it is a stage that reported nothing,
+                // not an empty table.
+                File.WriteAllText(path, "stage,blocks,best_ms" + Environment.NewLine);
+                Assert.Throws<InvalidOperationException>(() => StageLab.ReadCsv(path));
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        private static StageLab.Row Find(IList<StageLab.Row> rows, string stage)
+        {
+            for (int i = 0; i < rows.Count; i++)
+            {
+                if (rows[i].Stage == stage) return rows[i];
+            }
+
+            throw new System.InvalidOperationException("no row for " + stage);
+        }
+
+        /// <summary>
+        /// **Both statistics reach the reader, and the shape that says which to believe.**
+        ///
+        /// <para>
+        /// The fastest repeat reproduces between runs for some stages and not others, and which is
+        /// which cannot be guessed — measured over four runs of one binary at 126,731 blocks, the
+        /// minimum spreads 4.5 % on the room pass and 97 % on `register`, while the median spreads
+        /// 0.9 % on exposure where the minimum spreads 30 % (performance.md, Pass 9, Iteration 5).
+        /// So the lab reports both and privileges neither, and `best/med` is the ratio that says
+        /// whether a row's minimum sits in its own bulk or in a fast mode it reached a few times.
+        /// </para>
+        ///
+        /// <para>
+        /// This asserts the arithmetic and the artefacts, not the reproducibility: whether two runs
+        /// agree is a property of the machine, and a test that demanded it under an eight-way
+        /// parallel suite would be testing the hardware — the mistake pass 8 made and undid.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryRowCarriesItsMedianAndItsShape()
+        {
+            int repeats = StageLab.Repeats;
+            int confirming = StageLab.ConfirmingRepeats;
+
+            StageLab.Repeats = 5;
+            StageLab.ConfirmingRepeats = 2;
+            try
+            {
+                List<StageLab.Row> rows = StageLab.Run("ship", 2000, StageLab.Stages);
+
+                foreach (StageLab.Row row in rows)
+                {
+                    // The median is one of the readings taken, and it is between the two extremes.
+                    Assert.Contains(row.MedianMs, row.Samples);
+                    Assert.True(row.MedianMs >= row.BestMs,
+                        row.Stage + " has a median of " + row.MedianMs + " below its best of "
+                        + row.BestMs + ", so one of the two is not of these repeats");
+                    Assert.True(row.MedianMs <= row.WorstMs,
+                        row.Stage + " has a median of " + row.MedianMs + " above its worst of "
+                        + row.WorstMs);
+
+                    // The shape is the ratio, and it cannot exceed one by construction.
+                    Assert.True(row.FastModeShare > 0d && row.FastModeShare <= 1d,
+                        row.Stage + " reports a best/median of " + row.FastModeShare);
+                }
+
+                string table = StageLab.Table(rows);
+                string header = StageLab.Csv(rows).Split('\n')[0];
+
+                Assert.Contains("median ms", table);
+                Assert.Contains("best/med", table);
+                Assert.Contains("median_ms", header);
+                Assert.Contains("fast_mode_share", header);
+            }
+            finally
+            {
+                StageLab.Repeats = repeats;
+                StageLab.ConfirmingRepeats = confirming;
+            }
+        }
+
+        /// <summary>
+        /// The step-phase path reports a median too, rather than a zero that would read as a stage
+        /// with an infinitely rare fast mode. It takes a fixed count of repeats and says `fixed`,
+        /// and it keeps them all like every other row.
+        /// </summary>
+        [Fact]
+        public void AStepPhaseRowCarriesItsRepeatsAndItsMedian()
+        {
+            int repeats = StageLab.Repeats;
+
+            StageLab.Repeats = 3;
+            try
+            {
+                List<StageLab.Row> rows = StageLab.StepPhases("ship", 2000);
+
+                Assert.NotEmpty(rows);
+                foreach (StageLab.Row row in rows)
+                {
+                    Assert.Equal(StageLab.Row.Fixed, row.Stop);
+                    Assert.Equal(3, row.Repeats);
+                    Assert.Equal(3, row.Samples.Count);
+                    Assert.True(row.MedianMs > 0d,
+                        row.Stage + " reports no median, which would read as a best that is"
+                        + " infinitely far below its own bulk");
+                }
+            }
+            finally
+            {
+                StageLab.Repeats = repeats;
+            }
+        }
+
+        /// <summary>
+        /// **And the reason reaches the reader.** The lab has counted confirmations since pass 8
+        /// and the test below has asserted that every row is either confirmed or capped — but for a
+        /// pass neither the table a person reads nor the CSV a comparison is built from carried the
+        /// answer, so a capped row and a settled one printed identically. An instrument that knows
+        /// and does not say is the failure this whole page is about (`P2`, `E9`).
+        ///
+        /// <para>
+        /// This asserts the two artefacts, not the counting: that the header names the columns, that
+        /// every row's word is one of the three the lab defines, and that the word printed is the
+        /// one the row holds. It runs the lab at a floor of three so it costs a second.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheTableAndTheCsvSayWhyEachStageStopped()
+        {
+            int repeats = StageLab.Repeats;
+            int confirming = StageLab.ConfirmingRepeats;
+
+            StageLab.Repeats = 3;
+            StageLab.ConfirmingRepeats = 2;
+            try
+            {
+                List<StageLab.Row> rows = StageLab.Run("ship", 2000, StageLab.Stages);
+
+                string table = StageLab.Table(rows);
+                string csv = StageLab.Csv(rows);
+
+                Assert.Contains("stopped", table);
+                Assert.Contains("repeats", table);
+                Assert.Contains("stopped", csv.Split('\n')[0]);
+                Assert.Contains("repeats", csv.Split('\n')[0]);
+                Assert.Contains("confirmed_best", csv.Split('\n')[0]);
+
+                // **Which window a figure came from is part of the figure** (`M7`): the same code
+                // read 2.2x apart between two sessions of this machine, so a row that does not say
+                // when it was taken is a row that will be compared with one from another day. The
+                // stamp is asserted in the artefact rather than on the row, because the row is not
+                // what anybody reads a fortnight later.
+                Assert.Contains("taken_utc", csv.Split('\n')[0]);
+                Assert.Contains("host", csv.Split('\n')[0]);
+                Assert.Contains(StageLab.TakenUtc, csv);
+                Assert.Contains(StageLab.Host, csv);
+
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    StageLab.Row row = rows[i];
+
+                    Assert.True(row.Stop == StageLab.Row.Confirmed || row.Stop == StageLab.Row.Capped,
+                        row.Stage + " stopped for \"" + row.Stop + "\", which is not one of the words"
+                        + " the lab defines, so a reader cannot tell what ended it");
+
+                    // The word has to be *in* the artefacts, not merely on the row.
+                    Assert.Contains(row.Stage, table);
+                    Assert.Contains(row.Stage + ",", csv);
+                }
+
+                // A capped row and a confirmed one must not print the same, which is the whole
+                // point; at a floor of three on a 2,000-block hull every row confirms, so the
+                // discrimination is checked on a row made to hit the cap instead.
+                StageLab.Row capped = new StageLab.Row();
+                capped.Stage = "contrived";
+                capped.Stop = StageLab.Row.Capped;
+                capped.BestMs = 1d;
+                capped.WorstMs = 2d;
+                capped.Work = 1;
+                capped.WorkUnit = "things";
+
+                List<StageLab.Row> mixed = new List<StageLab.Row> { rows[0], capped };
+                string mixedTable = StageLab.Table(mixed);
+                string mixedCsv = StageLab.Csv(mixed);
+
+                Assert.Contains(StageLab.Row.Capped, mixedTable);
+                Assert.Contains(StageLab.Row.Confirmed, mixedTable);
+                Assert.Contains("," + StageLab.Row.Capped + ",", mixedCsv);
+                Assert.Contains("," + StageLab.Row.Confirmed + ",", mixedCsv);
+            }
+            finally
+            {
+                StageLab.Repeats = repeats;
+                StageLab.ConfirmingRepeats = confirming;
             }
         }
 

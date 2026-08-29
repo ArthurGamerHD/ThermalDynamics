@@ -24,11 +24,77 @@ python3 tools/corpus/pace.py out/cap-2026-08-25/progress.txt \
     --reference out/air-corpus-2026-08-24/progress.txt \
     --outcomes  out/air-corpus-2026-08-24/outcomes.csv   # what a running walk will cost
 ./tools/corpus/build-report.sh out/corpus-2026-08-21      # the survey as one page
-python3 tools/corpus/panel.py out/census-2026-08-21/census.csv \
-                             out/corpus-2026-08-21/outcomes.csv   # rebuild the standing panel
+python3 tools/corpus/panel.py out/census-2026-08-25/census.csv \
+                             out/survey-2026-08-25/outcomes.csv   # rebuild the standing panel
 ./tools/corpus/build-bench.sh out/corpus-2026-08-21 \
                              out/census-2026-08-21 out/knobs-2026-08-21   # every dataset, one page
 ```
+
+## The core corpus — a walk of the population in an hour instead of eleven
+
+`core.py` draws a **stratified sample with weights**, committed as
+[`core-corpus.csv`](core-corpus.csv), which walks in about **36 minutes in air and 78 in the cap
+walk's paired arms** against 5.1 and 11.1 hours for the whole corpus. The downloaded blueprints all
+stay where they are; the core corpus is a *selection over* them, so nothing is lost and a full walk
+is still one environment variable away.
+
+```
+python3 tools/corpus/core.py out/air-2026-08-28 --out out/core-selection.txt   # build the list
+THERMAL_CORPUS_ONLY=$PWD/out/core-selection.txt ...                            # walk it
+python3 tools/corpus/core.py --score out/<core-dataset>                        # read it
+```
+
+**The cost is not spread the way anyone guesses, and that is the whole design.** Measured on
+`out/air-2026-08-28`:
+
+| blocks | ships | share of the walk's cost | runs over the allowance |
+| --- | ---: | ---: | ---: |
+| under 10,000 | 7,199 (88.5 %) | **20.8 %** | **0** |
+| 10,000 and over | 925 (11.5 %) | **79.2 %** | **712, all of them** |
+
+**So the obvious cut is the wrong one, and it is wrong by a measured 82 %.** Dropping every ship
+over 10,000 blocks gives a 63-minute walk in which `G6`'s cost half reads *zero runs over the
+allowance* and its p99 lands **82 % below** the population's. A size-truncated corpus is not a
+cheaper corpus, it is a corpus with the finding deleted — which is the same lesson as *never quote a
+partial corpus result*, arrived at from the other end.
+
+**What works is keeping the cheap strata whole and sampling the giants hard.** Every ship under
+2,000 blocks is 63.9 % of the corpus and 4.5 % of the walk, so it is kept entire; above that the
+sample is one in ten, one in eight and one in twenty, systematic within narrow bands rather than
+random, and each kept ship carries the number of ships it stands for. Twenty runs in the whole
+population go critical in air and they come from **eight ships** costing 2.3 % between them, so
+those eight are a take-all stratum — at any fraction that makes the giants affordable, `G1` reads
+zero, not because the population moved but because the event is rarer than the sample.
+
+**How good it is, measured rather than claimed.** Drawn from the air walk and scored against two
+walks it was *not* drawn from — the cap walk's uncapped arm, on a different build, and the survey's
+five vacuum scenarios:
+
+| statistic | in sample | cap walk | survey |
+| --- | ---: | ---: | ---: |
+| work p50 | +0.9 % | +0.9 % | −0.0 % |
+| work p95 | −1.8 % | −3.5 % | −0.7 % |
+| work p99 | **+0.3 %** | **−0.9 %** | **−4.5 %** |
+| demand p99 | 0.0 % | 0.0 % | −0.3 % |
+| over the allowance | −5.8 % | −3.0 % | −23.7 % |
+| critical rate | +0.2 % | −19.8 % | −1.5 % |
+
+**The pattern is the same in all three columns and it is the one sampling predicts: what is common
+is estimated well and what is rare is not.** The survey's over-allowance rate is 0.68 % of runs and
+reads 24 % low; the air walk's is 2.19 % and reads 5.8 % low. So the core corpus answers `G6`'s
+percentiles, the demand half and the medians, and it does **not** answer a maximum — `work max` is
+76 % low, because a maximum is one ship and cannot be sampled — nor any rate below about half a
+per cent.
+
+**Read a core walk with `core.py --score` and nothing else.** `verdict.py` has no weights, and a
+core dataset read without them describes a population that is mostly small ships, which is not the
+corpus and is not anything; it recognises such a dataset and stops rather than printing figures
+shaped like population figures.
+
+**When to walk the whole corpus anyway.** When the finding is a maximum, a rare rate, or a tail
+that has to be exact rather than estimated — and when a population figure is going to be published
+as one. The core corpus is for the other ninety per cent of runs, where the question is *did this
+change move anything* and the answer arrives in half an hour instead of overnight.
 
 ## Ask what the smallest run that answers the question is, before launching one
 
@@ -94,12 +160,22 @@ scenario; the capped arm cannot stop there, because it has to stop where its own
 (`M1`). `THERMAL_CORPUS_SHIPS=40` walks a stride sample instead of the population, which is how to
 see that a walk works before committing the hours — the sample for this one was 320 runs in 77 s.
 
-**Twice is a ceiling, and it is the estimate to use.** The cap walk is the air walk's four
-scenarios with a second arm on each, and the two arms share one blueprint parse, so the second arm
-can only ever add what it simulates. Measured over the fifty files the two walks' progress records
-share, the cap walk is **1.95x** the air walk per file, and the air walk finished in 104 minutes —
-so the cap walk is **about three and a half hours**, with 2x as a bound nothing about the machine
-can move.
+**A walk's cost is a property of the build, not just of the corpus.** The 2026-08-28 air re-take is
+**2.94x per file** over the same file range as the 2026-08-24 walk it replaces — about 5.1 hours
+against 104 minutes — and the reason is `A13`: the eleven block kinds that reader built as armour
+are oxygen generators, gravity generators, doors and turrets now, and this walk runs to equilibrium.
+**A dataset taken through a broken reader was cheaper to collect than the truth.** So the 1.95x
+figure below is a ratio between two walks *of one build*, and re-using it across a build that
+changed what the corpus contains would understate the cost.
+
+**Twice was offered as a ceiling and the finished walks breach it.** The reasoning still holds —
+the cap walk is the air walk's four scenarios with a second arm on each, the two arms share one
+blueprint parse, so the second arm can only add what it simulates. The number did not: 1.95x was
+measured over the **fifty files** the two walks' progress records share, and over the whole corpus
+the same two walks are **228.8 minutes against 104.5**, which is **2.19x** (`E10`). A fifty-file
+sample of a corpus walked largest-first is fifty capital hulls, and the second arm costs relatively
+more on the small ships that make up the rest. So the cap walk is **2.19x the air walk**, and on
+the re-taken air walk's 303.6 minutes that is about **eleven hours**, not three and a half.
 
 **Do not estimate a walk from the rate it is covering blocks at.** That is what abandoned the first
 cap walk, and it is not an instrument: the corpus is walked largest first, so blocks-per-minute
@@ -138,12 +214,39 @@ the other is the finding, not a gap to be joined away.
 
 **Every dataset says what build it came from.** `provenance.txt` is written beside the outcomes on a
 walk's first batch: the walk's name and start, the commit `HEAD` pointed at, and a digest of
-`Cubes.xml` and `Materials.xml` — the two files whose contents decide what a walk measures and which
-a commit hash says nothing about when they are edited and not committed. A resumed walk appends a
-second block rather than overwriting, so a dataset assembled across two builds says so.
+`Cubes.xml`, `Loops.xml` and `Planets.xml` — the three files whose contents decide what a walk
+measures and which a commit hash says nothing about when they are edited and not committed. A
+resumed walk appends a second block rather than overwriting, so a dataset assembled across two
+builds says so.
 
 `verdict.py` prints it and `--csv` records it, so a figure quoted from a committed summary carries
 the world it was measured in. A dataset with no such file says so rather than being assumed current.
+
+**And a reader has to read all of it, which took until 2026-08-28.** The writer had appended
+correctly since the day it was written and its own summary said so; `provenance.py` read only the
+*last* `Cubes.xml` line, so a walk resumed across a definition change reported as measured against
+the current file — which it half was. The 2026-08-25 survey ran in five slices and records two
+`Cubes.xml` hashes and two `Loops.xml` hashes, because `C36`, `C42` and `C43` landed between the
+fourth and the fifth. One format, two readers, and they had drifted (`D3`).
+
+`provenance.py` now prints `SPANS n VERSIONS of <file>` above its figures, and
+`spans_several_definitions` is the lookup. It says the dataset is mixed; it does not say whether
+that reaches the figures, because that depends on which blocks moved and whether the population
+carries them. For that survey it does not: the only `Cubes.xml` change in the window is the
+emissivity of `Gauge_SG_Radiator` and `Gauge_LG_Radiator`, and **no ship in the corpus carries a
+radiator, a coolant pipe, a pump or a heat pump**. `Loops.xml` describes coolant, which is the same
+argument. Both halves of the dataset are comparable, and now a reader can see the question rather
+than having to think of it.
+
+That last claim is a measurement, not an argument from what a workshop blueprint ought to contain —
+`Ship.IsVanilla` means every block named a definition, and the mod's blocks *are* definitions, so it
+would not have caught one. It is 207 distinct types across the whole census and none of them one
+this mod adds:
+
+```bash
+cut -d, -f4 out/census-2026-08-25/composition.csv | tr -d '"' | sort -u \
+    | grep -icE 'radiator|coolant|heatpump'      # 0, of 207 distinct types
+```
 
 It exists because the alternative was paid for once. The 2026-08-24 air walk finished **one minute
 after** a commit that took twenty-seven `ConsumerWasteEnergy` fractions from 0.9 to 1.0, and
@@ -190,14 +293,15 @@ census, the composition and the dial sweep with `pack-bench.py` and assembles `b
 `pending` where it is absent, so the bench exists before the sweep finishes.
 
 **Every figure a page states about its dataset comes from that dataset.** The bench's header
-counts were written into the HTML by hand until the panel grew from 36 ships to 50 and the page
+counts were written into the HTML by hand until the panel grew from 36 ships to 50 — and to 52 on 2026-08-28 — and the page
 went on saying 36. A reader who catches one wrong count stops believing the right ones.
 
-## The five ways a full sweep dies
+## The ways a full sweep dies
 
-A full sweep is about eight hours of compute. Five things went wrong on the run of 2026-08-21, all
-of them avoidable, and all five cost time rather than data. Recorded here because a run that dies at
-hour seven is the most expensive mistake this repository can make.
+A full sweep is hours of compute. Five things went wrong on the run of 2026-08-21, all of them
+avoidable, and all five cost time rather than data; the two below them cost a dataset and a session
+instead, and were found later. Recorded here because a run that dies at hour seven is the most
+expensive mistake this repository can make.
 
 **Never set `--blame-hang-timeout` on a corpus test.** It killed a healthy run at exactly eight
 hours. The survey is one test that legitimately runs longer than any timeout worth setting, and
@@ -247,6 +351,14 @@ python3 -c "import csv,sys;[print(r['path']) for r in csv.DictReader(open(sys.ar
 One caveat, and it is the reason this is a recovery rather than the normal path: a blueprint holding
 several ships that was interrupted part way through appears in `ships.csv` and would be skipped with
 ships still to do. That is one file of nine thousand, against a whole run.
+
+**And one that costs the dataset rather than the run: do not rebuild the configuration a walk is
+using while it is slicing.** A walk runs `-c Release --no-build`, so every slice loads whatever is
+in the Release output at the moment it starts. A `dotnet build -c Release` or a `dotnet publish`
+between two slices — for a benchmark, say, or to pin a binary — silently gives the second half of
+the dataset a different build from the first. The provenance record makes that *visible* rather than
+harmless: it appends a block per slice and `provenance.py` reports `SPANS n VERSIONS`, which is how
+the 2026-08-25 survey's split was found. Debug builds are fine; they are not what a walk loads.
 
 **And one that costs a session rather than a run: do not read the suite while a walk is running.** The tests that assert an elapsed time are
 measuring a machine a walk is using every core of, and they fail on it: on 2026-08-25 the full suite
@@ -452,8 +564,11 @@ pins the four provenance counts against the ones `AuthoredWasteTests` pins, so t
 one grammar cannot drift apart quietly (`D3`), `test_pace.py` pins what a progress file can be
 asked — that a repeated final line is not a stall, that the ratio is taken over the files two walks
 share rather than the time they ran, and that the block-share estimate is reported as the spread it
-has, and `test_reproduce.py` pins that a comparison
-with nothing in common is not a reproduction. Changing any of them fails a check rather than moving a number nobody is watching. They are the
+has,, `test_reproduce.py` pins that a comparison
+with nothing in common is not a reproduction, and `test_core.py` pins the two properties the core
+corpus is exact on — that a weight of one is the unweighted percentile and that an integer weight
+means what repeating the row means, which an earlier draft satisfied the first of and not the
+second — together with the guard that stops a sampled dataset being read as a population. Changing any of them fails a check rather than moving a number nobody is watching. They are the
 only checks over the scorers and are not part of the `dotnet test` suite; run them when a scorer
 changes.
 
@@ -469,6 +584,12 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **`pace.py`'s ratio reads every mark of a resumed walk, not just its first slice.** The morning's fix made a resumed walk's counts cumulative, and cumulative counts do not land on the reference's ten-file grid — so the intersection was empty after the first resume and **21 of 268** marks were in use. The reference is interpolated at the subject's own counts now, bounded to five marks because the corpus is largest-first. The air re-take reads 2.94x over 3,166 files against 3.05x over its first 400. |
+| 2026-08-28 | **The standing panel is re-picked** on the corrected census and the re-surveyed outcomes (`C32`, unblocked by `A13`'s survey half finishing). 52 ships from 50, `oxygen-heavy` added, and 16 of 24 rules pick different hulls — the census and the outcomes both moved under it, so this is not an isolation of the rule fix. The commands above now name the datasets it was built from. **No dial sweep taken before it is comparable with one taken after** (`M1`). |
+| 2026-08-28 | **`pace.py` reads a walk taken in slices.** Relaunching to resume is the documented normal path and it writes many blocks into one progress file, each restarting its own file count; read literally, the air re-take's ninetieth file of its sixth slice sat at 272 minutes after the first slice's first mark, and the file written to refuse a bad estimate reported **9.45x** per file where the honest figure is 3.05x. Counts continue from the resume line, the gap between slices is not walked time, and a slice's clock starts at its resume line — the work before a slice's first mark is real walking at the walk's own rate, sixty-four minutes of it over five boundaries. Pinned by a sliced fixture and the same walk in one run reporting the same elapsed and the same ratio. |
+| 2026-08-28 | Added the sixth way a sweep dies, which costs the dataset rather than the run: **do not rebuild Release while a walk is slicing.** Slices load `--no-build`, so a build between two of them gives the dataset's halves different builds. `provenance.txt` makes that visible rather than harmless, which is the only reason it is recoverable. |
+| 2026-08-28 | Said that a walk's cost belongs to the build as well as to the corpus. The `A13` air re-take is **1.78x per file** over the walk it replaces, because the blocks that reader built as armour are generators and doors now and this walk runs to equilibrium — so the 1.95x cap-to-air ratio is a ratio *within one build* and understates the cap walk's cost across a build that changed what the corpus contains. |
+| 2026-08-28 | **A dataset that spans two builds says so, and the reader that could not see it is fixed.** `provenance.txt` has appended a block per slice since it was written, and its writer's summary said as much; `provenance.py` read only the last `Cubes.xml` line, so the 2026-08-25 survey — five slices, two `Cubes.xml` hashes, two `Loops.xml` hashes — reported as measured against the current file. One format, two readers, drifted (`D3`). `spans_several_definitions` is the lookup and the report prints it. **It does not decide whether the split matters**: for that survey it does not, because the only change in the window is the two radiators' emissivity and no corpus ship carries a radiator or any other block the mod adds. Also corrected: this page named `Materials.xml` as the second hashed file for months, and the three the code hashes are `Cubes.xml`, `Loops.xml` and `Planets.xml`. |
 | 2026-08-26 | **`verdict.py` says when a dataset is partial**, which `E4` has asked for since it was written and nothing did. It counts the corpus's blueprints — recursively, because a workshop item can be a collection of several and counting one level deep misses fourteen of this corpus's and reports a population *smaller* than the walk that covered it — and prints `*** PARTIAL: n of m ***` above everything else. Where the corpus is not on the machine it says the population is **unknown** rather than assuming the dataset is whole; `--population <n>` states it. The threshold is 95 %, because the blueprint filters reject about one hull in a thousand and demanding equality would call every finished walk partial. |
 | 2026-08-26 | Added [`cellsize.py`](cellsize.py) and `test_cellsize.py`: which cell size is the harder one to cool, split off a census rather than argued off a cell face. Every column favours small grids — 2.47× the exposed skin per kilowatt, a fifth as much of it buried, **19.75×** the hull path per watt for the hottest block — which is the opposite of what [balance.md](../../docs/balance.md) had written down and what `C43` was blocked on. The hull path is read per kilowatt because the raw column says the reverse, and the test is built around that one column. |
 | 2026-08-25 | `verdict.py` refuses to score a criterion its dataset is too coarse to state, and `scoring.resolves` is the rule. A criterion given as a share of the corpus needs a corpus that can tell its two sides apart: on the thirteen ships of a partial survey slice one ship is 7.7 %, so *nothing critical* and *one per cent critical* are the same reading, and `G1` came back `[HOLDS]`. It reads `[  ?  ]` now, with what the dataset would need. It is a resolution test rather than a confidence one and says so — a partial walk that passes it is still a partial walk. The 8,142-ship dataset is unaffected. |
@@ -486,6 +607,8 @@ limit in [known-issues.md](../../docs/known-issues.md).
 | 2026-08-25 | Renamed `air.py`'s ratio column from *vs shipped* to *vs baseline*, and made it print which cell ships. The column compares every cell with the sweep's own control, conductivity x1 at a clock of 225 — which stopped being the shipped configuration when `C24` shipped x4 at 90, a row of the same table. The arithmetic was never wrong; the word was. |
 | 2026-08-25 | Fixed `verdict.py` reading a paired walk's second arm as duplicate rows. It keyed a row by ship and scenario, so `CorpusCapWalk`'s capped arm looked like the same run written twice: half the dataset was dropped, under a note blaming a resume that had not happened, and the arm it kept was the right one by accident. The arm is part of a row's identity now, and a paired dataset is scored on the one that ships with both named on the first line (`M1`, `P6`). |
 | 2026-08-25 | Added [`reproduce.py`](reproduce.py): whether two walks that overlap wrote the same numbers on the ships they share. Its first use was the cap walk's restart, whose 552 shared rows matched the abandoned partial exactly on all 22 compared columns. |
+| 2026-08-28 | Added [`core.py`](core.py) and the committed [`core-corpus.csv`](core-corpus.csv): a stratified, weighted sample that walks in 36 minutes where the corpus takes 5.1 hours. The measurement that shaped it is that the 11.5 % of ships over 10,000 blocks carry **79 % of the cost and all 712 of the over-allowance runs**, so the obvious cut deletes the finding — a size-truncated corpus reads `G6`'s work p99 **82 % low** and its over-allowance count as zero. Scored out of sample against two walks it was not drawn from, work p99 lands within 0.9 % and 4.5 %. |
+| 2026-08-28 | **Corrected the cap-to-air ratio, which the finished walks refute** (`E10`). 1.95x was measured over the fifty files two walks' progress records share; over the whole corpus the same two walks are 228.8 minutes against 104.5, so **2.19x**, and the cap walk on the re-taken air walk is about eleven hours rather than three and a half. A fifty-file sample of a largest-first walk is fifty capital hulls. |
 | 2026-08-25 | Added the one way a sweep costs a session rather than a run: a walk in progress fails the suite's wall-clock tests, because they are measuring a machine the walk is using every core of. Measured — the suite was green before the cap walk and `SolverCostPerLinkStaysProportional` was 3.14× its limit during it. |
 | 2026-08-25 | Added [`pace.py`](pace.py): what a running walk will cost, and the check that says whether the estimate means anything. The block-share rate that abandoned the first cap walk is reported as the spread it has and then run over the finished air walk, where the answer is known. |
 | 2026-08-25 | Added the *Looking for* table. A reader arriving here often wants the criteria these scripts score rather than the scripts. |
@@ -507,7 +630,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 | 2026-08-23 | Added `typical.py` and [the retest set](#the-retest-set): the panel picks extremes for a dial sweep, this picks the middle for a regression. |
 | 2026-08-22 | Split the crossing from the loss everywhere the pages had run them together. The survey report's headline said a ship *loses its first block* after nine seconds where it meant *crosses critical*, its table's `First loss` column was the crossing and its `Blocks lost` column was blocks over critical, and the bench page repeated all three. `seconds_to_first_loss` is packed and shown beside the crossing, and reads as absent on every dataset collected before it existed. |
 | 2026-08-22 | The resume is a record rather than a count. A walk writes `done-<walk>.txt` as it finishes each blueprint and reads it on the next start, so relaunching is the whole procedure and `THERMAL_CORPUS_SKIP` is gone ([backlog.md](../../docs/backlog.md) `H2`). Said that off is now spellable in `THERMAL_CORPUS_TESTS` every way anyone reaches for (`H3`). |
-| 2026-08-22 | Wrote down [the five ways a full sweep dies](#the-five-ways-a-full-sweep-dies), which [balance.md](../../docs/balance.md) had been pointing at [backlog.md](../../docs/backlog.md) for and which no page in the tree carried — it had survived only as a note kept outside the repository, which is the failure [rules.md](../../docs/rules.md) exists to prevent. |
+| 2026-08-22 | Wrote down [the ways a full sweep dies](#the-ways-a-full-sweep-dies), which [balance.md](../../docs/balance.md) had been pointing at [backlog.md](../../docs/backlog.md) for and which no page in the tree carried — it had survived only as a note kept outside the repository, which is the failure [rules.md](../../docs/rules.md) exists to prevent. |
 | 2026-08-22 | Added this change log. |
 | 2026-08-22 | Made every recorded corpus figure read by something, and closed the pass. |
 | 2026-08-21 | Opened the page against the 2026-08-21 datasets: what each script reads, what it prints, and why the panel's every pick names its own rule. |

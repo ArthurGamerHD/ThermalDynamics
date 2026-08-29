@@ -1,0 +1,81 @@
+statistic,value,unit
+dataset population,8144,blueprints
+dataset partial,0,
+dataset outcome rows,40685,
+dataset ships,8137,
+dataset ships.csv rows,8137,
+dataset scenarios,5,
+provenance walk,survey started 2026-08-28 09:40:22,
+provenance walk versions,6,
+provenance walk all,survey started 2026-08-25 19:14:22 survey started 2026-08-25 19:52:46 survey started 2026-08-25 21:34:48 survey started 2026-08-25 23:00:16 survey started 2026-08-26 18:28:38 survey started 2026-08-28 09:40:22,
+provenance commit,53bb4bd3830c2efa1e13a4761fa848a79632092e,
+provenance commit versions,6,
+provenance commit all,ecf14ce896fce0e2a006c72154d19a839368bed7 a615936af70b3c9fb68e525a3b3bb75a36cfa01d d5d8ae25003128c1616511f8d62f3bfd1c949f98 f19c5753060f39e74199ba78031c46312103bf73 0e90f63a841ab6ae7b59dfacb28cbdf4a5e04a10 53bb4bd3830c2efa1e13a4761fa848a79632092e,
+provenance Cubes.xml,3cdf7e20633c2c3c,
+provenance Cubes.xml versions,2,
+provenance Cubes.xml all,6bcb535eb1128246 3cdf7e20633c2c3c,
+provenance Loops.xml,ea59e1f282c2ba29,
+provenance Loops.xml versions,2,
+provenance Loops.xml all,046f8b8fc8181265 ea59e1f282c2ba29,
+provenance Planets.xml,da93b8fdd826e7cf,
+population blocks,45301652,
+population blocks p50,1112,
+population blocks p99,70141,
+sealed blocks,73,
+sealed ships,23,
+sealed block share,0.00016,%
+G1 idle critical share,0.0737,%
+G1 verdict,holds,
+G2 warm share,67.236,%
+G2 verdict,holds,
+G5 recovered share,98.562,%
+G5 verdict,holds,
+G6 demand p50,7.425,substeps
+G6 demand p95,10.598,substeps
+G6 demand p99,11.627,substeps
+G6 demand max,26.728,substeps
+G6 substep cap,64,substeps
+G6 work p50,45762,element visits
+G6 work p95,1052471,element visits
+G6 work p99,3248587,element visits
+G6 work max,38122745,element visits
+G6 visit allowance,4000000,element visits
+G6 runs over the allowance,278,
+G6 verdict,holds,
+G6 burn-forward demand p10,5.909,substeps
+G6 burn-forward demand p50,7.531,substeps
+G6 burn-forward demand p90,10.202,substeps
+G6 burn-forward demand p99,11.768,substeps
+G6 burn-forward demand max,26.728,substeps
+G6 burn-forward work p99,3349972,element visits
+G6 burn-forward runs over the allowance,59,
+G6 full-electrical demand p10,5.884,substeps
+G6 full-electrical demand p50,7.506,substeps
+G6 full-electrical demand p90,10.349,substeps
+G6 full-electrical demand p99,12.293,substeps
+G6 full-electrical demand max,19.661,substeps
+G6 full-electrical work p99,3329147,element visits
+G6 full-electrical runs over the allowance,62,
+G6 idle demand p10,5.84,substeps
+G6 idle demand p50,7.386,substeps
+G6 idle demand p90,10.029,substeps
+G6 idle demand p99,11.454,substeps
+G6 idle demand max,13.215,substeps
+G6 idle work p99,3225316,element visits
+G6 idle runs over the allowance,52,
+G6 recovery demand p10,5.848,substeps
+G6 recovery demand p50,7.396,substeps
+G6 recovery demand p90,10.034,substeps
+G6 recovery demand p99,11.49,substeps
+G6 recovery demand max,25.526,substeps
+G6 recovery work p99,3233377,element visits
+G6 recovery runs over the allowance,53,
+G6 vacuum-sunlit demand p10,5.841,substeps
+G6 vacuum-sunlit demand p50,7.389,substeps
+G6 vacuum-sunlit demand p90,10.034,substeps
+G6 vacuum-sunlit demand p99,11.453,substeps
+G6 vacuum-sunlit demand max,13.27,substeps
+G6 vacuum-sunlit work p99,3227833,element visits
+G6 vacuum-sunlit runs over the allowance,52,
+G3 verdict,unanswered,
+G4 verdict,unanswered,

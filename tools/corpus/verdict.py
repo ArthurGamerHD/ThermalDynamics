@@ -37,6 +37,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import provenance as provenance_lib
 import scoring
 from scoring import oversubscription_note
 
@@ -176,6 +177,17 @@ if population is None:
     print("  population UNKNOWN — the corpus is not on this machine and --population was not given,"
           " so whether this dataset is whole cannot be established here")
     record("dataset population", "", "blueprints")
+elif scoring.is_core_walk(set(r.get("workshop_id") for r in outcomes)):
+    # **A core walk is not a partial one and must not be read as either** (`P1`). It is a
+    # stratified sample: every ship under 2,000 blocks and one in twenty of the giants, and a
+    # giant in it stands for twenty. Counted once each, as everything below would count them, its
+    # figures describe a population that is mostly small ships -- which is not the corpus and is
+    # not anything. So this stops rather than printing figures shaped like population figures.
+    print(f"  *** CORE CORPUS: {walked:,} ships drawn by tools/corpus/core.py ***")
+    print("      This is a weighted sample, and verdict.py has no weights. Read it with")
+    print("          python3 tools/corpus/core.py --score " + DATA)
+    print("      which is the one implementation that applies them (`P5`).")
+    raise SystemExit(0)
 elif share is not None and share < scoring.WHOLE_ENOUGH:
     print(f"  *** PARTIAL: {walked:,} of {population:,} blueprints, {share * 100:.1f} % ***")
     print("      The corpus is walked largest-first, so this is the wrong end of a population"
@@ -197,6 +209,7 @@ record("dataset scenarios", len(set(r.get("scenario") for r in outcomes)))
 # collected one minute after a definition change, and nothing in its output said so.
 provenance = os.path.join(DATA, "provenance.txt")
 if os.path.exists(provenance):
+    seen = {}
     with open(provenance, encoding="utf-8") as handle:
         for line in handle:
             line = line.strip()
@@ -211,7 +224,34 @@ if os.path.exists(provenance):
                 continue
 
             name, _, value = line.partition(" ")
-            record("provenance " + name, value)
+            seen.setdefault(name, [])
+            if value not in seen[name]:
+                seen[name].append(value)
+
+    # **A resumed walk appends a block per slice, so a key can appear several times — and recording
+    # each in turn leaves the summary claiming the last.** That is the committed artefact every
+    # quoted figure is checked against, so it has to carry the split rather than the last value:
+    # the 2026-08-25 survey ran in six slices across two `Cubes.xml` and two `Loops.xml`, and this
+    # file would have said it was measured against one of each.
+    for name in seen:
+        record("provenance " + name, seen[name][-1])
+        if len(seen[name]) > 1:
+            record("provenance " + name + " versions", len(seen[name]))
+            record("provenance " + name + " all", " ".join(seen[name]))
+
+    # **Which definition files this dataset spans is asked of `provenance.py` rather than worked
+    # out again here.** The two readers of this format had already drifted once — that module read
+    # only the last `Cubes.xml` line and reported a split dataset as one — and a second
+    # implementation of the same question is how that happens (`D3`). The block above still counts
+    # every key, because the summary has to carry the commits and walk times as well.
+    split = sorted(provenance_lib.spans_several_definitions(DATA))
+    if split:
+        print()
+        for name in split:
+            versions = provenance_lib.definition_hashes(DATA, name)
+            print(f"  SPANS {len(versions)} VERSIONS of {name}: {', '.join(versions)}")
+        print("  This dataset was walked in slices and the definitions moved under it. Every figure"
+              " below is over both.")
 else:
     print("  provenance: not recorded — this dataset predates 2026-08-25")
     record("provenance", "absent")
@@ -405,7 +445,14 @@ if demand:
             if not demands:
                 continue
             d = percentiles(demands)
+
+            # Per scenario rather than pooled, because `Census.Corpus` states the corpus in
+            # vacuum and in air separately and a pooled figure answers neither.
+            record(f"G6 {name} demand p10", round(d["p10"], 3), "substeps")
+            record(f"G6 {name} demand p50", round(d["p50"], 3), "substeps")
+            record(f"G6 {name} demand p90", round(d["p90"], 3), "substeps")
             record(f"G6 {name} demand p99", round(d["p99"], 3), "substeps")
+            record(f"G6 {name} demand max", round(d["max"], 3), "substeps")
 
             if not works:
                 print(f"        {name:18}{len(rows):>8,}{d['p50']:>12.1f}{d['p99']:>12.1f}"

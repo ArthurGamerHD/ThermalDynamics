@@ -56,6 +56,27 @@ namespace Thermodynamics.Harness
             /// <summary>What this case is called in the table.</summary>
             public string Name = "none";
 
+            /// <summary>
+            /// The scenarios this case can be seen on, or null where every scenario shows it.
+            ///
+            /// <para>
+            /// **A case measured on a scenario that cannot express it reports 0.0 K, which reads
+            /// exactly like a case that does nothing** (`E8`). Thrust and speed errors have always
+            /// been `burn`-only and the table said so in prose; position needs `descent`, which is
+            /// the whole reason `F19` could not measure it; and weather needs a planet, so on the
+            /// two space scenarios there is nothing for it to be wrong about. Naming them here lets
+            /// the report mark the row as *not exercised* instead of printing a zero a reader would
+            /// believe.
+            /// </para>
+            ///
+            /// <para>
+            /// A list rather than a name, because *needs a planet* is two scenarios and collapsing
+            /// it to one would make the report call a row unexercised on a scenario it acts on —
+            /// which is the same lie the other way round.
+            /// </para>
+            /// </summary>
+            public string[] Scenarios;
+
             /// <summary>One line on what is being degraded and why that is what the engine does.</summary>
             public string Because = "";
 
@@ -118,6 +139,34 @@ namespace Thermodynamics.Harness
             /// because convection is the strongest path a hull has.
             /// </summary>
             public float AirDensityError;
+
+            /// <summary>
+            /// The client places the ship where it was this many simulated seconds ago, so it reads
+            /// the ambient of an altitude the ship has already left.
+            ///
+            /// <para>
+            /// **Only a scenario that changes altitude can show this**, which is why it is measured
+            /// on `descent` rather than on the level scenarios: on a ship holding station a stale
+            /// position is the right position. Position is *predicted* on a client rather than
+            /// replicated, exactly as velocity is, and the error it makes is a lapse rate away —
+            /// 6.4 K a kilometre on an earthlike, through `ClimateModel.Lapse`.
+            /// </para>
+            /// </summary>
+            public float PositionLagSeconds;
+
+            /// <summary>
+            /// The client sees calm air where the server has weather.
+            ///
+            /// <para>
+            /// **Server-driven world state with no prediction behind it**, which is what makes it
+            /// different from the two above: a client that has not been told cannot work it out.
+            /// Weather is not a small term — snow is −18 K on the target, a tenth of the sunlight
+            /// and 2.2× the convection — so this is the largest single-input divergence the sweep
+            /// can express, and the honest direction is the client missing the weather rather than
+            /// inventing one.
+            /// </para>
+            /// </summary>
+            public bool MissesWeather;
 
             /// <summary>
             /// The client's thrust is wrong by this share, permanently. **A bias, and the one input
@@ -381,6 +430,19 @@ namespace Thermodynamics.Harness
             public int Blocks;
             public string Scenario;
 
+            /// <summary>
+            /// True where the case names a scenario this run is not, so its figures are of a
+            /// degradation that could not act.
+            ///
+            /// <para>
+            /// **A zero here would read exactly like an input that does not matter** (`E8`). Thrust
+            /// and speed errors need a ship under way and position needs one changing altitude; run
+            /// on `planet` all three are switches wired to a world that cannot show them, and the
+            /// table used to print 0.0 K for each.
+            /// </para>
+            /// </summary>
+            public bool NotExercised;
+
             /// <summary>The worst disagreement at any sample, K.</summary>
             public float PeakKelvin;
 
@@ -541,6 +603,7 @@ namespace Thermodynamics.Harness
                 Protocol = fix,
                 Blocks = server.Solver.Nodes.Count,
                 Scenario = scenario,
+                NotExercised = how.Scenarios != null && Array.IndexOf(how.Scenarios, scenario) < 0,
             };
 
             // **The compartments hold air, and without this two of the knobs below measure
@@ -853,7 +916,70 @@ namespace Thermodynamics.Harness
             float air = 1f;
             if (onClient) air = Math.Max(0f, Math.Min(1f, air - how.AirDensityError));
 
-            return Worlds.PlanetSurface(air, timeOfDay);
+            // **A ship coming down, so that where it is is a different ambient from where it was.**
+            // On the level scenarios a stale position is the right position, which is why `F19`
+            // said position needed a scenario that descends before it could be measured at all.
+            if (scenario == "descent")
+            {
+                float at = seconds;
+                if (onClient) at -= how.PositionLagSeconds;
+
+                EnvironmentSample descending = Worlds.PlanetSurface(air, timeOfDay);
+                Descend(ref descending, at);
+                Weather(ref descending, how, onClient);
+                return descending;
+            }
+
+            EnvironmentSample surface = Worlds.PlanetSurface(air, timeOfDay);
+            Weather(ref surface, how, onClient);
+            return surface;
+        }
+
+        /// <summary>Metres the descent scenario starts at, and the rate it comes down.</summary>
+        public const float DescentFromMetres = 8000f;
+        public const float DescentMetresPerSecond = 10f;
+
+        /// <summary>
+        /// Puts the sample where a ship descending at <see cref="DescentMetresPerSecond"/> is after
+        /// this many seconds, stopping at the ground.
+        ///
+        /// <para>
+        /// Ten metres a second from eight kilometres is a descent that takes thirteen minutes — the
+        /// length of the sweep's own run — so the whole scenario is spent moving through air that
+        /// is getting warmer, and a client a few seconds behind is a few tens of metres high. The
+        /// air thins with altitude as well, because a sample that changed the temperature and not
+        /// the density would be a world that does not exist and would flatter the convection term.
+        /// </para>
+        /// </summary>
+        private static void Descend(ref EnvironmentSample sample, float seconds)
+        {
+            if (seconds < 0f) seconds = 0f;
+
+            float altitude = DescentFromMetres - (seconds * DescentMetresPerSecond);
+            if (altitude < 0f) altitude = 0f;
+
+            sample.Altitude = altitude;
+            sample.Radius = Worlds.EarthlikeRadius + altitude;
+
+            // Roughly the troposphere: half the sea-level density at about five and a half
+            // kilometres. The scenario is about ambient rather than about the atmosphere model, so
+            // this is a shape and not a claim.
+            float thinning = (float)Math.Exp(-altitude / 5500d);
+            sample.AirDensity *= thinning;
+        }
+
+        /// <summary>
+        /// The weather both machines are in, and the one the client is missing when the case says
+        /// so. Snow, because the sweep wants the divergence a client cannot predict its way out of
+        /// and it is the largest one the table carries.
+        /// </summary>
+        private static void Weather(ref EnvironmentSample sample, Degradation how, bool onClient)
+        {
+            // The server's world has the weather. The client's does not, which is the case.
+            if (!how.MissesWeather || onClient) return;
+
+            sample.Weather = WeatherResponse.For("Snow");
+            sample.WeatherIntensity = 1f;
         }
 
         /// <summary>
@@ -1217,13 +1343,31 @@ namespace Thermodynamics.Harness
                 {
                     Name = "thrust error",
                     Because = "the engine predicts thrust rather than sending it, so its 20 % is a guess",
+                    Scenarios = new[] { "burn" },
                     ThrustErrorShare = 0.2f,
                 },
                 new Degradation
                 {
                     Name = "speed error",
                     Because = "its predicted velocity is 20 % out, which is 1.7x the friction heat",
+                    Scenarios = new[] { "burn" },
                     SpeedErrorShare = 0.2f,
+                },
+                new Degradation
+                {
+                    Name = "position lag",
+                    Because = "places the ship where it was 5 s ago, which on a descent is a"
+                        + " different ambient — position is predicted, not replicated",
+                    Scenarios = new[] { "descent" },
+                    PositionLagSeconds = 5f,
+                },
+                new Degradation
+                {
+                    Name = "wrong weather",
+                    Because = "the server is in snow and the client has not been told — world state"
+                        + " with no prediction behind it, so patience does not fix it",
+                    Scenarios = new[] { "planet", "descent" },
+                    MissesWeather = true,
                 },
                 new Degradation
                 {
@@ -1338,6 +1482,20 @@ namespace Thermodynamics.Harness
             return cases;
         }
 
+        /// <summary>Which scenarios a case needs, for the row that says it was not exercised.</summary>
+        private static string NeedsScenario(Result result)
+        {
+            List<Degradation> cases = All();
+            for (int i = 0; i < cases.Count; i++)
+            {
+                if (cases[i].Name == result.Name && cases[i].Scenarios != null)
+                {
+                    return string.Join(" or ", cases[i].Scenarios);
+                }
+            }
+            return "another scenario";
+        }
+
         /// <summary>The sweep as a table.</summary>
         public static string Report(IList<Result> results)
         {
@@ -1356,13 +1514,28 @@ namespace Thermodynamics.Harness
             text.AppendLine("degradation         fix      peak K   standing K   misreading    worst  absent   B/s");
 
             int judged = 0;
+            int skipped = 0;
 
             for (int i = 0; i < results.Count; i++)
             {
                 Result result = results[i];
                 bool off = result.Protocol == null || result.Protocol.IntervalSeconds <= 0f;
-                bool anythingFailed = result.PeakServerCritical > 0;
+                bool anythingFailed = result.PeakServerCritical > 0 && !result.NotExercised;
                 if (anythingFailed) judged++;
+                if (result.NotExercised) skipped++;
+
+                // A case its scenario cannot express is said rather than scored: every column
+                // below would be the control's, and a reader cannot tell that from an input that
+                // does nothing (`E8`).
+                if (result.NotExercised)
+                {
+                    text.AppendLine(string.Format("{0,-20}{1,-9}{2}",
+                        result.Name,
+                        off ? "off" : result.Protocol.IntervalSeconds.ToString("n0") + " s"
+                            + (result.Protocol.WholeHullOnJoin ? "+j" : ""),
+                        "not exercised on " + result.Scenario + " — needs " + NeedsScenario(result)));
+                    continue;
+                }
 
                 text.AppendLine(string.Format(
                     "{0,-20}{1,-9}{2,8}{3,13}{4,13}{5,9}{6,8}{7,6}",
@@ -1377,10 +1550,21 @@ namespace Thermodynamics.Harness
                     result.BytesPerSecond.ToString("n0")));
             }
 
-            if (judged < results.Count)
+            if (skipped > 0)
             {
                 text.AppendLine();
-                text.AppendLine("**" + (results.Count - judged) + " of " + results.Count
+                text.AppendLine("**" + skipped + " of " + results.Count + " rows name a scenario"
+                    + " this run is not**, so their degradation could not act. They are said rather");
+                text.AppendLine("than scored: on the wrong scenario every column would be the"
+                    + " control's, which reads as an input");
+                text.AppendLine("that does not matter (E8). Run them with --scenario.");
+            }
+
+            if (judged < results.Count - skipped)
+            {
+                text.AppendLine();
+                text.AppendLine("**" + (results.Count - skipped - judged) + " of "
+                    + (results.Count - skipped)
                     + " rows had no block past critical on the server**, so their readout columns");
                 text.AppendLine("judged nothing and are printed as 'nothing hot' rather than as zero (E8). The");
                 text.AppendLine("kelvin columns are still real; the readout columns are not.");

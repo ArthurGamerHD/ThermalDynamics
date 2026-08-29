@@ -82,23 +82,19 @@ namespace Thermodynamics.Tests
                 + " %, which is no longer a mechanic worth building");
         }
 
-        /// <summary>
-        /// The fitter's own defect, kept as a note rather than as a second test.
-        ///
-        /// <para>
-        /// The first run of this lab built rings with no sink face requested, which couples a ring
-        /// to a hot block through ordinary block-to-block conduction — the bolted case with extra
-        /// pipes. It reported a median of 0.13 % over 108 fits. Requiring the sink halved the fits
-        /// to 49 and doubled the median, which is the 1,000 W/K against 167 that `balance.md`
-        /// prices, arriving as a retrofit result.
-        /// </para>
-        ///
-        /// <para>
-        /// `PipeFitter` was written because a scenario made exactly this mistake and passed, and
-        /// the property itself is already pinned by
-        /// `CoolantLoopTests.ASinkFaceCarriesMoreThanThePipesAlone`. A second test of it here would
-        /// be a second place for the same claim to be maintained.
-        /// </para>
-        /// </summary>
+        // The fitter's own defect, kept as a note rather than as a second test. A `///` comment
+        // here would be documentation attached to nothing, which is the orphan pass 9's iteration 4
+        // made the compiler refuse (CS1587) -- and this was one of the two it found.
+        //
+        // The first run of this lab built rings with no sink face requested, which couples a ring
+        // to a hot block through ordinary block-to-block conduction -- the bolted case with extra
+        // pipes. It reported a median of 0.13 % over 108 fits. Requiring the sink halved the fits
+        // to 49 and doubled the median, which is the 1,000 W/K against 167 that balance.md
+        // prices, arriving as a retrofit result.
+        //
+        // PipeFitter was written because a scenario made exactly this mistake and passed, and the
+        // property itself is already pinned by
+        // CoolantLoopTests.ASinkFaceCarriesMoreThanThePipesAlone. A second test of it here would be
+        // a second place for the same claim to be maintained.
     }
 }

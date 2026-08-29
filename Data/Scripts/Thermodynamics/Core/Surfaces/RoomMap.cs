@@ -64,7 +64,7 @@ namespace Thermodynamics.Core
         /// **The cell-to-room dictionary is gone.** It was written once per room cell during the
         /// flood, read by nobody while the pass ran — a working map is private until it is
         /// published — and enumerated once at the end to build the frozen arrays, which
-        /// <see cref="Rooms"/> can supply directly since it holds the same cells with their room
+        /// <see cref="roomCellStore"/> can supply directly since it holds the same cells with their room
         /// already known. At half a million blocks that was 1.5 million hash inserts and something
         /// like ninety megabytes of the two hundred and fifty the pass allocated.
         /// See performance.md, Pass 4, Iteration 1.
@@ -403,7 +403,7 @@ namespace Thermodynamics.Core
             return IsVented(room);
         }
 
-        /// <summary>Index into <see cref="Rooms"/>, or -1 when the cell is not in a room.</summary>
+        /// <summary>The cell's room, in the numbering <see cref="CellsOf"/> reads, or -1 when it is in none.</summary>
         public int RoomIndexOf(Vector3I cell)
         {
             return RoomAt(cell);

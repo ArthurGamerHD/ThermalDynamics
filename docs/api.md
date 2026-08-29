@@ -154,7 +154,12 @@ game session, and its two seams are meant to be used:
 
 ## Guarantees
 
-* No API call throws into the caller. Bad arguments return `false`, `0` or `NaN`.
+* No API call throws into the caller. Bad arguments return `false`, `0` or `NaN`, and so does an
+  internal failure: every entry in the table is wrapped, so what reaches you is the return type's
+  default and what reaches this mod's telemetry is the exception. That is structural rather than a
+  promise about each implementation — it was a promise until 2026-08-28, and `GetSetting` had been
+  breaking it, throwing where its `SetSetting` sibling returned `false`. Asking for a setting before
+  this mod has loaded its own is safe now, and answers with the defaults rather than with zero.
 * No API call is required to be made on a particular thread or update phase.
 * Delegate signatures use whitelisted types only, so scripts and mods can both bind.
 * Keys will not change meaning within a major version. New keys may be added; missing keys mean an
@@ -179,6 +184,7 @@ than *not within a major*.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **The first guarantee is enforced rather than promised, and it had been false.** `GetSetting` dereferenced `Settings.Instance` where its `SetSetting` sibling guarded the same field, so a consumer asking for a setting before this mod loaded its own got a `NullReferenceException` in their session. Every entry is wrapped now, `GetSetting` reads through `Settings.EnsureLoaded`, and `ModApiShapeTests` fails on an unwrapped entry by name. |
 | 2026-08-25 | Said what moves the major version, which the page had told a caller to trust without saying what it was worth ([backlog.md](backlog.md) `B37`). It moves when a caller written against the previous major could still bind and then be wrong; an added key does not move it. Two of the three cases are now checked against a recorded surface. |
 | 2026-08-22 | Added the standard header and this change log. |
 | 2026-08-21 | Checked every link on this page against the files and headings it names. |

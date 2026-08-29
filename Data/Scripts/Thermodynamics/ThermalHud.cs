@@ -28,11 +28,13 @@ namespace Thermodynamics
 
         private static Label toolLabel;
         private static Label windLabel;
+        private static Label airLabel;
         private static LabelBox gridPanel;
         private static int sinceText;
 
         private static readonly StringBuilder ToolText = new StringBuilder();
         private static readonly StringBuilder WindText = new StringBuilder();
+        private static readonly StringBuilder AirText = new StringBuilder();
 
         /// <summary>Reused by the billboard pass so aiming at a block allocates nothing.</summary>
         private static readonly List<BlockInstance> NeighbourScratch = new List<BlockInstance>();
@@ -62,6 +64,18 @@ namespace Thermodynamics
                 ParentAlignment = ParentAlignments.Center,
                 Offset = new Vector2(0f, -132f),
                 Format = new GlyphFormat(new Color(200, 224, 236), TextAlignment.Center, 0.9f),
+                Visible = false,
+            };
+
+            // **The one readout that is on by default**, so the mod announces itself in a healthy
+            // world rather than only in a failing one (`B41`). Bottom centre, above where the game
+            // puts its own hint line, small and unbacked: it is one short line and a box around it
+            // would be the mod-shaped panel the intent page says not to draw.
+            airLabel = new Label(HudMain.HighDpiRoot)
+            {
+                ParentAlignment = ParentAlignments.Bottom | ParentAlignments.InnerV,
+                Offset = new Vector2(0f, 96f),
+                Format = new GlyphFormat(new Color(206, 214, 220), TextAlignment.Center, 0.85f),
                 Visible = false,
             };
 
@@ -97,6 +111,7 @@ namespace Thermodynamics
         {
             toolLabel = null;
             windLabel = null;
+            airLabel = null;
             gridPanel = null;
         }
 
@@ -121,8 +136,10 @@ namespace Thermodynamics
             if (!publish) return;
 
             DrawGridHud();
+            DrawEnvironmentReadout();
             Publish(toolLabel, ToolText);
             Publish(windLabel, WindText);
+            Publish(airLabel, AirText);
 
             if (gridPanel != null)
             {
@@ -372,6 +389,75 @@ namespace Thermodynamics
         private const float MinimumReadableWind = 0.5f;
 
         private static readonly MyStringId NeedleMaterial = MyStringId.GetOrCompute("Square");
+
+        /// <summary>
+        /// **The line the mod shows as a matter of course**: what the air is doing, and what the
+        /// ship is doing about it.
+        ///
+        /// <para>
+        /// What it says is `EnvironmentReadout`'s decision and is pinned by
+        /// `EnvironmentReadoutTests`; this is the shell that finds the numbers and hands them over.
+        /// The grid is the one the player is on or aiming at — the readout is about *their* ship,
+        /// not about the fleet, which is what the performance panel is for.
+        /// </para>
+        ///
+        /// <para>
+        /// Off costs a comparison and nothing else (`C7`): the text is not built, the label is
+        /// hidden, and no grid is walked.
+        /// </para>
+        /// </summary>
+        private static void DrawEnvironmentReadout()
+        {
+            AirText.Clear();
+
+            if (Settings.Instance == null || !Settings.Instance.ShowEnvironmentReadout) return;
+
+            ThermalGrid thermals = PlayerGrid();
+            if (thermals == null || thermals.Simulation == null) return;
+
+            ThermalNode hottest = thermals.HottestNode;
+
+            // No hottest node is a grid the solver has not stepped yet, and the air is still true
+            // — so the line drops the ship's half rather than the whole readout.
+            float peak = hottest == null ? float.NaN : hottest.Temperature;
+            float critical = hottest == null ? 0f : hottest.Thermal.CriticalTemperature;
+
+            AirText.Append(EnvironmentReadout.Line(
+                thermals.LastState.AmbientTemperature, peak, critical));
+        }
+
+        /// <summary>
+        /// The grid this readout is about: the one the player is standing on or piloting, and
+        /// nothing when they are on foot outside.
+        ///
+        /// <para>
+        /// Their own ship rather than the nearest or the hottest. A readout that followed whatever
+        /// was worst in the world would be answering a question the player did not ask, and would
+        /// change what it was talking about as they walked around.
+        /// </para>
+        /// </summary>
+        private static ThermalGrid PlayerGrid()
+        {
+            if (MyAPIGateway.Session == null) return null;
+
+            IMyCharacter character = MyAPIGateway.Session.Player == null
+                ? null
+                : MyAPIGateway.Session.Player.Character;
+
+            IMyCubeGrid grid = null;
+
+            IMyCockpit seat = character == null ? null : character.Parent as IMyCockpit;
+            if (seat != null) grid = seat.CubeGrid;
+
+            if (grid == null && character != null)
+            {
+                // Standing on a grid: the one under their feet, which the engine already tracks.
+                grid = character.Parent as IMyCubeGrid;
+            }
+
+            if (grid == null || grid.GameLogic == null) return null;
+            return grid.GameLogic.GetAs<ThermalGrid>();
+        }
 
         /// <summary>
         /// A compass needle for the wind under the crosshair. Screen up is the way the player faces, so

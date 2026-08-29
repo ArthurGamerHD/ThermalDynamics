@@ -72,12 +72,8 @@ namespace Thermodynamics
         [ProtoMember(35)]
         public float CoolantKilogramsPerCubicMetre = 33f;
 
-        /// <summary>
-        /// Thermal conductivity of the coolant, W/(m K). Reference values:
-        /// https://www.engineeringtoolbox.com/thermal-conductivity-metals-d_858.html
-        /// </summary>
-        [ProtoMember(5)]
         /// <summary>Fluid-to-wall heat transfer coefficient, W/(m²·K). See thermal-model.md, Coolant loops.</summary>
+        [ProtoMember(5)]
         public float HeatTransferCoefficient = 1000f;
 
         /// <summary>

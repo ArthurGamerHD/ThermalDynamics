@@ -22,6 +22,18 @@ namespace Thermodynamics.Core
         public long ExposureNodeVisits;
 
         /// <summary>
+        /// Of those visits, the ones that found a face count that had actually moved.
+        ///
+        /// <para>
+        /// The gap between this and <see cref="ExposureNodeVisits"/> is the whole of what Pass 9's
+        /// seventh iteration removed: a refresh over an unchanged hull visits every node and writes
+        /// none of them. It is counted rather than inferred because *the gate engaged* is the claim
+        /// a skip's A/B rests on — two runs of a gate that never fires agree perfectly (`E8`).
+        /// </para>
+        /// </summary>
+        public long ExposureNodeWrites;
+
+        /// <summary>
         /// Passes over every link recomputing the conductance each node sees. Structural changes mark
         /// it stale and it is recomputed once before it is next read, so this should stay well below
         /// the number of changes that dirtied it.
@@ -93,6 +105,7 @@ namespace Thermodynamics.Core
             LinksRemoved = 0;
             ExposureRefreshes = 0;
             ExposureNodeVisits = 0;
+            ExposureNodeWrites = 0;
             ConductanceRecomputes = 0;
             RoomAirRebuilds = 0;
             RoomAirRoomVisits = 0;
@@ -124,6 +137,7 @@ namespace Thermodynamics.Core
             copy.LinksRemoved = LinksRemoved;
             copy.ExposureRefreshes = ExposureRefreshes;
             copy.ExposureNodeVisits = ExposureNodeVisits;
+            copy.ExposureNodeWrites = ExposureNodeWrites;
             copy.ConductanceRecomputes = ConductanceRecomputes;
             copy.RoomAirRebuilds = RoomAirRebuilds;
             copy.RoomAirRoomVisits = RoomAirRoomVisits;

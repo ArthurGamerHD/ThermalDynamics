@@ -181,6 +181,14 @@ the mod is invisible until something is already wrong, which is the opposite of 
 environmental information should be on screen as a matter of course** ([backlog.md](backlog.md)
 `B41`).
 
+**Built 2026-08-28, and the half that can be judged outside a session is judged.**
+`ShowEnvironmentReadout` ships on: one line, bottom centre, carrying the air temperature around the
+player's ship and one word for the ship against its own rating. What it *says* is a decision, so it
+lives in `Core` where a test can reach it — `hot` begins exactly where the glow begins, so the
+sentence and the block a player is looking at cannot disagree, and `warm` is half the climb from the
+air rather than half the rating, because a hull sitting in a furnace is not warming up. What it
+*looks like* is the half only a session can judge, and that is still open.
+
 **And "clear" is a higher bar than "present".** An indicator a player has to be taught is a
 diagnosis in disguise. The test is whether somebody who has never read this repository can look at
 the screen and tell that their ship is getting hotter — not whether the number is correct.
@@ -528,7 +536,7 @@ The core speaks no game type, so it builds and runs outside the session in secon
 makes it testable, profilable, drivable by another mod, and portable to another engine — the four
 are one property, not four.
 
-**Checked by** `C5` (`CoreIsolationTests`). The suite is 1,884 tests, 33 deterministic scenarios and
+**Checked by** `C5` (`CoreIsolationTests`). The suite is 2,100 tests, 33 deterministic scenarios and
 a load benchmark that reaches a million blocks in one grid.
 
 ### Open — the API is part of the contract
@@ -1444,6 +1452,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | *Basic environmental information should be on screen as a matter of course* is built, and the page says which half of it is judged: what the readout **says** is a decision in `Core` and pinned by tests; whether it reads as the game's own HUD is the half only a session can settle. |
 | 2026-08-25 | Gave *realism wins where the difference is visible* its second worked example, which is the reactor's taken the other way. The oxygen generator's 0.6 was an invention with a sourced 0.20-0.40 sitting beside it, and what moved it was not the provenance: at 0.6 two of the game's six generators are past their own critical temperature alone in open space at their rated draw. The reactor kept an invention because the real number destroyed it; the generator lost one because the invention destroyed it. The prior reads better with both, because one case alone reads as *inventions are fine*.
 
 | 2026-08-25 | **Measured the base claim and kept it, with its emphasis corrected.** A station really is harder to cool than a ship of the same block count — 284.4 K above ambient against 236.1 — and *what a base gets in exchange* is room to run **transport** rather than room for surface. On a planet its penalty is three times what its halved area explains, because the binding resistance is the path from its middle to its skin: 39.9 K of interior-to-skin drop where a ship has none. Radiator area helps and cannot close it, at 43 % of the station's blocks. So this page's pairing of *elaborate coolant systems and radiator farms* keeps the first and demotes the second, on evidence rather than on preference. |

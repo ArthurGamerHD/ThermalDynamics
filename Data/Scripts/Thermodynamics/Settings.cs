@@ -481,6 +481,27 @@ namespace Thermodynamics
         [ProtoMember(113)] public bool DebugWindIndicator = true;
 
         /// <summary>
+        /// The always-on environmental readout: what the air is doing and what the ship is doing
+        /// about it, on screen as a matter of course.
+        ///
+        /// <para>
+        /// **On by default, which is the point of it.** The intent page decides that a player who
+        /// adds this mod to a healthy world should be able to tell it is there without waiting for
+        /// a failure; everything else the mod draws is a warning that fires once something is
+        /// already wrong. It is not a `Debug` switch for the same reason — the debug switches are
+        /// for somebody who already knows what they are looking for. See backlog.md `B41`.
+        /// </para>
+        ///
+        /// <para>
+        /// It is a switch rather than a ladder because it has no cheaper form: one line of text
+        /// built from figures the simulation has already computed is the whole mechanism, and a
+        /// rung between that and nothing would be a rung that does nothing (`C15` — two ends is the
+        /// honest answer where a middle would be invented).
+        /// </para>
+        /// </summary>
+        [ProtoMember(134)] public bool ShowEnvironmentReadout = true;
+
+        /// <summary>
         /// Blocks glow as they heat, from the Draper point up. Client side, and on by default: it
         /// is what a hot block looks like rather than a diagnostic, and it is the mod's answer to
         /// *a player should learn their ship is overheating without looking at an instrument*.
@@ -864,6 +885,7 @@ namespace Thermodynamics
         {
             "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast", "DebugBlockOverlay",
             "DebugWindOverlay", "DebugWindIndicator", "DebugOverlayMaxBoxes",
+            "ShowEnvironmentReadout",
             "HeatGlow", "HeatWarningSound", "HeatTerminalPanel",
         };
 
@@ -897,6 +919,7 @@ namespace Thermodynamics
                 "WindTerrainInfluence", "WindTerrainRadius", "WindSlopeStrength",
                 "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast",
                 "DebugBlockOverlay", "DebugWindOverlay", "DebugWindIndicator",
+                "ShowEnvironmentReadout",
                 "DebugOverlayMaxBoxes",
                 "HeatGlow", "HeatWarningSound", "HeatTerminalPanel",
                 "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
@@ -985,6 +1008,7 @@ namespace Thermodynamics
                 case "DebugOverlayMaxBoxes": return DebugOverlayMaxBoxes;
                 case "DebugWindOverlay": return DebugWindOverlay;
                 case "DebugWindIndicator": return Flag(DebugWindIndicator);
+                case "ShowEnvironmentReadout": return Flag(ShowEnvironmentReadout);
                 case "HeatGlow": return Flag(HeatGlow);
                 case "HeatTerminalPanel": return Flag(HeatTerminalPanel);
                 case "HeatWarningSound": return Flag(HeatWarningSound);
@@ -1103,6 +1127,7 @@ namespace Thermodynamics
                     return true;
                 case "DebugOverlayMaxBoxes": DebugOverlayMaxBoxes = (int)value; return true;
                 case "DebugWindIndicator": DebugWindIndicator = Flag(value); return true;
+                case "ShowEnvironmentReadout": ShowEnvironmentReadout = Flag(value); return true;
                 case "HeatGlow": HeatGlow = Flag(value); return true;
                 case "HeatTerminalPanel": HeatTerminalPanel = Flag(value); return true;
                 case "HeatWarningSound": HeatWarningSound = Flag(value); return true;

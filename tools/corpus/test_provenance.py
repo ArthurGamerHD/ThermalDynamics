@@ -10,10 +10,12 @@ that moving one without the other fails.
 
     python3 -m unittest discover -s tools/corpus -p 'test_*.py'
 """
-import os
-import sys
+import csv
 import hashlib
+import os
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -131,6 +133,88 @@ class ARestatementAppliesOnlyToADatasetThatPredatesTheChange(unittest.TestCase):
 
     def test_a_recorded_hash_that_differs_means_restate(self):
         self.assertIs(False, provenance.measured_current_definitions(self.write("0" * 16)))
+
+    def slices(self, *hashes):
+        """A provenance file as a resumed walk writes it: one block of lines per slice."""
+        path = os.path.join(self.root, "composition.csv")
+        open(path, "w").write("ship,workshop_id,subtype,type_id,count,waste_full_w,share_of_waste\n")
+        with open(os.path.join(self.root, "provenance.txt"), "w") as handle:
+            for i, digest in enumerate(hashes):
+                handle.write(f"walk survey started slice {i}\ncommit abc\n")
+                handle.write(f"Cubes.xml {digest}\nLoops.xml aaaa\nPlanets.xml bbbb\n")
+        return path
+
+    def test_a_walk_taken_in_one_run_spans_one_version(self):
+        self.slices("1111111111111111", "1111111111111111", "1111111111111111")
+        self.assertEqual(["1111111111111111"],
+                         provenance.definition_hashes(self.root, "Cubes.xml"))
+        self.assertEqual({}, provenance.spans_several_definitions(self.root))
+
+    def test_a_walk_resumed_across_a_definition_change_says_so(self):
+        """**The failure this exists to prevent is a mixed dataset reading as one.**
+
+        The survey of 2026-08-25 ran in five slices and `C36` moved the radiator's emissivity
+        between the fourth and the fifth, so its provenance records two `Cubes.xml` hashes.
+        Reading only the last line — which is what this module did — reports it as measured
+        against the current file, which it half was.
+        """
+        self.slices("1111111111111111", "1111111111111111", "2222222222222222")
+
+        self.assertEqual(["1111111111111111", "2222222222222222"],
+                         provenance.definition_hashes(self.root, "Cubes.xml"))
+
+        split = provenance.spans_several_definitions(self.root)
+        self.assertIn("Cubes.xml", split)
+        self.assertEqual(["1111111111111111", "2222222222222222"], split["Cubes.xml"])
+
+        # The files that did not move are not reported, or every split dataset would name all
+        # three and the one that matters would be lost among them.
+        self.assertNotIn("Loops.xml", split)
+        self.assertNotIn("Planets.xml", split)
+
+    def test_verdict_records_the_split_in_the_summary_it_commits(self):
+        """**The committed summary is the artefact every quoted figure is checked against.**
+
+        `verdict.py --csv` recorded one row per provenance line, so six slices wrote
+        `provenance Cubes.xml` six times and the last won: the file said the dataset was measured
+        against one build when it was measured against two. This runs the real script over a
+        dataset whose provenance is split and asserts the summary carries the split — which is the
+        one place it has to, because the summary outlives the directory it came from.
+        """
+        data = os.path.join(self.root, "dataset")
+        os.makedirs(data)
+        with open(os.path.join(data, "provenance.txt"), "w", encoding="utf-8") as handle:
+            for i, digest in enumerate(("1111111111111111", "2222222222222222")):
+                handle.write(f"walk survey started slice {i}\ncommit abc{i}\n")
+                handle.write(f"Cubes.xml {digest}\nLoops.xml aaaa\nPlanets.xml bbbb\n")
+
+        open(os.path.join(data, "outcomes.csv"), "w").write("ship,scenario,peak_k\n")
+        open(os.path.join(data, "ships.csv"), "w").write("ship,blocks\n")
+
+        summary = os.path.join(self.root, "summary.csv")
+        script = os.path.join(os.path.dirname(os.path.abspath(provenance.__file__)), "verdict.py")
+        subprocess.run([sys.executable, script, data, "--csv", summary],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+
+        self.assertTrue(os.path.exists(summary), "verdict.py wrote no summary")
+        rows = dict((r[0], r[1]) for r in csv.reader(open(summary, encoding="utf-8")) if len(r) > 1)
+
+        self.assertEqual("2", rows.get("provenance Cubes.xml versions"))
+        self.assertEqual("1111111111111111 2222222222222222", rows.get("provenance Cubes.xml all"))
+
+        # The last value is still recorded under the plain key, so a reader that only wants "what
+        # was it finished on" is unaffected.
+        self.assertEqual("2222222222222222", rows.get("provenance Cubes.xml"))
+
+        # And a file that did not move carries no versions row, or every summary would carry three
+        # and the one that matters would be lost among them.
+        self.assertIsNone(rows.get("provenance Planets.xml versions"))
+
+    def test_a_dataset_with_no_provenance_spans_nothing_rather_than_failing(self):
+        """Every dataset taken before `provenance.txt` existed has none, and that is not a split."""
+        self.write(None)
+        self.assertEqual([], provenance.definition_hashes(self.root, "Cubes.xml"))
+        self.assertEqual({}, provenance.spans_several_definitions(self.root))
 
 
 if __name__ == "__main__":

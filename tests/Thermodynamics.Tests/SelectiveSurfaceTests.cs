@@ -52,6 +52,7 @@ namespace Thermodynamics.Tests
         /// describes one surface rather than two. It bought a third more cooling per panel (20.9 K
         /// to 27.6 K on the ladder's reactor) and moved a corpus hull by 0.1 %, which is the
         /// finding: emission was never what limited a radiator here.
+        /// </para>
         /// </summary>
         [Fact]
         public void TheShippedRadiatorDeclaresASelectiveSurface()

@@ -31,7 +31,9 @@ def progress(*lines):
 
 
 def at(minute, files):
-    return (f"12:{minute:02d}:00", files)
+    """A mark at `minute` past noon. Minutes past fifty-nine roll into the hour, so a fixture can
+    span one without the reader having to do the arithmetic."""
+    return (f"{12 + minute // 60:02d}:{minute % 60:02d}:00", files)
 
 
 class AProgressFileIsReadAsMarks(unittest.TestCase):
@@ -52,6 +54,126 @@ class AProgressFileIsReadAsMarks(unittest.TestCase):
         order = pace.marks(progress(at(0, 10), at(30, 20)))
         self.assertEqual(30.0, pace.elapsed(order, 20))
         self.assertIsNone(pace.elapsed(order, 30))
+
+
+class ASlicedWalkReadsAsOneWalk(unittest.TestCase):
+    """**Relaunching to resume is the documented normal path, and it broke this estimator.**
+
+    A walk sliced so a shared machine can be given back writes many blocks into one progress file.
+    Each begins `air: resuming, N blueprints already finished`, and every count after it restarts
+    from zero *within that slice*. Read literally, the 2026-08-28 air walk's ninetieth file of its
+    sixth slice sat at 272 minutes after the first slice's first mark, and this file — which exists
+    to refuse a bad estimate — reported 9.45x per file where the honest figure was 2.15x.
+
+    Two things follow, and both are asserted below: a count is cumulative from the resume line
+    above it, and the gap between one slice's last mark and the next slice's first is not walked
+    time. On a shared machine that gap is mostly somebody else's job.
+    """
+
+    def sliced(self, *blocks):
+        """A progress file of several slices: each block is `(already done, [(minute, files)])`."""
+        handle = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8")
+        for first, (done, lines) in enumerate(blocks):
+            if first or done:
+                handle.write(f"12:00:00 air: resuming, {done} blueprints already finished"
+                             f" and {8144 - done} to go\n")
+            for when, files in lines:
+                handle.write(f"{when} air batch {files}/{8144 - done} ships {files}"
+                             f" files {files}\n")
+        handle.close()
+        return handle.name
+
+    def test_a_slices_counts_continue_from_what_earlier_slices_finished(self):
+        path = self.sliced((0, [at(0, 10), at(10, 20)]),
+                           (20, [at(40, 10), at(50, 20)]))
+
+        self.assertEqual([10, 20, 30, 40], [files for _, files in pace.marks(path)])
+
+    def sliced_at(self, *blocks):
+        """The same, with each slice's resume line placed at a stated minute."""
+        handle = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8")
+        for done, resumed, lines in blocks:
+            if resumed is not None:
+                stamp = at(resumed, 0)[0]
+                handle.write(f"{stamp} air: resuming, {done} blueprints already"
+                             f" finished and {8144 - done} to go\n")
+            for when, files in lines:
+                handle.write(f"{when} air batch {files}/{8144 - done} ships {files}"
+                             f" files {files}\n")
+        handle.close()
+        return handle.name
+
+    def test_the_gap_between_slices_is_not_walked_time(self):
+        # Slice one walks minutes 0 to 10. Slice two is queued behind another project until minute
+        # 40 and then walks to 60. The walk walked thirty minutes; fifty went by.
+        path = self.sliced_at((0, None, [at(0, 10), at(10, 20)]),
+                              (20, 40, [at(50, 10), at(60, 20)]))
+
+        self.assertEqual(30.0, pace.elapsed(pace.marks(path), 40))
+
+    def test_a_sliced_walk_and_the_same_walk_in_one_run_agree(self):
+        """The property that matters: slicing is a way of sharing a machine, not a measurement.
+
+        Ten minutes a mark either way. The sliced run's second slice resumes at minute 40 and
+        reaches its first mark at 50, which is the same ten minutes of walking the whole run spends
+        between its marks at 20 and 30 — so the two must report the same elapsed and the same
+        ratio against a reference.
+        """
+        whole = pace.marks(progress(at(0, 10), at(10, 20), at(20, 30), at(30, 40)))
+        cut = pace.marks(self.sliced_at((0, None, [at(0, 10), at(10, 20)]),
+                                        (20, 40, [at(50, 10), at(60, 20)])))
+
+        self.assertEqual([files for _, files in whole], [files for _, files in cut])
+        self.assertEqual(pace.elapsed(whole, 40), pace.elapsed(cut, 40))
+
+        # And so does the ratio, which is the figure a session actually reads.
+        reference = pace.marks(progress(at(0, 10), at(5, 20), at(10, 30), at(15, 40)))
+        self.assertEqual(pace.ratio(whole, reference), pace.ratio(cut, reference))
+
+    def test_the_ratio_uses_a_resumed_walks_marks_and_not_just_its_first_slice(self):
+        """**A resumed walk's marks do not land on the reference's grid, and that hid most of them.**
+
+        A walk writes a mark every ten files, so an unbroken run's marks are multiples of ten and
+        two such walks share nearly all of them. A resumed one counts from where it left off: its
+        marks are 2,106 and 2,116 where the reference has 2,100 and 2,110, and the intersection is
+        empty. Measured on the 2026-08-28 air re-take, 21 of 268 marks were being used — all of
+        them from before the first resume — so the estimate had not moved in two hours of walking.
+        """
+        reference = pace.marks(progress(*[at(i, (i + 1) * 10) for i in range(0, 60, 5)]))
+
+        # A subject resumed at 63, so every mark after it is 73, 83, ... — off the grid entirely.
+        cut = pace.marks(self.sliced_at(
+            (0, None, [at(0, 10), at(5, 20)]),
+            (63, 20, [at(25, 10), at(30, 20), at(35, 30)])))
+
+        counts = [files for _, files in cut]
+        self.assertIn(83, counts, "the fixture is not producing off-grid marks")
+
+        found, first, last = pace.ratio(cut, reference)
+
+        self.assertIsNotNone(found)
+        self.assertEqual(10, first)
+        self.assertEqual(93, last, "the ratio stopped at the last mark shared with the reference,"
+                                   " so it is reading the first slice alone")
+
+    def test_the_ratio_is_unchanged_for_a_walk_that_was_never_resumed(self):
+        """Interpolation must not move the answer where the marks already line up."""
+        reference = pace.marks(progress(at(0, 10), at(5, 20), at(10, 30), at(15, 40)))
+        whole = pace.marks(progress(at(0, 10), at(10, 20), at(20, 30), at(30, 40)))
+
+        found, first, last = pace.ratio(whole, reference)
+
+        self.assertAlmostEqual(2.0, found, places=6)
+        self.assertEqual(10, first)
+        self.assertEqual(40, last)
+
+    def test_a_resume_line_that_names_no_count_does_not_throw(self):
+        handle = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8")
+        handle.write("12:00:00 air: resuming, everything already finished\n")
+        handle.write("12:00:10 air batch 10/8144 ships 10 files 10\n")
+        handle.close()
+
+        self.assertEqual([10], [files for _, files in pace.marks(handle.name)])
 
 
 class TheRatioComparesTheSameFiles(unittest.TestCase):

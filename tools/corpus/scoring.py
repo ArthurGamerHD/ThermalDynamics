@@ -5,6 +5,7 @@
 So anything of its arithmetic that deserves a test lives here instead, where a test can call it
 without running a report.
 """
+import csv
 import os
 
 
@@ -314,16 +315,60 @@ def percentile(values, q):
 
     Returns None for an empty series, which is what an unmeasured thing reports (`E8`).
     """
-    ordered = sorted(values)
+    return weighted_percentile([(value, 1.0) for value in values], q)
+
+
+def weighted_percentile(pairs, q):
+    """The `q` quantile of `(value, weight)` pairs, on the same definition as `percentile`.
+
+    **A reduced corpus is a sample with weights, and a sample read without them is a different
+    population** (`P1`). `core.py` keeps every small ship and one in twenty of the giants, so a
+    giant in the core stands for twenty in the corpus; counting it once would report the population
+    as though it were mostly small, which is the shape of error `E2` is about. Each kept ship
+    carries the count it represents and every figure is taken over those counts.
+
+    **It is one implementation rather than two** (`P5`, `D3`). `percentile` is this function with
+    every weight at 1, and `WeightedPercentileMatchesTheUnweightedOne` holds the two together — the
+    failure it prevents is a weighted corpus figure and an unweighted panel figure differing by the
+    estimator rather than by the population, which is exactly the confusion that made `percentile`
+    one definition in the first place.
+
+    An item of weight `w` occupies a *span* of `w` ranks rather than a point, which is what makes
+    an integer weight mean exactly what repeating the row that many times means — the property
+    `AnIntegerWeightIsTheSameAsRepeatingTheRow` holds. A span of weight 1 is a single rank, so the
+    unweighted case is the same arithmetic on the same ranks. Returns None for an empty series
+    (`E8`).
+    """
+    ordered = sorted((value, weight) for value, weight in pairs if weight and weight > 0)
     if not ordered:
         return None
     if len(ordered) == 1:
-        return ordered[0]
+        return ordered[0][0]
 
-    at = (len(ordered) - 1) * q
-    low = int(at)
-    high = min(low + 1, len(ordered) - 1)
-    return ordered[low] + (ordered[high] - ordered[low]) * (at - low)
+    total = sum(weight for _, weight in ordered)
+    if total <= 1:
+        return ordered[0][0]
+
+    spans = []
+    below = 0.0
+    for value, weight in ordered:
+        spans.append((below, below + weight - 1.0))
+        below += weight
+
+    at = (total - 1.0) * q
+    if at <= spans[0][1]:
+        return ordered[0][0]
+    for index in range(len(spans)):
+        start, end = spans[index]
+        if start <= at <= end:
+            return ordered[index][0]
+        if at < start:
+            last = spans[index - 1][1]
+            if start <= last:
+                return ordered[index][0]
+            reach = (at - last) / (start - last)
+            return ordered[index - 1][0] + (ordered[index][0] - ordered[index - 1][0]) * reach
+    return ordered[-1][0]
 
 
 def percentiles(values):
@@ -334,7 +379,14 @@ def percentiles(values):
 
     return {
         "min": ordered[0],
+        # **p10 and p90 are here for the constants rather than for the row.** `Census.Corpus`
+        # states the corpus's substep demand as p10/p50/p90 and those figures were transcribed by
+        # hand from a walk's output, which is the shape `F14` records going wrong once already —
+        # a page saying twenty-four sealed blocks where the dataset said 1,184. A summary that
+        # carries them is a summary a test can hold the constants against (`E5`).
+        "p10": percentile(ordered, 0.1),
         "p50": percentile(ordered, 0.5),
+        "p90": percentile(ordered, 0.9),
         "p95": percentile(ordered, 0.95),
         "p99": percentile(ordered, 0.99),
         "max": ordered[-1],
@@ -546,3 +598,41 @@ def walked_share(walked, population):
     if not population:
         return None
     return walked / float(population)
+
+
+# ---- the core corpus ------------------------------------------------------------------------
+
+CORE_SELECTION = os.path.join(os.path.dirname(os.path.abspath(__file__)), "core-corpus.csv")
+
+# How much of the selection a walk must cover before it is called a core walk. A core walk that
+# died halfway is still a core walk and still must not be read unweighted, so this is well under
+# one; a full-corpus walk contains every core ship and is separated by the other half of the
+# test -- it also contains thousands that are not in the selection.
+CORE_ENOUGH = 0.5
+
+
+def core_selection(path=None):
+    """The workshop ids of the core corpus, or an empty set where the selection is not on disk."""
+    path = path or CORE_SELECTION
+    if not os.path.exists(path):
+        return set()
+    with open(path) as handle:
+        return set(row["workshop_id"] for row in csv.DictReader(handle))
+
+
+def is_core_walk(walked, path=None):
+    """Whether a set of walked workshop ids is a walk of the core corpus rather than the corpus.
+
+    **The failure this prevents is the quiet one.** A core dataset has every column a full one has
+    and two thirds of its ships, so read without weights it prints a complete-looking population
+    whose giants are outnumbered twenty to one. It is told apart by what it does *not* contain:
+    a core walk covers most of the selection and almost nothing outside it, and a full walk covers
+    the selection and thousands more.
+    """
+    selection = core_selection(path)
+    if not selection or not walked:
+        return False
+    inside = len(walked & selection)
+    if inside < CORE_ENOUGH * len(selection):
+        return False
+    return len(walked - selection) < 0.1 * len(selection)
