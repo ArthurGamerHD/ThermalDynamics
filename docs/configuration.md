@@ -146,7 +146,7 @@ whether a cheaper rung is known to be possible and nobody has built it.
 | Waste heat | `EnableWasteHeat` | 2 | None known: it is a per-block fraction of a wattage the game already reports. |
 | Point heat sources | `EnableHeatSources` | 2 | The inverse square is already cut off by range. A rung that sampled the registry less often is possible and has never been wanted, because the registry is usually empty. |
 | Aerodynamic friction | `EnableFriction` | 2 + dials | `FrictionScale` and `FrictionAtSpeedsAbove` are balance dials rather than fidelity rungs — they change how much friction there is, not how well it is modelled. |
-| Room air | `EnableRoomAir` | 2 | **A cheaper rung is possible and unbuilt.** Room air is a well-mixed body already; what is expensive is the flood fill that finds the rooms, and a coarser or less frequent map is a rung. `D2` measures the fill at 7,207 ticks on a million blocks, so this is the mechanism where a middle rung would buy the most. |
+| Room air | `EnableRoomAir` | 2 | **A cheaper rung is possible and unbuilt.** Room air is a well-mixed body already; what is expensive is the flood fill that finds the rooms, and a coarser or less frequent map is a rung. `D2` measures the fill at **3,934 ticks — about eleven minutes — on a million blocks** (re-measured 2026-08-28 by `bench scale --max 1000000`; the 7,207 this row carried predates the 2026-08-26 word skip and the 2026-08-27 span flood). **What the rung would buy is latency rather than CPU**: the mapper is budgeted per tick and capped at 4,096 cells, so convergence is the bounding volume divided by that cap and the performance passes moved the milliseconds without moving the wait. A *coarser* map shortens it; a *less frequent* one makes it worse, so only one of the two rungs this row names is the rung. |
 | Heat pumps | `EnableHeatPumps` | 2 | None known. Off makes them ordinary blocks. |
 | Overheat damage | `EnableDamage`, `DamageIsPerSecond` | 2 | `DamageIsPerSecond` is a correctness switch rather than a rung — off makes damage scale with `Frequency`, which is wrong rather than cheap. |
 | The suit | `EnableSuitDamage` | 2 | None known. One character, one pass. |
@@ -1305,6 +1305,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **Corrected the room map's convergence figure, which had been stale for nine days and was quoted here from `D2`** (`E10`, `E5`). It read 7,207 ticks — twenty minutes — on a million blocks; re-measured by `bench scale --max 1000000` it is **3,934 ticks, about eleven minutes**, on 1,000,294 blocks and a 14,278,796-cell box. The 7,207 predated the 2026-08-26 word skip and the 2026-08-27 span flood, both of which `D2`'s own body already recorded — the headline outlived the paragraph that superseded it. **And the figure is structural**: convergence is the box over a 4,096-cell tick budget, so no work on milliseconds a cell can move it, which `RoomMapConvergenceIsTheBoxDividedByItsBudget` now pins. |
 <<<<<<< HEAD
 | 2026-08-28 | Added `ShowEnvironmentReadout`, **on by default** — the first readout that is. One line, bottom centre: the air around your ship and one word for the ship against its own rating. `hot` begins exactly where the glow does, so the two cannot disagree. `B41`. |
 =======
