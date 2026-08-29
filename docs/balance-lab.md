@@ -561,10 +561,74 @@ the drive fractions, the twenty-seven computer fractions, and `A13` — so this 
 stands against the model as it stood*, not what any one of them did (`P6`). Isolating `A13` needs
 the same walk on the old reader, which is not a thing that exists.
 
-*Basis: `out/survey-2026-08-25`, assembled across four slices whose `provenance.txt` records four
-commits and — the thing that makes it one dataset — **identical `Cubes.xml`, `Loops.xml` and
-`Planets.xml` hashes across all four**. The coolant work those commits carry cannot reach a corpus
-ship: the filter admits only vanilla hulls and none of them has a loop.*
+*Basis: `out/survey-2026-08-25`, assembled across six slices whose `provenance.txt` records six
+commits, **two `Cubes.xml` hashes and two `Loops.xml` hashes** — corrected 2026-08-28. This
+paragraph said "identical hashes across all four" and rested the dataset's integrity on that; the
+fifth slice, on 2026-08-26, carried `C36`, `C42` and `C43` and moved both files, so the claim was
+true when written and false when the walk finished (`E10`).*
+
+*It is still one dataset, for the reason the paragraph already gave and now measured rather than
+asserted. The only `Cubes.xml` change in the window is the emissivity of `Gauge_SG_Radiator` and
+`Gauge_LG_Radiator`, and `Loops.xml` describes coolant: **no ship in the corpus carries a radiator,
+a coolant pipe, a pump or a heat pump** — 207 distinct block types across the whole census and not
+one of them a block this mod adds. Note that `Ship.IsVanilla` would not have caught one, since the
+mod's blocks are definitions too; this is a count, not an argument from what a workshop blueprint
+ought to hold.*
+
+*`provenance.py` and `verdict.py` both read only the **last** hash until 2026-08-28, which is why
+nobody saw the split: the writer had been appending a block per slice since it was written and its
+own summary said so. `spans_several_definitions` is the lookup now, and a summary carries
+`<file> versions` and `<file> all` beside the value.*
+
+### What re-taking the corpus in air will move, written before it is re-taken
+
+`CorpusAirWalk` is running again as this is written, into `out/air-2026-08-28`, because the dataset
+`F11`'s verdict rests on — `out/air-corpus-2026-08-24` — was collected through the blueprint reader
+`A13` fixed and **has no `provenance.txt` at all**, so nothing records what build it saw. The
+prediction goes here first, with what would falsify it (`E1`, `P3`).
+
+**What `F11` found, and what is being re-asked.** The demand half passed with room — p99 34.8
+against 64 granted. The cost half failed: **step work p99 5,812,731** against the 4,000,000 the
+allowance grants, 1.45× over, with **222 ships of 8,144 (2.73 %)** past it in at least one air
+scenario.
+
+**The mechanism, and why it points down rather than up.** Step work is `substeps × (links + 4 ×
+nodes)` — a *structural* quantity. `A13` changed what eleven kinds of block **are**, which moves
+three things and only two of them reach this figure:
+
+* **Heat: up 15.76 % on the population, and irrelevant here.** Step work counts element visits, not
+  watts. The census re-take already showed this asymmetry from the other side — the stiffness walk
+  came back with every headline percentile identical to the digit, because *a block-identity error
+  can be worth a sixth of a population's heat and nothing whatever to its cost*.
+* **Mass: up, and it lowers substeps if it moves them at all.** A gravity generator is eight tonnes
+  against an armour cube's five hundred kilos, so the corrected blocks are the *least* stiff things
+  on the ship. The stiffness walk says this is worth nothing measurable.
+* **Links: down, and this is the one that reaches it.** The eleven kinds were built as armour cubes,
+  which mount on six faces. Doors, hangar doors, passages and ladders do not. Fewer mount faces is
+  fewer conduction links, and links are the term step work is dominated by on a large hull.
+
+**The prediction.** Step work p99 falls, by less than the margin it needs.
+
+| | 2026-08-24, broken reader | predicted, fixed reader | falsified by |
+| --- | ---: | ---: | --- |
+| step work p99 | 5,812,731 | **4.6 M to 5.8 M** | outside that band |
+| `G6` cost half | fails, 1.45× over | **still fails** | holding |
+| ships past the allowance | 222 of 8,144 (2.73 %) | **1.5 % to 2.9 %** | outside that band |
+| demand p99 | 34.8 of 64 | **within 10 % of 34.8** | moving more than that |
+
+**A fall of more than 21 % falsifies it**, because that is what closing the gap to 4.0 M would take
+and the mechanism above does not offer it: the corrected blocks are a minority of any hull and each
+loses at most a few of six faces.
+
+**And the reverse falsifies it harder.** If step work *rises*, the reasoning is wrong in a way worth
+knowing: it would mean the eleven kinds carry more mount faces than an armour cube, not fewer, and
+every link figure this repository has published through the old reader is low rather than high.
+
+*The comparison is `verdict.py out/air-2026-08-28 --baseline tools/corpus/summary-air-2026-08-24.csv`.
+Both walks run the same four scenarios on the same corpus at the pair that ships, so the reader is
+the only thing that moved — which is the one clean comparison `A13` has offered so far, and the
+opposite of the survey's, where 94 commits touched `Data/` between the two datasets and the pair is
+a trend rather than a measurement (`M7`).*
 
 ### The runaway target, written before anything is dialled
 
@@ -1447,6 +1511,7 @@ is an enclosing hull, and the corpus has hulls.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **Registered what re-taking the corpus in air will move, before it is re-taken**, and corrected the survey's basis line where it was published (`E10`). That line rested the dataset's integrity on *identical hashes across all four* slices; the fifth carried `C36`, `C42` and `C43` and moved `Cubes.xml` and `Loops.xml`, so it was true when written and false when the walk finished. It is still one dataset for the reason the line already gave, now **measured**: 207 distinct block types in the census and not one of them a block this mod adds. |
 | 2026-08-25 | **Re-took the census, and `A13` is worth twice what the sample said.** 8,137 ships in 2 m 1 s, run twice and reproducing on every column. Summed over the rows a base variant writes, the eleven block kinds the reader built as armour carry **15.76 %** of what the population makes without them, against the 400-ship sample's 8.89 % — the sample carried a representative share of blocks and an unrepresentative share of gravity generators, and a gravity generator is 6.9 GW on its own. **Two of five predictions fail and one of the failures is the instrument**: a census-to-census diff spans four days and four definition changes, so its 41.14 % is the sum of the drives' 0.15 → 0.2, the computer fractions' 0.9 → 1.0, the oxygen generator's 0.6 → 0.40 and `C24`'s clock, and cannot isolate a reader fix (`P6`). The ship count moved by four — seven hulls rejected for holding an empty-subtype door or gravity generator on a small grid, which the game has only on large, and three admitted that the type-and-subtype pair now resolves — and both directions are the fix working (`J3`). The reach prediction is not scorable from a census at all: `composition.csv` holds heat-making blocks only, and nine of the eleven make none (`P2`). |
 | 2026-08-25 | **Every dataset this page reports on was taken through a reader that built eleven kinds of vanilla block as armour** ([backlog.md](backlog.md) `A13`). The game gives thirteen definitions no `SubtypeId`; the blueprint reader turned all of them into a plain armour cube, so every oxygen generator, air vent, oxygen tank, gravity generator, door, hangar door, passage, ladder and large turret in every walk drew no power and made no heat. The reader is fixed and nothing here has been re-measured. Priced by parse on a 400-ship stride sample: **275 of 400 ships** change, and the sample's full-load waste rises **8.89 %** on this page's own basis — full electrical, no thrust, stores in reserve — and **no ship changes side on the vanilla filter**, so the fix moves what a walk measures rather than which hulls it measures. Until a re-run, **a figure on this page about anything but armour is a lower bound**.
 *The census half of that re-run happened the same day and is the entry above; the stepped walks
