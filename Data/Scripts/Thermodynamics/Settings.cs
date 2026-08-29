@@ -499,7 +499,7 @@ namespace Thermodynamics
         /// honest answer where a middle would be invented).
         /// </para>
         /// </summary>
-        [ProtoMember(114)] public bool ShowEnvironmentReadout = true;
+        [ProtoMember(134)] public bool ShowEnvironmentReadout = true;
 
         /// <summary>
         /// Blocks glow as they heat, from the Draper point up. Client side, and on by default: it

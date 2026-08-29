@@ -163,6 +163,7 @@ namespace Thermodynamics.Tests
                 { "Thermodynamics.Core.WeatherResponse.Weathers", "read-only table" },
                 { "Thermodynamics.Core.PlanetThermalDerivation.LevelTemperatures", "read-only table" },
                 { "Thermodynamics.Core.Incandescence.Locus", "read-only table" },
+                { "Thermodynamics.Core.FidelityEnds.All", "read-only table" },
                 { "Thermodynamics.Core.ThermalSolver+SubstepProfile.DemandEdges", "read-only table" },
                 { "Thermodynamics.Core.ThermalSolver+SubstepProfile.ProjectedCaps", "read-only table" },
 
