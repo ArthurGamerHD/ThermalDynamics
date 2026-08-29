@@ -48,6 +48,26 @@ namespace Thermodynamics.Tests
             return file;
         }
 
+        /// <summary>The same blueprint `WriteBlueprint` writes, for tests that choose their own path.</summary>
+        private static string BlueprintText(string blocks)
+        {
+            return "<?xml version=\"1.0\"?>\n" +
+                "<Definitions xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n" +
+                "  <ShipBlueprints>\n" +
+                "    <ShipBlueprint>\n" +
+                "      <Id Type=\"MyObjectBuilder_ShipBlueprintDefinition\" Subtype=\"TestShip\" />\n" +
+                "      <CubeGrids>\n" +
+                "        <CubeGrid>\n" +
+                "          <DisplayName>Test Ship</DisplayName>\n" +
+                "          <GridSizeEnum>Large</GridSizeEnum>\n" +
+                "          <CubeBlocks>\n" + blocks + "\n          </CubeBlocks>\n" +
+                "        </CubeGrid>\n" +
+                "      </CubeGrids>\n" +
+                "    </ShipBlueprint>\n" +
+                "  </ShipBlueprints>\n" +
+                "</Definitions>\n";
+        }
+
         private static string Block(string subtype, int x, int y, int z, string orientation = null)
         {
             return "<MyObjectBuilder_CubeBlock xsi:type=\"MyObjectBuilder_CubeBlock\">" +
@@ -338,5 +358,66 @@ namespace Thermodynamics.Tests
             Assert.True(Blueprints.Unreadable().ContainsKey(file),
                 "the file should have been recorded as unreadable");
         }
+        /// <summary>
+        /// A blueprint's workshop id survives a **collection**, where the ship sits one level
+        /// deeper than an ordinary item.
+        ///
+        /// <para>
+        /// The failure this pins is quiet and it had happened: reading the immediate parent folder
+        /// gets the *ship's name* out of a collection, which parses to nothing and fell back to 0.
+        /// Zero is a workshop id like any other to every reader downstream, so on the 2026-08-28
+        /// air walk **fourteen distinct ships shared it** and anything keyed by workshop id — the
+        /// core corpus's selection, the census, the standing panel — counted the fourteen as one.
+        /// </para>
+        /// </summary>
+        [Theory]
+        [InlineData("244850/1415550344", 1415550344L)]
+        [InlineData("244850/1415550344/T.N.F. Orbital Station 'Charlie'", 1415550344L)]
+        [InlineData("244850/413269248/T.N.F. Strike Carrier Class 'Tigershark' Mk.II", 413269248L)]
+        public void AWorkshopIdIsReadThroughACollectionFolder(string under, long expected)
+        {
+            string root = Path.Combine(Path.GetTempPath(),
+                "thermal-ws-" + System.Guid.NewGuid().ToString("n"));
+            string folder = Path.Combine(root, "content", under.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(folder);
+
+            string path = Path.Combine(folder, "bp.sbc");
+            File.WriteAllText(path, BlueprintText(Block("LargeBlockArmorBlock", 0, 0, 0)));
+
+            try
+            {
+                List<Blueprints.Ship> ships = Blueprints.Read(path);
+                Assert.NotEmpty(ships);
+                Assert.Equal(expected, ships[0].WorkshopId);
+            }
+            finally
+            {
+                Directory.Delete(root, true);
+            }
+        }
+
+        /// <summary>A blueprint outside the corpus root reports no id rather than a wrong one.</summary>
+        [Fact]
+        public void ABlueprintOutsideTheWorkshopHasNoId()
+        {
+            string root = Path.Combine(Path.GetTempPath(),
+                "thermal-ws-" + System.Guid.NewGuid().ToString("n"), "somewhere", "else");
+            Directory.CreateDirectory(root);
+
+            string path = Path.Combine(root, "bp.sbc");
+            File.WriteAllText(path, BlueprintText(Block("LargeBlockArmorBlock", 0, 0, 0)));
+
+            try
+            {
+                List<Blueprints.Ship> ships = Blueprints.Read(path);
+                Assert.NotEmpty(ships);
+                Assert.Equal(0L, ships[0].WorkshopId);
+            }
+            finally
+            {
+                Directory.Delete(Path.GetDirectoryName(Path.GetDirectoryName(root)), true);
+            }
+        }
+
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Thermodynamics.Harness;
 using Xunit;
 
@@ -63,10 +64,62 @@ namespace Thermodynamics.Tests
             {
                 Assert.True(byName.ContainsKey(name),
                     "the air walk asks for scenario '" + name + "' and the battery has no such case");
-                chosen.Add(byName[name]);
+                chosen.Add(Ceiling(byName[name]));
             }
 
             return chosen;
+        }
+
+        /// <summary>
+        /// A scenario with its clock shortened by <c>THERMAL_SCENARIO_CEILING</c>, for measuring
+        /// what a shorter walk would cost in fidelity.
+        ///
+        /// <para>
+        /// **This exists to price a saving, not to take one.** A walk of the whole corpus is hours
+        /// and `vacuum-shadow` is a third of it — measured at **33.7 %** of the 2026-08-28 air
+        /// walk's modelled cost — because it is the one scenario of the four that never satisfies
+        /// the settle rule: a hull radiating in shadow is still moving faster than 0.25 K a minute
+        /// when its 1,800 s run ends, while the other three stop at a median 120 s.
+        /// </para>
+        ///
+        /// <para>
+        /// **Shortening it is not free and the reason is where the reading is taken.**
+        /// `ScenarioOutcome` is read at the *end* of a run, so a truncated `vacuum-shadow` reports a
+        /// hull caught on its way down rather than one that has arrived — the median run is still
+        /// 5 K from where it finishes at 1,620 s of its 1,800. So this is a knob for a paired
+        /// experiment against a full-ceiling walk of the same ships on the same build, and what it
+        /// costs is a measurement rather than an assumption (`M1`, `P6`, `E11`).
+        /// </para>
+        ///
+        /// <para>
+        /// Unset, or set to nothing usable, it changes nothing. A ceiling *above* a scenario's own
+        /// is not applied either: this shortens walks and never lengthens them, so a value cannot
+        /// quietly turn one scenario into a longer experiment than the battery defines.
+        /// </para>
+        /// </summary>
+        private static Battery.Scenario Ceiling(Battery.Scenario scenario)
+        {
+            string set = Environment.GetEnvironmentVariable("THERMAL_SCENARIO_CEILING");
+            float seconds;
+            if (string.IsNullOrEmpty(set)
+                || !float.TryParse(set, NumberStyles.Float, CultureInfo.InvariantCulture,
+                    out seconds)
+                || seconds <= 0f
+                || seconds >= scenario.Seconds)
+            {
+                return scenario;
+            }
+
+            return new Battery.Scenario
+            {
+                Name = scenario.Name,
+                Question = scenario.Question,
+                Environment = scenario.Environment,
+                Load = scenario.Load,
+                Then = scenario.Then,
+                ThenAfterSeconds = scenario.ThenAfterSeconds,
+                Seconds = seconds,
+            };
         }
 
         /// <summary>The walk's name: its resume record, and the `walk` column of every row.</summary>

@@ -411,6 +411,7 @@ namespace Thermodynamics.Harness
         private static void RunUntilSettled(AssemblyRunner runner, float ceiling)
         {
             float previous = float.NaN;
+            float lastStep = float.NaN;
             float elapsed = 0f;
 
             while (elapsed < ceiling)
@@ -420,11 +421,93 @@ namespace Thermodynamics.Harness
                 elapsed += chunk;
 
                 float hottest = runner.Hottest[runner.Hottest.Count - 1];
-                if (!float.IsNaN(previous) && Math.Abs(hottest - previous) <= SettleWithin) return;
+                if (!float.IsNaN(previous))
+                {
+                    float step = hottest - previous;
+                    if (Math.Abs(step) <= SettleWithin) return;
+                    if (Extrapolates && Converged(step, lastStep)) return;
+                    lastStep = step;
+                }
 
                 previous = hottest;
             }
         }
+
+        /// <summary>
+        /// Whether what is left of a decaying approach is already inside <see cref="SettleWithin"/>.
+        ///
+        /// <para>
+        /// **The plain test asks how far the hull moved last chunk; this asks how far it has left to
+        /// go.** They are the same question only when the approach is fast. `vacuum-shadow` is the
+        /// case where they are not: a hull radiating into the dark decays towards its floor, so its
+        /// per-chunk movement shrinks geometrically and creeps under a fixed 0.25 K only after most
+        /// of an hour. Measured on the 2026-08-28 air walk it is the **one scenario of four that
+        /// never satisfies the plain test** — every ship runs its full 1,800 s while the other three
+        /// stop at a median 120 — and it is **33.7 %** of the whole walk's cost.
+        /// </para>
+        ///
+        /// <para>
+        /// **So the rule is Richardson's, not a shorter clock.** If a chunk moved the hull `d` and
+        /// the one before moved it `p` in the same direction, the ratio `r = d / p` is the decay per
+        /// chunk and what remains is the sum of the rest of that series, `d * r / (1 - r)`. When
+        /// that is inside the tolerance the run is *already* where it is going, and simulating the
+        /// rest of the way changes the answer by less than the tolerance the plain test allows.
+        /// This is a cheaper route to the same reading rather than a looser reading, which is why
+        /// it is bounded by the same constant.
+        /// </para>
+        ///
+        /// <para>
+        /// **Every guard here is a refusal to extrapolate something that is not decaying.** Both
+        /// steps must be in the same direction, the ratio must be under
+        /// <see cref="ConvergedRatio"/> — a hull creeping at 0.999 per chunk is not converging on
+        /// any timescale worth trusting an extrapolation over — and neither step may be zero. A run
+        /// that oscillates, accelerates, or sits exactly still falls through to the plain test,
+        /// which is the behaviour every dataset before this was collected under.
+        /// </para>
+        /// </summary>
+        public static bool Converged(float step, float lastStep)
+        {
+            if (float.IsNaN(lastStep) || lastStep == 0f || step == 0f) return false;
+
+            // Same direction, or this is not a decay.
+            if ((step > 0f) != (lastStep > 0f)) return false;
+
+            float ratio = Math.Abs(step) / Math.Abs(lastStep);
+            if (ratio >= ConvergedRatio) return false;
+
+            float remaining = Math.Abs(step) * ratio / (1f - ratio);
+            return remaining <= SettleWithin;
+        }
+
+        /// <summary>
+        /// The slowest per-chunk decay an extrapolation is trusted over.
+        ///
+        /// A geometric series only sums to something small when its ratio is comfortably under one,
+        /// and the closer the ratio runs to one the more the estimate rests on two samples of a
+        /// curve that is not exactly geometric — the hull sheds by radiation, which goes as the
+        /// fourth power and is only locally exponential. At 0.9 the tail this skips is ten chunks
+        /// of movement; above it the run is left to the plain test.
+        /// </summary>
+        public const float ConvergedRatio = 0.9f;
+
+        /// <summary>
+        /// Whether <see cref="Converged"/> is consulted, from <c>THERMAL_SETTLE_EXTRAPOLATE</c>.
+        ///
+        /// <para>
+        /// **Off by default, because turning it on moves every reading this repository has taken.**
+        /// The stopping point is where a run's peak, demand and step cost are read, so a walk with
+        /// this on is not comparable with one taken without it — which is `M1` exactly. It is a
+        /// switch so the two can be walked as arms of one experiment on one build, and the default
+        /// moves when the paired measurement says what it costs, in a commit that cites it (`E11`).
+        /// </para>
+        ///
+        /// <para>
+        /// Read once. A run that consulted the environment per chunk would let a sweep change
+        /// stopping rules half way through itself.
+        /// </para>
+        /// </summary>
+        public static readonly bool Extrapolates =
+            (System.Environment.GetEnvironmentVariable("THERMAL_SETTLE_EXTRAPOLATE") ?? "") == "1";
 
         /// <summary>
         /// The two figures that are about time rather than about the end state: how long the ship

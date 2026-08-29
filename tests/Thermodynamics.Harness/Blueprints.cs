@@ -455,12 +455,57 @@ namespace Thermodynamics.Harness
             return ship;
         }
 
+        /// <summary>
+        /// The workshop item a blueprint belongs to, read from its path.
+        ///
+        /// <para>
+        /// **A workshop item can be a collection, and then the blueprint is one level deeper.**
+        /// Most items are <c>.../244850/&lt;id&gt;/bp.sbc</c>, but a collection is
+        /// <c>.../244850/&lt;id&gt;/&lt;ship name&gt;/bp.sbc</c> — so reading the immediate parent
+        /// folder gets the *ship's name* and parses to nothing. It fell back to 0, and 0 is a
+        /// workshop id like any other as far as every reader is concerned: on the 2026-08-28 air
+        /// walk **fourteen distinct ships shared it**, from at least two collections, and anything
+        /// keyed by workshop id — the core corpus's selection, the census, the standing panel —
+        /// treated the fourteen as one ship.
+        /// </para>
+        ///
+        /// <para>
+        /// So the id is looked for by walking up to the segment under the app id rather than
+        /// assumed to be the first parent, and a path that has no such segment returns 0 as before.
+        /// That case is a blueprint outside the corpus root, which is a different thing from a
+        /// collection and is left alone.
+        /// </para>
+        /// </summary>
         private static long WorkshopIdOf(string path)
         {
-            string folder = Path.GetFileName(Path.GetDirectoryName(path) ?? "");
             long id;
-            return long.TryParse(folder, NumberStyles.Integer, CultureInfo.InvariantCulture, out id) ? id : 0L;
+            string folder = Path.GetDirectoryName(path);
+
+            while (!string.IsNullOrEmpty(folder))
+            {
+                string name = Path.GetFileName(folder);
+                string parent = Path.GetDirectoryName(folder);
+
+                // The id is the segment directly under the game's app id, whatever depth the
+                // blueprint itself sits at.
+                if (!string.IsNullOrEmpty(parent) && Path.GetFileName(parent) == AppId
+                    && long.TryParse(name, NumberStyles.Integer, CultureInfo.InvariantCulture,
+                        out id))
+                {
+                    return id;
+                }
+
+                folder = parent;
+            }
+
+            // No app-id segment at all: a blueprint from somewhere other than the workshop corpus.
+            folder = Path.GetFileName(Path.GetDirectoryName(path) ?? "");
+            return long.TryParse(folder, NumberStyles.Integer, CultureInfo.InvariantCulture, out id)
+                ? id : 0L;
         }
+
+        /// <summary>The game's Steam app id, which is the folder every workshop item sits under.</summary>
+        private const string AppId = "244850";
 
         private static Grid ReadGrid(XElement grid,
             Dictionary<string, GameBlocks.Definition> definitions, Ship ship)

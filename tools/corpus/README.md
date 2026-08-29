@@ -31,13 +31,25 @@ python3 tools/corpus/panel.py out/census-2026-08-25/census.csv \
                              out/census-2026-08-21 out/knobs-2026-08-21   # every dataset, one page
 ```
 
-## The core corpus — a walk of the population in an hour instead of eleven
+## The core corpus — a walk of the population in eleven minutes
 
 `core.py` draws a **stratified sample with weights**, committed as
-[`core-corpus.csv`](core-corpus.csv), which walks in about **36 minutes in air and 78 in the cap
-walk's paired arms** against 5.1 and 11.1 hours for the whole corpus. The downloaded blueprints all
-stay where they are; the core corpus is a *selection over* them, so nothing is lost and a full walk
-is still one environment variable away.
+[`core-corpus.csv`](core-corpus.csv). The downloaded blueprints all stay where they are; the core
+corpus is a *selection over* them, so nothing is lost and a full walk is still one environment
+variable away.
+
+> **The costs this page used to quote were about four times too high, and slicing is why.**
+> They said 36 minutes in air and 78 in the cap walk's paired arms. Walked in **one hold** on
+> 2026-08-28 the same corpus took **11 m 19 s** and **21 m 32 s**. Nothing about the corpus or the
+> solver changed between those figures; what changed is that the walks they were calibrated from
+> were taken in nine slices. **Resume skips only what *finished***, so every slice killed by its
+> deadline discards whatever its 31 workers had in flight — and the corpus is walked largest-first,
+> so those are the most expensive ships in the population, redone by the next slice. The 2026-08-28
+> air walk ran its first 625 files at 0.9–2.3 files a minute and its last 6,048 at 165.
+>
+> **So the first rule of a cheap walk is to finish it in one hold**, and the second is that a cost
+> measured across slices is not a cost. Every figure on this page is now a single-hold one and says
+> so (`E5`, `M1`).
 
 ```
 python3 tools/corpus/core.py out/air-2026-08-28 --out out/core-selection.txt   # build the list
