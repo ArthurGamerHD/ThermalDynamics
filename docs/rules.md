@@ -780,9 +780,12 @@ which checks the fixture it built.
 
 **No count, share or total is written into prose by hand when the data behind it can be read.**
 
-The balance bench stated 36 panel ships for as long as the panel had 50, because the header had
-been typed rather than generated. A reader who catches one wrong count stops believing the right
-ones.
+The balance bench stated 36 panel ships for as long as the panel had 50 — it is 52 now — because
+the header had been typed rather than generated. A reader who catches one wrong count stops believing the right
+ones. *(The panel is 52 now — `C32` re-picked it on the corrected census. This sentence has to
+name the current figure as well as the historical one, or the check below excuses it forever:
+recording a wrong count is allowed, and only while the same sentence proves it knows the right
+one.)*
 
 *Applies to:* every page that reports on a dataset, including this one's own claims about the
 suite.

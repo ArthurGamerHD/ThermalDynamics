@@ -24,8 +24,8 @@ python3 tools/corpus/pace.py out/cap-2026-08-25/progress.txt \
     --reference out/air-corpus-2026-08-24/progress.txt \
     --outcomes  out/air-corpus-2026-08-24/outcomes.csv   # what a running walk will cost
 ./tools/corpus/build-report.sh out/corpus-2026-08-21      # the survey as one page
-python3 tools/corpus/panel.py out/census-2026-08-21/census.csv \
-                             out/corpus-2026-08-21/outcomes.csv   # rebuild the standing panel
+python3 tools/corpus/panel.py out/census-2026-08-25/census.csv \
+                             out/survey-2026-08-25/outcomes.csv   # rebuild the standing panel
 ./tools/corpus/build-bench.sh out/corpus-2026-08-21 \
                              out/census-2026-08-21 out/knobs-2026-08-21   # every dataset, one page
 ```
@@ -225,7 +225,7 @@ census, the composition and the dial sweep with `pack-bench.py` and assembles `b
 `pending` where it is absent, so the bench exists before the sweep finishes.
 
 **Every figure a page states about its dataset comes from that dataset.** The bench's header
-counts were written into the HTML by hand until the panel grew from 36 ships to 50 and the page
+counts were written into the HTML by hand until the panel grew from 36 ships to 50 — and to 52 on 2026-08-28 — and the page
 went on saying 36. A reader who catches one wrong count stops believing the right ones.
 
 ## The ways a full sweep dies
@@ -513,6 +513,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **The standing panel is re-picked** on the corrected census and the re-surveyed outcomes (`C32`, unblocked by `A13`'s survey half finishing). 52 ships from 50, `oxygen-heavy` added, and 16 of 24 rules pick different hulls — the census and the outcomes both moved under it, so this is not an isolation of the rule fix. The commands above now name the datasets it was built from. **No dial sweep taken before it is comparable with one taken after** (`M1`). |
 | 2026-08-28 | **`pace.py` reads a walk taken in slices.** Relaunching to resume is the documented normal path and it writes many blocks into one progress file, each restarting its own file count; read literally, the air re-take's ninetieth file of its sixth slice sat at 272 minutes after the first slice's first mark, and the file written to refuse a bad estimate reported **9.45x** per file where the honest figure is 3.05x. Counts continue from the resume line, the gap between slices is not walked time, and a slice's clock starts at its resume line — the work before a slice's first mark is real walking at the walk's own rate, sixty-four minutes of it over five boundaries. Pinned by a sliced fixture and the same walk in one run reporting the same elapsed and the same ratio. |
 | 2026-08-28 | Added the sixth way a sweep dies, which costs the dataset rather than the run: **do not rebuild Release while a walk is slicing.** Slices load `--no-build`, so a build between two of them gives the dataset's halves different builds. `provenance.txt` makes that visible rather than harmless, which is the only reason it is recoverable. |
 | 2026-08-28 | Said that a walk's cost belongs to the build as well as to the corpus. The `A13` air re-take is **1.78x per file** over the walk it replaces, because the blocks that reader built as armour are generators and doors now and this walk runs to equilibrium — so the 1.95x cap-to-air ratio is a ratio *within one build* and understates the cap walk's cost across a build that changed what the corpus contains. |

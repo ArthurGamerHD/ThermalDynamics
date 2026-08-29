@@ -184,10 +184,24 @@ rather than to a number. See [definitions.md](definitions.md#conductivity-is-in-
 mounted, the bolted area is `coverage_a × coverage_b`. The model records coverage per face, not per
 cell, so it cannot know whether two partial mounts line up.
 
-**Radiators cannot be inline loop segments.** A radiator sheds heat when a pipe's sink face is
-pressed against it, which works and is what the `radiator` scenario measures. It has no coolant
-ports of its own, so a loop cannot run *through* one. The block is 1×5×2 with mount points only on
-its top and bottom, so adding ports needs the port geometry checked against the model.
+**Radiators cannot be inline loop segments, and `C40` says what that is worth.** A radiator sheds
+heat when a pipe's sink face is pressed against it, which works and is what the `radiator` scenario
+measures. It has no coolant ports of its own, so a loop cannot run *through* one. The block is 1×5×2
+with mount points only on its top and bottom, so the ports would go there and the geometry would
+need checking against the model.
+
+**What stopped this being built is the price rather than the plumbing.** Running coolant through a
+radiator is a way of getting heat *into* it faster, which is internal transport — and `C40` measured
+the ceiling on every internal path at **9.13 % of the peak**, because the hottest block on a plumbed
+hull already sheds **1,457 W/K** into the hull it is welded to and stands only 39.2 K above its
+grid's median. The shipped loop reaches 2.43 % of that ceiling; the `C38` candidate raises the loop's
+40 W/K to 250 against the hull's 1,457. An inline radiator competes in the same term, so it cannot
+be worth more than a fraction of nine per cent however good the coupling is.
+
+*That is a bound and not a measurement of this change: nobody has run it.* It is written here so the
+next reader prices it before building it, which is the mistake `C36` records three independent levers
+making — the panel's emissivity, the fluid's coupling and the coolant's mass all measured large on a
+bench with no hull and nothing on a real one.
 
 **The underground core gradient is out of reach in ordinary play.** Below `SealevelDeadzone` the
 rock warms toward `CoreTemperature`, and the shipped deadzone is 2 km below sea level — deeper than
@@ -1085,6 +1099,7 @@ counters rather than milliseconds so it holds on any machine.
 | Date | Change |
 | --- | --- |
 | 2026-08-28 | **The input sweep covers twenty of twenty-one inputs; it covered eighteen of twenty-one.** Position needed a scenario that changes altitude before it could be measured at all, and on the new `descent` it is **0.8 K at worst and 0.00 K standing** — covered, and it does not matter. Weather needed nothing but asking, and it is **168.8 K at worst and 87.1 K standing**, the largest single-input divergence the sweep can express and a bias rather than a perturbation. Both were inert on the first attempt because `EnvironmentSample` is a **struct** and the helpers were mutating copies, which is why the sweep now marks a case its scenario cannot express rather than printing the zero that looked identical. |
+| 2026-08-28 | Priced the inline-radiator limit against `C40` instead of leaving it as plumbing waiting to be done. Running coolant through a radiator is internal transport, and the ceiling on every internal path is **9.13 % of the peak** — the hull already carries 1,457 W/K against the loop's 40. Stated as a bound rather than a measurement, because nobody has run this one. |
 | 2026-08-25 | **The block-population limit above is a limit and no longer a leak.** It says heat leaves with a block that leaves; it did not say that breaking a coolant ring destroyed two thirds of the *surviving* pipes' heat as well ([backlog.md](backlog.md) `A12`), which is not a population change at all — the same blocks were still there. Fixed in [thermal-model.md](thermal-model.md#coolant-loops): a pipe now holds the parcel it absorbed, capacity and all. `HeatLaunderingTests` measures what a broken ring costs now — one parcel out of `N`, nothing for a split — instead of pinning the old fraction. |
 | 2026-08-25 | Wrote down the limit that had never been written down anywhere ([backlog.md](backlog.md) `F26`): heat leaves the world with a block that leaves it and arrives at ambient with one that is built. Energy conservation is an invariant about a step and says nothing across a change in the population. Pinned by a test, so it is not rediscovered as a bug. |
 | 2026-08-25 | Refreshed the per-face shadow figures, which had been quoted from a page rather than from the lab and had gone stale when `C24` moved the clock: 0.0018 K a metre against a cadence of about half a kelvin, where this page said 0.0045 against 1.47. The table they come from is now pinned to `OcclusionLadderTests`. |
