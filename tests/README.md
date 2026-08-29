@@ -158,8 +158,17 @@ THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=out/survey-2026-08-25 \
 
 Do not delete the data directory between slices — that is what starts the walk over.
 
+**But slice only if you must, because a sliced walk costs about four times a single-hold one.**
+Resume skips what *finished*; a slice killed by its deadline discards whatever its workers had in
+flight, and the corpus is walked largest-first, so those are the most expensive ships in the
+population and the next slice does them again. Measured on the same corpus, in one hold against the
+nine-slice walk the published costs were calibrated from: **11 m 19 s against 35.6 minutes** in air,
+**21 m 32 s against 78** in the cap walk's paired arms. Ask for a hold long enough to finish, and
+treat a cost measured across slices as not a cost at all (`M1`).
+
 **Or walk the core corpus and finish inside one hold.** `tools/corpus/core.py` draws a weighted
-sample that costs a tenth of the corpus — **36 minutes in air, 78 in the cap walk** — and answers
+sample that costs a tenth of the corpus — **11 m 19 s in air and 21 m 32 s in the cap walk's paired
+arms, both measured in one hold on 2026-08-28** — and answers
 `G6`'s percentiles, the demand half and the medians to within a few per cent, measured out of
 sample. It does not answer a maximum or a rate under about half a per cent, and it is read with
 `core.py --score` rather than `verdict.py`, which has no weights and stops rather than printing a
@@ -193,7 +202,7 @@ names it `weighted`, and reports the halves a sample cannot answer as `?` rather
 — a maximum is one observation, and the core corpus reads 76 % under the population's `work max`.
 
 The whole corpus stays on disk and a full walk is one variable away; see
-[tools/corpus/README.md](../tools/corpus/README.md#the-core-corpus--a-walk-of-the-population-in-an-hour-instead-of-eleven)
+[tools/corpus/README.md](../tools/corpus/README.md#the-core-corpus--a-walk-of-the-population-in-eleven-minutes)
 for what the sample can and cannot answer, and why dropping the giants outright would have deleted
 `G6`'s finding rather than made it cheaper.
 
