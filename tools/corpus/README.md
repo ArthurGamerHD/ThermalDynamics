@@ -597,9 +597,13 @@ pins the four provenance counts against the ones `AuthoredWasteTests` pins, so t
 one grammar cannot drift apart quietly (`D3`), `test_pace.py` pins what a progress file can be
 asked — that a repeated final line is not a stall, that the ratio is taken over the files two walks
 share rather than the time they ran, and that the block-share estimate is reported as the spread it
-has,, `test_reproduce.py` pins that a comparison
-with nothing in common is not a reproduction, and `test_core.py` pins the two properties the core
-corpus is exact on — that a weight of one is the unweighted percentile and that an integer weight
+has, `test_reproduce.py` pins that a comparison
+with nothing in common is not a reproduction, `test_cap.py` pins the ways the cap report could read
+a sampled walk as a population — a stray ship dropped rather than given a default weight of 1, a
+weighted giant moving a percentile exactly as the twenty rows it stands for would, the identity
+check deliberately left unweighted because it is an assertion about the walk, and a verdict a
+sample cannot reach recorded as `unscored` rather than as a pass — and `test_core.py` pins the two
+properties the core corpus is exact on — that a weight of one is the unweighted percentile and that an integer weight
 means what repeating the row means, which an earlier draft satisfied the first of and not the
 second — together with the guard that stops a sampled dataset being read as a population. Changing any of them fails a check rather than moving a number nobody is watching. They are the
 only checks over the scorers and are not part of the `dotnet test` suite; run them when a scorer

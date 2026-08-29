@@ -30,13 +30,42 @@ whatever it is bolted to — so energy leaves and enters with no accounting at a
 
 **This is on purpose and the alternative is worse.** Conserving it means a grinder that heats the
 ship around it and a welder that chills it, which is a mechanism a player would never connect to a
-cause, at the cost of a redistribution pass on every block change (`P14`). What it costs as it
-stands is that a hull losing blocks in a fire cools slightly faster than the physics says, in the
-one situation where nobody is reading a number.
+cause, at the cost of a redistribution pass on every block change (`P14`).
+
+**The case it used to cost — a hull losing blocks in a fire — is the one that is now conserved**,
+and it is the only one: the redistribution pass runs when a departing node is past its critical
+temperature and not otherwise, so a grinder still costs nothing and still heats nothing. What the
+limit costs as it stands is a block a player takes away below its rating, where the heat that leaves
+with it is the heat that was in it.
 
 `EnergyIsNotConservedWhenTheBlockPopulationChanges` pins both halves — the total falls by exactly
 the departing node's energy, no neighbour moves, and a welded block arrives at ambient — because a
 limit that is only described is a limit somebody rediscovers as a bug (`D5`).
+
+**With one exception, and the exception is where the limit became an exploit.** A block that leaves
+the world **above its critical temperature** hands its energy to the neighbours it was bolted to
+instead of taking it away. The argument above is about a block a *player takes away*; a node past
+critical did not leave, it **failed in place**, and the mod is what destroyed it. Letting its energy
+go makes overheating a reward — cook a cheap block and the world is that much cooler, for free and
+repeatably, which is [backlog.md](backlog.md) `B42`'s remaining half: the sacrificial block, the
+grind-and-reweld timer on a glowing block, and the crudest version that needs no grinder at all
+because the mod destroys the block for you.
+
+**The test is the temperature rather than the cause**, because the cause is not knowable where the
+decision is made: the game removes a block and the mod is told, with nothing to say whether a
+grinder or a fire did it. Reading the temperature answers all three variants at once and leaves a
+cool block ground off exactly as it was — so the grinder that heats the ship around it, which is why
+this limit exists, still does not exist.
+
+The energy is spread **by heat capacity**, so every neighbour takes the same temperature rise: that
+is the mixing answer, where conduction would have carried them given time, rather than a guess at a
+rate. Spreading by conductance would put more into whichever neighbour happened to have the fattest
+joint, which is a statement about the path and not about where the energy ends up. A node with **no
+neighbours** keeps the plain limit — a lone block that cooks itself really does take its heat with
+it, and inventing a recipient would be worse than the limit (`E8`).
+
+`OverheatSpillTests` pins it, including the exploit run as a player would run it: cook, let the mod
+destroy it, weld a fresh one back, five times over, and the hull is no cooler for it.
 
 **The lab never destroys a block, so a peak temperature above critical is not a prediction.** The
 solver raises an `OverheatEvent` when a node passes its critical temperature, but applying that
