@@ -1648,5 +1648,86 @@ namespace Thermodynamics.Tests
                 "corpus walks that do not declare the collection that runs alone (O4):\n  "
                 + string.Join("\n  ", offenders.ToArray()));
         }
+        /// <summary>
+        /// **No committed file carries an unresolved merge conflict.**
+        ///
+        /// <para>
+        /// This is not hypothetical. `docs/configuration.md` carried `&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD`, `=======` and
+        /// `&gt;&gt;&gt;&gt;&gt;&gt;&gt; b31-fidelity-ends` through a merge and into master, in the middle of a change
+        /// log, where both sides were real entries from the same day and both belonged. Nothing
+        /// caught it: the file still rendered, the markdown was still valid, every link in it still
+        /// resolved, and the two rows it garbled were about features that both exist.
+        /// </para>
+        ///
+        /// <para>
+        /// **It is the shape of failure this repository's rules are about** — a page that reads as
+        /// though somebody checked. A conflict marker is the cheapest possible thing to detect and
+        /// the only reason it survived is that nothing looked (`D5`).
+        /// </para>
+        ///
+        /// <para>
+        /// Every text file rather than only markdown, because a marker in a `.cs` file would not
+        /// compile but one in an `.xml` definition or a `.py` tool comment can sit there as
+        /// quietly as this one did.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void NoCommittedFileCarriesAConflictMarker()
+        {
+            string[] markers = { "<" + "<<<<<< ", "=" + "======", ">" + ">>>>>> " };
+            List<string> found = new List<string>();
+
+            foreach (string file in TextFiles())
+            {
+                string[] lines = File.ReadAllLines(file);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    string line = lines[i];
+                    for (int m = 0; m < markers.Length; m++)
+                    {
+                        // Anchored at the start of the line, which is where git writes them and
+                        // where prose does not: a row of equals signs under a heading is a common
+                        // thing to write and is not a conflict.
+                        if (!line.StartsWith(markers[m], StringComparison.Ordinal)) continue;
+                        if (markers[m][0] == '=' && line.TrimEnd() != "=======") continue;
+
+                        found.Add(Relative(file) + ":" + (i + 1) + "  " + line.Trim());
+                    }
+                }
+            }
+
+            Assert.True(found.Count == 0,
+                "these files carry unresolved merge conflicts:\n  " + string.Join("\n  ", found));
+        }
+
+        /// <summary>
+        /// Every committed text file worth scanning: documentation, definitions, tools and scripts.
+        ///
+        /// Build output and downloaded data are excluded the same way <see cref="MarkdownFiles"/>
+        /// excludes them — they are not committed, and `out/` holds gigabytes of walk results.
+        /// </summary>
+        private static List<string> TextFiles()
+        {
+            string[] extensions = { "*.md", "*.xml", "*.py", "*.sh", "*.cs", "*.csproj", "*.sln" };
+            List<string> files = new List<string>();
+
+            foreach (string pattern in extensions)
+            {
+                foreach (string file in Directory.GetFiles(RepoRoot(), pattern,
+                    SearchOption.AllDirectories))
+                {
+                    string relative = Relative(file);
+                    if (relative.StartsWith("out/", StringComparison.Ordinal)) continue;
+                    if (relative.StartsWith(".git/", StringComparison.Ordinal)) continue;
+                    if (relative.Contains("/bin/") || relative.Contains("/obj/")) continue;
+                    if (relative.Contains("/RichHudFramework/")) continue;
+                    files.Add(file);
+                }
+            }
+
+            files.Sort(StringComparer.Ordinal);
+            return files;
+        }
+
     }
 }
