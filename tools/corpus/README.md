@@ -16,7 +16,8 @@ each of these prints what it found and renders without the parts that are absent
 
 ```
 python3 tools/corpus/verdict.py out/corpus-2026-08-21     # the criteria, on the terminal
-python3 tools/corpus/cap.py out/cap-2026-08-25            # C3: what a per-block cap buys and costs
+python3 tools/corpus/cap.py out/cap-2026-08-25 \
+    --csv tools/corpus/summary-cap-2026-08-25.csv         # C3: what a per-block cap buys and costs
 python3 tools/corpus/reproduce.py out/cap-2026-08-24 out/cap-2026-08-25  # did a restart reproduce?
 python3 tools/corpus/censusdiff.py out/census-2026-08-21 out/census-2026-08-25 \
     --expect waste_full_w=8:10 --expect ships=0:0            # A13: did the re-take do what was predicted?
@@ -90,6 +91,26 @@ per cent.
 core dataset read without them describes a population that is mostly small ships, which is not the
 corpus and is not anything; it recognises such a dataset and stops rather than printing figures
 shaped like population figures.
+
+**The one exception is `cap.py`, because a paired walk is a comparison and not a population.** It
+applies the same weights from the same file and recognises a core dataset by the same test, so a
+core cap walk is read with `cap.py` exactly as a full one is and the report says on its first line
+which it has. Three things follow, and they are the difference between the two reports:
+
+* Every population figure is weighted, and its name says so — `C3 weighted dpeak p99`, never
+  `C3 dpeak p99`. A core figure and a full-walk figure can then never be put side by side as
+  though they were one reading.
+* **The identity check is deliberately not weighted.** *Did the capped arm cap* is an assertion
+  about the walk, and every pair walked is one observation of it; weighting that count would hide
+  a broken pair on a ship of weight 1 behind twenty good ones on a ship of weight 20.
+* **The maxima are unscored rather than passed.** The cost prediction is a p99 under 1 K *and* a
+  max under 10 K, and a sample of one giant in twenty has no maximum — the core corpus reads 76 %
+  under the population's `work max`. That half prints `?` on a sampled walk, and an unscorable
+  half never rescues a failing one (`E8`).
+
+`cap.py --csv` writes the figures as `statistic,value,unit` beside the dataset's provenance, from
+the same `provenance.summary_rows` `verdict.py` uses (`P5`), which is what makes a cap figure on a
+page checkable against the walk that produced it rather than against another page (`E5`).
 
 **When to walk the whole corpus anyway.** When the finding is a maximum, a rare rate, or a tail
 that has to be exact rather than estimated — and when a population figure is going to be published
@@ -584,6 +605,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **`cap.py` reads a sampled walk with weights, and says which halves a sample cannot answer.** `A13`'s last open half is the cap walk, and the core corpus walks it in 78 minutes rather than eleven hours — but it is a *weighted* sample, and this report had no weights: read unweighted it would have printed a complete-looking population whose giants are outnumbered twenty to one. The dataset is recognised by `scoring.is_core_walk` rather than by a flag, every population figure is weighted and named `weighted`, and the identity check deliberately is not — *did the capped arm cap* is an assertion about the walk, and weighting it would hide a broken pair on a ship of weight 1 behind twenty good ones on a ship of weight 20. **Two halves report `?` rather than passing**: a maximum is one observation and cannot be sampled, so the cost prediction's max-under-10-K half is unscoreable on a sampled walk, and an unscorable half never rescues a failing one (`E8`). `--csv` gives the walk a committed source, from the same `provenance.summary_rows` `verdict.py` uses (`P5`, `E5`); the 2026-08-25 summary reproduces byte for byte through it. `core.py --score` now splits a paired walk to the arm that ships, which it had not — a mixture of two configurations has every column one configuration has (`M1`, `P6`). |
 | 2026-08-28 | **`pace.py`'s ratio reads every mark of a resumed walk, not just its first slice.** The morning's fix made a resumed walk's counts cumulative, and cumulative counts do not land on the reference's ten-file grid — so the intersection was empty after the first resume and **21 of 268** marks were in use. The reference is interpolated at the subject's own counts now, bounded to five marks because the corpus is largest-first. The air re-take reads 2.94x over 3,166 files against 3.05x over its first 400. |
 | 2026-08-28 | **The standing panel is re-picked** on the corrected census and the re-surveyed outcomes (`C32`, unblocked by `A13`'s survey half finishing). 52 ships from 50, `oxygen-heavy` added, and 16 of 24 rules pick different hulls — the census and the outcomes both moved under it, so this is not an isolation of the rule fix. The commands above now name the datasets it was built from. **No dial sweep taken before it is comparable with one taken after** (`M1`). |
 | 2026-08-28 | **`pace.py` reads a walk taken in slices.** Relaunching to resume is the documented normal path and it writes many blocks into one progress file, each restarting its own file count; read literally, the air re-take's ninetieth file of its sixth slice sat at 272 minutes after the first slice's first mark, and the file written to refuse a bad estimate reported **9.45x** per file where the honest figure is 3.05x. Counts continue from the resume line, the gap between slices is not walked time, and a slice's clock starts at its resume line — the work before a slice's first mark is real walking at the walk's own rate, sixty-four minutes of it over five boundaries. Pinned by a sliced fixture and the same walk in one run reporting the same elapsed and the same ratio. |
