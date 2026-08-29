@@ -260,6 +260,26 @@ namespace Thermodynamics.Harness
                 Material = OnlyOn("Thrust", (p, x) => p.ConsumerWasteEnergy *= x),
             });
 
+            // **`C31`'s dial, and the one the sweep was missing.** The oxygen generator's consumer
+            // fraction went from 0.60 to 0.40 on a rig of six blocks, which is the right evidence
+            // for *can this block be built* and no evidence at all for what it does to a fleet. The type is a median 14.4 % of the full-load waste of the ships that
+            // carry one and 80.8 % at p90, so it is the largest move to a real ship's heat since
+            // `C24` and the only one never swept.
+            //
+            // Consumer rather than producer, unlike `reactor-waste` and `engine-waste` beside it: a
+            // generator makes no power, it draws it, and the fraction that ships is
+            // `ConsumerWasteEnergy 0.40`. A knob on the producer side would move nothing and read
+            // as a type that does not matter (`E8`).
+            knobs.Add(new Knob
+            {
+                Name = "oxygen-waste",
+                Intent = "waste fraction of oxygen generators alone — ships at 0.40, was 0.60",
+                Multiplier = true, Shipped = 1f, Levels = new[] { 0.5f, 1f, 1.5f, 2f },
+                Scenarios = Core,
+                OnlyType = "OxygenGenerator",
+                Material = OnlyOn("OxygenGenerator", (p, x) => p.ConsumerWasteEnergy *= x),
+            });
+
             knobs.Add(new Knob
             {
                 Name = "reactor-waste",
