@@ -1026,6 +1026,64 @@ than 14 K apart and the control is past nothing on any of them: `NX-01 (Vanila)`
 uncapped and 533 K capped at hot noon. What they have in common is size — every one of the ten is
 between 79,460 and 155,010 blocks.
 
+### The re-take on a corrected reader: what it should find, written before it finds it
+
+**`A13` is why this walk is being run again.** Every figure in the two sections above was measured
+through a blueprint reader that built eleven kinds of block as plain armour, so every vanilla oxygen
+generator, gravity generator, door, hangar door, passage, ladder, air vent, oxygen tank and large
+turret in `out/cap-2026-08-25` was 500 kg of steel drawing no power and making no heat. The reader
+is fixed. The dataset is not, and `C3` was decided on it.
+
+**The re-take walks the core corpus, not the population, and that is a choice with a price.** The
+whole corpus in paired arms is about eleven hours; [`core.py`](../tools/corpus/core.py)'s
+stratified sample is **78 minutes** and estimates this walk's own work p99 to within **0.9 %**
+out of sample. What it cannot do is a maximum — it keeps one giant in twenty, and a maximum is one
+observation — so **the cost prediction's *max under 10 K* half is unscoreable on this dataset and
+is reported `?` rather than passed** (`E8`). The 2026-08-25 walk failed on exactly that half. So the
+re-take can confirm or overturn the *decision* and cannot re-score that failure, and saying which
+before the run is the point of writing this down.
+
+**What is predicted, and what would falsify it.** The reasoning is one fact measured twice: `A13`
+is worth **15.76 %** of the population's heat and **nothing whatever** to its cost. The re-taken
+stiffness walk moved only in `Census.Corpus`'s last place, and the re-taken air walk's substep
+demand — p99 34.779, p95 30.195, max 36.614 — is identical to this walk's control arm to three
+decimals. Heat is a sum over blocks and stiffness is a maximum over them, and the corrected blocks
+are heavy: a gravity generator is eight tonnes, so it makes megawatts and demands almost no
+substeps.
+
+| | prediction | falsified by |
+| --- | --- | --- |
+| the identity | unchanged: capped demand is `min(uncapped, 6)` on every pair | any pair differing by more than 1 % |
+| the benefit | weighted capped work p99 in **1.9–2.5 M**, straddling the 2,180,352 the broken reader measured | outside that band |
+| the cost | weighted Δpeak p99 stays in the **0.03–0.6 K judgement band**, so `C3`'s decision does not invert | a p99 at or under 0.03 K, or at or over 0.6 K |
+| the reach | still **3–10 %** of blocks in air | outside that band |
+
+**The benefit band is the sampling error, not a new physical claim.** Work is substep cost times
+demand; block identity moves neither the node count nor the link count nor the demand, and the air
+re-take put the movement at **−1.30 %**. The band is that figure plus `core.py`'s measured
+out-of-sample error on this very walk's control arm — work p99 −0.9 %, p95 −3.5 % — widened to a
+round 1.9–2.5 M. **A prediction that cannot be falsified by a sampling error is not a prediction
+about the population**, which is what makes the width honest rather than convenient.
+
+**The cost prediction is the one that decides something.** `C3` stays closed the way it closed if
+the p99 lands in the band; it reopens either way out. A p99 *under* 0.03 K would say the broken
+reader had inflated the cap's cost and the cap should ship — and it is the direction the physics
+argues against, because `A13` adds heat and heat is what a transient is made of. A p99 *over* 0.6 K
+would say the corrected blocks make hulls the cap re-masses visibly, and the switch becomes a
+refusal rather than a default deferred.
+
+**One more reading is registered here because it is nearly free.** This walk's control arm is the
+same four scenarios on the same build as [`out/air-2026-08-28`](../tools/corpus/summary-air-2026-08-28.csv),
+so on the ships they share the two must agree to the last bit — same solver, same definitions, same
+scenarios, and neither arm caps. Any disagreement is a defect in one of them and not a finding about
+the population (`E7`). [reproduce.py](../tools/corpus/reproduce.py) is the check.
+
+**What this walk does not answer, said before it runs**: the maximum, any rate below about half a
+per cent, and the per-ship table in the section below — *6,548 of 8,144 ships pay in full and
+collect nothing* is a count over the whole population, and a sample estimates its share and not its
+count. The judgement that closed `C3` rests on that share, so the re-take tests the share and
+leaves the count to the dataset that has one.
+
 ### And the trade is the wrong way round: the cost is per block, the benefit is per grid
 
 This is the finding, and it is not one the pre-registration anticipated.
