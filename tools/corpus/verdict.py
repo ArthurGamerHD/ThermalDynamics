@@ -209,35 +209,20 @@ record("dataset scenarios", len(set(r.get("scenario") for r in outcomes)))
 # collected one minute after a definition change, and nothing in its output said so.
 provenance = os.path.join(DATA, "provenance.txt")
 if os.path.exists(provenance):
-    seen = {}
     with open(provenance, encoding="utf-8") as handle:
         for line in handle:
             line = line.strip()
-            if not line:
-                continue
-
-            print(f"  {line}")
-
-            # A comment is context for a reader and not a statistic; recording it would put prose
-            # in the summary's value column.
-            if line.startswith("#"):
-                continue
-
-            name, _, value = line.partition(" ")
-            seen.setdefault(name, [])
-            if value not in seen[name]:
-                seen[name].append(value)
+            if line:
+                print(f"  {line}")
 
     # **A resumed walk appends a block per slice, so a key can appear several times — and recording
     # each in turn leaves the summary claiming the last.** That is the committed artefact every
     # quoted figure is checked against, so it has to carry the split rather than the last value:
     # the 2026-08-25 survey ran in six slices across two `Cubes.xml` and two `Loops.xml`, and this
-    # file would have said it was measured against one of each.
-    for name in seen:
-        record("provenance " + name, seen[name][-1])
-        if len(seen[name]) > 1:
-            record("provenance " + name + " versions", len(seen[name]))
-            record("provenance " + name + " all", " ".join(seen[name]))
+    # file would have said it was measured against one of each. The rows come from
+    # `provenance.summary_rows`, which `cap.py` writes the same ones from (`P5`).
+    for statistic, value, unit in provenance_lib.summary_rows(DATA):
+        record(statistic, value, unit)
 
     # **Which definition files this dataset spans is asked of `provenance.py` rather than worked
     # out again here.** The two readers of this format had already drifted once — that module read

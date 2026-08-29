@@ -372,8 +372,27 @@ def weighted_percentile(pairs, q):
 
 
 def percentiles(values):
-    """The five figures a population row prints, all from `percentile`."""
-    ordered = sorted(values)
+    """The five figures a population row prints, all from `percentile`.
+
+    This is `weighted_percentiles` with every weight at 1, for the same reason `percentile` is
+    `weighted_percentile` with every weight at 1 (`P5`): a full-corpus report and a core-corpus
+    report differing by their estimator rather than by their population is the confusion the whole
+    weighted path exists to avoid.
+    """
+    return weighted_percentiles([(value, 1.0) for value in values])
+
+
+def weighted_percentiles(pairs):
+    """The five figures a population row prints, over `(value, weight)` pairs.
+
+    **`min` and `max` are not estimates and are labelled as such by their absence from the error
+    table `core.py` prints.** A weighted sample's extremes are the extremes *of the sample*: the
+    core corpus keeps one giant in twenty, so its `max` is 76 % under the population's and no
+    weighting can repair that — a maximum is one observation and cannot be sampled. They are
+    returned because a reader of a full walk wants them; a reader of a sampled one is told by
+    `cap.py` that the row is the sample's own, not the population's.
+    """
+    ordered = sorted(value for value, weight in pairs if weight and weight > 0)
     if not ordered:
         return {}
 
@@ -384,11 +403,11 @@ def percentiles(values):
         # hand from a walk's output, which is the shape `F14` records going wrong once already —
         # a page saying twenty-four sealed blocks where the dataset said 1,184. A summary that
         # carries them is a summary a test can hold the constants against (`E5`).
-        "p10": percentile(ordered, 0.1),
-        "p50": percentile(ordered, 0.5),
-        "p90": percentile(ordered, 0.9),
-        "p95": percentile(ordered, 0.95),
-        "p99": percentile(ordered, 0.99),
+        "p10": weighted_percentile(pairs, 0.1),
+        "p50": weighted_percentile(pairs, 0.5),
+        "p90": weighted_percentile(pairs, 0.9),
+        "p95": weighted_percentile(pairs, 0.95),
+        "p99": weighted_percentile(pairs, 0.99),
         "max": ordered[-1],
     }
 
