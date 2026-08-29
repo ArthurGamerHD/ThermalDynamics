@@ -133,11 +133,54 @@ def elapsed(order, files):
     return None
 
 
-def walk_order(root=CORPUS):
+def selection(path):
+    """The selection a walk was narrowed to, as workshop ids, or None where it walked the corpus.
+
+    **A walk of a selection is not a walk of the corpus, and both estimators here silently assume
+    it is.** `walk_order` is the corpus largest-first, so the block-share estimate reads *file 950*
+    as the 950th-largest hull in the population; on a walk of the core corpus the 950th file is the
+    950th-largest ship **of the selection**, and the two are not the same ship. Measured on the
+    2026-08-28 core cap walk, the share it printed and the share it meant part company by up to
+    **fifteen points** — 67.4 % against 52.8 % at file 950, 52.5 % against 43.3 % at file 500 —
+    and they agree at the ends, which is what makes the error hard to see: nought is nought and
+    everything is everything, and the walk's own first mark is close enough to look right.
+
+    The walk records what it was narrowed to on its own first line — `walking N blueprints named by
+    <path>` — so this is read rather than guessed, and a selection file that has since been
+    overwritten or deleted returns None the same way no selection does. That is the honest state:
+    *this walk was narrowed and the narrowing is gone* leaves nothing to compute a share over
+    (`E8`, `P2`).
+    """
+    if not os.path.exists(path):
+        return None
+
+    named = None
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            if " blueprints named by " in line:
+                named = line.strip().split(" blueprints named by ", 1)[1]
+                break
+
+    if not named or not os.path.exists(named):
+        return None
+
+    ids = set()
+    with open(named, encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if line.startswith("#") or "/content/244850/" not in line:
+                continue
+            ids.add(line.split("/content/244850/")[1].split("/")[0])
+    return ids or None
+
+
+def walk_order(root=CORPUS, only=None):
     """The corpus in the order a walk reads it: every `bp.sbc`, largest file first.
 
     This is `CorpusFixture.Find`'s sort, repeated here rather than assumed, because the whole
-    point of the block-share estimate is that it depends on the ordering.
+    point of the block-share estimate is that it depends on the ordering. `only` narrows it to a
+    selection, which is the same sort over the same files and is what a narrowed walk actually
+    reads.
     """
     sized = []
 
@@ -145,6 +188,8 @@ def walk_order(root=CORPUS):
         return sized
 
     for entry in os.scandir(root):
+        if only is not None and os.path.basename(entry.path) not in only:
+            continue
         blueprint = os.path.join(entry.path, "bp.sbc")
         try:
             sized.append((os.path.getsize(blueprint), os.path.basename(entry.path)))
@@ -173,15 +218,20 @@ def block_counts(path):
     return counts
 
 
-def coverage(order, counts, root=CORPUS):
-    """Cumulative share of the population's blocks after each file of the walk order, 0..1.
+def coverage(order, counts, root=CORPUS, only=None):
+    """Cumulative share of the walked blocks after each file of the walk order, 0..1.
 
     Returns an empty list when the corpus is not on this machine, because the share of a
-    population cannot be guessed from a walk that has not finished it (`P2`).
+    population cannot be guessed from a walk that has not finished it (`P2`). `only` makes the
+    denominator the selection's blocks rather than the population's, which is what a narrowed walk
+    is a share of.
     """
-    sized = walk_order(root)
+    sized = walk_order(root, only)
     if not sized:
         return []
+
+    if only is not None:
+        counts = {workshop: blocks for workshop, blocks in counts.items() if workshop in only}
 
     total = float(sum(counts.values()))
     if total <= 0:
@@ -355,9 +405,16 @@ def main():
     print(f"{args.progress}: {len(subject)} marks, "
           f"{subject[-1][1]} files, {elapsed(subject, subject[-1][1]):.1f} min so far")
 
+    # **A narrowed walk reads a different corpus, and every figure below depends on which one.**
+    # The walk says so on its own first line, so it is read rather than guessed.
+    narrowed = selection(args.progress)
+    if narrowed:
+        print(f"  narrowed to a selection of {len(narrowed):,} blueprints, so every share below is "
+              f"of that selection")
+
     shares = []
     if args.outcomes:
-        shares = coverage(subject, block_counts(args.outcomes), args.corpus)
+        shares = coverage(subject, block_counts(args.outcomes), args.corpus, narrowed)
         if not shares:
             print("  no corpus on this machine, so the block-share estimate is not available")
 
@@ -381,6 +438,21 @@ def main():
 
     print(f"{args.reference}: finished, {reference[-1][1]} files in {total:.1f} min")
 
+    # **The per-file ratio compares file N with file N, and that is only a comparison when the two
+    # walks read the same file N.** A selection walk's 520th file is the 520th largest ship *of the
+    # selection*; a corpus walk's is the 520th largest in the population, which is very much bigger.
+    # Refused rather than printed, because the number it produces looks entirely reasonable — on
+    # the 2026-08-28 core cap walk it read **0.04x per file** and projected **0.2 hours** for a walk
+    # budgeted at 78 minutes, which is the ratio of a fighter to a capital hull and not a ratio
+    # between two walks (`P2`, `E8`).
+    reference_narrowed = selection(args.reference)
+    if bool(narrowed) != bool(reference_narrowed) or (
+            narrowed and reference_narrowed and narrowed != reference_narrowed):
+        print("  the two walks did not read the same blueprints in the same order — one is "
+              "narrowed to a selection and the other is not, or they are narrowed to different "
+              "ones — so file N of each is a different ship and there is no ratio to take")
+        return 0
+
     if dearer is None:
         print("  the two walks share fewer than two marks, so there is no ratio to take")
         return 0
@@ -388,7 +460,7 @@ def main():
     print(f"  the subject is {dearer:.2f}x per file over files {first}..{last}")
     print(f"  so it costs about {dearer * total / 60.0:.1f} h")
 
-    if shares:
+    if shares and not narrowed:
         rows = block_share_estimate(reference, shares)
         cut = elapsed(subject, subject[-1][1])
         early = [row for row in rows if row[0] <= cut]

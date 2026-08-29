@@ -11,10 +11,13 @@ The rules these pin are stated canonically in [rules.md](../../docs/rules.md): `
     python3 -m unittest discover -s tools/corpus -p 'test_*.py'
 """
 import datetime
+import io
 import os
+import shutil
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -224,6 +227,86 @@ class CoverageNeedsThePopulationItIsAShareOf(unittest.TestCase):
 
     def test_no_corpus_means_no_coverage_rather_than_an_assumed_one(self):
         self.assertEqual([], pace.coverage([], {"1": 100}, root="/nonexistent"))
+
+
+class ANarrowedWalkIsAShareOfWhatItWasNarrowedTo(unittest.TestCase):
+    """A selection walk reads a different corpus, and every share here depends on which one.
+
+    **The error is invisible at the ends and largest in the middle**, which is why it survived a
+    reading: nought is nought and everything is everything, so a walk's first mark looks right. On
+    the 2026-08-28 core cap walk the share printed and the share meant were 67.4 % against 52.8 %
+    at file 950. The walk names its own selection on its first line, so this is read rather than
+    guessed (`P2`, `E8`).
+    """
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.root)
+        # Four ships, largest first by file size, of which two are in the selection.
+        self.sizes = {"aaa": 4000, "bbb": 3000, "ccc": 2000, "ddd": 1000}
+        for workshop, size in self.sizes.items():
+            os.makedirs(os.path.join(self.root, workshop))
+            with open(os.path.join(self.root, workshop, "bp.sbc"), "w") as handle:
+                handle.write("x" * size)
+
+        self.chosen = os.path.join(self.root, "selection.txt")
+        with open(self.chosen, "w") as handle:
+            handle.write("# a comment is not a path\n")
+            for workshop in ("aaa", "ccc"):
+                handle.write("/content/244850/%s/bp.sbc\n" % workshop)
+
+        self.counts = {"aaa": 400, "bbb": 300, "ccc": 200, "ddd": 100}
+
+    def progress(self, header):
+        path = os.path.join(self.root, "progress.txt")
+        with open(path, "w") as handle:
+            handle.write(header)
+            handle.write("00:01:00 cap batch 10/4 ships 10 files 10\n")
+        return path
+
+    def test_the_selection_is_read_off_the_walks_own_first_line(self):
+        path = self.progress("00:00:00 walking 2 blueprints named by %s\n" % self.chosen)
+        self.assertEqual(pace.selection(path), {"aaa", "ccc"})
+
+    def test_a_walk_of_the_corpus_names_no_selection(self):
+        path = self.progress("00:00:00 walking the corpus\n")
+        self.assertIsNone(pace.selection(path))
+
+    def test_a_selection_file_that_is_gone_is_unknown_rather_than_assumed(self):
+        path = self.progress("00:00:00 walking 2 blueprints named by /nowhere/at/all.txt\n")
+        self.assertIsNone(pace.selection(path))
+
+    def test_the_denominator_is_the_selections_blocks_and_not_the_populations(self):
+        whole = pace.coverage([], self.counts, root=self.root)
+        narrowed = pace.coverage([], self.counts, root=self.root, only={"aaa", "ccc"})
+
+        # Whole: aaa is 400 of 1,000 blocks. Narrowed: aaa is 400 of 600, and the walk order holds
+        # two files rather than four, so the same file index means a different ship.
+        self.assertEqual(len(whole), 4)
+        self.assertEqual(len(narrowed), 2)
+        self.assertAlmostEqual(whole[0], 0.4)
+        self.assertAlmostEqual(narrowed[0], 400.0 / 600.0)
+
+    def test_a_selection_walk_and_a_corpus_walk_have_no_per_file_ratio(self):
+        """File N of each is a different ship, so the ratio is refused rather than printed."""
+        narrowed = self.progress("00:00:00 walking 2 blueprints named by %s\n" % self.chosen)
+        whole = os.path.join(self.root, "reference.txt")
+        with open(whole, "w") as handle:
+            handle.write("00:00:00 walking the corpus\n")
+            for mark in range(1, 5):
+                handle.write("00:%02d:00 air batch %d/4 ships %d files %d\n"
+                             % (mark, mark * 10, mark * 10, mark * 10))
+
+        out = io.StringIO()
+        with unittest.mock.patch.object(sys, "stdout", out), \
+                unittest.mock.patch.object(
+                    sys, "argv", ["pace.py", narrowed, "--reference", whole]):
+            pace.main()
+        report = out.getvalue()
+
+        self.assertIn("narrowed to a selection", report)
+        self.assertIn("there is no ratio to take", report)
+        self.assertNotIn("x per file", report)
 
 
 if __name__ == "__main__":
