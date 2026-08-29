@@ -177,6 +177,17 @@ if population is None:
     print("  population UNKNOWN — the corpus is not on this machine and --population was not given,"
           " so whether this dataset is whole cannot be established here")
     record("dataset population", "", "blueprints")
+elif scoring.is_core_walk(set(r.get("workshop_id") for r in outcomes)):
+    # **A core walk is not a partial one and must not be read as either** (`P1`). It is a
+    # stratified sample: every ship under 2,000 blocks and one in twenty of the giants, and a
+    # giant in it stands for twenty. Counted once each, as everything below would count them, its
+    # figures describe a population that is mostly small ships -- which is not the corpus and is
+    # not anything. So this stops rather than printing figures shaped like population figures.
+    print(f"  *** CORE CORPUS: {walked:,} ships drawn by tools/corpus/core.py ***")
+    print("      This is a weighted sample, and verdict.py has no weights. Read it with")
+    print("          python3 tools/corpus/core.py --score " + DATA)
+    print("      which is the one implementation that applies them (`P5`).")
+    raise SystemExit(0)
 elif share is not None and share < scoring.WHOLE_ENOUGH:
     print(f"  *** PARTIAL: {walked:,} of {population:,} blueprints, {share * 100:.1f} % ***")
     print("      The corpus is walked largest-first, so this is the wrong end of a population"

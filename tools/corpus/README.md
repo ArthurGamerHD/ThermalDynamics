@@ -30,6 +30,72 @@ python3 tools/corpus/panel.py out/census-2026-08-25/census.csv \
                              out/census-2026-08-21 out/knobs-2026-08-21   # every dataset, one page
 ```
 
+## The core corpus — a walk of the population in an hour instead of eleven
+
+`core.py` draws a **stratified sample with weights**, committed as
+[`core-corpus.csv`](core-corpus.csv), which walks in about **36 minutes in air and 78 in the cap
+walk's paired arms** against 5.1 and 11.1 hours for the whole corpus. The downloaded blueprints all
+stay where they are; the core corpus is a *selection over* them, so nothing is lost and a full walk
+is still one environment variable away.
+
+```
+python3 tools/corpus/core.py out/air-2026-08-28 --out out/core-selection.txt   # build the list
+THERMAL_CORPUS_ONLY=$PWD/out/core-selection.txt ...                            # walk it
+python3 tools/corpus/core.py --score out/<core-dataset>                        # read it
+```
+
+**The cost is not spread the way anyone guesses, and that is the whole design.** Measured on
+`out/air-2026-08-28`:
+
+| blocks | ships | share of the walk's cost | runs over the allowance |
+| --- | ---: | ---: | ---: |
+| under 10,000 | 7,199 (88.5 %) | **20.8 %** | **0** |
+| 10,000 and over | 925 (11.5 %) | **79.2 %** | **712, all of them** |
+
+**So the obvious cut is the wrong one, and it is wrong by a measured 82 %.** Dropping every ship
+over 10,000 blocks gives a 63-minute walk in which `G6`'s cost half reads *zero runs over the
+allowance* and its p99 lands **82 % below** the population's. A size-truncated corpus is not a
+cheaper corpus, it is a corpus with the finding deleted — which is the same lesson as *never quote a
+partial corpus result*, arrived at from the other end.
+
+**What works is keeping the cheap strata whole and sampling the giants hard.** Every ship under
+2,000 blocks is 63.9 % of the corpus and 4.5 % of the walk, so it is kept entire; above that the
+sample is one in ten, one in eight and one in twenty, systematic within narrow bands rather than
+random, and each kept ship carries the number of ships it stands for. Twenty runs in the whole
+population go critical in air and they come from **eight ships** costing 2.3 % between them, so
+those eight are a take-all stratum — at any fraction that makes the giants affordable, `G1` reads
+zero, not because the population moved but because the event is rarer than the sample.
+
+**How good it is, measured rather than claimed.** Drawn from the air walk and scored against two
+walks it was *not* drawn from — the cap walk's uncapped arm, on a different build, and the survey's
+five vacuum scenarios:
+
+| statistic | in sample | cap walk | survey |
+| --- | ---: | ---: | ---: |
+| work p50 | +0.9 % | +0.9 % | −0.0 % |
+| work p95 | −1.8 % | −3.5 % | −0.7 % |
+| work p99 | **+0.3 %** | **−0.9 %** | **−4.5 %** |
+| demand p99 | 0.0 % | 0.0 % | −0.3 % |
+| over the allowance | −5.8 % | −3.0 % | −23.7 % |
+| critical rate | +0.2 % | −19.8 % | −1.5 % |
+
+**The pattern is the same in all three columns and it is the one sampling predicts: what is common
+is estimated well and what is rare is not.** The survey's over-allowance rate is 0.68 % of runs and
+reads 24 % low; the air walk's is 2.19 % and reads 5.8 % low. So the core corpus answers `G6`'s
+percentiles, the demand half and the medians, and it does **not** answer a maximum — `work max` is
+76 % low, because a maximum is one ship and cannot be sampled — nor any rate below about half a
+per cent.
+
+**Read a core walk with `core.py --score` and nothing else.** `verdict.py` has no weights, and a
+core dataset read without them describes a population that is mostly small ships, which is not the
+corpus and is not anything; it recognises such a dataset and stops rather than printing figures
+shaped like population figures.
+
+**When to walk the whole corpus anyway.** When the finding is a maximum, a rare rate, or a tail
+that has to be exact rather than estimated — and when a population figure is going to be published
+as one. The core corpus is for the other ninety per cent of runs, where the question is *did this
+change move anything* and the answer arrives in half an hour instead of overnight.
+
 ## Ask what the smallest run that answers the question is, before launching one
 
 **A full sweep is meant to be rare.** It is hours of the machine, it blocks every other walk while it
@@ -102,12 +168,14 @@ are oxygen generators, gravity generators, doors and turrets now, and this walk 
 figure below is a ratio between two walks *of one build*, and re-using it across a build that
 changed what the corpus contains would understate the cost.
 
-**Twice is a ceiling, and it is the estimate to use.** The cap walk is the air walk's four
-scenarios with a second arm on each, and the two arms share one blueprint parse, so the second arm
-can only ever add what it simulates. Measured over the fifty files the two walks' progress records
-share, the cap walk is **1.95x** the air walk per file, and the air walk finished in 104 minutes —
-so the cap walk is **about three and a half hours**, with 2x as a bound nothing about the machine
-can move.
+**Twice was offered as a ceiling and the finished walks breach it.** The reasoning still holds —
+the cap walk is the air walk's four scenarios with a second arm on each, the two arms share one
+blueprint parse, so the second arm can only add what it simulates. The number did not: 1.95x was
+measured over the **fifty files** the two walks' progress records share, and over the whole corpus
+the same two walks are **228.8 minutes against 104.5**, which is **2.19x** (`E10`). A fifty-file
+sample of a corpus walked largest-first is fifty capital hulls, and the second arm costs relatively
+more on the small ships that make up the rest. So the cap walk is **2.19x the air walk**, and on
+the re-taken air walk's 303.6 minutes that is about **eleven hours**, not three and a half.
 
 **Do not estimate a walk from the rate it is covering blocks at.** That is what abandoned the first
 cap walk, and it is not an instrument: the corpus is walked largest first, so blocks-per-minute
@@ -536,6 +604,8 @@ limit in [known-issues.md](../../docs/known-issues.md).
 | 2026-08-25 | Renamed `air.py`'s ratio column from *vs shipped* to *vs baseline*, and made it print which cell ships. The column compares every cell with the sweep's own control, conductivity x1 at a clock of 225 — which stopped being the shipped configuration when `C24` shipped x4 at 90, a row of the same table. The arithmetic was never wrong; the word was. |
 | 2026-08-25 | Fixed `verdict.py` reading a paired walk's second arm as duplicate rows. It keyed a row by ship and scenario, so `CorpusCapWalk`'s capped arm looked like the same run written twice: half the dataset was dropped, under a note blaming a resume that had not happened, and the arm it kept was the right one by accident. The arm is part of a row's identity now, and a paired dataset is scored on the one that ships with both named on the first line (`M1`, `P6`). |
 | 2026-08-25 | Added [`reproduce.py`](reproduce.py): whether two walks that overlap wrote the same numbers on the ships they share. Its first use was the cap walk's restart, whose 552 shared rows matched the abandoned partial exactly on all 22 compared columns. |
+| 2026-08-28 | Added [`core.py`](core.py) and the committed [`core-corpus.csv`](core-corpus.csv): a stratified, weighted sample that walks in 36 minutes where the corpus takes 5.1 hours. The measurement that shaped it is that the 11.5 % of ships over 10,000 blocks carry **79 % of the cost and all 712 of the over-allowance runs**, so the obvious cut deletes the finding — a size-truncated corpus reads `G6`'s work p99 **82 % low** and its over-allowance count as zero. Scored out of sample against two walks it was not drawn from, work p99 lands within 0.9 % and 4.5 %. |
+| 2026-08-28 | **Corrected the cap-to-air ratio, which the finished walks refute** (`E10`). 1.95x was measured over the fifty files two walks' progress records share; over the whole corpus the same two walks are 228.8 minutes against 104.5, so **2.19x**, and the cap walk on the re-taken air walk is about eleven hours rather than three and a half. A fifty-file sample of a largest-first walk is fifty capital hulls. |
 | 2026-08-25 | Added the one way a sweep costs a session rather than a run: a walk in progress fails the suite's wall-clock tests, because they are measuring a machine the walk is using every core of. Measured — the suite was green before the cap walk and `SolverCostPerLinkStaysProportional` was 3.14× its limit during it. |
 | 2026-08-25 | Added [`pace.py`](pace.py): what a running walk will cost, and the check that says whether the estimate means anything. The block-share rate that abandoned the first cap walk is reported as the spread it has and then run over the finished air walk, where the answer is known. |
 | 2026-08-25 | Added the *Looking for* table. A reader arriving here often wants the criteria these scripts score rather than the scripts. |
