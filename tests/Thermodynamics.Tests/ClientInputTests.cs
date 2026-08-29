@@ -364,6 +364,171 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **Weather is the largest input a client cannot predict, and it is a bias.**
+        ///
+        /// <para>
+        /// The three inputs the sweep did not cover were position, weather and the wind fields
+        /// (`F19`). Weather is the one with no prediction behind it at all: velocity and position
+        /// a client extrapolates, but what the sky is doing is server-driven world state, so a
+        /// client that has not been told is wrong until it is. Snow is the table's heaviest entry —
+        /// −18 K on the target, a tenth of the sunlight, 2.2× the convection — so this is the
+        /// sweep's upper bound on what one un-replicated input is worth.
+        /// </para>
+        ///
+        /// <para>
+        /// It settles rather than decaying, which is the finding: the server's hull is in weather
+        /// and the client's is not, so the two run to different equilibria and stay there.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void MissingTheWeatherIsABiasAndTheLargestOne()
+        {
+            // On a planet, because `sunlit` and `shadow` are space and there is no weather to
+            // be wrong about there — which is what `Scenarios` says and the report marks.
+            ClientInputLab.Result weather = OnAPlanet(new ClientInputLab.Degradation
+            {
+                Name = "wrong weather",
+                MissesWeather = true,
+            });
+
+            ClientInputLab.Result air = OnAPlanet(new ClientInputLab.Degradation
+            {
+                Name = "thinner air",
+                AirDensityError = 0.2f,
+            });
+
+            output.WriteLine("weather: peak {0:n1} K, standing {1:n1} K. air: standing {2:n1} K",
+                weather.PeakKelvin, weather.StandingKelvin, air.StandingKelvin);
+
+            Assert.True(weather.StandingKelvin > 5f,
+                "missing the weather showed " + weather.StandingKelvin
+                + " K, so the knob reached nothing");
+
+            // **A bias, and the comparison is against a perturbation rather than against its own
+            // peak.** `thrust error` can be judged on peak-against-standing because the hull's
+            // load is what it is; here the load script alternates every two minutes, so the peak
+            // is a transient of the *load* and the ratio says nothing about whether the
+            // degradation decays. What does say it is a one-off wrong state on the same hull:
+            // `stale join` is given the server's state from sixty seconds ago and decays to
+            // nothing, which is what the standing column was added to tell apart.
+            ClientInputLab.Result perturbation = OnAPlanet(new ClientInputLab.Degradation
+            {
+                Name = "stale join",
+                StaleSeconds = 60f,
+            });
+
+            output.WriteLine("stale join, the perturbation: peak {0:n1} K, standing {1:n2} K",
+                perturbation.PeakKelvin, perturbation.StandingKelvin);
+
+            Assert.True(weather.StandingKelvin > perturbation.StandingKelvin * 20f,
+                "missing the weather settled at " + weather.StandingKelvin + " K against a stale"
+                + " join's " + perturbation.StandingKelvin + " K, so it is not clearly a bias");
+
+            // And larger than the environment input the sweep already had, which is the claim that
+            // makes it worth adding rather than a row that repeats one.
+            Assert.True(weather.StandingKelvin > air.StandingKelvin,
+                "missing the weather (" + weather.StandingKelvin + " K) is no worse than a 20 %"
+                + " air density error (" + air.StandingKelvin + " K), so it says nothing new");
+        }
+
+        /// <summary>
+        /// **A stale position costs nothing on a ship holding station, and a lapse rate on one
+        /// coming down.**
+        ///
+        /// <para>
+        /// This is why `F19` could not measure position: on every scenario the sweep had, the ship
+        /// stays where it is, and a client a few seconds behind about *where* is not behind about
+        /// *what the air is doing*. The `descent` scenario is a ship losing altitude for the length
+        /// of the run, so a client's stale position is a stale ambient — `ClimateModel.Lapse`,
+        /// four kelvin a kilometre on the default planet.
+        /// </para>
+        ///
+        /// <para>
+        /// Both halves are asserted, because only the pair is the finding: on the level scenario
+        /// it must read *exactly* zero, or the knob is reaching something it should not.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void APositionLagCostsNothingLevelAndALapseRateOnADescent()
+        {
+            ClientInputLab.Degradation how = new ClientInputLab.Degradation
+            {
+                Name = "position lag",
+                PositionLagSeconds = 5f,
+            };
+
+            ClientInputLab.Result descending = Descending(how);
+            ClientInputLab.Result level = Run(how);
+
+            output.WriteLine("descending: peak {0:n2} K, standing {1:n2} K. level: peak {2:n2} K",
+                descending.PeakKelvin, descending.StandingKelvin, level.PeakKelvin);
+
+            Assert.Equal(0f, level.PeakKelvin, 3);
+
+            // **The peak, not the standing error, because position lag turns out to be a
+            // perturbation.** A five-second lag on a controlled descent is fifty metres, which is
+            // a fifth of a kelvin of ambient at the default planet's four kelvin a kilometre; the
+            // hull follows it and the disagreement decays, reading 0.00 standing on the 2,000-block
+            // sweep. So the finding is that this input is covered and does not matter, and
+            // asserting a magnitude would be asserting the scenario's descent rate rather than
+            // anything about the mod.
+            Assert.True(descending.PeakKelvin > 0f,
+                "a descending hull showed exactly " + descending.PeakKelvin
+                + " K at its worst, so the knob reached nothing");
+
+            Assert.True(descending.StandingKelvin < 1f,
+                "position lag settled at " + descending.StandingKelvin + " K, which would make it a"
+                + " bias — the sweep and this test both read it as a perturbation");
+        }
+
+        /// <summary>
+        /// The same run on a ship coming down. `descent` is the only scenario where altitude
+        /// changes, so it is the only one a position error can be seen on.
+        /// </summary>
+        private static ClientInputLab.Result Descending(ClientInputLab.Degradation how,
+            float seconds = Seconds)
+        {
+            return ClientInputLab.Measure(how, ClientDriftLab.Correction.None, "descent", seconds, Blocks);
+        }
+
+        /// <summary>On the ground under an atmosphere, which is where weather exists at all.</summary>
+        private static ClientInputLab.Result OnAPlanet(ClientInputLab.Degradation how,
+            float seconds = Seconds)
+        {
+            return ClientInputLab.Measure(how, ClientDriftLab.Correction.None, "planet", seconds, Blocks);
+        }
+
+        /// <summary>
+        /// **A case that names a scenario says so rather than reporting a zero**, which is the same
+        /// `E8` the "nothing hot" columns are about one level down: a degradation that could not
+        /// act reads exactly like one that does not matter.
+        /// </summary>
+        [Fact]
+        public void ACaseThatCannotActOnThisScenarioIsSaidRatherThanScored()
+        {
+            ClientInputLab.Degradation how = new ClientInputLab.Degradation
+            {
+                Name = "position lag",
+                Scenarios = new[] { "descent" },
+                PositionLagSeconds = 5f,
+            };
+
+            ClientInputLab.Result wrong = Run(how);          // on "sunlit"
+            ClientInputLab.Result right = Descending(how);
+
+            Assert.True(wrong.NotExercised,
+                "a case naming descent was run on sunlit and did not say so");
+            Assert.False(right.NotExercised);
+
+            string report = ClientInputLab.Report(new List<ClientInputLab.Result> { wrong, right });
+            Assert.Contains("not exercised on sunlit", report);
+            Assert.Contains("needs descent", report);
+
+            // The row that *was* exercised still carries its figures.
+            Assert.Contains(right.StandingKelvin.ToString("n2"), report);
+        }
+
+        /// <summary>
         /// The same run, on a hull that is flying rather than sitting.
         ///
         /// **The duration is a parameter because a bias needs time to become one.** A standing

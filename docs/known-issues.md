@@ -440,8 +440,8 @@ each — and the shape is what decides the protocol.
 
 The simulation reads its state from three places: an `EnvironmentSample` the client builds itself
 from the world around it, block state the adapter reads off the game's own blocks, and the room map
-it floods locally. Enumerated against the code rather than remembered, **the sweep covers eighteen
-inputs and leaves three**:
+it floods locally. Enumerated against the code rather than remembered, **the sweep covers twenty
+inputs and leaves one**:
 
 | input | read from | covered | |
 | --- | --- | --- | --- |
@@ -457,8 +457,8 @@ inputs and leaves three**:
 | solar occlusion | raycast against voxels and grids | yes | `wrong shadow` — a *binary* flag over the whole solar input, resolved against world state a client holds differently |
 | block mass and integrity | `SweepMass`, a rota | yes | `mass error` — swept every 8 steps and capped at 4,096 blocks, so a large grid's masses lag by design on *both* machines and the two rotas are not in step |
 | block enabled and functional state | the game's block | yes | `blocks off` — a block turned off on one machine and not the other, which is a binary *per block* rather than per hull |
-| **altitude, depth, latitude** | grid position | **no** | position lag on a *moving* ship, which is not the same as a lag on a stationary one |
-| **weather and its intensity** | the game's weather | **no** | server-driven world state |
+| altitude, depth, latitude | grid position | yes | `position lag`, on the `descent` scenario — position is *predicted* on a client like velocity, and on a ship holding station a stale position is the right position, which is why this needed a scenario that comes down |
+| weather and its intensity | the game's weather | yes | `wrong weather` — server-driven world state with no prediction behind it, and **the largest single-input divergence the sweep can express** |
 | **the ten wind fields** | terrain and the wind solver | **no** | shelter, burial and channelling are all voxel-derived |
 | **room air pressure** | the game's gas system | yes | `room pressure` — `C9` says the mod reads the game's answer, so this is the input the mod least owns, and it is *binary*: worth almost nothing until it reaches zero |
 | **the room map itself** | a local flood fill | yes | `room map lag` — publishes atomically, so a client mid-pass holds no interior at all; `D2` measures the pass at 7,207 ticks on a million blocks |
@@ -467,10 +467,29 @@ inputs and leaves three**:
 | **registered heat sources** | the mod API | yes | `missing source` — a registry another mod writes into, with no replication behind it, so a client can be beside a furnace it does not know exists |
 | **simulation speed** | the host's own tick rate | yes | `slow clock` — the mod counts simulated time in *simulation ticks*, so a machine running fewer of them has a thermal clock that runs slow; `hitching` is the same deficit in lumps |
 
-The three rows still open are the environment ones, tracked as [backlog.md](backlog.md) `F19`: a
-ship's position, the weather, and the ten wind fields. None of them changes the protocol — the
-correction overwrites state and so does not care which input produced the disagreement — and each of
-them changes how much correcting there is to do.
+**Two of the three closed on 2026-08-28, and they answer opposite ways.**
+
+*Position is covered and does not matter.* It needed a scenario that changes altitude before it
+could be measured at all — on every scenario the sweep had, a client a few seconds behind about
+*where* is not behind about *what the air is doing* — so `descent` brings a ship down for the length
+of the run and a five-second lag is fifty metres, a fifth of a kelvin of ambient at four kelvin a
+kilometre. The hull follows it: **0.8 K at worst and 0.00 K standing**, a perturbation that decays.
+
+*Weather is covered and is the worst thing in the table.* A client that has not been told what the
+sky is doing cannot work it out — unlike velocity and position, there is nothing to predict from —
+and snow is −18 K on the target, a tenth of the sunlight and 2.2× the convection. Measured at
+**168.8 K at worst and 87.1 K standing** on the 2,000-block descent, against a stale join's 0.00:
+it is a bias, it is an order of magnitude past every other environment input, and no amount of
+patience fixes it.
+
+*(Both figures are from a run where nothing on the server went past critical, so the readout columns
+judged nothing and the table says so. The kelvin columns are what stand.)*
+
+The row still open is the ten wind fields, tracked as [backlog.md](backlog.md) `F19`: shelter,
+burial and channelling are all voxel-derived, so a client computes them from terrain it holds rather
+than reading them from anywhere. It does not change the protocol — the correction overwrites state
+and so does not care which input produced the disagreement — it changes how much correcting there is
+to do.
 
 **A speed error reaches the cubic term, not the saturating one.** A client's velocity is predicted
 rather than replicated, and it feeds two terms of very different shape: forced convection saturates,
@@ -1065,6 +1084,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **The input sweep covers twenty of twenty-one inputs; it covered eighteen of twenty-one.** Position needed a scenario that changes altitude before it could be measured at all, and on the new `descent` it is **0.8 K at worst and 0.00 K standing** — covered, and it does not matter. Weather needed nothing but asking, and it is **168.8 K at worst and 87.1 K standing**, the largest single-input divergence the sweep can express and a bias rather than a perturbation. Both were inert on the first attempt because `EnvironmentSample` is a **struct** and the helpers were mutating copies, which is why the sweep now marks a case its scenario cannot express rather than printing the zero that looked identical. |
 | 2026-08-25 | **The block-population limit above is a limit and no longer a leak.** It says heat leaves with a block that leaves; it did not say that breaking a coolant ring destroyed two thirds of the *surviving* pipes' heat as well ([backlog.md](backlog.md) `A12`), which is not a population change at all — the same blocks were still there. Fixed in [thermal-model.md](thermal-model.md#coolant-loops): a pipe now holds the parcel it absorbed, capacity and all. `HeatLaunderingTests` measures what a broken ring costs now — one parcel out of `N`, nothing for a split — instead of pinning the old fraction. |
 | 2026-08-25 | Wrote down the limit that had never been written down anywhere ([backlog.md](backlog.md) `F26`): heat leaves the world with a block that leaves it and arrives at ambient with one that is built. Energy conservation is an invariant about a step and says nothing across a change in the population. Pinned by a test, so it is not rediscovered as a bug. |
 | 2026-08-25 | Refreshed the per-face shadow figures, which had been quoted from a page rather than from the lab and had gone stale when `C24` moved the clock: 0.0018 K a metre against a cadence of about half a kelvin, where this page said 0.0045 against 1.47. The table they come from is now pinned to `OcclusionLadderTests`. |
