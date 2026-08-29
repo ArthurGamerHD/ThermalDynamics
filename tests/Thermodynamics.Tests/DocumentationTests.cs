@@ -274,8 +274,8 @@ namespace Thermodynamics.Tests
         ///
         /// The generalisation of <see cref="EveryQuotedSuiteSizeIsCurrent"/>, and the rule is `E5`:
         /// no count is written into prose by hand when the data behind it can be read. The balance
-        /// bench said 36 panel ships for as long as the panel had 50, because the header had been
-        /// typed rather than generated — and a reader who catches one wrong count stops believing
+        /// bench said 36 panel ships for as long as the panel had 50 — it is 52 now — because the
+        /// header had been typed rather than generated — and a reader who catches one wrong count stops believing
         /// the right ones. The pass that added this found two more of the same shape, a count of the
         /// authored values and a count of the suite's own classes, both stated at roughly two
         /// thirds of the truth.
@@ -392,13 +392,15 @@ namespace Thermodynamics.Tests
         /// <para>
         /// **A sentence that also states the true figure is left alone.** Two pages describe the
         /// original defect — "the balance bench stated 36 panel ships for as long as the panel had
-        /// 50" — and a page that names the right number beside the wrong one is not making the
-        /// claim, it is recording it.
+        /// 50, and 52 now" — and a page that names the right number beside the wrong one is not
+        /// making the claim, it is recording it. **The exemption expires when the count moves**, which is the
+        /// half worth having: `C32` re-picked the panel at 52 and both sentences had to be brought
+        /// up to date to keep it, rather than being excused by a number that had itself gone stale.
         /// </para>
         ///
         /// <para>
         /// **It reads source comments as well as pages, and it did not until 2026-08-25.** The
-        /// panel grew from 36 ships to 50, every page was corrected, and `KnobSweep`'s own summary
+        /// panel grew from 36 ships to 50 and later to 52, every page was corrected, and `KnobSweep`'s own summary
         /// went on saying 36 for a day — in the file a reader opens to find out what the sweep
         /// does. A comment is documentation with no reader watching it, which makes it the more
         /// likely of the two to drift, not the less.
