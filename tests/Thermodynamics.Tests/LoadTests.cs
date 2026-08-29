@@ -555,6 +555,61 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **Ticks for the room map to converge is the bounding box over the tick budget**, which is
+        /// what makes it a structural figure rather than a timing one.
+        ///
+        /// <para>
+        /// This exists because a headline went stale for nine days and four pages quoted it. `D2`
+        /// led with *7,207 ticks, twenty minutes, at a million blocks*; three performance passes
+        /// then made each cell about three times cheaper, the row's own body recorded each of them,
+        /// and the headline did not move — because none of that work could move it. The mapper is
+        /// budgeted per tick, so convergence is cells divided by the budget, and milliseconds a
+        /// cell are not in that quotient. Re-measured on 2026-08-28 the figure is **3,934 ticks on
+        /// 1,000,294 blocks**, about eleven minutes.
+        /// </para>
+        ///
+        /// <para>
+        /// So the floor below is the half that matters: no amount of making a cell cheaper can beat
+        /// the budget, and a change that appears to needs explaining rather than believing. The
+        /// ceiling is loose on purpose — the scan and the phase changes cost something above the
+        /// pure quotient, about 1.13x on a large grid and more on a small one where the budget
+        /// floor of 64 binds.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void RoomMapConvergenceIsTheBoxDividedByItsBudget()
+        {
+            ThermalSimulation simulation = Build(Large);
+
+            Vector3I extents = (simulation.Grid.Max - simulation.Grid.Min) + Vector3I.One;
+            int volume = Math.Max(1, extents.X * extents.Y * extents.Z);
+            int budget = SimulationScheduler.RoomMappingBudget(volume);
+
+            simulation.MarkTopologyDirty();
+
+            int ticks = 0;
+            do
+            {
+                simulation.Update(LoadBenchmarks.TickSeconds, Space());
+                ticks++;
+            }
+            while (simulation.HasPendingWork && ticks < 100000);
+
+            double quotient = volume / (double)budget;
+            output.WriteLine("bounding volume " + volume.ToString("n0") + " over budget " + budget
+                + " is " + quotient.ToString("n0") + " ticks; converged in " + ticks
+                + " (" + (ticks / quotient).ToString("n2") + "x the quotient).");
+
+            Assert.True(ticks >= quotient * 0.95,
+                "converged in " + ticks + " ticks against a budget that allows no fewer than "
+                + quotient.ToString("n0") + " — either the budget is not being respected or the box"
+                + " is not being walked");
+            Assert.True(ticks <= quotient * 3.0,
+                "converged in " + ticks + " ticks against a quotient of " + quotient.ToString("n0")
+                + ", so the walk is costing far more than the cells it has to visit");
+        }
+
+        /// <summary>
         /// The exposure refresh must respect a budget too, however large the grid.
         ///
         /// It used to run whole on the tick a room pass published, which put it on the same tick

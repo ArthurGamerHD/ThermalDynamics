@@ -225,7 +225,7 @@ the room map**, against 392 ms for the links and 345 ms for exposure. The flood 
 cell of a bounding volume fourteen times the block count, asks two questions per face — is this
 face sealed on either side, is that cell solid — and each was answered from `SurfaceMap`'s
 dictionaries: two hash probes per face, twelve per cell, eighty million probes a pass. It is also
-what [backlog.md](backlog.md) `D2` measures at 7,207 ticks to converge at a million blocks, and
+what [backlog.md](backlog.md) `D2` measures at 3,934 ticks to converge at a million blocks, and
 what a world load waits on.
 
 **What changed.** When a pass begins, the mapper copies the structural self-airtight bits of every
@@ -2992,6 +2992,7 @@ settle, says which session it came from, and can be told to give every stage a p
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **Corrected the room map's convergence figure, which had been stale for nine days and was quoted here from `D2`** (`E10`, `E5`). It read 7,207 ticks — twenty minutes — on a million blocks; re-measured by `bench scale --max 1000000` it is **3,934 ticks, about eleven minutes**, on 1,000,294 blocks and a 14,278,796-cell box. The 7,207 predated the 2026-08-26 word skip and the 2026-08-27 span flood, both of which `D2`'s own body already recorded — the headline outlived the paragraph that superseded it. **And the figure is structural**: convergence is the box over a 4,096-cell tick budget, so no work on milliseconds a cell can move it, which `RoomMapConvergenceIsTheBoxDividedByItsBudget` now pins. |
 | 2026-08-28 | **Pass 9 measured against its own start, and the control was the finding.** `place` −12.1 % and exposure −4.9 % on the minimum, both with ranges that do not overlap — and `place` reproduces iteration 9's −12.2 % on a different day with a different stage list, which is the pass's clearest evidence that a within-window ratio travels where an absolute figure does not. The `rooms` control moved 4.5 % on a stage nothing touched; **run on its own the two binaries agree to 0.3 %**. Settling between stages reclaims the garbage and leaves the heap, so a stage carries its predecessors' allocation — which is also the mechanism behind iteration 6's unexplained 13.9 %. `bench stages --isolate` gives every stage its own process. |
 | 2026-08-27 | **One-cell blocks share their surface arrays per model and orientation**, because the bits do not depend on where the block is. `place` falls **15.6 % on its median and 12.2 % on its minimum** with neither leg's range overlapping, and allocates 11 % less. The first version took the rotation as a delegate and allocated *more* than it saved — 40,005 KB against 36,044 — which the stage lab's allocation column caught and no timing in that window did. |
 | 2026-08-27 | **The ladder's `build` column and the `calibration` row were single samples**, under a page that says every case is timed three times and the fastest kept. One is what a load-path change is judged by and the other is the divisor two machines are compared through. Repeated now: the between-run spread at 500,000 blocks falls from **19.0 % to 3.4 %** and at a million from 6.8 % to 1.1 %, and the figure falls a few per cent at every rung. `EveryTimedCaseInTheReportIsRepeated` fails on any stopwatch in the report with no repeat loop around it, because a third would arrive the same way. |

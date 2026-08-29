@@ -475,7 +475,7 @@ inputs and leaves one**:
 | weather and its intensity | the game's weather | yes | `wrong weather` — server-driven world state with no prediction behind it, and **the largest single-input divergence the sweep can express** |
 | **the ten wind fields** | terrain and the wind solver | **no** | shelter, burial and channelling are all voxel-derived |
 | **room air pressure** | the game's gas system | yes | `room pressure` — `C9` says the mod reads the game's answer, so this is the input the mod least owns, and it is *binary*: worth almost nothing until it reaches zero |
-| **the room map itself** | a local flood fill | yes | `room map lag` — publishes atomically, so a client mid-pass holds no interior at all; `D2` measures the pass at 7,207 ticks on a million blocks |
+| **the room map itself** | a local flood fill | yes | `room map lag` — publishes atomically, so a client mid-pass holds no interior at all; `D2` measures the pass at 3,934 ticks — about eleven minutes — on a million blocks |
 | **topology and subgrid attach** | block add and remove | yes | `build order`, `blocks missing` — placement order changes the index space and nothing else, and a missing block changes the conduction graph rather than a value in it |
 | **coolant loop identity** | loop signatures over topology | yes | `CoolantLoopTests` — the signature is an order-independent hash of the ring, so build order cannot move it and one pipe more is a different loop |
 | **registered heat sources** | the mod API | yes | `missing source` — a registry another mod writes into, with no replication behind it, so a client can be beside a furnace it does not know exists |
@@ -586,7 +586,7 @@ settles at **0.01 K**. It is a perturbation, and the shape is the opposite of `b
 loudest thing here is the one the correction has least reason to chase.
 
 **The bound is the other way round, and it out-settles every other input.** A client whose pass
-never lands — `D2` measures the flood fill at 7,207 ticks on a million blocks, and a grid that
+never lands — `D2` measures the flood fill at 3,934 ticks, about eleven minutes, on a million blocks, and a grid that
 restarts faster than it finishes publishes nothing — is a bias, and at 290.95 K standing on the
 sweep hull it is worse than the wrong switch's 245.87 K. Its two halves decompose: losing the air is
 110.3 K of it and believing in a quarter more skin is the remaining 180.7 K, so **the skin is the
@@ -1098,6 +1098,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **Corrected the room map's convergence figure, which had been stale for nine days and was quoted here from `D2`** (`E10`, `E5`). It read 7,207 ticks — twenty minutes — on a million blocks; re-measured by `bench scale --max 1000000` it is **3,934 ticks, about eleven minutes**, on 1,000,294 blocks and a 14,278,796-cell box. The 7,207 predated the 2026-08-26 word skip and the 2026-08-27 span flood, both of which `D2`'s own body already recorded — the headline outlived the paragraph that superseded it. **And the figure is structural**: convergence is the box over a 4,096-cell tick budget, so no work on milliseconds a cell can move it, which `RoomMapConvergenceIsTheBoxDividedByItsBudget` now pins. |
 | 2026-08-28 | **The input sweep covers twenty of twenty-one inputs; it covered eighteen of twenty-one.** Position needed a scenario that changes altitude before it could be measured at all, and on the new `descent` it is **0.8 K at worst and 0.00 K standing** — covered, and it does not matter. Weather needed nothing but asking, and it is **168.8 K at worst and 87.1 K standing**, the largest single-input divergence the sweep can express and a bias rather than a perturbation. Both were inert on the first attempt because `EnvironmentSample` is a **struct** and the helpers were mutating copies, which is why the sweep now marks a case its scenario cannot express rather than printing the zero that looked identical. |
 | 2026-08-28 | Priced the inline-radiator limit against `C40` instead of leaving it as plumbing waiting to be done. Running coolant through a radiator is internal transport, and the ceiling on every internal path is **9.13 % of the peak** — the hull already carries 1,457 W/K against the loop's 40. Stated as a bound rather than a measurement, because nobody has run this one. |
 | 2026-08-25 | **The block-population limit above is a limit and no longer a leak.** It says heat leaves with a block that leaves; it did not say that breaking a coolant ring destroyed two thirds of the *surviving* pipes' heat as well ([backlog.md](backlog.md) `A12`), which is not a population change at all — the same blocks were still there. Fixed in [thermal-model.md](thermal-model.md#coolant-loops): a pipe now holds the parcel it absorbed, capacity and all. `HeatLaunderingTests` measures what a broken ring costs now — one parcel out of `N`, nothing for a split — instead of pinning the old fraction. |
