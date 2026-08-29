@@ -130,6 +130,43 @@ class ASlicedWalkReadsAsOneWalk(unittest.TestCase):
         reference = pace.marks(progress(at(0, 10), at(5, 20), at(10, 30), at(15, 40)))
         self.assertEqual(pace.ratio(whole, reference), pace.ratio(cut, reference))
 
+    def test_the_ratio_uses_a_resumed_walks_marks_and_not_just_its_first_slice(self):
+        """**A resumed walk's marks do not land on the reference's grid, and that hid most of them.**
+
+        A walk writes a mark every ten files, so an unbroken run's marks are multiples of ten and
+        two such walks share nearly all of them. A resumed one counts from where it left off: its
+        marks are 2,106 and 2,116 where the reference has 2,100 and 2,110, and the intersection is
+        empty. Measured on the 2026-08-28 air re-take, 21 of 268 marks were being used — all of
+        them from before the first resume — so the estimate had not moved in two hours of walking.
+        """
+        reference = pace.marks(progress(*[at(i, (i + 1) * 10) for i in range(0, 60, 5)]))
+
+        # A subject resumed at 63, so every mark after it is 73, 83, ... — off the grid entirely.
+        cut = pace.marks(self.sliced_at(
+            (0, None, [at(0, 10), at(5, 20)]),
+            (63, 20, [at(25, 10), at(30, 20), at(35, 30)])))
+
+        counts = [files for _, files in cut]
+        self.assertIn(83, counts, "the fixture is not producing off-grid marks")
+
+        found, first, last = pace.ratio(cut, reference)
+
+        self.assertIsNotNone(found)
+        self.assertEqual(10, first)
+        self.assertEqual(93, last, "the ratio stopped at the last mark shared with the reference,"
+                                   " so it is reading the first slice alone")
+
+    def test_the_ratio_is_unchanged_for_a_walk_that_was_never_resumed(self):
+        """Interpolation must not move the answer where the marks already line up."""
+        reference = pace.marks(progress(at(0, 10), at(5, 20), at(10, 30), at(15, 40)))
+        whole = pace.marks(progress(at(0, 10), at(10, 20), at(20, 30), at(30, 40)))
+
+        found, first, last = pace.ratio(whole, reference)
+
+        self.assertAlmostEqual(2.0, found, places=6)
+        self.assertEqual(10, first)
+        self.assertEqual(40, last)
+
     def test_a_resume_line_that_names_no_count_does_not_throw(self):
         handle = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8")
         handle.write("12:00:00 air: resuming, everything already finished\n")

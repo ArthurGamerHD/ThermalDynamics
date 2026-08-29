@@ -245,6 +245,63 @@ def spread(rows):
             f"median {middle:.0f}")
 
 
+#: Files a walk covers between marks. Stated by the walk, not inferred: it writes one every ten.
+MARK_FILES = 10
+
+#: How wide a gap between two reference marks may be and still be read between.
+#:
+#: **Five marks, and the reason it is bounded at all is the ordering.** The corpus is walked largest
+#: first, so cost per file falls steeply and a straight line across a wide gap is a poor assumption
+#: — which is what the *one mark in common* case was always about: a reference with marks at ten
+#: files and seventy carries no information about file twenty, and reading it there would be
+#: inventing one. Within a few marks the line is the same assumption the marks themselves carry.
+WIDEST_BRACKET = 5 * MARK_FILES
+
+
+def bracket(counts, files):
+    """How far apart the two reference marks either side of `files` are."""
+    if files <= counts[0] or files >= counts[-1]:
+        return 0
+
+    low, high = 0, len(counts) - 1
+    while high - low > 1:
+        middle = (low + high) // 2
+        if counts[middle] <= files:
+            low = middle
+        else:
+            high = middle
+
+    return counts[high] - counts[low]
+
+
+def at(counts, walked, files):
+    """Minutes the reference had walked by `files`, interpolated between the marks either side.
+
+    A walk's cost per file is not constant — the corpus is largest first — so this is a straight
+    line between two marks ten files apart rather than a model of anything. Over that interval it
+    is the same assumption the marks themselves carry.
+    """
+    if files <= counts[0]:
+        return walked[0]
+    if files >= counts[-1]:
+        return walked[-1]
+
+    low, high = 0, len(counts) - 1
+    while high - low > 1:
+        middle = (low + high) // 2
+        if counts[middle] <= files:
+            low = middle
+        else:
+            high = middle
+
+    span = counts[high] - counts[low]
+    if span <= 0:
+        return walked[low]
+
+    share = (files - counts[low]) / float(span)
+    return walked[low] + (walked[high] - walked[low]) * share
+
+
 def ratio(subject, reference):
     """How much dearer the subject walk is per file, over the marks the two walks share.
 
@@ -252,15 +309,29 @@ def ratio(subject, reference):
     comparison and not two readings (`P6`). Returns `(ratio, first mark, last mark)`.
     """
     mine = {files: walked for walked, files in subject}
-    theirs = {files: walked for walked, files in reference}
 
-    shared = sorted(set(mine) & set(theirs))
-    if len(shared) < 2:
+    # **The reference is read at the subject's file counts rather than at counts the two happen to
+    # share**, which is not a refinement — without it a resumed walk is compared on its first slice
+    # alone. A walk writes a mark every ten files, so an unbroken run's marks are multiples of ten
+    # and two such walks share nearly all of them; a *resumed* one counts from where it left off,
+    # so its marks are 2,106 and 2,116 where the reference has 2,100 and 2,110 and the intersection
+    # is empty. Measured on the 2026-08-28 air re-take: 21 of 268 marks were being used, all of
+    # them from before the first resume, and the ratio had not moved since.
+    ordered = sorted(reference, key=lambda pair: pair[1])
+    counts = [files for _, files in ordered]
+    walked = [minutes for minutes, _ in ordered]
+
+    if len(counts) < 2:
         return None, None, None
 
-    first, last = shared[0], shared[-1]
+    usable = sorted(f for f in mine
+                    if counts[0] <= f <= counts[-1] and bracket(counts, f) <= WIDEST_BRACKET)
+    if len(usable) < 2:
+        return None, None, None
+
+    first, last = usable[0], usable[-1]
     span_subject = mine[last] - mine[first]
-    span_reference = theirs[last] - theirs[first]
+    span_reference = at(counts, walked, last) - at(counts, walked, first)
 
     if span_reference <= 0:
         return None, first, last
