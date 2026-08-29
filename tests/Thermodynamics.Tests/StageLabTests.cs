@@ -282,6 +282,19 @@ namespace Thermodynamics.Tests
             }
         }
 
+        /// <summary>A row with every field filled and a stop word chosen by the caller.</summary>
+        private static StageLab.Row Contrived(string stage, string stop)
+        {
+            StageLab.Row row = new StageLab.Row();
+            row.Stage = stage;
+            row.Stop = stop;
+            row.BestMs = 1d;
+            row.WorstMs = 2d;
+            row.Work = 1;
+            row.WorkUnit = "things";
+            return row;
+        }
+
         /// <summary>
         /// **And the reason reaches the reader.** The lab has counted confirmations since pass 8
         /// and the test below has asserted that every row is either confirmed or capped — but for a
@@ -340,17 +353,23 @@ namespace Thermodynamics.Tests
                 }
 
                 // A capped row and a confirmed one must not print the same, which is the whole
-                // point; at a floor of three on a 2,000-block hull every row confirms, so the
-                // discrimination is checked on a row made to hit the cap instead.
-                StageLab.Row capped = new StageLab.Row();
-                capped.Stage = "contrived";
-                capped.Stop = StageLab.Row.Capped;
-                capped.BestMs = 1d;
-                capped.WorstMs = 2d;
-                capped.Work = 1;
-                capped.WorkUnit = "things";
+                // point.
+                //
+                // **Both rows are contrived, and that is the fix for a real flake.** This used to
+                // pair a contrived capped row with `rows[0]` on the reasoning that at a floor of
+                // three on a 2,000-block hull every row confirms. That is true on an idle machine
+                // and not on a loaded one: a stage that runs long enough hits the cap instead, and
+                // then the mixed table holds no confirmed row and this fails. It did, in a full
+                // suite run on 2026-08-29, and passed alone minutes later — which is the signature.
+                //
+                // The claim here is about **formatting**, not about timing: that the two stop words
+                // print differently. Reading either row off a measurement made the check depend on
+                // how busy the machine was, which is a property of nothing the test is about
+                // (`M7`).
+                StageLab.Row capped = Contrived("contrived-capped", StageLab.Row.Capped);
+                StageLab.Row confirmed = Contrived("contrived-confirmed", StageLab.Row.Confirmed);
 
-                List<StageLab.Row> mixed = new List<StageLab.Row> { rows[0], capped };
+                List<StageLab.Row> mixed = new List<StageLab.Row> { confirmed, capped };
                 string mixedTable = StageLab.Table(mixed);
                 string mixedCsv = StageLab.Csv(mixed);
 
