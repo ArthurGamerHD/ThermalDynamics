@@ -334,7 +334,14 @@ def percentiles(values):
 
     return {
         "min": ordered[0],
+        # **p10 and p90 are here for the constants rather than for the row.** `Census.Corpus`
+        # states the corpus's substep demand as p10/p50/p90 and those figures were transcribed by
+        # hand from a walk's output, which is the shape `F14` records going wrong once already —
+        # a page saying twenty-four sealed blocks where the dataset said 1,184. A summary that
+        # carries them is a summary a test can hold the constants against (`E5`).
+        "p10": percentile(ordered, 0.1),
         "p50": percentile(ordered, 0.5),
+        "p90": percentile(ordered, 0.9),
         "p95": percentile(ordered, 0.95),
         "p99": percentile(ordered, 0.99),
         "max": ordered[-1],
