@@ -1084,6 +1084,59 @@ collect nothing* is a count over the whole population, and a sample estimates it
 count. The judgement that closed `C3` rests on that share, so the re-take tests the share and
 leaves the count to the dataset that has one.
 
+### What the re-take found: all four hold, and the cost doubled
+
+**5,463 ships, four scenarios, two arms, 21 m 32 s** — `out/cap-core-2026-08-28`, summarised in
+[`summary-cap-core-2026-08-28.csv`](../tools/corpus/summary-cap-core-2026-08-28.csv). Every
+prediction registered above holds, and the one that decides something moved a long way inside its
+band.
+
+| | prediction | measured | |
+| --- | --- | --- | --- |
+| the identity | `min(uncapped, 6)` on every pair | **0 of 21,848 pairs** differ by more than 1 %; the worst is 0.0000 substeps | **holds** |
+| the benefit | weighted capped work p99 in 1.9–2.5 M | **1,927,404**, from 7,223,225 uncapped | **holds** |
+| the cost | weighted Δpeak p99 stays in the 0.03–0.6 K judgement band | **0.5660 K** | **holds** |
+| the reach | 3–10 % of blocks in air | **5.98 %** | **holds** |
+
+**The registered reproduction check is exact.** This walk's control arm is the same four scenarios
+on the same build as `out/air-2026-08-28`, and on the **21,852 rows they share it agrees on all 22
+columns, worst relative difference 0.00e+00** ([reproduce.py](../tools/corpus/reproduce.py)). The
+control arm *is* the air walk repeated, which is what makes the capped arm's difference the cap and
+nothing else (`E7`, `M1`).
+
+**`C3`'s decision does not invert, and it is much closer to inverting than it was.** The p99 Δpeak
+was **0.2820 K** through the broken reader and is **0.5660 K** through the corrected one — it
+doubled, and the rule's refusal threshold is 0.6 K. The share of pairs moving more than the 0.03 K
+the mod already accepts went from 9.58 % to **18.24 %**, and the share past the 0.6 K it refuses
+from 0.50 % to **0.84 %**. So the cap is *worse* than it was thought to be, in the direction the
+pre-registration argued it would be: `A13` is 15.76 % more heat, heat is what a transient is made
+of, and a cap changes the rate a transient travels at.
+
+**The verdict stands and it stands for a better reason.** `MaxSubstepsPerBlock` stays 0. It was
+kept a switch on the argument that the error is charged per block and the benefit collected per
+grid, and that argument does not depend on the figure that moved; what the re-take adds is that the
+figure moved *toward* the threshold that would have refused it outright, so the decision has more
+room under it than it did, not less.
+
+**The benefit is unchanged, which is the stiffness finding arriving by a third route.** Capped work
+p99 is 1,927,404 against 2,180,352 through the broken reader, and the uncapped arm is 7,223,225
+against 7,293,904 — a movement of a per cent or so where the heat moved by a sixth. Block identity
+is worth nothing to a step's cost. That is now measured on the stiffness walk, on the air walk's
+demand percentiles and on this walk's two arms.
+
+**Two things this dataset does not say, and they were named before it ran.** The cost prediction's
+*max under 10 K* half is **unscored**: the sample's largest delta is 276.41 K, on `Wymsageu` in
+`storm-parked`, and a sample of one giant in twenty has no population maximum. And the judgement
+that closed `C3` rests on *6,548 of 8,144 ships pay in full and collect nothing*, which is a count
+over the population; this walk tests the share and leaves the count to the dataset that has one.
+
+**Eight rows were dropped as strays, and chasing them found a defect.** They carry `workshop_id` 0,
+and on the air walk **fourteen distinct ships share that id** — a workshop *collection* puts the
+blueprint one folder deeper than an ordinary item, so the id was read off the ship's name, parsed to
+nothing and fell back to 0. Anything keyed by workshop id counted the fourteen as one ship. The
+reader is fixed and the case is pinned; `cap.py` dropping them rather than inventing a weight of 1
+is what made them visible at all.
+
 ### And the trade is the wrong way round: the cost is per block, the benefit is per grid
 
 This is the finding, and it is not one the pre-registration anticipated.

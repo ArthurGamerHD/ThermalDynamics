@@ -1,0 +1,44 @@
+statistic,value,unit
+dataset outcome rows,43704,
+dataset ships,5462,
+dataset pairs,21848,
+dataset scenarios,4,
+dataset core corpus,1,
+dataset represents pairs,32492,
+dataset rows without a partner,0,
+dataset rows outside the selection,8,
+provenance walk,cap started 2026-08-28 22:59:39,
+provenance commit,2839025b2b6956de95a500e1101199d8de48b93d,
+provenance Cubes.xml,3cdf7e20633c2c3c,
+provenance Loops.xml,ea59e1f282c2ba29,
+provenance Planets.xml,da93b8fdd826e7cf,
+C3 cap walked,6,substeps
+C3 identity verdict,holds,
+C3 off weighted work p50,61238.439,element visits
+C3 off weighted work p95,1964529.075,element visits
+C3 off weighted work p99,7223224.533,element visits
+C3 off sample work max,29028158.784,element visits
+C3 off runs over the allowance,44,runs
+C3 off weighted share over the allowance,2.0617,%
+C3 capped weighted work p50,35826.0,element visits
+C3 capped weighted work p95,699744.0,element visits
+C3 capped weighted work p99,1927404.0,element visits
+C3 capped sample work max,5768712.0,element visits
+C3 capped runs over the allowance,8,runs
+C3 capped weighted share over the allowance,0.4629,%
+C3 benefit verdict,holds,
+C3 benefit as predicted verdict,holds,
+C3 weighted dpeak p50,0.003,K
+C3 weighted dpeak p95,0.089,K
+C3 weighted dpeak p99,0.566,K
+C3 sample dpeak max,276.406,K
+C3 pairs over the accepted kelvin,2627,pairs
+C3 weighted share over the accepted kelvin,18.2425,%
+C3 pairs over the refused kelvin,41,pairs
+C3 weighted share over the refused kelvin,0.8391,%
+C3 decision,judgement,
+C3 cost verdict,unscored,
+C3 weighted reach in air,5.9795,%
+C3 weighted reach over every scenario,5.2037,%
+C3 control floored,0.0,node-runs
+C3 reach verdict,holds,
