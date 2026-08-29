@@ -434,7 +434,14 @@ if demand:
             if not demands:
                 continue
             d = percentiles(demands)
+
+            # Per scenario rather than pooled, because `Census.Corpus` states the corpus in
+            # vacuum and in air separately and a pooled figure answers neither.
+            record(f"G6 {name} demand p10", round(d["p10"], 3), "substeps")
+            record(f"G6 {name} demand p50", round(d["p50"], 3), "substeps")
+            record(f"G6 {name} demand p90", round(d["p90"], 3), "substeps")
             record(f"G6 {name} demand p99", round(d["p99"], 3), "substeps")
+            record(f"G6 {name} demand max", round(d["max"], 3), "substeps")
 
             if not works:
                 print(f"        {name:18}{len(rows):>8,}{d['p50']:>12.1f}{d['p99']:>12.1f}"
