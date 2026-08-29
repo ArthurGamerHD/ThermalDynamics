@@ -192,36 +192,10 @@ namespace Thermodynamics.Tests
             Dictionary<string, ScenarioOutcome> byName =
                 new Dictionary<string, ScenarioOutcome>(StringComparer.Ordinal);
 
-            // **A ship's scenarios run together, and the reason is the tail of the walk.** The
-            // corpus is walked largest-first with one worker per ship, so a walk cannot finish
-            // before its single biggest hull does — and measured on `out/cap-core-2026-08-28`, the
-            // last handful of ships are **30.7 % of the whole walk** with the machine otherwise
-            // idle. Four scenarios of one ship are four independent runs off one parse, so they
-            // fill four cores instead of one and shorten exactly the stretch that is the critical
-            // path. Nothing about a reading changes: `Battery.Run` builds its own assembly per
-            // scenario, which it did before this too, so the runs neither share state nor see each
-            // other (`M3`).
-            //
-            // Ordered by `LabRun.Map`'s own contract, so two walks of one corpus still diff.
-            List<ScenarioOutcome> ran = LabRun.Map(scenarios, s => Battery.Run(ship, s),
-                CorpusFixture.WithinShip);
-
-            // **`LabRun.Map` drops what throws, and a dropped scenario must not read as a ship that
-            // simply has fewer.** That is right for a *corpus of ships*, where a hull this model
-            // cannot build is not a reason to lose the pass; it is wrong for the four scenarios of
-            // one hull, which are a fixed set the row count is checked against. Without this, a
-            // scenario that threw would leave a ship with three rows and nothing anywhere would
-            // say so.
-            if (ran.Count != scenarios.Count)
+            foreach (Battery.Scenario scenario in scenarios)
             {
-                walked.Violations.Add("scenarios: " + ship.Name + " ran " + ran.Count + " of "
-                    + scenarios.Count + " scenarios; one threw and was dropped");
-                return walked;
-            }
-
-            foreach (ScenarioOutcome outcome in ran)
-            {
-                byName[outcome.Scenario] = outcome;
+                ScenarioOutcome outcome = Battery.Run(ship, scenario);
+                byName[scenario.Name] = outcome;
                 walked.Outcomes.Add(outcome);
             }
 

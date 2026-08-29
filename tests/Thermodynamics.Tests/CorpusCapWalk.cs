@@ -150,14 +150,6 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", violations.ToArray()));
         }
 
-        /// <summary>One scenario's two arms, so a parallel map returns them as one item.</summary>
-        private class Pair
-        {
-            public string Name;
-            public ScenarioOutcome Uncapped;
-            public ScenarioOutcome Capped;
-        }
-
         private static Walked Walk(Blueprints.Ship ship, List<Battery.Scenario> scenarios)
         {
             Walked walked = new Walked { Ship = ship.Name };
@@ -165,13 +157,7 @@ namespace Thermodynamics.Tests
             Dictionary<string, ScenarioOutcome> control =
                 new Dictionary<string, ScenarioOutcome>(StringComparer.Ordinal);
 
-            // **The scenarios run together in the tail of the walk**, which is where a third of it
-            // is spent: the corpus is walked largest-first with one worker per ship, so nothing
-            // finishes before the biggest hull does, and on this walk's own 2026-08-28 run the last
-            // ships were **30.7 %** of it with the machine idle. The **pair** stays sequential
-            // inside each scenario, because the capped arm's clock is the control's elapsed
-            // seconds and it cannot be started before the control has finished (`M1`, `P6`).
-            List<Pair> pairs = LabRun.Map(scenarios, scenario =>
+            foreach (Battery.Scenario scenario in scenarios)
             {
                 // The control: the cap off, stopped at equilibrium, which is exactly what `F11`'s
                 // walk did. Its elapsed clock is the second arm's clock.
@@ -182,26 +168,11 @@ namespace Thermodynamics.Tests
                     Battery.RunForSeconds(ship, scenario, uncapped.RunSeconds, Arm(Cap));
                 capped.SubstepsPerBlockCap = Cap;
 
-                return new Pair { Name = scenario.Name, Uncapped = uncapped, Capped = capped };
-            }, CorpusFixture.WithinShip);
+                control[scenario.Name] = uncapped;
+                walked.Outcomes.Add(uncapped);
+                walked.Outcomes.Add(capped);
 
-            // **A dropped scenario must not read as a ship that simply has fewer** — see the same
-            // guard in `CorpusAirWalk`. `LabRun.Map` swallows what throws, which is right for a
-            // corpus of ships and wrong for the fixed set of scenarios inside one.
-            if (pairs.Count != scenarios.Count)
-            {
-                walked.Violations.Add("scenarios: " + ship.Name + " ran " + pairs.Count + " of "
-                    + scenarios.Count + " scenarios; one threw and was dropped");
-                return walked;
-            }
-
-            foreach (Pair pair in pairs)
-            {
-                control[pair.Name] = pair.Uncapped;
-                walked.Outcomes.Add(pair.Uncapped);
-                walked.Outcomes.Add(pair.Capped);
-
-                Judge(walked, pair.Name, pair.Uncapped, pair.Capped);
+                Judge(walked, scenario.Name, uncapped, capped);
             }
 
             CorpusRecord.Outcomes(Label, walked.Outcomes);

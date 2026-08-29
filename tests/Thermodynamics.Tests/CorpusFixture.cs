@@ -467,58 +467,12 @@ namespace Thermodynamics.Tests
         /// nothing has to be re-parsed per scenario (`M3`). The heaviest files still queue for a parse
         /// slot. See balance-lab.md, Running the lab.
         /// </summary>
-        /// <summary>
-        /// How many files of the walk in progress have not been finished yet, or -1 outside a walk.
-        ///
-        /// **This exists so a walk can tell when it is in its tail**, which is the stretch that
-        /// costs most and uses the machine least. See <see cref="WithinShip"/>.
-        /// </summary>
-        private static int outstanding = -1;
-
-        /// <summary>
-        /// Whether a ship's scenarios should be run in parallel with each other.
-        ///
-        /// <para>
-        /// **A walk cannot finish before its single biggest hull does.** The corpus is walked
-        /// largest-first with one worker per ship, so the end of every walk is a handful of capital
-        /// hulls held by a handful of workers while the rest of the machine sits idle. Measured on
-        /// `out/cap-core-2026-08-28`: the last ships are **30.7 % of the whole walk**, and on the
-        /// air walk of the same corpus, 25 %. A third of the cost of a walk is its tail.
-        /// </para>
-        ///
-        /// <para>
-        /// **The scenarios of one ship are independent, so the tail can be spread over them.**
-        /// `Battery.Run` builds its own assembly per scenario, so four scenarios of a hull are four
-        /// runs that share a parse and nothing else — four cores instead of one, on exactly the
-        /// stretch that is the critical path (`M3`).
-        /// </para>
-        ///
-        /// <para>
-        /// **It is the tail and not the whole walk, and the reason is memory.** In the bulk phase
-        /// there are already <see cref="LabRun.Workers"/> ships in flight, each holding an
-        /// assembly; multiplying that by the scenario count would multiply the live assemblies by
-        /// the same, and what bounds a sweep's memory is how many are alive at once. In the tail
-        /// there are a handful of ships left, so the same number of assemblies is alive either way
-        /// — the cores just stop idling. Outside a walk it is linear, which is what every lab test
-        /// on one ship wants.
-        /// </para>
-        /// </summary>
-        public static LabMode WithinShip
-        {
-            get
-            {
-                int left = outstanding;
-                return left >= 0 && left <= LabRun.Workers ? LabMode.Parallel : LabMode.Linear;
-            }
-        }
-
         public static List<T> Sweep<T>(string label, Func<Blueprints.Ship, T> work) where T : class
         {
             List<string> paths = Sample(label);
             List<T> results = new List<T>();
             if (paths.Count == 0) return results;
 
-            outstanding = paths.Count;
 
             GameBlocks.BySubtype();
 
@@ -549,7 +503,6 @@ namespace Thermodynamics.Tests
                             MarkDone(label, paths[i]);
                             files++;
                             ships += mine.Count;
-                            outstanding = paths.Count - files;
 
                             if (files % ReportEvery == 0 || files == paths.Count)
                             {
@@ -560,7 +513,6 @@ namespace Thermodynamics.Tests
                 });
 
             Report(label, files, paths.Count, ships, files);
-            outstanding = -1;
             return results;
         }
 
