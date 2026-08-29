@@ -150,6 +150,47 @@ def spans_several_definitions(directory):
     return split
 
 
+def summary_rows(directory):
+    """A dataset's provenance as `(statistic, value, unit)` rows, for a committed summary.
+
+    **One implementation, because two reports need it** (`P5`). `verdict.py` has written these
+    rows since 2026-08-25 and `cap.py` needs the same ones: a figure quoted from either summary has
+    to carry the build it was measured on, and two transcriptions of the same file are two things
+    that can drift apart.
+
+    **A resumed walk appends a block per slice, so a key can appear several times** -- and taking
+    the last would leave a summary claiming one `Cubes.xml` for a walk that saw two. Each key
+    records its last value, and where it saw more than one, the count and the whole list beside it.
+    A dataset with no `provenance.txt` records `absent` rather than nothing, because *not recorded*
+    and *nothing to record* are different states and only one of them is a problem (`E8`).
+    """
+    path = os.path.join(directory, "provenance.txt")
+    if not os.path.exists(path):
+        return [("provenance", "absent", "")]
+
+    seen = {}
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            # A comment is context for a reader and not a statistic; recording it would put prose
+            # in the summary's value column.
+            if not line or line.startswith("#"):
+                continue
+
+            name, _, value = line.partition(" ")
+            seen.setdefault(name, [])
+            if value not in seen[name]:
+                seen[name].append(value)
+
+    rows = []
+    for name in seen:
+        rows.append(("provenance " + name, seen[name][-1], ""))
+        if len(seen[name]) > 1:
+            rows.append(("provenance " + name + " versions", len(seen[name]), ""))
+            rows.append(("provenance " + name + " all", " ".join(seen[name]), ""))
+    return rows
+
+
 def classify(note):
     """The provenance a comment claims, or None where it claims nothing."""
     text = " ".join(line.strip() for line in (note or "").split("\n") if line.strip())

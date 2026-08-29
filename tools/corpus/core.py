@@ -98,6 +98,19 @@ def read(directory):
         raise SystemExit(path + " does not exist, so there is nothing to draw a selection from")
 
     rows = list(csv.DictReader(open(path)))
+
+    # **A paired walk carries two configurations and only one of them ships** (`M1`, `P6`). The
+    # cap walk writes every run twice, uncapped and at 6; mixing the arms into one percentile is
+    # two experiments read as one, and the failure is quiet because the mixture has every column a
+    # single-arm dataset has. `cap.py` is the tool that compares arms; this one scores the shipped
+    # arm, and says how many rows it left behind rather than dropping them in silence.
+    arms, shipped = scoring.split_arms(rows)
+    if arms:
+        print("note: this is a paired walk carrying arms %s; scoring the %d rows of the arm that"
+              " ships and leaving %d to cap.py"
+              % (", ".join(a or "(absent)" for a in arms), len(shipped), len(rows) - len(shipped)))
+        rows = shipped
+
     ships = collections.defaultdict(list)
     for row in rows:
         row["_work"] = scoring.step_work(

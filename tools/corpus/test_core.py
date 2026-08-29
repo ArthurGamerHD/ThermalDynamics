@@ -137,5 +137,40 @@ class EverySelectedShipNamesTheRuleThatPickedIt(unittest.TestCase):
             self.assertEqual(float(row["weight"]), 1.0)
 
 
+class APairedWalkIsScoredOnTheArmThatShips(unittest.TestCase):
+    """The cap walk writes every run twice, and `core.py --score` reads the shipped arm.
+
+    **The failure is quiet.** A mixed dataset has every column a single-arm one has, so the report
+    would print percentiles over two configurations at once and nothing would look wrong. It is the
+    same defect `verdict.py` hit on the 2026-08-25 cap dataset, arriving through a second door
+    (`M1`, `P6`).
+    """
+
+    def outcomes(self, directory, rows):
+        with open(os.path.join(directory, "outcomes.csv"), "w", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+            writer.writeheader()
+            for row in rows:
+                writer.writerow(row)
+
+    def test_the_capped_arm_is_left_to_cap_py(self):
+        import tempfile
+
+        def row(workshop, cap_value, cost):
+            return {"workshop_id": workshop, "ship": "s" + workshop, "scenario": "vacuum-shadow",
+                    "cap": cap_value, "blocks": "100", "substeps_demanded": "10",
+                    "substep_cost": cost, "over_critical": "", "run_seconds": "1", "links": "10"}
+
+        with tempfile.TemporaryDirectory() as directory:
+            self.outcomes(directory, [row("a", "0", "1000"), row("a", "6", "1"),
+                                      row("b", "0", "1000"), row("b", "6", "1")])
+            rows, ships = core.read(directory)
+
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(sorted(ships), ["a", "b"])
+        self.assertEqual({r["cap"] for r in rows}, {"0"},
+                         "a mixed pair of arms is two experiments read as one")
+
+
 if __name__ == "__main__":
     unittest.main()

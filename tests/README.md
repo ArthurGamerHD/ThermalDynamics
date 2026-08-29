@@ -173,6 +173,25 @@ THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/core-2026-08-28 \
 python3 tools/corpus/core.py --score out/core-2026-08-28
 ```
 
+**The paired cap walk is the one core walk `cap.py` reads instead**, because a paired dataset is a
+comparison rather than a population and `cap.py` is the tool that compares arms. It applies the
+same weights from the same file and recognises a core dataset by the same test, so nothing changes
+in the command except the filter:
+
+```bash
+python3 tools/corpus/core.py out/air-2026-08-28 --out $PWD/out/core-selection.txt
+THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/cap-core-2026-08-28 \
+  THERMAL_CORPUS_ONLY=$PWD/out/core-selection.txt \
+  THERMAL_CORPUS_PROGRESS=$PWD/out/cap-core-2026-08-28/progress.txt \
+  heavy run --minutes 120 -- dotnet test --filter CorpusCapWalk
+python3 tools/corpus/cap.py out/cap-core-2026-08-28 \
+  --csv tools/corpus/summary-cap-core-2026-08-28.csv
+```
+
+The report says on its first line that it has a core dataset, weights every population figure and
+names it `weighted`, and reports the halves a sample cannot answer as `?` rather than passing them
+— a maximum is one observation, and the core corpus reads 76 % under the population's `work max`.
+
 The whole corpus stays on disk and a full walk is one variable away; see
 [tools/corpus/README.md](../tools/corpus/README.md#the-core-corpus--a-walk-of-the-population-in-an-hour-instead-of-eleven)
 for what the sample can and cannot answer, and why dropping the giants outright would have deleted
