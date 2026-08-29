@@ -95,7 +95,7 @@ scenario; the capped arm cannot stop there, because it has to stop where its own
 see that a walk works before committing the hours — the sample for this one was 320 runs in 77 s.
 
 **A walk's cost is a property of the build, not just of the corpus.** The 2026-08-28 air re-take is
-**3.05x per file** over the same file range as the 2026-08-24 walk it replaces — about 5.3 hours
+**2.94x per file** over the same file range as the 2026-08-24 walk it replaces — about 5.1 hours
 against 104 minutes — and the reason is `A13`: the eleven block kinds that reader built as armour
 are oxygen generators, gravity generators, doors and turrets now, and this walk runs to equilibrium.
 **A dataset taken through a broken reader was cheaper to collect than the truth.** So the 1.95x
@@ -513,6 +513,7 @@ limit in [known-issues.md](../../docs/known-issues.md).
 
 | Date | Change |
 | --- | --- |
+| 2026-08-28 | **`pace.py`'s ratio reads every mark of a resumed walk, not just its first slice.** The morning's fix made a resumed walk's counts cumulative, and cumulative counts do not land on the reference's ten-file grid — so the intersection was empty after the first resume and **21 of 268** marks were in use. The reference is interpolated at the subject's own counts now, bounded to five marks because the corpus is largest-first. The air re-take reads 2.94x over 3,166 files against 3.05x over its first 400. |
 | 2026-08-28 | **The standing panel is re-picked** on the corrected census and the re-surveyed outcomes (`C32`, unblocked by `A13`'s survey half finishing). 52 ships from 50, `oxygen-heavy` added, and 16 of 24 rules pick different hulls — the census and the outcomes both moved under it, so this is not an isolation of the rule fix. The commands above now name the datasets it was built from. **No dial sweep taken before it is comparable with one taken after** (`M1`). |
 | 2026-08-28 | **`pace.py` reads a walk taken in slices.** Relaunching to resume is the documented normal path and it writes many blocks into one progress file, each restarting its own file count; read literally, the air re-take's ninetieth file of its sixth slice sat at 272 minutes after the first slice's first mark, and the file written to refuse a bad estimate reported **9.45x** per file where the honest figure is 3.05x. Counts continue from the resume line, the gap between slices is not walked time, and a slice's clock starts at its resume line — the work before a slice's first mark is real walking at the walk's own rate, sixty-four minutes of it over five boundaries. Pinned by a sliced fixture and the same walk in one run reporting the same elapsed and the same ratio. |
 | 2026-08-28 | Added the sixth way a sweep dies, which costs the dataset rather than the run: **do not rebuild Release while a walk is slicing.** Slices load `--no-build`, so a build between two of them gives the dataset's halves different builds. `provenance.txt` makes that visible rather than harmless, which is the only reason it is recoverable. |
