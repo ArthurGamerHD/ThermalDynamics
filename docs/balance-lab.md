@@ -1265,6 +1265,16 @@ four fifths of the population cannot use is the exact case
 exists for, and shipping it would be taking a fifth of the population's problem out of the other
 four fifths' fidelity.
 
+> **Re-measured on the corrected reader, and the argument is the one that survived.** `A13`'s
+> re-take put the p99 at **0.5660 K** rather than 0.282 K — still inside the judgement band, but a
+> hair under the 0.6 K that refuses outright rather than half way. **The decision does not move,
+> because it never rested on the figure**: it rests on who pays, and the who has not changed. What
+> the re-take does change is that the *how much* is no longer comfortable, so a future world cap
+> arrives with less room than this paragraph originally described
+> ([the re-take](#what-the-re-take-found-all-four-hold-and-the-cost-doubled)).
+
+
+
 **And leaving it as a switch is not an answer either**, because `G6`'s cost half then stays failing
 with the only lever that moves it behind a setting nobody will find.
 
