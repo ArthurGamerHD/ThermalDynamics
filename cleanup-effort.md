@@ -4,7 +4,7 @@ What a pass over the code found, what was changed, and — more usefully — wha
 **deliberately not** changed, with the reason. A reduction nobody records is a reduction the next
 reader proposes again.
 
-The rules this page is bound by are stated canonically in [docs/rules.md](docs/rules.md).
+> The rules argued here are stated canonically in [docs/rules.md](docs/rules.md): `E5` `D5` `M7` `P4`.
 
 ## What was changed
 
@@ -31,3 +31,11 @@ JITted.
 **This is the rule rather than the exception for the three vendored trees**, and the reason is worth
 stating once: dead code inside a vendored client is not this repository's dead code. It is
 somebody else's live code that this repository does not happen to call.
+
+---
+
+## Change log
+
+| Date | Change |
+| --- | --- |
+| 2026-08-29 | Opened. Two changes merged — one preamble for the API's grid accessors, and the three dead null checks against a `LiveGrids` that cannot be null — and one finding recorded rather than acted on: the nine unused `TryGet*` methods in the vendored `DefinitionExtensionsAPI.cs`, which stay because trimming a vendored client to the subset this mod happens to call turns every future update from a copy into a merge. |

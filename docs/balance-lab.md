@@ -852,6 +852,58 @@ rows with a worst relative difference of `0.00e+00`.
 no others, so nothing it produces is a population figure and none of it describes the 96 % the
 mechanism never reaches (`P1`, `P2`). That was true of the 2026-08-25 walk and is true of this one.
 
+### What the re-take found: all four hold, and the floor's cost more than doubled
+
+**283 ships, 1,132 paired cells** — `out/floor-2026-08-29`, summarised in
+[`summary-floor-2026-08-29.csv`](../tools/corpus/summary-floor-2026-08-29.csv), which is the first
+committed source this row has ever had. Every prediction registered above holds.
+
+| | prediction | measured | |
+| --- | --- | --- | --- |
+| the clock | unchanged: 0 cells on different clocks | **0** of 1,132 | **holds** |
+| the safety | unchanged: never stiffens, never floors in the control | **0** and **0** | **holds** |
+| the reach | 11–15 %, straddling 13.05 % | **13.14 %** | **holds** |
+| the cost | far over 0.6 K, so the decision does not invert | **60.20 K** | **holds** |
+
+**Read the two walks with one estimator, which is the only way the difference means anything.**
+`floor.py` scores both, so what follows is the same arithmetic over two datasets rather than a
+figure from a page against a figure from a tool (`M7`, `E5`):
+
+| statistic | 2026-08-25, broken reader | 2026-08-29, corrected | |
+| --- | ---: | ---: | --- |
+| reach | 12.93 % | **13.14 %** | +1.6 % |
+| Δpeak p50 | 0.0060 K | **0.1600 K** | ×27 |
+| Δpeak p95 | 2.1351 K | **13.0832 K** | ×6.1 |
+| Δpeak p99 | 27.6656 K | **60.1977 K** | **×2.18** |
+| Δpeak max | 48.207 K | **276.343 K** | ×5.7 |
+| cells over 0.03 K | 229 of 738 | **485 of 717** | ×2.1 |
+| cells over 0.6 K | 62 of 738 | **232 of 717** | ×3.7 |
+| decision | switch | **switch** | unchanged |
+
+**The reach did not move and the cost doubled, which is `A13`'s signature and now its fourth
+sighting.** The floor engages on a *cost* criterion — a grid that cannot afford its demand — and
+block identity is worth about a per cent of the population's cost, so the share of blocks it holds
+back moves by 1.6 %. The price is a *temperature* difference, and block identity is worth 15.76 % of
+the population's heat, so it more than doubles. The cap walk's own Δpeak p99 doubled over the same
+correction — 0.2820 K to 0.5660 K, ×2.0 — which is the same ratio on a mechanism that shares nothing
+with this one but the population it is measured on.
+
+**`FloorBlocksWhenOverBudget` stays off, and the reason it closed is untouched.** The rule refuses at
+0.6 K and the reading is a hundred times that. What the re-take changes is the margin: the tail is
+worse than it was thought to be in every quantile, and a third of the engaged cells now exceed the
+figure the mod refuses rather than a twelfth.
+
+**One figure on this page was 0.3 % out and is corrected.** The 2026-08-25 walk's p99 was scored by
+hand as **27.76 K**; the same dataset through `floor.py` is **27.6656 K**. Nothing decided on it
+moves — it is a hundredth of the way to a threshold two orders of magnitude away — and it is exactly
+what `E5` predicts of a figure with no source in the tree: not wrong enough to notice, and not
+checkable.
+
+**And the partial dataset lied in the direction `P1` says it will.** At 280 of 283 ships the reach
+read **8.51 %**, which is outside the band registered for it; the three ships missing were the
+largest, and the floored blocks concentrate in exactly those. The finished walk reads 13.14 %. A
+partial corpus result is not a small result, it is the wrong end of one.
+
 ### What it did: the floor is safe, exact about the clock, and far too expensive to default
 
 `CorpusFloorWalk` finished 2026-08-25 — 291 ships, 1,164 paired cells, 2 h 42 m. Scored against the
