@@ -307,11 +307,11 @@ proposes deriving it finds the pair of hulls that says why not.
 
 **With drag on, a ship's top speed becomes altitude-dependent, and that is a change a player will
 notice.** A ship stops accelerating where its thrust balances `½ C_d ρ A v²`, so it is slow in thick
-air and fast where the air runs out: over the census the median published hull balances at **70.4
-m/s at sea level, 100.6 at half density, 142.3 thin and 246.5 very thin**
-([`summary-cruise-2026-08-30.csv`](../tools/corpus/summary-cruise-2026-08-30.csv)). **84.5 % of ships
-balance below the 100 m/s the engine already enforces**, so for most of them the air is what limits
-them and the engine's cap never binds; higher up the cap takes over exactly as it does today.
+air and fast where the air runs out: over the census the median published hull balances at **140.9
+m/s at sea level, 201.3 at half density, 284.7 thin and 493.1 very thin**
+([`summary-cruise-2026-08-30.csv`](../tools/corpus/summary-cruise-2026-08-30.csv)). **22.4 % of ships
+balance below the 100 m/s the engine already enforces**, so for those the air is what limits them and
+for the rest the engine's cap binds first, as it does today.
 
 That is physically right and it is *not* what a world running
 [RelativeTopSpeed](https://github.com/Gauge/RelativeTopSpeed) has, because a cruise speed

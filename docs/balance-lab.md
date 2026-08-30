@@ -808,6 +808,51 @@ and whether the game's own respawn ships are in the corpus at all — they are n
 blueprints, so `G7`'s literal subject is outside this measurement and the population stands in for
 it.
 
+### What it did: the criterion was a tautology, and the area was wrong
+
+**Both halves of `K5` went wrong and in different ways, which is why this section is longer than the
+result.**
+
+**The criterion I registered could not fail on drag, because it was thrust-to-weight in disguise.**
+It asked how hard a hull decelerates *at its own cruise speed* — and at cruise, drag equals thrust
+by definition, so `a = F/m` is exactly `T/m`. Measured, the two agree to the digit: p50 4.275 g and
+p95 10.347 g for both. A criterion that returns the same number whatever the drag model says is not
+a measurement of the drag model. **A prediction has to be falsifiable by the thing it is about**, and
+this one was falsifiable only by Space Engineers ships having less thrust than they do.
+
+| | prediction | measured | |
+| --- | --- | --- | --- |
+| the floor | no more than 1 % of hulls over 1 g | **88.93 %** | fails — but of thrust-to-weight, not of drag |
+| the survivable case | median under 0.2 g | **4.275 g** | the same tautology |
+| the shape | deceleration falls with hull size | 6.18 → 5.51 → 3.54 → **1.72 g** across four size bands | holds, and means big ships have lower thrust-to-weight |
+
+**And chasing why the numbers were so large found a real error in `K12`'s figures.** The census
+records a hull's **total exposed area** — every exposed face, whichever way it points — and
+`½ C_d ρ A v²` wants the **frontal projection**. `cruise.py` used the total. The two differ by
+**Cauchy's formula**: the mean projection of a convex body over all orientations is exactly a
+quarter of its surface area, which is also what the solver's own incidence weighting computes.
+
+**So every cruise speed published on 2026-08-30 was low by a factor of two and every drag high by
+four**, and the conclusion that most ships are drag-limited was inverted:
+
+| | as published | corrected |
+| --- | ---: | ---: |
+| median sea-level cruise | 70.4 m/s | **140.9 m/s** |
+| inside RTS's 60–110 band | 54.8 % | **19.0 %** |
+| drag-limited below the engine's 100 m/s | 84.5 % | **22.4 %** |
+
+**What survives the correction and what does not.** `K12`'s claim that a derived speed lands *in the
+same neighbourhood* as an authored one survives in shape and weakens in strength: the median is now
+above RTS's band rather than inside it. `K11`'s conclusion — that the retarding force is unnecessary
+— **does not survive as stated**: it rested on most ships being drag-limited, and most are not. What
+remains true is that the mechanism is unnecessary *for the fifth of ships that are*, and that top
+speed becomes altitude-dependent, which no mass curve produces.
+
+**`K5` is still open, and what it needs is a criterion about drag.** The candidate is the one this
+exercise stumbled on: **drag alone at a fixed reference speed**, which does not cancel against
+thrust. At 100 m/s in sea-level air the corrected median is **2.09 g**, which is a firm push rather
+than a wall — but that figure is now in the tree, so a prediction about it would not be one.
+
 ### What flooring an over-budget grid does, written before it is measured
 
 `CorpusFloorWalk` is built and **has produced nothing**. The question, the statistic, the decision

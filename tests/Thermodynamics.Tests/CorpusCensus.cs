@@ -83,7 +83,7 @@ namespace Thermodynamics.Tests
         public const string Header =
             "ship,workshop_id,large,blocks,grids,joints,rooms,"
             + "exposed_blocks,buried_blocks,buried_share,sealed_blocks,exposed_area_m2,"
-            + "thermal_mass_j_per_k,mean_capacity_j_per_k,"
+            + "thermal_mass_j_per_k,mass_kg,mean_capacity_j_per_k,"
             + "armor_n,producer_n,installed_power_w,store_n,store_power_w,"
             + "thruster_n,thrust_n,tool_n,consumer_n,consumer_draw_w,other_n,"
             + "waste_idle_w,waste_full_w,waste_burn_w,"
@@ -118,6 +118,11 @@ namespace Thermodynamics.Tests
             double exposedArea = 0d;
             double thermalMass = 0d;
 
+            // **Physical mass, which is not thermal mass.** `ThermalMass` is a heat capacity, J/K, and
+            // the two differ by a specific heat that varies with what a block is made of. `K5` scores
+            // deceleration, `a = F/m`, and needs the kilograms.
+            double mass = 0d;
+
             for (int g = 0; g < assembly.Simulations.Count; g++)
             {
                 ThermalSolver solver = assembly.Simulations[g].Solver;
@@ -126,6 +131,7 @@ namespace Thermodynamics.Tests
                     ThermalNode node = solver.Nodes[i];
                     exposedArea += node.ExposedArea;
                     thermalMass += node.ThermalMass;
+                    mass += node.Block.Mass;
 
                     if (node.ExposedArea > 0f) exposedBlocks++;
                     else
@@ -250,6 +256,7 @@ namespace Thermodynamics.Tests
             row.Append(sealedBlocks).Append(',');
             row.Append(CorpusRecord.Num((float)exposedArea)).Append(',');
             row.Append(CorpusRecord.Num((float)thermalMass)).Append(',');
+            row.Append(CorpusRecord.Num((float)mass)).Append(',');
             row.Append(CorpusRecord.Num(assembly.NodeCount > 0
                 ? (float)(thermalMass / assembly.NodeCount) : 0f)).Append(',');
             row.Append(armor).Append(',');

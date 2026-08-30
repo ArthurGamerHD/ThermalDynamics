@@ -1,20 +1,20 @@
 statistic,value,unit
-cruise p5,18.82,m/s
-cruise p25,52.43,m/s
-cruise p50,70.44,m/s
-cruise p75,88.84,m/s
-cruise p95,122.32,m/s
-cruise min,0.89,m/s
-cruise max,180.76,m/s
-ships inside the authored band,3480,ships
-share inside the authored band,54.79,%
+cruise p5,37.65,m/s
+cruise p25,104.85,m/s
+cruise p50,140.88,m/s
+cruise p75,177.69,m/s
+cruise p95,244.65,m/s
+cruise min,1.78,m/s
+cruise max,361.53,m/s
+ships inside the authored band,1206,ships
+share inside the authored band,18.99,%
 ships with thrust and area,6352,ships
 ships with neither,1785,ships
-median cruise at density 1.225,70.44,m/s
-share under the engine cap at density 1.225,84.51,%
-median cruise at density 0.6,100.65,m/s
-share under the engine cap at density 0.6,49.42,%
-median cruise at density 0.3,142.33,m/s
-share under the engine cap at density 0.3,21.96,%
-median cruise at density 0.1,246.53,m/s
-share under the engine cap at density 0.1,8.71,%
+median cruise at density 1.225,140.88,m/s
+share under the engine cap at density 1.225,22.45,%
+median cruise at density 0.6,201.29,m/s
+share under the engine cap at density 0.6,11.43,%
+median cruise at density 0.3,284.67,m/s
+share under the engine cap at density 0.3,7.16,%
+median cruise at density 0.1,493.06,m/s
+share under the engine cap at density 0.1,3.35,%
