@@ -277,6 +277,34 @@ coefficient is the reason: `FrictionScale` is 0.001, which as `½ C_d` implies a
 a fraction of the work done against drag lands as heat in the surface — the rest goes into the wake
 — so the two are different numbers and neither can be read off the other.
 
+**Written out, the two constants are one product.** `FrictionScale = ½ · C_d · η`, where `η` is the
+share of the work done against drag that ends up in the *surface* rather than in the wake. Two of
+the three are free and the third follows, so the question `K3` asks is which two the mod authors.
+**It authors `FrictionScale` and `C_d`, and `η` is the derived consequence** — at the shipped 0.001
+against a bluff body's `C_d ≈ 1`, `η` is **0.002**, two parts in a thousand. That is low, and it is
+a game-feel figure rather than a measured one; what matters here is that it is now a figure the mod
+can state rather than a discrepancy between two numbers that looked like they should agree.
+
+**Authoring `FrictionScale` rather than deriving it is what protects a tuned world.** A world that
+has moved `FrictionScale` moved it to change *heat*, and heat is what it still changes. Handling
+will be driven by the drag coefficient, which is a separate dial with its own default, so applying
+the force does not silently re-tune anybody's hull temperatures — and a world that wants a draggier
+sky changes the dial that is about drag.
+
+**And `C_d` cannot be derived from the hull, which is measured rather than assumed.** The obvious
+hope is that a model already computing a windward area could compute the coefficient too and spare
+an authored number (`P7`). It cannot: what the solver sums is exposed cell faces weighted by
+`max(0, dot(faceNormal, wind))`, which is a **projected area**, and a projected area is not a shape.
+`DragShapeTests` builds a four-cell brick and a stair-stepped wedge that share its frontal
+cross-section — 64 blocks against 40, so they are genuinely different hulls — and **the drag power
+the solver computes for them is identical**, while their real drag coefficients differ by about ten
+times. Halving the frontal area halves the drag; reshaping everything behind it changes nothing.
+The lever is the projection and only the projection.
+
+So the coefficient is authored until there is a shape term to derive it from, which is what `K6` and
+`K7` are about. The counter-example is a test rather than an argument, so the next reader who
+proposes deriving it finds the pair of hulls that says why not.
+
 ### Waste heat
 
 Recomputed only when the game reports a change, never per step
