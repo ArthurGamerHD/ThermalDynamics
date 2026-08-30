@@ -114,6 +114,44 @@ namespace Thermodynamics.Core
         /// <summary>Coefficient on the v^3 aerodynamic heating term.</summary>
         public float FrictionScale = 0.001f;
 
+        /// <summary>
+        /// Whether the drag the friction term already computes is taken out of the ship's motion.
+        ///
+        /// <para>
+        /// **Off, and not because it is unfinished.** Two mods that both slow a ship down is
+        /// `B38` with a name on it, and the mod's answer to *another mod is doing this too* is a
+        /// switch rather than a detection (`C7`). A world running an aerodynamics mod turns this
+        /// off and keeps the heat; a world running only this one turns it on.
+        /// </para>
+        /// </summary>
+        public bool EnableDrag = false;
+
+        /// <summary>
+        /// The drag coefficient a hull is treated as having, dimensionless.
+        ///
+        /// <para>
+        /// **A different number from <see cref="FrictionScale"/>, and that is the whole of `K3`.**
+        /// The two are one product — `FrictionScale = ½ · C_d · η`, where `η` is the share of the
+        /// work done against drag that lands in the surface rather than the wake — so authoring
+        /// both leaves `η` derived, which at these defaults is 0.002. Authoring the *heat* dial and
+        /// deriving the force from it instead would mean a world that tuned its temperatures
+        /// silently re-tuned its handling.
+        /// </para>
+        ///
+        /// <para>
+        /// **Authored rather than derived from the hull, which is measured.** The solver's windward
+        /// term is a projected area, and a projected area is not a shape: a brick and a
+        /// stair-stepped wedge sharing a frontal cross-section compute the *same* drag here while
+        /// their real coefficients differ by about ten times (`DragShapeTests`). Deriving this
+        /// needs a shape term the model does not have, which is `K6` and `K7`.
+        /// </para>
+        ///
+        /// <para>
+        /// The default is a bluff body's, because a Space Engineers hull is a brick.
+        /// </para>
+        /// </summary>
+        public float DragCoefficient = 1f;
+
         // ---- room air ---------------------------------------------------------------------
 
         /// <summary>
@@ -289,6 +327,7 @@ namespace Thermodynamics.Core
             if (VacuumTemperature < 0f) VacuumTemperature = 0f;
             if (SolarEnergy < 0f) SolarEnergy = 0f;
             if (FrictionAtSpeedsAbove < 0f) FrictionAtSpeedsAbove = 0f;
+            if (DragCoefficient < 0f) DragCoefficient = 0f;
             if (FrictionScale < 0f) FrictionScale = 0f;
             if (RoomConvectionCoefficient < 0f) RoomConvectionCoefficient = 0f;
             if (RoomAirDensity < 0f) RoomAirDensity = 0f;
