@@ -274,7 +274,7 @@ namespace Thermodynamics
         /// derived rather than assumed. It is authored rather than read off the hull because the
         /// solver's windward term is a projected area, and a projected area is not a shape.
         /// </summary>
-        [ProtoMember(136)] public float DragCoefficient = 1f;
+        [ProtoMember(136)] public float DragCoefficient = 0.5f;
 
         /// <summary>
         /// Whether a block behind another is sheltered from the wind, for heat and for drag.

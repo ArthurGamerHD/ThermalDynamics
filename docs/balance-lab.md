@@ -880,6 +880,31 @@ fighter as a sail. If both are bad together, the coefficient is simply too big a
 is the dial. The pair separates a modelling error from a tuning one, which the single figure could
 not.
 
+#### What it did: the shipped coefficient fails, and 0.5 passes
+
+**The population had to be corrected first, and by reading the criterion rather than the data.**
+Scored over every thrust-carrying hull, the worst ceilings are `Moat Tower`, `International Space
+Station`, `Asteroid Base`, `Modern House #3` — **stations with one or two thrusters**, thrust-to-
+weight of 0.001 to 0.017 g, median 0.325 g against the population's 4.275. A hull that cannot lift
+itself is not a ship drag broke; it never flew. `K5`'s own words are *must also still be able to
+fly*, so the population is hulls that can lift themselves — **5,649 of 6,352, 88.9 %** — and that is
+a reading of the criterion, not a subset chosen because it passes.
+
+| | `C_d` 1 (shipped) | `C_d` 0.5 | registered |
+| --- | ---: | ---: | --- |
+| drag at 100 m/s beats the ship's own thrust | **14.06 %** | **3.13 %** | no more than 5 % |
+| p1 hull's ceiling at full thrust | **55.7 m/s** | **78.8 m/s** | at least 60 m/s |
+
+**So the shipped coefficient fails both halves and 0.5 passes both, and the default moves to 0.5.**
+The threshold did not move; the configuration did, which is the direction `E11` permits.
+
+**Half is also where the physics puts it, which is worth more than the fit.** What the coefficient
+multiplies is a *Newtonian flat-plate* projection — every exposed face weighted by its incidence,
+with no wake and no pressure recovery behind the hull. That over-predicts a real bluff body at the
+speeds a ship flies, so the coefficient that matches reality is *below* the one an aerodynamicist
+would quote for the shape. Landing at half of it is the expected size of that correction rather than
+a number chosen to pass.
+
 ### What flooring an over-budget grid does, written before it is measured
 
 `CorpusFloorWalk` is built and **has produced nothing**. The question, the statistic, the decision
