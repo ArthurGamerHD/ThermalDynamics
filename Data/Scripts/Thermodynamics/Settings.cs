@@ -255,6 +255,26 @@ namespace Thermodynamics
         [ProtoMember(41)] public float SolarEnergy = 1000f;
         [ProtoMember(42)] public float FrictionAtSpeedsAbove = 50f;
         [ProtoMember(43)] public float FrictionScale = 0.001f;
+
+        /// <summary>
+        /// Whether the drag the friction term already computes is taken out of the ship's motion.
+        ///
+        /// **Off, and not because it is unfinished.** Two mods that both slow a ship down is `B38`
+        /// with a name on it, and this mod's answer to *something else is doing this too* is a
+        /// switch rather than a detection (`C7`).
+        /// </summary>
+        [ProtoMember(135)] public bool EnableDrag = false;
+
+        /// <summary>
+        /// The drag coefficient a hull is treated as having, dimensionless. A bluff body by default,
+        /// because a Space Engineers hull is a brick.
+        ///
+        /// **A different number from `FrictionScale` and that is the whole of `K3`**: the two are
+        /// one product, so authoring both leaves the share of drag work that lands in the surface
+        /// derived rather than assumed. It is authored rather than read off the hull because the
+        /// solver's windward term is a projected area, and a projected area is not a shape.
+        /// </summary>
+        [ProtoMember(136)] public float DragCoefficient = 1f;
         [ProtoMember(44)] public float RoomConvectionCoefficient = 8f;
         [ProtoMember(45)] public float RoomAirDensity = 1.225f;
 
@@ -839,6 +859,8 @@ namespace Thermodynamics
             core.SolarEnergy = SolarEnergy;
             core.FrictionAtSpeedsAbove = FrictionAtSpeedsAbove;
             core.FrictionScale = FrictionScale;
+            core.EnableDrag = EnableDrag;
+            core.DragCoefficient = DragCoefficient;
             core.RoomConvectionCoefficient = RoomConvectionCoefficient;
             core.RoomAirDensity = RoomAirDensity;
             core.HeatPumpCarnotFraction = HeatPumpCarnotFraction;
@@ -909,6 +931,7 @@ namespace Thermodynamics
                 "Frequency", "SimulationSpeed", "HeatTimeScale", "MaxElementVisitsPerStep",
                 "MaxSubsteps", "MaxSubstepsPerBlock", "FloorBlocksWhenOverBudget",
                 "VacuumTemperature", "SolarEnergy", "FrictionAtSpeedsAbove", "FrictionScale",
+                "EnableDrag", "DragCoefficient",
                 "RoomConvectionCoefficient", "RoomAirDensity", "SolarOcclusionInterval",
                 "ClimateGroundInfluence", "ClimateWeatherInfluence",
                 "HeatPumpCarnotFraction", "HeatPumpMaxCoefficient",
@@ -981,6 +1004,8 @@ namespace Thermodynamics
                 case "SolarEnergy": return SolarEnergy;
                 case "FrictionAtSpeedsAbove": return FrictionAtSpeedsAbove;
                 case "FrictionScale": return FrictionScale;
+                case "EnableDrag": return EnableDrag ? 1f : 0f;
+                case "DragCoefficient": return DragCoefficient;
                 case "RoomConvectionCoefficient": return RoomConvectionCoefficient;
                 case "RoomAirDensity": return RoomAirDensity;
                 case "HeatPumpCarnotFraction": return HeatPumpCarnotFraction;
@@ -1092,6 +1117,8 @@ namespace Thermodynamics
                 case "SolarEnergy": SolarEnergy = value; return true;
                 case "FrictionAtSpeedsAbove": FrictionAtSpeedsAbove = value; return true;
                 case "FrictionScale": FrictionScale = value; return true;
+                case "EnableDrag": EnableDrag = value != 0f; return true;
+                case "DragCoefficient": DragCoefficient = value; return true;
                 case "RoomConvectionCoefficient": RoomConvectionCoefficient = value; return true;
                 case "RoomAirDensity": RoomAirDensity = value; return true;
                 case "HeatPumpCarnotFraction": HeatPumpCarnotFraction = value; return true;

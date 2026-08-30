@@ -77,6 +77,16 @@ namespace Thermodynamics.Tests
             { "StepSeconds", "derived from Frequency and SimulationSpeed" },
             { "StepsPerSecond", "derived from Frequency and SimulationSpeed" },
             { "Revision", "a change counter the host reads, not an input" },
+
+            // **These two steer a force, and a force is not a temperature.** The rigs below step a
+            // grid and watch its thermal readings move; drag changes the ship's *motion*, which no
+            // rig here models and no harness applies — `Physics.AddForce` is the game layer. The
+            // arithmetic they drive is covered by `DragForceTests` against the solver's own
+            // published watts, and the grouping the force needs by `DragGroupingTests`.
+            { "EnableDrag", "switches a force applied in the game layer; DragForceTests covers the"
+                + " arithmetic and no rig here models motion" },
+            { "DragCoefficient", "scales a force applied in the game layer; DragForceTests pins that"
+                + " doubling it doubles the force" },
         };
 
         /// <summary>

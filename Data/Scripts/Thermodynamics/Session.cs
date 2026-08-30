@@ -189,6 +189,12 @@ namespace Thermodynamics
             // Every grid every frame, each doing its share of the step it is part way through.
             ThermalGridScheduler.Tick();
 
+            // **After the step, because it reads what the step published.** The drag force is
+            // derived from `Simulation.FrictionWatts`, which the environment pass fills; applying
+            // it before would apply the previous frame's air to this frame's motion. Returns
+            // immediately unless `EnableDrag` is on and this is the server.
+            ThermalGridDrag.Tick();
+
             // The planet-wide wind sweep. Once per frame at most, never per grid, and it returns
             // immediately unless telemetry and the probe interval are both on.
             PlanetProbes.Step(ThermalGrid.TickSeconds);
