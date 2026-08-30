@@ -149,6 +149,7 @@ namespace Thermodynamics
             methods["GetGridSummary"] = Guard(new Func<IMyCubeGrid, MyTuple<float, float, int, int>>(GetGridSummary), "GetGridSummary");
             methods["GetRoom"] = Guard(new Func<IMyCubeGrid, Vector3I, MyTuple<bool, float, float, float>>(GetRoom), "GetRoom");
             methods["GetGridHeatBalance"] = Guard(new Func<IMyCubeGrid, MyTuple<float, float>>(GetGridHeatBalance), "GetGridHeatBalance");
+            methods["GetGridFrictionWatts"] = Guard(new Func<IMyCubeGrid, float>(GetGridFrictionWatts), "GetGridFrictionWatts");
 
             // ---- writing ------------------------------------------------------------------
             methods["SetBlockTemperature"] = Guard(new Func<IMySlimBlock, float, bool>(SetBlockTemperature), "SetBlockTemperature");
@@ -246,6 +247,34 @@ namespace Thermodynamics
 
             return new MyTuple<float, float>(
                 thermals.Simulation.VentedWatts, thermals.Simulation.HeatGainWatts);
+        }
+
+        /// <summary>
+        /// Watts the grid is taking from the air by aerodynamic friction.
+        ///
+        /// <para>
+        /// **This is drag power in all but name.** The solver computes `FrictionScale x rho x
+        /// v_rel^3 x area x windward exposure` summed over the grid's nodes, and real drag power is
+        /// `1/2 C_d rho A v^3` — the same expression. The mod turns it into heat and takes nothing
+        /// from the ship's motion, so a caller that wants to apply the force this implies has the
+        /// magnitude here and nowhere else (backlog.md `K1`).
+        /// </para>
+        ///
+        /// <para>
+        /// It is one term of the second figure `GetGridHeatBalance` returns rather than a separate
+        /// gain, so a caller adding the two would count it twice. Zero for a grid with no
+        /// simulation, which is what every accessor here returns for one (`E8`).
+        /// </para>
+        /// </summary>
+        private static float GetGridFrictionWatts(IMyCubeGrid grid)
+        {
+            ThermalGrid thermals = grid == null || grid.GameLogic == null
+                ? null
+                : grid.GameLogic.GetAs<ThermalGrid>();
+
+            if (thermals == null || thermals.Simulation == null) return 0f;
+
+            return thermals.Simulation.FrictionWatts;
         }
 
         /// <summary>Is a sealed room, air temperature K, pressure 0..1, volume m^3.</summary>

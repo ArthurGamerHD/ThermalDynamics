@@ -106,7 +106,7 @@ def pair(rows):
 def verdict(key, label, holds, detail):
     """One scored row, printed and recorded under a name that does not move (`E5`)."""
     mark = "HOLDS" if holds else ("  ?  " if holds is None else "FAILS")
-    record("C30 " + key + " verdict",
+    record("floor " + key + " verdict",
            "unscored" if holds is None else ("holds" if holds else "fails"))
     print("\n[%s] %s" % (mark.center(5), label))
     print("        " + detail)
@@ -148,7 +148,7 @@ def main():
         if a is None or b is None or abs(a - b) > 1e-3:
             off_clock += 1
 
-    record("C30 pairs on different clocks", off_clock, "pairs")
+    record("floor pairs on different clocks", off_clock, "pairs")
     verdict("clock", "the clock: no run loses simulated time", off_clock == 0,
             "%s of %s pairs ran their two arms on different clocks"
             % (format(off_clock, ","), format(len(pairs), ",")))
@@ -165,8 +165,8 @@ def main():
         if a is not None and b is not None and b > a + scoring.FLOOR_SLACK_SUBSTEPS:
             stiffened += 1
 
-    record("C30 control floored", control_floored, "node-runs")
-    record("C30 pairs stiffened", stiffened, "pairs")
+    record("floor control floored", control_floored, "node-runs")
+    record("floor pairs stiffened", stiffened, "pairs")
     verdict("safety", "the safety: never stiffens, never floors in the control",
             control_floored == 0 and stiffened == 0,
             "the control floored %s node-runs, which must be nought or it is not a control, and "
@@ -190,8 +190,8 @@ def main():
 
     share = 100.0 * floored_nodes / blocks if blocks else 0.0
     low, high = scoring.FLOOR_REACH_BAND
-    record("C30 reach", round(share, 4), "%")
-    record("C30 cells the floor engages on", len(engaged), "pairs")
+    record("floor reach", round(share, 4), "%")
+    record("floor cells the floor engages on", len(engaged), "pairs")
     verdict("reach", "the reach: what the floor holds back", low <= share <= high,
             "%s of %s node-runs, %.2f %% against the %g-%g %% predicted; the floor engages on "
             "%s of %s cells"
@@ -245,14 +245,14 @@ def main():
               " a delta of nought by construction")
 
         for label, q in (("p50", "p50"), ("p95", "p95"), ("p99", "p99")):
-            record("C30 dpeak " + label, round(p[q], 4), "K")
-        record("C30 dpeak max", round(p["max"], 4), "K")
-        record("C30 decision", decision)
+            record("floor dpeak " + label, round(p[q], 4), "K")
+        record("floor dpeak max", round(p["max"], 4), "K")
+        record("floor decision", decision)
 
         over_accepted = sum(1 for v in values if v > scoring.CAP_ACCEPTED_KELVIN)
         over_refused = sum(1 for v in values if v > scoring.CAP_REFUSED_KELVIN)
-        record("C30 cells over the accepted kelvin", over_accepted, "cells")
-        record("C30 cells over the refused kelvin", over_refused, "cells")
+        record("floor cells over the accepted kelvin", over_accepted, "cells")
+        record("floor cells over the refused kelvin", over_refused, "cells")
 
         verdict("cost", "the cost: what the floor moves a peak by",
                 p["p99"] < scoring.FLOOR_COST_P99_KELVIN,

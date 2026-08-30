@@ -450,7 +450,7 @@ CAP_REACH_BAND = (3.0, 10.0)
 
 # ---- the over-budget floor, and the rule that decides whether it ships ------------------------
 #
-# **`C30`'s predictions, which lived only in prose until 2026-08-29.** They were registered in
+# **the over-budget floor's predictions, which lived only in prose until 2026-08-29.** They were registered in
 # balance-lab.md before `CorpusFloorWalk` ran and then scored by hand, so the figures the page
 # quotes had no source anything could check them against — which is the failure `E5` is about, and
 # the reason `floor.py` exists. Written here beside `C3`'s so the two mechanisms are scored against

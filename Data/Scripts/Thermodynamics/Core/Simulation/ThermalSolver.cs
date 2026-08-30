@@ -266,8 +266,39 @@ namespace Thermodynamics.Core
         /// </summary>
         public float LastHeatGainWatts { get; private set; }
 
+        /// <summary>
+        /// Watts the grid took from the air by aerodynamic friction on the last substep, summed
+        /// over its nodes.
+        ///
+        /// <para>
+        /// **This is drag power in all but name, and it is the figure a force is derived from.**
+        /// What the solver computes per node is `FrictionScale x rho x v_rel^3 x area x windward
+        /// exposure`, and real drag power is `1/2 C_d rho A v^3` — the same expression. The mod
+        /// turns it into heat in the hull and takes nothing from the ship's motion, so energy
+        /// enters the world with nothing paying for it: measured over the 8,144 published
+        /// blueprints at `reentry`, the median hull absorbs **5.05 MW** and the largest 4.91 GW, on
+        /// **100 %** of them. At 300 m/s a median 5.05 MW is 16.8 kN never applied
+        /// (backlog.md `K1`).
+        /// </para>
+        ///
+        /// <para>
+        /// **Summed whether or not diagnostics are on**, which is the whole point of it existing
+        /// separately: `ThermalNode.LastFrictionWatts` is filled only under diagnostics, so a force
+        /// derived from walking the nodes would be a force that existed when somebody was looking.
+        /// It rides the accumulator the heat gain already uses, so it costs an add on a row that is
+        /// already being summed.
+        /// </para>
+        ///
+        /// <para>
+        /// A rate from the most recent pass rather than a sum that grows with the session, which is
+        /// what the per-node figures beside it are.
+        /// </para>
+        /// </summary>
+        public float LastFrictionWatts { get; private set; }
+
         private float environmentWattsAccumulator;
         private float heatGainAccumulator;
+        private float frictionAccumulator;
 
         /// <summary>
         /// The heat a grid puts into itself from its own rows — waste heat, solar gain, friction —
@@ -289,6 +320,12 @@ namespace Thermodynamics.Core
         /// </summary>
         private float heatGainRowTotal;
 
+        /// <summary>
+        /// The friction half of <see cref="heatGainRowTotal"/>, hoisted with it and settled by the
+        /// same call, so the two cannot come from different substeps.
+        /// </summary>
+        private float frictionRowTotal;
+
         /// <summary>Whether <see cref="heatGainRowTotal"/> belongs to the step now running.</summary>
         private bool heatGainRowTotalValid;
 
@@ -303,6 +340,7 @@ namespace Thermodynamics.Core
         {
             environmentWattsAccumulator = 0f;
             heatGainAccumulator = 0f;
+            frictionAccumulator = 0f;
         }
 
         /// <summary>
@@ -325,11 +363,19 @@ namespace Thermodynamics.Core
             if (summed)
             {
                 heatGainRowTotal = heatGainAccumulator;
+                frictionRowTotal = frictionAccumulator;
                 heatGainRowTotalValid = true;
                 return;
             }
 
             heatGainAccumulator += heatGainRowTotal;
+
+            // **Friction is hoisted with the heat gain and for the same reason.** It is read out of
+            // the same row, so a substep that does not re-sum the rows has nothing in its
+            // accumulator — and a friction total that reads its true value on the first substep of
+            // a step and nought on the other twenty-three is the shape of defect a force derived
+            // from it would inherit as a stutter nobody could trace.
+            frictionAccumulator += frictionRowTotal;
         }
 
         /// <summary>
@@ -341,6 +387,7 @@ namespace Thermodynamics.Core
         {
             LastEnvironmentWatts = environmentWattsAccumulator;
             LastHeatGainWatts = heatGainAccumulator;
+            LastFrictionWatts = frictionAccumulator;
         }
 
         private readonly List<OverheatEvent> overheats = new List<OverheatEvent>();
@@ -2502,7 +2549,15 @@ namespace Thermodynamics.Core
                 // environment half is signed, so a grid absorbing more than it sheds reads
                 // positive and the venting figure derived from it reads zero.
                 environmentWattsAccumulator += radiationWatts + convectionWatts;
-                if (summingRows) heatGainAccumulator += source;
+                if (summingRows)
+                {
+                    heatGainAccumulator += source;
+
+                    // Friction is already inside `source` — this pulls it out again as its own
+                    // total, because a force needs the friction term alone and the heat model
+                    // needs the sum. One add on a row that is already being summed.
+                    frictionAccumulator += nodeFrictionRow[i];
+                }
 
                 if (!diagnostics) continue;
 

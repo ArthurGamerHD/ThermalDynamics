@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """**The floor report's arithmetic, and the two ways it could quietly say the wrong thing.**
 
-`C30` is decided on the paired floor walk, and until 2026-08-29 that walk had no reader: its
+the over-budget floor is decided on the paired floor walk, and until 2026-08-29 that walk had no reader: its
 figures were scored by hand once and written onto a page, so nothing could check them (`E5`). The
 two things a reader of a paired walk has to get right are which arm is which, and what the price is
 averaged over — and both are silent when wrong, because either produces a number of the right shape.
@@ -87,7 +87,7 @@ class ThePriceIsAveragedOverTheCellsTheFloorTouched(unittest.TestCase):
 
 
 class TheRegisteredConstantsAreUnderTest(unittest.TestCase):
-    """The bands `C30` was registered against live in `scoring.py`, not in a sentence.
+    """The bands the floor's predictions were registered against live in `scoring.py`, not in a sentence.
 
     They were prose until 2026-08-29, which is how a page can quote a figure scored against a
     threshold no longer written anywhere the code can see (`D3`, `E5`).

@@ -158,6 +158,20 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Watts the grid is taking from the air by aerodynamic friction, summed over its nodes.
+        ///
+        /// **Drag power in all but name**, and the one figure a drag force needs for its magnitude:
+        /// the solver computes `FrictionScale x rho x v_rel^3 x area x windward exposure` and real
+        /// drag power is `1/2 C_d rho A v^3`. Today it becomes heat in the hull and nothing is
+        /// taken from the ship's motion (backlog.md `K1`). Included in
+        /// <see cref="HeatGainWatts"/>, which is the sum this is one term of.
+        /// </summary>
+        public float FrictionWatts
+        {
+            get { return solver.LastFrictionWatts; }
+        }
+
+        /// <summary>
         /// Watts this grid is putting into itself: waste heat, sunlight, friction and registered
         /// heat sources. Venting means nothing without it — a ship shedding a megawatt is coping
         /// or overwhelmed depending on this figure.
