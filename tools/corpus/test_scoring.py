@@ -449,6 +449,37 @@ class NoughtAndNothingAreDifferentAnswers(unittest.TestCase):
 
 
 
+class ARowIsNamedByAShipAndAnId(unittest.TestCase):
+    """**A ship is a name *and* a workshop id, and an arm where the dataset has one.**
+
+    Both halves have failed once. Keyed by id alone, the fourteen ships that shared `workshop_id` 0
+    through a workshop *collection* were one ship. Keyed without the arm, `verdict.py` called half
+    of a paired walk's rows duplicates — *912 duplicate rows* on the 2026-08-25 cap dataset — and
+    scored `G6` on whichever arm happened to come first.
+    """
+
+    def test_two_ships_sharing_an_id_are_two_rows(self):
+        a = {"ship": "Raptor", "workshop_id": "0"}
+        b = {"ship": "Ghost", "workshop_id": "0"}
+        self.assertNotEqual(scoring.key_of(a), scoring.key_of(b))
+
+    def test_two_ships_sharing_a_name_are_two_rows(self):
+        a = {"ship": "Drone", "workshop_id": "1"}
+        b = {"ship": "Drone", "workshop_id": "2"}
+        self.assertNotEqual(scoring.key_of(a), scoring.key_of(b))
+
+    def test_the_arm_is_part_of_the_identity_when_asked_for(self):
+        control = {"ship": "Drone", "workshop_id": "1", "cap": "0"}
+        capped = {"ship": "Drone", "workshop_id": "1", "cap": "6"}
+
+        self.assertEqual(scoring.key_of(control), scoring.key_of(capped))
+        self.assertNotEqual(scoring.key_of(control, "cap"), scoring.key_of(capped, "cap"))
+
+    def test_a_column_a_row_does_not_have_reads_as_absent_rather_than_throwing(self):
+        self.assertEqual((None, None), scoring.key_of({}))
+
+
+
 if __name__ == "__main__":
     unittest.main()
 

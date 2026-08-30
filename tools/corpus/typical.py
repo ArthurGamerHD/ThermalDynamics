@@ -36,6 +36,10 @@ import csv
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import scoring
+
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
 CENSUS = args[0] if len(args) > 0 else "out/census-2026-08-21/census.csv"
 OUTCOMES = args[1] if len(args) > 1 else "out/corpus-2026-08-21/outcomes.csv"
@@ -60,10 +64,19 @@ AXES = ["buried_share", "exposure_m2_per_kw", "capacity_j_per_k_per_w", "w_per_b
 
 
 def number(row, key, default=0.0):
-    try:
-        return float(row[key])
-    except (TypeError, ValueError, KeyError):
-        return default
+    """A cell as a float, defaulting where the dataset does not carry it.
+
+    **The parsing is `scoring.number` and the default is this tool's own choice.**
+    `scoring.number` reports an absent cell as *unmeasured* because nought and nothing are
+    different answers (`E8`) — twelve copies of that parse had already drifted into three
+    behaviours, one of which was a live defect in `censusdiff.py`. Where a tool wants a
+    default it says so here rather than burying it in a second parser.
+
+    The selectors here are counts — thrusters, producers, rooms — where absent and none
+    are the same statement about a hull.
+    """
+    value = scoring.number(row, key)
+    return default if value is None else value
 
 
 def key_of(row):
