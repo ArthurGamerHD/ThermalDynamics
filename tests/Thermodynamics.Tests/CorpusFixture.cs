@@ -235,6 +235,18 @@ namespace Thermodynamics.Tests
         {
             List<string> corpus = Files();
 
+            // **The selection is applied to the whole corpus, before the resume takes out what is
+            // finished.** The other order cannot resume: `Only` asserts that every blueprint it
+            // names is present, which is the check that catches a selection built against a
+            // different corpus — and after `Remaining` has removed the ships an earlier slice
+            // finished, the ones it names are legitimately absent. Measured on the 2026-08-29 floor
+            // walk: a selection of 283 with 227 done failed with *the corpus holds 56 of them*,
+            // which is 283 minus 227 and not a statement about the corpus at all.
+            //
+            // So a walk narrowed by `THERMAL_CORPUS_ONLY` could not be resumed, and a selection
+            // walk is exactly the kind that needs to be — its ships are picked for being expensive.
+            corpus = Only(corpus);
+
             HashSet<string> done = Done(label);
             if (done.Count > 0)
             {
@@ -243,8 +255,6 @@ namespace Thermodynamics.Tests
                     + remaining.Count + " to go");
                 corpus = remaining;
             }
-
-            corpus = Only(corpus);
 
             int cap;
             string configured = Environment.GetEnvironmentVariable("THERMAL_CORPUS_SHIPS");
@@ -285,7 +295,7 @@ namespace Thermodynamics.Tests
         /// that came out would be over a population nobody can name.
         /// </para>
         /// </summary>
-        private static List<string> Only(List<string> corpus)
+        public static List<string> Only(List<string> corpus)
         {
             string path = Environment.GetEnvironmentVariable("THERMAL_CORPUS_ONLY");
             if (string.IsNullOrEmpty(path)) return corpus;

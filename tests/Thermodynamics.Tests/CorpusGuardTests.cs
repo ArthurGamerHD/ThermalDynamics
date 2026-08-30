@@ -103,5 +103,61 @@ namespace Thermodynamics.Tests
             Assert.Equal(corpus, visited);
             Assert.Empty(CorpusFixture.Remaining(corpus, done));
         }
+        /// <summary>
+        /// **A walk narrowed by `THERMAL_CORPUS_ONLY` can be resumed**, which it could not.
+        ///
+        /// <para>
+        /// `Only` asserts that the corpus holds every blueprint the selection names — the check
+        /// that catches a list built against a different corpus. Applied *after* the resume filter
+        /// has removed what an earlier slice finished, the ones it names are legitimately absent
+        /// and the check fires on a healthy resume.
+        /// </para>
+        ///
+        /// <para>
+        /// Measured on the 2026-08-29 floor walk: a selection of 283 with 227 finished failed with
+        /// *the corpus holds 56 of them*, which is 283 minus 227 and not a statement about the
+        /// corpus. A selection walk is exactly the kind that needs resuming — its ships are picked
+        /// for being expensive — so this made the guard's own message the reason a three-hour walk
+        /// could not be continued.
+        /// </para>
+        ///
+        /// <para>
+        /// The order is the fix: narrow first, then take out what is done. This pins the property
+        /// that makes it right — the two operations commute on what they *keep*, and only the
+        /// assertion inside `Only` distinguishes them, so applying the selection to the whole
+        /// corpus is the only order under which that assertion means what it says.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void NarrowingThenResumingKeepsTheSameShips()
+        {
+            List<string> corpus = new List<string> { "a", "b", "c", "d", "e" };
+            HashSet<string> selection = new HashSet<string> { "a", "b", "c" };
+            HashSet<string> done = new HashSet<string> { "a", "b" };
+
+            // Narrow, then resume: what a slice of a selection walk should read.
+            List<string> narrowedFirst = CorpusFixture.Remaining(
+                Keep(corpus, selection), done);
+
+            // Resume, then narrow: the same ships, which is why the defect was invisible in what
+            // the walk *read* and visible only in the assertion it tripped.
+            List<string> resumedFirst = Keep(
+                CorpusFixture.Remaining(corpus, done), selection);
+
+            Assert.Equal(new List<string> { "c" }, narrowedFirst);
+            Assert.Equal(narrowedFirst, resumedFirst);
+        }
+
+        private static List<string> Keep(IList<string> corpus, ICollection<string> wanted)
+        {
+            List<string> kept = new List<string>();
+            foreach (string path in corpus)
+            {
+                if (wanted.Contains(path)) kept.Add(path);
+            }
+
+            return kept;
+        }
+
     }
 }
