@@ -47,6 +47,40 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+        /// <summary>
+        /// Cold block, pump, hot block in a row along Z with **conduction left on**, which is what
+        /// separates it from <see cref="Rig(out ThermalNode, out ThermalNode, out HeatPumpDevice)"/>.
+        ///
+        /// <para>
+        /// `Rig` switches conduction off so three touching blocks cannot equalise on their own and
+        /// hide the pump. These tests want the opposite: they are about what the pump does against
+        /// a hull that is fighting it back, so the blocks are heavy armour and the heat is allowed
+        /// to flow. Written out three times before this, identically, which is three chances for
+        /// one of them to stop being the same rig as the other two while all three still passed.
+        /// </para>
+        /// </summary>
+        private static ThermalSimulation ConductingRig(out BlockInstance cold, out BlockInstance hot,
+            out HeatPumpDevice pump)
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
+            cold = builder.Last;
+            builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
+                new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
+            BlockInstance pumpBlock = builder.Last;
+            builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
+            hot = builder.Last;
+
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableEnvironment = false;
+            settings.EnableDamage = false;
+            settings.Derive();
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
+            pump = simulation.Solver.GetHeatPump(pumpBlock);
+            return simulation;
+        }
+
         [Fact]
         public void APumpBindsToTheBlocksEitherSideOfIt()
         {
@@ -467,22 +501,9 @@ namespace Thermodynamics.Tests
         [InlineData(0.25f)]
         public void TheThrottleCapsWhatThePumpDraws(float setting)
         {
-            GridBuilder builder = GridBuilder.Large();
-            builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
-            BlockInstance cold = builder.Last;
-            builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
-                new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
-            BlockInstance pumpBlock = builder.Last;
-            builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
-            BlockInstance hot = builder.Last;
-
-            ThermalSettings settings = new ThermalSettings();
-            settings.EnableEnvironment = false;
-            settings.EnableDamage = false;
-            settings.Derive();
-
-            ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
-            HeatPumpDevice pump = simulation.Solver.GetHeatPump(pumpBlock);
+            BlockInstance cold, hot;
+            HeatPumpDevice pump;
+            ThermalSimulation simulation = ConductingRig(out cold, out hot, out pump);
             pump.Enabled = true;
             pump.PowerAvailable = 1f;
             pump.PowerSetting = setting;
@@ -687,22 +708,9 @@ namespace Thermodynamics.Tests
         [InlineData(400f, -60f)]    // 100 K gap: sixty degrees too wide
         public void TheOptimalMarginSaysHowFarTheGapIsFromFullOutput(float hotSide, float expected)
         {
-            GridBuilder builder = GridBuilder.Large();
-            builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
-            BlockInstance cold = builder.Last;
-            builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
-                new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
-            BlockInstance pumpBlock = builder.Last;
-            builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
-            BlockInstance hot = builder.Last;
-
-            ThermalSettings settings = new ThermalSettings();
-            settings.EnableEnvironment = false;
-            settings.EnableDamage = false;
-            settings.Derive();
-
-            ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
-            HeatPumpDevice pump = simulation.Solver.GetHeatPump(pumpBlock);
+            BlockInstance cold, hot;
+            HeatPumpDevice pump;
+            ThermalSimulation simulation = ConductingRig(out cold, out hot, out pump);
             pump.Enabled = true;
             pump.PowerAvailable = 1f;
 
@@ -727,22 +735,9 @@ namespace Thermodynamics.Tests
         [Fact]
         public void ThrottlingShrinksTheOptimalMargin()
         {
-            GridBuilder builder = GridBuilder.Large();
-            builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
-            BlockInstance cold = builder.Last;
-            builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
-                new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
-            BlockInstance pumpBlock = builder.Last;
-            builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
-            BlockInstance hot = builder.Last;
-
-            ThermalSettings settings = new ThermalSettings();
-            settings.EnableEnvironment = false;
-            settings.EnableDamage = false;
-            settings.Derive();
-
-            ThermalSimulation simulation = builder.BuildSimulation(settings, 300f);
-            HeatPumpDevice pump = simulation.Solver.GetHeatPump(pumpBlock);
+            BlockInstance cold, hot;
+            HeatPumpDevice pump;
+            ThermalSimulation simulation = ConductingRig(out cold, out hot, out pump);
             pump.Enabled = true;
             pump.PowerAvailable = 1f;
             pump.PowerSetting = 0.5f;

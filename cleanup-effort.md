@@ -15,6 +15,9 @@ reader proposes again.
 
 | 4 | **The per-face frame, computed once instead of four times.** Counting a block's exposure, auditing it and building a room map each walked the six faces of a block's bounds and each worked out the same six numbers to do it. `BoxGeometry.Span` returns them. | Measured, because it is the surfaces hot path — see below. 52 bit-identity tests pass unchanged, and `FaceSpanTests` is written against the arithmetic rather than against the extraction, so it would have caught a copy that had drifted before it was one function. |
 
+| 5 | **The live cap judgement quoted a figure the re-take superseded.** The paragraph deciding `MaxSubstepsPerBlock` stays 0 is current reasoning, not a historical record, and it cited the 0.282 K measured through the reader `A13` is about. | The decision does not move — it rests on *who pays*, and the who has not changed — so the note says the margin moved rather than silently swapping the number. A decision whose stated evidence changed and whose conclusion did not is worth showing, not tidying. |
+| 6 | **Two rigs the harness already owned, built by hand three times each.** `HeatPumpTests` built the same conducting rig three times, and a pumpless ring was derived cell by cell in `Scenarios.LoopFaults` and twice more in `CoolantFaultTests`. Now `ConductingRig` and `PipeFitter.BuildPumplessRing`. | Three copies of a geometry derivation is three chances for one to lay a corner where a straight belongs — and a mis-oriented pipe still builds a ring, so a fault test would fail for the wrong reason and pass. 2,141 tests green. |
+
 ### Measuring cleanup 4, and why one reading was not enough
 
 **The first paired reading said the refactor was 1.9 % slower and it was noise.** Best-of-N moved
