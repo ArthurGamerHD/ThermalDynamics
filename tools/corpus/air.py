@@ -65,11 +65,6 @@ COEFFICIENT = {"surface-hot-noon": 1.0, "storm-parked": 2.0, "reentry": 2.4142}
 PROJECT_AT = 2.7321
 
 
-def number(row, key):
-    try:
-        return float(row[key])
-    except (TypeError, ValueError, KeyError):
-        return None
 
 
 def load(name):
@@ -97,7 +92,7 @@ def main():
 
     demand = {}
     for row in rows:
-        value = number(row, "substeps_demanded")
+        value = scoring.number(row, "substeps_demanded")
         if value is None:
             continue
         cell = (float(row["conductivity"]), float(row["clock"]))

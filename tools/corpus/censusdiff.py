@@ -28,6 +28,10 @@ import csv
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import scoring
+
 # Columns worth comparing, and what each one answers. Everything else in a census row is an
 # identifier, a name, or a figure derived from these.
 HEAT = ["waste_idle_w", "waste_full_w", "waste_burn_w", "installed_power_w", "consumer_draw_w"]
@@ -42,11 +46,6 @@ def key_of(row):
     return (row["ship"], row["workshop_id"])
 
 
-def number(row, column):
-    try:
-        return float(row[column])
-    except (TypeError, ValueError, KeyError):
-        return 0.0
 
 
 def read(directory, name):
@@ -69,7 +68,7 @@ def composition(directory):
     with open(path, newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle):
             type_id = row["type_id"]
-            watts[type_id] = watts.get(type_id, 0.0) + number(row, "waste_full_w")
+            watts[type_id] = watts.get(type_id, 0.0) + scoring.number(row, "waste_full_w")
             ships.setdefault(type_id, set()).add(key_of(row))
 
     return watts, {t: len(s) for t, s in ships.items()}
@@ -119,10 +118,23 @@ def main(argv=None):
 
     moves = {}
     for column in COLUMNS:
-        total_before = sum(number(before[k], column) for k in shared)
-        total_after = sum(number(after[k], column) for k in shared)
-        moved = sum(1 for k in shared
-                    if number(before[k], column) != number(after[k], column))
+        # **A column one census does not carry is absent, not nought** (`E8`, `C8`). Summed as
+        # zero it printed as a total — *before 0, after 12,345* reads as a column that grew, when
+        # what happened is that one of the two censuses has no such column. Comparing censuses
+        # taken on different builds is what this tool is for, and columns coming and going between
+        # builds is what `C8` is about, so this is the case rather than the corner.
+        readings_before = [scoring.number(before[k], column) for k in shared]
+        readings_after = [scoring.number(after[k], column) for k in shared]
+
+        if any(v is None for v in readings_before) or any(v is None for v in readings_after):
+            carried = "before" if any(v is None for v in readings_after) else "after"
+            print(f"  {column:<24} {'not carried by the ' + carried + ' census':>48}")
+            moves[column] = (None, 0)
+            continue
+
+        total_before = sum(readings_before)
+        total_after = sum(readings_after)
+        moved = sum(1 for a, b in zip(readings_before, readings_after) if a != b)
 
         percent = share(total_before, total_after)
         moves[column] = (percent, moved)

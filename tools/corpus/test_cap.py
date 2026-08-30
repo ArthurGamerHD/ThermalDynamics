@@ -134,8 +134,8 @@ class AWeightIsCarriedIntoEveryPopulationFigure(unittest.TestCase):
             paired("giant", scenario="reentry", floored=50.0, blocks=100.0)
 
         pairs, _, _, _ = cap.pair(rows, weights)
-        floored = sum(cap.number(capped, "floored") * weight for _, _, capped, weight in pairs)
-        blocks = sum(cap.number(capped, "blocks") * weight for _, _, capped, weight in pairs)
+        floored = sum(scoring.number(capped, "floored") * weight for _, _, capped, weight in pairs)
+        blocks = sum(scoring.number(capped, "blocks") * weight for _, _, capped, weight in pairs)
 
         # Unweighted the two ships are 50 of 200 node-runs, 25 %. Weighted the giant is twenty
         # ships, so it is 1,000 of 2,100 -- 47.6 %, and the band it is scored against is 3-10 %.
@@ -157,8 +157,8 @@ class AWalkCheckIsNotWeighted(unittest.TestCase):
 
         pairs, _, _, _ = cap.pair(rows, {"light": 1.0, "heavy": 20.0})
         broken = sum(1 for _, control, capped, _ in pairs
-                     if abs(cap.number(capped, "substeps_demanded")
-                            - min(cap.number(control, "substeps_demanded"), 6.0)) > 0.01)
+                     if abs(scoring.number(capped, "substeps_demanded")
+                            - min(scoring.number(control, "substeps_demanded"), 6.0)) > 0.01)
         self.assertEqual(broken, 1)
 
 

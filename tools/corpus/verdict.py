@@ -67,17 +67,6 @@ def record(statistic, value, unit=""):
 WARM_KELVIN = 400.0
 
 
-def number(row, key):
-    """A column as a float, or None where the dataset does not carry it.
-
-    **A missing column reads the same as an empty cell** (`C8`). `KeyError` is in the list because
-    a walk that predates a column has no such key at all, and the first caller to ask an old
-    dataset for a new column crashed the report rather than reporting the column as unmeasured.
-    """
-    try:
-        return float(row[key])
-    except (KeyError, TypeError, ValueError):
-        return None
 
 
 # The key that identifies a ship. A workshop id alone is not enough: fourteen corpus blueprints
@@ -244,14 +233,14 @@ else:
 # **The population figures the documentation quotes.** Sealed blocks are here because a page said
 # twenty-four of them on one ship where the dataset says 1,184 across 331 (`F14`); the share it
 # also quoted was right, which is how it survived.
-_blocks = [number(r, "blocks") for r in ships]
+_blocks = [scoring.number(r, "blocks") for r in ships]
 _blocks = sorted(b for b in _blocks if b is not None)
 if _blocks:
     record("population blocks", int(sum(_blocks)))
     record("population blocks p50", int(_blocks[len(_blocks) // 2]))
     record("population blocks p99", int(_blocks[min(len(_blocks) - 1, int(0.99 * len(_blocks)))]))
 
-_sealed = [number(r, "sealed_blocks") for r in ships]
+_sealed = [scoring.number(r, "sealed_blocks") for r in ships]
 _sealed = [v for v in _sealed if v is not None]
 if _sealed and _blocks:
     record("sealed blocks", int(sum(_sealed)))
@@ -263,12 +252,12 @@ print("peak temperature by scenario")
 print(f"  {'scenario':18}{'ships':>7}{'min':>8}{'p50':>8}{'p95':>9}{'p99':>9}{'max':>10}{'over crit':>11}")
 for name in sorted(by_scenario):
     rows = by_scenario[name]
-    peaks = [number(r, "peak_k") for r in rows]
+    peaks = [scoring.number(r, "peak_k") for r in rows]
     peaks = [p for p in peaks if p is not None]
     if not peaks:
         continue
     p = percentiles(peaks)
-    over = sum(1 for r in rows if number(r, "over_critical") and number(r, "over_critical") > 0)
+    over = sum(1 for r in rows if scoring.number(r, "over_critical") and scoring.number(r, "over_critical") > 0)
     print(f"  {name:18}{len(rows):>7,}{p['min']:>8.0f}{p['p50']:>8.0f}{p['p95']:>9.0f}"
           f"{p['p99']:>9.0f}{p['max']:>10.0f}{pct(over, len(rows)):>10.1f}%")
 
@@ -288,7 +277,7 @@ def verdict(tag, claim, ok, detail, fails_when):
 # ---- G1: idle is safe -------------------------------------------------------------------
 idle = by_scenario.get("idle", []) + by_scenario.get("vacuum-shadow", [])
 if idle:
-    critical = sum(1 for r in idle if number(r, "over_critical") and number(r, "over_critical") > 0)
+    critical = sum(1 for r in idle if scoring.number(r, "over_critical") and scoring.number(r, "over_critical") > 0)
     share = pct(critical, len(idle))
     record("G1 idle critical share", round(share, 4), "%")
     verdict("G1", "Idle is safe.",
@@ -305,7 +294,7 @@ else:
 loaded = by_scenario.get("full-electrical", [])
 if loaded:
     warm = sum(1 for r in loaded
-               if number(r, "peak_k") is not None and number(r, "peak_k") >= WARM_KELVIN)
+               if scoring.number(r, "peak_k") is not None and scoring.number(r, "peak_k") >= WARM_KELVIN)
     share = pct(warm, len(loaded))
     record("G2 warm share", round(share, 3), "%")
     verdict("G2", "Load bites.",
@@ -324,7 +313,7 @@ else:
 recovery = by_scenario.get("recovery", [])
 if recovery:
     returned = sum(1 for r in recovery
-                   if number(r, "over_critical") == 0)
+                   if scoring.number(r, "over_critical") == 0)
     record("G5 recovered share", round(pct(returned, len(recovery)), 3), "%")
     verdict("G5", "No death spiral.",
             pct(returned, len(recovery)) > 95.0 if scoring.resolves(len(recovery), 5.0) else None,
@@ -337,11 +326,11 @@ else:
             "recovery time unbounded, or damage continues after the load stops")
 
 # ---- G6: affordable across the population ------------------------------------------------
-demand = [number(r, "substeps_demanded") for r in outcomes]
+demand = [scoring.number(r, "substeps_demanded") for r in outcomes]
 demand = [d for d in demand if d is not None]
 if demand:
     p = percentiles(demand)
-    granted = [number(r, "substeps_granted") for r in outcomes]
+    granted = [scoring.number(r, "substeps_granted") for r in outcomes]
     granted = [g for g in granted if g is not None]
 
     # The shipped `MaxSubsteps`, not the largest count this dataset happened to be granted. See
@@ -355,10 +344,10 @@ if demand:
     for row in outcomes:
         # Demanded rather than granted: the allowance decides by comparing the demand against what
         # it can afford, so a granted count is the answer rather than the question.
-        substeps = number(row, "substeps_demanded")
+        substeps = scoring.number(row, "substeps_demanded")
         if substeps is None:
-            substeps = number(row, "substeps_granted")
-        cost = scoring.step_work(number(row, "substep_cost"), substeps)
+            substeps = scoring.number(row, "substeps_granted")
+        cost = scoring.step_work(scoring.number(row, "substep_cost"), substeps)
         if cost is not None:
             work.append(cost)
 
@@ -418,13 +407,13 @@ if demand:
               f"{'work p50':>12}{'work p99':>12}{'over':>7}")
         for name in sorted(by_scenario):
             rows = by_scenario[name]
-            demands = [d for d in (number(r, "substeps_demanded") for r in rows) if d is not None]
+            demands = [d for d in (scoring.number(r, "substeps_demanded") for r in rows) if d is not None]
             works = []
             for row in rows:
-                substeps = number(row, "substeps_demanded")
+                substeps = scoring.number(row, "substeps_demanded")
                 if substeps is None:
-                    substeps = number(row, "substeps_granted")
-                cost = scoring.step_work(number(row, "substep_cost"), substeps)
+                    substeps = scoring.number(row, "substeps_granted")
+                cost = scoring.step_work(scoring.number(row, "substep_cost"), substeps)
                 if cost is not None:
                     works.append(cost)
             if not demands:
@@ -477,13 +466,13 @@ print("=" * 78)
 
 
 def extremes(scenario, key, label, count=5, reverse=True):
-    rows = [r for r in by_scenario.get(scenario, []) if number(r, key) is not None]
+    rows = [r for r in by_scenario.get(scenario, []) if scoring.number(r, key) is not None]
     if not rows:
         return
-    rows.sort(key=lambda r: number(r, key), reverse=reverse)
+    rows.sort(key=lambda r: scoring.number(r, key), reverse=reverse)
     print(f"\n{label} ({scenario})")
     for r in rows[:count]:
-        print(f"  {number(r, key):12,.0f}  {int(number(r, 'blocks') or 0):>7,} blocks  "
+        print(f"  {scoring.number(r, key):12,.0f}  {int(scoring.number(r, 'blocks') or 0):>7,} blocks  "
               f"{r['ship'][:44]}")
 
 
@@ -503,9 +492,9 @@ print("""
   so the p95/p99/max columns above describe the harness, not the mod.
 """.rstrip())
 
-tail = [r for r in outcomes if (number(r, "peak_k") or 0) > 900.0]
-far = [r for r in outcomes if (number(r, "peak_k") or 0) > 10000.0]
-runaway_ships = set(r["ship"] for r in outcomes if (number(r, "peak_k") or 0) > 2000.0)
+tail = [r for r in outcomes if (scoring.number(r, "peak_k") or 0) > 900.0]
+far = [r for r in outcomes if (scoring.number(r, "peak_k") or 0) > 10000.0]
+runaway_ships = set(r["ship"] for r in outcomes if (scoring.number(r, "peak_k") or 0) > 2000.0)
 print(f"\n  rows past 900 K (steel service limit): {len(tail):>6,}  {pct(len(tail), len(outcomes)):5.2f} %")
 print(f"  rows past 10,000 K — plainly unphysical: {len(far):>6,}  {pct(len(far), len(outcomes)):5.2f} %")
 print(f"  ships with at least one runaway scenario: {len(runaway_ships):,} of "
@@ -527,7 +516,7 @@ print("  and they are different numbers wherever the share is not one (E9).")
 print(f"\n  {'scenario':18}{'reach critical':>16}{'p10':>8}{'median':>9}{'p90':>8}")
 for name in sorted(by_scenario):
     rows_ = by_scenario[name]
-    hit = sorted(v for v in (number(r, "seconds_to_critical") for r in rows_)
+    hit = sorted(v for v in (scoring.number(r, "seconds_to_critical") for r in rows_)
                  if v is not None and v >= 0)
     if not hit:
         print(f"  {name:18}{'none':>16}")
@@ -555,17 +544,17 @@ else:
           f"{'after crossing':>17}")
     for name in sorted(by_scenario):
         rows_ = by_scenario[name]
-        lost = sorted(v for v in (number(r, "seconds_to_first_loss") for r in rows_)
+        lost = sorted(v for v in (scoring.number(r, "seconds_to_first_loss") for r in rows_)
                       if v is not None and v >= 0)
         if not lost:
             print(f"  {name:18}{'none':>16}")
             continue
         # Paired per ship before the difference is taken (`E6`): the gap between two percentiles of
         # two populations is not a percentile of the gap.
-        gaps = sorted(number(r, "seconds_to_first_loss") - number(r, "seconds_to_critical")
+        gaps = sorted(scoring.number(r, "seconds_to_first_loss") - scoring.number(r, "seconds_to_critical")
                       for r in rows_
-                      if (number(r, "seconds_to_first_loss") or -1) >= 0
-                      and (number(r, "seconds_to_critical") or -1) >= 0)
+                      if (scoring.number(r, "seconds_to_first_loss") or -1) >= 0
+                      and (scoring.number(r, "seconds_to_critical") or -1) >= 0)
         q = percentiles(lost)
         gap = f"{percentiles(gaps)['p50']:>16.0f}s" if gaps else f"{'—':>17}"
         print(f"  {name:18}{pct(len(lost), len(rows_)):>15.1f}%{lost[len(lost)//10]:>8.0f}s"
@@ -581,7 +570,7 @@ hot_run = {}
 for r in outcomes:
     name = r.get("hottest_block") or "?"
     hot_all[name] = hot_all.get(name, 0) + 1
-    if (number(r, "peak_k") or 0) > 2000.0:
+    if (scoring.number(r, "peak_k") or 0) > 2000.0:
         hot_run[name] = hot_run.get(name, 0) + 1
 
 total_run = sum(hot_run.values())

@@ -80,12 +80,6 @@ ANCHOR = "vacuum-shadow"
 OFF = 0
 
 
-def number(row, key):
-    """A column as a float, or None where the dataset does not carry it (`C8`)."""
-    try:
-        return float(row[key])
-    except (KeyError, TypeError, ValueError):
-        return None
 
 
 def load(path):
@@ -132,7 +126,7 @@ def pair(rows, weight_by_ship):
     caps = set()
 
     for row in rows:
-        cap = number(row, "cap")
+        cap = scoring.number(row, "cap")
         if cap is None:
             continue
 
@@ -165,10 +159,10 @@ def pair(rows, weight_by_ship):
 
 
 def work(row):
-    substeps = number(row, "substeps_demanded")
+    substeps = scoring.number(row, "substeps_demanded")
     if substeps is None:
-        substeps = number(row, "substeps_granted")
-    return scoring.step_work(number(row, "substep_cost"), substeps)
+        substeps = scoring.number(row, "substeps_granted")
+    return scoring.step_work(scoring.number(row, "substep_cost"), substeps)
 
 
 def verdict(key, label, holds, detail):
@@ -245,8 +239,8 @@ def main():
     broken = 0
     worst = 0.0
     for _, control, capped, _ in pairs:
-        a = number(control, "substeps_demanded")
-        b = number(capped, "substeps_demanded")
+        a = scoring.number(control, "substeps_demanded")
+        b = scoring.number(capped, "substeps_demanded")
         if a is None or b is None:
             continue
 
@@ -325,7 +319,7 @@ def main():
     deltas = []
     by_scenario = collections.defaultdict(list)
     for key, control, capped, weight in pairs:
-        delta = scoring.delta_peak(number(control, "peak_k"), number(capped, "peak_k"))
+        delta = scoring.delta_peak(scoring.number(control, "peak_k"), scoring.number(capped, "peak_k"))
         if delta is None:
             continue
         deltas.append((delta, key, weight))
@@ -339,11 +333,11 @@ def main():
     resting = []
     travelling = []
     for key, control, capped, weight in pairs:
-        delta = scoring.delta_peak(number(control, "peak_k"), number(capped, "peak_k"))
+        delta = scoring.delta_peak(scoring.number(control, "peak_k"), scoring.number(capped, "peak_k"))
         if delta is None:
             continue
 
-        rest = scoring.at_rest(number(control, "peak_rate_k_per_s"))
+        rest = scoring.at_rest(scoring.number(control, "peak_rate_k_per_s"))
         if rest is None:
             continue
 
@@ -453,14 +447,14 @@ def main():
     control_floored = 0
 
     for _, control, capped, weight in pairs:
-        f = number(capped, "floored")
-        b = number(capped, "blocks")
+        f = scoring.number(capped, "floored")
+        b = scoring.number(capped, "blocks")
         if f is None or b is None:
             continue
 
         floored += f * weight
         blocks += b * weight
-        control_floored += (number(control, "floored") or 0) * weight
+        control_floored += (scoring.number(control, "floored") or 0) * weight
 
         if capped.get("scenario") == ANCHOR:
             continue

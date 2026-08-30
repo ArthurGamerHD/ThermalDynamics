@@ -300,6 +300,34 @@ def compare(before, now):
 ABSENT = "\u2014"
 
 
+# ---- reading a cell -------------------------------------------------------------------------
+
+
+def number(row, key):
+    """A CSV cell as a float, or **None** where the dataset does not carry it.
+
+    **One definition, because there were twelve and they had already drifted into three.** Every
+    reader in this directory needs to turn a cell into a figure, and each grew its own: seven
+    returned `None` for a cell that is absent or unparseable, three took a `default=0.0`, and
+    `censusdiff.py` returned `0.0` outright.
+
+    **The last of those was a live defect rather than a style difference.** `censusdiff` *sums* a
+    column over the ships two censuses share, so a column one census does not carry read nought on
+    every ship and printed as a total: *before 0, after 12,345* reads as a column that grew, when
+    what happened is that one census does not have it. Comparing two censuses taken on different
+    builds is the entire purpose of that tool, and columns appearing and disappearing between builds
+    is the entire reason `C8` exists.
+
+    **Nought and nothing are different answers** (`E8`). A caller that genuinely wants a default for
+    a missing cell should say so at the call site, where a reader can see it, rather than have it
+    baked into the reader.
+    """
+    try:
+        return float(row[key])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 # ---- percentiles ----------------------------------------------------------------------------
 
 
