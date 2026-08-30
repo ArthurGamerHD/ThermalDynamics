@@ -129,5 +129,115 @@ namespace Thermodynamics.Tests
                 "the wind and the sun move at comparable rates, so the solar cadence would carry "
                 + "over and this whole concern is misplaced");
         }
+        /// <summary>
+        /// **How wrong a stale windward map is, per degree of lag — which is what prices a looser
+        /// rebuild threshold.**
+        ///
+        /// <para>
+        /// The pass cannot keep up with a turning ship at a 2° threshold. The obvious repair is to
+        /// let the map go stale: rebuild at 10° or 20° instead, so the pass completes and what it
+        /// returns is merely out of date. Whether that is acceptable is not a matter of taste — it
+        /// is how much the *shielding answer* changes over that angle.
+        /// </para>
+        ///
+        /// <para>
+        /// This builds the map at one direction and compares its per-face answer against a map
+        /// built at an angle off it, over every block and face of a hull, and reports the share of
+        /// faces that disagree. A face that disagrees is a face heated and dragged as though it
+        /// were in the open when it is sheltered, or the reverse.
+        /// </para>
+        /// </summary>
+        [Theory]
+        [InlineData(2.0)]
+        [InlineData(5.0)]
+        [InlineData(10.0)]
+        [InlineData(20.0)]
+        [InlineData(45.0)]
+        public void AStaleWindwardMapDisagreesWithTheTruthByThisMuch(double degrees)
+        {
+            ThermalSimulation simulation = Structured();
+            ThermalSolver solver = simulation.Solver;
+            simulation.StepExact(1, Worlds.Space(Vector3.Forward));
+
+            Vector3 truth = Vector3.Normalize(new Vector3(1f, 0.35f, 0.2f));
+            double radians = degrees * Math.PI / 180.0;
+
+            // Rotated about an axis the direction is not parallel to, so the whole angle is a real
+            // change of direction rather than a spin about it.
+            Matrix turn = Matrix.CreateFromAxisAngle(Vector3.Up, (float)radians);
+            Vector3 stale = Vector3.Normalize(Vector3.TransformNormal(truth, turn));
+
+            SunShadowMap exact = Built(solver, truth);
+            SunShadowMap lagged = Built(solver, stale);
+
+            int faces = 0;
+            int differing = 0;
+            double error = 0.0;
+
+            for (int i = 0; i < solver.Nodes.Count; i++)
+            {
+                BlockInstance block = solver.Nodes[i].Block;
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    float a = exact.FaceLitFraction(block, face);
+                    float b = lagged.FaceLitFraction(block, face);
+
+                    faces++;
+                    error += Math.Abs(a - b);
+                    if (Math.Abs(a - b) > 0.01f) differing++;
+                }
+            }
+
+            output.WriteLine("{0,5:0.0} deg stale: {1,6} faces, {2,6} disagree ({3,5:0.0} %), "
+                + "mean error {4:0.0000}",
+                degrees, faces, differing, 100.0 * differing / faces, error / faces);
+
+            Assert.True(faces > 0);
+        }
+
+        /// <summary>
+        /// A hull with something to cast a shadow **onto**, which a solid cube does not have.
+        ///
+        /// <para>
+        /// **Measuring staleness on a cube would be measuring the least sensitive shape there is.**
+        /// A solid block's occlusion is almost all *which way a face points*, which does not change
+        /// as the direction turns; what changes with direction is which parts shade which other
+        /// parts, and a cube has none of that. This is a base with two towers and a gap between
+        /// them, so a turn moves one tower's shadow across the base and off the other tower.
+        /// </para>
+        /// </summary>
+        private static ThermalSimulation Structured()
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.SolarSelfShadowing = true;
+            settings.Derive();
+
+            GridBuilder builder = GridBuilder.Large();
+
+            // A flat base for shadows to land on.
+            builder.Fill(Catalog.HeavyArmor(), Vector3I.Zero, new Vector3I(16, 2, 16));
+
+            // Two towers with a gap, so a turn sweeps one shadow across the base and the other.
+            builder.Fill(Catalog.HeavyArmor(), new Vector3I(2, 2, 2), new Vector3I(5, 12, 5));
+            builder.Fill(Catalog.HeavyArmor(), new Vector3I(11, 2, 11), new Vector3I(14, 12, 14));
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
+            simulation.Planet = PlanetThermalProperties.Default();
+            return simulation;
+        }
+
+        /// <summary>A completed direction pass, or the test is measuring a half-built one.</summary>
+        private static SunShadowMap Built(ThermalSolver solver, Vector3 direction)
+        {
+            SunShadowMap map = new SunShadowMap();
+            map.Restart(solver.Grid, direction, null);
+
+            int guard = 0;
+            while (map.IsRunning && guard++ < 100000) map.Step(solver.SunShadowBudget);
+
+            Assert.True(map.IsBuilt, "the pass did not complete, so this compares nothing");
+            return map;
+        }
+
     }
 }
