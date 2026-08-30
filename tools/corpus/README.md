@@ -20,6 +20,8 @@ python3 tools/corpus/cap.py out/cap-2026-08-25 \
     --csv tools/corpus/summary-cap-2026-08-25.csv         # C3: what a per-block cap buys and costs
 python3 tools/corpus/floor.py out/floor-2026-08-29 \
     --csv tools/corpus/summary-floor-2026-08-29.csv       # C30: what an over-budget floor buys and costs
+python3 tools/corpus/cruise.py out/census-2026-08-25/census.csv \
+    --csv tools/corpus/summary-cruise-2026-08-30.csv      # K12: does a derived top speed land where the authored one does
 python3 tools/corpus/reproduce.py out/cap-2026-08-24 out/cap-2026-08-25  # did a restart reproduce?
 python3 tools/corpus/censusdiff.py out/census-2026-08-21 out/census-2026-08-25 \
     --expect waste_full_w=8:10 --expect ships=0:0            # A13: did the re-take do what was predicted?
@@ -600,7 +602,7 @@ one grammar cannot drift apart quietly (`D3`), `test_pace.py` pins what a progre
 asked — that a repeated final line is not a stall, that the ratio is taken over the files two walks
 share rather than the time they ran, and that the block-share estimate is reported as the spread it
 has, `test_reproduce.py` pins that a comparison
-with nothing in common is not a reproduction, `test_floor.py` pins the two ways the floor report could quietly say the wrong thing — mixing the
+with nothing in common is not a reproduction, `test_cruise.py` pins the derivation `K12` rests on — that the speed it returns is the one where drag equals thrust, that it is a square law in both thrust and area, and that a ship with no thrust has *no* cruise speed rather than one of nought, which would put 1,785 stations into the bottom of the distribution and make every quantile below the median a statement about stations. `test_floor.py` pins the two ways the floor report could quietly say the wrong thing — mixing the
 arms, which would report the mechanism against itself and read as *the floor is free*, and averaging
 the price over cells the floor never touched, which on the 2026-08-29 walk halves it (p99 60.9 K
 over the engaged cells against 28.3 K over every cell walked) — and that `C30`'s registered bands
