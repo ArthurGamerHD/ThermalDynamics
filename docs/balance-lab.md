@@ -768,6 +768,46 @@ The dial that governs the whole timescale is `HeatTimeScale`, which `C24` alread
 on the same number. **`G11` and `G8` are the same question asked at two scales**, and neither has
 been measured at the pair that ships.
 
+### What drag does to a ship's ability to fly, written before it is measured
+
+**`G7` says a ship the game spawns survives arriving. A ship the game spawns must also still be able
+to *fly*, and `K1`'s drag is the obvious way to break that** — a coefficient nobody has tuned,
+applied to every hull in atmosphere. This is `K5`, and the criterion goes here before the number
+does (`E1`), the way `C3`'s did.
+
+**The cruise half is already measured and is not what is registered here.** `K12` solved
+`T = ½ C_d ρ A v²` over the census: 6,352 of 8,137 hulls carry thrust and area, and their sea-level
+cruise is p5 18.8 m/s, p50 70.4, p95 122.3. That distribution exists, so a prediction about it would
+be a prediction about a number already in the tree, which is not a prediction.
+
+**What is not measured is deceleration, which is what *able to fly* actually turns on.** A cruise
+speed says where a ship stops accelerating; how badly drag hurts is `a = F/m`, and the census does
+not carry mass. Adding it is a column and a two-minute re-run rather than a walk.
+
+**The criterion, and what falsifies it.**
+
+| | prediction | falsified by |
+| --- | --- | --- |
+| the floor | **no more than 1 %** of thrust-carrying hulls decelerate harder than **1 g** at their own cruise speed in sea-level air | more than 1 % |
+| the shape | deceleration at cruise **falls with hull size** — a big ship has more mass per unit of frontal area than a small one | a flat or rising trend against block count |
+| the survivable case | the **median** hull decelerates at under **0.2 g**, which is a firm push rather than a wall | a median over 0.2 g |
+
+**Why a gravity is the unit and why 1 g is the line.** A ship that loses speed faster than it falls
+is a ship the air is doing more to than the planet is, which is the point at which a player stops
+experiencing drag as air and starts experiencing it as a wall. It is also the number a player has an
+intuition for, which a coefficient does not.
+
+**The shape prediction is the one that would reveal a modelling error rather than a tuning one.**
+Drag goes as frontal area and mass goes as volume, so deceleration should fall roughly as the
+reciprocal of a ship's linear size — a big hull should be *less* troubled than a fighter. If the
+trend is flat or rising, the exposed-area term is behaving as though hulls were hollow shells all
+the way up, and that is a defect rather than a dial.
+
+**What this cannot answer.** Whether a ship is *fun* to fly under it, which no corpus pass reaches,
+and whether the game's own respawn ships are in the corpus at all — they are not published
+blueprints, so `G7`'s literal subject is outside this measurement and the population stands in for
+it.
+
 ### What flooring an over-budget grid does, written before it is measured
 
 `CorpusFloorWalk` is built and **has produced nothing**. The question, the statistic, the decision
