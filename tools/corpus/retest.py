@@ -41,11 +41,6 @@ CONTROL = "shipped"
 KEY = ("ship", "workshop_id", "scenario")
 
 
-def number(row, key):
-    try:
-        return float(row[key])
-    except (TypeError, ValueError, KeyError):
-        return None
 
 
 def load(name):
@@ -142,12 +137,12 @@ def main():
     # says *ran away* and nothing finer.
     censored = {}
     for row in rows:
-        peak = number(row, "peak_k")
+        peak = scoring.number(row, "peak_k")
         if peak is None:
             continue
         got = censored.setdefault((row["world"], row["scenario"]), [0, 0, 0])
         got[2] += 1
-        if scoring.peak_is_censored(number(row, "over_critical"), peak):
+        if scoring.peak_is_censored(scoring.number(row, "over_critical"), peak):
             got[0] += 1
         if scoring.peak_ran_away(peak):
             got[1] += 1
@@ -205,8 +200,8 @@ def main():
                     if control is None or other is None:
                         continue
 
-                    a = number(control, column)
-                    b = number(other, column)
+                    a = scoring.number(control, column)
+                    b = scoring.number(other, column)
                     if a is None or b is None:
                         continue
 
@@ -253,9 +248,9 @@ def main():
             hit = sum(1 for r in subset if test(r))
             return f"{hit}/{len(subset)} {hit / len(subset):.0%}"
 
-        g1 = share(idle, lambda r: (number(r, "over_critical") or 0) > 0)
-        g2 = share(loaded, lambda r: (number(r, "peak_k") or 0) >= 400.0)
-        g5 = share(recovery, lambda r: number(r, "over_critical") == 0)
+        g1 = share(idle, lambda r: (scoring.number(r, "over_critical") or 0) > 0)
+        g2 = share(loaded, lambda r: (scoring.number(r, "peak_k") or 0) >= 400.0)
+        g5 = share(recovery, lambda r: scoring.number(r, "over_critical") == 0)
         print(f"{world:<22}{g1:>22}{g2:>22}{g5:>18}")
 
     print()

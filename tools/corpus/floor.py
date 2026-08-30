@@ -62,12 +62,6 @@ def record(statistic, value, unit=""):
     FIGURES.append((statistic, value, unit))
 
 
-def number(row, key):
-    """A column as a float, or None where the dataset does not carry it (`C8`)."""
-    try:
-        return float(row[key])
-    except (KeyError, TypeError, ValueError):
-        return None
 
 
 def load(path):
@@ -87,7 +81,7 @@ def pair(rows):
     """
     by_key = collections.defaultdict(dict)
     for row in rows:
-        arm = number(row, "cap")
+        arm = scoring.number(row, "cap")
         if arm is None:
             continue
         by_key[(row.get("ship"), row.get("workshop_id"), row.get("scenario"))][int(arm)] = row
@@ -143,8 +137,8 @@ def main():
     # the stopping rule rather than the floor (`M1`, `P6`).
     off_clock = 0
     for _, control, floored in pairs:
-        a = number(control, "run_seconds")
-        b = number(floored, "run_seconds")
+        a = scoring.number(control, "run_seconds")
+        b = scoring.number(floored, "run_seconds")
         if a is None or b is None or abs(a - b) > 1e-3:
             off_clock += 1
 
@@ -159,9 +153,9 @@ def main():
     control_floored = 0
     stiffened = 0
     for _, control, floored in pairs:
-        control_floored += number(control, "floored") or 0
-        a = number(control, "substeps_demanded")
-        b = number(floored, "substeps_demanded")
+        control_floored += scoring.number(control, "floored") or 0
+        a = scoring.number(control, "substeps_demanded")
+        b = scoring.number(floored, "substeps_demanded")
         if a is not None and b is not None and b > a + scoring.FLOOR_SLACK_SUBSTEPS:
             stiffened += 1
 
@@ -178,8 +172,8 @@ def main():
     blocks = 0
     engaged = []
     for _, control, floored in pairs:
-        f = number(floored, "floored")
-        b = number(floored, "blocks")
+        f = scoring.number(floored, "floored")
+        b = scoring.number(floored, "blocks")
         if f is None or b is None:
             continue
 
@@ -206,12 +200,12 @@ def main():
     by_scenario = collections.defaultdict(list)
     everything = []
     for key, control, floored in pairs:
-        delta = scoring.delta_peak(number(control, "peak_k"), number(floored, "peak_k"))
+        delta = scoring.delta_peak(scoring.number(control, "peak_k"), scoring.number(floored, "peak_k"))
         if delta is None:
             continue
 
         everything.append(delta)
-        if (number(floored, "floored") or 0) > 0:
+        if (scoring.number(floored, "floored") or 0) > 0:
             deltas.append((delta, key))
             by_scenario[key[2]].append(delta)
 

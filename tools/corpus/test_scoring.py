@@ -415,6 +415,40 @@ class ACriterionNeedsADatasetFineEnoughToStateIt(unittest.TestCase):
         self.assertFalse(scoring.resolves(33, 3.0))
 
 
+class NoughtAndNothingAreDifferentAnswers(unittest.TestCase):
+    """**A cell a dataset does not carry reads as unmeasured, not as zero** (`E8`, `C8`).
+
+    There were twelve copies of this function across the tools and they had already drifted into
+    three behaviours: seven returned `None`, three took a `default=0.0`, and `censusdiff.py`
+    returned `0.0` outright.
+
+    **The last was a live defect rather than a style difference.** `censusdiff` sums a column over
+    the ships two censuses share, so a column one census does not carry read nought on every ship
+    and printed as a total — *before 0, after 12,345* reads as a column that grew, when what
+    happened is that one census has no such column. Comparing censuses taken on different builds is
+    what that tool is for, and columns coming and going between builds is what `C8` is about, so it
+    is the case rather than the corner.
+    """
+
+    def test_a_missing_column_is_unmeasured(self):
+        self.assertIsNone(scoring.number({"a": "1"}, "b"))
+
+    def test_an_unparseable_cell_is_unmeasured(self):
+        self.assertIsNone(scoring.number({"a": ""}, "a"))
+        self.assertIsNone(scoring.number({"a": "n/a"}, "a"))
+        self.assertIsNone(scoring.number({"a": None}, "a"))
+
+    def test_a_real_zero_is_still_a_zero(self):
+        """The distinction is only worth anything if nought still reads as nought."""
+        self.assertEqual(0.0, scoring.number({"a": "0"}, "a"))
+        self.assertEqual(0.0, scoring.number({"a": "0.0"}, "a"))
+
+    def test_a_negative_and_an_exponent_read_as_written(self):
+        self.assertEqual(-2.5, scoring.number({"a": "-2.5"}, "a"))
+        self.assertEqual(1200.0, scoring.number({"a": "1.2e3"}, "a"))
+
+
+
 if __name__ == "__main__":
     unittest.main()
 

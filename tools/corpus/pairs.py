@@ -66,11 +66,6 @@ INFINITE = float("inf")
 CENSORED = 1500.0
 
 
-def number(row, key):
-    try:
-        return float(row[key])
-    except (TypeError, ValueError, KeyError):
-        return None
 
 
 def load(name):
@@ -100,7 +95,7 @@ def crossings(rows):
     """
     out = []
     for row in rows:
-        value = number(row, "seconds_to_critical")
+        value = scoring.number(row, "seconds_to_critical")
         out.append(value if value is not None and value >= 0 else INFINITE)
     return out
 
@@ -182,8 +177,8 @@ def where(cells, per_cell, cell_crossing):
         recovery = [r for r in per_cell[key] if r["scenario"] == "recovery"]
         values = []
         for row in recovery:
-            value = number(row, "seconds_to_settle")
-            ceiling = number(row, "ceiling_s") or 0.0
+            value = scoring.number(row, "seconds_to_settle")
+            ceiling = scoring.number(row, "ceiling_s") or 0.0
             values.append(value if value is not None and value >= 0
                           else max(ceiling * 2, RECOVERY_BOUND * 10))
         back = median(values)
@@ -258,7 +253,7 @@ def main():
           f" {'G8':>4} {'G1':>6} {'G2':>6} {'G5':>6} {'substeps':>9} {'cost':>6}"
           f" {'idle-floor':>11}")
 
-    control_demand = median([number(r, "substeps_demanded") or 0.0
+    control_demand = median([scoring.number(r, "substeps_demanded") or 0.0
                              for r in per_cell[control]])
 
     winners = []
@@ -276,8 +271,8 @@ def main():
         # counts as past the bound rather than as missing — its ceiling is already past it.
         returns = []
         for row in recovery:
-            value = number(row, "seconds_to_settle")
-            ceiling = number(row, "ceiling_s") or 0.0
+            value = scoring.number(row, "seconds_to_settle")
+            ceiling = scoring.number(row, "ceiling_s") or 0.0
             returns.append(value if value is not None and value >= 0
                            else max(ceiling * 2, RECOVERY_BOUND * 10))
 
@@ -285,19 +280,19 @@ def main():
 
         # The idle column, printed only so the blind spot stays visible: at low clock a hull has
         # barely moved and reports the floor, which is why this is not what G8 is scored on.
-        idle_settles = [number(r, "seconds_to_settle") or -1.0 for r in idle]
+        idle_settles = [scoring.number(r, "seconds_to_settle") or -1.0 for r in idle]
         on_floor = sum(1 for v in idle_settles if 0 <= v <= SETTLE_FLOOR)
 
-        g1_hits = sum(1 for r in idle if (number(r, "over_critical") or 0) > 0)
+        g1_hits = sum(1 for r in idle if (scoring.number(r, "over_critical") or 0) > 0)
         g1 = 100.0 * g1_hits / len(idle) if idle else None
 
-        g2_hits = sum(1 for r in loaded if (number(r, "peak_k") or 0) >= WARM_KELVIN)
+        g2_hits = sum(1 for r in loaded if (scoring.number(r, "peak_k") or 0) >= WARM_KELVIN)
         g2 = 100.0 * g2_hits / len(loaded) if loaded else None
 
-        g5_hits = sum(1 for r in recovery if number(r, "over_critical") == 0)
+        g5_hits = sum(1 for r in recovery if scoring.number(r, "over_critical") == 0)
         g5 = 100.0 * g5_hits / len(recovery) if recovery else None
 
-        demand = median([number(r, "substeps_demanded") or 0.0 for r in mine])
+        demand = median([scoring.number(r, "substeps_demanded") or 0.0 for r in mine])
 
         in_window = cross is not None and WINDOW[0] <= cross <= WINDOW[1]
         comes_back = back is not None and back <= RECOVERY_BOUND
@@ -405,7 +400,7 @@ def main():
 
     # ---- censoring ---------------------------------------------------------------------------
     censored = sum(1 for r in rows
-                   if (number(r, "peak_k") or 0) >= CENSORED)
+                   if (scoring.number(r, "peak_k") or 0) >= CENSORED)
     print()
     print(f"{censored} of {len(rows)} runs ({censored / len(rows):.1%}) end past {CENSORED:.0f} K,")
     print("which says 'ran away' and not a temperature. Crossing times are decided long before")
