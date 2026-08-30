@@ -328,6 +328,30 @@ def number(row, key):
         return None
 
 
+# ---- what identifies a row ------------------------------------------------------------------
+
+#: The columns that name the ship a row is about.
+#:
+#: **A ship is a name *and* a workshop id, not either alone.** Two published blueprints can share a
+#: name, and a workshop item can be a *collection* holding several ships under one id — which is not
+#: hypothetical: the 2026-08-28 air walk had fourteen distinct ships sharing `workshop_id` 0 until
+#: the reader was taught to walk up to the segment under the app id. Keyed by id alone those
+#: fourteen are one ship; keyed by name alone, two hulls called `Drone` are one ship.
+ROW_KEY = ("ship", "workshop_id")
+
+
+def key_of(row, *extra):
+    """The identity of an outcome row: the ship, plus any column the caller adds.
+
+    **The arm is part of a row's identity wherever the dataset carries one.** A paired walk writes
+    two rows per ship and scenario that differ only in the `cap` column, so a key without it calls
+    half of them duplicates — which `verdict.py` did on a dry run of the 2026-08-25 cap dataset,
+    reporting *912 duplicate rows* and scoring `G6` on whichever arm happened to be first. The extra
+    columns are passed by the caller because which ones exist is a property of the dataset.
+    """
+    return tuple(row.get(column) for column in ROW_KEY + tuple(extra))
+
+
 # ---- percentiles ----------------------------------------------------------------------------
 
 

@@ -22,6 +22,10 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import scoring
+
 SURVEY = sys.argv[1] if len(sys.argv) > 1 else "out/corpus-2026-08-21"
 CENSUS = sys.argv[2] if len(sys.argv) > 2 else "out/census-2026-08-21"
 KNOBS = sys.argv[3] if len(sys.argv) > 3 else "out/knobs-2026-08-21"
@@ -38,14 +42,21 @@ def rows(path):
 
 
 def number(row, key, default=0.0):
-    try:
-        return float(row[key])
-    except (TypeError, ValueError, KeyError):
-        return default
+    """A cell as a float, defaulting where the dataset does not carry it.
+
+    **The parsing is `scoring.number` and the default is this tool's own choice.**
+    `scoring.number` reports an absent cell as *unmeasured* because nought and nothing are
+    different answers (`E8`) — twelve copies of that parse had already drifted into three
+    behaviours, one of which was a live defect in `censusdiff.py`. Where a tool wants a
+    default it says so here rather than burying it in a second parser.
+
+    The packer writes a fixed row shape for the web report, so a cell with nothing in it
+    has to become something; the callers that mean a sentinel pass one explicitly.
+    """
+    value = scoring.number(row, key)
+    return default if value is None else value
 
 
-def key_of(row):
-    return (row["ship"], row["workshop_id"])
 
 
 def r2(value, places=2):
@@ -68,7 +79,7 @@ print(f"survey {len(survey):,}  census {len(census):,}  composition {len(composi
 # honest join is 8,132, and every correlation was computed against a few ships' figures crossed
 # with another's. Identity here is the pair; the name is carried separately for display.
 scenarios = sorted(set(r["scenario"] for r in survey))
-keys = sorted(set(key_of(r) for r in survey) | set(key_of(r) for r in census))
+keys = sorted(set(scoring.key_of(r) for r in survey) | set(scoring.key_of(r) for r in census))
 blocks = sorted(set(r["hottest_block"] for r in survey)
                 | set(r["subtype"] for r in composition))
 si = {s: i for i, s in enumerate(scenarios)}
@@ -83,19 +94,19 @@ workshop = [k[1] for k in keys]
 # split is a finding, so it has to be membership and not a proxy.
 has_drive = [0] * len(keys)
 for r in composition:
-    if "JumpDrive" in r["subtype"] and key_of(r) in shi:
-        has_drive[shi[key_of(r)]] = 1
+    if "JumpDrive" in r["subtype"] and scoring.key_of(r) in shi:
+        has_drive[shi[scoring.key_of(r)]] = 1
 
 # ---- the survey -------------------------------------------------------------------------------
 outcomes = [[
-    shi[key_of(r)], si[r["scenario"]], int(number(r, "blocks")),
+    shi[scoring.key_of(r)], si[r["scenario"]], int(number(r, "blocks")),
     r2(number(r, "peak_k")), r2(number(r, "median_k")),
     int(number(r, "over_critical")), r2(number(r, "over_share") * 100, 3),
     int(number(r, "seconds_to_critical", -1)),
     r2(number(r, "substeps_demanded")), r2(number(r, "substeps_granted"), 1),
     int(number(r, "generation_w")), bi[r["hottest_block"]],
     r2(number(r, "hotspot_k")),
-] for r in survey if key_of(r) in shi]
+] for r in survey if scoring.key_of(r) in shi]
 
 # **The worst index any block a ship carries scores** — from the full composition, not from the
 # one or two block names the outcome rows happen to mention. Inferring it from the hottest block
@@ -105,7 +116,7 @@ index_by_block = {r["subtype"]: (number(r, "index"), number(r, "self_index")) fo
 worst_index = {}
 worst_self = {}
 for r in composition:
-    k = key_of(r)
+    k = scoring.key_of(r)
     entry = index_by_block.get(r["subtype"])
     if not entry or k not in shi:
         continue
@@ -132,11 +143,11 @@ CENSUS_KEEP = [
     ("heat_spread_m", lambda v: r2(v, 2)),
     ("hottest_conductance_w_per_k", lambda v: r2(v, 2)),
 ]
-census_rows = [[shi[key_of(r)]] + [cast(number(r, name)) for name, cast in CENSUS_KEEP]
+census_rows = [[shi[scoring.key_of(r)]] + [cast(number(r, name)) for name, cast in CENSUS_KEEP]
                + [bi.get(r.get("top_source", ""), -1),
-                  r2(worst_index.get(shi[key_of(r)], 0.0), 4),
-                  r2(worst_self.get(shi[key_of(r)], 0.0), 3)]
-               for r in census if key_of(r) in shi]
+                  r2(worst_index.get(shi[scoring.key_of(r)], 0.0), 4),
+                  r2(worst_self.get(shi[scoring.key_of(r)], 0.0), 3)]
+               for r in census if scoring.key_of(r) in shi]
 
 # ---- composition, two ways ---------------------------------------------------------------------
 # Corpus-wide: where the heat is made, one row per block type.
@@ -151,10 +162,10 @@ heat_by_block = sorted(
     key=lambda row: -row[1])[:60]
 
 # Per panel ship: what this hull is made of, so a distribution reads against its heating.
-panel_keys = set(key_of(r) for r in panel)
+panel_keys = set(scoring.key_of(r) for r in panel)
 panel_composition = {}
 for r in composition:
-    k = key_of(r)
+    k = scoring.key_of(r)
     if k not in panel_keys:
         continue
     panel_composition.setdefault(shi[k], []).append(
@@ -171,13 +182,13 @@ for r in panel:
     whys.setdefault(r["rule"], r["why"])
 
 panel_rows = [[
-    shi[key_of(r)], ri[r["rule"]], int(number(r, "large")), int(number(r, "blocks")),
+    shi[scoring.key_of(r)], ri[r["rule"]], int(number(r, "large")), int(number(r, "blocks")),
     r2(number(r, "buried_share"), 3), r2(number(r, "exposure_m2_per_kw"), 2),
     r2(number(r, "capacity_j_per_k_per_w"), 2), int(number(r, "waste_full_w")),
     r2(number(r, "idle_peak_k"), 1), r2(number(r, "load_peak_k"), 1),
     r2(number(r, "burn_peak_k"), 1), int(number(r, "scenarios_critical")),
     int(number(r, "load_seconds_to_critical", -1)),
-] for r in panel if key_of(r) in shi]
+] for r in panel if scoring.key_of(r) in shi]
 
 # ---- the knob sweep --------------------------------------------------------------------------
 knob_names = sorted(set(r["knob"] for r in knobs))
@@ -187,11 +198,11 @@ ksi = {s: i for i, s in enumerate(knob_scenarios)}
 
 knob_rows = [[
     ki[r["knob"]], r2(number(r, "level"), 4), int(number(r, "shipped")),
-    ksi[r["scenario"]], shi.get(key_of(r), -1), int(number(r, "large")),
+    ksi[r["scenario"]], shi.get(scoring.key_of(r), -1), int(number(r, "large")),
     r2(number(r, "peak_k")), r2(number(r, "median_k")),
     int(number(r, "over_critical")), int(number(r, "seconds_to_critical", -1)),
     r2(number(r, "seconds_to_settle"), 1), r2(number(r, "substeps_demanded")),
-] for r in knobs if key_of(r) in shi]
+] for r in knobs if scoring.key_of(r) in shi]
 
 # ---- the per-block index ----------------------------------------------------------------------
 # Computed from the definitions with no simulation at all, so it is independent of everything else

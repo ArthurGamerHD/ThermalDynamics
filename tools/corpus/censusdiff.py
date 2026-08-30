@@ -42,8 +42,6 @@ GEOMETRY = ["blocks", "grids", "joints", "rooms", "exposed_blocks", "buried_bloc
 COLUMNS = HEAT + GEOMETRY
 
 
-def key_of(row):
-    return (row["ship"], row["workshop_id"])
 
 
 
@@ -55,7 +53,7 @@ def read(directory, name):
         return {}, path
 
     with open(path, newline="", encoding="utf-8") as handle:
-        return {key_of(r): r for r in csv.DictReader(handle)}, path
+        return {scoring.key_of(r): r for r in csv.DictReader(handle)}, path
 
 
 def composition(directory):
@@ -69,7 +67,7 @@ def composition(directory):
         for row in csv.DictReader(handle):
             type_id = row["type_id"]
             watts[type_id] = watts.get(type_id, 0.0) + scoring.number(row, "waste_full_w")
-            ships.setdefault(type_id, set()).add(key_of(row))
+            ships.setdefault(type_id, set()).add(scoring.key_of(row))
 
     return watts, {t: len(s) for t, s in ships.items()}
 
