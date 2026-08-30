@@ -4,6 +4,7 @@ using System.Text;
 using System.Xml.Serialization;
 using Draygo.BlockExtensionsAPI;
 using ProtoBuf;
+using Thermodynamics.Core;
 using VRage.Game;
 using VRage.Utils;
 
