@@ -1,0 +1,12 @@
+statistic,value,unit
+cruise p5,18.82,m/s
+cruise p25,52.43,m/s
+cruise p50,70.44,m/s
+cruise p75,88.84,m/s
+cruise p95,122.32,m/s
+cruise min,0.89,m/s
+cruise max,180.76,m/s
+ships inside the authored band,3480,ships
+share inside the authored band,54.79,%
+ships with thrust and area,6352,ships
+ships with neither,1785,ships
