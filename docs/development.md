@@ -34,6 +34,19 @@ dotnet build tests/Thermodynamics.slnx      # everything, mod project included
 dotnet build Generic.csproj -c Release      # the mod project alone
 ```
 
+**Building a project by name does not build the mod, and a full green suite does not either.** The
+test projects compile `Core/**/*.cs` and a named list of adapters; `Game/`, `Definitions/`, the
+session and the HUD compile only in `Generic.csproj`. So `dotnet build tests/Thermodynamics.Tests`
+followed by `dotnet test --no-build` can be entirely green while the mod does not compile — which
+happened on 2026-08-30, when a cleanup pointed `ThermalLoopDefinition` at `Core`'s
+`LoopThermalProperties` without the `using` and 2,141 tests passed over it. **Build the `.slnx`**;
+it catches that in four errors, and building the test project by name catches it in none.
+
+It is the same shape as the malformed-project case below and arrives through a different door: there
+the project leaves the build, here the project is never in it. And it is the mirror of the rule this
+repository already keeps in the other direction — a green mod build is not the game's whitelist
+check.
+
 **Solution membership is the check for a rename, and it is not the check for a malformed project
 file.** A `.csproj` MSBuild cannot parse does not fail the projects that reference it — it leaves
 the build, and `dotnet build Thermodynamics.Tests.csproj` and `dotnet test --no-build` both go on

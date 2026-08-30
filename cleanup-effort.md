@@ -44,6 +44,26 @@ hour apart on this machine measures the hour.
 
 ## What was found and not changed
 
+### The cleanup broke the mod build and 2,141 tests did not notice
+
+Iteration 9 pointed `ThermalLoopDefinition` at `Core`'s `LoopThermalProperties` without adding the
+`using`. `Generic.csproj` — the mod itself — stopped compiling, and the full suite stayed green
+through the merge.
+
+**The test projects compile `Core/**/*.cs` and a named list of adapter files.** `Game/`,
+`Definitions/`, the session and the HUD compile only in the mod project, which nothing in a test run
+builds. So `dotnet build tests/Thermodynamics.Tests` followed by `dotnet test --no-build` is green
+over a mod that does not exist.
+
+**`dotnet build tests/Thermodynamics.slnx` catches it in four errors**, and that command was already
+the documented one — the mistake was building the project by name, which this repository's own notes
+recommend for a *different* reason (an incremental root build leaves a stale test DLL behind). Two
+pieces of correct advice that compose into a hole.
+
+[development.md](docs/development.md) now says so where the build commands are, beside the
+malformed-project case it is a sibling of: there the project leaves the build, here it was never in
+it.
+
 ### Constants that share a value and not a meaning
 
 A sweep for constants declared with the same type and literal in more than one file returns about
