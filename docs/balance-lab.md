@@ -853,6 +853,33 @@ exercise stumbled on: **drag alone at a fixed reference speed**, which does not 
 thrust. At 100 m/s in sea-level air the corrected median is **2.09 g**, which is a firm push rather
 than a wall — but that figure is now in the tree, so a prediction about it would not be one.
 
+### The criterion `K5` actually needs, written before it is measured
+
+**What went wrong the first time is the thing to design against: the quantity has to be one drag can
+move.** Thrust cancelled out of the last one. Two candidates survive that test, and both are about
+what a *pilot* would feel rather than what a solver computes.
+
+| | prediction | falsified by |
+| --- | --- | --- |
+| the fraction | on **no more than 5 %** of thrust-carrying hulls does drag at 100 m/s in sea-level air exceed the ship's **own thrust** — that is, the ship cannot hold 100 m/s at full power | more than 5 % |
+| the ceiling | the **p99** hull still reaches **60 m/s** at full thrust in sea-level air, which is a working speed rather than a crawl | a p99 ceiling under 60 m/s |
+
+**The first is a ratio and the second is a speed, deliberately.** A ratio says how many ships the air
+beats; a speed says how badly it beats the worst of them. Neither cancels: drag at a *fixed* speed
+is `½ C_d ρ A v²` with `v` chosen by the criterion rather than by the ship, so a change to `C_d` or
+to the exposure model moves both figures and a change to thrust moves only the first.
+
+**Why 100 m/s and why 60.** A hundred is the engine's own large-grid cap — the speed a world without
+this mod flies at — so *drag exceeds thrust at 100 m/s* is exactly *this mod took away a speed the
+game gave you*. Sixty is two thirds of it, which is the point at which a player would notice they are
+slow rather than notice they are stuck.
+
+**And what would falsify the model rather than the tuning**: if the fraction is large *and* the
+ceiling is high, drag is too strong on small hulls only, which is the exposure model treating a
+fighter as a sail. If both are bad together, the coefficient is simply too big and `DragCoefficient`
+is the dial. The pair separates a modelling error from a tuning one, which the single figure could
+not.
+
 ### What flooring an over-budget grid does, written before it is measured
 
 `CorpusFloorWalk` is built and **has produced nothing**. The question, the statistic, the decision

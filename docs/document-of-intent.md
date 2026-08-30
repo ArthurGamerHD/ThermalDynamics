@@ -1195,9 +1195,10 @@ not weaken for being about force instead of heat.
 
 **And the composition a world wants is one or the other, not both** — which is a measurement rather
 than a preference. RTS holds each grid under a cruise speed *because it has no drag*; this model has
-drag, and **84.5 % of published ships balance below the 100 m/s the engine already enforces**
-([backlog.md](backlog.md) `K11`). So a world running both gets two retarding forces where one would
-do, and a world that wants either can have it by switching the other off. What would be better than
+drag, and **22.4 % of published ships balance below the 100 m/s the engine already enforces**
+([backlog.md](backlog.md) `K11`, corrected for a projected-area error under `K12`). So where the air
+is thick the two forces overlap, and where it is thin RTS's acts alone — a world that wants either
+can have it by switching the other off. What would be better than
 both is `K17`: one mod owns the force on a constraint group and the rest contribute to its inputs.
 That is an interface nobody has built yet, and until somebody does, the switch is the answer.
 
