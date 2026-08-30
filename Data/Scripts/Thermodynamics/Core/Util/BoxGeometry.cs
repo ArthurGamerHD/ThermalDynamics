@@ -27,6 +27,65 @@ namespace Thermodynamics.Core
             }
         }
 
+        /// <summary>
+        /// One face of a box, as the numbers a caller needs to walk its cells.
+        ///
+        /// **Six lines of arithmetic that were written out four times.** The slab index is the far
+        /// row on a positive face and the near one on a negative face — the `- 1` is the half-open
+        /// bound and is exactly the sort of thing that is right in three copies and wrong in the
+        /// fourth, silently, because a wrong slab still walks a real face of a real block.
+        /// </summary>
+        public struct FaceSpan
+        {
+            /// <summary>The face's unit offset, which is what a neighbour lookup steps by.</summary>
+            public Vector3I Offset;
+
+            /// <summary>The axis the face is normal to: 0 = X, 1 = Y, 2 = Z.</summary>
+            public int Axis;
+
+            /// <summary>Whether the face is on the axis's positive side.</summary>
+            public bool Positive;
+
+            /// <summary>The row of cells the face is made of, on <see cref="Axis"/>.</summary>
+            public int Slab;
+
+            /// <summary>The two axes the face spans, in the order a caller should nest them.</summary>
+            public int U;
+            public int V;
+
+            /// <summary>Half-open bounds of the face on <see cref="U"/> and <see cref="V"/>.</summary>
+            public int MinU;
+            public int MaxExclusiveU;
+            public int MinV;
+            public int MaxExclusiveV;
+        }
+
+        /// <summary>
+        /// The <see cref="FaceSpan"/> of one face of a half-open box.
+        ///
+        /// The caller supplies the face index because what it does with the span differs — counting
+        /// exposure, auditing it, or building a room map — while the frame it walks does not.
+        /// </summary>
+        public static FaceSpan Span(Vector3I min, Vector3I maxExclusive, int face)
+        {
+            Vector3I offset = Face.Offsets[face];
+            int axis = Face.Axis(face);
+            bool positive = Component(offset, axis) > 0;
+
+            FaceSpan span;
+            span.Offset = offset;
+            span.Axis = axis;
+            span.Positive = positive;
+            span.Slab = positive ? Component(maxExclusive, axis) - 1 : Component(min, axis);
+            span.U = (axis + 1) % 3;
+            span.V = (axis + 2) % 3;
+            span.MinU = Component(min, span.U);
+            span.MaxExclusiveU = Component(maxExclusive, span.U);
+            span.MinV = Component(min, span.V);
+            span.MaxExclusiveV = Component(maxExclusive, span.V);
+            return span;
+        }
+
         /// <summary>Length of the overlap of two half-open intervals, or 0 when they do not overlap.</summary>
         public static int Overlap(int minA, int maxExclusiveA, int minB, int maxExclusiveB)
         {

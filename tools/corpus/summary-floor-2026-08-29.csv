@@ -1,0 +1,30 @@
+statistic,value,unit
+dataset outcome rows,2264,
+dataset ships,283,
+dataset pairs,1132,
+dataset rows without a partner,0,
+provenance walk,floor started 2026-08-29 21:53:28,
+provenance walk versions,2,
+provenance walk all,floor started 2026-08-29 01:30:26 floor started 2026-08-29 21:53:28,
+provenance commit,adcf5bd90ad2a9abba8200430b13a38041451ec4,
+provenance commit versions,2,
+provenance commit all,01333d8b69cbeee1132d24951af5fda1bc556116 adcf5bd90ad2a9abba8200430b13a38041451ec4,
+provenance Cubes.xml,3cdf7e20633c2c3c,
+provenance Loops.xml,ea59e1f282c2ba29,
+provenance Planets.xml,da93b8fdd826e7cf,
+floor pairs on different clocks,0,pairs
+floor clock verdict,holds,
+floor control floored,0,node-runs
+floor pairs stiffened,0,pairs
+floor safety verdict,holds,
+floor reach,13.1376,%
+floor cells the floor engages on,717,pairs
+floor reach verdict,fails,
+floor dpeak p50,0.16,K
+floor dpeak p95,13.0832,K
+floor dpeak p99,60.1977,K
+floor dpeak max,276.343,K
+floor decision,switch,
+floor cells over the accepted kelvin,485,cells
+floor cells over the refused kelvin,232,cells
+floor cost verdict,fails,

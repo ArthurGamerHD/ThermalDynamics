@@ -331,16 +331,13 @@ namespace Thermodynamics.Core
             // cost the cube of block size rather than the square.
             for (int face = 0; face < Face.Count; face++)
             {
-                Vector3I offset = Face.Offsets[face];
-                int axis = Face.Axis(face);
-                bool positive = BoxGeometry.Component(offset, axis) > 0;
-
-                int slab = positive
-                    ? BoxGeometry.Component(maxExclusive, axis) - 1
-                    : BoxGeometry.Component(min, axis);
-
-                int u = (axis + 1) % 3;
-                int v = (axis + 2) % 3;
+                BoxGeometry.FaceSpan span = BoxGeometry.Span(min, maxExclusive, face);
+                Vector3I offset = span.Offset;
+                int axis = span.Axis;
+                bool positive = span.Positive;
+                int slab = span.Slab;
+                int u = span.U;
+                int v = span.V;
 
                 int count = 0;
 
@@ -385,16 +382,13 @@ namespace Thermodynamics.Core
 
             for (int face = 0; face < Face.Count; face++)
             {
-                Vector3I offset = Face.Offsets[face];
-                int axis = Face.Axis(face);
-                bool positive = BoxGeometry.Component(offset, axis) > 0;
-
-                int slab = positive
-                    ? BoxGeometry.Component(maxExclusive, axis) - 1
-                    : BoxGeometry.Component(min, axis);
-
-                int u = (axis + 1) % 3;
-                int v = (axis + 2) % 3;
+                BoxGeometry.FaceSpan span = BoxGeometry.Span(min, maxExclusive, face);
+                Vector3I offset = span.Offset;
+                int axis = span.Axis;
+                bool positive = span.Positive;
+                int slab = span.Slab;
+                int u = span.U;
+                int v = span.V;
 
                 for (int a = BoxGeometry.Component(min, u); a < BoxGeometry.Component(maxExclusive, u); a++)
                 {
