@@ -27,7 +27,6 @@ namespace Thermodynamics
         public static void Tick()
         {
             IList<ThermalGrid> grids = ThermalGrid.LiveGrids;
-            if (grids == null) return;
 
             if (Settings.Instance != null && Settings.Instance.ParallelGrids)
             {

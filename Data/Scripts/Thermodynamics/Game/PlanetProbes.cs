@@ -141,7 +141,6 @@ namespace Thermodynamics
         private static PlanetManager.Planet Anchor()
         {
             IList<ThermalGrid> grids = ThermalGrid.LiveGrids;
-            if (grids == null) return null;
 
             for (int i = 0; i < grids.Count; i++)
             {
