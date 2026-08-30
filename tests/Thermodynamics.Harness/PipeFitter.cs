@@ -139,6 +139,44 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
+        /// Lays a closed ring of pipe with **no pump in it**, which is a ring that never
+        /// circulates.
+        ///
+        /// <para>
+        /// It is the fault case rather than a variant of a working ring, and it had been written
+        /// out by hand three times — once in `Scenarios.LoopFaults` and twice in
+        /// `CoolantFaultTests` — each time re-deriving the same orientation from the previous and
+        /// next cell. Three copies of a geometry derivation is three chances for one to lay a
+        /// corner where a straight belongs, and a mis-oriented pipe still builds a ring: it just
+        /// builds one that fails for a second reason, and a fault test that fails for the wrong
+        /// reason passes.
+        /// </para>
+        /// </summary>
+        public static List<BlockInstance> BuildPumplessRing(GridBuilder builder, IList<Vector3I> cells)
+        {
+            if (builder == null) throw new ArgumentNullException("builder");
+            if (cells == null || cells.Count < 4) throw new ArgumentException("A ring needs at least four cells");
+
+            List<BlockInstance> ring = new List<BlockInstance>();
+
+            for (int i = 0; i < cells.Count; i++)
+            {
+                Vector3I cell = cells[i];
+                Vector3I toPrevious = cells[(i - 1 + cells.Count) % cells.Count] - cell;
+                Vector3I toNext = cells[(i + 1) % cells.Count] - cell;
+
+                BlockModel model = toPrevious == -toNext
+                    ? Catalog.CoolantPipeStraight()
+                    : Catalog.CoolantPipeCorner();
+
+                builder.Place(model, cell, Orient(model, toPrevious, toNext));
+                ring.Add(builder.Last);
+            }
+
+            return ring;
+        }
+
+        /// <summary>
         /// Lays a closed ring of coolant blocks through <paramref name="cells"/>, in order,
         /// wrapping from the last cell back to the first.
         ///

@@ -206,17 +206,7 @@ namespace Thermodynamics.Tests
             PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
 
             List<Vector3I> pumpless = PipeFitter.RectangleXZ(new Vector3I(0, 10, 0), 3, 3);
-            for (int i = 0; i < pumpless.Count; i++)
-            {
-                Vector3I cell = pumpless[i];
-                Vector3I toPrevious = pumpless[(i - 1 + pumpless.Count) % pumpless.Count] - cell;
-                Vector3I toNext = pumpless[(i + 1) % pumpless.Count] - cell;
-
-                BlockModel model = toPrevious == -toNext
-                    ? Catalog.CoolantPipeStraight()
-                    : Catalog.CoolantPipeCorner();
-                builder.Place(model, cell, PipeFitter.Orient(model, toPrevious, toNext));
-            }
+            PipeFitter.BuildPumplessRing(builder, pumpless);
 
             builder.Place(Catalog.CoolantPump(), new Vector3I(0, 20, 0),
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
@@ -255,17 +245,7 @@ namespace Thermodynamics.Tests
             PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
 
             List<Vector3I> pumpless = PipeFitter.RectangleXZ(new Vector3I(0, 10, 0), 3, 3);
-            for (int i = 0; i < pumpless.Count; i++)
-            {
-                Vector3I cell = pumpless[i];
-                Vector3I toPrevious = pumpless[(i - 1 + pumpless.Count) % pumpless.Count] - cell;
-                Vector3I toNext = pumpless[(i + 1) % pumpless.Count] - cell;
-
-                BlockModel model = toPrevious == -toNext
-                    ? Catalog.CoolantPipeStraight()
-                    : Catalog.CoolantPipeCorner();
-                builder.Place(model, cell, PipeFitter.Orient(model, toPrevious, toNext));
-            }
+            PipeFitter.BuildPumplessRing(builder, pumpless);
 
             builder.Place(Catalog.CoolantPump(), new Vector3I(0, 20, 0),
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));

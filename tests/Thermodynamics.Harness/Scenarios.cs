@@ -1735,17 +1735,7 @@ namespace Thermodynamics.Harness
 
             // A closed ring with no pump in it.
             List<Vector3I> pumpless = PipeFitter.RectangleXZ(new Vector3I(0, 10, 0), 3, 3);
-            for (int i = 0; i < pumpless.Count; i++)
-            {
-                Vector3I cell = pumpless[i];
-                Vector3I toPrevious = pumpless[(i - 1 + pumpless.Count) % pumpless.Count] - cell;
-                Vector3I toNext = pumpless[(i + 1) % pumpless.Count] - cell;
-
-                BlockModel model = toPrevious == -toNext
-                    ? Catalog.CoolantPipeStraight()
-                    : Catalog.CoolantPipeCorner();
-                builder.Place(model, cell, PipeFitter.Orient(model, toPrevious, toNext));
-            }
+            PipeFitter.BuildPumplessRing(builder, pumpless);
 
             // A pump with nothing on either end.
             builder.Place(Catalog.CoolantPump(), new Vector3I(0, 20, 0),
