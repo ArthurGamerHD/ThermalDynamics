@@ -390,6 +390,19 @@ difference, and its temperatures will keep climbing until radiation catches up o
 Venting reads zero rather than going negative while a grid is net absorbing, which a hull in
 sunlight or in warm atmosphere legitimately is.
 
+**`friction W` is one of the terms inside `made W`, reported separately because it is drag power.**
+The solver computes `FrictionScale × ρ × v_rel³ × area × windward exposure` summed over the grid's
+nodes, and real drag power is `½ C_d ρ A v³` — the same expression. So this column is the magnitude
+of a force the mod does not apply: it turns the energy into heat in the hull and takes nothing from
+the ship's motion, which over the 8,144 published blueprints at `reentry` is a median **5.05 MW** on
+**100 %** of hulls, 16.8 kN at 300 m/s ([backlog.md](backlog.md) `K1`). A reader adding it to
+`made W` counts it twice.
+
+It is summed on the hot path beside the other two rather than behind `CollectDiagnostics`, for the
+same reason and one more: `ThermalNode.LastFrictionWatts` is filled only when diagnostics are on, so
+anything derived from walking the nodes would exist while somebody was watching a debug panel and
+not otherwise.
+
 Measured cost of collecting them: none detectable. The per-node figures were already computed by
 the pass that walks every node each substep, so this is two adds; a before-and-after run of
 `bench elements` at a hundred thousand nodes moved the per-node cost from 6.1–6.6 ns to 5.8 ns,

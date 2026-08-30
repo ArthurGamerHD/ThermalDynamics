@@ -149,6 +149,7 @@ namespace Thermodynamics
             methods["GetGridSummary"] = Guard(new Func<IMyCubeGrid, MyTuple<float, float, int, int>>(GetGridSummary), "GetGridSummary");
             methods["GetRoom"] = Guard(new Func<IMyCubeGrid, Vector3I, MyTuple<bool, float, float, float>>(GetRoom), "GetRoom");
             methods["GetGridHeatBalance"] = Guard(new Func<IMyCubeGrid, MyTuple<float, float>>(GetGridHeatBalance), "GetGridHeatBalance");
+            methods["GetGridFrictionWatts"] = Guard(new Func<IMyCubeGrid, float>(GetGridFrictionWatts), "GetGridFrictionWatts");
 
             // ---- writing ------------------------------------------------------------------
             methods["SetBlockTemperature"] = Guard(new Func<IMySlimBlock, float, bool>(SetBlockTemperature), "SetBlockTemperature");
@@ -177,6 +178,31 @@ namespace Thermodynamics
         {
             if (block == null || block.CubeGrid == null) return null;
             return block.CubeGrid.GameLogic == null ? null : block.CubeGrid.GameLogic.GetAs<ThermalGrid>();
+        }
+
+        /// <summary>
+        /// The thermal grid attached to a grid, or null where there is not one.
+        ///
+        /// <para>
+        /// **Every grid accessor here begins the same way and every one of them must.** A caller
+        /// hands in an `IMyCubeGrid` from anywhere — a grid with no game logic, one whose logic has
+        /// not attached yet, one this mod excluded from simulation — and each is a null on a
+        /// different member. Written out five times it was five chances to check two of the three,
+        /// and the failure would be an exception crossing the API boundary into somebody else's
+        /// mod, which is what `Guard` exists to stop and what an accessor should not be relying on
+        /// it for.
+        /// </para>
+        ///
+        /// <para>
+        /// The accessors return zero for a grid this cannot resolve rather than throwing, which is
+        /// the contract api.md states: *a block that is not simulated reads as zero rather than
+        /// throwing*.
+        /// </para>
+        /// </summary>
+        private static ThermalGrid GridOf(IMyCubeGrid grid)
+        {
+            if (grid == null || grid.GameLogic == null) return null;
+            return grid.GameLogic.GetAs<ThermalGrid>();
         }
 
         private static ThermalBlock Bound(IMySlimBlock block)
@@ -211,10 +237,7 @@ namespace Thermodynamics
         /// <summary>Hottest block K, ambient K, blocks over critical, coolant loops.</summary>
         private static MyTuple<float, float, int, int> GetGridSummary(IMyCubeGrid grid)
         {
-            ThermalGrid thermals = grid == null || grid.GameLogic == null
-                ? null
-                : grid.GameLogic.GetAs<ThermalGrid>();
-
+            ThermalGrid thermals = GridOf(grid);
             if (thermals == null || thermals.Simulation == null)
             {
                 return new MyTuple<float, float, int, int>(0f, 0f, 0, 0);
@@ -235,10 +258,7 @@ namespace Thermodynamics
         /// </summary>
         private static MyTuple<float, float> GetGridHeatBalance(IMyCubeGrid grid)
         {
-            ThermalGrid thermals = grid == null || grid.GameLogic == null
-                ? null
-                : grid.GameLogic.GetAs<ThermalGrid>();
-
+            ThermalGrid thermals = GridOf(grid);
             if (thermals == null || thermals.Simulation == null)
             {
                 return new MyTuple<float, float>(0f, 0f);
@@ -248,13 +268,35 @@ namespace Thermodynamics
                 thermals.Simulation.VentedWatts, thermals.Simulation.HeatGainWatts);
         }
 
+        /// <summary>
+        /// Watts the grid is taking from the air by aerodynamic friction.
+        ///
+        /// <para>
+        /// **This is drag power in all but name.** The solver computes `FrictionScale x rho x
+        /// v_rel^3 x area x windward exposure` summed over the grid's nodes, and real drag power is
+        /// `1/2 C_d rho A v^3` — the same expression. The mod turns it into heat and takes nothing
+        /// from the ship's motion, so a caller that wants to apply the force this implies has the
+        /// magnitude here and nowhere else (backlog.md `K1`).
+        /// </para>
+        ///
+        /// <para>
+        /// It is one term of the second figure `GetGridHeatBalance` returns rather than a separate
+        /// gain, so a caller adding the two would count it twice. Zero for a grid with no
+        /// simulation, which is what every accessor here returns for one (`E8`).
+        /// </para>
+        /// </summary>
+        private static float GetGridFrictionWatts(IMyCubeGrid grid)
+        {
+            ThermalGrid thermals = GridOf(grid);
+            if (thermals == null || thermals.Simulation == null) return 0f;
+
+            return thermals.Simulation.FrictionWatts;
+        }
+
         /// <summary>Is a sealed room, air temperature K, pressure 0..1, volume m^3.</summary>
         private static MyTuple<bool, float, float, float> GetRoom(IMyCubeGrid grid, Vector3I cell)
         {
-            ThermalGrid thermals = grid == null || grid.GameLogic == null
-                ? null
-                : grid.GameLogic.GetAs<ThermalGrid>();
-
+            ThermalGrid thermals = GridOf(grid);
             if (thermals == null || thermals.Simulation == null)
             {
                 return new MyTuple<bool, float, float, float>(false, 0f, 0f, 0f);
@@ -296,10 +338,7 @@ namespace Thermodynamics
 
         private static bool SetRoomPressure(IMyCubeGrid grid, Vector3I cell, float pressure)
         {
-            ThermalGrid thermals = grid == null || grid.GameLogic == null
-                ? null
-                : grid.GameLogic.GetAs<ThermalGrid>();
-
+            ThermalGrid thermals = GridOf(grid);
             if (thermals == null || thermals.Simulation == null) return false;
             return thermals.Simulation.SetRoomPressure(cell, pressure);
         }

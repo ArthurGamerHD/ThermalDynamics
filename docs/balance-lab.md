@@ -813,6 +813,45 @@ the defaults.
 about the 96 % it does not touch — which is the point of the mechanism and also the reason its
 percentiles must never be quoted as population figures.
 
+### The floor's re-take on a corrected reader: what it should find, written before it runs
+
+**`out/floor-2026-08-25` is the last dataset `A13` has not re-taken.** Its 294 ships were selected
+out of `out/cap-2026-08-25` — the control arm of a walk measured through the blueprint reader that
+built eleven kinds of block as plain armour — and `C30` was decided on it.
+
+**The selection moved by thirteen ships and that is itself a reading.** Drawn again from
+`out/air-2026-08-28`, the corrected full air walk, the rule *every ship whose step work exceeds the
+allowance in at least one air scenario* now names **283 ships against 294, with 282 in both**. Twelve
+leave and one arrives. `A13` is worth 15.76 % of the population's heat and about a per cent of its
+cost, so a selection made on **cost** barely moves — which is the same finding the stiffness walk,
+the air walk's demand percentiles and the cap walk's two arms have each already given, arriving a
+fourth time. The rule is written into `out/floor-2026-08-29/selection.txt` beside the dataset (`M10`).
+
+| | prediction | falsified by |
+| --- | --- | --- |
+| the clock | unchanged: no run loses simulated time, 0 cells | any cell whose arms ran different clocks |
+| the safety | unchanged: never stiffens, never floors in the control | any occurrence of either |
+| the reach | **11–15 %** of blocks, straddling the 13.05 % the broken reader measured | outside that band |
+| the cost | Δpeak p99 stays **far over 0.6 K**, so `C30`'s decision does not invert | a p99 under 0.6 K |
+
+**The cost band is deliberately one-sided and the reason is what the row already found.** 27.76 K is
+three orders of magnitude past the threshold that would ship the mechanism, so a prediction with a
+tight two-sided band would be a prediction about the third significant figure of a number whose
+first one settles the question. What is worth registering is the direction: `A13` adds heat and a
+Δpeak is a transient, so the cap walk's own Δpeak p99 **doubled** on the corrected reader — 0.2820 K
+to 0.5660 K. If the floor's does the same it lands near 55 K and the decision is unmoved. **A p99
+under 0.6 K is the only reading that would reopen `C30`**, and nothing in the evidence argues for it.
+
+**One reading is registered because it is nearly free.** This walk's control arm is the same four
+`PairLab.AirScenarios` on the same build as `out/air-2026-08-28`, and neither arm floors, so on the
+ships they share the two must agree to the last bit. Any disagreement is a defect in one of them and
+not a finding about the population (`E7`) — the same check the cap walk's re-take passed on 21,852
+rows with a worst relative difference of `0.00e+00`.
+
+**What this walk cannot answer, said before it runs.** It walks the ships the allowance binds on and
+no others, so nothing it produces is a population figure and none of it describes the 96 % the
+mechanism never reaches (`P1`, `P2`). That was true of the 2026-08-25 walk and is true of this one.
+
 ### What it did: the floor is safe, exact about the clock, and far too expensive to default
 
 `CorpusFloorWalk` finished 2026-08-25 — 291 ships, 1,164 paired cells, 2 h 42 m. Scored against the

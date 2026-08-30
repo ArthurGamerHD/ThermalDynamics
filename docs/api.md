@@ -59,6 +59,7 @@ Unregister the handler in `UnloadData`.
 | `GetGridSummary` | `Func<IMyCubeGrid, MyTuple<float,float,int,int>>` | Hottest block K, ambient K, blocks over critical, coolant loops. |
 | `GetRoom` | `Func<IMyCubeGrid, Vector3I, MyTuple<bool,float,float,float>>` | Is a sealed room, air temperature K, pressure 0..1, volume m³. |
 | `GetGridHeatBalance` | `Func<IMyCubeGrid, MyTuple<float,float>>` | Watts the grid is venting, watts it is making. Venting reads zero while a grid is net absorbing. |
+| `GetGridFrictionWatts` | `Func<IMyCubeGrid, float>` | Watts the grid is taking from the air by aerodynamic friction. **One term of the second figure above, not a third one** — adding them counts it twice. |
 
 A block that is not simulated — excluded by `ExcludeFromSimulation`, on a grid without physics, or not yet
 registered — reads as zero rather than throwing.
