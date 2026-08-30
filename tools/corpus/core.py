@@ -82,13 +82,6 @@ AIR_MINUTES = 303.6
 CAP_OVER_AIR = 2.19
 
 
-def number(row, column):
-    """A numeric cell, or None where the walk wrote nothing."""
-    value = row.get(column, "")
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
 
 
 def read(directory):
@@ -114,8 +107,8 @@ def read(directory):
     ships = collections.defaultdict(list)
     for row in rows:
         row["_work"] = scoring.step_work(
-            number(row, "substep_cost"), number(row, "substeps_demanded"))
-        row["_critical"] = 1.0 if number(row, "over_critical") else 0.0
+            scoring.number(row, "substep_cost"), scoring.number(row, "substeps_demanded"))
+        row["_critical"] = 1.0 if scoring.number(row, "over_critical") else 0.0
         ships[row["workshop_id"]].append(row)
     return rows, ships
 
@@ -151,9 +144,9 @@ def cost(rows, blocks):
     """
     total = 0.0
     for row in rows:
-        seconds = number(row, "run_seconds") or 0.0
-        substeps = number(row, "substeps_demanded") or 0.0
-        links = number(row, "links") or 0.0
+        seconds = scoring.number(row, "run_seconds") or 0.0
+        substeps = scoring.number(row, "substeps_demanded") or 0.0
+        links = scoring.number(row, "links") or 0.0
         total += seconds * substeps * (links + 4.0 * blocks)
     return total
 
@@ -176,7 +169,7 @@ def select(ships):
     for ship, rows in ships.items():
         if ship in chosen:
             continue
-        blocks = number(rows[0], "blocks") or 0.0
+        blocks = scoring.number(rows[0], "blocks") or 0.0
         for index, (bound, _) in enumerate(STRATA):
             if blocks < bound:
                 banded[index].append((blocks, ship))
@@ -217,7 +210,7 @@ def fidelity(rows, ships, chosen):
         return [(pick(r), w) for r, w in kept if pick(r) is not None]
 
     work = lambda r: r["_work"]
-    demand = lambda r: number(r, "substeps_demanded")
+    demand = lambda r: scoring.number(r, "substeps_demanded")
 
     out = []
     for label, q in (("work p50", 0.5), ("work p95", 0.95), ("work p99", 0.99)):
@@ -270,8 +263,8 @@ def score(directory, weights):
 
     allowance = scoring.SHIPPED_VISIT_ALLOWANCE
     work = [(r["_work"], w) for r, w in kept if r["_work"]]
-    demand = [(number(r, "substeps_demanded"), w) for r, w in kept
-              if number(r, "substeps_demanded") is not None]
+    demand = [(scoring.number(r, "substeps_demanded"), w) for r, w in kept
+              if scoring.number(r, "substeps_demanded") is not None]
     print()
     print("  %-22s %16s" % ("statistic", "core (weighted)"))
     for label, q in (("G6 work p50", 0.5), ("G6 work p95", 0.95), ("G6 work p99", 0.99)):
@@ -315,8 +308,8 @@ def main():
     where = paths(directory)
     chosen, watch = select(ships)
 
-    total = sum(cost(rs, number(rs[0], "blocks") or 0.0) for rs in ships.values())
-    kept_cost = sum(cost(ships[s], number(ships[s][0], "blocks") or 0.0) for s in chosen)
+    total = sum(cost(rs, scoring.number(rs[0], "blocks") or 0.0) for rs in ships.values())
+    kept_cost = sum(cost(ships[s], scoring.number(ships[s][0], "blocks") or 0.0) for s in chosen)
     share = kept_cost / total if total else 0.0
 
     print("core corpus drawn from %s" % directory)

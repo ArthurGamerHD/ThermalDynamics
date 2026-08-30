@@ -26,7 +26,19 @@ namespace Thermodynamics
         /// <summary>Real seconds between <see cref="UpdateBeforeSimulation10"/> calls.</summary>
         public const float TickSeconds = 10f / 60f;
 
-        private static readonly MyStringHash ThermalDamage = MyStringHash.GetOrCompute("thermal");
+        /// <summary>
+        /// The damage type every heat kill in this mod is attributed to.
+        ///
+        /// <para>
+        /// **One declaration, because two would be two damage types that happen to spell the same
+        /// word today.** A block cooked by its own heat and a character cooked by the air around it
+        /// are the same cause, and anything filtering on the type — a death message, another mod's
+        /// damage handler, a statistic — sees one or the other depending on which declaration it
+        /// happened to match. Renaming one and not the other is a silent split: both still compile,
+        /// both still damage, and the two halves of *heat killed this* stop being one thing.
+        /// </para>
+        /// </summary>
+        public static readonly MyStringHash ThermalDamage = MyStringHash.GetOrCompute("thermal");
 
         public MyCubeGrid Grid;
 

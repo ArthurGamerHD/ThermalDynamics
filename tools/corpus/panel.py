@@ -55,11 +55,9 @@ def number(row, key, default=0.0):
     return default if value is None else value
 
 
-def key_of(row):
-    return (row["ship"], row["workshop_id"])
 
 
-census = {key_of(r): r for r in csv.DictReader(open(CENSUS))}
+census = {scoring.key_of(r): r for r in csv.DictReader(open(CENSUS))}
 
 # Which hulls carry each offending type, and how much of their heat it is.
 #
@@ -82,7 +80,7 @@ share = {}
 carriers = {name: 0 for name in TYPES}
 if os.path.exists(COMPOSITION):
     for r in csv.DictReader(open(COMPOSITION)):
-        k = key_of(r)
+        k = scoring.key_of(r)
         by_type = share.setdefault(k, {})
         for name, type_id in TYPES.items():
             if r["type_id"] == type_id:
@@ -102,12 +100,12 @@ for name in sorted(TYPES):
 paths = {}
 if os.path.exists(SHIPS):
     for r in csv.DictReader(open(SHIPS)):
-        paths[key_of(r)] = r.get("path", "")
+        paths[scoring.key_of(r)] = r.get("path", "")
 else:
     print(f"warning: {SHIPS} not found — the panel will carry no blueprint paths")
 outcomes = {}
 for row in csv.DictReader(open(OUTCOMES)):
-    outcomes.setdefault(key_of(row), {})[row["scenario"]] = row
+    outcomes.setdefault(scoring.key_of(row), {})[row["scenario"]] = row
 
 # A ship is eligible when both passes measured it under every scenario.
 ships = [k for k in census if k in outcomes and REQUIRED <= set(outcomes[k])]

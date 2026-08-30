@@ -41,7 +41,31 @@ What the table shows more usefully is `master` drifting **upward across rounds**
 branches have to be read inside one round rather than across two runs. A before-and-after taken an
 hour apart on this machine measures the hour.
 
+| 9 | **Two constants that were one concept declared twice.** `LargeGridCellMetres` / `SmallGridCellMetres` sat in `Core/Definitions/LoopThermalProperties` **and** privately in `Definitions/ThermalLoopDefinition`; `ThermalDamage` — the damage type every heat kill is attributed to — was declared privately in both `ThermalGrid` and `ThermalCharacters`. | Two declarations of a damage type are two types that happen to spell the same word today. A block cooked by its own heat and a character cooked by the air are the same cause, and anything filtering on the type sees one or the other depending on which declaration it matched. Renaming one is a silent split: both still compile, both still damage. |
+
+| 10 | **Finishing what iteration 8 started.** `key_of` was still declared in `panel.py` and `typical.py`, and `core.py` and `pack.py` still had their own cell parse. All four now use `scoring`. | A half-done consolidation is worse than none: it leaves two conventions and a reader cannot tell which is current. Verified by reproduction rather than by tests alone — `panel.csv`, `typical.csv`, `core-corpus.csv` and both walk summaries come back byte for byte. |
+
 ## What was found and not changed
+
+### Constants that share a value and not a meaning
+
+A sweep for constants declared with the same type and literal in more than one file returns about
+thirty groups, and **almost all of them are coincidence**: `MassSweepInterval` is 8 and so is
+`Longitudes`; `SaveFlushFrames` is 60 and so is `MaxRoomsReported`. Merging those would couple
+things whose only relationship is that nobody has yet had a reason to change one of them.
+
+Two near-misses are worth naming because they look like the real thing and are not:
+
+* **`SinkGroup = "Utility"`** in `ThermalCoolantPumpBlock` and `ThermalHeatPumpBlock`. Two block
+  types that each declare which power group they draw from. They agree today; a future block that
+  drew from another group would be a change to one of them, not a divergence.
+* **`SpecificHeatId = "SpecificHeat"`** in `ThermalCellDefinition` and `ThermalLoopDefinition`. Two
+  readers of two *different* definition groups that happen to name a field the same way. Renaming a
+  cell's field would not imply renaming a loop's.
+
+**The test that separates them from the real duplicates is whether changing one implies changing the
+other.** For `ThermalDamage` it does — there is one answer to *what killed this* — so it is one
+declaration now. For these two it does not.
 
 ### Nine unused `TryGet*` methods in `DefinitionExtensionsAPI.cs`
 
