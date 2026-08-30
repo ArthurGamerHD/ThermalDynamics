@@ -18,6 +18,8 @@ each of these prints what it found and renders without the parts that are absent
 python3 tools/corpus/verdict.py out/corpus-2026-08-21     # the criteria, on the terminal
 python3 tools/corpus/cap.py out/cap-2026-08-25 \
     --csv tools/corpus/summary-cap-2026-08-25.csv         # C3: what a per-block cap buys and costs
+python3 tools/corpus/floor.py out/floor-2026-08-29 \
+    --csv tools/corpus/summary-floor-2026-08-29.csv       # C30: what an over-budget floor buys and costs
 python3 tools/corpus/reproduce.py out/cap-2026-08-24 out/cap-2026-08-25  # did a restart reproduce?
 python3 tools/corpus/censusdiff.py out/census-2026-08-21 out/census-2026-08-25 \
     --expect waste_full_w=8:10 --expect ships=0:0            # A13: did the re-take do what was predicted?
@@ -598,7 +600,11 @@ one grammar cannot drift apart quietly (`D3`), `test_pace.py` pins what a progre
 asked — that a repeated final line is not a stall, that the ratio is taken over the files two walks
 share rather than the time they ran, and that the block-share estimate is reported as the spread it
 has, `test_reproduce.py` pins that a comparison
-with nothing in common is not a reproduction, `test_cap.py` pins the ways the cap report could read
+with nothing in common is not a reproduction, `test_floor.py` pins the two ways the floor report could quietly say the wrong thing — mixing the
+arms, which would report the mechanism against itself and read as *the floor is free*, and averaging
+the price over cells the floor never touched, which on the 2026-08-29 walk halves it (p99 60.9 K
+over the engaged cells against 28.3 K over every cell walked) — and that `C30`'s registered bands
+live in `scoring.py` rather than in a sentence. `test_cap.py` pins the ways the cap report could read
 a sampled walk as a population — a stray ship dropped rather than given a default weight of 1, a
 weighted giant moving a percentile exactly as the twenty rows it stands for would, the identity
 check deliberately left unweighted because it is an assertion about the walk, and a verdict a

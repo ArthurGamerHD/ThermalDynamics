@@ -447,6 +447,30 @@ CAP_COST_MAX_KELVIN = 10.0
 #: The predicted share of blocks the cap holds back, in air.
 CAP_REACH_BAND = (3.0, 10.0)
 
+
+# ---- the over-budget floor, and the rule that decides whether it ships ------------------------
+#
+# **`C30`'s predictions, which lived only in prose until 2026-08-29.** They were registered in
+# balance-lab.md before `CorpusFloorWalk` ran and then scored by hand, so the figures the page
+# quotes had no source anything could check them against — which is the failure `E5` is about, and
+# the reason `floor.py` exists. Written here beside `C3`'s so the two mechanisms are scored against
+# constants under test rather than against sentences (`D3`).
+
+#: The predicted share of blocks the floor holds back: **fewer** than `C3`'s fixed cap of 6 did,
+#: because a grid's own budget is a larger grant than 6. The band is open at the bottom and closed
+#: at the cap's measured 5.83 %, which is what the prediction named as its falsifier.
+FLOOR_REACH_BAND = (0.0, 5.83)
+
+#: The predicted delta-peak: p99 under the 0.03 K this mod already accepts, on the argument that a
+#: budget is a gentler cap than 6 and 6 cost 0.024 K at rest. It is the prediction with an argument
+#: rather than a measurement behind it, and it failed by three orders of magnitude.
+FLOOR_COST_P99_KELVIN = 0.03
+
+#: Substeps of slack before a floored arm counts as having come back *stiffer* than it went in,
+#: which the mechanism must never do. The walk's own tolerance, restated here so the report and the
+#: walk cannot drift apart (`D3`).
+FLOOR_SLACK_SUBSTEPS = 0.5
+
 CAP_ACCEPTED_KELVIN = 0.03
 
 # What the mod already refuses as the price of a default: `MaxSubstepsPerBlock 6` cost this much on
