@@ -142,6 +142,21 @@ namespace Thermodynamics
         /// </summary>
         private static readonly List<ThermalGrid> Live = new List<ThermalGrid>();
 
+        /// <summary>
+        /// Every grid this mod is simulating, in the order they registered.
+        ///
+        /// <para>
+        /// **Never null.** It is a `static readonly` list created with the type and only ever added
+        /// to and removed from, so a caller that checks it for null is checking something that
+        /// cannot happen — and three of them did, which left the next reader unable to tell whether
+        /// the ones that do not are a bug. The contract is stated here so the checks can go.
+        /// </para>
+        ///
+        /// <para>
+        /// It can be **empty**, which is a different thing and is worth checking: a session with no
+        /// grids yet, or one where every grid has closed.
+        /// </para>
+        /// </summary>
         public static IList<ThermalGrid> LiveGrids
         {
             get { return Live; }

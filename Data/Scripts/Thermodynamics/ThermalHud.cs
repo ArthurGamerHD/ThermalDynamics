@@ -214,7 +214,7 @@ namespace Thermodynamics
             if (!ShowPerformancePanel) return;
 
             IList<ThermalGrid> grids = ThermalGrid.LiveGrids;
-            if (grids == null || grids.Count == 0) return;
+            if (grids.Count == 0) return;
 
             int simulated = 0;
             long blocks = 0;
