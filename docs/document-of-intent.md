@@ -1178,6 +1178,29 @@ mod can both bind. And **keys do not change meaning within a major version**.
 Together they are what makes the table safe to publish at all — the *why* under
 [Open](#open--the-api-is-part-of-the-contract), which states the goal and the check.
 
+### To another mod that also slows a ship down: the same answer, and it is stronger here
+
+**`EnableDrag` ships off, so adding this mod to a world running
+[RelativeTopSpeed](https://github.com/Gauge/RelativeTopSpeed) changes no force at all.** That is the
+whole of the collision handled, and it is handled by the same switch the section below argues for
+rather than by a special case: the collision cannot happen by accident, only by a world turning it
+on, which is a decision rather than a surprise.
+
+**Detection is refused, and here it would actually be possible**, which is why it is worth saying
+no to explicitly. RTS ships an API and uses the same `SENetworkAPI` this repository vendors, so
+unlike a second heat mod it *could* be seen. It still should not be: a mod that stood down because
+it saw something it thought was a rival would take a working world's drag away, and it would do so
+depending on load order and on another mod's version. That is the same argument as below and it does
+not weaken for being about force instead of heat.
+
+**And the composition a world wants is one or the other, not both** — which is a measurement rather
+than a preference. RTS holds each grid under a cruise speed *because it has no drag*; this model has
+drag, and **84.5 % of published ships balance below the 100 m/s the engine already enforces**
+([backlog.md](backlog.md) `K11`). So a world running both gets two retarding forces where one would
+do, and a world that wants either can have it by switching the other off. What would be better than
+both is `K17`: one mod owns the force on a constraint group and the rest contribute to its inputs.
+That is an interface nobody has built yet, and until somebody does, the switch is the answer.
+
 ### To another mod that also simulates heat: nothing, and the switches are the answer
 
 **The mod behaves as though it is alone, because it cannot tell that it is not.** There is no
