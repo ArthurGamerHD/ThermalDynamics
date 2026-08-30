@@ -66,6 +66,14 @@ namespace Thermodynamics
                 ThermalGrid thermals = grids[i];
                 if (thermals == null || thermals.Grid == null || thermals.Simulation == null) continue;
 
+                // **A grid making no drag never resolves its group, which is what makes a parked
+                // fleet free** (`K11`). Resolving the group is the expensive half of this — a call
+                // into the engine and a list of every grid joined to it — and a ship sitting in a
+                // hangar, in vacuum, or below `FrictionAtSpeedsAbove` has nothing for it to sum.
+                // A group with *any* moving grid in it is still reached, by that grid; this skips
+                // groups where every member is still, not members of a moving group.
+                if (thermals.Simulation.FrictionWatts <= 0f) continue;
+
                 ApplyToGroupOf(thermals);
             }
         }

@@ -10,3 +10,11 @@ ships inside the authored band,3480,ships
 share inside the authored band,54.79,%
 ships with thrust and area,6352,ships
 ships with neither,1785,ships
+median cruise at density 1.225,70.44,m/s
+share under the engine cap at density 1.225,84.51,%
+median cruise at density 0.6,100.65,m/s
+share under the engine cap at density 0.6,49.42,%
+median cruise at density 0.3,142.33,m/s
+share under the engine cap at density 0.3,21.96,%
+median cruise at density 0.1,246.53,m/s
+share under the engine cap at density 0.1,8.71,%

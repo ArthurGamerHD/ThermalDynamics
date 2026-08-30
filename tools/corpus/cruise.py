@@ -37,6 +37,10 @@ AUTHORED_BAND = (60.0, 110.0)
 #: authored curve was tuned; thinner air raises every derived speed by the same square root.
 SEA_LEVEL_DENSITY = 1.225
 
+#: Space Engineers' own large-grid speed cap, m/s. RTS raises it and then holds each grid down; the
+#: question here is how many ships never reach it because the air stops them first.
+ENGINE_CAP = 100.0
+
 
 def cruise(thrust, area, coefficient, density):
     """Where thrust balances drag, m/s, or None where the ship has neither (`E8`)."""
@@ -119,6 +123,33 @@ def main():
     print("  function of thrust over area, which is what actually decides a top speed — and the"
           " spread")
     print("  below is the size of what the mass curve throws away.")
+
+    # ---- what the engine's own cap does to this ------------------------------------------------
+    #
+    # **The reason `K11` may not need a retarding force at all.** RTS holds each grid under a cruise
+    # speed because it has no drag: without one, a ship accelerates to the engine's global cap and
+    # stays there. This model *has* drag, so a ship stops where thrust balances it — and for most
+    # ships that is below the cap the engine already enforces, which means the retarding force would
+    # be holding them under a speed they cannot reach.
+    print()
+    print("  %-12s %14s %10s %28s" % ("air density", "", "median", "drag-limited below 100 m/s"))
+    for rho, label in ((1.225, "sea level"), (0.6, "half"), (0.3, "thin"), (0.1, "very thin")):
+        thinner = sorted(v for v in (cruise(scoring.number(row, "thrust_n"),
+                                            scoring.number(row, "exposed_area_m2"),
+                                            coefficient, rho) for row in rows) if v is not None)
+        median = scoring.percentile(thinner, 0.5)
+        below = sum(1 for v in thinner if v <= ENGINE_CAP)
+        share_below = 100.0 * below / len(thinner)
+        print("  %-12.3f %14s %8.1f m/s %26.1f %%" % (rho, label, median, share_below))
+        figures.append(("median cruise at density %g" % rho, round(median, 2), "m/s"))
+        figures.append(("share under the engine cap at density %g" % rho, round(share_below, 2), "%"))
+
+    print()
+    print("  **A top speed that falls with altitude, which is what a mass curve cannot produce.**")
+    print("  Low down a ship is held by the air; high up the engine's own cap takes over, exactly as")
+    print("  it does today. So the per-grid top speed `K11` wanted a force for is an outcome of drag")
+    print("  that is already applied, for the great majority of ships and all of the low-altitude"
+          " ones.")
 
     if out:
         with open(out, "w", newline="", encoding="utf-8") as handle:

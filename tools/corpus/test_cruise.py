@@ -80,5 +80,29 @@ class TheAuthoredBandIsWhatItIsComparedAgainst(unittest.TestCase):
         self.assertAlmostEqual(1.225, cruise.SEA_LEVEL_DENSITY, places=6)
 
 
+class TheEngineCapIsWhatARetardingForceWouldCompeteWith(unittest.TestCase):
+    """**Whether a per-grid speed limit needs a force at all** (`K11`).
+
+    RTS holds each grid under a cruise speed because it has no drag: without one, a ship accelerates
+    to the engine's global cap and sits there. This model has drag, so a ship stops where thrust
+    balances it — and measured over the census, **84.5 % of ships balance below the 100 m/s the
+    engine already enforces**. A retarding force would be holding those ships under a speed they
+    cannot reach.
+    """
+
+    def test_the_cap_is_the_engines_own(self):
+        self.assertAlmostEqual(100.0, cruise.ENGINE_CAP, places=6)
+
+    def test_thinner_air_raises_the_speed_so_the_cap_binds_more_often(self):
+        """Which is the altitude dependence a mass-based curve cannot produce."""
+        thick = cruise.cruise(500000.0, 400.0, 1.0, 1.225)
+        thin = cruise.cruise(500000.0, 400.0, 1.0, 0.1)
+
+        self.assertLess(thick, cruise.ENGINE_CAP)
+        self.assertGreater(thin, cruise.ENGINE_CAP)
+        self.assertGreater(thin, thick)
+
+
+
 if __name__ == "__main__":
     unittest.main()
