@@ -305,6 +305,19 @@ So the coefficient is authored until there is a shape term to derive it from, wh
 `K7` are about. The counter-example is a test rather than an argument, so the next reader who
 proposes deriving it finds the pair of hulls that says why not.
 
+**With drag on, a ship's top speed becomes altitude-dependent, and that is a change a player will
+notice.** A ship stops accelerating where its thrust balances `½ C_d ρ A v²`, so it is slow in thick
+air and fast where the air runs out: over the census the median published hull balances at **70.4
+m/s at sea level, 100.6 at half density, 142.3 thin and 246.5 very thin**
+([`summary-cruise-2026-08-30.csv`](../tools/corpus/summary-cruise-2026-08-30.csv)). **84.5 % of ships
+balance below the 100 m/s the engine already enforces**, so for most of them the air is what limits
+them and the engine's cap never binds; higher up the cap takes over exactly as it does today.
+
+That is physically right and it is *not* what a world running
+[RelativeTopSpeed](https://github.com/Gauge/RelativeTopSpeed) has, because a cruise speed
+interpolated through authored mass points has no altitude in it at all. It is named here rather than
+left to be discovered ([backlog.md](backlog.md) `K18`).
+
 **Windward shielding is a switch, and it moves temperatures as well as forces.**
 `EnableWindwardShielding` runs the sun's self-shadowing pass aimed at the relative wind, so a face
 in another block's lee contributes only what the wind can reach of it. It ships **off**, and the
