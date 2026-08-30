@@ -275,6 +275,16 @@ namespace Thermodynamics
         /// solver's windward term is a projected area, and a projected area is not a shape.
         /// </summary>
         [ProtoMember(136)] public float DragCoefficient = 1f;
+
+        /// <summary>
+        /// Whether a block behind another is sheltered from the wind, for heat and for drag.
+        ///
+        /// **Off, and the default is the conservative answer**: unshielded, every face is treated
+        /// as being in the open, so a hull is heated and dragged at least as much as it should be
+        /// and never less. It is a second sliced pass and a second six-floats-a-node array, 3 MB on
+        /// a 126,731-block hull, which a world not using it should not carry.
+        /// </summary>
+        [ProtoMember(137)] public bool EnableWindwardShielding = false;
         [ProtoMember(44)] public float RoomConvectionCoefficient = 8f;
         [ProtoMember(45)] public float RoomAirDensity = 1.225f;
 
@@ -861,6 +871,7 @@ namespace Thermodynamics
             core.FrictionScale = FrictionScale;
             core.EnableDrag = EnableDrag;
             core.DragCoefficient = DragCoefficient;
+            core.EnableWindwardShielding = EnableWindwardShielding;
             core.RoomConvectionCoefficient = RoomConvectionCoefficient;
             core.RoomAirDensity = RoomAirDensity;
             core.HeatPumpCarnotFraction = HeatPumpCarnotFraction;
@@ -931,7 +942,7 @@ namespace Thermodynamics
                 "Frequency", "SimulationSpeed", "HeatTimeScale", "MaxElementVisitsPerStep",
                 "MaxSubsteps", "MaxSubstepsPerBlock", "FloorBlocksWhenOverBudget",
                 "VacuumTemperature", "SolarEnergy", "FrictionAtSpeedsAbove", "FrictionScale",
-                "EnableDrag", "DragCoefficient",
+                "EnableDrag", "DragCoefficient", "EnableWindwardShielding",
                 "RoomConvectionCoefficient", "RoomAirDensity", "SolarOcclusionInterval",
                 "ClimateGroundInfluence", "ClimateWeatherInfluence",
                 "HeatPumpCarnotFraction", "HeatPumpMaxCoefficient",
@@ -1006,6 +1017,7 @@ namespace Thermodynamics
                 case "FrictionScale": return FrictionScale;
                 case "EnableDrag": return EnableDrag ? 1f : 0f;
                 case "DragCoefficient": return DragCoefficient;
+                case "EnableWindwardShielding": return EnableWindwardShielding ? 1f : 0f;
                 case "RoomConvectionCoefficient": return RoomConvectionCoefficient;
                 case "RoomAirDensity": return RoomAirDensity;
                 case "HeatPumpCarnotFraction": return HeatPumpCarnotFraction;
@@ -1119,6 +1131,7 @@ namespace Thermodynamics
                 case "FrictionScale": FrictionScale = value; return true;
                 case "EnableDrag": EnableDrag = value != 0f; return true;
                 case "DragCoefficient": DragCoefficient = value; return true;
+                case "EnableWindwardShielding": EnableWindwardShielding = value != 0f; return true;
                 case "RoomConvectionCoefficient": RoomConvectionCoefficient = value; return true;
                 case "RoomAirDensity": RoomAirDensity = value; return true;
                 case "HeatPumpCarnotFraction": HeatPumpCarnotFraction = value; return true;

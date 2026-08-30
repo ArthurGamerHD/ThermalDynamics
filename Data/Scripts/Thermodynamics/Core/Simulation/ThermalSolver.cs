@@ -157,8 +157,35 @@ namespace Thermodynamics.Core
         /// </summary>
         private float[] nodeSunLit = new float[0];
 
+        /// <summary>Per-node, per-face windward exposure from <see cref="windShadow"/>, 0..1.</summary>
+        private float[] nodeWindLit = new float[0];
+
         /// <summary>The grid's own shadow, rebuilt when the sun has moved far enough to matter.</summary>
         private readonly SunShadowMap sunShadow = new SunShadowMap();
+
+        /// <summary>
+        /// The same pass aimed at the relative wind, so a block behind another is sheltered from
+        /// heating and from drag.
+        ///
+        /// <para>
+        /// **`SunShadowMap` is a direction pass, not a sun pass** — `Restart` takes the direction as
+        /// an argument. What differs is entirely the cadence, and that is measured rather than
+        /// inherited: the sun crosses the shipped 2° threshold every 40 s on a two-hour day, while
+        /// the wind is in *grid-local* space and crosses it whenever the ship turns 2°, which a
+        /// 10 °/s yaw does five times a second. At that threshold a capital hull's pass — 7
+        /// substeps, 1.75 s — restarts before it can ever complete, spending the whole budget to
+        /// return the unshielded answer for ever.
+        /// </para>
+        ///
+        /// <para>
+        /// **So the wind map is allowed to be stale, because staleness is cheap and never
+        /// finishing is not.** Measured on a hull with real shadow structure, a map 20° out
+        /// disagrees on 2.0 % of faces and one 45° out on 3.8 %. See
+        /// <see cref="WindRebuildCosine"/> and the refusal to restart a running pass in
+        /// <see cref="RefreshWindShadow"/>.
+        /// </para>
+        /// </summary>
+        private readonly SunShadowMap windShadow = new SunShadowMap();
 
         /// <summary>Other grids whose shadows fall on this one. Filled by the host; usually empty.</summary>
         public readonly List<SunShadowMap.Occluder> SunOccluders = new List<SunShadowMap.Occluder>();
@@ -170,6 +197,7 @@ namespace Thermodynamics.Core
         public void MarkSunOccludersChanged()
         {
             sunLitDirty = true;
+            windLitDirty = true;
         }
 
         /// <summary>
@@ -178,6 +206,26 @@ namespace Thermodynamics.Core
         /// pass faster than it can complete under a slowly moving sun.
         /// </summary>
         private const float SunRebuildCosine = 0.99939f;
+
+        /// <summary>
+        /// How far the **wind** may move before a new shielding pass starts, as cos(20°).
+        ///
+        /// <para>
+        /// Ten times looser than the sun's, and the reason is that the two directions move at
+        /// completely different rates: the sun crosses 2° every 40 s and a ship yawing at 10 °/s
+        /// crosses it every fifth of a second, two hundred times more often. At the sun's threshold
+        /// the pass would restart before it could finish and never produce a result at all.
+        /// </para>
+        ///
+        /// <para>
+        /// **What that staleness costs is measured, not assumed** (`WindShieldingCostTests`), on a
+        /// hull with towers so that a turn actually sweeps one shadow across another: 2° out
+        /// disagrees on 0.1 % of faces, 10° on 1.1 %, **20° on 2.0 %** and 45° on 3.8 %. Two per
+        /// cent of faces reading as open when they are sheltered is a far smaller error than the
+        /// hundred per cent that comes of never completing.
+        /// </para>
+        /// </summary>
+        private const float WindRebuildCosine = 0.93969f;
 
         /// <summary>
         /// Cells walked per environment pass. The walk is exact and so is budgeted like the room
@@ -202,6 +250,13 @@ namespace Thermodynamics.Core
         /// map is the source. Used when self-shadowing is disabled and no map exists.
         /// </summary>
         private float sunLitFill = -1f;
+
+        private float windLitFill = -1f;
+        private int windLitCursor;
+        private bool windLitPending;
+
+        /// <summary>True when <see cref="nodeWindLit"/> no longer matches the nodes or the map.</summary>
+        private bool windLitDirty = true;
 
         /// <summary>True when <see cref="nodeSunLit"/> no longer matches the nodes or the map.</summary>
         private bool sunLitDirty = true;
@@ -653,6 +708,7 @@ namespace Thermodynamics.Core
             nodeFirstLink[node.Index] = -1;
 
             sunLitDirty = true;
+            windLitDirty = true;
             return node;
         }
 
@@ -741,6 +797,7 @@ namespace Thermodynamics.Core
             }
 
             sunLitDirty = true;
+            windLitDirty = true;
 
             // The cached hottest index refers to a slot, and a removal moves the last node into
             // another slot. Cleared rather than repaired: the next step's write-back rebuilds it,
@@ -2315,6 +2372,11 @@ namespace Thermodynamics.Core
             {
                 Vector3 wind = env.WindDirectionLocal;
                 ResolveDirection(ref wind, windWeights);
+
+                // The shielding pass, aimed at the same direction the weighting just used. Like the
+                // solar one it is the input to the precomputed rows that can change part way
+                // through a step, so a completed pass invalidates them.
+                if (RefreshWindShadow(ref wind)) InvalidateEnvironmentRows();
             }
 
             if (plan.SolarEnabled)
@@ -2393,6 +2455,11 @@ namespace Thermodynamics.Core
             float radiationShare = plan.RadiationShare;
             float frictionScale = plan.FrictionScale;
 
+            // Resolved once for the pass rather than per node: whether the shielding is on and its
+            // array is filled cannot change part way through a grid.
+            bool shielded = settings.EnableWindwardShielding
+                && nodeWindLit.Length >= nodes.Count * Face.Count;
+
             // The first substep of a step fills the rows below; later substeps read them. Their
             // inputs (exposure, area, emissivity, sun and wind directions, step length) are fixed
             // for the whole step, so both paths compute the same values.
@@ -2461,9 +2528,22 @@ namespace Thermodynamics.Core
                     float wind = 0f;
                     if (windy || frictionEnabled)
                     {
-                        wind = (f0 * windWeights[0]) + (f1 * windWeights[1])
-                            + (f2 * windWeights[2]) + (f3 * windWeights[3])
-                            + (f4 * windWeights[4]) + (f5 * windWeights[5]);
+                        // **Each face's share of the wind, times how much of that face the wind can
+                        // actually reach.** Without shielding the exposure is one and this is the
+                        // sum it always was; with it, a face behind another block contributes what
+                        // is left of it. The conservative direction is *unshielded* — every face in
+                        // the open — so a world that has not switched this on is heated and dragged
+                        // at least as much as it should be, never less.
+                        wind = shielded
+                            ? (f0 * windWeights[0] * nodeWindLit[b])
+                                + (f1 * windWeights[1] * nodeWindLit[b + 1])
+                                + (f2 * windWeights[2] * nodeWindLit[b + 2])
+                                + (f3 * windWeights[3] * nodeWindLit[b + 3])
+                                + (f4 * windWeights[4] * nodeWindLit[b + 4])
+                                + (f5 * windWeights[5] * nodeWindLit[b + 5])
+                            : (f0 * windWeights[0]) + (f1 * windWeights[1])
+                                + (f2 * windWeights[2]) + (f3 * windWeights[3])
+                                + (f4 * windWeights[4]) + (f5 * windWeights[5]);
                     }
 
                     // Spans 1..2, so a lee face sheds what still air sheds and never less.
@@ -2641,6 +2721,109 @@ namespace Thermodynamics.Core
             return StepSunLit(SunLitBudget);
         }
 
+        /// <summary>
+        /// Advances the windward shielding pass, and refreshes the per-face exposure when one
+        /// completes.
+        ///
+        /// <para>
+        /// **Two rules separate this from the solar pass, and both come from a measurement.**
+        /// </para>
+        ///
+        /// <para>
+        /// **A much looser threshold.** The direction is in grid-local space, so it moves when the
+        /// *ship* turns; at the sun's 2° a 10 °/s yaw restarts the pass five times a second while a
+        /// capital hull needs 1.75 s to walk it. `WindRebuildCosine` is 20°, which costs 2.0 % of
+        /// faces in staleness against never completing at all.
+        /// </para>
+        ///
+        /// <para>
+        /// **And a running pass is never restarted.** Without that, a fast enough turn still
+        /// outruns any fixed threshold and the shielding is unbounded-stale rather than
+        /// bounded-stale — it simply never exists. Letting the pass finish bounds the error at the
+        /// pass's own length times the turn rate: 1.75 s at 20 °/s is 35°, under four per cent of
+        /// faces. A bound that degrades is worth more than a promise that fails.
+        /// </para>
+        /// </summary>
+        /// <returns>True when it wrote any exposure.</returns>
+        private bool RefreshWindShadow(ref Vector3 windLocal)
+        {
+            if (!settings.EnableWindwardShielding)
+            {
+                if (windShadow.IsBuilt || windShadow.IsRunning)
+                {
+                    windShadow.Clear();
+                    BeginWindLit(1f);
+                }
+
+                return StepWindLit(SunLitBudget);
+            }
+
+            // A block added or removed invalidates a pass in flight as well as its result, so the
+            // layout takes priority over the do-not-restart rule below: a pass walking a grid that
+            // has changed is walking a grid that no longer exists.
+            if (windLitDirty)
+            {
+                windShadow.Restart(grid, windLocal, SunOccluders);
+                windLitDirty = false;
+            }
+            else if (!windShadow.IsRunning && windShadow.NeedsRestart(ref windLocal, WindRebuildCosine))
+            {
+                windShadow.Restart(grid, windLocal, SunOccluders);
+            }
+
+            if (windShadow.Step(SunShadowBudget)) BeginWindLit(-1f);
+
+            return StepWindLit(SunLitBudget);
+        }
+
+        /// <summary>Starts a windward exposure refresh, from the map or from a fixed value.</summary>
+        private void BeginWindLit(float fill)
+        {
+            windLitFill = fill;
+            windLitCursor = 0;
+            windLitPending = true;
+        }
+
+        /// <summary>Advances a windward exposure refresh by at most <paramref name="nodeBudget"/> nodes.</summary>
+        private bool StepWindLit(int nodeBudget)
+        {
+            if (!windLitPending) return false;
+
+            if (windLitCursor >= nodes.Count)
+            {
+                windLitPending = false;
+                return false;
+            }
+
+            if (nodeWindLit.Length < nodes.Count * Face.Count) return false;
+
+            int end = Math.Min(nodes.Count, windLitCursor + nodeBudget);
+
+            if (windLitFill >= 0f)
+            {
+                for (int i = windLitCursor; i < end; i++)
+                {
+                    int b = i * Face.Count;
+                    for (int f = 0; f < Face.Count; f++) nodeWindLit[b + f] = windLitFill;
+                }
+            }
+            else
+            {
+                for (int i = windLitCursor; i < end; i++)
+                {
+                    int b = i * Face.Count;
+                    for (int f = 0; f < Face.Count; f++)
+                    {
+                        nodeWindLit[b + f] = windShadow.FaceLitFraction(nodes[i].Block, f);
+                    }
+                }
+            }
+
+            windLitCursor = end;
+            if (windLitCursor >= nodes.Count) windLitPending = false;
+            return true;
+        }
+
         /// <summary>Starts a lit-fraction refresh, from the shadow map or from a fixed value.</summary>
         private void BeginSunLit(float fill)
         {
@@ -2708,6 +2891,15 @@ namespace Thermodynamics.Core
         /// off or the sun has never been resolved.
         /// </summary>
         public SunShadowMap SunShadow { get { return sunShadow; } }
+
+        /// <summary>The windward shielding pass, for tests and diagnostics.</summary>
+        public SunShadowMap WindShadow { get { return windShadow; } }
+
+        /// <summary>
+        /// How many per-face exposures the shielding holds, which is nought when it is switched off.
+        /// A test reads this to check that a world not shielding does not pay for the array.
+        /// </summary>
+        public int WindLitLength { get { return nodeWindLit.Length; } }
 
         /// <summary>Fraction of one face of a node the sun reaches, 0..1.</summary>
         public float SunLitFraction(int node, int face)
@@ -3812,6 +4004,7 @@ namespace Thermodynamics.Core
                 nodeConductanceTotal = new float[size];
                 resyncAll = true;
                 sunLitDirty = true;
+            windLitDirty = true;
                 nodeThermalMass = new float[size];
                 nodeRadiation = new float[size];
                 nodeGeneration = new float[size];
@@ -3829,6 +4022,14 @@ namespace Thermodynamics.Core
                 InvalidateEnvironmentRows();
                 nodeFaceWeights = new float[size * Face.Count];
                 nodeSunLit = new float[size * Face.Count];
+
+                // **Allocated only where the shielding is switched on.** The array is six floats a
+                // node, which on a 126,731-block hull is 3 MB, and a world that is not shielding
+                // should not pay it. `EnableWindwardShielding` cannot change mid-step, so the two cannot
+                // disagree about whether the array exists.
+                nodeWindLit = settings.EnableWindwardShielding
+                    ? new float[size * Face.Count]
+                    : new float[0];
             }
             if (loopEffectiveMass.Length < loops.Count)
             {

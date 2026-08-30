@@ -102,6 +102,7 @@ namespace Thermodynamics.Tests
             InTheSun(apply, readings);
             NearAStar(apply, readings);
             Flying(apply, readings);
+            FlyingInTrail(apply, readings);
             Plumbed(apply, readings);
             Pumped(apply, readings);
             Sealed(apply, readings);
@@ -341,6 +342,29 @@ namespace Thermodynamics.Tests
             Read(simulation, into);
         }
 
+        /// <summary>
+        /// Two walls in line down the wind, so one is in the other's lee.
+        ///
+        /// <para>
+        /// **`Flying` cannot see the shielding and this is why**: it is a hollow shell, so nothing
+        /// is behind anything and a pass that shelters what is sheltered has nothing to shelter. A
+        /// setting that only bites where one block occludes another needs a rig where one does.
+        /// </para>
+        /// </summary>
+        private static void FlyingInTrail(Action<ThermalSettings> apply, List<float> into)
+        {
+            GridBuilder builder = GridBuilder.Large();
+
+            // `Worlds.Flight` moves the ship backward, so the air arrives from +Z and the wall at
+            // the origin sits in the lee of the one at +4.
+            builder.Fill(Catalog.LightArmor(), new Vector3I(0, 0, 4), new Vector3I(4, 4, 6));
+            builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 4, 2));
+
+            ThermalSimulation simulation = builder.BuildSimulation(Settings(apply), 293.15f);
+            simulation.StepExact(LabClock.Steps(200), Worlds.Flight(1f, 400f));
+            Read(simulation, into);
+        }
+
         /// <summary>A ring with a sink face on a source: the coolant path and its well-mixed model.</summary>
         private static void Plumbed(Action<ThermalSettings> apply, List<float> into)
         {
@@ -558,7 +582,7 @@ namespace Thermodynamics.Tests
                     moved ? "reaches" : (exempt ? "inert, and named as inert" : "REACHES NOTHING"));
             }
 
-            output.WriteLine("{0} settings, {1} runs of {2} rigs", fields.Count, judged, 13);
+            output.WriteLine("{0} settings, {1} runs of {2} rigs", fields.Count, judged, 14);
 
             Assert.True(inert.Count == 0,
                 "settings that changed nothing any rig here reads:\n  "

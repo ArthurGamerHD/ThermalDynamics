@@ -127,6 +127,19 @@ namespace Thermodynamics.Core
         public bool EnableDrag = false;
 
         /// <summary>
+        /// Whether a block behind another is sheltered from the wind, for heat and for drag.
+        ///
+        /// <para>
+        /// **The same self-shadowing pass the sun uses, aimed at the relative wind.** Off by
+        /// default because it is a second sliced pass and a second six-floats-a-node array — 3 MB
+        /// on a 126,731-block hull — and because without it the model's answer is the conservative
+        /// one: every face is treated as being in the open, so a hull is heated and dragged at
+        /// least as much as it should be.
+        /// </para>
+        /// </summary>
+        public bool EnableWindwardShielding = false;
+
+        /// <summary>
         /// The drag coefficient a hull is treated as having, dimensionless.
         ///
         /// <para>
