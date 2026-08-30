@@ -40,8 +40,7 @@ namespace Thermodynamics
         private static readonly MyStringId LegacySinkContactId = MyStringId.GetOrCompute("PlateSurfaceAreaScaler");
 
         /// <summary>Space Engineers' two cell sizes, used to convert the retired parcel-rate name.</summary>
-        private const float LargeGridCellMetres = 2.5f;
-        private const float SmallGridCellMetres = 0.5f;
+
 
         public static readonly MyDefinitionId DefaultLoopDefinitionId = new MyDefinitionId(typeof(MyObjectBuilder_EnvironmentDefinition), Settings.DefaultLoopSubtypeId);
 
@@ -156,7 +155,7 @@ namespace Thermodynamics
             {
                 // Parcels per second: one parcel is one pipe block, so the speed a definition
                 // written this way actually produced depended on the grid it was built on.
-                def.LargeGridFlowRate = (float)dvalue * LargeGridCellMetres;
+                def.LargeGridFlowRate = (float)dvalue * LoopThermalProperties.LargeGridCellMetres;
             }
 
             if (lookup.TryGetDouble(defId, GroupId, SmallGridFlowRateId, out dvalue))
@@ -169,7 +168,7 @@ namespace Thermodynamics
             }
             else if (lookup.TryGetDouble(defId, GroupId, LegacyParcelRateId, out dvalue))
             {
-                def.SmallGridFlowRate = (float)dvalue * SmallGridCellMetres;
+                def.SmallGridFlowRate = (float)dvalue * LoopThermalProperties.SmallGridCellMetres;
             }
 
             if (lookup.TryGetDouble(defId, GroupId, StagnantTransferId, out dvalue))

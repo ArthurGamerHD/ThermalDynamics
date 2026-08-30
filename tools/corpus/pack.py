@@ -13,14 +13,22 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import scoring
+
 DATA = sys.argv[1] if len(sys.argv) > 1 else "."
 
 
 def number(row, key, default=None):
-    try:
-        return float(row[key])
-    except (TypeError, ValueError, KeyError):
-        return default
+    """A cell as a float, defaulting where the dataset does not carry it.
+
+    The parse is `scoring.number`, which reports an absent cell as *unmeasured*; the default is
+    this tool's own and is `None` unless a caller names one, so the two agree unless somebody asks
+    them not to. See `scoring.number` for why there is only one parse (`E8`).
+    """
+    value = scoring.number(row, key)
+    return default if value is None else value
 
 
 with open(os.path.join(DATA, "outcomes.csv")) as handle:

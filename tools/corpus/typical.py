@@ -79,22 +79,20 @@ def number(row, key, default=0.0):
     return default if value is None else value
 
 
-def key_of(row):
-    return (row["ship"], row["workshop_id"])
 
 
-census = {key_of(r): r for r in csv.DictReader(open(CENSUS))}
+census = {scoring.key_of(r): r for r in csv.DictReader(open(CENSUS))}
 
 paths = {}
 if os.path.exists(SHIPS):
     for r in csv.DictReader(open(SHIPS)):
-        paths[key_of(r)] = r.get("path", "")
+        paths[scoring.key_of(r)] = r.get("path", "")
 else:
     print(f"warning: {SHIPS} not found — the set will carry no blueprint paths")
 
 outcomes = {}
 for r in csv.DictReader(open(OUTCOMES)):
-    outcomes.setdefault(key_of(r), {})[r["scenario"]] = r
+    outcomes.setdefault(scoring.key_of(r), {})[r["scenario"]] = r
 
 
 def complete(k):

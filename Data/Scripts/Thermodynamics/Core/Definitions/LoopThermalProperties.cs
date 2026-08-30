@@ -187,6 +187,9 @@ namespace Thermodynamics.Core
         /// <summary>Space Engineers' large cell edge, m. The fallback where a caller states none.</summary>
         public const float LargeGridCellMetres = 2.5f;
 
+        /// <summary>Space Engineers' small cell edge, m.</summary>
+        public const float SmallGridCellMetres = 0.5f;
+
         /// <summary>
         /// Fraction of full transfer that survives with no circulation at all, 0..1.
         ///

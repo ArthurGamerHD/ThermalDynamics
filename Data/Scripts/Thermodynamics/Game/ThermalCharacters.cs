@@ -25,7 +25,6 @@ namespace Thermodynamics
     /// </summary>
     public static class ThermalCharacters
     {
-        private static readonly MyStringHash ThermalDamage = MyStringHash.GetOrCompute("thermal");
 
         /// <summary>
         /// Suit interior temperature per player, K. Keyed by identity rather than by entity so a
@@ -121,7 +120,7 @@ namespace Thermodynamics
             if (result.Damage <= 0f) return;
 
             IMyDestroyableObject destroyable = character as IMyDestroyableObject;
-            if (destroyable != null) destroyable.DoDamage(result.Damage, ThermalDamage, true);
+            if (destroyable != null) destroyable.DoDamage(result.Damage, ThermalGrid.ThermalDamage, true);
         }
 
         /// <summary>
