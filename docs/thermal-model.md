@@ -305,6 +305,21 @@ So the coefficient is authored until there is a shape term to derive it from, wh
 `K7` are about. The counter-example is a test rather than an argument, so the next reader who
 proposes deriving it finds the pair of hulls that says why not.
 
+**The same fact decides how a force would have to be grouped, and it is worse news than `K15`
+expected.** Real frontal area is additive, so a per-grid sum of drag looks about right for a ship
+that is several grids. This model's area is not additive: it charges for the windward projection and
+the depth along the wind never enters the sum, so **each half of a hull cut across the wind takes the
+same drag as the whole hull**. `DragGroupingTests` measures 172,800 W for a 4×4×4 hull and 172,800 W
+for each of its halves — a per-grid sum of **exactly 2×**, and exactly N× for N pieces. A cut *along*
+the wind is exactly additive, halving the projection and the drag with it. Those are the two extremes
+and there is no case between them.
+
+So a drag force cannot be summed per grid: it has to be computed over the physical constraint group,
+`IMyCubeGrid.GetGridGroup(GridLinkTypeEnum.Physical)`, which is broader than this mod's own
+`ThermalBridges` — a connector links two grids physically and conducts no heat. A ship would
+otherwise get draggier for growing a turret, which is the same shape of defect `K15` found in the
+mass curve and larger.
+
 ### Waste heat
 
 Recomputed only when the game reports a change, never per step
