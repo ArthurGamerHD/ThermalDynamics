@@ -1,3 +1,4 @@
+using System;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
 using VRageMath;
@@ -127,5 +128,83 @@ namespace Thermodynamics.Tests
             Assert.True(on.Solver.WindLitLength > 0,
                 "the shielding is on and its array is empty, so it is reading nothing");
         }
+        /// <summary>
+        /// **The shielding reaches convection as well as friction, and this measures how far.**
+        ///
+        /// <para>
+        /// The six-face wind sum is read by *both* the friction row and the convection factor —
+        /// `windFactor = 1 + wind` — so sheltering a face reduces the forced convection over it as
+        /// well as the aerodynamic heating of it. That is physically right: a face in another
+        /// block's lee has less air moving across it, and forced convection is what air moving
+        /// across a surface does.
+        /// </para>
+        ///
+        /// <para>
+        /// **But it means this is a change to the heat model rather than an addition to the force
+        /// one**, which is backlog.md `K9` and the reason the switch ships off. Nothing has changed
+        /// for any existing world; what a world turns on when it sets the switch is measured here
+        /// on a hull and wants the corpus before it becomes a default.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void ShieldingChangesTemperaturesAndNotOnlyDrag()
+        {
+            // **The environment on**, unlike the drag rigs above: those switch it off to isolate
+            // friction, and convection is the term being measured here.
+            ThermalSimulation open = Convecting(false);
+            ThermalSimulation shielded = Convecting(true);
+
+            open.StepExact(120, Worlds.Flight(ThickAir, Speed));
+            shielded.StepExact(120, Worlds.Flight(ThickAir, Speed));
+
+            float openPeak = Peak(open);
+            float shieldedPeak = Peak(shielded);
+
+            Assert.True(openPeak > 0f && shieldedPeak > 0f);
+
+            // **The shielded hull runs hotter, and that is the right direction.** A sheltered face
+            // has less air moving over it, so it loses less to forced convection — and this hull
+            // starts above the air, so losing less means staying warmer. Measured at **7.4 K** on
+            // this rig, 316.1 K open against 323.5 K shielded, which is the size of the change
+            // `K9` says has to reach the corpus before it could ever be a default.
+            Assert.True(shieldedPeak > openPeak,
+                "the shielded hull is not hotter, so the shielding is not reducing convection the "
+                + "way it reduces friction — open " + openPeak + " K, shielded " + shieldedPeak + " K");
+            Assert.True(Math.Abs(openPeak - shieldedPeak) > 0.001f,
+                "shielding moved no temperature at all, so it is not reaching the convection term "
+                + "that the same six-face sum feeds — open " + openPeak + " K, shielded "
+                + shieldedPeak + " K");
+        }
+
+        /// <summary>The sheltered pair with the environment left on, so convection is live.</summary>
+        private static ThermalSimulation Convecting(bool shielding)
+        {
+            ThermalSettings settings = new ThermalSettings();
+            settings.EnableSolarHeat = false;
+            settings.EnableDamage = false;
+            settings.EnableWindwardShielding = shielding;
+            settings.Derive();
+
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.HeavyArmor(), new Vector3I(0, 0, 4), new Vector3I(4, 4, 6));
+            builder.Fill(Catalog.HeavyArmor(), Vector3I.Zero, new Vector3I(4, 4, 2));
+
+            ThermalSimulation simulation = builder.BuildSimulation(settings, 500f);
+            simulation.Planet = PlanetThermalProperties.Default();
+            return simulation;
+        }
+
+        private static float Peak(ThermalSimulation simulation)
+        {
+            float peak = 0f;
+            for (int i = 0; i < simulation.Solver.Nodes.Count; i++)
+            {
+                float t = simulation.Solver.Nodes[i].Temperature;
+                if (t > peak) peak = t;
+            }
+
+            return peak;
+        }
+
     }
 }
