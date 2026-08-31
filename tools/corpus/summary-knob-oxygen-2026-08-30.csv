@@ -1,0 +1,17 @@
+statistic,value,unit
+provenance,absent,
+oxygen-waste level 0.5 cells,156,cells
+oxygen-waste level 0.5 reached,86,cells
+oxygen-waste level 0.5 dpeak p50,0.6565,K
+oxygen-waste level 0.5 dpeak p95,48.8478,K
+oxygen-waste level 0.5 dpeak max,196.443,K
+oxygen-waste level 1.5 cells,156,cells
+oxygen-waste level 1.5 reached,90,cells
+oxygen-waste level 1.5 dpeak p50,0.7325,K
+oxygen-waste level 1.5 dpeak p95,46.6479,K
+oxygen-waste level 1.5 dpeak max,127.22,K
+oxygen-waste level 2 cells,156,cells
+oxygen-waste level 2 reached,91,cells
+oxygen-waste level 2 dpeak p50,1.607,K
+oxygen-waste level 2 dpeak p95,78.172,K
+oxygen-waste level 2 dpeak max,402.129,K
