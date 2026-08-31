@@ -154,6 +154,16 @@ namespace Thermodynamics.Core
         public float LastSolarWatts;
         public float LastFrictionWatts;
 
+        /// <summary>
+        /// A directional drag multiplier on this block's six faces, registered through the API.
+        ///
+        /// **Unset by default, which reads as no change.** A block's exposed faces are what its
+        /// geometry gives it; a profile is a mod saying the air slips past one of them more easily
+        /// than its area suggests — a jet engine is slippery nose-on and blunt side-on, and an
+        /// axis-aligned face count cannot tell (backlog.md `K17`).
+        /// </summary>
+        public DragProfile Drag;
+
         /// <summary>Watts from mod-registered point heat sources, summed over every source.</summary>
         public float LastHeatSourceWatts;
 

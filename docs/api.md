@@ -60,6 +60,8 @@ Unregister the handler in `UnloadData`.
 | `GetRoom` | `Func<IMyCubeGrid, Vector3I, MyTuple<bool,float,float,float>>` | Is a sealed room, air temperature K, pressure 0..1, volume m³. |
 | `GetGridHeatBalance` | `Func<IMyCubeGrid, MyTuple<float,float>>` | Watts the grid is venting, watts it is making. Venting reads zero while a grid is net absorbing. |
 | `GetGridFrictionWatts` | `Func<IMyCubeGrid, float>` | Watts the grid is taking from the air by aerodynamic friction. **One term of the second figure above, not a third one** — adding them counts it twice. |
+| `SetBlockDragProfile` | `Func<IMySlimBlock, float[], bool>` | Six multipliers in face order, each 0..1, telling the drag model this block is more slippery on some faces than its area says — a nacelle is slippery nose-on and blunt side-on, and an axis-aligned face count cannot tell. **A profile may only reduce**: anything over 1, under 0, or not a number is clamped to 1, which is *no change*. Touches drag and the wind's convection and **not** the sun. |
+| `ClearBlockDragProfile` | `Func<IMySlimBlock, bool>` | Removes a profile, so the block's faces read as their own area again. |
 
 A block that is not simulated — excluded by `ExcludeFromSimulation`, on a grid without physics, or not yet
 registered — reads as zero rather than throwing.

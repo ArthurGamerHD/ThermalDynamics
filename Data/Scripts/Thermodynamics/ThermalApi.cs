@@ -150,6 +150,8 @@ namespace Thermodynamics
             methods["GetRoom"] = Guard(new Func<IMyCubeGrid, Vector3I, MyTuple<bool, float, float, float>>(GetRoom), "GetRoom");
             methods["GetGridHeatBalance"] = Guard(new Func<IMyCubeGrid, MyTuple<float, float>>(GetGridHeatBalance), "GetGridHeatBalance");
             methods["GetGridFrictionWatts"] = Guard(new Func<IMyCubeGrid, float>(GetGridFrictionWatts), "GetGridFrictionWatts");
+            methods["SetBlockDragProfile"] = Guard(new Func<IMySlimBlock, float[], bool>(SetBlockDragProfile), "SetBlockDragProfile");
+            methods["ClearBlockDragProfile"] = Guard(new Func<IMySlimBlock, bool>(ClearBlockDragProfile), "ClearBlockDragProfile");
 
             // ---- writing ------------------------------------------------------------------
             methods["SetBlockTemperature"] = Guard(new Func<IMySlimBlock, float, bool>(SetBlockTemperature), "SetBlockTemperature");
@@ -291,6 +293,56 @@ namespace Thermodynamics
             if (thermals == null || thermals.Simulation == null) return 0f;
 
             return thermals.Simulation.FrictionWatts;
+        }
+
+        /// <summary>
+        /// Tells the drag model that a block is more slippery on some faces than its area says.
+        ///
+        /// <para>
+        /// **Six multipliers in `Face` order, each 0..1, riding the exposure the solver already
+        /// computes.** The model's only shape term is a projected area, so it cannot tell a jet
+        /// engine from a box of the same size — a nacelle is slippery nose-on and blunt side-on,
+        /// and an axis-aligned face count does not say so. A mod that knows the shape of its own
+        /// block can (backlog.md `K17`).
+        /// </para>
+        ///
+        /// <para>
+        /// **A profile may only reduce, and that is the bound on what a registration may claim.** A
+        /// block's faces are what its geometry gives it; this says the air slips past one more
+        /// easily. Anything over 1, under 0, or not a number is clamped to 1 — *no change* — rather
+        /// than refused, because a registration must not throw into somebody else's update loop
+        /// (`W4`), and *no change* is the direction that cannot break a ship.
+        /// </para>
+        ///
+        /// <para>
+        /// **It touches drag and the wind's convection, and not the sun.** The multiplier is applied
+        /// where the flow is weighted; a block slippery to the air is not slippery to sunlight.
+        /// </para>
+        ///
+        /// <para>
+        /// False for a block with no node, a null or short array — six entries are required, since a
+        /// caller who meant five has made a mistake this cannot guess the shape of.
+        /// </para>
+        /// </summary>
+        private static bool SetBlockDragProfile(IMySlimBlock block, float[] faces)
+        {
+            if (faces == null || faces.Length != Face.Count) return false;
+
+            ThermalBlock bound = Bound(block);
+            if (bound == null || bound.Node == null) return false;
+
+            bound.Node.Drag = DragProfile.Of(faces[0], faces[1], faces[2], faces[3], faces[4], faces[5]);
+            return true;
+        }
+
+        /// <summary>Removes a block's drag profile, so its faces read as their own area again.</summary>
+        private static bool ClearBlockDragProfile(IMySlimBlock block)
+        {
+            ThermalBlock bound = Bound(block);
+            if (bound == null || bound.Node == null) return false;
+
+            bound.Node.Drag = default(DragProfile);
+            return true;
         }
 
         /// <summary>Is a sealed room, air temperature K, pressure 0..1, volume m^3.</summary>
