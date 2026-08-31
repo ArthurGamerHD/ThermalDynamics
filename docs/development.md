@@ -42,6 +42,13 @@ happened on 2026-08-30, when a cleanup pointed `ThermalLoopDefinition` at `Core`
 `LoopThermalProperties` without the `using` and 2,141 tests passed over it. **Build the `.slnx`**;
 it catches that in four errors, and building the test project by name catches it in none.
 
+**And the mod project is not a stand-in for the solution either, because the two disagree about what
+an error is.** A doc comment with an unbalanced `<para>` was zero errors to `Generic.csproj` and four
+to `tests/Thermodynamics.slnx` on 2026-08-30, because the `Core` project treats malformed XML doc
+comments as errors and the mod project does not. So *build the mod project* is not the shortcut —
+build the `.slnx`, which is the only command that compiles everything under the strictness each part
+of it is configured with.
+
 It is the same shape as the malformed-project case below and arrives through a different door: there
 the project leaves the build, here the project is never in it. And it is the mirror of the rule this
 repository already keeps in the other direction — a green mod build is not the game's whitelist
