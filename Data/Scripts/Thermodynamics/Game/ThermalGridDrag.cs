@@ -14,7 +14,7 @@ namespace Thermodynamics
     /// The solver has always computed drag power — `FrictionScale × ρ × v_rel³ × A_windward` is
     /// `½ C_d ρ A v³` under another name — turned it into heat in the hull, and taken nothing from
     /// the ship. Over the 8,144 published blueprints at `reentry` the median hull is given 5.05 MW
-    /// that way (backlog.md `K1`).
+    /// that way (thermal-model.md's change log).
     /// </para>
     ///
     /// <para>
@@ -26,7 +26,7 @@ namespace Thermodynamics
     /// N grids, so it would get slower for growing a turret. `GetGridGroup(Physical)` is the unit
     /// the engine already keeps, and it is broader than this mod's `ThermalBridges`, which pair
     /// grids across rotors and pistons only — a connector links two grids physically and conducts
-    /// no heat (backlog.md `K15`).
+    /// no heat (thermal-model.md's change log).
     /// </para>
     ///
     /// <para>
@@ -67,7 +67,7 @@ namespace Thermodynamics
                 if (thermals == null || thermals.Grid == null || thermals.Simulation == null) continue;
 
                 // **A grid making no drag never resolves its group, which is what makes a parked
-                // fleet free** (`K11`). Resolving the group is the expensive half of this — a call
+                // fleet free** (the drag milestone). Resolving the group is the expensive half of this — a call
                 // into the engine and a list of every grid joined to it — and a ship sitting in a
                 // hangar, in vacuum, or below `FrictionAtSpeedsAbove` has nothing for it to sum.
                 // A group with *any* moving grid in it is still reached, by that grid; this skips
@@ -84,7 +84,7 @@ namespace Thermodynamics
         /// <para>
         /// **One force at one point, rather than one per grid at each grid's centre.** A force at
         /// each subgrid's own centre of mass produces a net torque on the assembly that no real air
-        /// produces, and loads the joints with it — rotors detach (`K15`).
+        /// produces, and loads the joints with it — rotors detach (the drag milestone).
         /// </para>
         /// </summary>
         private static void ApplyToGroupOf(ThermalGrid leader)

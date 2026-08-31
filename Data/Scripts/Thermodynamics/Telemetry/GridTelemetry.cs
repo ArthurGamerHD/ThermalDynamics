@@ -394,7 +394,7 @@ namespace Thermodynamics
         /// adding the two counts it twice. It is here on its own because it is *drag power* — the
         /// solver's friction expression is the drag expression — and the mod turns it into heat
         /// while taking nothing from the ship's motion, which is a question a report should be able
-        /// to answer about a hull before anybody builds the force (backlog.md `K1`).
+        /// to answer about a hull before anybody builds the force (thermal-model.md's change log).
         /// </summary>
         public readonly RunningStat FrictionWatts = new RunningStat();
         public readonly RunningStat EffectiveSolarEnergy = new RunningStat();

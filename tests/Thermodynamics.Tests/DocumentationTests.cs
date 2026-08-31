@@ -1139,7 +1139,7 @@ namespace Thermodynamics.Tests
                 if (relative.Contains("RichHudFramework")) continue;
                 if (relative.Contains("NetworkAPI")) continue;
 
-                foreach (Match m in Regex.Matches(File.ReadAllText(file), @"`([EMDCROJW]\d{1,2})`"))
+                foreach (Match m in Regex.Matches(File.ReadAllText(file), @"`([EMDCROJWK]\d{1,2})`"))
                 {
                     cited++;
                     if (!known.Contains(m.Groups[1].Value))

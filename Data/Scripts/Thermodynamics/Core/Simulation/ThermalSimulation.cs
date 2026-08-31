@@ -163,7 +163,7 @@ namespace Thermodynamics.Core
         /// **Drag power in all but name**, and the one figure a drag force needs for its magnitude:
         /// the solver computes `FrictionScale x rho x v_rel^3 x area x windward exposure` and real
         /// drag power is `1/2 C_d rho A v^3`. Today it becomes heat in the hull and nothing is
-        /// taken from the ship's motion (backlog.md `K1`). Included in
+        /// taken from the ship's motion (thermal-model.md's change log). Included in
         /// <see cref="HeatGainWatts"/>, which is the sum this is one term of.
         /// </summary>
         public float FrictionWatts

@@ -141,7 +141,7 @@ namespace Thermodynamics.Tests
         ///
         /// <para>
         /// **But it means this is a change to the heat model rather than an addition to the force
-        /// one**, which is backlog.md `K9` and the reason the switch ships off. Nothing has changed
+        /// one**, which is thermal-model.md's change log and the reason the switch ships off. Nothing has changed
         /// for any existing world; what a world turns on when it sets the switch is measured here
         /// on a hull and wants the corpus before it becomes a default.
         /// </para>
@@ -166,7 +166,7 @@ namespace Thermodynamics.Tests
             // has less air moving over it, so it loses less to forced convection — and this hull
             // starts above the air, so losing less means staying warmer. Measured at **7.4 K** on
             // this rig, 316.1 K open against 323.5 K shielded, which is the size of the change
-            // `K9` says has to reach the corpus before it could ever be a default.
+            // the drag milestone says has to reach the corpus before it could ever be a default.
             Assert.True(shieldedPeak > openPeak,
                 "the shielded hull is not hotter, so the shielding is not reducing convection the "
                 + "way it reduces friction — open " + openPeak + " K, shielded " + shieldedPeak + " K");

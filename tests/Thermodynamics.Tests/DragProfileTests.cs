@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     ///
     /// <para>
     /// The model's only shape term is a projected area — six exposed-face fractions weighted by
-    /// their incidence — so it cannot tell a jet engine from a box of the same size. `K17` is the
+    /// their incidence — so it cannot tell a jet engine from a box of the same size. the drag milestone is the
     /// interface for a mod that knows its own block's shape to say so, and the mechanism is a
     /// multiplier on the exposure the solver already computes rather than a parallel model.
     /// </para>

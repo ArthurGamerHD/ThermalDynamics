@@ -15,11 +15,11 @@ namespace Thermodynamics.Tests
     /// that power into heat in the hull and takes nothing from the ship's motion, so energy enters
     /// the world with nothing paying for it: measured over the 8,144 published blueprints at
     /// `reentry`, the median hull absorbs 5.05 MW and the largest 4.91 GW, on 100 % of them. At
-    /// 300 m/s a median 5.05 MW is 16.8 kN of force never applied. See backlog.md `K1`.
+    /// 300 m/s a median 5.05 MW is 16.8 kN of force never applied. See thermal-model.md's change log.
     /// </para>
     ///
     /// <para>
-    /// `K2` is the part that costs nothing and makes the rest measurable: sum it per grid and
+    /// the drag milestone is the part that costs nothing and makes the rest measurable: sum it per grid and
     /// publish it. Until now the friction term existed per node, in the harness's per-scenario
     /// outcome, and per block type in the telemetry — everywhere except the one place a force would
     /// read it from.
