@@ -119,7 +119,7 @@ namespace Thermodynamics.Tests
             double thermalMass = 0d;
 
             // **Physical mass, which is not thermal mass.** `ThermalMass` is a heat capacity, J/K, and
-            // the two differ by a specific heat that varies with what a block is made of. `K5` scores
+            // the two differ by a specific heat that varies with what a block is made of. the drag milestone scores
             // deceleration, `a = F/m`, and needs the kilograms.
             double mass = 0d;
 

@@ -143,7 +143,7 @@ namespace Thermodynamics.Core
         /// The drag coefficient a hull is treated as having, dimensionless.
         ///
         /// <para>
-        /// **A different number from <see cref="FrictionScale"/>, and that is the whole of `K3`.**
+        /// **A different number from <see cref="FrictionScale"/>, and that is the whole of the drag milestone.**
         /// The two are one product — `FrictionScale = ½ · C_d · η`, where `η` is the share of the
         /// work done against drag that lands in the surface rather than the wake — so authoring
         /// both leaves `η` derived, which at these defaults is 0.002. Authoring the *heat* dial and
@@ -156,12 +156,12 @@ namespace Thermodynamics.Core
         /// term is a projected area, and a projected area is not a shape: a brick and a
         /// stair-stepped wedge sharing a frontal cross-section compute the *same* drag here while
         /// their real coefficients differ by about ten times (`DragShapeTests`). Deriving this
-        /// needs a shape term the model does not have, which is `K6` and `K7`.
+        /// needs a shape term the model does not have, which is `K6` and the drag milestone.
         /// </para>
         ///
         /// <para>
         /// **The default is 0.5 and was measured rather than reasoned to.** A bluff body's own
-        /// coefficient is about 1, and at 1 this fails `K5` on the population: drag at 100 m/s in
+        /// coefficient is about 1, and at 1 this fails the drag milestone on the population: drag at 100 m/s in
         /// sea-level air beats the ship's own thrust on **14.06 %** of hulls that can lift
         /// themselves, and the worst percentile of them cannot hold **55.7 m/s** — against a
         /// criterion of 5 % and 60 m/s registered before the walk. At 0.5 it passes both, 3.13 %

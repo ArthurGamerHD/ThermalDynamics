@@ -27,8 +27,8 @@ namespace Thermodynamics.Tests
     /// </para>
     ///
     /// <para>
-    /// So `K3`'s coefficient has to be authored until there is a shape term to derive it from,
-    /// which is `K6` and `K7`'s subject. This test is here so that when somebody proposes deriving
+    /// So the drag milestone's coefficient has to be authored until there is a shape term to derive it from,
+    /// which is `K6` and the drag milestone's subject. This test is here so that when somebody proposes deriving
     /// it, the counter-example is a test rather than an argument.
     /// </para>
     /// </summary>

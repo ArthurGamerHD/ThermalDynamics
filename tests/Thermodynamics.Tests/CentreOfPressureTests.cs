@@ -11,8 +11,8 @@ namespace Thermodynamics.Tests
     /// **Where the drag actually acts, against where this mod applies it.**
     ///
     /// <para>
-    /// `K4` applies one force per constraint group at the group's **centre of mass**, which
-    /// produces no torque. That is a deliberate simplification — `K15` required one force at one
+    /// the drag milestone applies one force per constraint group at the group's **centre of mass**, which
+    /// produces no torque. That is a deliberate simplification — the drag milestone required one force at one
     /// point, because a force per subgrid at each subgrid's own centre loads the joints with a
     /// torque no real air produces — but it is still a simplification: real drag acts at the
     /// **centre of pressure**, and a centre of pressure behind the centre of mass is what makes a
@@ -24,7 +24,7 @@ namespace Thermodynamics.Tests
     /// is already in the loop: each node's exposed area, its incidence against the relative wind,
     /// and where it sits. `K16` wants the pair drawn for a player; this wants the number for a
     /// developer, and the two uses are separable — the flight-model one is refused with lift
-    /// (`K8`), and this one is not, because drag exists whether or not lift does.
+    /// (the drag milestone), and this one is not, because drag exists whether or not lift does.
     /// </para>
     /// </summary>
     public class CentreOfPressureTests
@@ -114,7 +114,7 @@ namespace Thermodynamics.Tests
         /// </para>
         ///
         /// <para>
-        /// So the quantity that prices `K4`'s choice is the **lateral** offset — the part of the
+        /// So the quantity that prices the drag milestone's choice is the **lateral** offset — the part of the
         /// separation perpendicular to the relative wind. That is what a torque is proportional to,
         /// and it is nought on anything symmetric about the flow however far the two centres are
         /// apart along it.
@@ -156,7 +156,7 @@ namespace Thermodynamics.Tests
         /// <para>
         /// A body with a fin on one flank: the mass sits near the middle and the wind pushes hardest
         /// on the fin, so the pressure moves sideways. The lateral arm times the drag is the torque
-        /// `K4` throws away by applying at the centre of mass — a real ship of this shape would
+        /// the drag milestone throws away by applying at the centre of mass — a real ship of this shape would
         /// yaw until the fin trailed, and under this mod it does not.
         /// </para>
         /// </summary>

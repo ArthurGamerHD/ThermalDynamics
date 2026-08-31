@@ -13,7 +13,7 @@ namespace Thermodynamics.Core
     /// expression. So the solver knows, every step, the rate at which the air is doing work on the
     /// hull; it turns that into heat and takes nothing from the motion. Over the 8,144 published
     /// blueprints at `reentry` the median hull is given 5.05 MW this way, which at 300 m/s is
-    /// 16.8 kN of force that is never applied (backlog.md `K1`).
+    /// 16.8 kN of force that is never applied (thermal-model.md's change log).
     /// </para>
     ///
     /// <para>

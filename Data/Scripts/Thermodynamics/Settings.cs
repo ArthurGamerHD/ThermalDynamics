@@ -269,7 +269,7 @@ namespace Thermodynamics
         /// The drag coefficient a hull is treated as having, dimensionless. A bluff body by default,
         /// because a Space Engineers hull is a brick.
         ///
-        /// **A different number from `FrictionScale` and that is the whole of `K3`**: the two are
+        /// **A different number from `FrictionScale` and that is the whole of the drag milestone**: the two are
         /// one product, so authoring both leaves the share of drag work that lands in the surface
         /// derived rather than assumed. It is authored rather than read off the hull because the
         /// solver's windward term is a projected area, and a projected area is not a shape.

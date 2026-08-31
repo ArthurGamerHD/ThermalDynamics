@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
 {
     /// <summary>
     /// **What windward shielding would cost, measured before it is built — because the one thing
-    /// `K7` says has no measurement behind it is the thing that decides whether it can work at all.**
+    /// the drag milestone says has no measurement behind it is the thing that decides whether it can work at all.**
     ///
     /// <para>
     /// The machinery exists. `SunShadowMap` is not a sun pass, it is a **direction** pass:
@@ -29,7 +29,7 @@ namespace Thermodynamics.Tests
     ///
     /// <para>
     /// This measures how long a pass takes on a real hull and states the turn rate at which it can
-    /// never finish. It is the number `K7` has to be designed against.
+    /// never finish. It is the number the drag milestone has to be designed against.
     /// </para>
     /// </summary>
     public class WindShieldingCostTests

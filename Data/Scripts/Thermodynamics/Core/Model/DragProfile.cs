@@ -16,7 +16,7 @@ namespace Thermodynamics.Core
     ///
     /// <para>
     /// **So a mod that knows the shape of its own block can say so, and the mechanism is a
-    /// multiplier rather than a parallel model** (`K17`). Six numbers ride the exposure the solver
+    /// multiplier rather than a parallel model** (the drag milestone). Six numbers ride the exposure the solver
     /// already computes, which is why this costs a multiply on a row that is already being summed
     /// and why a registration cannot invent geometry the hull does not have.
     /// </para>

@@ -278,7 +278,7 @@ namespace Thermodynamics
         /// v_rel^3 x area x windward exposure` summed over the grid's nodes, and real drag power is
         /// `1/2 C_d rho A v^3` — the same expression. The mod turns it into heat and takes nothing
         /// from the ship's motion, so a caller that wants to apply the force this implies has the
-        /// magnitude here and nowhere else (backlog.md `K1`).
+        /// magnitude here and nowhere else (thermal-model.md's change log).
         /// </para>
         ///
         /// <para>
@@ -303,7 +303,7 @@ namespace Thermodynamics
         /// computes.** The model's only shape term is a projected area, so it cannot tell a jet
         /// engine from a box of the same size — a nacelle is slippery nose-on and blunt side-on,
         /// and an axis-aligned face count does not say so. A mod that knows the shape of its own
-        /// block can (backlog.md `K17`).
+        /// block can (thermal-model.md's change log).
         /// </para>
         ///
         /// <para>

@@ -160,7 +160,7 @@ namespace Thermodynamics.Core
         /// **Unset by default, which reads as no change.** A block's exposed faces are what its
         /// geometry gives it; a profile is a mod saying the air slips past one of them more easily
         /// than its area suggests — a jet engine is slippery nose-on and blunt side-on, and an
-        /// axis-aligned face count cannot tell (backlog.md `K17`).
+        /// axis-aligned face count cannot tell (thermal-model.md's change log).
         /// </summary>
         public DragProfile Drag;
 

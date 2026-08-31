@@ -11,7 +11,7 @@ fitted: a ship cruises where its thrust balances its drag, `T = ½ C_d ρ A v²`
 
     v_cruise = sqrt(2T / (C_d ρ A))
 
-and needs no mass at all. That is the whole argument of backlog.md `K12`, and the row says exactly
+and needs no mass at all. That is the whole argument of thermal-model.md's change log, the grid-speed milestone, and the row says exactly
 what decides it: **whether the derived speeds land where the authored ones do on real ships**. This
 is that measurement.
 
@@ -142,7 +142,7 @@ def main():
 
     # ---- what the engine's own cap does to this ------------------------------------------------
     #
-    # **The reason `K11` may not need a retarding force at all.** RTS holds each grid under a cruise
+    # **The reason the grid-speed milestone may not need a retarding force at all.** RTS holds each grid under a cruise
     # speed because it has no drag: without one, a ship accelerates to the engine's global cap and
     # stays there. This model *has* drag, so a ship stops where thrust balances it — and for most
     # ships that is below the cap the engine already enforces, which means the retarding force would
@@ -163,7 +163,7 @@ def main():
     print()
     print("  **A top speed that falls with altitude, which is what a mass curve cannot produce.**")
     print("  Low down a ship is held by the air; high up the engine's own cap takes over, exactly as")
-    print("  it does today. So the per-grid top speed `K11` wanted a force for is an outcome of drag")
+    print("  it does today. So the per-grid top speed the grid-speed milestone wanted a force for is an outcome of drag")
     print("  that is already applied, for the great majority of ships and all of the low-altitude"
           " ones.")
 

@@ -6,11 +6,11 @@ using Xunit;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// **What a per-grid drag sum costs, measured — because `K15` binds `K4` and says it is small.**
+    /// **What a per-grid drag sum costs, measured — because the drag milestone binds the drag milestone and says it is small.**
     ///
     /// <para>
     /// A ship with a rotor turret is several grids to the engine, each with its own `Physics`.
-    /// `K15` argues that a *mass*-derived force splits badly, and that drag fails differently and
+    /// the drag milestone argues that a *mass*-derived force splits badly, and that drag fails differently and
     /// less badly, "because area is additive, so a per-grid sum is about right in magnitude". That
     /// is true of real frontal area and this asks whether it is true of **this model's** area,
     /// which is a different question: the solver's drag is proportional to *exposed* windward
@@ -21,7 +21,7 @@ namespace Thermodynamics.Tests
     /// <para>
     /// So splitting one hull into two grids does not merely redistribute the drag, it **adds** some:
     /// the interface that was interior becomes two lee-and-windward faces. This is the size of that
-    /// error, so `K4` can apply a force knowing what it is wrong by rather than assuming it is
+    /// error, so the drag milestone can apply a force knowing what it is wrong by rather than assuming it is
     /// nothing.
     /// </para>
     /// </summary>
@@ -74,7 +74,7 @@ namespace Thermodynamics.Tests
 
             // The per-grid sum is larger, and by how much is the finding rather than the assertion:
             // the bound is loose so this test reports a size rather than pinning an arithmetic that
-            // `K7`'s shielding will change on purpose.
+            // the drag milestone's shielding will change on purpose.
             // **Each half takes the *same* drag as the whole hull.** Drag here is windward
             // projection and nothing else, and both halves project the same 4x4 square; the depth
             // along the wind never entered the sum. So a cut across the wind does not add a little
@@ -109,8 +109,8 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// **A subgrid in the hull's lee is not sheltered**, which is the other half of what `K15`
-        /// names and what `K7` is for. A block sitting directly behind the hull takes the same drag
+        /// **A subgrid in the hull's lee is not sheltered**, which is the other half of what the drag milestone
+        /// names and what the drag milestone is for. A block sitting directly behind the hull takes the same drag
         /// as one sitting in clear air, because nothing occludes anything.
         /// </summary>
         [Fact]

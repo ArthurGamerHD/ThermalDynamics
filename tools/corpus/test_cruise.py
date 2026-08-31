@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """**A derived cruise speed, and the ways the derivation could be quietly wrong.**
 
-`K12`'s argument is that a top speed does not have to be authored: a ship cruises where its thrust
+the grid-speed milestone's argument is that a top speed does not have to be authored: a ship cruises where its thrust
 balances its drag, which this model has every term of. The question the row says decides it is
 whether the derived speeds land where the authored ones do on real ships — measured by `cruise.py`
 over the census, and pinned here at the level of the arithmetic.
@@ -83,7 +83,7 @@ class TheAuthoredBandIsWhatItIsComparedAgainst(unittest.TestCase):
 
 
 class TheEngineCapIsWhatARetardingForceWouldCompeteWith(unittest.TestCase):
-    """**Whether a per-grid speed limit needs a force at all** (`K11`).
+    """**Whether a per-grid speed limit needs a force at all** (the grid-speed milestone).
 
     RTS holds each grid under a cruise speed because it has no drag: without one, a ship accelerates
     to the engine's global cap and sits there. This model has drag, so a ship stops where thrust

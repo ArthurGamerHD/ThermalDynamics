@@ -333,7 +333,7 @@ namespace Thermodynamics.Core
         /// enters the world with nothing paying for it: measured over the 8,144 published
         /// blueprints at `reentry`, the median hull absorbs **5.05 MW** and the largest 4.91 GW, on
         /// **100 %** of them. At 300 m/s a median 5.05 MW is 16.8 kN never applied
-        /// (backlog.md `K1`).
+        /// (thermal-model.md's change log).
         /// </para>
         ///
         /// <para>
@@ -2533,7 +2533,7 @@ namespace Thermodynamics.Core
                         // nacelle that is slippery to the air is not slippery to sunlight — putting
                         // the multiplier into `nodeFaceWeights` would have dimmed the sun on any
                         // block a mod registered. It belongs to the flow, so it is applied where the
-                        // flow is (`K17`).
+                        // flow is (the drag milestone).
                         DragProfile profile = nodes[i].Drag;
                         // **Each face's share of the wind, times how much of that face the wind can
                         // actually reach.** Without shielding the exposure is one and this is the

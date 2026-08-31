@@ -58,7 +58,7 @@ namespace Thermodynamics.Tests
         {
             // The backlog's 16.8 kN is the *heating* power over the speed: 5.05 MW / 300 m/s.
             // The whole drag force is that divided by eta, which is what a physics engine would
-            // feel, and is three orders larger — which is the point `K3` settles.
+            // feel, and is three orders larger — which is the point the drag milestone settles.
             float heatingShare = 5.05e6f / 300f;
             Assert.True(System.Math.Abs(heatingShare - 16.8e3f) < 100f,
                 "the backlog's 16.8 kN is not 5.05 MW over 300 m/s, it is " + heatingShare);
@@ -87,7 +87,7 @@ namespace Thermodynamics.Tests
         /// **A world that tuned `FrictionScale` for heat does not get a different force.**
         ///
         /// Doubling `FrictionScale` doubles the friction watts the solver produces, and halves the
-        /// share this divides by — so the force is unchanged. That is `K3`'s promise made
+        /// share this divides by — so the force is unchanged. That is the drag milestone's promise made
         /// arithmetic: the heat dial moves heat and the drag dial moves drag.
         /// </summary>
         [Fact]
@@ -186,7 +186,7 @@ namespace Thermodynamics.Tests
 
             // **The share derived from the settings rather than written down.** `eta` is
             // `FrictionScale / (½ C_d)`, and hardcoding the 0.002 it happened to be at `C_d` 1 made
-            // this test fail the day `K5` moved the default to 0.5 — a test asserting the old
+            // this test fail the day the drag milestone moved the default to 0.5 — a test asserting the old
             // default rather than the identity it is about.
             float eta = settings.FrictionScale / (0.5f * settings.DragCoefficient);
 
