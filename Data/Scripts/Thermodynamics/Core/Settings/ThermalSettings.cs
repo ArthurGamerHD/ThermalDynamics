@@ -166,6 +166,7 @@ namespace Thermodynamics.Core
         /// themselves, and the worst percentile of them cannot hold **55.7 m/s** — against a
         /// criterion of 5 % and 60 m/s registered before the walk. At 0.5 it passes both, 3.13 %
         /// and 78.8 m/s.
+        /// </para>
         ///
         /// <para>
         /// **And half is the physically expected place for it to land.** What multiplies this is a
