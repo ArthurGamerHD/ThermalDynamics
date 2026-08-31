@@ -45,8 +45,16 @@ the cap's Δpeak p99 0.2820 K to 0.5660 K, the floor's 27.67 K to 60.20 K.
 margin rather than the verdict: the cap now sits a hair under the figure that would refuse it
 outright, and a third of the floor's engaged cells exceed that figure rather than a twelfth.
 
-What is left below are the rows that were always blocked on something a lab cannot reach, and the
-feature milestones in `K` that have never been started.
+**The `K` milestones are no longer the untouched half of this page.** Drag and grid speed closed on
+2026-08-30 and aerodynamics all but — what closed them is in
+[thermal-model.md](thermal-model.md#change-log). The mod now takes the momentum out of the air it
+was already turning into heat, applies it once per physical constraint group, shelters a block that
+stands behind another, and has a top speed that is an outcome with altitude in it rather than a
+curve through authored mass points. What is left of `K` is an indicator, a cheap client that needs a
+session, and a debug convenience.
+
+So what is left below is mostly what it always was: the rows blocked on something a lab cannot
+reach.
 
 | | Item | Why it is here |
 | --- | --- | --- |
