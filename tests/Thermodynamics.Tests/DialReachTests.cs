@@ -92,8 +92,10 @@ namespace Thermodynamics.Tests
             // *consumer* — it draws power rather than making it, and `Charging` already tells the
             // two apart — which is why the dial moves `ConsumerWasteEnergy` where the reactor's and
             // the engine's move the producer side. The rig refused the dial as inert before this
-            // block existed, which is the check working: `C31` is a row about a type that is
-            // 14.4 % of a real ship's waste and 0 % of what the instruments carried.
+            // block existed, which is the check working: the oxygen generator is a type that is
+            // 14.4 % of a real ship's waste and was 0 % of what the instruments carried. Swept over
+            // the panel on 2026-08-30 once it was in both — see balance.md, What the oxygen
+            // generator's fraction is worth on real ships.
             Charging(builder, material, "LargeBlockOxygenGeneratorLab", new Vector3I(1, 1, 2));
 
             return builder.BuildSimulation(settings ?? new ThermalSettings());
