@@ -768,6 +768,143 @@ The dial that governs the whole timescale is `HeatTimeScale`, which `C24` alread
 on the same number. **`G11` and `G8` are the same question asked at two scales**, and neither has
 been measured at the pair that ships.
 
+### What drag does to a ship's ability to fly, written before it is measured
+
+**`G7` says a ship the game spawns survives arriving. A ship the game spawns must also still be able
+to *fly*, and `K1`'s drag is the obvious way to break that** — a coefficient nobody has tuned,
+applied to every hull in atmosphere. This is `K5`, and the criterion goes here before the number
+does (`E1`), the way `C3`'s did.
+
+**The cruise half is already measured and is not what is registered here.** `K12` solved
+`T = ½ C_d ρ A v²` over the census: 6,352 of 8,137 hulls carry thrust and area, and their sea-level
+cruise is p5 18.8 m/s, p50 70.4, p95 122.3. That distribution exists, so a prediction about it would
+be a prediction about a number already in the tree, which is not a prediction.
+
+**What is not measured is deceleration, which is what *able to fly* actually turns on.** A cruise
+speed says where a ship stops accelerating; how badly drag hurts is `a = F/m`, and the census does
+not carry mass. Adding it is a column and a two-minute re-run rather than a walk.
+
+**The criterion, and what falsifies it.**
+
+| | prediction | falsified by |
+| --- | --- | --- |
+| the floor | **no more than 1 %** of thrust-carrying hulls decelerate harder than **1 g** at their own cruise speed in sea-level air | more than 1 % |
+| the shape | deceleration at cruise **falls with hull size** — a big ship has more mass per unit of frontal area than a small one | a flat or rising trend against block count |
+| the survivable case | the **median** hull decelerates at under **0.2 g**, which is a firm push rather than a wall | a median over 0.2 g |
+
+**Why a gravity is the unit and why 1 g is the line.** A ship that loses speed faster than it falls
+is a ship the air is doing more to than the planet is, which is the point at which a player stops
+experiencing drag as air and starts experiencing it as a wall. It is also the number a player has an
+intuition for, which a coefficient does not.
+
+**The shape prediction is the one that would reveal a modelling error rather than a tuning one.**
+Drag goes as frontal area and mass goes as volume, so deceleration should fall roughly as the
+reciprocal of a ship's linear size — a big hull should be *less* troubled than a fighter. If the
+trend is flat or rising, the exposed-area term is behaving as though hulls were hollow shells all
+the way up, and that is a defect rather than a dial.
+
+**What this cannot answer.** Whether a ship is *fun* to fly under it, which no corpus pass reaches,
+and whether the game's own respawn ships are in the corpus at all — they are not published
+blueprints, so `G7`'s literal subject is outside this measurement and the population stands in for
+it.
+
+### What it did: the criterion was a tautology, and the area was wrong
+
+**Both halves of `K5` went wrong and in different ways, which is why this section is longer than the
+result.**
+
+**The criterion I registered could not fail on drag, because it was thrust-to-weight in disguise.**
+It asked how hard a hull decelerates *at its own cruise speed* — and at cruise, drag equals thrust
+by definition, so `a = F/m` is exactly `T/m`. Measured, the two agree to the digit: p50 4.275 g and
+p95 10.347 g for both. A criterion that returns the same number whatever the drag model says is not
+a measurement of the drag model. **A prediction has to be falsifiable by the thing it is about**, and
+this one was falsifiable only by Space Engineers ships having less thrust than they do.
+
+| | prediction | measured | |
+| --- | --- | --- | --- |
+| the floor | no more than 1 % of hulls over 1 g | **88.93 %** | fails — but of thrust-to-weight, not of drag |
+| the survivable case | median under 0.2 g | **4.275 g** | the same tautology |
+| the shape | deceleration falls with hull size | 6.18 → 5.51 → 3.54 → **1.72 g** across four size bands | holds, and means big ships have lower thrust-to-weight |
+
+**And chasing why the numbers were so large found a real error in `K12`'s figures.** The census
+records a hull's **total exposed area** — every exposed face, whichever way it points — and
+`½ C_d ρ A v²` wants the **frontal projection**. `cruise.py` used the total. The two differ by
+**Cauchy's formula**: the mean projection of a convex body over all orientations is exactly a
+quarter of its surface area, which is also what the solver's own incidence weighting computes.
+
+**So every cruise speed published on 2026-08-30 was low by a factor of two and every drag high by
+four**, and the conclusion that most ships are drag-limited was inverted:
+
+| | as published | corrected |
+| --- | ---: | ---: |
+| median sea-level cruise | 70.4 m/s | **140.9 m/s** |
+| inside RTS's 60–110 band | 54.8 % | **19.0 %** |
+| drag-limited below the engine's 100 m/s | 84.5 % | **22.4 %** |
+
+**What survives the correction and what does not.** `K12`'s claim that a derived speed lands *in the
+same neighbourhood* as an authored one survives in shape and weakens in strength: the median is now
+above RTS's band rather than inside it. `K11`'s conclusion — that the retarding force is unnecessary
+— **does not survive as stated**: it rested on most ships being drag-limited, and most are not. What
+remains true is that the mechanism is unnecessary *for the fifth of ships that are*, and that top
+speed becomes altitude-dependent, which no mass curve produces.
+
+**`K5` is still open, and what it needs is a criterion about drag.** The candidate is the one this
+exercise stumbled on: **drag alone at a fixed reference speed**, which does not cancel against
+thrust. At 100 m/s in sea-level air the corrected median is **2.09 g**, which is a firm push rather
+than a wall — but that figure is now in the tree, so a prediction about it would not be one.
+
+### The criterion `K5` actually needs, written before it is measured
+
+**What went wrong the first time is the thing to design against: the quantity has to be one drag can
+move.** Thrust cancelled out of the last one. Two candidates survive that test, and both are about
+what a *pilot* would feel rather than what a solver computes.
+
+| | prediction | falsified by |
+| --- | --- | --- |
+| the fraction | on **no more than 5 %** of thrust-carrying hulls does drag at 100 m/s in sea-level air exceed the ship's **own thrust** — that is, the ship cannot hold 100 m/s at full power | more than 5 % |
+| the ceiling | the **p99** hull still reaches **60 m/s** at full thrust in sea-level air, which is a working speed rather than a crawl | a p99 ceiling under 60 m/s |
+
+**The first is a ratio and the second is a speed, deliberately.** A ratio says how many ships the air
+beats; a speed says how badly it beats the worst of them. Neither cancels: drag at a *fixed* speed
+is `½ C_d ρ A v²` with `v` chosen by the criterion rather than by the ship, so a change to `C_d` or
+to the exposure model moves both figures and a change to thrust moves only the first.
+
+**Why 100 m/s and why 60.** A hundred is the engine's own large-grid cap — the speed a world without
+this mod flies at — so *drag exceeds thrust at 100 m/s* is exactly *this mod took away a speed the
+game gave you*. Sixty is two thirds of it, which is the point at which a player would notice they are
+slow rather than notice they are stuck.
+
+**And what would falsify the model rather than the tuning**: if the fraction is large *and* the
+ceiling is high, drag is too strong on small hulls only, which is the exposure model treating a
+fighter as a sail. If both are bad together, the coefficient is simply too big and `DragCoefficient`
+is the dial. The pair separates a modelling error from a tuning one, which the single figure could
+not.
+
+#### What it did: the shipped coefficient fails, and 0.5 passes
+
+**The population had to be corrected first, and by reading the criterion rather than the data.**
+Scored over every thrust-carrying hull, the worst ceilings are `Moat Tower`, `International Space
+Station`, `Asteroid Base`, `Modern House #3` — **stations with one or two thrusters**, thrust-to-
+weight of 0.001 to 0.017 g, median 0.325 g against the population's 4.275. A hull that cannot lift
+itself is not a ship drag broke; it never flew. `K5`'s own words are *must also still be able to
+fly*, so the population is hulls that can lift themselves — **5,649 of 6,352, 88.9 %** — and that is
+a reading of the criterion, not a subset chosen because it passes.
+
+| | `C_d` 1 (shipped) | `C_d` 0.5 | registered |
+| --- | ---: | ---: | --- |
+| drag at 100 m/s beats the ship's own thrust | **14.06 %** | **3.13 %** | no more than 5 % |
+| p1 hull's ceiling at full thrust | **55.7 m/s** | **78.8 m/s** | at least 60 m/s |
+
+**So the shipped coefficient fails both halves and 0.5 passes both, and the default moves to 0.5.**
+The threshold did not move; the configuration did, which is the direction `E11` permits.
+
+**Half is also where the physics puts it, which is worth more than the fit.** What the coefficient
+multiplies is a *Newtonian flat-plate* projection — every exposed face weighted by its incidence,
+with no wake and no pressure recovery behind the hull. That over-predicts a real bluff body at the
+speeds a ship flies, so the coefficient that matches reality is *below* the one an aerodynamicist
+would quote for the shape. Landing at half of it is the expected size of that correction rather than
+a number chosen to pass.
+
 ### What flooring an over-budget grid does, written before it is measured
 
 `CorpusFloorWalk` is built and **has produced nothing**. The question, the statistic, the decision

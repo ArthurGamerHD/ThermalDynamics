@@ -42,14 +42,30 @@ SEA_LEVEL_DENSITY = 1.225
 ENGINE_CAP = 100.0
 
 
+#: What fraction of a hull's **total exposed area** is presented to the flow at any one moment.
+#:
+#: **Cauchy's surface-area formula**: the mean projection of a convex body over all orientations is
+#: exactly a quarter of its surface area. The census records the total — every exposed face,
+#: whichever way it points — and `½ C_d ρ A v²` wants the *frontal projection*, which is what the
+#: solver itself uses through its incidence weighting.
+#:
+#: **The first version of this file used the total and was wrong by this factor**, which put every
+#: cruise speed low by two and every drag high by four. See the change log below.
+PROJECTED_SHARE = 0.25
+
+
 def cruise(thrust, area, coefficient, density):
-    """Where thrust balances drag, m/s, or None where the ship has neither (`E8`)."""
+    """Where thrust balances drag, m/s, or None where the ship has neither (`E8`).
+
+    `area` is a hull's **total exposed area**, as the census records it; the frontal projection the
+    drag expression wants is `PROJECTED_SHARE` of it.
+    """
     if thrust is None or area is None or thrust <= 0 or area <= 0:
         return None
     if coefficient <= 0 or density <= 0:
         return None
 
-    return math.sqrt(2.0 * thrust / (coefficient * density * area))
+    return math.sqrt(2.0 * thrust / (coefficient * density * area * PROJECTED_SHARE))
 
 
 def main():

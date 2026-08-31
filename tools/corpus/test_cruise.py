@@ -27,7 +27,9 @@ class TheBalanceOfThrustAndDrag(unittest.TestCase):
         thrust, area, cd, rho = 500000.0, 400.0, 1.0, 1.225
         speed = cruise.cruise(thrust, area, cd, rho)
 
-        drag = 0.5 * cd * rho * area * speed * speed
+        # The drag expression takes the **frontal projection**, which is a quarter of the total
+        # exposed area the census records — Cauchy's formula for a convex body.
+        drag = 0.5 * cd * rho * area * cruise.PROJECTED_SHARE * speed * speed
         self.assertAlmostEqual(thrust, drag, places=3)
 
     def test_four_times_the_thrust_is_twice_the_speed(self):
@@ -101,6 +103,29 @@ class TheEngineCapIsWhatARetardingForceWouldCompeteWith(unittest.TestCase):
         self.assertLess(thick, cruise.ENGINE_CAP)
         self.assertGreater(thin, cruise.ENGINE_CAP)
         self.assertGreater(thin, thick)
+
+
+
+class TheAreaIsAProjectionAndNotASurface(unittest.TestCase):
+    """**The correction that this file's first version got wrong** (`E10`).
+
+    The census records a hull's *total* exposed area — every exposed face, whichever way it points —
+    and `½ C_d ρ A v²` wants the area presented to the flow. The two differ by Cauchy's formula: the
+    mean projection of a convex body over all orientations is a quarter of its surface. Using the
+    total put every cruise speed low by a factor of two and every drag high by four, and inverted
+    the conclusion that most ships are drag-limited below the engine's cap.
+    """
+
+    def test_the_share_is_cauchys_quarter(self):
+        self.assertAlmostEqual(0.25, cruise.PROJECTED_SHARE, places=6)
+
+    def test_a_hull_is_faster_than_its_total_area_would_say(self):
+        """Two times faster, which is the square root of four."""
+        area = 400.0
+        with_projection = cruise.cruise(500000.0, area, 1.0, 1.225)
+        as_if_total = math.sqrt(2.0 * 500000.0 / (1.0 * 1.225 * area))
+
+        self.assertAlmostEqual(2.0 * as_if_total, with_projection, places=4)
 
 
 

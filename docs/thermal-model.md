@@ -305,6 +305,35 @@ So the coefficient is authored until there is a shape term to derive it from, wh
 `K7` are about. The counter-example is a test rather than an argument, so the next reader who
 proposes deriving it finds the pair of hulls that says why not.
 
+**With drag on, a ship's top speed becomes altitude-dependent, and that is a change a player will
+notice.** A ship stops accelerating where its thrust balances `½ C_d ρ A v²`, so it is slow in thick
+air and fast where the air runs out: over the census the median published hull balances at **140.9
+m/s at sea level, 201.3 at half density, 284.7 thin and 493.1 very thin**
+([`summary-cruise-2026-08-30.csv`](../tools/corpus/summary-cruise-2026-08-30.csv)). **22.4 % of ships
+balance below the 100 m/s the engine already enforces**, so for those the air is what limits them and
+for the rest the engine's cap binds first, as it does today.
+
+That is physically right and it is *not* what a world running
+[RelativeTopSpeed](https://github.com/Gauge/RelativeTopSpeed) has, because a cruise speed
+interpolated through authored mass points has no altitude in it at all. It is named here rather than
+left to be discovered ([backlog.md](backlog.md) `K18`).
+
+**Windward shielding is a switch, and it moves temperatures as well as forces.**
+`EnableWindwardShielding` runs the sun's self-shadowing pass aimed at the relative wind, so a face
+in another block's lee contributes only what the wind can reach of it. It ships **off**, and the
+reason is that the six-face sum it modifies is read by the *convection* factor as well as the
+friction row: sheltering a face reduces the forced convection over it, which is physically right — a
+face with less air moving across it loses less — and measurably large. On a sheltered pair driven in
+thick moving air the shielded hull runs **7.4 K hotter**, 316.1 K against 323.5 K. A feature that
+changes the shipped answer is not an addition ([backlog.md](backlog.md) `K9`), so what stands
+between the switch and a default is a corpus re-walk with `G6` and `G7` rescored.
+
+Its cadence is not the sun's and that is measured: the wind direction is grid-local, so it moves
+when the *ship* turns, and at the sun's 2° threshold a capital hull's 1.75 s pass would restart five
+times a second under a 10 °/s yaw and never complete. The threshold is 20°, worth 2.0 % of faces in
+staleness, and a running pass is never restarted — which bounds the error at the pass's own length
+times the turn rate rather than leaving it unbounded.
+
 **The same fact decides how a force would have to be grouped, and it is worse news than `K15`
 expected.** Real frontal area is additive, so a per-grid sum of drag looks about right for a ship
 that is several grids. This model's area is not additive: it charges for the windward projection and

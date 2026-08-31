@@ -1178,6 +1178,30 @@ mod can both bind. And **keys do not change meaning within a major version**.
 Together they are what makes the table safe to publish at all — the *why* under
 [Open](#open--the-api-is-part-of-the-contract), which states the goal and the check.
 
+### To another mod that also slows a ship down: the same answer, and it is stronger here
+
+**`EnableDrag` ships off, so adding this mod to a world running
+[RelativeTopSpeed](https://github.com/Gauge/RelativeTopSpeed) changes no force at all.** That is the
+whole of the collision handled, and it is handled by the same switch the section below argues for
+rather than by a special case: the collision cannot happen by accident, only by a world turning it
+on, which is a decision rather than a surprise.
+
+**Detection is refused, and here it would actually be possible**, which is why it is worth saying
+no to explicitly. RTS ships an API and uses the same `SENetworkAPI` this repository vendors, so
+unlike a second heat mod it *could* be seen. It still should not be: a mod that stood down because
+it saw something it thought was a rival would take a working world's drag away, and it would do so
+depending on load order and on another mod's version. That is the same argument as below and it does
+not weaken for being about force instead of heat.
+
+**And the composition a world wants is one or the other, not both** — which is a measurement rather
+than a preference. RTS holds each grid under a cruise speed *because it has no drag*; this model has
+drag, and **22.4 % of published ships balance below the 100 m/s the engine already enforces**
+([backlog.md](backlog.md) `K11`, corrected for a projected-area error under `K12`). So where the air
+is thick the two forces overlap, and where it is thin RTS's acts alone — a world that wants either
+can have it by switching the other off. What would be better than
+both is `K17`: one mod owns the force on a constraint group and the rest contribute to its inputs.
+That is an interface nobody has built yet, and until somebody does, the switch is the answer.
+
 ### To another mod that also simulates heat: nothing, and the switches are the answer
 
 **The mod behaves as though it is alone, because it cannot tell that it is not.** There is no
@@ -1309,6 +1333,22 @@ frame buffer. That is a statement about difficulty, not about intent — it is w
   blocks facing each other across a gap do not see each other, and no view factors exist. A surface
   *can* now be shiny to the sun and black to space — `SolarAbsorptivity` is separate from
   `Emissivity` — but each is one constant rather than a curve against wavelength.
+* **Not a flight model.** Drag is applied because it closes an energy hole; **lift is refused
+  because it opens a handling claim** ([backlog.md](backlog.md) `K8`). The two are not the same kind
+  of change, and the test that separates them is *does the mechanism correct something the mod
+  already computes wrongly, or assert something it does not compute at all*. Drag is the first: the
+  energy is computed, the momentum is discarded, and the discrepancy is a defect. Lift is the
+  second: **lift does no work**, so no energy accounting demands it — nothing in this model is
+  inconsistent for its absence — and supplying it would need a coefficient nobody has and an
+  angle-of-attack response the six face weights cannot give.
+  **And the two fail differently when wrong.** What the solver has is a Newtonian flat-plate model,
+  right in free-molecular hypersonic flow and wrong everywhere a ship actually flies; a heat model
+  wants the energy right and does not care where the force points, while a flight model is judged on
+  handling. A wrong heat term is invisible. A wrong lift term is a ship that flies badly, and a
+  player would rightly call that a broken mod rather than an approximate one. **A centre of
+  pressure is still worth computing**, because drag applied at the centre of mass produces no
+  torque and the offset between the two is the price of that simplification — a diagnostic, not
+  a force.
 * **Not a build-state simulator.** A block at 10% construction carries its full thermal properties.
   The machinery to change that exists and the difference would be invisible next to the heat a
   block's neighbours carry.
@@ -1316,12 +1356,17 @@ frame buffer. That is a statement about difficulty, not about intent — it is w
   peak above critical describes the harness rather than the mod. Crossing times are unaffected.
 * **Not authoritative over the game's own systems.** Room pressure is the game's answer, not this
   model's, and none of the three sources that can empty a room may insist on air — only refuse it.
-  **The mod reads a grid's velocity and writes nothing to its physics**, which is the same rule one
-  system across: [backlog.md](backlog.md) `K1` proposes applying the drag the friction term already
-  accounts for the energy of, and `K10` proposes going further and owning what a ship's top speed
-  is. Either would be the first time this mod moved something the game moves. They are listed as
-  milestones rather than done, and *whether the mod should push a ship at all* is the first question
-  in them rather than an assumption inside them.
+  ~~**The mod reads a grid's velocity and writes nothing to its physics.**~~ **It does now, behind a
+  switch that ships off** — `EnableDrag`, built 2026-08-30 as [backlog.md](backlog.md) `K1`. *Whether
+  the mod should push a ship at all* was the first question in that milestone rather than an
+  assumption inside it, and the answer turns on what kind of change it is: the friction term already
+  computes the rate at which the air does work on a hull, turns it into heat, and takes nothing from
+  the motion — so **energy enters the world with nothing paying for it**, a median 5.05 MW on a
+  published hull at reentry. Applying the force does not add a claim; it closes an accounting hole
+  the mod already had.
+
+  **That is the line, and it is why `K8`'s lift is refused below.** Drag corrects something the mod
+  computes wrongly. Lift would assert something the mod does not compute at all.
 
 ---
 

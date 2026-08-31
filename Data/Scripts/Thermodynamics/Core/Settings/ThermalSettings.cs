@@ -160,10 +160,23 @@ namespace Thermodynamics.Core
         /// </para>
         ///
         /// <para>
-        /// The default is a bluff body's, because a Space Engineers hull is a brick.
+        /// **The default is 0.5 and was measured rather than reasoned to.** A bluff body's own
+        /// coefficient is about 1, and at 1 this fails `K5` on the population: drag at 100 m/s in
+        /// sea-level air beats the ship's own thrust on **14.06 %** of hulls that can lift
+        /// themselves, and the worst percentile of them cannot hold **55.7 m/s** — against a
+        /// criterion of 5 % and 60 m/s registered before the walk. At 0.5 it passes both, 3.13 %
+        /// and 78.8 m/s.
+        /// </para>
+        ///
+        /// <para>
+        /// **And half is the physically expected place for it to land.** What multiplies this is a
+        /// *Newtonian flat-plate* projection: every exposed face, weighted by its incidence, with no
+        /// wake and no pressure recovery behind the hull. That over-predicts a real bluff body's
+        /// drag at the speeds a ship actually flies, so the coefficient that matches reality is
+        /// below the one an aerodynamicist would quote for the shape.
         /// </para>
         /// </summary>
-        public float DragCoefficient = 1f;
+        public float DragCoefficient = 0.5f;
 
         // ---- room air ---------------------------------------------------------------------
 

@@ -184,8 +184,14 @@ namespace Thermodynamics.Tests
 
             float newtons = DragForce.Newtons(watts, 120f, settings);
 
+            // **The share derived from the settings rather than written down.** `eta` is
+            // `FrictionScale / (½ C_d)`, and hardcoding the 0.002 it happened to be at `C_d` 1 made
+            // this test fail the day `K5` moved the default to 0.5 — a test asserting the old
+            // default rather than the identity it is about.
+            float eta = settings.FrictionScale / (0.5f * settings.DragCoefficient);
+
             // The whole drag power over the speed, which is the definition being asserted.
-            float expected = watts / 0.002f / 120f;
+            float expected = watts / eta / 120f;
             Assert.True(System.Math.Abs(newtons - expected) <= expected * 1e-5f,
                 "expected " + expected + " N and got " + newtons + " N");
         }
