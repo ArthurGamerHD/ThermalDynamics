@@ -260,11 +260,14 @@ namespace Thermodynamics.Harness
                 Material = OnlyOn("Thrust", (p, x) => p.ConsumerWasteEnergy *= x),
             });
 
-            // **`C31`'s dial, and the one the sweep was missing.** The oxygen generator's consumer
+            // **The oxygen generator's dial, and the one the sweep was missing.** The oxygen generator's consumer
             // fraction went from 0.60 to 0.40 on a rig of six blocks, which is the right evidence
             // for *can this block be built* and no evidence at all for what it does to a fleet. The type is a median 14.4 % of the full-load waste of the ships that
             // carry one and 80.8 % at p90, so it is the largest move to a real ship's heat since
-            // `C24` and the only one never swept.
+            // `C24` and the only one never swept. **Swept 2026-08-30**: halving it moves the
+            // median reached panel cell 0.657 K and p95 48.85 K — nothing on most hulls and tens
+            // of kelvin on the few that are mostly generator. See balance.md, What the oxygen
+            // generator's fraction is worth on real ships.
             //
             // Consumer rather than producer, unlike `reactor-waste` and `engine-waste` beside it: a
             // generator makes no power, it draws it, and the fraction that ships is

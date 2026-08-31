@@ -2251,6 +2251,52 @@ ways a full sweep dies, and [backlog.md](backlog.md) for what is still open.
 
 ---
 
+## What the oxygen generator's fraction is worth on real ships
+
+**`C21` took a third off the oxygen generator's waste on six blocks in two synthetic rigs.** That is
+the right evidence for *can this block be built* and none at all for what it does to a fleet, which
+is what [backlog.md](backlog.md) `C31` was opened to get. Measured 2026-08-30 with the cheapest
+instrument the row named — one dial over the standing panel, not a walk — and read with
+[knob.py](../tools/corpus/knob.py) against
+[`summary-knob-oxygen-2026-08-30.csv`](../tools/corpus/summary-knob-oxygen-2026-08-30.csv).
+
+| `oxygen-waste` | reached | Δpeak p50 | Δpeak p95 | Δpeak max |
+| --- | ---: | ---: | ---: | ---: |
+| 0.5× | 86 of 156 | **0.657 K** | **48.85 K** | 196.44 K |
+| 1.5× | 90 | 0.733 K | 46.65 K | 127.22 K |
+| 2× | 91 | 1.607 K | 78.17 K | 402.13 K |
+
+**The dial's shape is the type's shape.** The generator is a median 14.4 % of the full-load waste of
+the ships that carry one and 80.8 % at p90, and its dial moves the median reached ship by *under a
+kelvin* while p95 is nearly fifty. Almost nothing on most hulls and tens of kelvin on a few, which
+is the profile the composition predicted and which no rig of six blocks could have shown.
+
+**Against `reactor-waste`, the precedent this row was told to expect nothing from**, measured by the
+same instrument on the same panel in the same sweep:
+
+| at 0.5× | reached | Δpeak p50 | Δpeak p95 |
+| --- | ---: | ---: | ---: |
+| `oxygen-waste` | 86 of 156 | 0.657 K | 48.85 K |
+| `reactor-waste` | 86 of 156 | 0.180 K | 18.17 K |
+
+**So the oxygen generator is 3.6× the reactor at the median and 2.7× at p95, on identical reach.**
+The precedent held that a waste dial on one type moves nothing; it moves 18 K at p95 even for
+reactors, and the type `C21` actually changed moves nearly three times that. The row was right to
+refuse the precedent, and right about why: `reactor-waste` is a precedent about a type carrying
+3.65 % of a *fleet's* waste, which is the statistic `C21` proved is the wrong one to reason from.
+
+**What this does not do is reopen `C21`.** The fraction was decided on whether the block can be
+built, and nothing here speaks to that. What it changes is that the population cost of the decision
+is now known rather than assumed — under a kelvin for most ships, tens for the ships that are mostly
+generator.
+
+**Scope.** Fifty-two panel ships across three scenarios, of which 33 carry a generator at all — the
+panel re-picked on the corrected census, where the old one held 6 of 50 because the reader built
+31,214 vanilla generators as armour. It is a panel and not a population (`P1`), and a dial sweep and
+not a walk: it says what the dial is worth on ships chosen for spread, which is what an hours-long
+instrument can say and a days-long one would say better.
+
+
 ## Change log
 
 | Date | Change |
