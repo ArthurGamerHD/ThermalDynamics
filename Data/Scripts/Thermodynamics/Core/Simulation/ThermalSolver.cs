@@ -2528,6 +2528,13 @@ namespace Thermodynamics.Core
                     float wind = 0f;
                     if (windy || frictionEnabled)
                     {
+                        // **A registered drag profile rides on the wind weighting and nowhere
+                        // else.** These six face shares are also what the *solar* term reads, and a
+                        // nacelle that is slippery to the air is not slippery to sunlight — putting
+                        // the multiplier into `nodeFaceWeights` would have dimmed the sun on any
+                        // block a mod registered. It belongs to the flow, so it is applied where the
+                        // flow is (`K17`).
+                        DragProfile profile = nodes[i].Drag;
                         // **Each face's share of the wind, times how much of that face the wind can
                         // actually reach.** Without shielding the exposure is one and this is the
                         // sum it always was; with it, a face behind another block contributes what
@@ -2535,15 +2542,15 @@ namespace Thermodynamics.Core
                         // the open — so a world that has not switched this on is heated and dragged
                         // at least as much as it should be, never less.
                         wind = shielded
-                            ? (f0 * windWeights[0] * nodeWindLit[b])
-                                + (f1 * windWeights[1] * nodeWindLit[b + 1])
-                                + (f2 * windWeights[2] * nodeWindLit[b + 2])
-                                + (f3 * windWeights[3] * nodeWindLit[b + 3])
-                                + (f4 * windWeights[4] * nodeWindLit[b + 4])
-                                + (f5 * windWeights[5] * nodeWindLit[b + 5])
-                            : (f0 * windWeights[0]) + (f1 * windWeights[1])
-                                + (f2 * windWeights[2]) + (f3 * windWeights[3])
-                                + (f4 * windWeights[4]) + (f5 * windWeights[5]);
+                            ? (f0 * windWeights[0] * nodeWindLit[b] * profile[0])
+                                + (f1 * windWeights[1] * nodeWindLit[b + 1] * profile[1])
+                                + (f2 * windWeights[2] * nodeWindLit[b + 2] * profile[2])
+                                + (f3 * windWeights[3] * nodeWindLit[b + 3] * profile[3])
+                                + (f4 * windWeights[4] * nodeWindLit[b + 4] * profile[4])
+                                + (f5 * windWeights[5] * nodeWindLit[b + 5] * profile[5])
+                            : (f0 * windWeights[0] * profile[0]) + (f1 * windWeights[1] * profile[1])
+                                + (f2 * windWeights[2] * profile[2]) + (f3 * windWeights[3] * profile[3])
+                                + (f4 * windWeights[4] * profile[4]) + (f5 * windWeights[5] * profile[5]);
                     }
 
                     // Spans 1..2, so a lee face sheds what still air sheds and never less.
