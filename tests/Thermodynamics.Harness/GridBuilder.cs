@@ -232,6 +232,13 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = new ThermalSimulation(effective, grid);
             simulation.DefaultTemperature = initialTemperature;
 
+            // **The count is known here and the solver's lists would otherwise grow into it.** Every
+            // harness build comes through this method — the corpus walks, the labs and the suite —
+            // so the hint `ThermalGrid` gives the game's own load path belongs here too. The grid's
+            // cell table is already full by now, because a builder is filled before it is built; a
+            // blueprint is parsed a block at a time and never knows its own count in advance.
+            simulation.EnsureCapacity(placed.Count);
+
             for (int i = 0; i < placed.Count; i++)
             {
                 simulation.Solver.AddBlock(placed[i], initialTemperature);
