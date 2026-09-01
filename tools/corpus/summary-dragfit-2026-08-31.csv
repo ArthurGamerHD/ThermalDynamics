@@ -1,0 +1,6 @@
+statistic,value,unit
+beats thrust at C_d 0.5,3.13,%
+p1 ceiling at C_d 0.5,78.83,m/s
+verdict at C_d 0.5,pass,
+self-lifting hulls,5649,ships
+hull shape applied,0,

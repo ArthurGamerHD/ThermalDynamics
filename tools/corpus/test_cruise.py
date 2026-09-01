@@ -129,5 +129,41 @@ class TheAreaIsAProjectionAndNotASurface(unittest.TestCase):
 
 
 
+
+class TheHullShapeFactorScalesTheDrag(unittest.TestCase):
+    """**The shape term enters as one factor on the drag area, and nothing else changes.**
+
+    A hull that keeps a quarter of its projected drag flies twice as fast, because speed goes as the
+    inverse square root of the drag. One is the model without the term, which is what a census taken
+    before the column existed reads as (`E8`).
+    """
+
+    def test_a_shape_factor_of_one_is_the_model_without_the_term(self):
+        plain = cruise.cruise(1000.0, 50.0, 0.5, 1.225)
+        shaped = cruise.cruise(1000.0, 50.0, 0.5, 1.225, 1.0)
+
+        self.assertAlmostEqual(plain, shaped, places=9)
+
+    def test_a_quarter_of_the_drag_is_twice_the_speed(self):
+        full = cruise.cruise(1000.0, 50.0, 0.5, 1.225, 1.0)
+        quarter = cruise.cruise(1000.0, 50.0, 0.5, 1.225, 0.25)
+
+        self.assertAlmostEqual(2.0 * full, quarter, places=6)
+
+    def test_a_missing_or_nonsense_factor_reads_as_no_correction(self):
+        plain = cruise.cruise(1000.0, 50.0, 0.5, 1.225, 1.0)
+
+        for value in (None, 0.0, -1.0):
+            self.assertAlmostEqual(plain, cruise.cruise(1000.0, 50.0, 0.5, 1.225, value), places=9)
+
+    def test_a_row_without_the_column_reads_as_one(self):
+        self.assertEqual(1.0, cruise.shape_of({}, True))
+        self.assertEqual(1.0, cruise.shape_of({"shape_factor": "0.4"}, False))
+        self.assertAlmostEqual(0.4, cruise.shape_of({"shape_factor": "0.4"}, True))
+
+    def test_the_tool_scores_the_coefficient_the_mod_ships(self):
+        """Pinned here as well as in C#, so the Python side states the value it is claiming."""
+        self.assertEqual(0.5, cruise.SHIPPED_DRAG_COEFFICIENT)
+
 if __name__ == "__main__":
     unittest.main()

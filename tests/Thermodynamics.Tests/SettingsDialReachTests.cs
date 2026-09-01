@@ -87,6 +87,15 @@ namespace Thermodynamics.Tests
                 + " arithmetic and no rig here models motion" },
             { "DragCoefficient", "scales a force applied in the game layer; DragForceTests pins that"
                 + " doubling it doubles the force" },
+
+            // **And the same for lift, which is the transverse half of the same force.** It moves
+            // no temperature by construction: the shape factor it rides is applied to the friction
+            // row, and lift only keeps the *direction* that row's scalar throws away. `LiftTests`
+            // covers the arithmetic against the solver's own published pressure vector.
+            { "EnableLift", "switches the transverse half of a force applied in the game layer;"
+                + " LiftTests covers the arithmetic and no rig here models motion" },
+            { "LiftCoefficient", "scales a force applied in the game layer; LiftTests pins that"
+                + " halving it halves the force" },
         };
 
         /// <summary>

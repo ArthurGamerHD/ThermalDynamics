@@ -91,37 +91,7 @@ project cannot check. `IndexOutOfRangeException` and `ArgumentOutOfRangeExceptio
 prohibited in game and both compile happily here, so a green test run is necessary but not
 sufficient. See [development.md](../docs/development.md#repo-conventions) for the list.
 
-## Running heavy work on a shared machine
-
-**This machine is shared with three other projects that also run heavy workloads.** Four agents each
-starting a 32-thread suite do not get four suites four times slower — they get four suites that
-measure each other, and an editor that stops responding. Serialize with `heavy`, which is `W5`:
-
-```bash
-heavy status                                             # who holds it, who is waiting
-heavy run --for "thermaldynamics: full suite" -- dotnet test
-heavy log 20                                             # both sides of the last twenty windows
-```
-
-Exit **75** means the window was not free and *nothing ran* — try later rather than running
-unlocked. `~/.local/bin/HEAVY.md` is the tool's own page.
-
-| Hold the window | Do not |
-| --- | --- |
-| A corpus walk — `CorpusSurvey`, `CorpusAirWalk`, `CorpusCapWalk`, `CorpusFloorWalk`. Hours. | A `--filter`ed run of one class |
-| The whole suite | The fast lane, `--filter "speed!=slow"` |
-| `LoadTests`, `bench`, and every scenario or lab that reports a duration | An incremental build |
-| `Thermodynamics.Sim -- sweep / profiles / features / roomsweep / station` | A linter, `git`, reading or editing |
-| A release build of the mod | `--version`, `--help` |
-
-**`LoadTests` is the worked example.** Its timings fail against their own limits whenever anything
-else holds the cores — measured at **3.14×** and **3.10×** the limit, both times against a corpus
-walk in another process, and passing 3/3 in isolation. A suite pass taken beside other work reports
-failures that are about the machine. If you must run the suite unlocked, exclude them:
-
-```bash
-dotnet test --filter "FullyQualifiedName!~LoadTests"
-```
+## Long walks, and builds that lie
 
 **Build the test project, not the solution, before `--no-build`.** `dotnet build` from the repo root
 leaves `Thermodynamics.Tests.dll` stale — measured at **25 minutes** behind the sources in one case,
@@ -142,18 +112,16 @@ ls -la --time-style=+%H:%M:%S .build/Thermodynamics.Tests/bin/Debug/net9.0/Therm
 
 **Clean up after a build.** `dotnet build-server shutdown` does *not* reap the `nodeReuse` MSBuild
 worker nodes; they idle out after ten to fifteen minutes and hold about 128 MB each until they do.
-Kill them if the machine is wanted. They are also why `heavy` closes its lock descriptor before
-running a command — a daemon that inherits it keeps the window held after the run has ended.
+Kill them if the machine is wanted.
 
 **An hours-long walk is taken in slices, not in one hold.** Every corpus sweep resumes exactly — a
 blueprint is written to `done-<walk>.txt` only once every ship in it has been recorded (`O3`), so a
-killed slice loses the batch it was in and nothing else. On a machine three other projects are
-cycling through in three-to-six-minute windows, `heavy run --minutes 25` relaunched until the walk
-finishes is fair where a single eight-hour hold is not:
+killed slice loses the batch it was in and nothing else, so a walk too long for one sitting can be
+relaunched until it finishes:
 
 ```bash
 THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=out/survey-2026-08-25 \
-  heavy run --minutes 25 -- dotnet test --filter CorpusSurvey     # repeat until it completes
+  dotnet test --filter CorpusSurvey                                # repeat until it completes
 ```
 
 Do not delete the data directory between slices — that is what starts the walk over.
@@ -178,7 +146,7 @@ sampled dataset as a population.
 python3 tools/corpus/core.py out/air-2026-08-28 --out $PWD/out/core-selection.txt
 THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/core-2026-08-28 \
   THERMAL_CORPUS_ONLY=$PWD/out/core-selection.txt \
-  heavy run --minutes 45 -- dotnet test --filter CorpusAirWalk
+  dotnet test --filter CorpusAirWalk
 python3 tools/corpus/core.py --score out/core-2026-08-28
 ```
 
@@ -192,7 +160,7 @@ python3 tools/corpus/core.py out/air-2026-08-28 --out $PWD/out/core-selection.tx
 THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=$PWD/out/cap-core-2026-08-28 \
   THERMAL_CORPUS_ONLY=$PWD/out/core-selection.txt \
   THERMAL_CORPUS_PROGRESS=$PWD/out/cap-core-2026-08-28/progress.txt \
-  heavy run --minutes 120 -- dotnet test --filter CorpusCapWalk
+  dotnet test --filter CorpusCapWalk
 python3 tools/corpus/cap.py out/cap-core-2026-08-28 \
   --csv tools/corpus/summary-cap-core-2026-08-28.csv
 ```
@@ -237,11 +205,10 @@ queued suite came back non-zero having run no tests at all:
 MSBUILD : error MSB4166: Child node "3" exited prematurely. Shutting down.
 ```
 
-That is a build worker being reaped under memory pressure while two other projects held the
-machine — the run never reached a test, and a log skimmed for `Failed!` shows nothing either way.
-**A suite that reports no totals ran nothing**; read the head of the log before believing a
-non-zero exit is about the code. Waiting for the window is the fix, and `-m:1` avoids the
-multi-node build entirely for a run queued behind someone else's work.
+That is a build worker being reaped under memory pressure — the run never reached a test, and a log
+skimmed for `Failed!` shows nothing either way. **A suite that reports no totals ran nothing**; read
+the head of the log before believing a non-zero exit is about the code. `-m:1` avoids the
+multi-node build entirely.
 
 ## Running it
 
@@ -283,7 +250,15 @@ tagged. Thirty classes carry the trait now and the fast lane is **4 s over 1,582
 cases** — 5.5, 5.6, 6.2 s of wall clock across three runs, so the figure is the fastest of three
 and the spread is under a second (`M4`). The whole suite is 1 m 22 s.
 
-*Nothing checks it*, and that is why it rotted. The honest check would be a class's own measured
+**Something checks it now**: [`tools/lanes/lanes.py`](../tools/lanes/README.md) reads a run's trx
+and reports both directions — a class over the threshold without the trait, which is what makes the
+lane slow and exits non-zero, and a class tagged while costing almost nothing, which is the drift
+nobody looks for. Run on 2026-08-31 it found **nothing untagged and heavy** and **thirteen tagged and
+free**: classes tagged when they *were* expensive and left tagged after the performance passes made
+them cheap. Untagging them put **107 cases** back in the fast lane at no change to its four seconds,
+so the lane is **1,875 of 2,212** now.
+
+*Nothing checked it for months*, and that is why it rotted. The honest check would be a class's own measured
 cost, which a test inside that class cannot read; the naming rule that looks available — *a class
 that drives a harness `…Lab`* — sorts the tree worse than the cost rule does, selecting eleven
 classes that cost nothing and missing `ShapeTests` and `ProfileSuiteTests`, which are the second and
@@ -686,7 +661,7 @@ hold — `A13` was a change to how *vanilla* blocks are read, and it moved the p
 | **Block geometry and the grid model** | `FaceTests` `FaceSpanTests` `BoxGeometryTests` `GridMathTests` `CellBitsetTests` `BlockOrientationTests` `BlockOrientationCacheTests` `BlockInstanceTests` `BlockInstanceOneCellTests` `GridModelTests` `GridModelAdjacencyTests` `BlockSurfaceBuilderTests` `Se2LatticeTests` `ShapeTests` |
 | **Surfaces, rooms and air** | `SurfaceMapTests` `SurfaceMapPackingTests` `RoomMapperTests` `DoorSealingTests` `RoomPortalTests` `IncrementalRoomTests` `RoomMapFreezeTests` `RoomMapSnapshotTests` `RoomMapSolidTests` `RoomSpanFloodTests` `RoomMapCompletionTests` `GridOccupancyTests` `RoomCellStorageTests` `RoomAuditTests` `UnmappedRoomTests` `RoomAirTests` `RoomAirCanonicalTests` `RoomAirCouplingTests` `RoomPressureTests` `RoomAirPressureTests` `ExposureAuditTests` `ExposureFastPathTests` |
 | **Conduction and the integrator** | `ConductionTests` `StabilityTests` `ConductionClampGateTests` `CoupledConductanceCacheTests` `NodeIndexTests` `FacePackingTests` `SubstepDemandTests` `SubstepFloorTests` `SubstepCeilingTests` `SubstepScaleTests` `HeatTimeScaleTests` |
-| **Environment: air, climate, weather** | `EnvironmentSolverTests` `RadiationTests` `ConvectionSolarFrictionTests` `FrictionIsolationTests` `GridFrictionTotalTests` `DragShapeTests` `DragGroupingTests` `DragForceTests` `WindShieldingCostTests` `WindShieldingTests` `CentreOfPressureTests` `DragProfileTests` `ClimateModelTests` `GroundRoughnessTests` `DayLengthTests` `WeatherAndDepthTests` `UndergroundContactTests` `PlanetThermalTests` `PlanetReferenceTests` `PlanetPropertyMergeTests` `DescentTests` |
+| **Environment: air, climate, weather** | `EnvironmentSolverTests` `RadiationTests` `ConvectionSolarFrictionTests` `FrictionIsolationTests` `GridFrictionTotalTests` `DragShapeTests` `ShapeDragTests` `ShapeNormalOneCellTests` `GridCapacityTests` `CorpusShapeWalk` `LiftTests` `DragGroupingTests` `DragForceTests` `WindShieldingCostTests` `WindShieldingTests` `CentreOfPressureTests` `DragProfileTests` `ClimateModelTests` `GroundRoughnessTests` `DayLengthTests` `WeatherAndDepthTests` `UndergroundContactTests` `PlanetThermalTests` `PlanetReferenceTests` `PlanetPropertyMergeTests` `DescentTests` |
 | **Sun, shadow and occlusion** | `SunShadowMapTests` `SolarSelfShadowingTests` `SunLitSliceTests` `SolarOcclusionTests` `SolarOcclusionSamplerTests` `OcclusionLadderTests` `OcclusionMathTests` `SolarSymmetryTests` `GridShadowTests` `TerrainHorizonTests` `SelfShadowScenarioTests` `FaceWeightPairingTests` |
 | **Wind** | `WindFieldTests` `WindProfileTests` `GradientHeightTests` `WindSlopeTests` `WindTerrainTests` `WindCompassTests` `StormHeatingTests` `WindScenarioTests` `WindSolverContractTests` `WindLabTests` |
 | **Heat sources, damage and thresholds** | `HeatGenerationTests` `OverheatSpillTests` `DamageTests` `CriticalTemperatureTests` `CriticalTemperatureMirrorTests` `OverheatEventTests` `SuitThermalTests` `IncandescenceTests` `HeatWarningTests` `HeatCueScanTests` `ThresholdTests` `HeatSourceTests` `HeatSourceMathTests` `HeatSourceCommandTests` `CustomHeatSourceTests` `MultiCellAndDamageTests` `ReactorWasteHeatTests` `GridHeatBalanceTests` `HottestNodeTests` `GlowGeometryTests` |
@@ -726,6 +701,7 @@ hold — `A13` was a change to how *vanilla* blocks are read, and it moved the p
 
 | Date | Change |
 | --- | --- |
+| 2026-08-31 | **The lane rule has a checker, and the drift it found was the direction nobody looks.** `tools/lanes/lanes.py` reads a trx and cross-references the traits. Nothing was over two seconds and untagged — the lane had not rotted — but **thirteen classes were tagged while costing under half a second each**, tagged when they were expensive and left that way after the performance passes made them cheap. The thirteen run together in **1 s for 107 cases**, and untagging them left the fast lane at **4 s** while taking it from 1,768 to **1,875 cases**. Only the slow direction exits non-zero: an over-tagged class costs coverage rather than time, and failing on it would make the checker refuse to pass on a machine that ran quickly. |
 | 2026-08-26 | The fast lane had rotted to 37 s inside two days of being re-sorted, and the rule refresh brought it back to 4 s: `DesignedHullTests` was 35 s of it on its own and ten more classes had crossed two seconds untagged — `DialReachTests`, `ModHardwareRetestTests`, `SettingsDialReachTests`, `LoopDialReachTests`, `LoopCoolantMassTests`, `ScenarioTests`, `ScriptWhitelistTests`, `HeatTimeScaleTests`, `CoolantLoopTests` and `DocumentationTests`. The whole suite is 1 m 22 s over 2,001 cases on the optimised build, from 2 m 34 s over 1,884 ([performance.md](../docs/performance.md)). |
 | 2026-08-26 | The test tree compiles optimised in every configuration. Nothing set `<Optimize>`, `dotnet run` and `dotnet test` build Debug, and a Debug assembly tells the JIT not to optimise — so every timing the harness ever produced was of code the game never runs, at 3.4× a step and up to 7.7× on the diagnostics surcharge ([performance.md](../docs/performance.md)). |
 | 2026-08-26 | Added `ShippedIdentityTests`, which checks the two rules that were *judgement* because nothing could see them break: the workshop id in `modinfo.sbmi` (`R5` — a regenerated file publishes the mod as a new item and every subscriber stays on the old one, with a green build and a correct-looking repository) and the shape of `Models/` (`R4` — a `.mwm` path is baked into the `.sbc` that names it, so a move is a re-export of the source this repository does not hold). The model pin is a digest of the sorted set of paths: a file added is a normal day, a file moved is the failure, and only the set tells them apart. |
@@ -739,7 +715,6 @@ hold — `A13` was a change to how *vanilla* blocks are read, and it moved the p
 | 2026-08-25 | The 8.89 % below is what a 400-ship sample said and the population says **15.76 %** — `BaseVariantLab`'s stride sample carried a representative share of blocks and an unrepresentative share of gravity generators, which are 6.9 GW on their own. The entry below is left as written (`R12`); this is the figure to quote, and [balance-lab.md](../docs/balance-lab.md) carries how the sample missed it. The stiffness walk over the same corrected population moved by **0.00 %**, because heat is a sum over blocks and stiffness is a maximum over them. |
 | 2026-08-25 | **The blueprint reader built eleven kinds of vanilla block as armour, and does not now.** The game gives thirteen definitions no `SubtypeId`; `BaseSubtypeOf` turned every one into a plain armour cube — wrong mass, wrong material, no power draw, no heat — and the ship still parsed with the right block count, so nothing looked wrong. It resolves by type now, the model cache and every lookup that resolves a *placed* block key on a unique name, and `ABlockWithNoSubtypeNameIsItsOwnTypesBaseVariantRatherThanArmour` fails if it goes back. **The same pass found the other half of it**: three subtypes are claimed by two types each, and `LargePistonBase` belongs to both `PistonBase` and `ExtendedPistonBase` — same components, same power, sizes 1x2x1 and 1x3x1 — so every extended piston in the corpus was built a cell short. Blocks resolve on the pair now. Added `BaseVariantLab` and `basevariants` to price what it cost: on 400 ships, 17,079 blocks on 275 of them change identity and the sample's full-load waste rises **8.89 %**. Every dataset in `out/` was taken under the defect ([backlog.md](../docs/backlog.md) `A13`). |
 | 2026-08-25 | Added `OxygenGeneratorLab` and the `oxygen` command, and moved the two bounds `ReactorLab` had into `SoloBlockRig` so both labs run the same rig on the same clock. It decided the oxygen generator's waste fraction — 0.6 to 0.40 — on the finding that two of six vanilla generators were past critical *bare* at their rated draw, and it falsified the reading that bare is a ceiling and skinned a floor: at three orders of magnitude less waste than a reactor, the shell is the larger radiator and skinning **cools**. Also fixed the two `Vanilla` drift tests, which matched a reference row to a game definition by subtype alone — thirteen of the game's definitions carry no subtype, so the vanilla oxygen generator resolved to a door. |
-| 2026-08-25 | Wrote down that the machine is shared and what on this page is heavy enough to serialize with `heavy run` (`W5`), including the `LoadTests` case where a timing failed twice against a corpus walk in another process rather than against the code, and how to exclude them when the suite has to run unlocked. |
 | 2026-08-25 | Added the `station` scenario, which is the first thing in the library that is not a ship, a rig or a component ([backlog.md](../docs/backlog.md) `F27`). It runs a station against a ship matched to one cell with exactly half the external faces, in vacuum and in air at two loads, and prices what roof radiators are worth. `ScenarioClaimTests` pins both halves of its conclusion, and `TheStationAndTheShipAreMatchedOnBlocksAndHalvedOnArea` checks the pair off the shapes rather than off the scenario, so a change that quietly unmatches them fails there rather than moving every figure `F27` rests on. |
 | 2026-08-25 | **A walk launched from a git worktree recorded `unknown` for its commit**, which is what a walk on a machine with no repository records — so the one thing provenance exists to make loud was silent for anyone building on a branch checkout. `.git` is a directory in a clone and a *file* naming one in a worktree; `CorpusRecord.Commit` now follows it, and looks for a loose ref in the common directory a worktree shares with its clone before falling back to `packed-refs`. Found by `AWalkWritesWhatBuildItRanOn`, which was written to catch exactly this and had never had a worktree to catch it on. Its own summary also claimed a `dirty` marker no line of the method produced; the claim is gone and the reason it is not cheap to have is written down instead. |
 | 2026-08-25 | Re-measured both lanes on an idle machine, because the figures here had gone stale in the cheap direction: the whole suite is **2 m 34 s** over 1,884 cases where this page said 5 m 23 s, and the fast lane is **4 s** over 1,585 where it said 6 s over 1,554. Fastest of three with the spread quoted (`M4`). The stale figure was not caught by anything, which is the same reason the lane rule rotted: a suite's own cost is a number a test inside it cannot read. |

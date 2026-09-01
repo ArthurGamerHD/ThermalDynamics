@@ -73,6 +73,16 @@ namespace Thermodynamics.Core
         public SurfaceMap Surfaces { get { return surfaces; } }
         public RoomMapper Rooms { get { return rooms; } }
         public ThermalSolver Solver { get { return solver; } }
+
+        /// <summary>
+        /// Sizes the model and the solver for a hull about to be built. A hint, not a bound; see
+        /// <see cref="GridModel.EnsureCellCapacity"/> and <see cref="ThermalSolver.EnsureNodeCapacity"/>.
+        /// </summary>
+        public void EnsureCapacity(int blocks)
+        {
+            grid.EnsureCellCapacity(blocks);
+            solver.EnsureNodeCapacity(blocks);
+        }
         public SimulationScheduler Scheduler { get { return scheduler; } }
 
         public PlanetThermalProperties Planet
@@ -307,6 +317,7 @@ namespace Thermodynamics.Core
 
         private double roomCredit;
         private double exposureCredit;
+        private double shapeNormalCredit;
 
         /// <summary>A frame's share of a budget that was expressed per tick.</summary>
         private static int Share(ref double credit, int perTick, float frameSeconds)
@@ -624,6 +635,7 @@ namespace Thermodynamics.Core
 
             Begin(SimulationPhase.Exposure);
             solver.RefreshExposure(rooms.Map);
+            solver.RefreshShapeNormals();
             solver.RebuildRoomAir(rooms.Map);
             solver.RefreshHeatGeneration();
             End(SimulationPhase.Exposure);
@@ -808,6 +820,15 @@ namespace Thermodynamics.Core
                 if (!more) solver.RebuildRoomAir(rooms.Map);
 
                 End(SimulationPhase.Exposure);
+            }
+
+            // Its own pass and its own credit: a normal is geometry, so it goes stale when blocks
+            // move and not when a door opens, and it costs about seven times what an exposure node
+            // costs. Returns immediately unless the shape term is on and the layout has moved.
+            if (solver.BeginShapeNormalRefresh())
+            {
+                solver.StepShapeNormalRefresh(Share(ref shapeNormalCredit,
+                    SimulationScheduler.ShapeNormalBudget(solver.Nodes.Count), frameSeconds));
             }
 
             Begin(SimulationPhase.Solver);

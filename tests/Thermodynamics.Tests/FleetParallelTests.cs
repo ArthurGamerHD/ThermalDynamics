@@ -210,6 +210,12 @@ namespace Thermodynamics.Tests
                 // Built once from Face.Offsets: what a key changes by along each face.
                 { "Thermodynamics.Core.GridMath.KeyByFace", "table built once, never written after" },
 
+                // The 26 neighbours of a one-cell block and their unit vectors. A one-cell block's
+                // centre is its own cell, so both are the same for every block on every grid —
+                // which is the whole reason they are a table rather than 26 square roots a node.
+                { "Thermodynamics.Core.ShapeNormal.OneCellOffsets", "table built once, never written after" },
+                { "Thermodynamics.Core.ShapeNormal.OneCellUnits", "table built once, never written after" },
+
                 // The lock the mutable pair below is taken under, which is shared on purpose.
                 { "Thermodynamics.Core.ThermalValidation.Lock", "the lock itself" },
 

@@ -140,6 +140,56 @@ namespace Thermodynamics.Core
         public bool EnableWindwardShielding = false;
 
         /// <summary>
+        /// Whether the hull's own shape corrects the projected area the friction term charges for.
+        ///
+        /// <para>
+        /// **Off, and not because it is unfinished.** It moves heat as well as force — the friction
+        /// watts it scales are what warm the hull — so a world that switches it on gets different
+        /// temperatures as well as different handling, and a feature that changes the shipped
+        /// answer is not an addition. What stands between this and a default is a corpus re-walk
+        /// with the drag milestone's population criterion re-scored (backlog.md `K22`).
+        /// </para>
+        ///
+        /// <para>
+        /// It applies to the friction row alone and deliberately not to the convection factor,
+        /// which reads the same six-face sum: sheltering is what changes how much air crosses a
+        /// face, and inclination is what changes the pressure on it. Folding one into the other is
+        /// how windward shielding came to be worth 7.4 K on a sheltered hull.
+        /// </para>
+        /// </summary>
+        public bool EnableShapeDrag = false;
+
+        /// <summary>
+        /// Whether the transverse half of the aerodynamic force is applied — lift.
+        ///
+        /// <para>
+        /// **Off, and it needs both this and <see cref="EnableShapeDrag"/>.** Lift is the component
+        /// of the Newtonian pressure sum perpendicular to the flow, and that sum only has a
+        /// direction worth keeping once every node carries a reconstructed normal: with the shape
+        /// term off, every surface is one of six axis planes and the transverse part is an artefact
+        /// of how the hull happens to be drawn rather than of its shape.
+        /// </para>
+        ///
+        /// <para>
+        /// **It adds a force rather than re-deriving one**, so drag is bit-identical whether this is
+        /// on or off. A world that wants the handling it has keeps it.
+        /// </para>
+        /// </summary>
+        public bool EnableLift = false;
+
+        /// <summary>
+        /// How much of the computed transverse force is applied, dimensionless.
+        ///
+        /// <para>
+        /// **One is the model's own answer**, so this is a way to soften lift rather than to invent
+        /// it. What it scales is a Newtonian flat-plate sum, which is right in free-molecular
+        /// hypersonic flow and over-predicts everywhere a ship actually flies — the same reason
+        /// `DragCoefficient` sits at half a bluff body's value.
+        /// </para>
+        /// </summary>
+        public float LiftCoefficient = 1f;
+
+        /// <summary>
         /// The drag coefficient a hull is treated as having, dimensionless.
         ///
         /// <para>
@@ -354,6 +404,7 @@ namespace Thermodynamics.Core
             if (SolarEnergy < 0f) SolarEnergy = 0f;
             if (FrictionAtSpeedsAbove < 0f) FrictionAtSpeedsAbove = 0f;
             if (DragCoefficient < 0f) DragCoefficient = 0f;
+            if (LiftCoefficient < 0f) LiftCoefficient = 0f;
             if (FrictionScale < 0f) FrictionScale = 0f;
             if (RoomConvectionCoefficient < 0f) RoomConvectionCoefficient = 0f;
             if (RoomAirDensity < 0f) RoomAirDensity = 0f;

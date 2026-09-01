@@ -1,0 +1,12 @@
+statistic,value,unit
+ships,500,ships
+cooler,496,ships
+hotter,0,ships
+control moved,0,ships
+delta p5,-9.47,K
+delta p25,-6.03,K
+delta p50,-4.56,K
+delta p75,-3.19,K
+delta p95,-1.08,K
+delta min,-15.4,K
+delta max,0.0,K

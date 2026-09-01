@@ -42,17 +42,19 @@ same names are reachable from other mods, see [api.md](api.md#settings).
 
 **Ctrl+Shift+S** opens it, as does `/thermal menu`.
 
-The menu is a tree rather than one scroll: **Overview**, **Status** and **Debug** at the root, then
-four folders.
+The menu is a tree rather than one scroll: **Statistics**, **Debug** and **Defaults** at the root,
+then five folders.
 
 | Folder | Pages |
 | --- | --- |
 | **Solver** | Cost limits, Pace |
 | **Heat transfer** | Ambient, Conduction, Radiation, Convection, Solar, Occlusion |
-| **Ship systems** | Coolant loops, Heat pumps, Room air, Waste heat, Friction, Overheat damage, Point sources |
-| **World** | Climate, Underground |
+| **Ship systems** | Coolant loops, Heat pumps, Room air, Waste heat, Overheat damage, Point sources |
+| **Aerodynamics** | Friction heating, Drag |
+| **Multiplayer** | Temperatures |
+| **World** | Climate, Underground, Wind |
 
-Sixty-eight settings on a single scroll is a list to be searched by eye, and an administrator
+A hundred settings on a single scroll is a list to be searched by eye, and an administrator
 usually arrives wanting one part of it. **One system to a page, with its own switch at the top.**
 Grouping the switches together would be filing by part of speech: switching convection off belongs
 above the convection dials, where a reader can see what it governs.
@@ -70,8 +72,8 @@ at the menu in game rather than by reading the API:
   the list of what has been changed — lives on the Status page, which is a text page and does wrap.
 * **A page name clips in the rail at about seventeen characters.** Page names are short for that
   reason, not for taste.
-* **A loose page added after a folder draws against the folder's row.** Overview, Status and Debug
-  are therefore added before the folders.
+* **A loose page added after a folder draws against the folder's row.** Statistics, Debug and
+  Defaults are therefore added before the folders.
 
 **Some settings are typed, not dragged.** A slider offers about two hundred distinguishable
 positions, which suits a fraction between 0 and 1 and suits nothing else this mod has. The step
@@ -84,19 +86,33 @@ The range in a typed field's tooltip is what the slider *would* have spanned, no
 value goes through the same clamp as `/thermal set` and the mod API, so a step budget of nine
 million is yours to try. Anything unreadable puts the setting's own value back rather than guessing.
 
-**Overview** answers the question a wall of sliders cannot — how many settings differ from the
-shipped defaults, each of them dotted in front of its label on its own page. It flags a conflict in
-three words; **Status** spells it out, lists every changed setting with the shipped value beside it,
-and carries the settings digest for comparing against the server.
+**Statistics is the page the menu opens on, and everything the menu can report is on it.** It is a
+text page, which is the only kind here that wraps, so it is the only one that can say what a figure
+is measured over. It carries four things: what this world is set to — the mod version, how many
+settings differ from the shipped defaults, the settings digest to compare against the server's
+`/thermal sync`, and any conflict spelled out in full; what is running — grids, blocks, solver nodes,
+links, the hottest block and how many are over critical; the energy the world is moving — heat made,
+vented, exchanged with the ambient and taken from the air by friction; and what the solver is
+spending — substeps granted against substeps asked for, steps shortened to fit the budget, blocks
+floored by the per-block cap, element visits against the budget, and the simulation rate. It closes
+with every changed setting and the shipped value beside it.
 
-Three pages carry live figures read from the running grids rather than from the settings that
-produced them: **Cost limits** shows substeps granted against substeps asked for and how many blocks
-the cap floored, **Pace** shows the hottest block and what the world is venting against what it
-makes, and **Debug** shows which overlay is up and whether telemetry is recording.
+**The figures are read from the running grids rather than computed from the settings that produced
+them**, and where a fleet has to become one number it is the worst grid rather than the mean: a world
+is as starved as its most starved grid. They refresh about twice a second while the terminal is open,
+and not at all while it is closed.
 
-Overview also carries the menu's one bulk action, a **Defaults** button that returns every world
+**Frame cost is reported only when telemetry is recording**, because the frame timer is wound in
+telemetry's branch of the session update and nowhere else. With telemetry off the page says so rather
+than showing a nought, which would be a reading of an instrument that never ran.
+
+Settings changed from the shipped defaults are also dotted in front of their own label on their own
+page, so the count on Statistics has somewhere to lead.
+
+**Defaults** is the menu's one bulk action on a page of its own: a button that returns every world
 setting to the value a fresh install ships. The four presentation switches are left alone: what is
-drawn on a player's own screen is theirs. The menu is built on the
+drawn on a player's own screen is theirs. It is a page rather than a paragraph on Statistics because
+a button is a control and a text page holds none. The menu is built on the
 [Rich HUD Framework](https://github.com/ZachHembree/RichHudFramework.Client) and needs the
 **Rich HUD Master** mod (`1965654081`) to be enabled; without it the keystroke says so and the chat
 commands remain the way in.
@@ -108,8 +124,11 @@ you to confirm what you already did is asking you to do it twice, and a setting 
 reload because a button was missed is worse than either. Starting over is the one case that needs an
 action of its own, which is what Defaults is.
 
-Two columns because that is what the page is wide enough for: the framework's tiles are a fixed
-300x250, so a third column would have to be scrolled to sideways.
+**A section is one tile, and a page is its sections.** The framework takes a control nowhere but a
+tile — page, category, tile, control, with no accessor for anything else — so the tile cannot be got
+rid of, but there is exactly one per section rather than a grid of them. Pages used to pack controls
+three to a tile, two tiles to a row, and continue a section of more than six into a second headed
+group, which put a lattice of boxes on every page and left the last one part empty.
 
 The menu is generated from the same name list the chat commands and the mod API use, so a setting
 added to the config file appears in it without anyone maintaining a second list. A setting the
@@ -146,6 +165,8 @@ whether a cheaper rung is known to be possible and nobody has built it.
 | Waste heat | `EnableWasteHeat` | 2 | None known: it is a per-block fraction of a wattage the game already reports. |
 | Point heat sources | `EnableHeatSources` | 2 | The inverse square is already cut off by range. A rung that sampled the registry less often is possible and has never been wanted, because the registry is usually empty. |
 | Aerodynamic friction | `EnableFriction` | 2 + dials | `FrictionScale` and `FrictionAtSpeedsAbove` are balance dials rather than fidelity rungs — they change how much friction there is, not how well it is modelled. |
+| Hull shape | `EnableShapeDrag` | 2 | On or off. The rung below it is the projected area, which is what off means, and there is no cheaper form that is still the mechanism: the normal is reconstructed once per layout change and a step spends a dot product on it. A wider neighbourhood was the obvious finer rung and **it was measured and rejected**: a 45° slope already reads exactly `sin²45°` at radius one, a 26.6° slope reads the same at every radius, and widening only separates slopes below about 27° — where it overshoots — for 2.07× the pass ([backlog.md](backlog.md) `K22`). |
+| Lift | `EnableLift` | 2 | On or off, and the coefficient is a balance dial rather than a rung. There is no cheaper form that is still the mechanism — the transverse sum is one multiply-add on a row already being summed — and the rung below it is no lift at all, which is what off means. |
 | Grid drag | `EnableDrag` | 2 | On or off, and the coefficient is a balance dial rather than a rung. There is no cheaper form that is still the mechanism: the force is one division on a figure the solver already publishes, so the whole cost of it is an `AddForce` per constraint group. |
 | Windward shielding | `EnableWindwardShielding` | 2 | On or off. There is no cheaper form that is still the mechanism — the pass is already sliced and already budgeted — and the rung below it is the unshielded model, which is what off means. |
 | Room air | `EnableRoomAir` | 2 | **A cheaper rung is possible and unbuilt.** Room air is a well-mixed body already; what is expensive is the flood fill that finds the rooms, and a coarser or less frequent map is a rung. `D2` measures the fill at **3,934 ticks — about eleven minutes — on a million blocks** (re-measured 2026-08-28 by `bench scale --max 1000000`; the 7,207 this row carried predates the 2026-08-26 word skip and the 2026-08-27 span flood). **What the rung would buy is latency rather than CPU**: the mapper is budgeted per tick and capped at 4,096 cells, so convergence is the bounding volume divided by that cap and the performance passes moved the milliseconds without moving the wait. A *coarser* map shortens it; a *less frequent* one makes it worse, so only one of the two rungs this row names is the rung. |
@@ -694,7 +715,7 @@ Both clamps must stay on for any of this. `ClampConductionOvershoot` and `ClampE
 are what make a deliberately-too-long step bounded instead of divergent — with them off, a fast clock
 at one substep reaches 10^22 K in twenty seconds.
 
-**Starting over is one action.** The settings menu's Overview carries a **Defaults** button that
+**Starting over is one action.** The settings menu's **Defaults** page carries a button that
 returns every world setting to the value a fresh install ships, leaving the four presentation
 switches alone. There is no per-control reset and no Save button, because a change applies as it is
 made and reaches the config file a second later.
@@ -771,6 +792,9 @@ will not move it much.
 | `FrictionScale` | 0.001 | Coefficient on the v³ friction term. |
 | `EnableDrag` | 0 | Take the drag out of the ship's motion as well as putting it into the hull. **Off**, because two mods that both slow a ship down is a collision this mod answers with a switch rather than a detection ([backlog.md](backlog.md) `B38`, `C7`). A world running [RelativeTopSpeed](https://github.com/Gauge/RelativeTopSpeed) and this one gets no force from here until it asks for one — and it probably wants one or the other rather than both, because RTS's retarding force exists to stand in for the drag this computes. |
 | `DragCoefficient` | 0.5 | The drag coefficient a hull is treated as having. **Measured rather than reasoned to**: a bluff body's own coefficient is about 1, and at 1 drag beats a ship's own thrust at 100 m/s on 14.06 % of hulls that can lift themselves, against a 5 % criterion registered before the walk. At 0.5 it passes. Half is also where physics puts it — what multiplies this is a Newtonian flat-plate projection with no wake and no pressure recovery, which over-predicts a real bluff body at the speeds a ship flies. **A different number from `FrictionScale`**: the two are one product and authoring both leaves the share of drag work landing in the surface derived rather than assumed, so a world that tuned its heat has not tuned its handling. |
+| `EnableShapeDrag` | 0 | Correct the projected area by the hull's own shape. **The projection is blind by construction** — the friction sum weights each exposed face by `max(0, n_f · ŵ)` over six axis normals, so a stair-stepped 45° slope reads as the flat plate it projects onto ([thermal-model.md](thermal-model.md#the-shape-term-and-why-it-cannot-be-improved-in-place), [backlog.md](backlog.md) `K22`). This gives each block an effective normal read from the cells around it and applies the Newtonian `sin²θ` the projected area is missing. **Measured on the pair that motivated it**: a four-cell brick and a stair-stepped wedge of one frontal cross-section read **172,800 W each** with this off and **100,800 W against 82,215 W** with it on — a ratio of 0.816 where there was none. **Off**, because it moves temperatures as well as handling: the friction watts it scales are what warm the hull, and `K9`'s rule is that a feature changing the shipped answer is not an addition. **It can only reduce** — the factor is `sin²θ`, at most one — so switching it on lowers heating and drag or leaves them alone. |
+| `EnableLift` | 0 | Apply the half of the aerodynamic force that acts *across* the flow. **Not a second model**: Newtonian pressure acts along `−n̂` with magnitude `2q(n̂·ŵ)²dA`, the solver already sums that magnitude, and `ShapeNormal.Factor` collapses it to a scalar — keeping only what points along the flow. Lift is the transverse remainder, so it needs no coefficient to exist ([backlog.md](backlog.md) `K23`). **Needs `EnableShapeDrag`**, because without a reconstructed normal every surface is one of six axis planes and the transverse sum describes how a hull was drawn rather than what shape it is. **It adds a force and leaves drag bit-identical**, so a world can take lift without re-tuning the handling it had. **Small on real ships**: over 8,137 published hulls the median lift-to-drag is **0.057** and p95 **0.148**, and lift never exceeds a hull's own weight on any of the 5,649 that can lift themselves — a ship symmetric about its flight axis cancels most of the transverse sum, which is the same reason a cube makes none at all. |
+| `LiftCoefficient` | 1.0 | How much of the computed transverse force is applied. **One is the model's own answer**, so this softens lift rather than inventing it. What it scales is a Newtonian flat-plate sum — right in free-molecular hypersonic flow, over-predicting everywhere a ship actually flies, which is the same reason `DragCoefficient` sits at half a bluff body's value. |
 | `EnableWindwardShielding` | 0 | A block behind another is sheltered from the wind, for heat and for drag — the sun's self-shadowing pass aimed at the relative wind. **Off**: it is a second sliced pass and 3 MB on a large hull, and unshielded is the conservative answer, so a world without it is heated and dragged at least as much as it should be. Its rebuild threshold is 20° rather than the sun's 2°, because the wind direction is grid-local and moves when the *ship* turns. |
 | `RoomConvectionCoefficient` | 8 W/(m²·K) | Coupling between a room's air and the surfaces facing it. Lower than the planetary figure because room air is still. **It carries no pressure term**, so a compartment at a fiftieth of an atmosphere couples its walls as hard as a full one and pressure decides only whether the coupling exists — see [thermal-model.md](thermal-model.md#room-air). |
 | `RoomAirDensity` | 1.225 kg/m³ | Air density in a fully pressurised room. |
@@ -1262,8 +1286,9 @@ changing one at runtime needs the cache invalidated and every node of that type 
 folder is read-only in a workshop install, so this writes a per-world override layer into world
 storage like the other two, covering any subtype rather than a fixed list.
 
-**Status becomes the panel worth opening.** Today it lists what changed, which the Overview already
-counts. It should be the mod's own report:
+**Statistics grows the per-stage half.** It now carries the world's settings, what is running, the
+energy being moved, what the solver is spending and the frame cost. What it does not yet carry is the
+breakdown:
 
 * **Cost**, per stage rather than as one number: topology, room mapping, exposure, solver, room
   pressure, with the same figures the telemetry report carries.
@@ -1310,6 +1335,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-31 | **Reworked the menu: Aerodynamics is its own folder, Overview is gone, and a page is its sections rather than a lattice of tiles.** `EnableDrag`, `DragCoefficient` and `EnableWindwardShielding` had no layout entry, so the force half of the friction term sat unlabelled on the *Other* page while the heat half was a Ship systems page; both halves are now the **Aerodynamics** folder. **Overview is removed** — a count, a three-word conflict flag and three clipped figures, every one of them a worse version of a line on the page that wraps — and **Status is now Statistics**, carrying the world's settings, what is running, the energy it is moving, what the solver is spending and the frame cost. **Its figures were never refreshing**: `Refresh` was called from the settings sync and nowhere else, so a category headed *Right now* held whatever the world was doing when the menu was built; `ThermalSettingsMenu.Tick` now re-reads it twice a second while the terminal is open. **A section is one tile now** rather than tiles of three packed two to a row. Also fixed the subheader, which compared a page name against the `Display` *category* constant that no page is called — so on a client every page claimed to be server side, Debug included. |
 | 2026-08-28 | **Corrected the room map's convergence figure, which had been stale for nine days and was quoted here from `D2`** (`E10`, `E5`). It read 7,207 ticks — twenty minutes — on a million blocks; re-measured by `bench scale --max 1000000` it is **3,934 ticks, about eleven minutes**, on 1,000,294 blocks and a 14,278,796-cell box. The 7,207 predated the 2026-08-26 word skip and the 2026-08-27 span flood, both of which `D2`'s own body already recorded — the headline outlived the paragraph that superseded it. **And the figure is structural**: convergence is the box over a 4,096-cell tick budget, so no work on milliseconds a cell can move it, which `RoomMapConvergenceIsTheBoxDividedByItsBudget` now pins. |
 | 2026-08-28 | Added `ShowEnvironmentReadout`, **on by default** — the first readout that is. One line, bottom centre: the air around your ship and one word for the ship against its own rating. `hot` begins exactly where the glow does, so the two cannot disagree. `B41`. |
 | 2026-08-28 | **The menu says which way each integration dial points**, which until now only this page did. `FidelityEnds` declares the faithful end once and every per-setting tip carries the same sentence; `FidelityEndTests` holds it against the four claims in the rungs table and against the shipped defaults. Two of the four do not ship faithful, deliberately, and those are the two the sentence is for. |

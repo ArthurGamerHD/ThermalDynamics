@@ -20,8 +20,14 @@ python3 tools/corpus/cap.py out/cap-2026-08-25 \
     --csv tools/corpus/summary-cap-2026-08-25.csv         # C3: what a per-block cap buys and costs
 python3 tools/corpus/floor.py out/floor-2026-08-29 \
     --csv tools/corpus/summary-floor-2026-08-29.csv       # C30: what an over-budget floor buys and costs
-python3 tools/corpus/cruise.py out/census-2026-08-25/census.csv \
-    --csv tools/corpus/summary-cruise-2026-08-30.csv      # K12: does a derived top speed land where the authored one does
+python3 tools/corpus/cruise.py out/census-2026-08-31/census.csv \
+    --csv tools/corpus/summary-cruise-2026-08-31.csv      # K12: does a derived top speed land where the authored one does
+python3 tools/corpus/cruise.py out/census-2026-08-31/census.csv --cd 1.54 \
+    --csv tools/corpus/summary-cruise-shape-2026-08-31.csv # K22: the same, with the hull shape term on
+python3 tools/corpus/dragfit.py out/census-2026-08-31/census.csv --sweep \
+    --csv tools/corpus/summary-dragfit-shape-2026-08-31.csv # K22: does the drag milestone's criterion still hold
+python3 tools/corpus/shape.py out/shape-2026-08-31 \
+    --csv tools/corpus/summary-shape-2026-08-31.csv        # K22: what the shape term is worth to a population's temperatures
 python3 tools/corpus/knob.py out/knobs-2026-08-30 --knob oxygen-waste \
     --csv tools/corpus/summary-knob-oxygen-2026-08-30.csv # what one dial does to the standing panel
 python3 tools/corpus/reproduce.py out/cap-2026-08-24 out/cap-2026-08-25  # did a restart reproduce?
@@ -604,7 +610,7 @@ one grammar cannot drift apart quietly (`D3`), `test_pace.py` pins what a progre
 asked — that a repeated final line is not a stall, that the ratio is taken over the files two walks
 share rather than the time they ran, and that the block-share estimate is reported as the spread it
 has, `test_reproduce.py` pins that a comparison
-with nothing in common is not a reproduction, `test_knob.py` pins the two ways a dial sweep is read wrongly — a level compared against the population rather than against *the same ship* at the shipped level, and a dial with an `OnlyType` judged over every ship it was run on rather than the ones it can reach, which reports its reach as its effect and in the direction that makes every dial look harmless. `test_cruise.py` pins the derivation `K12` rests on — that the speed it returns is the one where drag equals thrust, that it is a square law in both thrust and area, and that a ship with no thrust has *no* cruise speed rather than one of nought, which would put 1,785 stations into the bottom of the distribution and make every quantile below the median a statement about stations. `test_floor.py` pins the two ways the floor report could quietly say the wrong thing — mixing the
+with nothing in common is not a reproduction, `test_knob.py` pins the two ways a dial sweep is read wrongly — a level compared against the population rather than against *the same ship* at the shipped level, and a dial with an `OnlyType` judged over every ship it was run on rather than the ones it can reach, which reports its reach as its effect and in the direction that makes every dial look harmless. `test_cruise.py` pins the derivation `K12` rests on — that the speed it returns is the one where drag equals thrust, that it is a square law in both thrust and area, and that a ship with no thrust has *no* cruise speed rather than one of nought, which would put 1,785 stations into the bottom of the distribution and make every quantile below the median a statement about stations. `test_shape.py` pins how the shape walk's two arms are paired — that a ship carrying one arm is dropped rather than averaged against the population, that a row with no peak is dropped rather than read as nought, and that the two scenarios do not mix, since one of them is the control that must not move. `test_dragfit.py` pins what the drag milestone's criterion *is* — that only hulls able to lift themselves are in the population, since the worst ceilings in the whole census are stations with one or two thrusters and a hull that never flew is not one drag broke; that both halves must hold or neither does, because a large share with a high ceiling is a modelling error and a bad pair is a tuning one; and that a hull whose ceiling sits exactly on the criterion speed is exactly the hull whose drag there equals its thrust, which is what says the two halves are the same model. `test_floor.py` pins the two ways the floor report could quietly say the wrong thing — mixing the
 arms, which would report the mechanism against itself and read as *the floor is free*, and averaging
 the price over cells the floor never touched, which on the 2026-08-29 walk halves it (p99 60.9 K
 over the engaged cells against 28.3 K over every cell walked) — and that `C30`'s registered bands

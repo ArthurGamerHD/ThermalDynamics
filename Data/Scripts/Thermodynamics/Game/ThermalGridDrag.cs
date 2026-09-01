@@ -135,6 +135,15 @@ namespace Thermodynamics
                     Vector3 worldWind = Vector3.TransformNormal(localWind, grid.WorldMatrix);
 
                     newtons += DragForce.Vector(watts, worldWind, thermals.Simulation.Settings);
+
+                    // **Lift, added to the same resultant and applied at the same point.** The
+                    // pressure sum is grid-local like the wind was, so it is rotated the same way.
+                    // Returns zero unless the shape term and lift are both on, so a world with
+                    // neither pays a length and a branch.
+                    Vector3 pressure = Vector3.TransformNormal(
+                        thermals.Simulation.Solver.LastPressureWatts, grid.WorldMatrix);
+
+                    newtons += LiftForce.Vector(pressure, worldWind, thermals.Simulation.Settings);
                     any = true;
                 }
 

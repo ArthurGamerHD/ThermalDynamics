@@ -57,6 +57,25 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Nodes a shape-normal pass may reconstruct this tick.
+        ///
+        /// <para>
+        /// **A seventh of the exposure budget, because a node costs about seven times as much.**
+        /// Measured at **195.5 ns a node** against exposure's **28.1** on a 126,731-block hull
+        /// (`bench stages`, performance.md), which is a 24.8 ms pass if it lands whole. Sized so the
+        /// two cost a frame about the same, which is what makes the exposure budget a precedent
+        /// rather than a coincidence.
+        /// </para>
+        /// </summary>
+        public static int ShapeNormalBudget(int nodeCount)
+        {
+            int budget = nodeCount / 280;
+            if (budget < 32) budget = 32;
+            if (budget > 512) budget = 512;
+            return budget;
+        }
+
+        /// <summary>
         /// How many items a rolling sweep should visit this tick: the share completing a full pass in
         /// <paramref name="interval"/> steps, capped so no tick exceeds its share however large the
         /// grid. Below the cap a grid still sweeps whole in exactly that many steps.
