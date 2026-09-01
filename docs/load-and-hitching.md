@@ -518,6 +518,32 @@ toward the old answer and never past it: there is no interruption that charges a
 was charged before. `ShapeDragTests` pins that, and it is why the pass needs no completion flag
 guarding the friction row.
 
+### 14. The surface rebuild keeps its scratch
+
+**A surface rebuild allocated two `long[cells]` every time it ran** — the snapshot that lets the
+derived neighbour half be written back without enumerating a dictionary it is mutating. On a
+126,731-block hull that is **2 MB**, it was the whole of what the `surfaces` stage allocated, and a
+rebuild runs on every structural change.
+
+| `surfaces` at 126,731 blocks | before | after |
+| --- | ---: | ---: |
+| allocated | 1,980 KB | **0 KB** |
+| best of 100 | 5.506 ms | 5.425 ms |
+
+The buffers are only ever grown, so the case worth testing is a small hull rebuilt into a large
+one's buffers: both loops are bounded by the table's count rather than by the array's length, and
+`SurfaceRebuildScratchTests` holds a smaller grid's map against a map that never saw the larger one.
+
+**What was looked at and left.** `roomair` allocates **2,573 KB** and it is the `RoomAirNode` per
+room and the `Links` list each carries — about 139,120 links on this hull. Pooling them means a
+`Reset` covering every field including a private-set property, and a room that inherited a
+predecessor's temperature would be a silent, physical bug rather than a crash; it wants the same
+paired test the fast paths here have. `rooms` allocates **4,768 KB** and that is the `RoomMap`
+itself, whose recycling is gated on a stated threading invariant — every grid whose room pass has
+not finished publishes the same empty default, and the code says plainly that a mapper mutating its
+current map rather than replacing it would be a race across every grid at once. Neither is a
+buffer-reuse job.
+
 ### 13. The cell table is sized before a hull is built, not grown during it
 
 **Placing blocks allocated 10.5 MB of nothing but old dictionaries.** `GridModel`'s cell table
@@ -886,6 +912,7 @@ reasoning that produced it was sound and the premise was not.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-31 | **The surface rebuild keeps its scratch: 1,980 KB to 0.** Two `long[cells]` were allocated per rebuild to snapshot a table being mutated; they are scratch, so they are kept and grown. `SurfaceRebuildScratchTests` holds a second rebuild against a first and a small hull against buffers a large one sized, which is the case a kept buffer could get wrong. Looked at and left: `roomair`'s 2,573 KB is per-room nodes whose pooling needs a full `Reset` and would fail as a silent physical bug, and `rooms`' 4,768 KB is the `RoomMap` itself, whose recycling is gated on the threading invariant that a published map is never mutated. |
 | 2026-08-31 | **Sized the solver's node lists too, and recorded which table must not be sized.** `Solver.AddBlock` falls from 187.0 to **153.4 bytes a block** — the `ThermalNode` objects and nothing else — for 4.2 MB, on top of the cell table's 10.5, and both about 7 % quicker. **`ThermalGrid.blocks` keeps its regrowth on purpose**: a list's order is its index order whatever its capacity, but a dictionary's enumeration order follows its bucket layout, and the x-ray overlay enumerates that one and stops at a budget — so sizing it would draw a different set of boxes. That is the rule the other two were checked against rather than a special case. |
 | 2026-08-31 | **Sized the cell table before a hull is built.** `GridModel`'s dictionary doubled as it filled and every doubling copied what it already held: **10,549,776 B** on a 125,000-block hull, 84.4 a block, thrown away immediately. `ThermalGrid` already enumerates `Grid.GetBlocks()` and so knows the count, and `EnsureCellCapacity` takes it — **0 B** after, and 0.93× the time. A hint rather than a bound, ignored after the first block, and `GridCapacityTests` pins that a sized grid is the same grid: same blocks, same lookups, same bounds. |
 | 2026-08-31 | **Gave the shape-normal pass a one-cell fast path, and learned that its cost is not what it looked like.** A one-cell block's 26 neighbour offsets and unit vectors are constants, so the walk was doing 26 square roots a node to arrive at a table; the table is 24.797 → **23.110 ms** at 126,731 blocks with `exposure` flat as the control, and `ShapeNormalOneCellTests` holds the two paths equal exactly rather than within a tolerance. **6.8 % for removing all the arithmetic says the pass is memory-bound on the occupancy probes**, which is where a further pass would have to aim — nine word reads for the nine rows of three adjacent bits, rather than twenty-six probes. Left unbuilt: the pass runs only behind a switch that ships off. |

@@ -29,6 +29,21 @@ namespace Thermodynamics.Core
             return GridMath.Key(cell);
         }
 
+        /// <summary>
+        /// Scratch for the derived pass below, kept rather than allocated per rebuild.
+        ///
+        /// <para>
+        /// **A rebuild used to allocate two `long[cells]` every time** — 2 MB on a 126,731-block
+        /// hull, which was the whole of what the `surfaces` stage allocated, and a rebuild runs on
+        /// every structural change. They are scratch: filled from the table, read by index and
+        /// dropped, so keeping them changes nothing but the garbage. Both loops below are bounded
+        /// by `count` rather than by `Length`, which is what lets the buffers be longer than the
+        /// hull that last used them.
+        /// </para>
+        /// </summary>
+        private long[] rebuildKeys = new long[0];
+        private long[] rebuildSelves = new long[0];
+
         private const int StructuralShift = 32;
         private const long LiveMask = 0xFFFFFFFFL;
 
@@ -142,8 +157,14 @@ namespace Thermodynamics.Core
             // written back exactly once. A neighbour's key is this cell's plus a constant
             // (`GridMath.KeyByFace`), so no cell is converted to a key or back inside the loop.
             int count = cells.Count;
-            long[] keys = new long[count];
-            long[] selves = new long[count];
+            if (rebuildKeys.Length < count)
+            {
+                rebuildKeys = new long[count];
+                rebuildSelves = new long[count];
+            }
+
+            long[] keys = rebuildKeys;
+            long[] selves = rebuildSelves;
             int at = 0;
             foreach (KeyValuePair<long, long> entry in cells)
             {
