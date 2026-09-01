@@ -217,6 +217,11 @@ namespace Thermodynamics
                 ThermalCharacters.Step(SuitFrames / 60f * Settings.Instance.SimulationSpeed);
             }
 
+            // The statistics page is read off the running grids, so it has to be re-read rather
+            // than written once when the menu was built. Returns immediately unless the terminal
+            // is open, and on every dedicated server, where the menu is never registered.
+            ThermalSettingsMenu.Tick();
+
             Debug.ShowDebugInfo();
         }
 
