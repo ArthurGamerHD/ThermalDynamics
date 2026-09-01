@@ -54,16 +54,15 @@ def marks(path):
 
     **A resumed walk restarts both counters, and reading it as one run is how this file came to
     produce the estimate it exists to refuse.** Relaunching to resume is the documented normal path,
-    and a walk sliced so a shared machine can be given back writes many blocks into one progress
+    and a walk taken in slices writes many blocks into one progress
     file: each begins `air: resuming, N blueprints already finished`, and every `files` count after
     it is a count *within that slice*. Read literally, the 2026-08-28 air walk's ninetieth file of
     its sixth slice sat at 272 minutes after the first slice's first mark — 9.45x per file against
     its reference, where the honest figure over the same file range is a fifth of that.
 
     So a count is made cumulative from the resume line above it, and the gap between one slice's
-    last mark and the next slice's first is **not** counted: the walk was not running in it, and
-    on a shared machine that gap is mostly somebody else's job. What this returns is minutes the
-    walk was walking, which is the only thing a per-file cost can be built on.
+    last mark and the next slice's first is **not** counted: the walk was not running in it. What
+    this returns is minutes the walk was walking, which is the only thing a per-file cost can be built on.
     """
     seen = {}
     order = []

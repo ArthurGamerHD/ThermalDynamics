@@ -234,7 +234,7 @@ def step_work(substep_cost, substeps):
     grid and is the wrong side of the very decision being scored.
 
     **A cost that is not a clock.** The corpus deliberately carries no timing column — a per-ship
-    millisecond figure taken across thousands of hulls on a shared machine measures the machine —
+    millisecond figure taken across thousands of hulls measures the machine —
     so the statistic is the work the solver charges itself and paces on.
 
     **This took `blocks` and `joints` until 2026-08-24, and `joints` is not the link count.** A

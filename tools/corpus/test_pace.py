@@ -62,7 +62,7 @@ class AProgressFileIsReadAsMarks(unittest.TestCase):
 class ASlicedWalkReadsAsOneWalk(unittest.TestCase):
     """**Relaunching to resume is the documented normal path, and it broke this estimator.**
 
-    A walk sliced so a shared machine can be given back writes many blocks into one progress file.
+    A walk taken in slices writes many blocks into one progress file.
     Each begins `air: resuming, N blueprints already finished`, and every count after it restarts
     from zero *within that slice*. Read literally, the 2026-08-28 air walk's ninetieth file of its
     sixth slice sat at 272 minutes after the first slice's first mark, and this file — which exists
@@ -70,7 +70,7 @@ class ASlicedWalkReadsAsOneWalk(unittest.TestCase):
 
     Two things follow, and both are asserted below: a count is cumulative from the resume line
     above it, and the gap between one slice's last mark and the next slice's first is not walked
-    time. On a shared machine that gap is mostly somebody else's job.
+    time.
     """
 
     def sliced(self, *blocks):
@@ -107,15 +107,15 @@ class ASlicedWalkReadsAsOneWalk(unittest.TestCase):
         return handle.name
 
     def test_the_gap_between_slices_is_not_walked_time(self):
-        # Slice one walks minutes 0 to 10. Slice two is queued behind another project until minute
-        # 40 and then walks to 60. The walk walked thirty minutes; fifty went by.
+        # Slice one walks minutes 0 to 10. Slice two is relaunched at minute 40 and walks to 60.
+        # The walk walked thirty minutes; fifty went by.
         path = self.sliced_at((0, None, [at(0, 10), at(10, 20)]),
                               (20, 40, [at(50, 10), at(60, 20)]))
 
         self.assertEqual(30.0, pace.elapsed(pace.marks(path), 40))
 
     def test_a_sliced_walk_and_the_same_walk_in_one_run_agree(self):
-        """The property that matters: slicing is a way of sharing a machine, not a measurement.
+        """The property that matters: slicing is a way of splitting a walk, not a measurement.
 
         Ten minutes a mark either way. The sliced run's second slice resumes at minute 40 and
         reaches its first mark at 50, which is the same ten minutes of walking the whole run spends

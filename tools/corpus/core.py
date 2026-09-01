@@ -2,7 +2,7 @@
 """The core corpus: a walk of the population that finishes in an hour instead of eleven.
 
 A full walk of the 8,144-ship corpus costs 5.1 hours in air and about 11 in the paired cap
-arms, and the machine is shared. That price is not spread evenly and it is not spread the way
+arms. That price is not spread evenly and it is not spread the way
 anyone guesses: measured on `out/air-2026-08-28`, the **11.5 % of ships over 10,000 blocks carry
 79 % of the cost**, and the 88.5 % under it carry 21 %. So the corpus is nearly all cheap ships and
 the walk is nearly all expensive ones.
