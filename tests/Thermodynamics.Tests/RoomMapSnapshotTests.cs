@@ -18,7 +18,6 @@ namespace Thermodynamics.Tests
     /// fixture asserts it found rooms, because two empty maps agree about nothing (`E8`).
     /// </para>
     /// </summary>
-    [Trait("speed", "slow")]
     public class RoomMapSnapshotTests
     {
         private static ThermalSimulation Shell(bool snapshot)

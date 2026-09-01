@@ -18,7 +18,6 @@ namespace Thermodynamics.Tests
     /// leaks energy still produces plausible-looking numbers.
     /// </para>
     /// </summary>
-    [Trait("speed", "slow")]
     public class CoolantLoopTests
     {
         private static ThermalSettings Isolated()

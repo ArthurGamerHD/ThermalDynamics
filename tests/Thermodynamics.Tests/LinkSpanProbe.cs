@@ -27,7 +27,6 @@ namespace Thermodynamics.Tests
     /// timing would explain, and this says so first.
     /// </para>
     /// </summary>
-    [Trait("speed", "slow")]
     public class LinkSpanProbe
     {
         private readonly ITestOutputHelper output;

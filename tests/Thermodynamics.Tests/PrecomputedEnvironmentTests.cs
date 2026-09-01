@@ -25,7 +25,6 @@ namespace Thermodynamics.Tests
     /// worse than none: it would drift silently, on exactly the grids nobody benchmarks.
     /// </para>
     /// </summary>
-    [Trait("speed", "slow")]
     public class PrecomputedEnvironmentTests
     {
         /// <summary>A hull with everything a substep touches, in a world that exercises all of it.</summary>
