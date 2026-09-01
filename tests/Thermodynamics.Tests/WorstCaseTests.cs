@@ -22,7 +22,6 @@ namespace Thermodynamics.Tests
     /// not tests of the simulation — they are tests that the measurements have a subject.
     /// </para>
     /// </summary>
-    [Trait("speed", "slow")]
     public class WorstCaseTests
     {
         private const int Size = 2000;

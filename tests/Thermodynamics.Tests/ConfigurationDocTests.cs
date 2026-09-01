@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using Thermodynamics.Harness;
+using Xunit;
 
 namespace Thermodynamics.Tests
 {
@@ -26,6 +29,45 @@ namespace Thermodynamics.Tests
     /// </summary>
     public class ConfigurationDocTests
     {
+        /// <summary>
+        /// **A corpus tool that scores a setting must score the value the mod ships.**
+        ///
+        /// <para>
+        /// `cruise.py` defaulted `--cd` to 1.0 while `DragCoefficient` shipped 0.5, and the
+        /// documented invocation passes no `--cd` at all — so every cruise figure ever published
+        /// from it was taken at **twice the drag the mod applies**. `summary-cruise-2026-08-30.csv`
+        /// and the four altitude medians quoted from it read 140.9 m/s at sea level and 22.4 % of
+        /// hulls drag-limited, where the shipped configuration gives 199.2 m/s and 11.6 %. The
+        /// setting moved from 1 to 0.5 on 2026-08-30 and the tool's default did not move with it.
+        /// </para>
+        ///
+        /// <para>
+        /// Nothing caught it because nothing could: the constant lives in Python and the setting in
+        /// C#, and the two agreed only by somebody remembering. This is that guard — the same drift
+        /// `P5` exists for, across a language boundary.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheCruiseToolScoresTheCoefficientTheModShips()
+        {
+            string path = Path.Combine(ShippedBlocks.RepoRoot(), "tools", "corpus", "cruise.py");
+            Assert.True(File.Exists(path), path + " does not exist");
+
+            Match declared = Regex.Match(File.ReadAllText(path),
+                @"^SHIPPED_DRAG_COEFFICIENT\s*=\s*([0-9.]+)", RegexOptions.Multiline);
+
+            Assert.True(declared.Success,
+                "cruise.py declares no SHIPPED_DRAG_COEFFICIENT, so nothing pins it to the setting");
+
+            float pinned = float.Parse(declared.Groups[1].Value, CultureInfo.InvariantCulture);
+            float shipped = new Thermodynamics.Core.ThermalSettings().DragCoefficient;
+
+            Assert.True(Math.Abs(pinned - shipped) < 1e-6f,
+                "cruise.py scores C_d " + pinned + " and the mod ships " + shipped
+                    + ". Every cruise figure taken with the tool's default describes a"
+                    + " configuration nobody runs — move the constant with the setting.");
+        }
+
         /// <summary>
         /// Settings by shape and not by nature: nobody tunes them, so the reference does not list
         /// them and nothing outside `Settings.cs` reads them.

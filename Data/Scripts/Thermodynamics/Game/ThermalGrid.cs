@@ -266,9 +266,19 @@ namespace Thermodynamics
         /// </summary>
         private void AddExistingBlocks()
         {
-            foreach (IMySlimBlock existing in Grid.GetBlocks())
+            // `var`, so the game's own concrete block type is not named here — the enumeration
+            // below is exactly what this method always did.
+            var existing = Grid.GetBlocks();
+
+            // **Sized before the first block rather than grown a dozen times during.** The cell
+            // table doubles as it fills, and every doubling copies every entry it already holds —
+            // on a hull of this size that is most of what placing blocks allocates. The count is a
+            // block count and the table is keyed per cell, so this is a hint rather than a bound.
+            Simulation.EnsureCapacity(existing.Count);
+
+            foreach (IMySlimBlock block in existing)
             {
-                AddBlock(existing);
+                AddBlock(block);
             }
         }
 

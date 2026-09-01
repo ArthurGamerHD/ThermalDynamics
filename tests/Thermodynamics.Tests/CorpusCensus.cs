@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Text;
 using Thermodynamics.Core;
 using Thermodynamics.Harness;
+using VRageMath;
 using Xunit;
 
 namespace Thermodynamics.Tests
@@ -89,10 +90,114 @@ namespace Thermodynamics.Tests
             + "waste_idle_w,waste_full_w,waste_burn_w,"
             + "exposure_m2_per_kw,capacity_j_per_k_per_w,top_source,top_source_w,top_source_n,"
             + "heat_sources,w_per_m2,max_depth,heat_depth_mean,heat_depth_max,clumping,heat_gini,"
-            + "local_w_max,local_w_per_m2_max,heat_spread_m,hottest_conductance_w_per_k";
+            + "local_w_max,local_w_per_m2_max,heat_spread_m,hottest_conductance_w_per_k,"
+            + "shape_factor,lift_over_drag";
 
         public const string CompositionHeader =
             "ship,workshop_id,subtype,type_id,count,waste_full_w,share_of_waste";
+
+        /// <summary>What one walk of the hull's surfaces learned about how it meets the air.</summary>
+        private struct Aerodynamics
+        {
+            /// <summary>
+            /// **What the hull's own shape is worth to its drag**: the projected-area-weighted mean
+            /// of `ShapeNormal.Factor` over the six axis winds, the six averaged. One is a hull the
+            /// shape term does not touch; below one is what it takes off (backlog.md `K22`).
+            /// </summary>
+            public float ShapeFactor;
+
+            /// <summary>
+            /// **How much lift the hull makes for the drag it makes**, the same six directions
+            /// averaged.
+            ///
+            /// <para>
+            /// Lift is the part of the pressure sum perpendicular to the flow and drag is the part
+            /// along it, so their ratio is a property of the shape alone — no density, no speed, no
+            /// coefficient. That is what makes it scoreable on a census rather than in a walk, and
+            /// it is `K23`'s fourth criterion: **p95 at most 2.0**, because a blocky hull under a
+            /// Newtonian flat-plate model has no business reaching a glider's ratio.
+            /// </para>
+            /// </summary>
+            public float LiftOverDrag;
+        }
+
+        /// <summary>
+        /// Both aerodynamic shape figures, from one walk of the nodes per direction.
+        ///
+        /// <para>
+        /// **Six directions rather than one, because a ship has no fixed attitude to the wind** and
+        /// a single axis would score a hull on how it happens to be drawn. Six is the cheap
+        /// direction-average; the honest one is Cauchy's over all orientations, which the census's
+        /// own `exposed_area_m2` already leans on for the projection it feeds `cruise.py`.
+        /// </para>
+        /// </summary>
+        private static Aerodynamics Aero(ShipAssembly assembly)
+        {
+            double shapeSum = 0d;
+            double ratioSum = 0d;
+            int directions = 0;
+
+            for (int f = 0; f < Face.Count; f++)
+            {
+                Vector3 wind = Face.Normals[f];
+                double weighted = 0d;
+                double projected = 0d;
+                Vector3 pressure = Vector3.Zero;
+
+                for (int g = 0; g < assembly.Simulations.Count; g++)
+                {
+                    ThermalSimulation simulation = assembly.Simulations[g];
+                    ThermalSolver solver = simulation.Solver;
+                    CellBitset occupancy = simulation.Grid.Occupancy();
+
+                    for (int i = 0; i < solver.Nodes.Count; i++)
+                    {
+                        ThermalNode node = solver.Nodes[i];
+                        int total = node.TotalExposedFaces;
+                        if (total <= 0 || node.ExposedArea <= 0f) continue;
+
+                        // An axis wind lights exactly one face, so the node's projected area is its
+                        // own area times the share of its faces pointing that way.
+                        double share = (double)node.GetExposedFaces(f) / total;
+                        if (share <= 0d) continue;
+
+                        double area = node.ExposedArea * share;
+                        Vector3 normal = ShapeNormal.Of(occupancy, node.Block);
+                        float factor = ShapeNormal.Factor(normal, wind);
+
+                        projected += area;
+                        weighted += area * factor;
+
+                        // The same contribution with its direction kept, which is what the solver
+                        // accumulates when lift is on: Newtonian pressure acts along `-n`.
+                        pressure -= normal * (float)(area * factor);
+                    }
+                }
+
+                if (projected <= 0d) continue;
+
+                shapeSum += weighted / projected;
+                directions++;
+
+                // Drag is the pressure along the flow and lift is the remainder, so the ratio is
+                // the shape's alone — no density, no speed, no coefficient in it.
+                float along = Vector3.Dot(pressure, wind);
+                float drag = along < 0f ? -along : along;
+                if (drag > 0f)
+                {
+                    Vector3 transverse = pressure - (along * wind);
+                    ratioSum += transverse.Length() / drag;
+                }
+            }
+
+            Aerodynamics aero = new Aerodynamics();
+
+            // No projected area in any direction is a hull with no exposed faces at all. One is
+            // *no correction*, which is what the solver reads a missing normal as (`E8`).
+            aero.ShapeFactor = directions == 0 ? 1f : (float)(shapeSum / directions);
+            aero.LiftOverDrag = directions == 0 ? 0f : (float)(ratioSum / directions);
+            return aero;
+        }
 
         /// <summary>
         /// Builds one ship, measures it under three load states, and returns its rows.
@@ -289,7 +394,10 @@ namespace Thermodynamics.Tests
             row.Append(CorpusRecord.Num((float)geometry.LocalWattsMax)).Append(',');
             row.Append(CorpusRecord.Num((float)geometry.LocalWattsPerAreaMax)).Append(',');
             row.Append(CorpusRecord.Num((float)geometry.SpreadMetres)).Append(',');
-            row.Append(CorpusRecord.Num((float)geometry.HottestSourceConductance));
+            row.Append(CorpusRecord.Num((float)geometry.HottestSourceConductance)).Append(',');
+            Aerodynamics aero = Aero(assembly);
+            row.Append(CorpusRecord.Num(aero.ShapeFactor)).Append(',');
+            row.Append(CorpusRecord.Num(aero.LiftOverDrag));
 
             censused.Row = row.ToString();
 

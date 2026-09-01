@@ -491,6 +491,105 @@ so what a remap costs falls from about 5.6 ms to 4.1 ms, and the part that stops
 unsliced part. `ExposureSkipTests` asserts the answers are bit-identical and that the skip engages
 on every node of an unchanged hull; `SimulationWork.ExposureNodeWrites` is what says so at runtime.
 
+### 12. The shape normals are their own pass, on their own budget
+
+**Reconstructing a node's effective surface normal costs about seven times what counting its exposed
+faces does**, and it was measured before it was budgeted:
+
+| at 126,731 blocks | `shapenormals` | `exposure` |
+| --- | ---: | ---: |
+| best of 100 | **24.781 ms** | 3.561 ms |
+| median | 24.920 ms | 3.644 ms |
+| per node | **195.5 ns** | 28.1 ns |
+
+*`bench stages --stages shapenormals,exposure --size 125000`, both confirmed — each reproduced its
+own best within 2 % five times, so neither is a capped row. The work column is 126,731 nodes for
+both, which is what says the two are the same walk doing different things at each stop.*
+
+**So it cannot land whole.** Unsliced, a layout change on a 126,731-block hull is a 24.8 ms frame,
+and the hull this mod is bounded by is four times that. `SimulationScheduler.ShapeNormalBudget` is
+therefore a seventh of the exposure budget — `nodeCount / 280`, floored at 32 and capped at 512 —
+which puts the two passes at about the same cost to a frame.
+
+**Slicing is safe here for a reason worth stating, because it is not true of every pass.** A node
+the pass has not reached holds a zero normal, and zero reads as a factor of *one* — the full
+projected area, which is the model without the term at all. A half-finished pass therefore degrades
+toward the old answer and never past it: there is no interruption that charges a hull less than it
+was charged before. `ShapeDragTests` pins that, and it is why the pass needs no completion flag
+guarding the friction row.
+
+### 13. The cell table is sized before a hull is built, not grown during it
+
+**Placing blocks allocated 10.5 MB of nothing but old dictionaries.** `GridModel`'s cell table
+doubles as it fills and every doubling copies every entry it already holds, so a 125,000-block hull
+paid **84.4 bytes a block** in tables it immediately threw away — most of what the `place` stage
+allocates, and the reason it and `register` are the only two stages that never reproduce their own
+best.
+
+`ThermalGrid` knows the count before it registers the first block — `Grid.GetBlocks()`, which it
+already enumerates — so it says so, and `EnsureCellCapacity` sizes the table once:
+
+| at 125,000 blocks | unsized | sized |
+| --- | ---: | ---: |
+| allocated by `GridModel.Add` | 10,549,776 B | **0 B** |
+| per block | 84.4 B | **0 B** |
+| best of five | 5.64 ms | **5.24 ms**, 0.93× |
+
+**A hint rather than a bound**, because the table is keyed per *cell* and the count is a block
+count: a hull of one-cell blocks lands exactly and one with multi-cell blocks grows once more.
+Nothing is refused for exceeding it, and a call after the first block is ignored rather than obeyed —
+rebuilding a populated table would copy every entry to save copying them later.
+`GridCapacityTests` holds the claim that matters, which is that a sized grid is the *same grid*:
+same blocks, same lookups, same bounds.
+
+**The solver's node lists take the same hint**, and it is the rest of the bookkeeping:
+
+| registering 125,000 blocks | unsized | sized |
+| --- | ---: | ---: |
+| allocated by `Solver.AddBlock` | 23,374,848 B | **19,179,840 B** |
+| per block | 187.0 B | **153.4 B** |
+| best of three | 9.05 ms | **8.45 ms**, 0.93× |
+
+153.4 bytes a block is the `ThermalNode` objects and nothing else — every byte of list growth is
+gone, and what is left is irreducible without a struct-of-arrays change. **14.7 MB in total** off a
+125,000-block build, both halves about 7 % quicker.
+
+**One table is deliberately not sized, and the reason is the general rule.** A list's order is its
+index order whatever its capacity, so sizing one cannot be observed. A **dictionary's is not**:
+capacity decides bucket layout and so decides enumeration order. `GridModel`'s cell table is safe
+because the only thing that enumerates it takes a min and a max over integers. `ThermalGrid.blocks`
+is **not**, because the x-ray overlay enumerates its values and stops at `DebugOverlayMaxBoxes` — so
+a different order would draw a different set of boxes on any hull over the budget. Cosmetic, and
+still a behaviour change, so it keeps its regrowth.
+
+**The `place` stage still measures the unsized path**, deliberately. That is what the incremental
+per-block path does, and changing what an instrument measures changes what its history means.
+
+### 12. The shape normals are their own pass, on their own budget — continued
+
+**A one-cell block's neighbourhood is a table, and that is worth 6.8 % — which is the finding
+rather than the saving.** Its centre is its own cell, so the 26 offsets and their unit vectors are
+the same for every such block; the general walk arrived at those constants by 26 square roots and 26
+divisions per node, and a census hull is mostly one-cell blocks. Replaced by a lookup — the same
+values summed in the same order, held to the walk *exactly* rather than to a tolerance by
+`ShapeNormalOneCellTests`, because float addition is not associative and a table read in a different
+order is a different answer. **24.797 ms → 23.110 ms** at 126,731 blocks, 195.7 → 182.4 ns a node,
+with `exposure` flat at 3.536 against 3.561 as the control.
+
+**Removing every square root bought 6.8 %, so the pass is not compute-bound — it is the probes.**
+Twenty-six scattered reads into the occupancy bitset is what a node costs, and the arithmetic on top
+of them was nearly free. That is where a further pass has to aim, and the shape of it is fewer reads
+rather than cheaper ones: the 26 neighbours of a cell occupy nine rows of three adjacent bits, so
+nine word reads could replace twenty-six probes. Not built, because this pass runs only where
+`EnableShapeDrag` is on and that ships off — the cost is real but almost nobody pays it.
+
+**It is also rebuilt on the right event, which is the other half of the cost.** Exposure is
+recomputed whenever a room-mapping pass completes — a door is enough — and a door does not move a
+hull. A normal is a function of occupancy, so this pass is keyed on the grid's own version and skips
+entirely on every change that does not add or remove a block. A running pass is never restarted
+either, the rule the wind shadow already follows: a hull under construction changes every few frames,
+and a pass that starts over each time never finishes.
+
 ## Catching it again
 
 The load tests in `tests/Thermodynamics.Tests/LoadTests.cs` run with the ordinary suite and assert
@@ -787,6 +886,10 @@ reasoning that produced it was sound and the premise was not.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-31 | **Sized the solver's node lists too, and recorded which table must not be sized.** `Solver.AddBlock` falls from 187.0 to **153.4 bytes a block** — the `ThermalNode` objects and nothing else — for 4.2 MB, on top of the cell table's 10.5, and both about 7 % quicker. **`ThermalGrid.blocks` keeps its regrowth on purpose**: a list's order is its index order whatever its capacity, but a dictionary's enumeration order follows its bucket layout, and the x-ray overlay enumerates that one and stops at a budget — so sizing it would draw a different set of boxes. That is the rule the other two were checked against rather than a special case. |
+| 2026-08-31 | **Sized the cell table before a hull is built.** `GridModel`'s dictionary doubled as it filled and every doubling copied what it already held: **10,549,776 B** on a 125,000-block hull, 84.4 a block, thrown away immediately. `ThermalGrid` already enumerates `Grid.GetBlocks()` and so knows the count, and `EnsureCellCapacity` takes it — **0 B** after, and 0.93× the time. A hint rather than a bound, ignored after the first block, and `GridCapacityTests` pins that a sized grid is the same grid: same blocks, same lookups, same bounds. |
+| 2026-08-31 | **Gave the shape-normal pass a one-cell fast path, and learned that its cost is not what it looked like.** A one-cell block's 26 neighbour offsets and unit vectors are constants, so the walk was doing 26 square roots a node to arrive at a table; the table is 24.797 → **23.110 ms** at 126,731 blocks with `exposure` flat as the control, and `ShapeNormalOneCellTests` holds the two paths equal exactly rather than within a tolerance. **6.8 % for removing all the arithmetic says the pass is memory-bound on the occupancy probes**, which is where a further pass would have to aim — nine word reads for the nine rows of three adjacent bits, rather than twenty-six probes. Left unbuilt: the pass runs only behind a switch that ships off. |
+| 2026-08-31 | **Measured the shape-normal pass and gave it a budget, before it shipped rather than after** ([backlog.md](backlog.md) `K22`). At 126,731 blocks it is **24.781 ms**, 195.5 ns a node, against exposure's 3.561 ms and 28.1 ns — seven times the cost of the walk it most resembles, and a frame-eating hitch if it lands whole. Sliced at a seventh of the exposure budget, keyed on the grid's version rather than on the exposure event so a door does not trigger it, and never restarted mid-pass. Safe to slice because an unvisited node reads as no correction, so a partial pass degrades toward the model without the term and never past it. |
 | 2026-08-27 | Added property 11: **an exposure pass that changed nothing no longer asks for the grid to be re-mirrored.** The refresh is budgeted and sliced; the full, unsliced `SyncNodeState` it forced onto the next step was not, and it arrived after every room remap for an answer identical to the one already there. Mirroring 126,731 rows is 2.13 ms against 0.145 for mirroring none. The same shape as property 8, and found while measuring something else. |
 | 2026-08-27 | The fifth performance pass moved **the settled step** for the first time — 0.86 at 505,566 blocks — and the link build 0.84 ([performance.md](performance.md#pass-5--what-the-pass-moved)). It also gave a step its first per-stage instrument: at that size a step is environment 28.9 ms, conduction 28.0, apply 11.7, publish 5.3 and the row fill 4.1, and conduction is measurably at its memory floor. |
 | 2026-08-27 | The fourth performance pass took the room-mapping pass to **0.36** of what it was at 505,566 blocks and the exposure refresh to **0.53**, and gave the room air rebuild — the largest single thing on the load path, and until then unmeasured by anything — an instrument ([performance.md](performance.md#pass-4--what-the-pass-moved)). Building a million-block world reads **1.32 s** against 1.66 s at the pass's start, of which `RebuildAll` is 0.98 s against 1.33 s. |

@@ -20,7 +20,7 @@ namespace Thermodynamics.Core
         /// against 9 on the same hull. The key is the one `BlockInstance.Key` already carries.
         /// See performance.md, Iteration 11.
         /// </summary>
-        private readonly Dictionary<long, BlockInstance> blocksByCell = new Dictionary<long, BlockInstance>();
+        private Dictionary<long, BlockInstance> blocksByCell = new Dictionary<long, BlockInstance>();
 
         private readonly List<BlockInstance> blocks = new List<BlockInstance>();
 
@@ -123,6 +123,16 @@ namespace Thermodynamics.Core
         }
 
         /// <summary>
+        /// Bumped whenever the block layout changes, which is what occupancy — and anything derived
+        /// from it, such as <see cref="ShapeNormal"/> — depends on. A reader caches against this
+        /// rather than rebuilding on events it cannot see the shape of.
+        /// </summary>
+        public int Version
+        {
+            get { return version; }
+        }
+
+        /// <summary>
         /// Where the blocks are, as one bit a cell over the padded bounding box, current as of this
         /// call. See <see cref="occupied"/> for why it exists and what it costs.
         ///
@@ -146,6 +156,30 @@ namespace Thermodynamics.Core
 
             occupancyVersion = version;
             return occupied;
+        }
+
+        /// <summary>
+        /// Sizes the cell table for a hull about to be built, so a full grid does not rebuild it on
+        /// the way in.
+        ///
+        /// <para>
+        /// **A hint, not a bound.** The table is keyed per *cell* and this is usually a block count,
+        /// which is a lower bound on cells — a hull of one-cell blocks lands exactly and one with
+        /// multi-cell blocks grows once more. Nothing here is a limit: adding past it works as it
+        /// always did.
+        /// </para>
+        ///
+        /// <para>
+        /// **Only before the first block**, because rebuilding a populated table would copy every
+        /// entry to save copying them later. A later call is ignored rather than refused.
+        /// </para>
+        /// </summary>
+        public void EnsureCellCapacity(int cells)
+        {
+            if (cells <= 0 || blocksByCell.Count > 0) return;
+
+            blocksByCell = new Dictionary<long, BlockInstance>(cells);
+            if (blocks.Capacity < cells) blocks.Capacity = cells;
         }
 
         public BlockInstance Add(BlockInstance block)

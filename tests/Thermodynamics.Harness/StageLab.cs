@@ -15,8 +15,8 @@ namespace Thermodynamics.Harness
     ///
     /// <para>
     /// **The build ladder cannot resolve a change to one of its stages.** Its `build` column is
-    /// the sum of five stages and carries all five lots of noise, and on a shared machine that is
-    /// six to twelve per cent between repeats of one tree — wide enough to hide a saving of a fifth
+    /// the sum of five stages and carries all five lots of noise, which is six to twelve per cent
+    /// between repeats of one tree — wide enough to hide a saving of a fifth
     /// (performance.md, Iteration 10) or to read one into nothing (Iteration 6). Timing the stage
     /// alone, best of N, resolves about a per cent, and the counter is what says two readings are
     /// the same work at two prices rather than two different walks (`M4`, `M5`, `P6`).
@@ -234,7 +234,7 @@ namespace Thermodynamics.Harness
         /// they answer one question and are asked for by name. Named here rather than left to a
         /// reader of the switch, so `bench stages --stages` has somewhere to point.
         /// </summary>
-        public static readonly string[] ExtraStages = { "syncdirty", "syncclean" };
+        public static readonly string[] ExtraStages = { "syncdirty", "syncclean", "shapenormals" };
 
         public static List<Row> Run(string shape, int blocks, IList<string> stages, Action<string> log = null)
         {
@@ -278,6 +278,7 @@ namespace Thermodynamics.Harness
                 case "links": return Links(builder);
                 case "rooms": return Rooms(builder);
                 case "exposure": return Exposure(builder);
+                case "shapenormals": return ShapeNormals(builder);
                 case "syncdirty": return NodeSync(builder, true);
                 case "syncclean": return NodeSync(builder, false);
                 case "roomair": return RoomAir(builder);
@@ -592,6 +593,39 @@ namespace Thermodynamics.Harness
                 if (r == 1) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
                 Work(row, simulation.Work.ExposureNodeVisits - before, r);
+            }
+
+            return row;
+        }
+
+        /// <summary>
+        /// What reconstructing every node's effective surface normal costs.
+        ///
+        /// <para>
+        /// **Not one of the stages of a grid's life**, because it runs only where `EnableShapeDrag`
+        /// is on and only when the layout changes — but it is a full walk of the nodes with a
+        /// neighbourhood read each, so it is the pass that decides whether the shape term is
+        /// affordable (backlog.md `K22`). `exposure` is the control worth reading it against: the
+        /// same walk over the same nodes, doing a different thing at each.
+        /// </para>
+        /// </summary>
+        private static Row ShapeNormals(GridBuilder builder)
+        {
+            ThermalSimulation simulation = Registered(builder);
+            simulation.Surfaces.Rebuild(simulation.Grid);
+
+            Row row = NewRow("shapenormals", simulation, "nodes");
+            int nodes = simulation.Solver.Nodes.Count;
+
+            for (int r = 0; !Settled(row); r++)
+            {
+                long allocated = r == 1 ? Allocated() : 0;
+                Stopwatch watch = Stopwatch.StartNew();
+                simulation.Solver.RebuildShapeNormals();
+                watch.Stop();
+                if (r == 1) row.AllocatedBytes = Allocated() - allocated;
+                Take(row, watch.Elapsed.TotalMilliseconds);
+                Work(row, nodes, r);
             }
 
             return row;

@@ -8,7 +8,7 @@ a step costs or how the report is read — it says what was done about it and ho
 checked.
 
 > The rules argued here are stated canonically in [rules.md](rules.md): `M4` `M5` `M6` `M7` `M13`
-> `D7` `D8` `W5`, and the principles P1, P4 and P6 they follow from.
+> `D7` `D8`, and the principles P1, P4 and P6 they follow from.
 
 | Looking for | Go to |
 | --- | --- |
@@ -24,7 +24,7 @@ Every iteration takes the same eight steps, and the order is the point: the meas
 before the idea, and the oracle before the change.
 
 1. **Measure.** `bench report` at the pass's own starting commit and at its tip, minutes apart, on
-   one machine, inside `heavy run` (`M7`, `W5`). Where the report cannot see the thing in question,
+   one machine (`M7`). Where the report cannot see the thing in question,
    a lab is written first and the report is extended to carry the figure.
 2. **Identify.** A candidate is a place the numbers accuse, and the counts are a place to look
    rather than a verdict (`D7`).
@@ -46,12 +46,12 @@ before the idea, and the oracle before the change.
    because nothing checks that rule and it has rotted twice in two days.
 
 **The machine.** Every figure on this page was taken on the repository's 32-core development
-machine, which is shared with three other projects (`W5`). It was not idle on 2026-08-26: two
+machine. It was not idle on 2026-08-26: two
 editor language servers held a core each for the whole day and the swap was full. Measured rather
 than assumed: the committed baseline's own commit, rebuilt and re-run unoptimised on this day,
 read a calibration of 146 ms against the 106 ms it recorded on 2026-08-22, so the machine is
 about **1.4×** slower than the baseline's — and nothing more. Every larger gap on this page is the
-code, and each one is named. The comparisons here are taken minutes apart in one held window,
+code, and each one is named. The comparisons here are taken minutes apart,
 which is what makes the ratios readable when the absolutes are not.
 
 ## The iterations
@@ -79,7 +79,7 @@ minimal-optimisation code with no register allocation across statements, no boun
 elimination and no inlining. **Every millisecond this repository had ever published was taken on
 code the game never runs.**
 
-**What it was worth, measured.** The same commit, the same machine, the same held window, four
+**What it was worth, measured.** The same commit, the same machine, the same window, four
 minutes apart; the committed report at `--size 32000 --max 125000`, fastest of three (`M4`).
 
 | figure | unoptimised | optimised | ratio |
@@ -147,7 +147,7 @@ that more than a twentieth of the blocks were turned at all (`D8`, `E8`). It fai
 run: the table's first entry is not the identity, and producers had been given index zero. That is
 the pin doing the one thing it is for.
 
-**What it was worth.** The tip before and after this iteration, optimised, in one held window,
+**What it was worth.** The tip before and after this iteration, optimised, in one window,
 each twice, fastest kept (`M4`):
 
 | figure | before | after | ratio |
@@ -206,7 +206,7 @@ static tables may be shared by grids on different threads: built once, never wri
 **What it was worth.** `bench load` is the one instrument here that constructs blocks inside its
 clock — a heavy-armour hull placed block by block, registered, then rebuilt — and its `adding
 blocks` figure is the block construction and registration; `RebuildAll` is the control, since it
-constructs no block. Before and after, optimised, one held window, each twice, fastest kept:
+constructs no block. Before and after, optimised, one window, each twice, fastest kept:
 
 | blocks | adding blocks, before | after | ratio | `RebuildAll`, before → after |
 | ---: | ---: | ---: | ---: | ---: |
@@ -244,7 +244,7 @@ the same portals — on a census hull with compartments, on a shell with a door 
 then steps the pressurised hull both ways to identical temperatures through `SolverAb`. Each fixture
 asserts it found rooms and portals first (`E8`).
 
-**What it was worth.** `bench scale`, ship shape, before and after in one held window, twice each:
+**What it was worth.** `bench scale`, ship shape, before and after in one window, twice each:
 
 | blocks | bounding cells | rooms, before | rooms, after | ratio | build, before → after | links, exposure (control) |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -258,7 +258,7 @@ asserts it found rooms and portals first (`E8`).
 
 The fastest of the two is the figure; the pairs are printed because the *before* rows at 505k
 disagree with each other by 40 %, which is the dictionary path's own sensitivity to the state of the
-cache on a shared machine, and the *after* rows by 2 %. The control columns did not move beyond
+cache, and the *after* rows by 2 %. The control columns did not move beyond
 their spread. What is left of the room map's cost is the bitset, the frontier queue and the
 published map's own per-cell writes; the `settle` column — ticks to converge after a placement — is
 unchanged at every rung, because the mapper's budget is counted in cells and this iteration made
@@ -283,7 +283,7 @@ removed, and with the door open, which is the only state in which the two layers
 asserts that they do.
 
 **What it was worth.** The `RebuildAll` split, each stage on its own clock on a dealt hull, at the
-commit before and after, one held window, fastest of two:
+commit before and after, one window, fastest of two:
 
 | blocks | `SurfaceMap.Rebuild`, before | after | ratio | links, rooms (controls) |
 | ---: | ---: | ---: | ---: | ---: |
@@ -300,7 +300,7 @@ indices and a conductance — beside the node rows it scatters into. A `LinkRow`
 in one array: one stream and one bounds check where there were three of each, the same arithmetic in
 the same order, so every bit-identity suite and every byte-identical scenario passed unchanged.
 
-**What it measured.** The full report at the commit before and after, optimised, one held window,
+**What it measured.** The full report at the commit before and after, optimised, one window,
 twice each, fastest kept:
 
 | figure | before | after | ratio |
@@ -380,9 +380,8 @@ blocks — 626 ms over 6,838,104 — against **302 ns** before iteration 4 on th
 
 **The ladder taken in the same window disagrees, and it is the ladder that is wrong.** Its rows for
 this commit carry a *step* column 28 % above the rows before it — a control no change in this pass
-can touch — which is another project's work landing on the machine while the window was held (`W5`
-is cooperative, and holding it does not stop anyone). The split above was taken first, its own
-controls (links, surfaces) held, and it is the figure quoted.
+can touch — so those rows are the machine rather than the code. The split above was taken first,
+its own controls (links, surfaces) held, and it is the figure quoted.
 
 **Where the build stands at 505,566 blocks after iterations 4, 5, 7 and 8**, on one clock: rooms
 626 ms, links 503, surfaces 418, exposure 173, block registration 56 — **1.6 s** where the pass
@@ -445,8 +444,8 @@ the two are the same walk at a different price rather than two different walks, 
 `LoadTests` holds a claim on work counters rather than on milliseconds.
 
 **And the spread is the reason this needed its own instrument.** Fifteen passes of the same code
-range from 69 ms to 263: on a machine three other projects share, the *worst* of N is about the
-machine and only the best of N is about the code (`M4`, `W5`).
+range from 69 ms to 263: the *worst* of N is about the machine and only the best of N is about the
+code (`M4`).
 
 ## Iteration 11 — the cell tables are keyed on `GridMath.Key`
 
@@ -496,7 +495,7 @@ instrument rather than the mod: a comparison that cannot fail is not a compariso
 ## What the pass moved
 
 Every figure below is the pass's starting commit against its tip, both built optimised, interleaved
-in one held window, each leg twice, fastest kept (`M7`, `M4`). The starting commit is measured
+in one window, each leg twice, fastest kept (`M7`, `M4`). The starting commit is measured
 *optimised* on purpose: iteration 1's saving is a property of how the harness was built rather than
 of the mod, so building both legs the same way is what leaves the code changes on their own.
 
@@ -530,7 +529,7 @@ step columns say so: 1.194 → 1.143 ms at 8,904 blocks, 5.381 → 5.373 at 32,8
 126,731, every feature's marginal and isolated cost unchanged, and a bare configuration identical to
 three decimal places. The scenario and environment rows read 3 to 6 % higher and the ladder rows
 1 % lower — two measurements of the same thing disagreeing by that much is this instrument's own
-repeatability on a shared machine, not a change.
+repeatability, not a change.
 
 **Where the next pass starts.** At 505,566 blocks the build split reads rooms ~323 ms, links
 ~232, surfaces ~100, exposure ~95, registration ~43 after iteration 11 — about 0.8 s of stage time
@@ -547,7 +546,7 @@ The second pass, started from `84e3be5`, the tip the first one left. It uses the
 lessons as its procedure: every candidate is judged on `bench stages`, and every before/after script
 proves its two legs differ before it times anything.
 
-**Where it started.** The same machine, the same shared window; every figure below is the fastest of
+**Where it started.** The same machine, the same window; every figure below is the fastest of
 fifteen on one prebuilt grid unless the row says otherwise:
 
 | stage, 505,566 blocks | start of pass 2 | work | ns per unit |
@@ -875,7 +874,7 @@ the pass's end carries the retained figure.
 ## Pass 2, iteration 10 — what the pass moved
 
 The pass's first commit with the instrument in the tree (`3296cfd`) against its tip, built the same
-way, interleaved in one held window, each stage on its own clock, fastest of fifteen, two rounds;
+way, interleaved in one window, each stage on its own clock, fastest of fifteen, two rounds;
 the world load against the true start (`84e3be5`). The step is the control: nothing kept in this
 pass touches it.
 
@@ -1815,10 +1814,9 @@ spread runs from 72 % to 204 % because it allocates — and its two rounds disag
 than once. Across four paired readings at two sizes, three favour the change. It is kept on being
 strictly less work, bit-identical, and one field simpler, not on a number.
 
-*Three windows were thrown away getting even that far: another project held the machine, and the
-controls moved 1.29, 1.44 and 1.86 between legs. A pairing whose control moves is not a pairing
-(`W5`), and the figure above is from the one window where the settled step read within 2 % on both
-legs.*
+*Three windows were thrown away getting even that far: the controls moved 1.29, 1.44 and 1.86
+between legs. A pairing whose control moves is not a pairing, and the figure above is from the one
+window where the settled step read within 2 % on both legs.*
 
 ## Pass 5, iteration 8 — the apply pass reads the critical row only when it could matter
 
@@ -2237,8 +2235,8 @@ pass flat. **Pass 6's verdict stands**, now on a sound reading: the mark that sa
 scattered write into three megabytes, which is the same random touch of grid-sized memory it saves.
 It is dropped again, and this time the number means something.
 
-*The reading at 505,566 blocks was queued behind another project's two-hour hold on the machine and
-had not returned when the pass closed. The verdict rests on the smaller rung, where the corrected
+*The reading at 505,566 blocks had not returned when the pass closed. The verdict rests on the
+smaller rung, where the corrected
 instrument reads within 3 % across runs — enough to see a change of the size this one would have to
 be, and stated rather than implied.*
 
@@ -2268,7 +2266,7 @@ This pass opens on the other end of the build. On the corrected instrument, at 1
 | register | 5.04 | 39.8 a block | — |
 
 *Taken at `a4e4f9b`, ship hull, all eight stages in one run, `bench stages --size 125000`. The
-machine is the one [named above](#performance-work); `heavy run` held it.*
+machine is the one [named above](#performance-work).*
 
 > **Provisional, and corrected below.** This table was taken before the lab said whether a row had
 > settled. [Iteration 2](#pass-9-iteration-2--the-stage-lab-knew-which-rows-had-not-settled-and-did-not-say)
@@ -2319,7 +2317,7 @@ node.RefreshExposure();                                               // and rea
 ```
 
 Five probe builds of the same tree, each rebuilt `--no-incremental` and measured on the corrected
-instrument with the room pass as control, all five inside one held window:
+instrument with the room pass as control, all five inside one window:
 
 | leg | what is left | exposure | rooms (control) |
 | --- | --- | ---: | ---: |
@@ -2508,7 +2506,7 @@ comparison uses — **do two runs of identical code agree on it.**
 | solver | 16 % | 25 | 17 | 42 | 7.3 | **4.4 %** | median |
 
 *Spread between the four runs, per stage, per summary. `bench stages --repeats 400` four times and
-`bench samplestats --from` over the four, in one held window.*
+`bench samplestats --from` over the four, in one window.*
 
 **The minimum is best for three stages, the median for two, the tenth percentile for one, and for
 two of the eight nothing tried reproduces at all.** That is not a result anybody expected, and it is
@@ -2574,7 +2572,7 @@ judged it.
 | rooms *(control)*, best | 13.550 ms | 13.774 ms | +1.7 % |
 | rooms *(control)*, median | 14.514 ms | 14.209 ms | −2.1 % |
 
-*Twelve processes in one held window, **alternating** base, change, base, change — six of each —
+*Twelve processes in one window, **alternating** base, change, base, change — six of each —
 at 126,731 blocks, four hundred repeats a stage. Each column is the median of its six processes.
 `rooms` rides along untouched as the control.*
 
@@ -2656,10 +2654,8 @@ that does not say which session it came from is one that will be compared with a
 `SampleStatisticTests` pins the boundary in both directions and pins that an unreadable or absent
 stamp is **not** one window, which is the state of every artefact written before today.
 
-**What is deliberately not done.** No cause is named. The machine is shared with three other
-projects; `heavy` serialises the heavy work and cannot serialise an editor, a language server or an
-incremental build, and nothing in this repository records what else the machine was doing two days
-ago. Naming frequency scaling or thermal state would be a story rather than a finding, and the rules
+**What is deliberately not done.** No cause is named. Nothing in this repository records what else
+the machine was doing two days ago. Naming frequency scaling or thermal state would be a story rather than a finding, and the rules
 above do not need one — they follow from the size of the effect and from where it is invisible, both
 of which are measured. **One limitation is worth stating plainly:** iteration 5's raw repeats are not
 on disk, so the comparison above is against its two published figures rather than against its
@@ -2693,7 +2689,7 @@ proposal was to compare and skip.
 | exposure, median of 400 | 4.214 ms | 4.353 ms | +3.3 % |
 | rooms *(control)*, median | 15.703 ms | 15.905 ms | +1.3 % |
 
-*Twelve processes, one held window, alternating, six a leg — the same shape as iteration 6's. The
+*Twelve processes, one window, alternating, six a leg — the same shape as iteration 6's. The
 two legs' ranges overlap on both statistics (base 3.738–4.060 against change 3.801–3.901 on the
 minimum), so by `M4` the ratio is not believed in either direction.*
 
@@ -2717,7 +2713,7 @@ rewritten, and a room-mapping pass completes on any structural or venting change
 | median of 400 | 2.133 ms | **0.145 ms** |
 | per node | 16.8 ns | 1.1 ns |
 
-*`bench stages --stages syncdirty,syncclean`, four processes in one held window. Both stages capped
+*`bench stages --stages syncdirty,syncclean`, four processes in one window. Both stages capped
 on three runs of four and both spread 25–33 % between runs, so neither figure is reproducible on its
 own — but the legs are fourteen times apart and never come near each other: the slowest *mirror
 none* reading in four hundred is 0.157 ms against a fastest *mirror every node* of 1.302. A ratio
@@ -2772,7 +2768,7 @@ dial so the claim can be put to the question instead of believed. This is what i
 | 500,000 | **19.0 %** | **3.4 %** | −3.9 % |
 | 1,000,000 | 6.8 % | **1.1 %** | −8.8 % |
 
-*Eight runs of one pinned binary alternating `--repeats 1` and `--repeats 3`, one held window
+*Eight runs of one pinned binary alternating `--repeats 1` and `--repeats 3`, one window
 (`M7`). `median` is the change in the middle of four runs.*
 
 **It does what it is supposed to at the rungs where the build is large enough to matter, and
@@ -2823,7 +2819,7 @@ so one array serves every block of that model in that orientation, on every grid
 | place, ns a block | 78.6 | 68.9 | |
 | rooms *(control)*, median | 15.489 ms | 15.329 ms | −1.0 % |
 
-*Twelve processes, one held window, alternating, six a leg. Neither statistic's ranges overlap —
+*Twelve processes, one window, alternating, six a leg. Neither statistic's ranges overlap —
 the slowest change minimum is 8.873 against a fastest base of 9.476, and the medians are 10.951
 against 10.984 — so by `M4` the ratio is believed on both. Block count is 126,731 in all twelve.*
 
@@ -2887,7 +2883,7 @@ been doing this since pass 2.
 ## Pass 9, iteration 10 — what the pass moved, and the control that was not one
 
 The pass measured against its own start (`M7`): the binary at `a4e4f9b`, the merge it opened from,
-against the binary at its tip, six of each alternating in one held window at 126,731 blocks and four
+against the binary at its tip, six of each alternating in one window at 126,731 blocks and four
 hundred repeats a stage.
 
 **Through `bench stages` and not `bench report`, deliberately.** Iteration 8 made the ladder's

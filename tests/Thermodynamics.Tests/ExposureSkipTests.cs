@@ -24,7 +24,6 @@ namespace Thermodynamics.Tests
     /// one that swallowed a real change, would pass every equivalence assertion above (`E8`).
     /// </para>
     /// </summary>
-    [Trait("speed", "slow")]
     public class ExposureSkipTests
     {
         /// <summary>

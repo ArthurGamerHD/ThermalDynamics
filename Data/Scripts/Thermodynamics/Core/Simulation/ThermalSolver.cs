@@ -92,6 +92,20 @@ namespace Thermodynamics.Core
         private float[] nodeFaceWeights = new float[0];
 
         /// <summary>
+        /// The effective surface normal at each node, three floats a node, from
+        /// <see cref="ShapeNormal"/>. Zero where the neighbourhood said nothing, which reads as
+        /// *no correction*.
+        ///
+        /// <para>
+        /// **Filled by the exposure pass and not by the wind.** A normal is geometry, so it changes
+        /// when blocks do; the shielding array beside it is rebuilt whenever the ship turns 20°.
+        /// Allocated only where the shape term is switched on — three floats a node is 6.07 MB at
+        /// 505,566 blocks, and a world not using it should not pay that.
+        /// </para>
+        /// </summary>
+        private float[] nodeShapeNormal = new float[0];
+
+        /// <summary>
         /// Fraction of a node's exchanges it may take this substep, 0..1. Bounds the sum where the
         /// per-link clamp bounds each pair. Below one only on a step refused its substeps.
         /// </summary>
@@ -351,9 +365,35 @@ namespace Thermodynamics.Core
         /// </summary>
         public float LastFrictionWatts { get; private set; }
 
+        /// <summary>
+        /// The friction sum kept as a vector, in grid-local space: `Σ wattsᵢ · (−n̂ᵢ)`.
+        ///
+        /// <para>
+        /// **Zero unless both the shape term and lift are on**, because without a reconstructed
+        /// normal there is no direction here worth keeping — every surface would be one of six axis
+        /// planes and the transverse part would describe how the hull was drawn rather than what
+        /// shape it is. Its axial component is <see cref="LastFrictionWatts"/> by construction; the
+        /// perpendicular remainder is what `LiftForce` turns into newtons.
+        /// </para>
+        /// </summary>
+        public Vector3 LastPressureWatts { get; private set; }
+
         private float environmentWattsAccumulator;
         private float heatGainAccumulator;
         private float frictionAccumulator;
+
+        /// <summary>
+        /// The same sum kept as a **vector**: each node's friction watts pointed along `−n̂`, the
+        /// inward direction Newtonian pressure acts in.
+        ///
+        /// <para>
+        /// **This is the direction `ShapeNormal.Factor` throws away.** The scalar beside it is this
+        /// sum's axial component and is what drag has always been; the part perpendicular to the
+        /// flow is lift, and it was discarded rather than absent (backlog.md `K23`).
+        /// </para>
+        /// </summary>
+        private Vector3 pressureAccumulator;
+        private Vector3 pressureRowTotal;
 
         /// <summary>
         /// The heat a grid puts into itself from its own rows — waste heat, solar gain, friction —
@@ -396,6 +436,7 @@ namespace Thermodynamics.Core
             environmentWattsAccumulator = 0f;
             heatGainAccumulator = 0f;
             frictionAccumulator = 0f;
+            pressureAccumulator = Vector3.Zero;
         }
 
         /// <summary>
@@ -419,6 +460,7 @@ namespace Thermodynamics.Core
             {
                 heatGainRowTotal = heatGainAccumulator;
                 frictionRowTotal = frictionAccumulator;
+                pressureRowTotal = pressureAccumulator;
                 heatGainRowTotalValid = true;
                 return;
             }
@@ -431,6 +473,7 @@ namespace Thermodynamics.Core
             // a step and nought on the other twenty-three is the shape of defect a force derived
             // from it would inherit as a stutter nobody could trace.
             frictionAccumulator += frictionRowTotal;
+            pressureAccumulator += pressureRowTotal;
         }
 
         /// <summary>
@@ -443,6 +486,7 @@ namespace Thermodynamics.Core
             LastEnvironmentWatts = environmentWattsAccumulator;
             LastHeatGainWatts = heatGainAccumulator;
             LastFrictionWatts = frictionAccumulator;
+            LastPressureWatts = pressureAccumulator;
         }
 
         private readonly List<OverheatEvent> overheats = new List<OverheatEvent>();
@@ -682,6 +726,31 @@ namespace Thermodynamics.Core
         public EnvironmentState Environment { get; private set; }
 
         // ---- topology ----------------------------------------------------------------------
+
+        /// <summary>
+        /// Sizes the node lists for a hull about to be registered, so a full grid does not grow
+        /// them a dozen times on the way in.
+        ///
+        /// <para>
+        /// **Lists only, and that is the whole safety argument.** A list's order is its index order
+        /// whatever its capacity, so sizing one cannot be observed. The same is *not* true of a
+        /// dictionary — capacity decides bucket layout and so decides enumeration order — which is
+        /// why `ThermalGrid`'s own block table is left alone: its values are enumerated by the x-ray
+        /// overlay, which stops at a budget, so a different order would draw a different set of
+        /// boxes. See load-and-hitching.md.
+        /// </para>
+        ///
+        /// <para>
+        /// **A hint, not a bound.** Registering past it works as it always did.
+        /// </para>
+        /// </summary>
+        public void EnsureNodeCapacity(int count)
+        {
+            if (count <= 0) return;
+
+            if (nodes.Capacity < count) nodes.Capacity = count;
+            if (pendingLinkNodes.Capacity < count) pendingLinkNodes.Capacity = count;
+        }
 
         /// <summary>
         /// Registers a block and returns its node, or null if the block is marked
@@ -2303,6 +2372,13 @@ namespace Thermodynamics.Core
             public bool Windy;
             public bool SolarEnabled;
             public bool FrictionEnabled;
+
+            /// <summary>Whether the hull's shape corrects the projected area, and which way it blows.</summary>
+            public bool ShapeEnabled;
+            public Vector3 WindDirection;
+
+            /// <summary>Whether the transverse half of the pressure sum is kept. Needs the shape term.</summary>
+            public bool LiftEnabled;
             public bool SourcesEnabled;
             public bool Generating;
             public bool Diagnostics;
@@ -2373,6 +2449,16 @@ namespace Thermodynamics.Core
                 Vector3 wind = env.WindDirectionLocal;
                 ResolveDirection(ref wind, windWeights);
 
+                // Kept whole as well as resolved onto the six axes: the shape factor is a dot
+                // against a normal that is not one of them, which is the entire point of it.
+                plan.ShapeEnabled = settings.EnableShapeDrag && plan.FrictionEnabled
+                    && nodeShapeNormal.Length >= nodes.Count * 3;
+                plan.WindDirection = wind;
+
+                // Lift needs the shape term: without a reconstructed normal there is no direction
+                // in this sum that describes the hull rather than the axes it was drawn on.
+                plan.LiftEnabled = plan.ShapeEnabled && settings.EnableLift;
+
                 // The shielding pass, aimed at the same direction the weighting just used. Like the
                 // solar one it is the input to the precomputed rows that can change part way
                 // through a step, so a completed pass invalidates them.
@@ -2389,6 +2475,145 @@ namespace Thermodynamics.Core
             }
 
             return plan;
+        }
+
+        /// <summary>The grid version the last completed shape-normal pass was built at.</summary>
+        private int shapeNormalVersion = -1;
+
+        /// <summary>The version a running pass is building toward, so a hull that changes mid-pass
+        /// is picked up by the next one rather than restarting this one.</summary>
+        private int shapeNormalTarget;
+
+        private bool shapeNormalPass;
+        private int shapeNormalCursor;
+
+        /// <summary>True while a shape-normal pass has nodes left to visit.</summary>
+        public bool ShapeNormalRefreshPending
+        {
+            get { return shapeNormalPass; }
+        }
+
+        /// <summary>
+        /// Rebuilds every stale shape normal in one go. The build path and the labs; the incremental
+        /// path slices it, exactly as exposure is built whole here and sliced there.
+        /// </summary>
+        public void RefreshShapeNormals()
+        {
+            if (!BeginShapeNormalRefresh()) return;
+            while (StepShapeNormalRefresh(int.MaxValue)) { }
+        }
+
+        /// <summary>
+        /// Starts a pass where the layout has moved since the last completed one.
+        ///
+        /// <para>
+        /// **Keyed on the grid's version rather than on the exposure pass**, which is the whole
+        /// saving: exposure is recomputed when a door opens, and a door does not move a hull. A
+        /// normal is a function of occupancy, so it is rebuilt exactly when occupancy changes and
+        /// never on a wind that turned.
+        /// </para>
+        ///
+        /// <para>
+        /// **A running pass is never restarted**, the same rule the wind shadow follows and for the
+        /// same reason: a hull under construction changes every few frames, and a pass that starts
+        /// over each time never finishes. Staleness is bounded at one pass instead.
+        /// </para>
+        /// </summary>
+        /// <returns>True when a pass is now running.</returns>
+        public bool BeginShapeNormalRefresh()
+        {
+            if (shapeNormalPass) return true;
+            if (!settings.EnableShapeDrag) return false;
+            if (shapeNormalVersion == grid.Version) return false;
+
+            if (nodeShapeNormal.Length < nodes.Count * 3)
+            {
+                nodeShapeNormal = new float[nodes.Count * 3];
+            }
+
+            shapeNormalPass = true;
+            shapeNormalCursor = 0;
+            shapeNormalTarget = grid.Version;
+            return true;
+        }
+
+        /// <summary>
+        /// Advances a pass by at most <paramref name="nodeBudget"/> nodes.
+        ///
+        /// <para>
+        /// **A half-finished pass degrades toward the model without the term**, which is what makes
+        /// slicing safe here: a node not yet visited holds a zero normal, which reads as a factor of
+        /// one — the full projected area, the conservative direction. There is no state in which a
+        /// hull is charged less than the old model charged it because a pass was interrupted.
+        /// </para>
+        /// </summary>
+        /// <returns>True while the pass still has nodes left.</returns>
+        public bool StepShapeNormalRefresh(int nodeBudget)
+        {
+            if (!shapeNormalPass) return false;
+            if (nodeBudget <= 0) return true;
+
+            CellBitset occupancy = grid.Occupancy();
+
+            int end = shapeNormalCursor + nodeBudget;
+            if (end > nodes.Count) end = nodes.Count;
+
+            for (int i = shapeNormalCursor; i < end; i++)
+            {
+                Vector3 normal = ShapeNormal.Of(occupancy, nodes[i].Block);
+
+                int b = i * 3;
+                nodeShapeNormal[b] = normal.X;
+                nodeShapeNormal[b + 1] = normal.Y;
+                nodeShapeNormal[b + 2] = normal.Z;
+            }
+
+            shapeNormalCursor = end;
+            if (shapeNormalCursor < nodes.Count) return true;
+
+            shapeNormalPass = false;
+            shapeNormalCursor = 0;
+            shapeNormalVersion = shapeNormalTarget;
+
+            // The friction row is precomputed per step and reads these, so a completed pass is one
+            // of the inputs that can change under it — the same treatment the shadow passes get.
+            InvalidateEnvironmentRows();
+            return false;
+        }
+
+        /// <summary>
+        /// Rebuilds every node's normal unconditionally, sizing the array if the settings never
+        /// asked for it.
+        ///
+        /// <para>
+        /// For the stage lab, which has to time the pass itself: in play the version check skips it
+        /// on all but the steps after a hull changes, and a stage that measures a skipped pass
+        /// measures the check.
+        /// </para>
+        /// </summary>
+        public void RebuildShapeNormals()
+        {
+            if (nodeShapeNormal.Length < nodes.Count * 3)
+            {
+                nodeShapeNormal = new float[nodes.Count * 3];
+            }
+
+            shapeNormalPass = true;
+            shapeNormalCursor = 0;
+            shapeNormalTarget = grid.Version;
+            while (StepShapeNormalRefresh(int.MaxValue)) { }
+        }
+
+        /// <summary>
+        /// The shape term's factor for one node, or 1 where its neighbourhood said nothing.
+        /// Bounded 0..1, so it may only reduce. See <see cref="ShapeNormal.Factor"/>.
+        /// </summary>
+        private float ShapeFactorOf(int index, ref Vector3 wind)
+        {
+            int b = index * 3;
+            return ShapeNormal.Factor(
+                new Vector3(nodeShapeNormal[b], nodeShapeNormal[b + 1], nodeShapeNormal[b + 2]),
+                wind);
         }
 
         /// <summary>Runs the environment pass over nodes <paramref name="from"/> to <paramref name="to"/>.</summary>
@@ -2452,6 +2677,9 @@ namespace Thermodynamics.Core
             bool windy = plan.Windy;
             bool solarEnabled = plan.SolarEnabled;
             bool frictionEnabled = plan.FrictionEnabled;
+            bool shapeEnabled = plan.ShapeEnabled;
+            bool liftEnabled = plan.LiftEnabled;
+            Vector3 shapeWind = plan.WindDirection;
             float radiationShare = plan.RadiationShare;
             float frictionScale = plan.FrictionScale;
 
@@ -2577,7 +2805,14 @@ namespace Thermodynamics.Core
                     }
                     nodeSolarRow[i] = solar;
 
+                    // **The shape factor multiplies friction and deliberately not `windFactor`
+                    // above.** Both read the same six-face sum, and they are different questions:
+                    // shielding changes how much air crosses a face, inclination changes the
+                    // pressure on it. Folding the second into the first is how windward shielding
+                    // came to move a hull 7.4 K.
                     float friction = frictionEnabled ? frictionScale * area * wind : 0f;
+                    if (shapeEnabled && friction > 0f) friction *= ShapeFactorOf(i, ref shapeWind);
+
                     nodeFrictionRow[i] = friction;
 
                     nodeSourceRow[i] = (generating ? nodeGeneration[i] : 0f) + solar + friction;
@@ -2644,6 +2879,20 @@ namespace Thermodynamics.Core
                     // total, because a force needs the friction term alone and the heat model
                     // needs the sum. One add on a row that is already being summed.
                     frictionAccumulator += nodeFrictionRow[i];
+
+                    // The same watts with the node's own normal on them. Newtonian pressure acts
+                    // along `−n̂`, so a windward face pushes into the hull and the sum of those
+                    // pushes has a transverse part wherever the hull is not symmetric about the
+                    // flow. One multiply-add on a row already being summed, and only where the
+                    // transverse part is going to be used.
+                    if (liftEnabled)
+                    {
+                        int b = i * 3;
+                        float pressure = nodeFrictionRow[i];
+                        pressureAccumulator.X -= pressure * nodeShapeNormal[b];
+                        pressureAccumulator.Y -= pressure * nodeShapeNormal[b + 1];
+                        pressureAccumulator.Z -= pressure * nodeShapeNormal[b + 2];
+                    }
                 }
 
                 if (!diagnostics) continue;
@@ -4037,6 +4286,11 @@ namespace Thermodynamics.Core
                 nodeWindLit = settings.EnableWindwardShielding
                     ? new float[size * Face.Count]
                     : new float[0];
+
+                // Same argument, three floats a node rather than six. `EnableShapeDrag` cannot
+                // change mid-step either, so the array and the flag cannot disagree.
+                nodeShapeNormal = settings.EnableShapeDrag ? new float[size * 3] : new float[0];
+                shapeNormalVersion = -1;
             }
             if (loopEffectiveMass.Length < loops.Count)
             {

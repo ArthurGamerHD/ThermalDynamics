@@ -18,7 +18,6 @@ namespace Thermodynamics.Tests
     /// since an empty set agrees with anything (`E8`).
     /// </para>
     /// </summary>
-    [Trait("speed", "slow")]
     public class RoomMapSolidTests
     {
         private static ThermalSimulation Build(string which)

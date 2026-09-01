@@ -17,7 +17,6 @@ namespace Thermodynamics.Tests
     /// See benchmarks.md, The watts row is written.
     /// </para>
     /// </summary>
-    [Trait("speed", "slow")]
     public class WattsClearFusionTests
     {
         private static ThermalSimulation Build(bool fused)

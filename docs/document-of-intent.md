@@ -1195,8 +1195,9 @@ not weaken for being about force instead of heat.
 
 **And the composition a world wants is one or the other, not both** — which is a measurement rather
 than a preference. RTS holds each grid under a cruise speed *because it has no drag*; this model has
-drag, and **22.4 % of published ships balance below the 100 m/s the engine already enforces**
-([backlog.md](backlog.md) `K11`, corrected for a projected-area error under `K12`). So where the air
+drag, and **11.6 % of published ships balance below the 100 m/s the engine already enforces**
+([backlog.md](backlog.md) `K11`, corrected twice: for a projected-area error under `K12`, and on
+2026-08-31 for a scoring tool that defaulted to twice the coefficient the mod ships). So where the air
 is thick the two forces overlap, and where it is thin RTS's acts alone — a world that wants either
 can have it by switching the other off. What would be better than
 both is `K17`: one mod owns the force on a constraint group and the rest contribute to its inputs.
@@ -1333,8 +1334,18 @@ frame buffer. That is a statement about difficulty, not about intent — it is w
   blocks facing each other across a gap do not see each other, and no view factors exist. A surface
   *can* now be shiny to the sun and black to space — `SolarAbsorptivity` is separate from
   `Emissivity` — but each is one constant rather than a curve against wavelength.
-* **Not a flight model.** Drag is applied because it closes an energy hole; **lift is refused
-  because it opens a handling claim** ([backlog.md](backlog.md) `K8`). The two are not the same kind
+* **Not a flight model — reversed 2026-08-31, by decision.** This bullet refused lift for ten
+  months of change log and one day of calendar, and the refusal is lifted because the owner asked
+  for aerodynamic lift implemented and configurable ([backlog.md](backlog.md) `K23`). **That is a
+  choice about what the mod is for, not a measurement that overturned one**, and it is recorded that
+  way so nobody later reads it as evidence. What changed on the evidence side is narrower and real:
+  `K22` closed the arithmetic gap the refusal named — every node now carries a reconstructed surface
+  normal, so an angle-of-attack response exists where six axis face weights could not give one — and
+  lift turns out not to be a new model at all but the transverse component of a sum the mod already
+  computes and discards. **The reasoning that argued against it still stands and is kept below**,
+  because it is what the switch defaults to off for and what the criterion in `K23` is written
+  against. Drag is applied because it closes an energy hole; **lift was refused because it opens a
+  handling claim**. The two are not the same kind
   of change, and the test that separates them is *does the mechanism correct something the mod
   already computes wrongly, or assert something it does not compute at all*. Drag is the first: the
   energy is computed, the momentum is discarded, and the discrepancy is a defect. Lift is the

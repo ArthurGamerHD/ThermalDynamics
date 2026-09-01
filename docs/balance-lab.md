@@ -59,7 +59,7 @@ is a finding rather than an excuse to move a threshold.
 **`G6`'s cost half, written down before it is scored** (`E11`, `E1`). The criterion has always
 said *substep demand **and step cost***, and only the demand has ever been produced, because the
 corpus carries no timing column — deliberately, since a per-ship millisecond figure taken across
-thousands of hulls on a shared machine measures the machine. So the cost is stated as **work**, in
+thousands of hulls measures the machine. So the cost is stated as **work**, in
 the solver's own unit, and compared against a bound the mod already ships.
 
 * **The statistic.** A step's work in element visits, in the unit the allowance is denominated in:
@@ -835,11 +835,18 @@ quarter of its surface area, which is also what the solver's own incidence weigh
 **So every cruise speed published on 2026-08-30 was low by a factor of two and every drag high by
 four**, and the conclusion that most ships are drag-limited was inverted:
 
-| | as published | corrected |
-| --- | ---: | ---: |
-| median sea-level cruise | 70.4 m/s | **140.9 m/s** |
-| inside RTS's 60–110 band | 54.8 % | **19.0 %** |
-| drag-limited below the engine's 100 m/s | 84.5 % | **22.4 %** |
+| | as published | corrected for the projection | corrected for the coefficient |
+| --- | ---: | ---: | ---: |
+| median sea-level cruise | 70.4 m/s | 140.9 m/s | **199.2 m/s** |
+| inside RTS's 60–110 band | 54.8 % | 19.0 % | **7.6 %** |
+| drag-limited below the engine's 100 m/s | 84.5 % | 22.4 % | **11.6 %** |
+
+**The third column is a second correction, found 2026-08-31, and its cause is not the first one's.**
+`cruise.py` defaulted `--cd` to 1.0 and the documented invocation passes no `--cd`, while `K5` had
+moved `DragCoefficient` to 0.5 the day before — so the middle column describes **twice the drag the
+mod applies**. Nothing caught it because nothing could: the constant lived in Python and the setting
+in C#, and the two agreed only by somebody remembering. `SHIPPED_DRAG_COEFFICIENT` now pins it and
+`TheCruiseToolScoresTheCoefficientTheModShips` fails when the two drift.
 
 **What survives the correction and what does not.** `K12`'s claim that a derived speed lands *in the
 same neighbourhood* as an authored one survives in shape and weakens in strength: the median is now
@@ -897,6 +904,40 @@ a reading of the criterion, not a subset chosen because it passes.
 
 **So the shipped coefficient fails both halves and 0.5 passes both, and the default moves to 0.5.**
 The threshold did not move; the configuration did, which is the direction `E11` permits.
+
+#### And re-scored with the shape term on, 2026-08-31
+
+**The criterion had no scorer until now.** It was computed by hand once, and the two figures it
+turned on lived in the paragraph above and nowhere else — one definition, no consumer, which is
+`P5`. [`dragfit.py`](../tools/corpus/dragfit.py) is that consumer, and the control it was proven
+against is this table: on the same census it reads **14.06 % and 55.7 m/s** at `C_d` 1 and **3.13 %
+and 78.8 m/s** at 0.5, to the digit, over the same 5,649 hulls.
+
+| on the 2026-08-31 census, self-lifting hulls | beats thrust | p1 ceiling | verdict |
+| --- | ---: | ---: | --- |
+| `C_d` 0.5, no shape — **what ships** | 3.13 % | 78.8 m/s | pass |
+| `C_d` 0.75, no shape | 7.75 % | 64.4 m/s | fail |
+| `C_d` 0.5, shape on | 0.04 % | 137.2 m/s | pass |
+| **`C_d` 1.54, shape on** | **3.42 %** | **78.2 m/s** | **pass** |
+| `C_d` 2.0, shape on | 5.75 % | 68.6 m/s | fail |
+
+**The shape term is calibration-neutral at `C_d` 1.54, and both statistics agree on it
+independently.** The population median shape factor is 0.3250, so the coefficient that restores the
+drag is `0.5 / 0.325 ≈ 1.54` — and at 1.54 the criterion reads 3.42 % and 78.2 m/s against the
+shipped 3.13 % and 78.8 m/s, while [`summary-cruise-shape-2026-08-31.csv`](../tools/corpus/summary-cruise-shape-2026-08-31.csv)
+reproduces the shipped altitude medians exactly. Two criteria that were never fitted to each other
+land on the same number.
+
+**What moves is which ships, and that is the whole point.** At matched calibration the two
+configurations condemn similar counts — 176 hulls unshaped against 192 shaped — but only **151 are
+the same ships**, a 69.6 % overlap. The **25 the shape term rescues have a median shape factor of
+0.243**, well below the population's 0.325; the **41 it condemns read 0.438**, well above it. So the
+term takes drag off slippery hulls and puts it back on blunt ones at constant population statistics,
+which is discrimination rather than a rescale — and it is the direction the physics asks for.
+
+**What this does not settle** is whether 1.54 is the right *default*, only that it is the
+calibration-neutral one. A world may want the shape term to make ships faster rather than to
+redistribute which ones are fast, and that is a balance question rather than a measurement.
 
 **Half is also where the physics puts it, which is worth more than the fit.** What the coefficient
 multiplies is a *Newtonian flat-plate* projection — every exposed face weighted by its incidence,
@@ -1924,6 +1965,8 @@ is an enclosing hull, and the corpus has hulls.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-31 | **The drag milestone's criterion has a scorer, and it was proven against the hand computation before it was used.** [`dragfit.py`](../tools/corpus/dragfit.py) reproduces 14.06 % / 55.7 m/s at `C_d` 1 and 3.13 % / 78.8 m/s at 0.5 over the same 5,649 self-lifting hulls — to the digit. Re-scored with the shape term on, **`C_d` 1.54 is calibration-neutral**: 3.42 % and 78.2 m/s, and the cruise medians reproduce exactly. The two criteria were never fitted to each other and land on the same number. What moves is *which* ships: 69.6 % overlap, the rescued reading a median shape factor of 0.243 and the condemned 0.438. |
+| 2026-08-31 | **The 2026-08-30 cruise figures needed a second correction, and this one was a tool default rather than a formula.** `cruise.py` scored at `C_d` 1.0 — its own default — while the mod ships 0.5, so the corrected column published under `K12` was itself twice the drag the mod applies. Median sea-level cruise is **199.2 m/s**, not 140.9; **7.6 %** of ships fall inside RTS's authored band, not 19.0; **11.6 %** are drag-limited below the engine cap, not 22.4. Pinned now, and guarded. |
 | 2026-08-28 | **The air re-take finished and its cost-half prediction turned out to be unscoreable.** 8,137 ships, 32,548 rows, whole. The demand half did not move to three decimals (p99 34.779, p95 30.195, max 36.614, all identical to the cap walk's control arm), and `G1` in air tripled — 0.0246 % to 0.0737 % — which is `A13`'s 15.76 % of extra heat arriving where heat goes and not where cost does. The cost half was predicted against **5,812,731**, a figure withdrawn four days earlier for omitting the link term, and `out/air-corpus-2026-08-24` **has no `links` column**, so it cannot be re-scored to recover a corrected baseline: the comparison the prediction named never existed (`P2`). Scored against the cap walk's control arm instead, which carries the column, work p99 falls **1.30 %** to 7,199,204 where closing the gap needs 21 % — so the verdict row holds, `G6`'s cost half fails at **1.80×** the allowance on 712 of 32,548 runs. **A prediction registered against a number in a paragraph is not registered**; a baseline names a committed summary (`E5`). |
 | 2026-08-28 | **Registered what re-taking the corpus in air will move, before it is re-taken**, and corrected the survey's basis line where it was published (`E10`). That line rested the dataset's integrity on *identical hashes across all four* slices; the fifth carried `C36`, `C42` and `C43` and moved `Cubes.xml` and `Loops.xml`, so it was true when written and false when the walk finished. It is still one dataset for the reason the line already gave, now **measured**: 207 distinct block types in the census and not one of them a block this mod adds. |
 | 2026-08-25 | **Re-took the census, and `A13` is worth twice what the sample said.** 8,137 ships in 2 m 1 s, run twice and reproducing on every column. Summed over the rows a base variant writes, the eleven block kinds the reader built as armour carry **15.76 %** of what the population makes without them, against the 400-ship sample's 8.89 % — the sample carried a representative share of blocks and an unrepresentative share of gravity generators, and a gravity generator is 6.9 GW on its own. **Two of five predictions fail and one of the failures is the instrument**: a census-to-census diff spans four days and four definition changes, so its 41.14 % is the sum of the drives' 0.15 → 0.2, the computer fractions' 0.9 → 1.0, the oxygen generator's 0.6 → 0.40 and `C24`'s clock, and cannot isolate a reader fix (`P6`). The ship count moved by four — seven hulls rejected for holding an empty-subtype door or gravity generator on a small grid, which the game has only on large, and three admitted that the type-and-subtype pair now resolves — and both directions are the fix working (`J3`). The reach prediction is not scorable from a census at all: `composition.csv` holds heat-making blocks only, and nine of the eleven make none (`P2`). |

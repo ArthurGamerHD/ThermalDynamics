@@ -20,7 +20,6 @@ namespace Thermodynamics.Tests
     /// change anything* (`P4`).
     /// </para>
     /// </summary>
-    [Trait("speed", "slow")]
     public class SurfaceMapPackingTests
     {
     public class TwoDictionarySurfaceMap
