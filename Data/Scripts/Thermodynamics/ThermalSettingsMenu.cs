@@ -49,6 +49,7 @@ namespace Thermodynamics
         private const string Solver = "Solver";
         private const string Environment = "Environment";
         private const string Aero = "Aerodynamics";
+        private const string Suit = "Suit";
         private const string Display = "Display";
         private const string Multiplayer = "Multiplayer";
         private const string Other = "Other";
@@ -80,6 +81,32 @@ namespace Thermodynamics
             { "EnableCoolantLoops", new Entry(Systems, "Coolant loops", "Closed pipe rings acting as one fluid mass.", 0, 1) },
             { "EnableRoomAir", new Entry(Systems, "Room air", "Sealed rooms hold an air mass that carries heat.", 0, 1) },
             { "EnableHeatPumps", new Entry(Systems, "Heat pumps", "The block that moves heat up a gradient for an electrical cost.", 0, 1) },
+
+            // **The last eleven settings with no layout entry.** They fell through to a page
+            // called *Other* that said it did not describe them, with the setting's own name as its
+            // label and a 0..1000 slider whatever the setting was. A suit's heat capacity is
+            // 240,000.
+            // **Documented as a rung and reachable by nothing.** `configuration.md`'s ladder
+            // lists coolant transport as off, well-mixed, then parcels round a ring — and the
+            // middle rung was in the config file, copied into the core and read by the solver, but
+            // absent from `Names()`, so no menu, no chat command and no API could set it. Only
+            // hand-editing a world's XML could.
+            { "WellMixedCoolant", new Entry(Systems, "Well-mixed coolant", "The cheaper transport rung: a loop's fluid as one well-mixed mass rather than one parcel per pipe travelling round the ring. A ring of any length holds a single parcel, so heat picked up at a sink reaches every other pipe in the same step instead of arriving as it flows. Off is the full model.", 0, 1) },
+
+            { "EnableSuitDamage", new Entry(Suit, "Suit damage", "Heat as something that can hurt a player rather than only a block. Off leaves the suit unsimulated and costs nothing.", 0, 1) },
+            { "SuitConductance", new Entry(Suit, "Suit conductance", "How well the outside reaches the occupant through a sealed suit, W/K. With the cooling rating below it, this is what sets the hottest room a player can stand in indefinitely.", 0f, 20f) },
+            { "SuitHeatCapacity", new Entry(Suit, "Suit heat capacity", "Heat capacity of the occupant and the suit together, J/K — about eighty kilograms of mostly water. Divided by the heat time scale like every block's, so a player heats on the same clock as the ship around them.", 10000f, 1000000f) },
+            { "SuitCoolingWatts", new Entry(Suit, "Suit cooling", "Heat the suit can move, either way, W. It cools a player in a hot room and warms one in a cold one.", 0f, 5000f) },
+            { "SuitCriticalTemperature", new Entry(Suit, "Hurts above", "Interior temperature at which the occupant starts being hurt, K. 315.15 is 42 C: the core body temperature at which heat stroke becomes life-threatening, and only a few degrees above where the suit holds them.", 300f, 350f) },
+            { "SuitDamagePerKelvin", new Entry(Suit, "Damage per kelvin", "Hit points a second, per kelvin above the temperature that hurts.", 0f, 10f) },
+
+            { "FloorBlocksWhenOverBudget", new Entry(Solver, "Floor over budget", "When a grid's step will not fit its element budget, floor the heat capacity of the blocks demanding most of it rather than shortening the step for everyone. Engages per grid and per step, only where the budget binds, and the cap it applies is what that grid can afford rather than a number chosen in advance — which is what makes it different from the per-block cap above.", 0, 1) },
+            { "ParallelGrids", new Entry(Solver, "Solve in parallel", "Fan a frame's grid solves out across the engine's own workers rather than walking them in order. Measured at 10.17x on a 242-grid fleet and 0.99x on one grid, so it is worth nothing to a single ship. **Off**, and what it is waiting for is a session rather than a measurement: how many threads a mod may take on a machine it shares with the game, and whether a worker's exception reaches a log the way the game thread's does.", 0, 1) },
+
+            { "ShowEnvironmentReadout", new Entry(Display, "Environment readout", "One line, bottom centre: the air temperature around your ship and one word for the ship against its own rating — cool, warm or hot. `hot` begins exactly where the glow does, so the line and the block cannot disagree. It is what makes the mod visible in a world where nothing is going wrong; everything else it draws is a warning.", 0, 1) },
+            { "DebugOverlayMaxBoxes", new Entry(Display, "Overlay box budget", "Boxes the block overlay may draw in one frame. Past it the overlay draws the part of the grid nearest the camera. 0 draws nothing.", 0f, 50000f, true) },
+
+            { "PlanetUndergroundConvectionCoefficient", new Entry(Environment, "Underground convection", "Convective coefficient for a grid buried in rock, W/(m2 K) — a far worse heat sink than moving air. Crossed over the first five metres of burial, and neither wind nor weather multiplies it.", 0f, 50f) },
 
             { "EnableTemperatureSync", new Entry(Multiplayer, "Replicate temperatures", "The server tells each client what its blocks are actually at: the whole ship once when the ship arrives, then whatever is near failing. Off leaves every client guessing, and a client that guesses can show a block safe for the whole time it is burning.", 0, 1) },
             { "TemperatureSyncInterval", new Entry(Multiplayer, "Update interval", "Seconds between updates about the blocks near failing. Longer is cheaper; the whole ship is still stated once whatever this says.", 0.5f, 60f) },
@@ -347,7 +374,10 @@ namespace Thermodynamics
             new Folder("Solver",
                 new Leaf("Cost limits",
                     "MaxSubsteps", "MaxSubstepsPerBlock", "MaxElementVisitsPerStep",
+                    "FloorBlocksWhenOverBudget",
                     "ClampConductionOvershoot", "ClampEnvironmentOvershoot"),
+                new Leaf("Threading",
+                    "ParallelGrids"),
                 new Leaf("Pace",
                     "Frequency", "SimulationSpeed", "HeatTimeScale")),
 
@@ -376,7 +406,7 @@ namespace Thermodynamics
 
             new Folder("Ship systems",
                 new Leaf("Coolant loops",
-                    "EnableCoolantLoops",
+                    "EnableCoolantLoops", "WellMixedCoolant",
                     "LoopLargeGridFlowRate", "LoopSmallGridFlowRate",
                     "LoopCoolantKilogramsPerCubicMetre", "LoopCoolantMassPerPipe",
                     "LoopRefillEquivalentKelvin",
@@ -393,7 +423,13 @@ namespace Thermodynamics
                 new Leaf("Overheat damage",
                     "EnableDamage", "DamageIsPerSecond"),
                 new Leaf("Point sources",
-                    "EnableHeatSources")),
+                    "EnableHeatSources"),
+
+                // The occupant rather than the ship, and the only page here that is not a block.
+                // It sits with the ship's systems because that is what a player is inside of.
+                new Leaf("Suit",
+                    "EnableSuitDamage", "SuitConductance", "SuitHeatCapacity",
+                    "SuitCoolingWatts", "SuitCriticalTemperature", "SuitDamagePerKelvin")),
 
             // Its own folder rather than a corner of Ship systems, because the two halves of
             // the same term were filed apart: the heating was a ship system and the force it
@@ -419,6 +455,7 @@ namespace Thermodynamics
                     "PlanetConvectionCoefficient", "PlanetSolarDecay"),
                 new Leaf("Underground",
                     "PlanetUndergroundTemperature", "PlanetUndergroundDampingDepth",
+                    "PlanetUndergroundConvectionCoefficient",
                     "PlanetCoreTemperature", "PlanetSealevelDeadzone"),
 
                 // Its own switch at the top of it, like every other system's page. The wind dials
@@ -454,8 +491,9 @@ namespace Thermodynamics
         /// server says; the telemetry pair belongs to the world.
         /// </summary>
         private static readonly Leaf DebugPage = new Leaf("Debug",
-            "HeatGlow", "HeatWarningSound", "HeatTerminalPanel",
-            "DebugTextOnScreen", "DebugBlockOverlay", "DebugSolarRaycast", "DebugWindRaycast",
+            "HeatGlow", "HeatWarningSound", "HeatTerminalPanel", "ShowEnvironmentReadout",
+            "DebugTextOnScreen", "DebugBlockOverlay", "DebugOverlayMaxBoxes",
+            "DebugSolarRaycast", "DebugWindRaycast",
             "DebugWindOverlay", "DebugWindIndicator",
             "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
             "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes");
@@ -1054,6 +1092,8 @@ namespace Thermodynamics
             { "Waste heat", "Power becoming heat where it is used" },
             { "Overheat damage", "What happens past a block's critical temperature" },
             { "Point sources", "Heat other mods register through the API" },
+            { "Suit", "The occupant, and what the ship does to them" },
+            { "Threading", "How a frame's grids are spread across cores" },
 
             { "Friction heating", "Air heating a hull at speed" },
             { "Drag", "The same air taking energy out of the motion" },

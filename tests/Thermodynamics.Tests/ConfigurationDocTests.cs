@@ -88,6 +88,57 @@ namespace Thermodynamics.Tests
             return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
 
+        /// <summary>
+        /// **Every setting reaches a page of the menu that names it.**
+        ///
+        /// <para>
+        /// A setting the layout tables do not mention still gets a control — on a final *Other*
+        /// page, labelled with its own field name and given a 0..1000 slider whatever it is. That
+        /// is a deliberate floor rather than a plan: it means a setting added to the config and
+        /// forgotten here is reachable rather than invisible. **It is not somewhere a setting
+        /// should stay**, and eleven of them stayed there, including the whole suit subsystem and a
+        /// heat capacity of 240,000 on a slider that stopped at a thousand.
+        /// </para>
+        ///
+        /// <para>
+        /// The floor stays and this is what keeps it empty.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EverySettingIsOnAMenuPageThatNamesIt()
+        {
+            string menu = File.ReadAllText(Path.Combine(
+                RepoRoot(), "Data", "Scripts", "Thermodynamics", "ThermalSettingsMenu.cs"));
+
+            int folders = menu.IndexOf("private static readonly Folder[] Folders", StringComparison.Ordinal);
+            int debug = menu.IndexOf("private static readonly Leaf DebugPage", StringComparison.Ordinal);
+            Assert.True(folders >= 0 && debug >= 0, "the menu's layout tables have been renamed");
+
+            // Everything the two tables name, which is every page a setting can be placed on.
+            HashSet<string> placed = new HashSet<string>();
+            foreach (Match match in Regex.Matches(
+                menu.Substring(folders, menu.IndexOf("private static readonly Dictionary<string, string> PageNotes",
+                    StringComparison.Ordinal) - folders)
+                + menu.Substring(debug, 900), "\"([A-Za-z0-9_]+)\""))
+            {
+                placed.Add(match.Groups[1].Value);
+            }
+
+            List<string> orphans = new List<string>();
+            foreach (string name in Declared())
+            {
+                if (NotTunable.Contains(name)) continue;
+                if (!placed.Contains(name)) orphans.Add(name);
+            }
+
+            orphans.Sort();
+
+            Assert.True(orphans.Count == 0,
+                orphans.Count + " settings reach no page and would land on *Other*, with their own"
+                + " field name for a label and a slider that fits nothing:\n  "
+                + string.Join("\n  ", orphans.ToArray()));
+        }
+
         private static HashSet<string> Declared()
         {
             string source = File.ReadAllText(Path.Combine(

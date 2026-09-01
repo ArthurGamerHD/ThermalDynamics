@@ -943,7 +943,7 @@ namespace Thermodynamics
                 "SolarOcclusionSamples",
                 "EnableHeatSources", "EnableWasteHeat", "EnablePlanets",
                 "EnableFriction", "EnableWind", "EnableDamage", "EnableCoolantLoops", "EnableRoomAir",
-                "EnableHeatPumps",
+                "EnableHeatPumps", "WellMixedCoolant",
                 "ClampConductionOvershoot", "ClampEnvironmentOvershoot", "DamageIsPerSecond",
                 "Frequency", "SimulationSpeed", "HeatTimeScale", "MaxElementVisitsPerStep",
                 "MaxSubsteps", "MaxSubstepsPerBlock", "FloorBlocksWhenOverBudget",
@@ -1006,6 +1006,7 @@ namespace Thermodynamics
                 case "EnableWind": return Flag(EnableWind);
                 case "EnableDamage": return Flag(EnableDamage);
                 case "EnableCoolantLoops": return Flag(EnableCoolantLoops);
+                case "WellMixedCoolant": return Flag(WellMixedCoolant);
                 case "EnableRoomAir": return Flag(EnableRoomAir);
                 case "EnableHeatPumps": return Flag(EnableHeatPumps);
                 case "ClampConductionOvershoot": return Flag(ClampConductionOvershoot);
@@ -1123,6 +1124,7 @@ namespace Thermodynamics
                 case "EnableWind": EnableWind = Flag(value); return true;
                 case "EnableDamage": EnableDamage = Flag(value); return true;
                 case "EnableCoolantLoops": EnableCoolantLoops = Flag(value); return true;
+                case "WellMixedCoolant": WellMixedCoolant = Flag(value); return true;
                 case "EnableRoomAir": EnableRoomAir = Flag(value); return true;
                 case "EnableHeatPumps": EnableHeatPumps = Flag(value); return true;
                 case "ClampConductionOvershoot": ClampConductionOvershoot = Flag(value); return true;
@@ -1232,7 +1234,18 @@ namespace Thermodynamics
                 || name == "SolarOcclusionVoxels"
                 || name == "SolarOcclusionTerrain"
                 || name == "ClampConductionOvershoot" || name == "ClampEnvironmentOvershoot"
-                || name == "DamageIsPerSecond");
+                || name == "DamageIsPerSecond"
+
+                // **Six switches the prefix rule missed**, found 2026-08-31 when the menu's last
+                // unplaced settings were being given pages. `IsFlag` decides three things at once —
+                // whether the menu draws a checkbox or a slider, whether `/thermal` prints `on` or a
+                // number, and whether the telemetry report records a bool — so a switch it does not
+                // recognise is wrong in all three. The three `Heat*` ones are on the Debug page and
+                // were being drawn as sliders from 0 to 1.
+                || name == "HeatGlow" || name == "HeatWarningSound" || name == "HeatTerminalPanel"
+                || name == "ShowEnvironmentReadout"
+                || name == "FloorBlocksWhenOverBudget" || name == "ParallelGrids"
+                || name == "WellMixedCoolant");
         }
 
         private static float Flag(bool value)

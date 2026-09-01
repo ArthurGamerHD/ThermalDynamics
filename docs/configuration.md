@@ -43,16 +43,24 @@ same names are reachable from other mods, see [api.md](api.md#settings).
 **Ctrl+Shift+S** opens it, as does `/thermal menu`.
 
 The menu is a tree rather than one scroll: **Statistics**, **Debug** and **Defaults** at the root,
-then five folders.
+then six folders.
 
 | Folder | Pages |
 | --- | --- |
-| **Solver** | Cost limits, Pace |
+| **Solver** | Cost limits, Threading, Pace |
 | **Heat transfer** | Ambient, Conduction, Radiation, Convection, Solar, Occlusion |
-| **Ship systems** | Coolant loops, Heat pumps, Room air, Waste heat, Overheat damage, Point sources |
-| **Aerodynamics** | Friction heating, Drag |
+| **Ship systems** | Coolant loops, Heat pumps, Room air, Waste heat, Overheat damage, Point sources, Suit |
+| **Aerodynamics** | Friction heating, Drag, Lift |
 | **Multiplayer** | Temperatures |
 | **World** | Climate, Underground, Wind |
+
+**Every setting is on one of those pages.** A setting the layout tables do not name still gets a
+control, on a final **Other** page — that floor stays, because a setting added to the config and
+forgotten here should be reachable rather than invisible. It is empty now and
+`EverySettingIsOnAMenuPageThatNamesIt` keeps it that way: eleven settings had stayed on it,
+including the whole suit subsystem, each labelled with its own field name and given a slider from 0
+to 1,000 whatever it was — which for a suit's heat capacity of 240,000 J/K is a control that cannot
+express its own default.
 
 A hundred settings on a single scroll is a list to be searched by eye, and an administrator
 usually arrives wanting one part of it. **One system to a page, with its own switch at the top.**
@@ -207,6 +215,7 @@ Each switch removes exactly its own mechanism and its own cost.
 | `EnableWind` | `true` | The wind field and everything that shapes it: the boundary-layer profile, terrain speed-up and shelter, slope channelling, the diurnal cycle and burial. Off is no wind anywhere rather than the game's wind unmodelled, because the game exposes a ceiling rather than a wind. A grid still feels its own motion through the air. |
 | `EnableDamage` | `true` | Damage above a block's critical temperature. |
 | `EnableCoolantLoops` | `true` | Coolant loop heat transport. |
+| `WellMixedCoolant` | `false` | The cheaper transport rung: a loop's fluid as one well-mixed mass rather than one parcel per pipe travelling round the ring, so heat picked up at a sink reaches every other pipe in the same step instead of arriving as it flows. **It was reachable by nothing until 2026-08-31** — in the config file, copied into the core and read by the solver, but absent from `Names()`, so no menu page, no `/thermal set` and no API call could reach it and only hand-editing a world's XML would do. |
 | `EnableRoomAir` | `true` | Sealed rooms hold an air mass that couples their surfaces. |
 | `EnableHeatPumps` | `true` | Heat pumps move heat against a gradient for an electrical cost. Off makes them ordinary blocks. |
 | `EnableSuitDamage` | `true` | Heat can hurt a player, not only a block. Off leaves the suit unsimulated and the pass does nothing. |
@@ -1335,6 +1344,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-31 | **The menu's *Other* page is empty, and three defects were found emptying it.** Eleven settings had no layout entry and lived there with their field name for a label and a 0..1,000 slider whatever they were — the six suit dials, `ParallelGrids`, `FloorBlocksWhenOverBudget`, `ShowEnvironmentReadout`, `DebugOverlayMaxBoxes` and `PlanetUndergroundConvectionCoefficient`. They have pages now: **Suit** under Ship systems and **Threading** under Solver are new. **`IsFlag` missed six switches**, three of them already on the Debug page and drawn as *sliders from 0 to 1* — it decides the menu's control, whether `/thermal` prints `on` or a number, and whether telemetry records a bool, so each was wrong three ways. **And `WellMixedCoolant` was reachable by nothing**: a documented rung of the coolant ladder, in the config and read by the solver, but missing from `Names()`, so only hand-editing a world's XML could set it. Two guards added — every setting reaches a page, and every `bool` is a flag and nothing else is. |
 | 2026-08-31 | **Reworked the menu: Aerodynamics is its own folder, Overview is gone, and a page is its sections rather than a lattice of tiles.** `EnableDrag`, `DragCoefficient` and `EnableWindwardShielding` had no layout entry, so the force half of the friction term sat unlabelled on the *Other* page while the heat half was a Ship systems page; both halves are now the **Aerodynamics** folder. **Overview is removed** — a count, a three-word conflict flag and three clipped figures, every one of them a worse version of a line on the page that wraps — and **Status is now Statistics**, carrying the world's settings, what is running, the energy it is moving, what the solver is spending and the frame cost. **Its figures were never refreshing**: `Refresh` was called from the settings sync and nowhere else, so a category headed *Right now* held whatever the world was doing when the menu was built; `ThermalSettingsMenu.Tick` now re-reads it twice a second while the terminal is open. **A section is one tile now** rather than tiles of three packed two to a row. Also fixed the subheader, which compared a page name against the `Display` *category* constant that no page is called — so on a client every page claimed to be server side, Debug included. |
 | 2026-08-28 | **Corrected the room map's convergence figure, which had been stale for nine days and was quoted here from `D2`** (`E10`, `E5`). It read 7,207 ticks — twenty minutes — on a million blocks; re-measured by `bench scale --max 1000000` it is **3,934 ticks, about eleven minutes**, on 1,000,294 blocks and a 14,278,796-cell box. The 7,207 predated the 2026-08-26 word skip and the 2026-08-27 span flood, both of which `D2`'s own body already recorded — the headline outlived the paragraph that superseded it. **And the figure is structural**: convergence is the box over a 4,096-cell tick budget, so no work on milliseconds a cell can move it, which `RoomMapConvergenceIsTheBoxDividedByItsBudget` now pins. |
 | 2026-08-28 | Added `ShowEnvironmentReadout`, **on by default** — the first readout that is. One line, bottom centre: the air around your ship and one word for the ship against its own rating. `hot` begins exactly where the glow does, so the two cannot disagree. `B41`. |

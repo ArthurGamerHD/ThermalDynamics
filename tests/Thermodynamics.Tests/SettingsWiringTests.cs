@@ -210,6 +210,66 @@ namespace Thermodynamics.Tests
             }
         }
 
+        /// <summary>
+        /// **Every `bool` setting is a switch to `IsFlag`, and nothing else is.**
+        ///
+        /// <para>
+        /// `IsFlag` works by prefix with a list of exceptions, so a switch whose name begins with
+        /// neither `Enable` nor `Debug` is missed silently — and it decides three things at once:
+        /// whether the menu draws a checkbox or a slider, whether `/thermal` prints `on` or a
+        /// number, and whether the telemetry report records a bool. **Six were missed**, three of
+        /// them on the Debug page and drawn as sliders from 0 to 1: `HeatGlow`,
+        /// `HeatWarningSound`, `HeatTerminalPanel`, `ShowEnvironmentReadout`,
+        /// `FloorBlocksWhenOverBudget` and `ParallelGrids`.
+        /// </para>
+        ///
+        /// <para>
+        /// The field's own type is the oracle, which is what the prefix rule was standing in for.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryBoolSettingIsAFlagAndNothingElseIs()
+        {
+            string source = Source();
+
+            int start = source.IndexOf("public static bool IsFlag", StringComparison.Ordinal);
+            Assert.True(start >= 0, "IsFlag is gone, so this test should be updated");
+
+            string body = source.Substring(start, Math.Min(1600, source.Length - start));
+
+            List<string> named = Names(source);
+            List<string> wrong = new List<string>();
+
+            foreach (Match match in Regex.Matches(source, @"public (bool|int|float) (\w+)\s*[;=]"))
+            {
+                string type = match.Groups[1].Value;
+                string name = match.Groups[2].Value;
+                if (!named.Contains(name)) continue;
+
+                bool recognised = name.StartsWith("Enable", StringComparison.Ordinal)
+                    || name.StartsWith("Debug", StringComparison.Ordinal)
+                    || body.Contains("name == \"" + name + "\"");
+
+                // A mode is excluded by name even though its prefix says otherwise.
+                if (body.Contains("name != \"" + name + "\"")) recognised = false;
+
+                if (type == "bool" && !recognised)
+                {
+                    wrong.Add(name + " is a bool and IsFlag does not know it: the menu draws a"
+                        + " slider, /thermal prints a number and the report records one");
+                }
+
+                if (type != "bool" && recognised)
+                {
+                    wrong.Add(name + " is a " + type + " and IsFlag calls it a switch");
+                }
+            }
+
+            Assert.True(wrong.Count == 0,
+                wrong.Count + " settings are the wrong shape to IsFlag:\n  "
+                + string.Join("\n  ", wrong.ToArray()));
+        }
+
         [Fact]
         public void EverySettingIsClampedOrDeliberatelyNot()
         {
