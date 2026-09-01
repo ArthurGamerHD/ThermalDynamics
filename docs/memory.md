@@ -284,10 +284,30 @@ what writing a check against the answer rather than the mechanism buys.
 
 ### 5. Move the node diagnostics out of the node — ~24 B/block
 
-`ThermalNode` carries eight floats of per-mechanism watts that only exist for the telemetry report
-and the debug overlay. `CollectDiagnostics` is false in ordinary play, so a shipping server is
-paying 32 bytes a node to store nothing. A side array, allocated when diagnostics are switched on
-and dropped when they are switched off, costs a null check on a path that already has one.
+`ThermalNode` carries per-mechanism watts that only exist for the telemetry report and the debug
+overlay. `CollectDiagnostics` is false in ordinary play, so a shipping server pays to store nothing.
+A side array, allocated when diagnostics are switched on and dropped when they are switched off,
+costs a null check on a path that already has one.
+
+**It is seven floats and not eight, and the eighth is the one that would break something**
+(audited 2026-08-31). `LastDeltaTemperature` is *not* a diagnostic: it is written on every publish,
+outside the `CollectDiagnostics` branch the other seven sit behind, and it is read by
+`ThermalTerminal` for the `K/s` line on a block's thermal panel — which ships **on**. Moving it with
+the rest would blank that readout in every world, silently, on a path no test covers because the
+panel is drawn rather than asserted. The seven that *are* diagnostics are `LastConductionWatts`,
+`LastRadiationWatts`, `LastConvectionWatts`, `LastSolarWatts`, `LastFrictionWatts`,
+`LastHeatSourceWatts` and `LastRoomWatts`, and they are **28 bytes a node**.
+
+**And the obvious shape of the side array is the wrong one.** A `float[nodes * 7]` keyed on
+`ThermalNode.Index` has to be reshuffled by *both* removal paths: the dirty path does
+`nodes.RemoveAt(index)` and renumbers every node after the hole, and the incremental one moves a
+node between slots. Until the next step rewrote them, every node past a removal would read its
+neighbour's watts — a visible glitch on the overlay the moment a block is destroyed, which is
+exactly when somebody is watching it. The alternative that carries no index at all is a small object
+per node, referenced from the node and null when diagnostics are off: it saves 20 bytes a node
+rather than 28, because the reference costs eight, and it moves with the node because the node holds
+it. It is worse while diagnostics are *on* — a header and a reference a node — which is the cheap
+direction to be worse in.
 
 ### 8. For SE2: blocks as boxes, not cells — the only one that matters at that scale
 
@@ -341,6 +361,7 @@ counted per cell, which is §8 and §9.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-31 | **Audited item 5 before doing it, and it was wrong in the direction that breaks something.** It said eight floats exist only for telemetry and the overlay; `LastDeltaTemperature` is not one of them — it is written on every publish, outside the `CollectDiagnostics` branch, and `ThermalTerminal` reads it for the `K/s` line on a panel that ships on. Moving it with the rest would blank that readout in every world, on a path no test covers because the panel is drawn rather than asserted. Seven floats, 28 bytes. Also recorded that the obvious side-array shape is the wrong one: keyed on the node index, both removal paths would leave every node past a hole reading its neighbour's watts until the next step. |
 | 2026-08-27 | **The room map is 70 → 53 bytes a block and the mapper's peak 297 → 152**, at 126,731 blocks, over the fourth performance pass ([performance.md](performance.md#pass-4--what-the-pass-moved)). Retained: the cell-to-room dictionary is gone, the per-room lists are ranges into one store carrying no slack, and the sorted key and room arrays are one room index per room cell read through a rank. Peak: the flood's retained frontier held millions of cells and now holds tens of thousands, because the walk takes a run at a time. Whole simulation, retained 739 → 722 and peak 967 → **821**. And the transient this page first measured on 2026-08-27 — a pass *allocating* 253 MB at 505,566 blocks — is **25 MB**. |
 | 2026-08-27 | §4 again: the sorted key and room arrays are gone as well. The membership set the pass already fills is ranked instead, so a room is an array lookup at a cell's rank — four bytes a cell, no keys, no sort. The measured per-block row here still says 72 and predates this; it is re-taken in the row above. |
 | 2026-08-27 | §4 said room cells are held twice. They are held once: the cell-to-room dictionary is gone, not merely replaced at publish — nothing read it while a pass ran, so the frozen arrays are built from the room lists instead. |
