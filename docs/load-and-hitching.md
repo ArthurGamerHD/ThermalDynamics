@@ -534,15 +534,31 @@ The buffers are only ever grown, so the case worth testing is a small hull rebui
 one's buffers: both loops are bounded by the table's count rather than by the array's length, and
 `SurfaceRebuildScratchTests` holds a smaller grid's map against a map that never saw the larger one.
 
-**What was looked at and left.** `roomair` allocates **2,573 KB** and it is the `RoomAirNode` per
-room and the `Links` list each carries — about 139,120 links on this hull. Pooling them means a
-`Reset` covering every field including a private-set property, and a room that inherited a
-predecessor's temperature would be a silent, physical bug rather than a crash; it wants the same
-paired test the fast paths here have. `rooms` allocates **4,768 KB** and that is the `RoomMap`
-itself, whose recycling is gated on a stated threading invariant — every grid whose room pass has
-not finished publishes the same empty default, and the code says plainly that a mapper mutating its
-current map rather than replacing it would be a race across every grid at once. Neither is a
-buffer-reuse job.
+**The room air nodes are pooled too**, which was the other 2,573 KB — a `RoomAirNode` per room and
+the `Links` list each carries, about 139,120 links on this hull:
+
+| `roomair` at 126,731 blocks | before | after |
+| --- | ---: | ---: |
+| allocated | 2,573 KB | **0 KB** |
+| best of 100 | 7.693 ms | 7.604 ms |
+
+**Two things had to change first, and both are the kind that fail silently.** The carry-over map
+held the *nodes* a rebuild was about to reuse, so a room could have read a temperature belonging to
+whichever room reused its node first; it holds copies of the three values now. And `Initialised` was
+written on the carry-over branch only, so a pooled node would have arrived at a room with no
+remembered anchor already claiming to hold a meaningful temperature.
+
+**The test for that second one passed against the bug at first**, which is worth recording: a
+rebuild of an unchanged hull finds every anchor in the carry-over map and never takes the branch at
+all. `RoomAirPoolTests` fills the room's own anchor cell in between, which moves the anchor and
+makes the branch run — and it was proven to fail with the field deliberately unwritten before it was
+believed.
+
+**What was looked at and left.** `rooms` allocates **4,768 KB** and that is the `RoomMap` itself,
+whose recycling is gated on a stated threading invariant — every grid whose room pass has not
+finished publishes the same empty default, and the code says plainly that a mapper mutating its
+current map rather than replacing it would be a race across every grid at once. Not a buffer-reuse
+job.
 
 ### 13. The cell table is sized before a hull is built, not grown during it
 
@@ -912,6 +928,7 @@ reasoning that produced it was sound and the premise was not.
 
 | Date | Change |
 | --- | --- |
+| 2026-08-31 | **The room air rebuild pools its nodes: 2,573 KB to 0.** A node and a link list per room were allocated every rebuild. Two silent hazards had to be closed first — the carry-over map held the very nodes the rebuild was about to reuse, and `Initialised` was written on one branch only — and `RoomAirPoolTests` was proven to fail against the second before it was believed. Its first version did not: a rebuild of an unchanged hull finds every anchor and never takes the branch, so the test now moves a room's anchor between rebuilds. |
 | 2026-08-31 | **The surface rebuild keeps its scratch: 1,980 KB to 0.** Two `long[cells]` were allocated per rebuild to snapshot a table being mutated; they are scratch, so they are kept and grown. `SurfaceRebuildScratchTests` holds a second rebuild against a first and a small hull against buffers a large one sized, which is the case a kept buffer could get wrong. Looked at and left: `roomair`'s 2,573 KB is per-room nodes whose pooling needs a full `Reset` and would fail as a silent physical bug, and `rooms`' 4,768 KB is the `RoomMap` itself, whose recycling is gated on the threading invariant that a published map is never mutated. |
 | 2026-08-31 | **Sized the solver's node lists too, and recorded which table must not be sized.** `Solver.AddBlock` falls from 187.0 to **153.4 bytes a block** — the `ThermalNode` objects and nothing else — for 4.2 MB, on top of the cell table's 10.5, and both about 7 % quicker. **`ThermalGrid.blocks` keeps its regrowth on purpose**: a list's order is its index order whatever its capacity, but a dictionary's enumeration order follows its bucket layout, and the x-ray overlay enumerates that one and stops at a budget — so sizing it would draw a different set of boxes. That is the rule the other two were checked against rather than a special case. |
 | 2026-08-31 | **Sized the cell table before a hull is built.** `GridModel`'s dictionary doubled as it filled and every doubling copied what it already held: **10,549,776 B** on a 125,000-block hull, 84.4 a block, thrown away immediately. `ThermalGrid` already enumerates `Grid.GetBlocks()` and so knows the count, and `EnsureCellCapacity` takes it — **0 B** after, and 0.93× the time. A hint rather than a bound, ignored after the first block, and `GridCapacityTests` pins that a sized grid is the same grid: same blocks, same lookups, same bounds. |

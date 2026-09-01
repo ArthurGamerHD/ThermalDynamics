@@ -1757,9 +1757,37 @@ namespace Thermodynamics.Core
 
         // ---- room air ----------------------------------------------------------------------
 
+        /// <summary>
+        /// What a room's air was, carried across a rebuild by the room's anchor cell.
+        ///
+        /// <para>
+        /// **The three values rather than the node they came from.** The nodes are pooled and reused
+        /// by the rebuild that reads this, so holding a reference here would let a room take the
+        /// temperature of whichever room happened to reuse its node first — a silent physical bug
+        /// rather than a crash. A copy cannot be overwritten.
+        /// </para>
+        /// </summary>
+        private struct RememberedAir
+        {
+            public float Temperature;
+            public float Pressure;
+            public bool Initialised;
+        }
+
+        /// <summary>
+        /// Room air nodes from the last rebuild, kept for the next one.
+        ///
+        /// <para>
+        /// **A rebuild allocated a node and a link list per room every time** — 2,573 KB on a
+        /// 126,731-block hull, mostly the links, and a rebuild runs on every completed room pass.
+        /// A reused node keeps its list's capacity, which is where the bytes were.
+        /// </para>
+        /// </summary>
+        private readonly List<RoomAirNode> roomAirPool = new List<RoomAirNode>();
+
         /// <summary>Air temperature and pressure of rooms seen before the last rebuild.</summary>
-        private readonly Dictionary<Vector3I, RoomAirNode> rememberedAir =
-            new Dictionary<Vector3I, RoomAirNode>(Vector3I.Comparer);
+        private readonly Dictionary<Vector3I, RememberedAir> rememberedAir =
+            new Dictionary<Vector3I, RememberedAir>(Vector3I.Comparer);
 
         /// <summary>
         /// Faces each bounding node presents to the room being built, counted in a row indexed by
@@ -1797,7 +1825,17 @@ namespace Thermodynamics.Core
             rememberedAir.Clear();
             for (int i = 0; i < roomAir.Count; i++)
             {
-                rememberedAir[roomAir[i].Anchor] = roomAir[i];
+                RoomAirNode was = roomAir[i];
+
+                RememberedAir remembered;
+                remembered.Temperature = was.Temperature;
+                remembered.Pressure = was.Pressure;
+                remembered.Initialised = was.Initialised;
+                rememberedAir[was.Anchor] = remembered;
+
+                // The node itself goes back on the pile. Its values are copied above, so reusing it
+                // below cannot take them from a room that has not been rebuilt yet.
+                roomAirPool.Add(was);
             }
 
             roomAir.Clear();
@@ -1813,13 +1851,13 @@ namespace Thermodynamics.Core
                     RoomMap.RoomCells cells = rooms.CellsOf(r);
                     if (cells.Count == 0) continue;
 
-                    RoomAirNode air = new RoomAirNode();
+                    RoomAirNode air = TakeRoomAirNode();
                     air.RoomIndex = r;
                     air.Anchor = LowestCell(cells);
                     air.CellCount = cells.Count;
                     air.Volume = cells.Count * cellVolume;
 
-                    RoomAirNode previous;
+                    RememberedAir previous;
                     if (rememberedAir.TryGetValue(air.Anchor, out previous))
                     {
                         air.Temperature = previous.Temperature;
@@ -1830,6 +1868,12 @@ namespace Thermodynamics.Core
                     {
                         air.Temperature = Environment.AmbientTemperature;
                         air.Pressure = 0f;
+
+                        // **Assigned rather than left**, which a fresh node did not need: every
+                        // other field here is written on both paths, and this one was written only
+                        // on the branch above. A pooled node would otherwise arrive at a new room
+                        // already claiming to hold a meaningful temperature.
+                        air.Initialised = false;
                     }
 
                     air.AirDensity = settings.RoomAirDensity;
@@ -1843,6 +1887,20 @@ namespace Thermodynamics.Core
             rememberedAir.Clear();
             EnsureBuffers();
             conductanceTotalsDirty = true;
+        }
+
+        /// <summary>
+        /// A room air node from the pool, or a new one. The caller writes every field; the pool
+        /// exists for the link list's capacity rather than for the object.
+        /// </summary>
+        private RoomAirNode TakeRoomAirNode()
+        {
+            int last = roomAirPool.Count - 1;
+            if (last < 0) return new RoomAirNode();
+
+            RoomAirNode air = roomAirPool[last];
+            roomAirPool.RemoveAt(last);
+            return air;
         }
 
         /// <summary>
