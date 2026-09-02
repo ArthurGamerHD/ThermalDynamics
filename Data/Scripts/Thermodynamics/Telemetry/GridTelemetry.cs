@@ -466,6 +466,20 @@ namespace Thermodynamics
         public readonly TimingStat BuildTime = new TimingStat("build");
 
         /// <summary>
+        /// One block arriving or leaving, and everything that follows from it.
+        ///
+        /// <para>
+        /// **A root of its own, like the build beside it**: block events arrive from the grid's own
+        /// callback, inside neither the session frame nor a grid's tick. Until 2026-09-01 they were
+        /// timed by nothing at all — a 2026-09-01 field report shows eleven 44,632-block ships
+        /// assembled inside one session against a `build` row reading 7 calls and 0.06 ms, because a
+        /// pasted or welded ship arrives a block at a time through here rather than through the
+        /// build. That is where the unattributed frame time went looking. See backlog `D15`.
+        /// </para>
+        /// </summary>
+        public readonly TimingStat BlockEventTime = new TimingStat("block events");
+
+        /// <summary>
         /// Steps between structure samples. Structure changes only when blocks do, so sampling it
         /// every step adds nothing.
         /// </summary>

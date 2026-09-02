@@ -1003,10 +1003,14 @@ namespace Thermodynamics.Harness
             // 5. the room map, which floods the whole bounding volume.
             //
             // Two figures, because they differ by an order of magnitude and only one of them is
-            // usually quoted. What the finished map retains is modest. What the pass needs while it
-            // runs is a bit and a byte for every cell of the bounding box — the visited set and the
-            // sealing snapshot — and both are live for the whole pass and retained between passes,
-            // so on a large grid this is the high-water mark of the entire mod.
+            // usually quoted. What the finished map retains is modest. The peak below is taken with
+            // `GC.GetTotalMemory(false)`, which is deliberate and is **not** a figure for live
+            // structures: it counts what the pass has allocated and not yet had collected, so it is
+            // the high-water mark the process has to have room for rather than the mapper's
+            // footprint. The live part is a visited bit and a sealing byte per cell of the box —
+            // 1.7 MB on a 1,499,616-cell box against the 18.4 the row reads — and the difference is
+            // the pass's own garbage, most of it the `RoomMap` it builds and the one it supersedes.
+            // See performance.md, Pass 10, Iteration 3.
             Vector3I extents = (grid.Max - grid.Min) + Vector3I.One;
             long volume = (long)extents.X * extents.Y * extents.Z;
 
@@ -1034,7 +1038,7 @@ namespace Thermodynamics.Harness
                 + " cells of slack); counted, not stored: "
                 + map.ExternalCellCount.ToString("n0") + " external"));
             rows.Add(Row("RoomMapper peak", peak - afterSolver, volume, blocks,
-                "high-water mark while a pass runs — a visited bit and a sealing byte per cell of the box"));
+                "allocated and not yet collected while a pass runs; live is a bit and a byte a cell"));
 
             rows.Add(Row("TOTAL retained", afterRooms - baseline, blocks, blocks, ""));
             rows.Add(Row("TOTAL peak", peak - baseline, blocks, blocks,

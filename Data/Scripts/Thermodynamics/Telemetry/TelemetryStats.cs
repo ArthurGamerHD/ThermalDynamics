@@ -287,6 +287,19 @@ namespace Thermodynamics
         }
 
         /// <summary>
+        /// The same, with the block-event root the 2026-09-01 field report showed was missing: a
+        /// pasted or welded ship arrives a block at a time from the grid's own callback, which is
+        /// inside neither the session frame nor a grid's tick, and until that report nothing timed
+        /// it. Kept beside the four-argument form rather than replacing it, because
+        /// `CostRollupTests` pins that one against figures taken before this root existed.
+        /// </summary>
+        public static double MeasuredMilliseconds(
+            double sessionFrame, double save, double load, double build, double blockEvents)
+        {
+            return MeasuredMilliseconds(sessionFrame, save, load, build) + blockEvents;
+        }
+
+        /// <summary>
         /// What a parent row cost that none of its children claimed, reported rather than clamped: a
         /// large positive figure is work nobody instrumented, and a negative one is two children
         /// timing the same milliseconds, which a maximum with zero would hide.

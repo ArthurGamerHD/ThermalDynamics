@@ -631,6 +631,7 @@ namespace Thermodynamics
             TimingStat save = new TimingStat("save");
             TimingStat load = new TimingStat("load");
             TimingStat build = new TimingStat("build");
+            TimingStat blockEvents = new TimingStat("block events");
 
             costRecords = 0;
             costCalls = 0;
@@ -663,6 +664,7 @@ namespace Thermodynamics
                 save.Merge(g.SaveTime);
                 load.Merge(g.LoadTime);
                 build.Merge(g.BuildTime);
+                blockEvents.Merge(g.BlockEventTime);
             }
 
             sb.Append("  Indented rows are nested inside the row above them and are not added\n");
@@ -702,12 +704,14 @@ namespace Thermodynamics
             save.WriteRow(sb);
             load.WriteRow(sb);
             build.WriteRow(sb);
+            blockEvents.WriteRow(sb);
 
             double total = CostRollup.MeasuredMilliseconds(
                 Telemetry.SessionFrameTime.TotalMilliseconds,
                 save.TotalMilliseconds,
                 load.TotalMilliseconds,
-                build.TotalMilliseconds);
+                build.TotalMilliseconds,
+                blockEvents.TotalMilliseconds);
 
             double share = CostRollup.ShareOfRealTime(total, Telemetry.SessionSeconds);
 
@@ -1166,6 +1170,26 @@ namespace Thermodynamics
             {
                 sb.Append("  !! the record list changed while the report was being written;\n");
                 sb.Append("  !! every aggregate above the grid detail is short by the difference.\n");
+            }
+
+            // **A child cannot cost more than the parent it runs inside**, and the Cost table nests
+            // grid simulation inside the session frame — `Session.Update` wraps `Tick`, `Tick` calls
+            // the scheduler, and the scheduler is the only caller of a grid's tick. Both figures are
+            // plain stopwatches over those spans, so if this line fires, one of them is not
+            // measuring the span its name claims and the negative `unattributed` row is the symptom
+            // rather than the fault. A 2026-09-01 field report read 156,231 ms of grid simulation
+            // inside a 46,359 ms frame — 3.4x — with no explanation yet. See backlog `D15`.
+            double frame = Telemetry.SessionFrameTime.TotalMilliseconds;
+            if (frame > 0d && milliseconds > frame)
+            {
+                sb.Append("  !! grid simulation totals ")
+                    .Append((milliseconds / frame).ToString("n2"))
+                    .Append("x the session frame it runs inside, so one of the two clocks is\n");
+                sb.Append("  !! wrong: the frame is ")
+                    .Append(frame.ToString("n0"))
+                    .Append(" ms and the grids inside it sum to ")
+                    .Append(milliseconds.ToString("n0"))
+                    .Append(" ms.\n");
             }
 
             sb.Append('\n');

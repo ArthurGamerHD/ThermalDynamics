@@ -148,11 +148,121 @@ namespace Thermodynamics.Core
 
         // ---- last-step diagnostics ---------------------------------------------------------
 
-        public float LastConductionWatts;
-        public float LastRadiationWatts;
-        public float LastConvectionWatts;
-        public float LastSolarWatts;
-        public float LastFrictionWatts;
+        /// <summary>
+        /// The per-mechanism watts, or null while nothing has recorded any — which is every node of
+        /// every world running the shipped configuration.
+        ///
+        /// <para>
+        /// **Seven floats that exist for the debug overlay, the crosshair readout and the telemetry
+        /// report, and sat on every node whether or not anything read them** (`E4`). The solver
+        /// writes them only inside its `CollectDiagnostics` branch, so a world with the readouts off
+        /// carried 28 bytes a node it never looked at: 3.5 MB on a 126,731-block hull and 28 on a
+        /// million. Here they are one small object, allocated by the first non-zero write and held
+        /// by the node itself.
+        /// </para>
+        ///
+        /// <para>
+        /// **The node holds it rather than an array holding it by index.** A `float[nodes × 7]`
+        /// keyed on the index has to be reshuffled by both removal paths — the dirty one renumbers
+        /// every node after the hole and the incremental one moves a node between slots — so until
+        /// the next step rewrote them, every node past a removal would read its neighbour's watts on
+        /// the overlay, at the moment a block is destroyed. A reference costs eight bytes of the
+        /// twenty-eight it saves; being unable to be wrong is what the other twenty buy.
+        /// </para>
+        /// </summary>
+        private NodeDiagnostics diagnostics;
+
+        /// <summary>What has been recorded for this node, or null if nothing has.</summary>
+        public NodeDiagnostics Diagnostics
+        {
+            get { return diagnostics; }
+        }
+
+        // **Each setter carries the null check rather than a shared helper.** A helper would have
+        // to take the field by reference to write it, and a `ref` to a field of a class the caller
+        // does not own is exactly the shape that outlives its object. Seven copies of three lines,
+        // and the shape is identical in each: nothing is recorded until something is non-zero.
+
+
+        public float LastConductionWatts
+        {
+            get { return diagnostics == null ? 0f : diagnostics.Conduction; }
+            set
+            {
+                if (diagnostics == null)
+                {
+                    if (value == 0f) return;
+
+                    diagnostics = new NodeDiagnostics();
+                }
+
+                diagnostics.Conduction = value;
+            }
+        }
+
+        public float LastRadiationWatts
+        {
+            get { return diagnostics == null ? 0f : diagnostics.Radiation; }
+            set
+            {
+                if (diagnostics == null)
+                {
+                    if (value == 0f) return;
+
+                    diagnostics = new NodeDiagnostics();
+                }
+
+                diagnostics.Radiation = value;
+            }
+        }
+
+        public float LastConvectionWatts
+        {
+            get { return diagnostics == null ? 0f : diagnostics.Convection; }
+            set
+            {
+                if (diagnostics == null)
+                {
+                    if (value == 0f) return;
+
+                    diagnostics = new NodeDiagnostics();
+                }
+
+                diagnostics.Convection = value;
+            }
+        }
+
+        public float LastSolarWatts
+        {
+            get { return diagnostics == null ? 0f : diagnostics.Solar; }
+            set
+            {
+                if (diagnostics == null)
+                {
+                    if (value == 0f) return;
+
+                    diagnostics = new NodeDiagnostics();
+                }
+
+                diagnostics.Solar = value;
+            }
+        }
+
+        public float LastFrictionWatts
+        {
+            get { return diagnostics == null ? 0f : diagnostics.Friction; }
+            set
+            {
+                if (diagnostics == null)
+                {
+                    if (value == 0f) return;
+
+                    diagnostics = new NodeDiagnostics();
+                }
+
+                diagnostics.Friction = value;
+            }
+        }
 
         /// <summary>
         /// A directional drag multiplier on this block's six faces, registered through the API.
@@ -165,10 +275,38 @@ namespace Thermodynamics.Core
         public DragProfile Drag;
 
         /// <summary>Watts from mod-registered point heat sources, summed over every source.</summary>
-        public float LastHeatSourceWatts;
+        public float LastHeatSourceWatts
+        {
+            get { return diagnostics == null ? 0f : diagnostics.HeatSource; }
+            set
+            {
+                if (diagnostics == null)
+                {
+                    if (value == 0f) return;
+
+                    diagnostics = new NodeDiagnostics();
+                }
+
+                diagnostics.HeatSource = value;
+            }
+        }
 
         /// <summary>Watts exchanged with the air of the rooms this block faces.</summary>
-        public float LastRoomWatts;
+        public float LastRoomWatts
+        {
+            get { return diagnostics == null ? 0f : diagnostics.Room; }
+            set
+            {
+                if (diagnostics == null)
+                {
+                    if (value == 0f) return;
+
+                    diagnostics = new NodeDiagnostics();
+                }
+
+                diagnostics.Room = value;
+            }
+        }
 
         public float LastDeltaTemperature;
 

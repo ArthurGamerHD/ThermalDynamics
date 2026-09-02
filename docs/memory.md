@@ -282,12 +282,19 @@ that remains — the code all of this replaced — over every room cell and the 
 so the misses are judged as well as the hits. It is unchanged across all three structures, which is
 what writing a check against the answer rather than the mechanism buys.
 
-### 5. Move the node diagnostics out of the node — ~24 B/block
+### 5. The node diagnostics are off the node — 24 B/block, taken 2026-09-01
 
-`ThermalNode` carries per-mechanism watts that only exist for the telemetry report and the debug
-overlay. `CollectDiagnostics` is false in ordinary play, so a shipping server pays to store nothing.
-A side array, allocated when diagnostics are switched on and dropped when they are switched off,
-costs a null check on a path that already has one.
+**Done.** `ThermalNode` carried per-mechanism watts that only exist for the telemetry report and the
+debug overlay, and `CollectDiagnostics` is false in ordinary play — so a shipping server stored
+seven floats a node it never read. They are a `NodeDiagnostics` record now, made by the first
+non-zero write and null until then, which in the shipped configuration is never. **Measured at
+24 bytes a node** by the stage lab's allocation column: the `register` stage allocates 20,100 KB on
+a 126,731-block hull where it allocated 23,070, with `place` beside it as a control that did not
+move. Twenty was the prediction — a reference costs eight of the twenty-eight — and the extra four
+is the object size rounding the other way. **The timings are not a claim**: the same window moved
+the control 2.6 %, which is what `M5` and `M7` say to do with a ratio taken beside it.
+
+The reasoning that chose the shape is kept below, because it is what the next reader needs.
 
 **It is seven floats and not eight, and the eighth is the one that would break something**
 (audited 2026-08-31). `LastDeltaTemperature` is *not* a diagnostic: it is written on every publish,
@@ -303,11 +310,13 @@ panel is drawn rather than asserted. The seven that *are* diagnostics are `LastC
 `nodes.RemoveAt(index)` and renumbers every node after the hole, and the incremental one moves a
 node between slots. Until the next step rewrote them, every node past a removal would read its
 neighbour's watts — a visible glitch on the overlay the moment a block is destroyed, which is
-exactly when somebody is watching it. The alternative that carries no index at all is a small object
-per node, referenced from the node and null when diagnostics are off: it saves 20 bytes a node
-rather than 28, because the reference costs eight, and it moves with the node because the node holds
-it. It is worse while diagnostics are *on* — a header and a reference a node — which is the cheap
-direction to be worse in.
+exactly when somebody is watching it. The alternative that carries no index at all — and the one built — is a small object
+per node, referenced from the node and null until something records a figure: it saves 24 bytes a
+node rather than 28, and it moves with the node because the node holds it. It is worse while
+diagnostics are *on* — a header and a reference a node — which is the cheap direction to be worse
+in. **A zero is not worth a record**, either: the clear passes run over every node whether or not
+that node has ever had watts attributed to it, so a setter that allocated on a zero would hand the
+shipped configuration back exactly what this removes.
 
 ### 8. For SE2: blocks as boxes, not cells — the only one that matters at that scale
 

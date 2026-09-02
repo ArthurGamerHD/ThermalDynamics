@@ -2984,10 +2984,99 @@ settle, says which session it came from, and can be told to give every stage a p
 
 ---
 
+## Pass 10, iteration 1 — the ladder had gone stale by four to fifteen times
+
+The pass opened the way every pass opens, by measuring — and the measurement disagreed with the
+page it was going to be compared against. `bench scale` re-run on 2026-09-01 against the ladder in
+[load-and-hitching.md](load-and-hitching.md#the-ladder), at a million blocks:
+
+| column | published | 2026-09-01 | |
+| --- | ---: | ---: | ---: |
+| build | 5,429 ms | **582 ms** | 9.3× |
+| topology | 421.4 ms | **121.7 ms** | 3.5× |
+| room mapping | 2,122.4 ms | **144.8 ms** | 14.7× |
+| exposure | 512.6 ms | **43.5 ms** | 11.8× |
+| a settled step | 118.2 ms | **61.3 ms** | 1.9× |
+| resident | 1,510 MB | **610 MB** | 2.5× |
+
+**None of that is new work.** Every one of those columns was moved by a pass between the second and
+the ninth, and every one of those passes wrote down what it moved in its own change log — the room
+flood a run at a time, the sealing snapshot, the bitset, the interior scan's word skip, the packed
+surface entry, the one-cell paths, the hoisted sum. The table at the top of the page, which is what
+four other pages quote, was never re-run. This is `E5` in its purest form and the same shape as the
+room-map convergence figure `D2` carried for nine days: **the headline outlived the paragraphs that
+superseded it**.
+
+**Part of the gap is the hull, and it is named rather than left in.** Today's census puts 1,826,153
+links on the million-block ship where the old table had 2,114,111, so the topology and step columns
+are not like-for-like. The bounding boxes are identical at every rung, so the room column is: 14.7×
+on the same volume.
+
+**What it changes about where to look next.** The load path is no longer 5.4 s of build against 2.1 s
+of room mapping; at a million blocks it is 582 ms of build, 145 of rooms, 122 of topology and 43 of
+exposure, and the largest single item on it is placing blocks. The stage lab agrees — `rooms` reads
+**9.2 ns a cell at 507,542 blocks against 8.7 at 126,731**, which is flat, so the room pass is not
+the superlinear thing the old ladder implied.
+
+## Pass 10, iteration 2 — the node diagnostics come off the node
+
+`E4`, scoped by two earlier sessions and built here. Seven per-mechanism watt floats sat on every
+`ThermalNode` for the crosshair readout, the block overlay and the telemetry report; the solver
+writes them only inside its `CollectDiagnostics` branch, which the shipped configuration leaves
+off. They are a `NodeDiagnostics` record now, made by the first non-zero write.
+
+| stage, 126,731 blocks | before | after | |
+| --- | ---: | ---: | ---: |
+| `register`, allocated | 23,070 KB | **20,100 KB** | −12.9 % |
+| `place`, allocated (control) | 32,084 KB | 32,084 KB | — |
+
+**24 bytes a node**, against a prediction of 20 — a reference costs eight of the twenty-eight saved,
+and the object size rounded the other way. About 3 MB on this hull and 24 at a million.
+
+**The timings from that window are not a claim.** `place`, which this change cannot reach, moved
+2.6 % between the two runs, so every ratio taken beside it is inside the noise (`M5`, `M7`); the
+allocation column is what carries, and it is the column `E4` was about.
+
+**Two shapes were refused before either was built.** A `float[nodes × 7]` keyed on the node's index
+has to be reshuffled by both removal paths — the dirty one renumbers every node after the hole, the
+incremental one moves a node between slots — so until the next step rewrote them, every node past a
+removal would read its neighbour's watts on the overlay, at the moment a block is destroyed. And a
+shared sink for zeroes written to a node that has no record would be static state two grids on two
+threads could reach, which `EveryPieceOfStaticStateInTheCoreSaysWhyTwoGridsMayShareIt` refused —
+correctly, and before it ever ran in a session.
+
+## Pass 10, iteration 3 — what a room pass allocates, and the row that said otherwise
+
+`bench memory` reports a **RoomMapper peak** of 18.4 MB above the solver on a 126,731-block hull —
+152 bytes a block — under a description saying that is "a visited bit and a sealing byte per cell of
+the box". Those two are 1.125 bytes a cell, which on this hull's 1,499,616-cell box is **1.7 MB**.
+The row is ten times its own explanation.
+
+**The row is right and the description was wrong.** The peak is sampled with
+`GC.GetTotalMemory(false)`, which counts what has been allocated and not yet collected — the figure
+a process needs headroom for, and deliberately so. What it is not is the mapper's live footprint,
+which is what the sentence beside it claimed. Fixed there rather than here.
+
+**What the difference is made of is the useful half.** The stage lab says a room pass allocates
+**4,768 KB** at this size, and the mapper builds a fresh `RoomMap` per pass: a cell store sized from
+the last map's count (3.3 MB of `Vector3I` here), two bitsets over the box, the range arrays, and an
+exact-size copy of the store at publish when it has slack. A sealing change requests a restart, so
+this is not only a load-path figure — **a door built or destroyed on a large ship costs a pass, and
+a pass costs its own map.** At a million blocks it is about 38 MB of garbage per remap.
+
+**The obvious fix is to recycle the map, and it is not safe as things stand.** Two buffers
+alternating would remove nearly all of it — but `ThermalSolver.exposureMap` holds the published map
+across a *budgeted* exposure refresh, which can span several publishes, so a map recycled two
+generations back can still be the one a refresh in flight is reading. Recycling needs an ownership
+rule before it needs code, and that is a row rather than an iteration: `D20`.
+
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-09-01 | **Pass 10 opened by re-taking the ladder, and it had gone stale by four to fifteen times**: 582 ms of build at a million blocks against the 5,429 the table carried, 145 of room mapping against 2,122, 43.5 of exposure against 513, a 61.3 ms step against 118, and 610 MB resident against 1,510. Every one of those was moved by a pass between the second and the ninth; the table other pages quote was never re-run. |
+| 2026-09-01 | **A room pass allocates its own map**, 4,768 KB at 126,731 blocks and about 38 MB at a million, and a sealing change requests a pass — so this is a play-time figure and not only a load-path one. Recycling the map is `D20`, blocked on an ownership rule: the solver holds the published map across a budgeted exposure refresh. Also corrected `bench memory`'s **RoomMapper peak** row, whose description named the live bit-and-byte footprint (1.7 MB here) for a figure that is the uncollected high-water mark (18.4 MB). |
+| 2026-09-01 | **The node diagnostics come off the node** (`E4`): seven floats that only the readouts and the telemetry report ever look at are a record the node makes on the first non-zero write. **24 bytes a node**, measured on the `register` stage's allocation column with `place` as an unmoved control. |
 | 2026-08-28 | **Corrected the room map's convergence figure, which had been stale for nine days and was quoted here from `D2`** (`E10`, `E5`). It read 7,207 ticks — twenty minutes — on a million blocks; re-measured by `bench scale --max 1000000` it is **3,934 ticks, about eleven minutes**, on 1,000,294 blocks and a 14,278,796-cell box. The 7,207 predated the 2026-08-26 word skip and the 2026-08-27 span flood, both of which `D2`'s own body already recorded — the headline outlived the paragraph that superseded it. **And the figure is structural**: convergence is the box over a 4,096-cell tick budget, so no work on milliseconds a cell can move it, which `RoomMapConvergenceIsTheBoxDividedByItsBudget` now pins. |
 | 2026-08-28 | **Pass 9 measured against its own start, and the control was the finding.** `place` −12.1 % and exposure −4.9 % on the minimum, both with ranges that do not overlap — and `place` reproduces iteration 9's −12.2 % on a different day with a different stage list, which is the pass's clearest evidence that a within-window ratio travels where an absolute figure does not. The `rooms` control moved 4.5 % on a stage nothing touched; **run on its own the two binaries agree to 0.3 %**. Settling between stages reclaims the garbage and leaves the heap, so a stage carries its predecessors' allocation — which is also the mechanism behind iteration 6's unexplained 13.9 %. `bench stages --isolate` gives every stage its own process. |
 | 2026-08-27 | **One-cell blocks share their surface arrays per model and orientation**, because the bits do not depend on where the block is. `place` falls **15.6 % on its median and 12.2 % on its minimum** with neither leg's range overlapping, and allocates 11 % less. The first version took the rotation as a delegate and allocated *more* than it saved — 40,005 KB against 36,044 — which the stage lab's allocation column caught and no timing in that window did. |

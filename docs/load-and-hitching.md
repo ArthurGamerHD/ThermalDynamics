@@ -127,14 +127,25 @@ figures moved so much.
 
 | blocks | links | bbox | exposed | build | topology | rooms | exposure | full step | sub | tick | cap | resident |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 8,904 | 20,779 | 68,800 | 72 % | 85 ms | 11.5 | 15.7 | 5.0 | 1.17 | 12 | 1.14 | 17 | 10 MB |
-| 32,800 | 73,787 | 328,640 | 61 % | 134 ms | 26.0 | 45.3 | 6.1 | 2.65 | 12 | 1.09 | 4 | 40 MB |
-| 126,731 | 277,967 | 1,499,616 | 49 % | 475 ms | 43.6 | 134.4 | 35.5 | 22.29 | 12 | 2.43 | 1 | 139 MB |
-| 505,566 | 1,079,559 | 6,838,104 | 35 % | 2,313 ms | 193.9 | 798.1 | 200.7 | 67.06 | 12 | 13.18 | 1 | 585 MB |
-| 1,000,294 | 2,114,111 | 14,278,796 | 30 % | 5,429 ms | 421.4 | 2,122.4 | 512.6 | 118.20 | 12 | 25.87 | 1 | 1,510 MB |
+| 8,904 | 18,333 | 68,800 | 72 % | 33 ms | 6.6 | 5.6 | 2.3 | 0.70 | 7 | 0.66 | 74 | 6 MB |
+| 32,800 | 64,964 | 328,640 | 61 % | 59 ms | 4.2 | 18.6 | 2.0 | 2.18 | 7 | 1.52 | 20 | 18 MB |
+| 126,731 | 247,350 | 1,499,616 | 49 % | 88 ms | 18.4 | 22.4 | 5.3 | 12.28 | 8 | 5.96 | 5 | 76 MB |
+| 505,566 | 952,523 | 6,838,104 | 35 % | 294 ms | 62.6 | 69.6 | 21.7 | 33.74 | 8 | 13.03 | 1 | 311 MB |
+| 1,000,294 | 1,826,153 | 14,278,796 | 30 % | 582 ms | 121.7 | 144.8 | 43.5 | 61.28 | 8 | 24.73 | 1 | 610 MB |
 
-**`sub` is 12 at every rung, which is what the stability estimate asks for rather than a ceiling.**
-The `full step` column is the cost of the step the default settings actually take.
+*Re-taken 2026-09-01 by `bench scale`. **The table it replaces had gone stale by four to fifteen
+times** — it read 5,429 ms of build, 2,122 ms of room mapping and 1,510 MB resident at a million
+blocks, against 582, 145 and 610 here. Every pass from the second to the ninth moved these columns
+and each recorded what it moved in its own change log; the table at the top of the page, which is
+what other pages quote, was never re-run. That is `E5` in its purest form — a headline outliving the
+paragraphs that superseded it — and it is the same shape as the room-map convergence figure `D2`
+carried for nine days. **Part of the difference is the hull**: today's census puts 1,826,153 links on
+the million-block ship where the old table had 2,114,111, so the topology and step columns are not a
+like-for-like ratio. The bounding boxes are identical at every rung, so the `rooms` column is.*
+
+**`sub` is 7 to 8 rather than the 12 this table used to read**, which is the stability estimate
+asking for less on a hull whose block mix has changed, not a ceiling. The `full step` column is the
+cost of the step the default settings actually take.
 
 **`exposed` falls as the hull grows**, from 72 % to 30 %, which is the bulkheads: they are solid
 slabs of the fuselage's cross-section, so a wider ship buries a larger share of itself. That
@@ -943,6 +954,8 @@ reasoning that produced it was sound and the premise was not.
 | 2026-08-31 | **Sized the cell table before a hull is built.** `GridModel`'s dictionary doubled as it filled and every doubling copied what it already held: **10,549,776 B** on a 125,000-block hull, 84.4 a block, thrown away immediately. `ThermalGrid` already enumerates `Grid.GetBlocks()` and so knows the count, and `EnsureCellCapacity` takes it — **0 B** after, and 0.93× the time. A hint rather than a bound, ignored after the first block, and `GridCapacityTests` pins that a sized grid is the same grid: same blocks, same lookups, same bounds. |
 | 2026-08-31 | **Gave the shape-normal pass a one-cell fast path, and learned that its cost is not what it looked like.** A one-cell block's 26 neighbour offsets and unit vectors are constants, so the walk was doing 26 square roots a node to arrive at a table; the table is 24.797 → **23.110 ms** at 126,731 blocks with `exposure` flat as the control, and `ShapeNormalOneCellTests` holds the two paths equal exactly rather than within a tolerance. **6.8 % for removing all the arithmetic says the pass is memory-bound on the occupancy probes**, which is where a further pass would have to aim — nine word reads for the nine rows of three adjacent bits, rather than twenty-six probes. Left unbuilt: the pass runs only behind a switch that ships off. |
 | 2026-08-31 | **Measured the shape-normal pass and gave it a budget, before it shipped rather than after** ([backlog.md](backlog.md) `K22`). At 126,731 blocks it is **24.781 ms**, 195.5 ns a node, against exposure's 3.561 ms and 28.1 ns — seven times the cost of the walk it most resembles, and a frame-eating hitch if it lands whole. Sliced at a seventh of the exposure budget, keyed on the grid's version rather than on the exposure event so a door does not trigger it, and never restarted mid-pass. Safe to slice because an unvisited node reads as no correction, so a partial pass degrades toward the model without the term and never past it. |
+| 2026-09-01 | **Re-took the ladder, which had gone stale by four to fifteen times.** At a million blocks: build **582 ms** against the 5,429 the table carried, room mapping **145** against 2,122, exposure **43.5** against 513, a settled step **61.3** against 118, and **610 MB** resident against 1,510. Nothing here is new work — every one of those figures is the passes from the second to the ninth landing, each of which recorded what it moved in a change log while the table other pages quote was left where it was. Today's census hull carries 14 % fewer links, so topology and step are not a like-for-like ratio; the bounding boxes are identical, so room mapping is. |
+| 2026-09-01 | The seven per-mechanism watt figures moved off `ThermalNode` into a record it makes only when something asks for them (`E4`): **20 bytes a node** in a world with the readouts off, which is every world running the shipped configuration. |
 | 2026-08-27 | Added property 11: **an exposure pass that changed nothing no longer asks for the grid to be re-mirrored.** The refresh is budgeted and sliced; the full, unsliced `SyncNodeState` it forced onto the next step was not, and it arrived after every room remap for an answer identical to the one already there. Mirroring 126,731 rows is 2.13 ms against 0.145 for mirroring none. The same shape as property 8, and found while measuring something else. |
 | 2026-08-27 | The fifth performance pass moved **the settled step** for the first time — 0.86 at 505,566 blocks — and the link build 0.84 ([performance.md](performance.md#pass-5--what-the-pass-moved)). It also gave a step its first per-stage instrument: at that size a step is environment 28.9 ms, conduction 28.0, apply 11.7, publish 5.3 and the row fill 4.1, and conduction is measurably at its memory floor. |
 | 2026-08-27 | The fourth performance pass took the room-mapping pass to **0.36** of what it was at 505,566 blocks and the exposure refresh to **0.53**, and gave the room air rebuild — the largest single thing on the load path, and until then unmeasured by anything — an instrument ([performance.md](performance.md#pass-4--what-the-pass-moved)). Building a million-block world reads **1.32 s** against 1.66 s at the pass's start, of which `RebuildAll` is 0.98 s against 1.33 s. |

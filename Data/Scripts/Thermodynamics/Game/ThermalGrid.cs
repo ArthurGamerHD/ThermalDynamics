@@ -325,7 +325,15 @@ namespace Thermodynamics
 
         private void BlockAdded(IMySlimBlock block)
         {
+            if (Stats == null)
+            {
+                AddBlock(block);
+                return;
+            }
+
+            Stats.BlockEventTime.Begin();
             AddBlock(block);
+            Stats.BlockEventTime.End();
         }
 
         private void AddBlock(IMySlimBlock block)
@@ -390,6 +398,20 @@ namespace Thermodynamics
         private void BlockRemoved(IMySlimBlock block)
         {
             if (disabled || block == null) return;
+
+            if (Stats != null) Stats.BlockEventTime.Begin();
+            try
+            {
+                RemoveBlock(block);
+            }
+            finally
+            {
+                if (Stats != null) Stats.BlockEventTime.End();
+            }
+        }
+
+        private void RemoveBlock(IMySlimBlock block)
+        {
 
             if (Grid.EntityId != block.CubeGrid.EntityId)
             {
