@@ -157,10 +157,10 @@ namespace Thermodynamics
             if (!registered) return;
             if (++frames < PassFrames) return;
 
-            // Simulated seconds, not real ones: the interval was measured against a simulation,
-            // and a world running at half speed diverges half as fast per real second. Same
-            // convention as the suit pass.
-            float seconds = frames / 60f * Settings.Instance.SimulationSpeed;
+            // Real seconds, which are simulated seconds now that the world carries no time
+            // multiplier: the dial that scaled these was `SimulationSpeed`, and it only ever
+            // multiplied `Frequency`.
+            float seconds = frames / 60f;
             frames = 0;
 
             try

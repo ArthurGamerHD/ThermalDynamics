@@ -65,7 +65,8 @@ temperatures, overheat events and threshold crossings.
 | [ThermalTerminal.cs](../Data/Scripts/Thermodynamics/ThermalTerminal.cs) | static | Thermal readout in every block's terminal. |
 | [ThermalHud.cs](../Data/Scripts/Thermodynamics/ThermalHud.cs) | static | Cockpit summary and extinguisher readout, on Rich HUD, plus the extinguisher billboard. |
 | [ThermalDebugView.cs](../Data/Scripts/Thermodynamics/ThermalDebugView.cs) | static | The x-ray overlay: a coloured box per block, or per room cell, cycled with Ctrl+Shift+=. |
-| [ThermalSettingsMenu.cs](../Data/Scripts/Thermodynamics/ThermalSettingsMenu.cs) | static | The Rich HUD settings menu, generated from `Settings.Names()`. Opened with Ctrl+Shift+S. Owns the framework registration. |
+| [ThermalSettingsMenu.cs](../Data/Scripts/Thermodynamics/ThermalSettingsMenu.cs) | static | What the settings menu holds: pages, controls and write-back, generated from `Settings.Names()`. Opened with Ctrl+Shift+S. Owns the framework registration. |
+| [ThermalSettingsWindow.cs](../Data/Scripts/Thermodynamics/ThermalSettingsWindow.cs) | `WindowBase` | The window the menu is drawn in, built from the framework's HUD elements rather than from terminal pages. See [configuration.md](configuration.md#the-settings-menu). |
 | [ThermalDebugPanel.cs](../Data/Scripts/Thermodynamics/ThermalDebugPanel.cs) | static | The Rich HUD readout beside the overlay: per-view figures for the grid being drawn. |
 | [Debug.cs](../Data/Scripts/Thermodynamics/Debug.cs) | static | The crosshair readout. |
 | [Settings.cs](../Data/Scripts/Thermodynamics/Settings.cs) | class | Config file, defaults, access by name, and the write-through to the model's settings. |
@@ -215,6 +216,7 @@ pumps `ThermalSimulation` — which is exactly what the test harness does.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-01 | Added `ThermalSettingsWindow`, and said what the settings menu file now is: the menu moved out of the Rich HUD terminal into a window this mod draws. |
 | 2026-08-25 | Said what `SimulationScheduler` holds rather than what it no longer holds (`R12`). The removed accumulator is a revision and belongs in a change log, which is where `F23` recorded it. |
 | 2026-08-24 | Corrected the update order and the pacing paragraph. The tick calls `Simulation.NeedsEnvironmentSample`, not `scheduler.WouldStep`, and step pacing is `ThermalSimulation.Update`'s work credit rather than `SimulationScheduler`'s — whose parallel step-credit accumulator no shipped path called and has been removed. Added what the constant frame length means: simulated time is counted in simulation ticks, so a machine below 1.0 sim speed has a thermal clock that runs slow ([backlog.md](backlog.md) `F23`). |
 | 2026-08-23 | Added the temperature replication: a third channel, a component in the adapter table, and a correction to the **Networking** claim that clients simply reach their own answers. They still do; the server now states the truth over the top of it. |

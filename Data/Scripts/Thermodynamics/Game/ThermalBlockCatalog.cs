@@ -453,9 +453,6 @@ namespace Thermodynamics
             Settings shipped = Defaults;
             if (world == null || shipped == null) return;
 
-            if (Moved(world.LoopCoolantMassPerPipe, shipped.LoopCoolantMassPerPipe))
-                properties.CoolantMassPerPipe = world.LoopCoolantMassPerPipe;
-
             if (Moved(world.LoopCoolantKilogramsPerCubicMetre,
                 shipped.LoopCoolantKilogramsPerCubicMetre))
                 properties.CoolantKilogramsPerCubicMetre = world.LoopCoolantKilogramsPerCubicMetre;
@@ -472,17 +469,20 @@ namespace Thermodynamics
             if (Moved(world.LoopSpecificHeat, shipped.LoopSpecificHeat))
                 properties.SpecificHeat = world.LoopSpecificHeat;
 
-            if (Moved(world.LoopPipeContactMultiplier, shipped.LoopPipeContactMultiplier))
-                properties.PipeContactMultiplier = world.LoopPipeContactMultiplier;
+            // One world dial over both joints, and one over both grid sizes. The definition keeps
+            // them apart — a fluid that behaves differently at a sink face or on a small grid says
+            // so in Loops.xml — but a world tuning either moves the pair together.
+            if (Moved(world.LoopContactMultiplier, shipped.LoopContactMultiplier))
+            {
+                properties.PipeContactMultiplier = world.LoopContactMultiplier;
+                properties.SinkContactMultiplier = world.LoopContactMultiplier;
+            }
 
-            if (Moved(world.LoopSinkContactMultiplier, shipped.LoopSinkContactMultiplier))
-                properties.SinkContactMultiplier = world.LoopSinkContactMultiplier;
-
-            if (Moved(world.LoopLargeGridFlowRate, shipped.LoopLargeGridFlowRate))
-                properties.LargeGridFlowRate = world.LoopLargeGridFlowRate;
-
-            if (Moved(world.LoopSmallGridFlowRate, shipped.LoopSmallGridFlowRate))
-                properties.SmallGridFlowRate = world.LoopSmallGridFlowRate;
+            if (Moved(world.LoopFlowRate, shipped.LoopFlowRate))
+            {
+                properties.LargeGridFlowRate = world.LoopFlowRate;
+                properties.SmallGridFlowRate = world.LoopFlowRate;
+            }
 
             if (Moved(world.LoopStagnantTransferFraction, shipped.LoopStagnantTransferFraction))
                 properties.StagnantTransferFraction = world.LoopStagnantTransferFraction;

@@ -12,17 +12,24 @@ using VRage.Utils;
 namespace Thermodynamics
 {
     /// <summary>
-    /// The settings menu, built on the Rich HUD Framework and generated from
-    /// <see cref="Settings.Names"/>, so a setting added to the config appears without a menu edit.
-    /// No Save button: every change saves itself. One Defaults button, on its own page, for starting
-    /// over. Every figure the menu reports is on the Statistics page, which is the one page that can
-    /// hold a sentence.
+    /// What the settings menu holds: the pages, the settings on each of them, and what each control
+    /// writes. Generated from <see cref="Settings.Names"/>, so a setting added to the config appears
+    /// without a menu edit. No Save button: every change saves itself. One Defaults button, on its
+    /// own page, for starting over. Every figure the menu reports is on the Statistics page, which
+    /// is the one page that holds sentences.
+    ///
+    /// <para>
+    /// **The menu is drawn by <see cref="ThermalSettingsWindow"/> rather than by the Rich HUD
+    /// terminal**, which put a fixed bordered panel around every control and offered the client no
+    /// way to turn it off. This file decides what the menu says; that one decides what it looks
+    /// like.
+    /// </para>
     /// See configuration.md, The settings menu.
     /// </summary>
     public static class ThermalSettingsMenu
     {
         /// <summary>How a single setting is presented.</summary>
-        private struct Entry
+        internal struct Entry
         {
             public string Category;
             public string Label;
@@ -60,23 +67,18 @@ namespace Thermodynamics
         /// </summary>
         private static readonly Dictionary<string, Entry> Layout = new Dictionary<string, Entry>
         {
-            { "EnableEnvironment", new Entry(Transfer, "Environment", "Ambient exchange with air, ground and space. Off leaves only internal heat flow.", 0, 1) },
+            { "EnableEnvironment", new Entry(Transfer, "Ambient exchange", "Ambient exchange with air, ground and space; off leaves only internal heat flow.", 0, 1) },
             { "EnableConduction", new Entry(Transfer, "Conduction", "Heat flow between touching blocks.", 0, 1) },
             { "EnableRadiation", new Entry(Transfer, "Radiation", "Radiative exchange with the sky from exposed faces.", 0, 1) },
             { "EnableConvection", new Entry(Transfer, "Convection", "Exchange with atmosphere and with room air.", 0, 1) },
             { "EnableSolarHeat", new Entry(Solar, "Solar heat", "Sunlight on exposed faces, occlusion included.", 0, 1) },
-            { "SolarSelfShadowing", new Entry(Solar, "Solar self-shadowing", "A grid shadows itself: a face behind the ship's own structure takes no sunlight. Costs a pass over the grid's cells whenever the sun moves. Off is the cheap model, which lights any face pointing at the sun.", 0, 1) },
-            { "SolarOcclusionPlanets", new Entry(Occlusion, "Occlusion: planets", "A planet can shadow the grid — night, and a world's shadow seen from orbit. Analytic, and the cheapest of the three.", 0, 1) },
-            { "SolarOcclusionTerrain", new Entry(Occlusion, "Occlusion: terrain", "The planet's own ground can shadow the grid — the mountain to the east at sunrise, the canyon wall. Ground-height lookups, and only near a surface.", 0, 1) },
-            { "SolarTerrainRange", new Entry(Occlusion, "Terrain range", "How far along the sun ray the terrain walk looks, in metres. Near ground is what shadows you; far ground almost never does.", 500f, 20000f) },
-            { "SolarOcclusionVoxels", new Entry(Occlusion, "Occlusion: asteroids", "Asteroids and other voxels can shadow the grid. Costs a physics raycast per candidate.", 0, 1) },
-            { "SolarGridShadows", new Entry(Occlusion, "Grid shadows", "How much work another grid's shadow is worth. None: other grids never shadow this one. Basic: one ray toward the sun, and anything in the way dims the whole grid. Full: the shadow lands on the faces it actually covers, for a walk through the occluder's blocks per face.", 0, 2, true) },
-            { "SolarOcclusionSamples", new Entry(Occlusion, "Occlusion samples", "Points across the grid tested for shadow. 1 is a single ray from the middle, all or nothing for the whole ship; more turn a terminator crossing into a ramp and cost their share of the work each.", 1, 9, true) },
+            { "SolarTerrainRange", new Entry(Occlusion, "Terrain shadow range (m)", "How far along the sun ray the terrain walk looks, in metres; near ground is what shadows you.", 500f, 20000f) },
+            { "SolarOcclusionSamples", new Entry(Occlusion, "Shadow samples across the grid", "Points across the grid tested for shadow; more turn a terminator crossing into a ramp, and cost their share each.", 1, 9, true) },
             { "EnableHeatSources", new Entry(Systems, "Point heat sources", "Heat from sources registered through the mod API.", 0, 1) },
             { "EnableWasteHeat", new Entry(Systems, "Waste heat", "Power producers, consumers and thrusters turning throughput into heat.", 0, 1) },
             { "EnablePlanets", new Entry(Systems, "Planets", "Per-planet ambient, air and ground temperatures.", 0, 1) },
-            { "EnableFriction", new Entry(Aero, "Friction heating", "Atmospheric heating above the speed threshold. The air does work on the hull and this is the share of it that lands in the surface.", 0, 1) },
-            { "EnableWind", new Entry(Environment, "Wind", "The wind field and everything that shapes it. Off is no wind anywhere: the game gives a ceiling rather than a wind, so every direction and speed here is this mod's. A grid still feels its own motion through the air.", 0, 1) },
+            { "EnableFriction", new Entry(Aero, "Friction heating", "Atmospheric heating above the speed threshold: the share of the air's work on the hull that lands in the surface.", 0, 1) },
+            { "EnableWind", new Entry(Environment, "Wind", "The wind field and everything that shapes it; off is no wind anywhere, though a grid still feels its own motion.", 0, 1) },
             { "EnableDamage", new Entry(Systems, "Overheat damage", "Blocks above their critical temperature take damage.", 0, 1) },
             { "EnableCoolantLoops", new Entry(Systems, "Coolant loops", "Closed pipe rings acting as one fluid mass.", 0, 1) },
             { "EnableRoomAir", new Entry(Systems, "Room air", "Sealed rooms hold an air mass that carries heat.", 0, 1) },
@@ -91,114 +93,129 @@ namespace Thermodynamics
             // middle rung was in the config file, copied into the core and read by the solver, but
             // absent from `Names()`, so no menu, no chat command and no API could set it. Only
             // hand-editing a world's XML could.
-            { "WellMixedCoolant", new Entry(Systems, "Well-mixed coolant", "The cheaper transport rung: a loop's fluid as one well-mixed mass rather than one parcel per pipe travelling round the ring. A ring of any length holds a single parcel, so heat picked up at a sink reaches every other pipe in the same step instead of arriving as it flows. Off is the full model.", 0, 1) },
+            { "WellMixedCoolant", new Entry(Systems, "Well-mixed coolant", "The cheaper transport rung: a loop's fluid as one well-mixed mass rather than parcels travelling round the ring.", 0, 1) },
 
-            { "EnableSuitDamage", new Entry(Suit, "Suit damage", "Heat as something that can hurt a player rather than only a block. Off leaves the suit unsimulated and costs nothing.", 0, 1) },
-            { "SuitConductance", new Entry(Suit, "Suit conductance", "How well the outside reaches the occupant through a sealed suit, W/K. With the cooling rating below it, this is what sets the hottest room a player can stand in indefinitely.", 0f, 20f) },
-            { "SuitHeatCapacity", new Entry(Suit, "Suit heat capacity", "Heat capacity of the occupant and the suit together, J/K — about eighty kilograms of mostly water. Divided by the heat time scale like every block's, so a player heats on the same clock as the ship around them.", 10000f, 1000000f) },
-            { "SuitCoolingWatts", new Entry(Suit, "Suit cooling", "Heat the suit can move, either way, W. It cools a player in a hot room and warms one in a cold one.", 0f, 5000f) },
-            { "SuitCriticalTemperature", new Entry(Suit, "Hurts above", "Interior temperature at which the occupant starts being hurt, K. 315.15 is 42 C: the core body temperature at which heat stroke becomes life-threatening, and only a few degrees above where the suit holds them.", 300f, 350f) },
-            { "SuitDamagePerKelvin", new Entry(Suit, "Damage per kelvin", "Hit points a second, per kelvin above the temperature that hurts.", 0f, 10f) },
+            { "EnableSuitDamage", new Entry(Suit, "Suit damage", "Heat as something that can hurt a player; off leaves the suit unsimulated and costs nothing.", 0, 1) },
+            { "SuitConductance", new Entry(Suit, "Suit conductance (W/K)", "How well the outside reaches the occupant through a sealed suit, W/K.", 0f, 20f) },
+            { "SuitHeatCapacity", new Entry(Suit, "Suit heat capacity (J/K)", "Heat capacity of the occupant and suit together, J/K — about eighty kilograms of mostly water.", 10000f, 1000000f) },
+            { "SuitCoolingWatts", new Entry(Suit, "Suit cooling (W)", "Heat the suit can move either way, W, cooling a player in a hot room and warming one in a cold one.", 0f, 5000f) },
+            { "SuitCriticalTemperature", new Entry(Suit, "Hurts above (K)", "Interior temperature at which the occupant starts being hurt, K; 315.15 is 42 C.", 300f, 350f) },
+            { "SuitDamagePerKelvin", new Entry(Suit, "Damage per kelvin (hp/s)", "Hit points a second, per kelvin above the temperature that hurts.", 0f, 10f) },
 
-            { "FloorBlocksWhenOverBudget", new Entry(Solver, "Floor over budget", "When a grid's step will not fit its element budget, floor the heat capacity of the blocks demanding most of it rather than shortening the step for everyone. Engages per grid and per step, only where the budget binds, and the cap it applies is what that grid can afford rather than a number chosen in advance — which is what makes it different from the per-block cap above.", 0, 1) },
-            { "ParallelGrids", new Entry(Solver, "Solve in parallel", "Fan a frame's grid solves out across the engine's own workers rather than walking them in order. Measured at 10.17x on a 242-grid fleet and 0.99x on one grid, so it is worth nothing to a single ship. **Off**, and what it is waiting for is a session rather than a measurement: how many threads a mod may take on a machine it shares with the game, and whether a worker's exception reaches a log the way the game thread's does.", 0, 1) },
+            { "FloorBlocksWhenOverBudget", new Entry(Solver, "Floor stiff blocks when over budget", "Over budget, floor the heat capacity of the blocks demanding most of it rather than shortening the step for everyone.", 0, 1) },
+            { "ParallelGrids", new Entry(Solver, "Solve in parallel", "Solve a frame's grids across the engine's own workers: 10x on a 242-grid fleet, and nothing on one ship.", 0, 1) },
 
-            { "ShowEnvironmentReadout", new Entry(Display, "Environment readout", "One line, bottom centre: the air temperature around your ship and one word for the ship against its own rating — cool, warm or hot. `hot` begins exactly where the glow does, so the line and the block cannot disagree. It is what makes the mod visible in a world where nothing is going wrong; everything else it draws is a warning.", 0, 1) },
-            { "DebugOverlayMaxBoxes", new Entry(Display, "Overlay box budget", "Boxes the block overlay may draw in one frame. Past it the overlay draws the part of the grid nearest the camera. 0 draws nothing.", 0f, 50000f, true) },
+            { "ShowEnvironmentReadout", new Entry(Display, "Environment readout", "One line, bottom centre: the air temperature around your ship, and one word for the ship against its own rating.", 0, 1) },
+            { "DebugOverlayMaxBoxes", new Entry(Display, "Overlay box budget per frame", "Boxes the block overlay may draw in one frame; past it it draws the part of the grid nearest the camera.", 0f, 50000f, true) },
 
-            { "PlanetUndergroundConvectionCoefficient", new Entry(Environment, "Underground convection", "Convective coefficient for a grid buried in rock, W/(m2 K) — a far worse heat sink than moving air. Crossed over the first five metres of burial, and neither wind nor weather multiplies it.", 0f, 50f) },
+            { "PlanetUndergroundConvectionCoefficient", new Entry(Environment, "Buried convection (W/m2 K)", "Convective coefficient for a grid buried in rock, W/(m2 K), crossed over the first five metres of burial.", 0f, 50f) },
 
-            { "EnableTemperatureSync", new Entry(Multiplayer, "Replicate temperatures", "The server tells each client what its blocks are actually at: the whole ship once when the ship arrives, then whatever is near failing. Off leaves every client guessing, and a client that guesses can show a block safe for the whole time it is burning.", 0, 1) },
-            { "TemperatureSyncInterval", new Entry(Multiplayer, "Update interval", "Seconds between updates about the blocks near failing. Longer is cheaper; the whole ship is still stated once whatever this says.", 0.5f, 60f) },
+            { "EnableTemperatureSync", new Entry(Multiplayer, "Replicate temperatures", "The server tells each client what its blocks are really at; off leaves every client guessing.", 0, 1) },
+            { "TemperatureSyncInterval", new Entry(Multiplayer, "Update interval (s)", "Seconds between updates about the blocks near failing; the whole ship is stated once regardless.", 0.5f, 60f) },
 
             // These four had no entry at all, so they fell through to "Other — not yet described"
             // at the bottom of the page, unlabelled and untooltipped. They are the four the field
             // tuning is entirely about: what a step costs and whether it stays stable.
-            { "MaxSubsteps", new Entry(Solver, "Substep ceiling", "Most substeps one step may divide itself into. The stability estimate asks for as many as the stiffest block needs; this is the ceiling on granting it, and reaching it is reported as a clamped step.", 1, 64, true) },
-            { "MaxSubstepsPerBlock", new Entry(Solver, "Per-block cap", "Most substeps any single block may demand of the whole grid before its heat capacity is floored. 0 leaves every block alone. A handful of light fittings otherwise set the cost of a whole ship. Raise the substep ceiling with it.", 0, 32, true) },
-            { "MaxElementVisitsPerStep", new Entry(Solver, "Step budget", "Most element visits one step may make — substeps times links plus four times nodes — before the step is shortened to fit. 0 removes the bound. Trades simulation rate for frame smoothness on very large grids.", 0, 8000000, true) },
-            { "ClampEnvironmentOvershoot", new Entry(Solver, "Clamp environment", "Stops radiation or convection carrying a block past ambient in one substep. Leave on.", 0, 1) },
+            { "MaxSubsteps", new Entry(Solver, "Substep ceiling per step", "Most substeps one step may divide itself into; reaching it is reported as a clamped step.", 1, 64, true) },
+            { "MaxSubstepsPerBlock", new Entry(Solver, "Substep cap per block", "Most substeps one block may demand before its heat capacity is floored; 0 leaves every block alone.", 0, 32, true) },
+            { "MaxElementVisitsPerStep", new Entry(Solver, "Work budget per step (visits)", "Most element visits one step may make before it is shortened to fit; 0 removes the bound.", 0, 8000000, true) },
 
-            { "ClampConductionOvershoot", new Entry(Solver, "Clamp conduction", "Stops a step from pushing two blocks past each other's temperature. Leave on.", 0, 1) },
-            { "DamageIsPerSecond", new Entry(Solver, "Damage is per second", "Overheat damage scaled to real time rather than to the step.", 0, 1) },
-            { "Frequency", new Entry(Solver, "Frequency", "Solver steps per second of simulated time. Higher is finer and costlier.", 1, 60, true) },
-            { "SimulationSpeed", new Entry(Solver, "Simulation speed", "Multiplier on how fast heat moves. 1 is the tuned pace.", 0.1f, 10f) },
-            { "HeatTimeScale", new Entry(Solver, "Heat time scale", "Seconds of physical time per second of play. The dial that makes heat happen on a human scale.", 1f, 1000f) },
+            { "DamageIsPerSecond", new Entry(Solver, "Overheat damage is per second", "Overheat damage scaled to real time rather than to the step.", 0, 1) },
+            { "Frequency", new Entry(Solver, "Solver steps per simulated second", "Solver steps per second of simulated time. Higher is finer and costlier.", 1, 60, true) },
+            { "HeatTimeScale", new Entry(Solver, "Heat pace (physics seconds per second)", "Seconds of physical time per second of play: the dial that puts heat on a human scale.", 1f, 1000f) },
 
             // From Loops.xml, which the menu never showed. This is the flow rate people ask for.
-            { "LoopLargeGridFlowRate", new Entry(Systems, "Flow rate, large", "How fast coolant moves on a large grid with one pump at full speed, m/s. Flow rises with the square root of combined pumping, so four pumps carry twice this, not four times.", 0f, 40f) },
-            { "LoopSmallGridFlowRate", new Entry(Systems, "Flow rate, small", "The same for a small grid. Split because it is a balance dial rather than a physical constant: a small-grid pump is a smaller machine driving a shorter ring.", 0f, 40f) },
-            { "LoopRefillEquivalentKelvin", new Entry(Systems, "Refill price, K", "The excess a coolant refill is priced at. Restoring a kilogram costs the heat that kilogram holds this far above ambient, and a pump turns all of it into heat where it stands — so this is the temperature at which dumping coolant and refilling exactly breaks even. Above it a vent pays; below it costs.", 0f, 600f) },
-            { "LoopRefillKilogramsPerSecond", new Entry(Systems, "Refill rate", "How fast a vented coolant loop comes back, kg/s. Venting is instant and refilling is not: this is what stops a dump being repeatable.", 0f, 200f) },
-            { "LoopCoolantKilogramsPerCubicMetre", new Entry(Systems, "Coolant density", "Coolant per cubic metre of the cell a pipe occupies, kg/m3. More is more capacity for the same coupling, so a ring holds heat more steadily and swings less between its sink face and the far side of the loop. A density rather than a flat mass because a flat one has no grid size in it: 50 kg is a gas in a 2.5 m cube and outweighs the pipe block in a 0.5 m one.", 0f, 200f) },
-            { "LoopCoolantMassPerPipe", new Entry(Systems, "Coolant per pipe", "A flat coolant mass per pipe block, kg, overriding the density above. Zero uses the density, which is what ships.", 0f, 600f) },
-            { "LoopSpecificHeat", new Entry(Systems, "Coolant specific heat", "J/(kg K). Water-glycol is about 3400, which is what the shipped fluid is.", 100f, 6000f) },
-            { "LoopHeatTransferCoefficient", new Entry(Systems, "Coolant heat transfer", "How well heat crosses between the fluid and the wall it touches while the pump is running, W/(m2 K). Convective, so there is no thickness in it: a few hundred is a slow liquid flow and a few thousand is a fast one. This is the dial that decides whether a big block can be cooled at all.", 0f, 2000f) },
-            { "LoopPipeContactMultiplier", new Entry(Systems, "Pipe contact", "Scales the coupling between the fluid and its own pipe.", 0f, 5f) },
-            { "LoopSinkContactMultiplier", new Entry(Systems, "Sink contact", "Scales the coupling through a sink face into whatever is mounted against it. The stiffest path in the mod: a bolt joint carries 167 W/K and a sink face 1,000.", 0f, 5f) },
-            { "LoopStagnantTransferFraction", new Entry(Systems, "Stagnant transfer", "What a stopped ring still carries across the fluid-to-wall joint, as a share of the coefficient above. A stopped pump is natural convection rather than forced. 0 makes a pump failure total.", 0f, 1f) },
+            { "LoopRefillEquivalentKelvin", new Entry(Systems, "Refill price (K above ambient)", "What a coolant refill is priced at: the temperature at which venting and refilling exactly breaks even.", 0f, 600f) },
+            { "LoopRefillKilogramsPerSecond", new Entry(Systems, "Refill rate (kg/s)", "How fast a vented coolant loop comes back, kg/s — venting is instant and refilling is not.", 0f, 200f) },
+            { "LoopCoolantKilogramsPerCubicMetre", new Entry(Systems, "Coolant density (kg/m3)", "Coolant per cubic metre of the cell a pipe occupies, kg/m3; more is more capacity for the same coupling.", 0f, 200f) },
+            { "LoopSpecificHeat", new Entry(Systems, "Coolant specific heat (J/kg K)", "J/(kg K). Water-glycol is about 3400, which is what the shipped fluid is.", 100f, 6000f) },
+            { "LoopHeatTransferCoefficient", new Entry(Systems, "Fluid-to-wall transfer (W/m2 K)", "How well heat crosses between the fluid and the wall it touches while the pump is running, W/(m2 K).", 0f, 2000f) },
+            { "LoopStagnantTransferFraction", new Entry(Systems, "Transfer with the pump stopped (0..1)", "What a stopped ring still carries across the fluid-to-wall joint, as a share of the coefficient above.", 0f, 1f) },
 
             // From Planets.xml, same argument.
-            { "PlanetDayTemperature", new Entry(Environment, "Day temperature", "Air temperature at the equator at noon, K.", 100f, 400f) },
-            { "PlanetNightTemperature", new Entry(Environment, "Night temperature", "Air temperature at the equator at midnight, K.", 100f, 400f) },
-            { "PlanetPoleTemperatureDrop", new Entry(Environment, "Pole drop", "How much colder a pole is than the equator, K. The least evidenced figure in the climate model.", 0f, 100f) },
-            { "PlanetAmbientLapseRate", new Entry(Environment, "Lapse rate", "How much colder the air gets with altitude, K per km. Earth is about 6.5; 4 is a compromise that keeps snow sites from freezing solid.", 0f, 12f) },
-            { "PlanetAmbientLagSeconds", new Entry(Environment, "Ambient lag", "Seconds the air takes to chase its target, which is what puts the day's peak after noon. Absolute seconds against a day that is not, so a short-day world wants this smaller.", 0f, 600f) },
-            { "PlanetConvectionCoefficient", new Entry(Environment, "Convection coeff", "Convective coefficient at sea level, W/(m2 K), before the atmosphere blend thins it with the air.", 0f, 200f) },
-            { "PlanetSolarDecay", new Entry(Environment, "Solar decay", "How much of the sun a full atmosphere absorbs, 0..1.", 0f, 1f) },
-            { "PlanetUndergroundTemperature", new Entry(Environment, "Underground temp", "Rock temperature below the damping depth, K.", 100f, 400f) },
-            { "PlanetUndergroundDampingDepth", new Entry(Environment, "Damping depth", "Metres over which the day-night swing dies out underground.", 1f, 200f) },
-            { "PlanetCoreTemperature", new Entry(Environment, "Core temperature", "Rock temperature the model warms toward below the sea-level deadzone, K. Unreachable in ordinary play at the shipped deadzone.", 300f, 6000f) },
-            { "PlanetSealevelDeadzone", new Entry(Environment, "Core deadzone", "Metres below sea level before the rock starts warming toward the core. Shipped at 2 km, which is deeper than SE's voxels go.", 0f, 4000f) },
+            { "PlanetDayTemperature", new Entry(Environment, "Day temperature (K)", "Air temperature at the equator at noon, K.", 100f, 400f) },
+            { "PlanetNightTemperature", new Entry(Environment, "Night temperature (K)", "Air temperature at the equator at midnight, K.", 100f, 400f) },
+            { "PlanetPoleTemperatureDrop", new Entry(Environment, "Colder at the poles (K)", "How much colder a pole is than the equator, K.", 0f, 100f) },
+            { "PlanetAmbientLapseRate", new Entry(Environment, "Colder with altitude (K/km)", "How much colder the air gets with altitude, K per km; Earth is about 6.5.", 0f, 12f) },
+            { "PlanetAmbientLagSeconds", new Entry(Environment, "Air lag behind the sun (s)", "Seconds the air takes to chase its target, which is what puts the day's peak after noon.", 0f, 600f) },
+            { "PlanetConvectionCoefficient", new Entry(Environment, "Air convection at sea level (W/m2 K)", "Convective coefficient at sea level, W/(m2 K), before the atmosphere blend thins it.", 0f, 200f) },
+            { "PlanetSolarDecay", new Entry(Environment, "Sunlight absorbed by air (0..1)", "How much of the sun a full atmosphere absorbs, 0..1.", 0f, 1f) },
+            { "PlanetUndergroundTemperature", new Entry(Environment, "Underground temperature (K)", "Rock temperature below the damping depth, K.", 100f, 400f) },
+            { "PlanetUndergroundDampingDepth", new Entry(Environment, "Day-night reach underground (m)", "Metres over which the day-night swing dies out underground.", 1f, 200f) },
+            { "PlanetCoreTemperature", new Entry(Environment, "Core temperature (K)", "Rock temperature the model warms toward below the sea-level deadzone, K.", 300f, 6000f) },
+            { "PlanetSealevelDeadzone", new Entry(Environment, "Depth before core warming (m)", "Metres below sea level before the rock starts warming toward the core.", 0f, 4000f) },
 
-            { "ClimateGroundInfluence", new Entry(Environment, "Ground influence", "How much the ground a grid is parked on shifts the air above it. 1 applies the full table — snow about 14 K colder than the planet's own figure, desert about 9 K warmer. 0 ignores what the ground is made of.", 0f, 1f) },
-            { "ClimateWeatherInfluence", new Entry(Environment, "Weather influence", "How much the weather changes the air around a grid. 1 applies the game's own figures in full — a heavy snowstorm about 18 K colder with a tenth of the sun and twice the wind, a sandstorm 12 K warmer. 0 leaves the weather affecting nothing but the wind.", 0f, 1f) },
-            { "VacuumTemperature", new Entry(Environment, "Vacuum temperature", "Sky temperature in space, K. 2.7 is the real background.", 0f, 300f) },
-            { "SolarEnergy", new Entry(Solar, "Solar energy", "Irradiance at the planet, W/m2.", 0f, 5000f) },
-            { "FrictionAtSpeedsAbove", new Entry(Aero, "Friction above", "Relative airspeed at which atmospheric heating starts, m/s. Below it the air carries heat away and adds none.", 0f, 300f) },
-            { "FrictionScale", new Entry(Aero, "Friction scale", "Multiplier on the v3 heating term. Half the drag coefficient times the share of the drag work that lands in the surface rather than the wake, so moving this retunes temperatures and — with drag on — leaves handling alone.", 0f, 0.01f) },
+            { "ClimateGroundInfluence", new Entry(Environment, "Ground shifts air temperature (0..1)", "How much the ground a grid is parked on shifts the air above it; 0 ignores what the ground is made of.", 0f, 1f) },
+            { "ClimateWeatherInfluence", new Entry(Environment, "Weather shifts air temperature (0..1)", "How much the weather changes the air around a grid; 1 applies the game's own figures in full.", 0f, 1f) },
+            { "VacuumTemperature", new Entry(Environment, "Vacuum temperature (K)", "Sky temperature in space, K. 2.7 is the real background.", 0f, 300f) },
+            { "SolarEnergy", new Entry(Solar, "Sunlight at the planet (W/m2)", "Irradiance at the planet, W/m2.", 0f, 5000f) },
+            { "FrictionAtSpeedsAbove", new Entry(Aero, "Heating starts above (m/s)", "Relative airspeed at which atmospheric heating starts, m/s.", 0f, 300f) },
+            { "FrictionScale", new Entry(Aero, "Friction heating scale", "Multiplier on the v3 heating term, so moving it retunes temperatures and leaves handling alone.", 0f, 0.01f) },
 
             // The drag three had no entry at all, so they fell through to "Other" unlabelled and
             // untooltipped: a switch called EnableDrag, a bare number and a second switch, on a
             // page that says it does not describe them. They are the force half of the same term
             // friction already computes.
-            { "EnableDrag", new Entry(Aero, "Apply drag", "Takes the drag the friction term already computes out of the ship's motion. Off by default so that a world running a dedicated aerodynamics mod keeps the heat without being slowed down twice; a world running only this one turns it on.", 0, 1) },
-            { "DragCoefficient", new Entry(Aero, "Drag coefficient", "The coefficient a hull is treated as having, dimensionless. Authored rather than read off the shape, because a projected area cannot tell a brick from a wedge. 0.5 is measured: at 1 drag beats thrust on 14 % of hulls that can lift themselves, at 0.5 on 3 %.", 0f, 2f) },
-            { "EnableShapeDrag", new Entry(Aero, "Hull shape", "Corrects the projected area for which way the hull actually faces, read from the cells around each block rather than from its own six sides. Without it a stair-stepped 45° slope drags exactly as the flat plate it projects onto. **Moves temperatures as well as handling** — it scales the friction watts that heat the hull — and it can only ever reduce both. Off until the population is re-scored.", 0, 1) },
-            { "EnableLift", new Entry(Aero, "Lift", "Applies the half of the aerodynamic force that acts across the airflow rather than along it. Needs Hull shape on: without a reconstructed normal there is no direction in the pressure sum that describes the hull rather than the axes it was drawn on. Adds a force and leaves drag exactly as it was. **Small on real ships** — a published hull makes about 6 % as much lift as drag, because a hull symmetric about its flight axis cancels most of it — so this is a nudge rather than a flight model.", 0, 1) },
-            { "LiftCoefficient", new Entry(Aero, "Lift coefficient", "How much of the computed transverse force is applied. 1 is the model's own answer, so this softens lift rather than inventing it. What it scales is a Newtonian flat-plate sum, right in free-molecular hypersonic flow and over-predicting everywhere a ship actually flies — the same reason the drag coefficient sits at half a bluff body's.", 0f, 2f) },
-            { "EnableWindwardShielding", new Entry(Aero, "Windward shielding", "A block behind another is sheltered from the wind, for heat and for drag — the sun's self-shadowing pass aimed at the relative wind. Off by default: it costs a second sliced pass and about 3 MB on a large hull, and without it every face is treated as being in the open, which is the conservative answer.", 0, 1) },
-            { "RoomConvectionCoefficient", new Entry(Environment, "Room convection", "Convective coefficient between a block and room air, W/(m2 K).", 0f, 50f) },
-            { "RoomAirDensity", new Entry(Environment, "Room air density", "Density of room air, kg/m3. 1.225 is sea level.", 0f, 5f) },
-            { "SolarOcclusionInterval", new Entry(Occlusion, "Occlusion interval", "Solver steps between sun occlusion raycasts.", 1, 60, true) },
+            { "EnableDrag", new Entry(Aero, "Apply drag", "Takes the drag the friction term already computes out of the ship's motion; off, so an aerodynamics mod is not doubled.", 0, 1) },
+            { "DragCoefficient", new Entry(Aero, "Drag coefficient", "The coefficient a hull is treated as having; 0.5 is measured, and authored rather than read off the shape.", 0f, 2f) },
+            { "EnableShapeDrag", new Entry(Aero, "Correct area for hull shape", "Corrects the projected area for which way the hull actually faces, which moves temperatures as well as handling.", 0, 1) },
+            { "EnableLift", new Entry(Aero, "Lift", "Applies the aerodynamic force across the airflow rather than along it; needs Hull shape, and is small on real ships.", 0, 1) },
+            { "LiftCoefficient", new Entry(Aero, "Lift coefficient", "How much of the computed transverse force is applied; 1 is the model's own answer.", 0f, 2f) },
+            { "EnableWindwardShielding", new Entry(Aero, "Shelter blocks behind others", "A block behind another is sheltered from the wind, for heat and for drag, at a second sliced pass over the hull.", 0, 1) },
+            { "RoomConvectionCoefficient", new Entry(Environment, "Room air convection (W/m2 K)", "Convective coefficient between a block and room air, W/(m2 K).", 0f, 50f) },
+            { "RoomAirDensity", new Entry(Environment, "Room air density (kg/m3)", "Density of room air, kg/m3. 1.225 is sea level.", 0f, 5f) },
+            { "SolarOcclusionInterval", new Entry(Occlusion, "Shadow recheck interval (steps)", "Solver steps between sun occlusion raycasts.", 1, 60, true) },
 
-            { "WindRoughnessLength", new Entry(Environment, "Roughness length", "Height at which wind theoretically reaches zero, m — about a tenth of what covers the ground. 0.0002 open water, 0.03 grassland, 0.5 forest. Sets how fast wind picks up as you climb.", 0.0001f, 2f) },
-            { "WindGradientHeight", new Entry(Environment, "Gradient height", "Height at which wind stops strengthening, m. Above the boundary layer the ground no longer sets the wind.", 10f, 3000f) },
-            { "WindDiurnalAmplitude", new Entry(Environment, "Diurnal swing", "How far the daily cycle moves wind either side of its mean, 0..1. Ground level peaks in the afternoon; above the crossover it peaks before dawn instead.", 0f, 1f) },
-            { "WindDiurnalCrossover", new Entry(Environment, "Diurnal crossover", "Height at which the daily cycle vanishes, m. Below it the surface cycle, above it the nocturnal jet.", 0f, 500f) },
-            { "WindTerrainInfluence", new Entry(Environment, "Terrain influence", "How much the shape of the ground steers and speeds the wind, 0..1: faster over rises, sheltered behind ridges, channelled along valleys.", 0f, 1f) },
-            { "WindSlopeStrength", new Entry(Environment, "Slope winds", "Air running up a mountain by day and draining back down it at night, 0..1. Blows on a still day and is overrun by a real wind. Costs nothing extra.", 0f, 1f) },
-            { "WindTerrainRadius", new Entry(Environment, "Terrain radius", "How far out the land around a point is read, m. The size of landform the wind notices.", 50f, 2000f) },
+            { "WindRoughnessLength", new Entry(Environment, "Ground roughness (m)", "Height at which wind theoretically reaches zero, m: 0.0002 open water, 0.03 grassland, 0.5 forest.", 0.0001f, 2f) },
+            { "WindGradientHeight", new Entry(Environment, "Wind stops rising above (m)", "Height at which wind stops strengthening, m, above which the ground no longer sets it.", 10f, 3000f) },
+            { "WindDiurnalAmplitude", new Entry(Environment, "Daily wind swing (0..1)", "How far the daily cycle moves wind either side of its mean, 0..1.", 0f, 1f) },
+            { "WindDiurnalCrossover", new Entry(Environment, "Daily cycle vanishes at (m)", "Height at which the daily cycle vanishes, m: the surface cycle below, the nocturnal jet above.", 0f, 500f) },
+            { "WindTerrainInfluence", new Entry(Environment, "Terrain steers the wind (0..1)", "How much the shape of the ground steers and speeds the wind, 0..1.", 0f, 1f) },
+            { "WindSlopeStrength", new Entry(Environment, "Slope winds (0..1)", "Air running up a mountain by day and draining back down it at night, 0..1.", 0f, 1f) },
+            { "WindTerrainRadius", new Entry(Environment, "Terrain read radius (m)", "How far out the land around a point is read, m: the size of landform the wind notices.", 50f, 2000f) },
 
-            { "HeatPumpCarnotFraction", new Entry(Systems, "Carnot fraction", "How much of the Carnot limit a pump achieves, 0..1.", 0f, 1f) },
-            { "HeatPumpMaxCoefficient", new Entry(Systems, "Max coefficient", "Ceiling on the coefficient of performance.", 0f, 20f) },
+            { "HeatPumpCarnotFraction", new Entry(Systems, "Pump efficiency (share of Carnot)", "How much of the Carnot limit a pump achieves, 0..1.", 0f, 1f) },
+            { "HeatPumpMaxCoefficient", new Entry(Systems, "Pump coefficient ceiling", "Ceiling on the coefficient of performance.", 0f, 20f) },
 
-            { "HeatGlow", new Entry(Display, "Blocks glow when hot", "A block glows over the last 100 K before its own critical temperature, full at it and above, so a glow means it is about to go rather than that it is warm. The colour is what a body that hot really looks like: deep red low down, orange high up.", 0, 1) },
-            { "HeatWarningSound", new Entry(Display, "Overheat cue", "A cue in the cockpit as a block comes up on its own rating and as it passes it. Heard only by the player at the controls.", 0, 1) },
-            { "HeatTerminalPanel", new Entry(Display, "Terminal readout", "The thermal panel in a block's terminal detail pane. Off leaves the block's own controls alone and draws no text, which is what a world running a second heat mod wants.", 0, 1) },
+            { "HeatGlow", new Entry(Display, "Blocks glow when hot", "A block glows over the last 100 K before its own critical temperature, in the colour a body that hot really is.", 0, 1) },
+            { "HeatWarningSound", new Entry(Display, "Overheat cue", "A cue in the cockpit as a block comes up on its rating and as it passes it, heard only at the controls.", 0, 1) },
+            { "HeatTerminalPanel", new Entry(Display, "Terminal readout", "The thermal panel in a block's terminal detail pane.", 0, 1) },
 
-            { "DebugTextOnScreen", new Entry(Display, "Crosshair readout", "Everything the simulation knows about the block being looked at. Also makes the solver record per-mechanism watts, which is not free.", 0, 1) },
+            { "DebugTextOnScreen", new Entry(Display, "Crosshair readout", "Everything the simulation knows about the block being looked at; also records per-mechanism watts.", 0, 1) },
             { "DebugSolarRaycast", new Entry(Display, "Draw sun ray", "The sun ray from each grid, white when lit and red when occluded.", 0, 1) },
-            { "DebugWindRaycast", new Entry(Display, "Draw wind vector", "The relative wind each grid is flying through, drawn from the grid. Green in still air, red once it is fast enough to heat the leading face.", 0, 1) },
-            { "DebugWindOverlay", new Entry(Display, "Wind map", "Draws the wind field as arrows: 1 a lattice around you, 2 the whole planet, where the circulation bands are. Ctrl+Shift+W cycles it in play.", 0, WindOverlay.ModeCount - 1, true) },
+            { "DebugWindRaycast", new Entry(Display, "Draw wind vector", "The relative wind each grid is flying through, drawn from the grid.", 0, 1) },
+            { "DebugWindOverlay", new Entry(Display, "Wind map", "Draws the wind field as arrows: 1 a lattice around you, 2 the whole planet. Ctrl+Shift+W cycles it.", 0, WindOverlay.ModeCount - 1, true) },
             { "DebugWindIndicator", new Entry(Display, "Wind indicator", "A needle and a speed beside the crosshair whenever there is wind where you are.", 0, 1) },
             { "DebugBlockOverlay", new Entry(Display, "Block overlay", "The x-ray box overlay. Ctrl+Shift+= cycles it in play.", 0, ThermalDebugView.ModeCount - 1, true) },
 
-            { "RoomOverlayMinKelvin", new Entry(Display, "Room overlay: cold", "Bottom of the room view's colour span, K. Room air lives in a narrow band, so it gets a tighter ramp than blocks do.", 173.15f, 323.15f) },
-            { "RoomOverlayMaxKelvin", new Entry(Display, "Room overlay: hot", "Top of the room view's colour span, K.", 273.15f, 423.15f) },
+            { "RoomOverlayMinKelvin", new Entry(Display, "Room overlay cold end (K)", "Bottom of the room view's colour span, K, which is a tighter ramp than blocks get.", 173.15f, 323.15f) },
+            { "RoomOverlayMaxKelvin", new Entry(Display, "Room overlay hot end (K)", "Top of the room view's colour span, K.", 273.15f, 423.15f) },
             { "EnableTelemetry", new Entry(Display, "Collect telemetry", "Per-grid and per-block-type data collection. Off for ordinary play.", 0, 1) },
-            { "TelemetryPlanetProbes", new Entry(Display, "Wind probes", "Solver steps between planet-wide wind sweeps, or 0 for none. Reads the wind at 72 points around the planet at five heights each, whether or not anything is standing there. Needs telemetry on.", 0, 3600, true) },
-            { "TelemetrySampleStride", new Entry(Display, "Sample stride", "Steps between telemetry samples.", 1, 64, true) },
+            { "TelemetryPlanetProbes", new Entry(Display, "Wind probe interval (steps)", "Solver steps between planet-wide wind sweeps, or 0 for none; needs telemetry on.", 0, 3600, true) },
+            { "EnableTopSpeed", new Entry(Aero, "Mass sets top speed", "Raises the world's speed cap and holds each ship under a cruise speed that falls with its mass, by a force rather than a limit.", 0, 1) },
+            { "SpeedLimit", new Entry(Aero, "World speed limit (m/s)", "The ceiling no ship passes whatever its mass or its boost, written into the world's own environment definition.", 20f, 1000f) },
+            { "EnableSpeedBoost", new Entry(Aero, "Allow boosting past cruise", "Lets thrust push a ship past its cruise speed and drags it back, rather than stopping it there.", 0, 1) },
+            { "LargeGridMinCruise", new Entry(Aero, "Large: cruise, light (m/s)", "Cruise speed of a large grid at or below the light mass below.", 10f, 1000f) },
+            { "LargeGridMidCruise", new Entry(Aero, "Large: cruise, middle (m/s)", "Cruise speed of a large grid at the middle mass below.", 10f, 1000f) },
+            { "LargeGridMaxCruise", new Entry(Aero, "Large: cruise, heavy (m/s)", "Cruise speed of a large grid at or above the heavy mass below.", 10f, 1000f) },
+            { "LargeGridMinMass", new Entry(Aero, "Large: light mass (kg)", "Mass below which a large grid holds its light cruise speed.", 0f, 2000000f) },
+            { "LargeGridMidMass", new Entry(Aero, "Large: middle mass (kg)", "The middle point of the large-grid curve, where the middle cruise speed applies.", 0f, 20000000f) },
+            { "LargeGridMaxMass", new Entry(Aero, "Large: heavy mass (kg)", "Mass above which a large grid holds its heavy cruise speed.", 0f, 40000000f) },
+            { "LargeGridResistance", new Entry(Aero, "Large: resistance (x)", "How hard a large grid is held to its cruise speed. Higher is a firmer hold.", 0f, 10f) },
+            { "LargeGridMaxBoostSpeed", new Entry(Aero, "Large: boost ceiling (N)", "Ceiling on the force that drags a boosting large grid back to its cruise speed.", 0f, 1000f) },
+            { "SmallGridMinCruise", new Entry(Aero, "Small: cruise, light (m/s)", "Cruise speed of a small grid at or below the light mass below.", 10f, 1000f) },
+            { "SmallGridMidCruise", new Entry(Aero, "Small: cruise, middle (m/s)", "Cruise speed of a small grid at the middle mass below.", 10f, 1000f) },
+            { "SmallGridMaxCruise", new Entry(Aero, "Small: cruise, heavy (m/s)", "Cruise speed of a small grid at or above the heavy mass below.", 10f, 1000f) },
+            { "SmallGridMinMass", new Entry(Aero, "Small: light mass (kg)", "Mass below which a small grid holds its light cruise speed.", 0f, 100000f) },
+            { "SmallGridMidMass", new Entry(Aero, "Small: middle mass (kg)", "The middle point of the small-grid curve, where the middle cruise speed applies.", 0f, 1000000f) },
+            { "SmallGridMaxMass", new Entry(Aero, "Small: heavy mass (kg)", "Mass above which a small grid holds its heavy cruise speed.", 0f, 2000000f) },
+            { "SmallGridResistance", new Entry(Aero, "Small: resistance (x)", "How hard a small grid is held to its cruise speed. Higher is a firmer hold.", 0f, 10f) },
+            { "SmallGridMaxBoostSpeed", new Entry(Aero, "Small: boost ceiling (N)", "Ceiling on the force that drags a boosting small grid back to its cruise speed.", 0f, 1000f) },
+            { "ShadowDetail", new Entry(Solar, "Shadow detail", "How much work a shadow is worth: none, planets only, the world around the ship, or everything including other grids.", 0, 3, true) },
+            { "ClampOvershoot", new Entry(Solver, "Clamp overshoot", "Stops a substep carrying a block past a neighbour's temperature or past ambient. Leave on.", 0, 1) },
+            { "LoopFlowRate", new Entry(Systems, "Coolant flow (m/s)", "How fast coolant moves with one pump at full speed; flow rises with the square root of combined pumping.", 0f, 40f) },
+            { "LoopContactMultiplier", new Entry(Systems, "Coolant coupling (x)", "Scales the coupling between the fluid and the metal it touches, at the pipe wall and the sink face alike.", 0f, 5f) },
+            { "TelemetrySampleStride", new Entry(Display, "Telemetry sample stride (steps)", "Steps between telemetry samples.", 1, 64, true) },
         };
 
         /// <summary>
@@ -213,34 +230,13 @@ namespace Thermodynamics
         private static bool initialised;
 
         /// <summary>
-        /// The page the menu opens on. Kept for <see cref="Open"/>; the others are reached from
-        /// the framework's own page list down the side.
+        /// The window itself, built once the framework answers. Null until then, and null again if
+        /// it resets, which is what <see cref="Open"/> tests before offering to show it.
         /// </summary>
-        private static TerminalPageBase page;
-
-        /// <summary>
-        /// Every setting's control, by setting name, so a change made anywhere — a slider, a
-        /// the Defaults button or the server pushing new values — can be reflected in all of them
-        /// rather than only the one that was touched.
-        /// </summary>
-        private static readonly Dictionary<string, TerminalControlBase> Controls =
-            new Dictionary<string, TerminalControlBase>();
+        private static ThermalSettingsWindow window;
 
         /// <summary>What a fresh install ships with, to mark what has been changed away from.</summary>
         private static Settings shipped;
-
-        /// <summary>
-        /// The statistics page: the one place in this menu where a sentence survives, because a
-        /// <see cref="TextPage"/> wraps where a <see cref="TerminalLabel"/> clips at both ends.
-        ///
-        /// <para>
-        /// That is why every figure the menu reports is gathered here rather than spread over the
-        /// pages as three-line tiles. A tile's label holds about twenty-two characters and does not
-        /// wrap, so "substeps 7 of 12.4 asked" was the whole of what a page could say; the same
-        /// figure on this page can say what it is measured over and what it means.
-        /// </para>
-        /// </summary>
-        private static TextPage statisticsPage;
 
         /// <summary>
         /// Requests registration with Rich HUD Master. The framework responds on its own schedule, or
@@ -271,19 +267,18 @@ namespace Thermodynamics
         /// </para>
         ///
         /// <para>
-        /// Twice a second, and only while the terminal is open — the refresh walks every live grid
-        /// and builds a page of text, which is not cheap enough to do behind a closed menu. The
-        /// frame count comes first because <see cref="RichHudTerminal.Open"/> is an API call.
+        /// Twice a second, and only while the window is open — the refresh walks every live grid
+        /// and builds a page of text, which is not cheap enough to do behind a closed menu.
         /// </para>
         /// </summary>
         public static void Tick()
         {
-            if (statisticsPage == null || !RichHudClient.Registered) return;
+            if (window == null) return;
 
             if (++framesSinceStatistics < StatisticsFrames) return;
             framesSinceStatistics = 0;
 
-            if (!RichHudTerminal.Open) return;
+            if (!window.IsOpen) return;
 
             Refresh();
         }
@@ -295,15 +290,31 @@ namespace Thermodynamics
 
         public static void Open()
         {
-            if (!RichHudClient.Registered)
+            if (window == null)
             {
                 MyAPIGateway.Utilities.ShowNotification(
                     "Thermodynamics: the settings menu needs the Rich HUD Master mod", 4000, "Red");
                 return;
             }
 
-            if (page == null) RichHudTerminal.OpenMenu();
-            else RichHudTerminal.OpenToPage(page);
+            window.Show();
+        }
+
+        /// <summary>
+        /// What the keystroke does: the same key closes the window it opened, which is what a
+        /// player expects of a key that opened something and what the close button and Escape do
+        /// anyway. `/thermal menu` opens rather than toggles, because a command that closed the
+        /// menu would have to be typed into a chat box the menu is covering.
+        /// </summary>
+        public static void Toggle()
+        {
+            if (window != null && window.IsOpen)
+            {
+                window.Hide();
+                return;
+            }
+
+            Open();
         }
 
         /// <summary>
@@ -321,9 +332,7 @@ namespace Thermodynamics
 
         private static void OnReset()
         {
-            page = null;
-            statisticsPage = null;
-            Controls.Clear();
+            window = null;
             ThermalDebugPanel.Reset();
             ThermalHud.Reset();
         }
@@ -338,11 +347,35 @@ namespace Thermodynamics
             public string Name;
             public string[] Settings;
 
+            /// <summary>
+            /// The settings that go below the page's **Advanced** line: the ones a world tunes once
+            /// or never, kept on the page that owns them rather than moved somewhere else.
+            ///
+            /// <para>
+            /// **Two tiers rather than two pages.** Every setting is still exactly one page away
+            /// and still named by this table, which is what `EverySettingIsOnAMenuPageThatNamesIt`
+            /// asks; what changes is that a reader opening *Coolant loops* sees the five dials that
+            /// answer "my ship is too hot" before the five that describe the fluid.
+            /// </para>
+            /// </summary>
+            public string[] Advanced;
+
             public Leaf(string name, params string[] settings)
             {
                 Name = name;
                 Settings = settings;
+                Advanced = Empty;
             }
+
+            /// <summary>The same page, with the settings that sit below its Advanced line.</summary>
+            public Leaf Then(params string[] advanced)
+            {
+                Leaf copy = this;
+                copy.Advanced = advanced;
+                return copy;
+            }
+
+            private static readonly string[] Empty = new string[0];
         }
 
         /// <summary>
@@ -372,64 +405,57 @@ namespace Thermodynamics
         private static readonly Folder[] Folders =
         {
             new Folder("Solver",
+                // Threading folded in: whether a fleet is solved across cores is a cost decision
+                // like the three above it, and it was a page holding one switch.
                 new Leaf("Cost limits",
-                    "MaxSubsteps", "MaxSubstepsPerBlock", "MaxElementVisitsPerStep",
-                    "FloorBlocksWhenOverBudget",
-                    "ClampConductionOvershoot", "ClampEnvironmentOvershoot"),
-                new Leaf("Threading",
-                    "ParallelGrids"),
+                    "MaxSubsteps", "MaxElementVisitsPerStep")
+                    .Then("MaxSubstepsPerBlock", "FloorBlocksWhenOverBudget",
+                        "ClampOvershoot", "ParallelGrids"),
                 new Leaf("Pace",
-                    "Frequency", "SimulationSpeed", "HeatTimeScale")),
+                    "Frequency", "HeatTimeScale")),
 
-            // One system to a page, its own switch at the top of it. Four switches used to sit
-            // together on a "Mechanisms" page because they were all switches, which is filing by
-            // part of speech: switching convection off belongs above the convection dials, where
-            // you can see what it governs.
+            // **Four pages became two.** Conduction, Radiation and Convection were a page each
+            // holding a single switch, because a block's conductivity, emissivity and area are its
+            // own and live in Cubes.xml — so each page said "the rest of this is elsewhere" and had
+            // nothing else to say. They sit with the ambient switch that governs them all. This is
+            // not the *Mechanisms* page the docs argue against: that one held switches away from
+            // the dials they govern, and these have no dials to be away from.
             new Folder("Heat transfer",
-                new Leaf("Ambient",
-                    "EnableEnvironment", "VacuumTemperature"),
-                new Leaf("Conduction",
-                    "EnableConduction"),
-                new Leaf("Radiation",
-                    "EnableRadiation"),
-                new Leaf("Convection",
-                    "EnableConvection"),
-                new Leaf("Solar",
-                    "EnableSolarHeat", "SolarEnergy"),
-                new Leaf("Occlusion",
-                    // Self-shadowing is what a grid does to itself, which is occlusion by any
-                    // reading; it sat under Solar because that is where its setting name starts.
-                    "SolarSelfShadowing", "SolarGridShadows",
-                    "SolarOcclusionPlanets", "SolarOcclusionVoxels",
-                    "SolarOcclusionTerrain", "SolarTerrainRange",
-                    "SolarOcclusionSamples", "SolarOcclusionInterval")),
+                new Leaf("Ambient exchange",
+                    "EnableEnvironment", "EnableConduction", "EnableRadiation", "EnableConvection",
+                    "VacuumTemperature"),
+
+                // Solar and Occlusion were two pages about one thing, and eight of their dials
+                // asked the same question five times over. See ShadowDetail.
+                new Leaf("Sunlight",
+                    "EnableSolarHeat", "SolarEnergy", "ShadowDetail")
+                    .Then("SolarTerrainRange", "SolarOcclusionSamples", "SolarOcclusionInterval")),
 
             new Folder("Ship systems",
                 new Leaf("Coolant loops",
-                    "EnableCoolantLoops", "WellMixedCoolant",
-                    "LoopLargeGridFlowRate", "LoopSmallGridFlowRate",
-                    "LoopCoolantKilogramsPerCubicMetre", "LoopCoolantMassPerPipe",
-                    "LoopRefillEquivalentKelvin",
-                    "LoopRefillKilogramsPerSecond",
-                    "LoopSpecificHeat", "LoopHeatTransferCoefficient",
-                    "LoopPipeContactMultiplier", "LoopSinkContactMultiplier",
-                    "LoopStagnantTransferFraction"),
+                    "EnableCoolantLoops", "LoopFlowRate", "LoopHeatTransferCoefficient",
+                    "LoopRefillEquivalentKelvin", "LoopRefillKilogramsPerSecond")
+                    .Then("WellMixedCoolant", "LoopCoolantKilogramsPerCubicMetre",
+                        "LoopSpecificHeat", "LoopContactMultiplier",
+                        "LoopStagnantTransferFraction"),
                 new Leaf("Heat pumps",
-                    "EnableHeatPumps", "HeatPumpCarnotFraction", "HeatPumpMaxCoefficient"),
+                    "EnableHeatPumps")
+                    .Then("HeatPumpCarnotFraction", "HeatPumpMaxCoefficient"),
                 new Leaf("Room air",
-                    "EnableRoomAir", "RoomConvectionCoefficient", "RoomAirDensity"),
-                new Leaf("Waste heat",
-                    "EnableWasteHeat"),
-                new Leaf("Overheat damage",
-                    "EnableDamage", "DamageIsPerSecond"),
-                new Leaf("Point sources",
-                    "EnableHeatSources"),
+                    "EnableRoomAir")
+                    .Then("RoomConvectionCoefficient", "RoomAirDensity"),
+
+                // Waste heat, Point sources and Overheat damage were three pages carrying four
+                // switches between them: where heat comes from and what it does when there is too
+                // much of it.
+                new Leaf("Heat made and damage",
+                    "EnableWasteHeat", "EnableHeatSources", "EnableDamage", "DamageIsPerSecond"),
 
                 // The occupant rather than the ship, and the only page here that is not a block.
                 // It sits with the ship's systems because that is what a player is inside of.
                 new Leaf("Suit",
-                    "EnableSuitDamage", "SuitConductance", "SuitHeatCapacity",
-                    "SuitCoolingWatts", "SuitCriticalTemperature", "SuitDamagePerKelvin")),
+                    "EnableSuitDamage", "SuitCriticalTemperature", "SuitCoolingWatts")
+                    .Then("SuitConductance", "SuitHeatCapacity", "SuitDamagePerKelvin")),
 
             // Its own folder rather than a corner of Ship systems, because the two halves of
             // the same term were filed apart: the heating was a ship system and the force it
@@ -437,11 +463,21 @@ namespace Thermodynamics
             // tuning either wants to see both.
             new Folder("Aerodynamics",
                 new Leaf("Friction heating",
-                    "EnableFriction", "FrictionAtSpeedsAbove", "FrictionScale"),
-                new Leaf("Drag",
-                    "EnableDrag", "DragCoefficient", "EnableWindwardShielding", "EnableShapeDrag"),
-                new Leaf("Lift",
-                    "EnableLift", "LiftCoefficient")),
+                    "EnableFriction")
+                    .Then("FrictionAtSpeedsAbove", "FrictionScale"),
+                // RelativeTopSpeed's configuration, absorbed. The three that answer "how fast can
+                // my ship go" are above the line; the twelve that draw the curve are below it.
+                new Leaf("Top speed",
+                    "EnableTopSpeed", "SpeedLimit", "EnableSpeedBoost")
+                    .Then("LargeGridMinCruise", "LargeGridMidCruise", "LargeGridMaxCruise",
+                        "LargeGridMinMass", "LargeGridMidMass", "LargeGridMaxMass",
+                        "LargeGridResistance", "LargeGridMaxBoostSpeed",
+                        "SmallGridMinCruise", "SmallGridMidCruise", "SmallGridMaxCruise",
+                        "SmallGridMinMass", "SmallGridMidMass", "SmallGridMaxMass",
+                        "SmallGridResistance", "SmallGridMaxBoostSpeed"),
+                new Leaf("Drag and lift",
+                    "EnableDrag", "DragCoefficient", "EnableLift")
+                    .Then("EnableShapeDrag", "EnableWindwardShielding", "LiftCoefficient")),
 
             new Folder("Multiplayer",
                 new Leaf("Temperatures",
@@ -449,22 +485,23 @@ namespace Thermodynamics
 
             new Folder("World",
                 new Leaf("Climate",
-                    "EnablePlanets", "ClimateGroundInfluence", "ClimateWeatherInfluence",
-                    "PlanetDayTemperature", "PlanetNightTemperature", "PlanetPoleTemperatureDrop",
-                    "PlanetAmbientLapseRate", "PlanetAmbientLagSeconds",
-                    "PlanetConvectionCoefficient", "PlanetSolarDecay"),
+                    "EnablePlanets", "PlanetDayTemperature", "PlanetNightTemperature",
+                    "ClimateGroundInfluence", "ClimateWeatherInfluence")
+                    .Then("PlanetPoleTemperatureDrop", "PlanetAmbientLapseRate",
+                        "PlanetAmbientLagSeconds", "PlanetConvectionCoefficient",
+                        "PlanetSolarDecay"),
                 new Leaf("Underground",
-                    "PlanetUndergroundTemperature", "PlanetUndergroundDampingDepth",
-                    "PlanetUndergroundConvectionCoefficient",
-                    "PlanetCoreTemperature", "PlanetSealevelDeadzone"),
+                    "PlanetUndergroundTemperature", "PlanetUndergroundDampingDepth")
+                    .Then("PlanetUndergroundConvectionCoefficient", "PlanetCoreTemperature",
+                        "PlanetSealevelDeadzone"),
 
                 // Its own switch at the top of it, like every other system's page. The wind dials
                 // used to fall through to the leftovers page, which is where a mechanism with no
                 // switch ends up (`C7`).
                 new Leaf("Wind",
-                    "EnableWind", "WindRoughnessLength", "WindGradientHeight",
-                    "WindDiurnalAmplitude", "WindDiurnalCrossover",
-                    "WindTerrainInfluence", "WindTerrainRadius", "WindSlopeStrength")),
+                    "EnableWind", "WindGradientHeight", "WindTerrainInfluence")
+                    .Then("WindRoughnessLength", "WindDiurnalAmplitude", "WindDiurnalCrossover",
+                        "WindTerrainRadius", "WindSlopeStrength")),
         };
 
         /// <summary>
@@ -474,13 +511,8 @@ namespace Thermodynamics
         /// </summary>
         private static readonly Dictionary<string, string> PageNotes = new Dictionary<string, string>
         {
-            { "Conduction", "A block's conductivity is its own, from Cubes.xml" },
-            { "Radiation", "Emissivity and exposed area are per block, from Cubes.xml" },
-            { "Convection", "The coefficient is the planet's, on the Climate page" },
-
-            { "Waste heat", "How much each block wastes is in Cubes.xml" },
-            { "Point sources", "Registered by other mods through the API" },
-
+            { "Ambient exchange", "Conductivity, emissivity and exposed area are per block, from Cubes.xml" },
+            { "Heat made and damage", "How much each block wastes is in Cubes.xml; point sources come through the API" },
         };
 
         /// <summary>
@@ -491,13 +523,16 @@ namespace Thermodynamics
         /// server says; the telemetry pair belongs to the world.
         /// </summary>
         private static readonly Leaf DebugPage = new Leaf("Debug",
-            "HeatGlow", "HeatWarningSound", "HeatTerminalPanel", "ShowEnvironmentReadout",
-            "DebugTextOnScreen", "DebugBlockOverlay", "DebugOverlayMaxBoxes",
-            "DebugSolarRaycast", "DebugWindRaycast",
-            "DebugWindOverlay", "DebugWindIndicator",
-            "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
-            "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes");
+                "HeatGlow", "HeatWarningSound", "HeatTerminalPanel", "ShowEnvironmentReadout",
+                "DebugBlockOverlay", "DebugTextOnScreen", "DebugWindOverlay", "DebugWindIndicator")
+            .Then("DebugSolarRaycast", "DebugWindRaycast", "DebugOverlayMaxBoxes",
+                "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
+                "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes");
 
+        /// <summary>
+        /// Builds the window: the pages down the rail in the order they are read, and every setting
+        /// on the page it belongs to.
+        /// </summary>
         private static void Build()
         {
             // A client permitted to ask counts as able to edit: its controls send a request to the
@@ -513,63 +548,143 @@ namespace Thermodynamics
             // separate requests.
             bool local = MyAPIGateway.Session == null || MyAPIGateway.Session.IsServer;
 
-            Controls.Clear();
             if (shipped == null) shipped = Settings.GetDefaults();
 
-            RichHudTerminal.Root.Enabled = true;
+            window = new ThermalSettingsWindow(HudMain.HighDpiRoot);
 
-            // Loose pages first, folders after. In game, a root page added *after* a category
-            // draws against the last folder's row rather than on its own line — so the order here
-            // is the order the rail can render, not a preference.
-            //
-            // Statistics is the page the menu opens on. Overview used to be, and what it held was
-            // a count, a three-word conflict flag and three clipped figures — every one of them a
-            // worse version of a line on this page, which wraps.
-            statisticsPage = new TextPage
-            {
-                Name = "Statistics",
-                HeaderText = "Thermodynamics",
-                SubHeaderText = "What this world is set to, and what it is doing",
-            };
-            RichHudTerminal.Root.Add(statisticsPage);
-            page = statisticsPage;
+            // The page the window opens on, and the only one that holds sentences rather than
+            // dials: what the world is set to, and what it is doing.
+            window.AddStatisticsPage();
 
-            // Everything the layout accounts for, so what is left over can be swept onto a final
-            // page instead of vanishing.
+            // Everything the layout accounts for, so what is left over can be swept onto a page of
+            // its own instead of vanishing.
             HashSet<string> placed = new HashSet<string>();
 
-            // Built before the folders so it lands above them in the rail, for the ordering reason
-            // above; it is one page and it is the one people open when something is wrong.
-            RichHudTerminal.Root.Add(BuildPage(DebugPage, editable, placed));
+            // The page someone opens when something is wrong, and the one bulk action. Both sit at
+            // the top of the rail rather than inside a folder, because neither is a system.
+            AddPage(DebugPage, editable, placed, false);
+            window.AddDefaultsPage(local, RestoreDefaults);
 
-            // The one bulk action, on a page named for what it does. It was the bottom half of
-            // Overview, which is the only part of that page anything else could not say better.
-            RichHudTerminal.Root.Add(BuildDefaultsPage(local));
-
-            // Anything the tables do not name, worked out before the folders are built so this
-            // page can be added while root pages still render correctly. Hidden when empty: an
-            // empty page in the rail is a promise of something to find.
+            // Anything the tables do not name. Absent when empty: an empty page in the rail is a
+            // promise of something to find.
             List<string> leftovers = Unplaced();
             if (leftovers.Count > 0)
             {
-                RichHudTerminal.Root.Add(
-                    BuildPage(new Leaf("Other", leftovers.ToArray()), editable, placed));
+                AddPage(new Leaf("Other", leftovers.ToArray()), editable, placed, false);
             }
 
             for (int f = 0; f < Folders.Length; f++)
             {
                 Folder folder = Folders[f];
-                TerminalPageCategory category = new TerminalPageCategory { Name = folder.Name };
+                window.AddFolder(folder.Name);
 
                 for (int p = 0; p < folder.Pages.Length; p++)
                 {
-                    category.Add(BuildPage(folder.Pages[p], editable, placed));
+                    AddPage(folder.Pages[p], editable, placed, true);
                 }
-
-                RichHudTerminal.Root.Add(category);
             }
 
+            window.OpenToFirst();
+            BuildTerminalEntry();
             Refresh();
+        }
+
+        /// <summary>
+        /// The mod's one page in the Rich HUD terminal: a button that opens the window, and the
+        /// keystroke that opens it without coming here at all.
+        ///
+        /// <para>
+        /// **The settings are not on it, and cannot be.** The terminal takes a control nowhere but
+        /// inside a tile, which is a fixed bordered box drawn inside Rich HUD Master with no
+        /// accessor for its background, its border or the scroll bar under its row — which is why
+        /// the settings moved into a window of this mod's own. What the terminal is still good for
+        /// is being the place a player looks: a mod absent from that list reads as a mod with
+        /// nothing to configure.
+        /// </para>
+        /// </summary>
+        private static void BuildTerminalEntry()
+        {
+            RichHudTerminal.Root.Enabled = true;
+
+            TerminalButton button = new TerminalButton
+            {
+                Name = "Open the settings",
+                ToolTip = new ToolTip
+                {
+                    text = new RichText("Closes this menu and opens the Thermodynamics settings"
+                        + " window, which is where every setting this mod has lives."
+                        + "\n\nCtrl+Shift+S opens the same window at any time, and closes it"
+                        + " again; so does /thermal menu."),
+                },
+            };
+
+            // Closes the terminal first: the window would otherwise open underneath the menu that
+            // asked for it.
+            button.ControlChangedHandler = (sender, args) =>
+            {
+                RichHudTerminal.CloseMenu();
+                Open();
+            };
+
+            ControlTile tile = new ControlTile();
+            tile.Add(button);
+
+            // A label is one line that clips rather than wrapping, so the keystroke is said in the
+            // fewest characters that still say it. The tooltip above carries the long form.
+            tile.Add(new TerminalLabel { Name = "or press Ctrl+Shift+S" });
+
+            ControlCategory group = new ControlCategory
+            {
+                HeaderText = "Thermodynamics",
+                SubheaderText = "Its settings are in a window of this mod's own",
+            };
+            group.Add(tile);
+
+            ControlPage page = new ControlPage { Name = "Settings" };
+            page.Add(group);
+
+            RichHudTerminal.Root.Add(page);
+        }
+
+        /// <summary>
+        /// One page: its settings, the line saying who owns them, and — where the menu does not
+        /// reach a system's numbers yet — a line saying where the rest of them live.
+        /// </summary>
+        private static void AddPage(Leaf leaf, bool editable, HashSet<string> placed, bool indented)
+        {
+            List<string> members = Take(leaf.Settings, placed);
+            List<string> advanced = Take(leaf.Advanced, placed);
+
+            string note;
+            PageNotes.TryGetValue(leaf.Name, out note);
+
+            // The subheader says who owns the page's settings, which is a property of all of them
+            // rather than of the tier they are drawn in.
+            List<string> both = new List<string>(members);
+            both.AddRange(advanced);
+
+            window.AddPage(leaf.Name, Subheader(leaf.Name, both, editable), members, advanced,
+                editable, note, indented);
+        }
+
+        /// <summary>
+        /// The settings of one tier that no earlier page has already taken, marking them taken. A
+        /// setting named twice belongs to the first page that names it, which is what keeps the
+        /// leftovers page honest.
+        /// </summary>
+        private static List<string> Take(string[] names, HashSet<string> placed)
+        {
+            List<string> taken = new List<string>();
+
+            for (int i = 0; i < names.Length; i++)
+            {
+                if (placed.Contains(names[i])) continue;
+
+                placed.Add(names[i]);
+                taken.Add(names[i]);
+            }
+
+            return taken;
         }
 
         /// <summary>
@@ -584,12 +699,17 @@ namespace Thermodynamics
             {
                 for (int p = 0; p < Folders[f].Pages.Length; p++)
                 {
-                    string[] settings = Folders[f].Pages[p].Settings;
-                    for (int i = 0; i < settings.Length; i++) named.Add(settings[i]);
+                    Leaf page = Folders[f].Pages[p];
+
+                    // Both tiers: a setting below a page's Advanced line is on that page, and
+                    // counting only the first tier would sweep every one of them onto Other.
+                    for (int i = 0; i < page.Settings.Length; i++) named.Add(page.Settings[i]);
+                    for (int i = 0; i < page.Advanced.Length; i++) named.Add(page.Advanced[i]);
                 }
             }
 
             for (int i = 0; i < DebugPage.Settings.Length; i++) named.Add(DebugPage.Settings[i]);
+            for (int i = 0; i < DebugPage.Advanced.Length; i++) named.Add(DebugPage.Advanced[i]);
 
             List<string> missing = new List<string>();
             List<string> names = Settings.Names();
@@ -600,93 +720,6 @@ namespace Thermodynamics
             }
 
             return missing;
-        }
-
-        /// <summary>
-        /// One page: its settings in a single section, and a line saying where the rest of that
-        /// system's numbers live when the menu does not reach them all yet.
-        /// </summary>
-        private static ControlPage BuildPage(Leaf leaf, bool editable, HashSet<string> placed)
-        {
-            ControlPage built = new ControlPage { Name = leaf.Name };
-
-            List<string> members = new List<string>();
-            for (int i = 0; i < leaf.Settings.Length; i++)
-            {
-                string name = leaf.Settings[i];
-                if (placed.Contains(name)) continue;
-
-                placed.Add(name);
-                members.Add(name);
-            }
-
-            if (members.Count > 0) AddSection(built, leaf.Name, members, editable);
-
-            string note;
-            if (PageNotes.TryGetValue(leaf.Name, out note))
-            {
-                ControlTile noteTile = new ControlTile();
-                noteTile.Add(new TerminalLabel { Name = "the rest of this system:" });
-                noteTile.Add(new TerminalLabel { Name = note });
-
-                ControlCategory elsewhere = new ControlCategory
-                {
-                    HeaderText = "Elsewhere",
-                    SubheaderText = "Dials this menu does not reach yet",
-                };
-                elsewhere.Add(noteTile);
-                built.Add(elsewhere);
-            }
-
-            return built;
-        }
-
-        /// <summary>
-        /// The menu's one bulk action, on a page of its own.
-        ///
-        /// <para>
-        /// It needs a <see cref="ControlPage"/> because a button is a control and a
-        /// <see cref="TextPage"/> holds no controls, which is the whole reason this is not simply
-        /// the last paragraph of the statistics page.
-        /// </para>
-        /// </summary>
-        private static ControlPage BuildDefaultsPage(bool local)
-        {
-            ControlPage built = new ControlPage { Name = "Defaults" };
-            built.Add(DefaultsCategory(local));
-            return built;
-        }
-
-        /// <summary>
-        /// One button returning every world setting to the shipped value.
-        ///
-        /// The menu carries no per-control reset and no Save button, because a change applies as it is
-        /// made and reaches the config file a second later. Starting over is the one case that needs
-        /// an action of its own.
-        /// </summary>
-        private static ControlCategory DefaultsCategory(bool local)
-        {
-            ControlCategory group = new ControlCategory
-            {
-                HeaderText = "Start over",
-                SubheaderText = local
-                    ? "Returns every world setting to the value a fresh install ships"
-                    : "Applied by the server; ask an administrator",
-            };
-
-            TerminalButton button = new TerminalButton
-            {
-                Name = "Defaults",
-                ToolTip = Tip("Returns every world setting to the shipped value. What is drawn on"
-                    + " your own screen is left alone."),
-                Enabled = local,
-            };
-            button.ControlChangedHandler = (sender, args) => RestoreDefaults();
-
-            ControlTile tile = new ControlTile();
-            tile.Add(button);
-            group.Add(tile);
-            return group;
         }
 
         private static void RestoreDefaults()
@@ -705,7 +738,7 @@ namespace Thermodynamics
         /// </summary>
         public static void Refresh()
         {
-            if (page == null || shipped == null) return;
+            if (window == null || shipped == null) return;
 
             try
             {
@@ -714,15 +747,11 @@ namespace Thermodynamics
 
                 for (int i = 0; i < names.Count; i++)
                 {
-                    string name = names[i];
-                    bool moved = Changed(name);
-                    if (moved) changed++;
-
-                    TerminalControlBase control;
-                    if (Controls.TryGetValue(name, out control)) control.Name = Label(name, moved);
+                    if (Changed(names[i])) changed++;
                 }
 
-                RefreshStatistics(changed, names);
+                window.Refresh();
+                window.SetStatistics(StatisticsText(changed, names));
             }
             catch (Exception e)
             {
@@ -737,7 +766,7 @@ namespace Thermodynamics
         }
 
         /// <summary>Whether a setting has been moved away from what a fresh install ships with.</summary>
-        private static bool Changed(string name)
+        internal static bool Changed(string name)
         {
             float mine = Settings.Instance.GetValue(name);
             float theirs = shipped.GetValue(name);
@@ -752,7 +781,7 @@ namespace Thermodynamics
         }
 
         /// <summary>The label a control carries: its name, dotted when it has been changed.</summary>
-        private static string Label(string name, bool moved)
+        internal static string Label(string name, bool moved)
         {
             string label = EntryFor(name).Label;
             return moved ? "• " + label : label;
@@ -768,17 +797,15 @@ namespace Thermodynamics
         /// the slider that set it, but what the world is doing against it.
         /// </para>
         /// </summary>
-        private static void RefreshStatistics(int changed, List<string> names)
+        private static string StatisticsText(int changed, List<string> names)
         {
-            if (statisticsPage == null) return;
-
             StringBuilder text = new StringBuilder();
 
             WriteWorld(text, changed, names);
             WriteLive(text);
             WriteChanged(text, names);
 
-            statisticsPage.Text = new RichText(text.ToString());
+            return text.ToString();
         }
 
         /// <summary>General information: what this world is running and who may change it.</summary>
@@ -1001,39 +1028,6 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// One section: one <see cref="ControlCategory"/> holding one <see cref="ControlTile"/>
-        /// holding every control on the page.
-        ///
-        /// <para>
-        /// **A page used to be packed into tiles of three, two tiles to a row, with a section of
-        /// more than six continuing into a second headed group.** That is what put a grid of boxes
-        /// on every page and left the last box part empty. The framework takes a control nowhere
-        /// but a tile — page, category, tile, control, with no accessor for anything else — so one
-        /// tile remains, and it is the section itself rather than a division inside it.
-        /// </para>
-        ///
-        /// <para>
-        /// **A tile is a fixed box that masks what overruns it**, so a long section depends on Rich
-        /// HUD Master sizing it to its contents. Coolant loops is the page to look at first: twelve
-        /// controls, the longest in the menu.
-        /// </para>
-        /// </summary>
-        private static void AddSection(ControlPage target, string name, List<string> members, bool editable)
-        {
-            ControlCategory group = new ControlCategory
-            {
-                HeaderText = name,
-                SubheaderText = Subheader(name, members, editable),
-            };
-
-            ControlTile tile = new ControlTile();
-            for (int i = 0; i < members.Count; i++) tile.Add(Control(members[i], editable));
-
-            group.Add(tile);
-            target.Add(group);
-        }
-
-        /// <summary>
         /// A section's one line: who owns these settings, or what the section is for where that is
         /// the same for everyone.
         ///
@@ -1076,27 +1070,21 @@ namespace Thermodynamics
         /// </summary>
         private static readonly Dictionary<string, string> SectionNotes = new Dictionary<string, string>
         {
-            { "Cost limits", "What a step may spend before it is shortened" },
+            { "Cost limits", "What a step may spend before it is shortened, and across how many cores" },
             { "Pace", "How fast heat moves, and how finely" },
 
-            { "Ambient", "Exchange with the world a grid sits in" },
-            { "Conduction", "Heat flowing between blocks that touch" },
-            { "Radiation", "What an exposed face trades with the sky" },
-            { "Convection", "Exchange with atmosphere and with room air" },
-            { "Solar", "Sunlight on the hull" },
-            { "Occlusion", "What stands between a grid and the sun" },
+            { "Ambient exchange", "What a grid trades with the world it sits in" },
+            { "Sunlight", "Sunlight on the hull, and what stands between it and the sun" },
 
             { "Coolant loops", "Closed pipe rings acting as one fluid mass" },
             { "Heat pumps", "Moving heat up a gradient for an electrical cost" },
             { "Room air", "The air a sealed room holds" },
-            { "Waste heat", "Power becoming heat where it is used" },
-            { "Overheat damage", "What happens past a block's critical temperature" },
-            { "Point sources", "Heat other mods register through the API" },
+            { "Heat made and damage", "Where heat comes from, and what too much of it does" },
             { "Suit", "The occupant, and what the ship does to them" },
-            { "Threading", "How a frame's grids are spread across cores" },
 
             { "Friction heating", "Air heating a hull at speed" },
-            { "Drag", "The same air taking energy out of the motion" },
+            { "Drag and lift", "The same air pushing back on the motion" },
+            { "Top speed", "How fast a ship of this mass may go, and the cap over all of them" },
 
             { "Temperatures", "What the server tells a client about its own blocks" },
 
@@ -1108,135 +1096,64 @@ namespace Thermodynamics
             { "Other", "Settings this menu's layout table does not describe yet" },
         };
 
-        private static TerminalControlBase Control(string name, bool editable)
+        /// <summary>The shadow levels, in cost order, as the chooser lists them.</summary>
+        internal static readonly string[] ShadowDetailNames =
         {
-            TerminalControlBase built = BuildControl(name, editable);
-            Controls[name] = built;
-            return built;
-        }
-
-        private static TerminalControlBase BuildControl(string name, bool editable)
-        {
-            Entry entry = EntryFor(name);
-            bool enabled = editable || ClientSide.Contains(name);
-
-            if (Settings.IsFlag(name))
-            {
-                TerminalCheckbox box = new TerminalCheckbox
-                {
-                    Name = entry.Label,
-                    ToolTip = Tip(entry.Tip + FidelityEnds.Sentence(name)),
-                    Enabled = enabled,
-                    Value = Settings.Instance.GetValue(name) > 0.5f,
-                    CustomValueGetter = () => Settings.Instance.GetValue(name) > 0.5f,
-                };
-                box.ControlChangedHandler = (sender, args) => Write(name, box.Value ? 1f : 0f);
-                return box;
-            }
-
-            if (name == "DebugBlockOverlay") return OverlayDropdown(entry, enabled);
-
-            // A slider cannot express either end of this mod's ranges. The step budget spans four
-            // million, so one pixel is ten thousand visits; the friction scale spans a hundredth,
-            // so every pixel is the same number to four decimal places. Both get a field to type
-            // the value into instead.
-            if (NeedsTyping(entry)) return NumberField(name, entry, enabled);
-
-            if (name == "SolarGridShadows")
-            {
-                return Dropdown(name, entry, enabled, GridShadowNames);
-            }
-
-            TerminalSlider slider = new TerminalSlider
-            {
-                Name = entry.Label,
-                ToolTip = Tip(entry.Tip + FidelityEnds.Sentence(name)),
-                Enabled = enabled,
-                Min = entry.Min,
-                Max = entry.Max,
-                Value = Settings.Instance.GetValue(name),
-                CustomValueGetter = () => Settings.Instance.GetValue(name),
-            };
-
-            slider.ValueText = Text(name, slider.Value, entry);
-            slider.ControlChangedHandler = (sender, args) =>
-            {
-                float value = entry.Integer ? (float)Math.Round(slider.Value) : slider.Value;
-                Write(name, value);
-                slider.ValueText = Text(name, value, entry);
-            };
-
-            return slider;
-        }
-
-        /// <summary>Names for the grid shadow modes, in value order.</summary>
-        private static readonly string[] GridShadowNames = { "none", "basic", "full" };
+            "none", "planets", "the world", "everything",
+        };
 
         /// <summary>
-        /// A named choice rather than a slider, since the values are three distinct behaviours rather
-        /// than points on a scale.
+        /// The block overlay's views, named as the overlay describes them itself, so the window
+        /// offers a named choice rather than a slider over three distinct behaviours.
         /// </summary>
-        private static TerminalControlBase Dropdown(string name, Entry entry, bool enabled, string[] labels)
+        internal static string[] OverlayNames()
         {
-            TerminalDropdown<int> dropdown = new TerminalDropdown<int>
-            {
-                Name = entry.Label,
-                ToolTip = Tip(entry.Tip + FidelityEnds.Sentence(name)),
-                Enabled = enabled,
-            };
+            string[] names = new string[ThermalDebugView.ModeCount];
 
-            for (int i = 0; i < labels.Length; i++)
+            for (int mode = 0; mode < names.Length; mode++)
             {
-                dropdown.List.Add(new RichText(labels[i]), i);
+                names[mode] = ThermalDebugView.Describe((ThermalDebugView.Mode)mode);
             }
 
-            dropdown.List.SetSelection((int)Settings.Instance.GetValue(name));
-            dropdown.ControlChangedHandler = (sender, args) =>
-            {
-                EntryData<int> selection = dropdown.Value;
-                if (selection == null) return;
-
-                Write(name, selection.AssocObject);
-            };
-
-            return dropdown;
+            return names;
         }
 
-        private static TerminalControlBase OverlayDropdown(Entry entry, bool enabled)
+        /// <summary>
+        /// What a control says on hover: what the setting does, which end of it is the faithful
+        /// one, and — where the value is typed — what the usual range is.
+        ///
+        /// The block overlay is the exception on the faithful end: it is a view chooser rather
+        /// than a dial, so there is no end of it to name.
+        /// </summary>
+        internal static ToolTip TipFor(string name, Entry entry)
         {
-            // No setting name here: the overlay dropdown is a view chooser rather than a dial, so
-            // there is no faithful end to name.
-            TerminalDropdown<int> dropdown = new TerminalDropdown<int>
-            {
-                Name = entry.Label,
-                ToolTip = Tip(entry.Tip),
-                Enabled = enabled,
-            };
+            string text = name == "DebugBlockOverlay"
+                ? entry.Tip
+                : entry.Tip + FidelityEnds.Sentence(name);
 
-            for (int mode = 0; mode < ThermalDebugView.ModeCount; mode++)
+            if (NeedsTyping(entry))
             {
-                dropdown.List.Add(
-                    new RichText(ThermalDebugView.Describe((ThermalDebugView.Mode)mode)),
-                    mode);
+                text += "\n\nTyped; usual values run from " + Number(entry.Min, entry) + " to "
+                    + Number(entry.Max, entry) + ".";
             }
 
-            dropdown.List.SetSelection((int)ThermalDebugView.Current);
-            dropdown.ControlChangedHandler = (sender, args) =>
-            {
-                EntryData<int> selection = dropdown.Value;
-                if (selection == null) return;
+            return new ToolTip { text = new RichText(text) };
+        }
 
-                Write("DebugBlockOverlay", selection.AssocObject);
-            };
-
-            return dropdown;
+        /// <summary>
+        /// Whether this machine may offer a working control for a setting. A client's own switches
+        /// are always its own; everything else depends on whether the server takes requests.
+        /// </summary>
+        internal static bool MayOffer(string name, bool editable)
+        {
+            return editable || ClientSide.Contains(name);
         }
 
         /// <summary>
         /// The single write-back path for every control. A client that acquired a control it should
         /// not have is rejected here rather than desynchronising from the server.
         /// </summary>
-        private static void Write(string name, float value)
+        internal static void Write(string name, float value)
         {
             if (!CanEdit(name)) return;
 
@@ -1271,79 +1188,43 @@ namespace Thermodynamics
         /// Whether a setting's range is one a slider cannot usefully divide — about two hundred
         /// positions, so a four-million span jumps and a hundredth-wide one never moves.
         /// </summary>
-        private static bool NeedsTyping(Entry entry)
+        internal static bool NeedsTyping(Entry entry)
         {
             return (entry.Max - entry.Min) > 200f || entry.Max <= 0.1f;
         }
 
-        /// <summary>
-        /// A setting typed rather than dragged. The tooltip's range is what the slider would have
-        /// spanned, not a limit: a typed value goes through the same clamp as the chat command.
-        /// </summary>
-        private static TerminalControlBase NumberField(string name, Entry entry, bool enabled)
-        {
-            TerminalTextField field = new TerminalTextField
-            {
-                Name = entry.Label,
-                ToolTip = Tip(entry.Tip + FidelityEnds.Sentence(name)
-                    + "\n\nTyped, because a slider cannot divide this range."
-                    + " Usual values run from " + Number(entry.Min, entry)
-                    + " to " + Number(entry.Max, entry) + "."),
-                Enabled = enabled,
-                Value = Number(Settings.Instance.GetValue(name), entry),
-                CustomValueGetter = () => Number(Settings.Instance.GetValue(name), entry),
-            };
-
-            // Anything that cannot be part of a number never reaches the field, so a typo is
-            // refused as it is made rather than on losing focus.
-            field.CharFilterFunc = c =>
-                (c >= '0' && c <= '9') || c == '.' || c == '-' || c == 'e' || c == 'E' || c == '+';
-
-            field.ControlChangedHandler = (sender, args) =>
-            {
-                float value;
-                if (!float.TryParse(field.Value, NumberStyles.Float, CultureInfo.InvariantCulture,
-                        out value)
-                    && !float.TryParse(field.Value, NumberStyles.Float, CultureInfo.CurrentCulture,
-                        out value))
-                {
-                    // Unreadable: put the setting's own value back rather than guessing at what
-                    // was meant. The getter above supplies it on the next draw.
-                    field.Value = Number(Settings.Instance.GetValue(name), entry);
-                    return;
-                }
-
-                Write(name, entry.Integer ? (float)Math.Round(value) : value);
-            };
-
-            return field;
-        }
-
         /// <summary>A value as a field shows it: whole for an integer setting, four places at most
         /// otherwise, and never in scientific notation, which nobody wants to retype.</summary>
-        private static string Number(float value, Entry entry)
+        internal static string Number(float value, Entry entry)
         {
             return entry.Integer
                 ? Math.Round(value).ToString("0", CultureInfo.InvariantCulture)
                 : value.ToString("0.####", CultureInfo.InvariantCulture);
         }
 
-        private static string Text(string name, float value, Entry entry)
+        /// <summary>A value as the column beside a slider reads it.</summary>
+        internal static string ValueText(float value, Entry entry)
         {
             if (entry.Integer) return ((int)Math.Round(value)).ToString();
             return value.ToString(entry.Max <= 0.1f ? "n4" : "n2");
         }
 
-        private static ToolTip Tip(string text)
+        /// <summary>
+        /// A typed number, in whichever of the player's own format and the invariant one reads it.
+        /// False for anything unreadable, which is what half a number looks like while it is still
+        /// being typed.
+        /// </summary>
+        internal static bool TryParse(string text, out float value)
         {
-            return new ToolTip { text = new RichText(text) };
+            return float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value)
+                || float.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
         }
 
         /// <summary>
         /// Builds a control for a setting with no layout entry, using its own name as the label and a
         /// wide default range, so an unlisted setting is still editable.
         /// </summary>
-        private static Entry EntryFor(string name)
+        internal static Entry EntryFor(string name)
         {
             Entry entry;
             if (Layout.TryGetValue(name, out entry)) return entry;

@@ -47,7 +47,10 @@ namespace Thermodynamics.Tests
                 "ThermalHud.cs", "ThermalTerminal.cs",
                 "Game/ThermalGridCues.cs", "Game/ThermalBlock.cs",
             }),
-            new KeyValuePair<string, string[]>("settings menu", new[] { "ThermalSettingsMenu.cs" }),
+            new KeyValuePair<string, string[]>("settings menu", new[]
+            {
+                "ThermalSettingsMenu.cs", "ThermalSettingsWindow.cs",
+            }),
             new KeyValuePair<string, string[]>("chat replies", new[]
             {
                 "Game/HeatSourceCommand.cs", "Session.cs",

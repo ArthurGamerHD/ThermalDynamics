@@ -40,17 +40,19 @@ same names are reachable from other mods, see [api.md](api.md#settings).
 
 ## The settings menu
 
-**Ctrl+Shift+S** opens it, as does `/thermal menu`.
+**Ctrl+Shift+S** opens it and closes it again, as does the window's own close button and
+**Escape**. `/thermal menu` opens it too — it does not close it, because a command that did would
+have to be typed into a chat box the window is covering.
 
 The menu is a tree rather than one scroll: **Statistics**, **Debug** and **Defaults** at the root,
 then six folders.
 
 | Folder | Pages |
 | --- | --- |
-| **Solver** | Cost limits, Threading, Pace |
-| **Heat transfer** | Ambient, Conduction, Radiation, Convection, Solar, Occlusion |
-| **Ship systems** | Coolant loops, Heat pumps, Room air, Waste heat, Overheat damage, Point sources, Suit |
-| **Aerodynamics** | Friction heating, Drag, Lift |
+| **Solver** | Cost limits, Pace |
+| **Heat transfer** | Ambient exchange, Sunlight |
+| **Ship systems** | Coolant loops, Heat pumps, Room air, Heat made and damage, Suit |
+| **Aerodynamics** | Friction heating, Top speed, Drag and lift |
 | **Multiplayer** | Temperatures |
 | **World** | Climate, Underground, Wind |
 
@@ -67,21 +69,51 @@ usually arrives wanting one part of it. **One system to a page, with its own swi
 Grouping the switches together would be filing by part of speech: switching convection off belongs
 above the convection dials, where a reader can see what it governs.
 
+**Fifteen pages where there were twenty-three.** Conduction, Radiation and Convection were a page
+each holding a single switch, because a block's conductivity, emissivity and exposed area are its
+own and live in `Cubes.xml` — so each page said "the rest of this is elsewhere" and had nothing else
+to say. They sit on **Ambient exchange** with the switch that governs all three, which is not the
+filing-by-part-of-speech mistake above: these have no dials to be kept beside. Waste heat, Point
+sources and Overheat damage merged the same way into **Heat made and damage**, Solar and Occlusion
+into **Sunlight**, Drag and Lift into **Drag and lift**, and Threading into **Cost limits**, where
+spreading a frame's grids across cores belongs with everything else that decides what a step costs.
+
+**Each page is in two tiers.** The dials a world reaches for are at the top; below an **Advanced**
+line are the ones it tunes once or never — the fluid's specific heat, the lapse rate, the terrain
+read radius. Both tiers are on the page that owns them, so nothing has moved out of reach, and
+`EverySettingIsOnAMenuPageThatNamesIt` still holds over both.
+
 A page whose system still keeps most of its numbers in a definition file says so, rather than
 looking broken with one switch on it. A setting named on no page still gets a control, on a final
 **Other** page — a setting added to the config and forgotten here is reachable rather than
 invisible.
 
-Three of the framework's habits shape what the pages can say, and all three were learned by looking
-at the menu in game rather than by reading the API:
+**The menu is a window this mod draws, not a page in the Rich HUD terminal.** The terminal takes a
+control nowhere but inside a *tile*: a fixed 300×250 box with a border of its own and a scroll bar
+under the row it sits in, created and drawn inside Rich HUD Master, whose client API offers
+`AddControl` and `Enabled` and nothing else. So a page there was a grid of panels that no mod could
+restyle or escape, and a section longer than three controls drew over itself. The framework's HUD
+element library is a different matter — it compiles into this mod and draws from here, which is
+what the cockpit readouts and the debug panel are already made of — so
+[`ThermalSettingsWindow.cs`](../Data/Scripts/Thermodynamics/ThermalSettingsWindow.cs) builds the
+window and [`ThermalSettingsMenu.cs`](../Data/Scripts/Thermodynamics/ThermalSettingsMenu.cs) keeps
+what it says.
 
-* **A label is one centred line and clips at both ends rather than wrapping.** Every label here
-  stays inside about twenty characters, and anything longer than that — the full text of a warning,
-  the list of what has been changed — lives on the Status page, which is a text page and does wrap.
-* **A page name clips in the rail at about seventeen characters.** Page names are short for that
-  reason, not for taste.
-* **A loose page added after a folder draws against the folder's row.** Statistics, Debug and
-  Defaults are therefore added before the folders.
+A setting therefore sits on the page itself rather than inside a panel: its name down the left, its
+control in a column of one width, and the value it is at on the right, so a page of forty dials
+reads as columns. The pages are listed down the left under their folder headings, the window drags
+and resizes, and it closes on Escape, on its close button,
+or on the keystroke that opened it.
+
+It still needs **Rich HUD Master** (`1965654081`) enabled, because the HUD tree is rooted in it and
+this mod registers as a client of it; without it the keystroke says so and the chat commands remain
+the way in. What the window looks like is this mod's own decision.
+
+**The mod keeps one page in the Rich HUD terminal, and it holds a button rather than settings.**
+That list is where a player looks for a mod's settings, and a mod absent from it reads as a mod
+with nothing to configure — so the page under **Thermodynamics** carries one button, which closes
+the terminal and opens the window, and says the keystroke that does the same without coming there
+at all.
 
 **Some settings are typed, not dragged.** A slider offers about two hundred distinguishable
 positions, which suits a fraction between 0 and 1 and suits nothing else this mod has. The step
@@ -90,13 +122,20 @@ a hundredth, so every position shows the same number. Seven settings therefore g
 a value into — the step budget, terrain range, solar energy, heat time scale, vacuum temperature,
 the friction threshold and the friction scale — and the rest keep their sliders.
 
+**Ctrl and a click on a slider types the value instead.** A slider has about two hundred positions,
+so a range it can *nearly* divide is the awkward one: it looks as though it reached 6.5 and it is at
+6.47. Hold Ctrl, click the slider, and it becomes a field on the number it is at — Enter or a click
+elsewhere commits, Escape leaves the setting where it was. The click is taken by an overlay rather
+than by the slider, so the value does not jump to wherever the pointer landed on the way to typing a
+different one. The settings that are *always* typed are the ones below, whose ranges a slider cannot
+divide at all.
+
 The range in a typed field's tooltip is what the slider *would* have spanned, not a limit. A typed
 value goes through the same clamp as `/thermal set` and the mod API, so a step budget of nine
 million is yours to try. Anything unreadable puts the setting's own value back rather than guessing.
 
-**Statistics is the page the menu opens on, and everything the menu can report is on it.** It is a
-text page, which is the only kind here that wraps, so it is the only one that can say what a figure
-is measured over. It carries four things: what this world is set to — the mod version, how many
+**Statistics is the page the menu opens on, and everything the menu can report is on it.** It is
+prose rather than controls, so it is the one page that can say what a figure is measured over. It carries four things: what this world is set to — the mod version, how many
 settings differ from the shipped defaults, the settings digest to compare against the server's
 `/thermal sync`, and any conflict spelled out in full; what is running — grids, blocks, solver nodes,
 links, the hottest block and how many are over critical; the energy the world is moving — heat made,
@@ -107,7 +146,7 @@ with every changed setting and the shipped value beside it.
 
 **The figures are read from the running grids rather than computed from the settings that produced
 them**, and where a fleet has to become one number it is the worst grid rather than the mean: a world
-is as starved as its most starved grid. They refresh about twice a second while the terminal is open,
+is as starved as its most starved grid. They refresh about twice a second while the window is open,
 and not at all while it is closed.
 
 **Frame cost is reported only when telemetry is recording**, because the frame timer is wound in
@@ -119,11 +158,9 @@ page, so the count on Statistics has somewhere to lead.
 
 **Defaults** is the menu's one bulk action on a page of its own: a button that returns every world
 setting to the value a fresh install ships. The four presentation switches are left alone: what is
-drawn on a player's own screen is theirs. It is a page rather than a paragraph on Statistics because
-a button is a control and a text page holds none. The menu is built on the
-[Rich HUD Framework](https://github.com/ZachHembree/RichHudFramework.Client) and needs the
-**Rich HUD Master** mod (`1965654081`) to be enabled; without it the keystroke says so and the chat
-commands remain the way in.
+drawn on a player's own screen is theirs. It is a page of its own rather than a paragraph on
+Statistics so that the one irreversible action in the menu is somewhere a reader arrives
+deliberately.
 
 **Settings save themselves, and there is no per-control Reset.** A change applies to the running
 session as you make it and reaches the config file about a second later, so a value you can see on
@@ -161,7 +198,8 @@ whether a cheaper rung is known to be possible and nobody has built it.
 
 | Mechanism | Configured by | Rungs today | A cheaper rung |
 | --- | --- | ---: | --- |
-| Solar gain and shadow | `EnableSolarHeat`, `SolarSelfShadowing`, `SolarGridShadows`, `SolarOcclusionSamples`, `SolarOcclusionInterval`, `SolarOcclusionPlanets`, `SolarOcclusionTerrain`, `SolarOcclusionVoxels` | many | **The one full ladder, and it is spread over eight settings.** `SolarGridShadows` alone runs `none` → `basic` → `full`, which is the shape this page is arguing for. The unbuilt rung is *above* the top one — planet shadow per face, priced at 0.0018 K a metre in [backlog.md](backlog.md) `A9`. |
+| Solar gain and shadow | `EnableSolarHeat`, `ShadowDetail`, `SolarOcclusionSamples`, `SolarOcclusionInterval`, `SolarTerrainRange` | 4 | **The one full ladder, and it is now a ladder rather than a scatter.** `ShadowDetail` runs `none` → `planets` → `the world` → `everything`, which is the shape this page is arguing for; it was eight settings, five of them switches whose sixteen combinations nobody had named. The unbuilt rung is *above* the top one — planet shadow per face, priced at 0.0018 K a metre in [backlog.md](backlog.md) `A9`. |
+| Top speed | `EnableTopSpeed`, `EnableSpeedBoost` | 3 | off → cruise speeds a ship cannot pass → cruise speeds it can be pushed past and is dragged back to. A complete ladder, and the cheap end is the *engine's* flat cap rather than nothing: turning this off is a world running the game's own speed rules. The cheaper rung that does not exist is a per-mass cap with no force in it, which is what `EnableSpeedBoost` off already is. |
 | Coolant transport | `EnableCoolantLoops`, `WellMixedCoolant` | 3 | off → well-mixed → parcels round a ring. Complete, and the middle rung reached no world until 2026-08-24. |
 | Wind | `EnableWind` + `WindTerrainInfluence`, `WindSlopeStrength`, `WindDiurnalAmplitude` | 2 + dials | Each influence runs 0 to 1, so the ladder above the switch is a dial rather than a list. **The switch was missing until 2026-08-24**, which made this the one mechanism a world could not turn off (`C7`): the nearest thing was zeroing those three and knowing which three, and that removes the modulations rather than the wind. Off is no wind anywhere — the game exposes a ceiling and not a wind, so every direction and speed is this model's — and it costs nothing, because it takes the same path a planet with no air over it already takes. |
 | Planet climate | `EnablePlanets`, `ClimateGroundInfluence`, `ClimateWeatherInfluence` | 2 + dials | Off means ambient is `VacuumTemperature` everywhere. The two influences are 0-to-1 dials on top of the switch rather than rungs under it. |
@@ -200,13 +238,9 @@ Each switch removes exactly its own mechanism and its own cost.
 | `EnableConduction` | `true` | Heat flow between touching blocks. |
 | `EnableRadiation` | `true` | Radiative exchange with the ambient sky. |
 | `EnableConvection` | `true` | Convective exchange with the surrounding air. |
-| `SolarOcclusionPlanets` | `true` | A planet may shadow the grid: night, and a world's shadow from orbit. Analytic — an angle against the planet's radius, no raycast — so it is nearly free. |
-| `SolarOcclusionTerrain` | `true` | The planet's own ground may shadow the grid: the mountain to the east at sunrise, the canyon wall, the cliff a base is parked against. Ground-height lookups along the sun ray, ten of them, and only for grids within 15 km of mean radius. |
+| `ShadowDetail` | 3 (everything) | How much work a shadow is worth, as one level rather than five switches. `0` nothing shadows anything: a face pointing at the sun is lit. `1` planets only — night, and a world's shadow seen from orbit; analytic, an angle against the planet's radius, no raycast, and nearly free. `2` the world: planets, terrain (ground-height lookups along the sun ray, only within 15 km of mean radius), asteroids (a physics raycast per candidate voxel per sample), and the ship shadowing itself (a walk from each cell toward the sun each time the sun moves more than 2°, sliced over ticks); another grid casts one whole-grid shadow. `3` everything: as `2`, and another grid's shadow lands on the faces it actually covers, for a walk through the occluder's blocks per face. **The five switches this replaced** (`SolarSelfShadowing`, `SolarOcclusionPlanets`, `SolarOcclusionTerrain`, `SolarOcclusionVoxels` and the three-way `SolarGridShadows`) had sixteen combinations, of which one was documented and none were tested; the levels are ordered by cost, so the answer to "this is too expensive" is the next one down. The solver still carries the switches and the world derives them from here. |
 | `SolarTerrainRange` | 4000 m | How far along the sun ray the terrain walk looks. Near ground is what shadows you — the cliff two hundred metres off — and far ground almost never does, so this is short by design. |
-| `SolarOcclusionVoxels` | `true` | Asteroids and other voxels may shadow the grid. Costs a physics raycast per candidate voxel per sample. |
-| `SolarGridShadows` | `full` (2) | How much work another grid's shadow is worth. `0` none: other grids never shadow this one. `1` basic: one ray toward the sun per sample, and anything in the way dims the whole grid — the original behaviour. `2` full: the shadow lands on the faces it actually covers, for a walk through the occluder's blocks per face of this grid, on the shadow pass rather than per step. Full needs `SolarSelfShadowing`, whose pass it rides on. |
 | `SolarOcclusionSamples` | 1 | Points across the grid tested for shadow, 1..9. One is a single ray from the middle: the whole ship is lit or dark together, and flips the moment its centre crosses a shadow. More points spread through the hull turn that step into a ramp, at the cost of one full query each. |
-| `SolarSelfShadowing` | `true` | A grid shadows itself: a face standing behind the ship's own structure takes no sunlight. Costs a walk from each cell toward the sun each time the sun moves more than 2°, spread over ticks in slices, and nothing between those. Turn it off for the cheap model, which lights any exposed face pointing at the sun. |
 | `EnableSolarHeat` | `true` | Solar gain and the sun occlusion raycast. |
 | `EnableHeatSources` | `true` | Gain from point sources registered by other mods. |
 | `EnableWasteHeat` | `true` | Heat from power production, power draw and thrust. |
@@ -232,7 +266,7 @@ player could see or avoid changing between them.
 
 When a step would exceed the budget, the step is made **shorter** rather than its substeps
 coarser. Coarsening substeps would take steps too large for the grid's stiffness and lean on
-`ClampConductionOvershoot` to stay bounded, which loses accuracy. Shortening the step advances
+`ClampOvershoot` to stay bounded, which loses accuracy. Shortening the step advances
 less simulated time at exactly the same accuracy: heat moves more slowly, and nothing else about
 it changes.
 
@@ -260,8 +294,8 @@ substeps a step needs = StepSeconds × max over blocks of (ΣG / C) / safety
 and what you pay per real second is that times the number of steps:
 
 ```
-substeps per real second = (Frequency × SimulationSpeed) × (1 / Frequency) × r_max / 0.5
-                         = SimulationSpeed × r_max / 0.5
+substeps per real second = Frequency × (1 / Frequency) × r_max / 0.5
+                         = r_max / 0.5
 ```
 
 **`Frequency` cancels.** Doubling it halves what each step needs and runs twice as many. What sets
@@ -717,23 +751,23 @@ So, knob by knob:
 * **`MaxSubsteps` chooses accuracy or speed.** High means the estimate is always granted and nothing
   clamps, which is what ships. `1` means every step is deliberately too long and the clamps carry it.
 * **Keep `HeatTimeScale / Frequency` under 4000.** This is the safety rail. Everything else is taste.
-* **`EnableRoomAir` and `SolarSelfShadowing` are the two mechanisms that cost most** for what a player
-  notices, and both ship on.
+* **`EnableRoomAir` and the ship shadowing itself are the two mechanisms that cost most** for what a
+  player notices, and both ship on — the second at `ShadowDetail` 2 and above.
 
-Both clamps must stay on for any of this. `ClampConductionOvershoot` and `ClampEnvironmentOvershoot`
-are what make a deliberately-too-long step bounded instead of divergent — with them off, a fast clock
-at one substep reaches 10^22 K in twenty seconds.
+`ClampOvershoot` must stay on for any of this. It is what makes a deliberately-too-long step bounded
+instead of divergent — with it off, a fast clock at one substep reaches 10^22 K in twenty seconds.
 
 **Starting over is one action.** The settings menu's **Defaults** page carries a button that
 returns every world setting to the value a fresh install ships, leaving the four presentation
 switches alone. There is no per-control reset and no Save button, because a change applies as it is
 made and reaches the config file a second later.
 
-## Trading simulation speed for heat transfer
+## Trading step rate for heat transfer
 
-A natural idea, and worth knowing what it does before reaching for it: halve `SimulationSpeed` and
-double `HeatTimeScale`, so half as many steps run each second but heat moves twice as fast in
-each, and a ship still cools at the same rate a player watching it would see.
+A natural idea, and the measurement that retired a setting. The world used to carry a
+`SimulationSpeed` multiplier beside `Frequency`, and the obvious trade was to halve it and double
+`HeatTimeScale`: half as many steps each second, heat moving twice as fast in each, and a ship
+cooling at the same rate a player watching it would see.
 
 **The pace half is exactly true.** `HeatTimeScale` divides every heat capacity, which is precisely
 equivalent to running the clock faster, so any pairing with the same
@@ -764,10 +798,11 @@ table is about is the relationship between the three dials rather than the value
 *127,000 blocks, 20 real seconds, work budget off so the effect is not hidden. `bench pace`.*
 
 **Lowering `Frequency` alone reaches the same place** — the fourth row is the third row's cost and
-the third row's answer, with `SimulationSpeed` and `HeatTimeScale` left alone. It is one knob
-instead of two, it does not move the world's clock, and it leaves `SimulationSpeed` meaning what a
-player expects. Going the other way costs: `Frequency 16` is nearly twice `Frequency 1` for a
-result 0.5 % different.
+the third row's answer, with the multiplier and `HeatTimeScale` left alone. It is one knob instead
+of two and it does not move the world's clock, which is why `SimulationSpeed` is no longer a world
+setting: it only ever multiplied `Frequency`, and `Frequency` says the same thing in units this page
+can price. The solver still carries it, and the pace labs still sweep it. Going the other way costs:
+`Frequency 16` is nearly twice `Frequency 1` for a result 0.5 % different.
 
 Two things to watch when lowering it. A longer step needs more substeps, so a stiff grid can reach
 `MaxSubsteps` and start clamping — the report's **steps clamped by substep cap** is where that
@@ -778,15 +813,13 @@ will not move it much.
 | Setting | Default | Effect |
 | --- | --- | --- |
 | `Frequency` | 4 | Solver steps per simulated second. The integration step is `1/Frequency`, so 4 is a quarter-second step — the basis every substep figure in this documentation is quoted on. Whether lowering it cuts cost depends on the grid — see below. |
-| `SimulationSpeed` | 1 | Simulated seconds per real second, applied by running more steps rather than longer ones. Linear in CPU. |
 | `HeatTimeScale` | 90 | How much faster than real physics heat moves. Divides every heat capacity. It was 225 until `C24`, which moved it to put the most significant thermal event inside the 2–5 minute window `G8` asks for — see [balance.md](balance.md#the-route-is-chosen-and-it-is-the-one-the-cost-column-argued-against). |
 | `MaxElementVisitsPerStep` | 4000000 | Most element visits one step may make — substeps times its links plus four times its nodes — before the step is shortened to fit. 0 removes the bound. **Moves with `Frequency`**: a step is spread across the frames of its window, so this figure and the step rate together set the per-frame cost — at `Frequency` 4 it bounds a frame at 266,667 visits. It was 2,000,000 until `C27` priced what a shortened step costs; see [What a shortened step costs](#what-a-shortened-step-costs). |
 | `MaxSubstepsPerBlock` | 0 (off) | Most substeps any single block may demand of the whole grid before it is treated as heavier than it is. The cheapest large win there is on a real ship. See below. |
 | `FloorBlocksWhenOverBudget` | `false` | When a grid cannot afford the substeps its demand asks for, floor its stiffest blocks to what `MaxElementVisitsPerStep` grants instead of shortening its step. Engages per grid and per step, only where the budget binds. See below. |
 | `ParallelGrids` | `false` | Solve a frame's grids on the engine's worker threads rather than one after another on the game thread. Measured at **10.17×** on a 242-grid fleet and 0.99× on a single grid. **Ships off**, and what a session has to answer first is [Solving a fleet in parallel](#solving-a-fleet-in-parallel). |
 | `MaxSubsteps` | 64 | Most substeps one step may be cut into, whatever the grid asks for. A grid refused here integrates a step too long for its stiffest block, and the overshoot clamps carry the difference. **It bound in thick air at flying speed until `C24`, and no measured hull reaches it now** — see [The approximation that shipped on](#the-approximation-that-shipped-on-and-no-longer-does). |
-| `ClampConductionOvershoot` | `true` | Caps each exchange at the energy that equalises the pair, and every exchange arriving at one node, one parcel of coolant or one room's air at the energy that equalises that. Off reproduces the original unbounded solver. Skipped, at no change to the result, on any step short enough that no element can overshoot — see [benchmarks.md](benchmarks.md#the-overshoot-clamp-ab). |
-| `ClampEnvironmentOvershoot` | `true` | The same for radiation and convection: neither may carry a block past ambient in one substep. This is what bounds a step that is deliberately far too long. |
+| `ClampOvershoot` | `true` | Stops a substep carrying a node past what it is exchanging with: each conduction exchange is capped at the energy that equalises the pair, and radiation and convection may not carry a block past ambient. It is what bounds a step that is deliberately far too long; off reproduces the original unbounded solver. Skipped, at no change to the result, on any step short enough that nothing can overshoot — see [benchmarks.md](benchmarks.md#the-overshoot-clamp-ab). **One switch where there were two**: `ClampConductionOvershoot` and `ClampEnvironmentOvershoot` were the same decision asked twice, both shipped on and both documented "leave on". The solver still clamps in two places and this sets both. |
 | `DamageIsPerSecond` | `true` | Overheat damage per second of simulated time. Off applies it per step, which makes damage scale with `Frequency`. |
 
 ## Environment
@@ -821,15 +854,12 @@ Move one and it wins from then on, across every loop definition in the world.
 | Setting | Default | Effect |
 | --- | --- | --- |
 | `LoopCoolantKilogramsPerCubicMetre` | 33 kg/m³ | Coolant per cubic metre of the cell a pipe occupies — 515.6 kg a pipe on a large grid and 4.1 kg on a small one. More is more capacity for the same coupling: a heavier ring takes longer to saturate and longer to shed, and swings less between its sink face and the far side of the loop. **A density rather than a flat mass because a flat one has no grid size in it**: the 50 kg this shipped until `C43` is 3.2 kg/m³ in a 2.5 m cube and 400 kg/m³ in a 0.5 m one, where it outweighs the pipe block carrying it. |
-| `LoopCoolantMassPerPipe` | 0 kg | A flat coolant mass per pipe block, overriding the density above. **Zero means "use the density"**, which is what ships; the name is kept rather than repurposed, so a world that had moved this dial still gets the kilograms it asked for. |
 | `LoopRefillEquivalentKelvin` | 100 K | The excess a refill is priced at. Restoring a kilogram costs the heat that kilogram holds this far above ambient, and a pump wastes **all** of what it draws, so the energy lands back in the ship — which makes this **the excess at which venting and refilling exactly break even**. Above it a vent pays, below it costs. 100 K is where the glow starts. |
 | `LoopRefillKilogramsPerSecond` | 5 kg/s | How fast a vented ring comes back. Venting is instant and refilling is not, and that is what stops a dump being repeatable: a full eight-pipe large-grid ring is 80 s. The one figure here with no derivation under it. |
 | `LoopSpecificHeat` | 3400 J/(kg·K) | The coolant's specific heat. Water-glycol is about 3,400. |
 | `LoopHeatTransferCoefficient` | 1000 | How well heat crosses between the fluid and the wall it touches **while the ring is circulating**, W/(m²·K). Convective, so there is no thickness in it. A few hundred is a slow liquid flow and a few thousand a fast one; `C42` moved it from 160 because at 160 one sink face forced a 6.4 MW block to sit 6,400 K above its surroundings. A stopped ring still carries 160, from `LoopStagnantTransferFraction`. |
-| `LoopPipeContactMultiplier` | 1.0 | Scales the coupling between the fluid and its own pipe. |
-| `LoopSinkContactMultiplier` | 1.0 | Scales the coupling through a sink face into whatever is mounted against it. This is the dial that decides whether plumbing beats bolting. |
-| `LoopLargeGridFlowRate` | 10 m/s | How fast coolant moves on a large grid with one pump at full speed. Flow costs no substeps — carrying the fluid is a rotation of which parcel sits in which pipe, exact at any speed — so this is free to be set for feel. |
-| `LoopSmallGridFlowRate` | 10 m/s | The same for a small grid. Split from the large-grid figure because it is a balance dial rather than a constant. |
+| `LoopContactMultiplier` | 1.0 | Scales the coupling between the coolant and the metal it touches, at the pipe wall and at a sink face alike — the dial that decides whether plumbing beats bolting. **One trim where there were two**: a pipe multiplier and a sink multiplier were two dials on one coefficient, both shipped at 1. A fluid that should behave differently at the two joints says so in `Loops.xml`, which still carries them apart. |
+| `LoopFlowRate` | 10 m/s | How fast coolant moves with one pump at full speed. Flow costs no substeps — carrying the fluid is a rotation of which parcel sits in which pipe, exact at any speed — so this is free to be set for feel. **One rate where there were two**: the large- and small-grid rates shipped identical and were never moved apart, and `Loops.xml` still carries both. |
 | `LoopStagnantTransferFraction` | 1.0 | What a stopped ring still carries across the fluid-to-wall joint, 0..1. Fluid-to-wall transfer is convective, so it depends on the flow: a pumped ring is forced convection and a stopped one is natural convection against the same wall. 0 makes a pump failure total. |
 | `WellMixedCoolant` | `false` | The cheap rung of coolant transport. Off — the default — is the realistic form: the fluid is a ring of parcels, so a stopped pump leaves the coolant cold at the radiator and hot at the reactor, and where a sink sits round the loop matters. On collapses the ring to one temperature, which is cheaper and makes a loop's layout stop mattering. **It existed in the solver and reached no world until 2026-08-24**: the model read it, the tests exercised it, and nothing a player could touch set it. |
 
@@ -1103,19 +1133,19 @@ pass is the cost, and it is spread over ticks in slices of `SunShadowBudget` (20
 A pass runs when the sun has moved 2° in the grid's own frame. On a planet that is tens of seconds
 of play. In space it is the *ship's* rotation that moves the sun, so a grid spinning fast rebuilds
 continuously — a sustained ~1 ms per tick on a mid-size ship rather than an occasional one. If that
-ever matters, `SolarSelfShadowing` off is the answer, and it is free.
+ever matters, `ShadowDetail` 1 is the answer, and it is free.
 
 ### External shadow
 
-`SolarOcclusionInterval` decides how often any of it is re-tested; the three switches decide what is
-tested at all, and each is priced differently:
+`SolarOcclusionInterval` decides how often any of it is re-tested; `ShadowDetail` decides what is
+tested at all, and each occluder is priced differently:
 
 | Occluder | How it is tested | Cost |
 | --- | --- | --- |
 | Planet | angle against the planet's radius | arithmetic, no ray |
 | Terrain | ground height sampled along the sun ray | ten height lookups, near a surface only |
 | Voxel | physics raycast against the asteroid | one raycast per candidate |
-| Grid | one ray, or a walk per face | `SolarGridShadows`: none, one block ray per candidate, or one walk per face |
+| Grid | one ray, or a walk per face | none below `ShadowDetail` 2, one block ray per candidate at 2, one walk per face at 3 |
 
 At `full`, other grids are dropped from the whole-grid ray and answered per face instead: counting
 them twice would shade an entire ship for a shadow across one corner. The
@@ -1134,8 +1164,8 @@ share is 0 or 1 and behaves exactly as before. Raise it and a kilometre-long shi
 terminator dims over the crossing instead of switching off when its centre passes.
 
 **The sample count is the cheapest rung, and it is measurably not the dial worth spending on.**
-`SolarOcclusionSamples`, `SolarGridShadows` and `SolarSelfShadowing` compose into a ladder that
-nothing names, and two of the three already ship at the top. The third ships at one ray from the
+`SolarOcclusionSamples` and `ShadowDetail` compose into a ladder, and the second already ships at
+the top. The third ships at one ray from the
 grid's centre, which [backlog.md](backlog.md) `A9` ranked second of everything open on the ground
 that a ship flipping between fully lit and fully dark is a difference a player can see. **Measured,
 it is the wrong dial**, and `dotnet run --project tests/Thermodynamics.Sim -- occlusion` is the
@@ -1198,10 +1228,10 @@ of the error, and above it the geometry is. That is what decides the top rung: i
 how long ships are rather than about how good the model is, and nothing in the shipped configuration
 moves for it. `OcclusionLadderTests` pins the rate and the crossover.
 
-The three solar settings stack as a choice of cost. `EnableSolarHeat` off is free and models no
-sunlight at all. On with `SolarSelfShadowing` off is the cheap model: a face is lit whenever it
-points at the sun. On with both is the accurate one: the grid shadows itself, for one pass over its
-cells whenever the sun moves.
+The solar settings stack as a choice of cost. `EnableSolarHeat` off is free and models no sunlight
+at all. On with `ShadowDetail` at `1` or below is the cheap model: a face is lit whenever it points
+at the sun. `2` and above is the accurate one: the grid shadows itself, for one pass over its cells
+whenever the sun moves.
 
 **Solar watts** does not draw boxes. Sunlight lands on a face, not on a block, so it draws the
 grid's skin — one quad per exposed face — shaded by that face's own irradiance: the sun's energy
@@ -1248,25 +1278,68 @@ a session starts on — the keybind is how each client drives it.
 | `TelemetryPlanetProbes` | 0 | Solver steps between planet-wide probe sweeps, or 0 for none. A sweep reads the **wind and the climate** at 72 fixed points — every latitude from −80° to +80° including the equator, eight longitudes each — at five heights, whether or not anything is standing there. Writes `Thermodynamics_PlanetProbes_*.csv`. 360 is a sweep a minute at the shipped clock. |
 | `TelemetrySampleStride` | 4 | Fraction of each grid's blocks sampled per step for the per-definition statistics — `1/n`. Every block is still seen once per `n` steps. |
 
+
+### Top speed
+
+**Absorbed from [RelativeTopSpeed](https://github.com/Gauge/RelativeTopSpeed)** (`K10`), and off
+until a world asks for it. The engine's speed cap is one number for every ship in the world; this
+raises it and then holds each grid under a cruise speed of its own — high for a fighter, low for a
+freighter — by a **force** rather than a limit, so a ship pushed past its cruise speed is dragged
+back to it rather than stopped dead. The curve is a cubic spline through three authored mass points
+a side, ported so that a world moving from that mod to this one flies the same.
+
+**It is not the aerodynamic model, and the two are independent.** `EnableDrag` takes the drag this
+mod computes out of a ship's motion, with air, altitude, area and shape in it; this is an authored
+curve with none of those. A world may run either, both or neither — and running both means two
+forces on one ship, which is a choice rather than a mistake.
+
+Applied on the server only, once per physical group at its centre of mass, on the group's combined
+mass: a tug and its load are one ship.
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `EnableTopSpeed` | `false` | The master switch. On, the world's cap becomes `SpeedLimit` and every grid is held under its own cruise speed. Off puts the world's own cap back, so a world that stops using this stops flying differently. |
+| `SpeedLimit` | 140 m/s | The ceiling no ship passes whatever its mass or its boost, written into the world's environment definition — this is what makes the game itself allow more than 100. |
+| `EnableSpeedBoost` | `true` | Whether thrust may push a ship past its cruise speed at all. On, it is dragged back toward it, which is what makes a burst of thrust worth something. |
+| `LargeGridMinCruise` | 60 m/s | Cruise speed of a large grid at or below `LargeGridMinMass`. |
+| `LargeGridMidCruise` | 80 m/s | Cruise speed of a large grid at `LargeGridMidMass`. |
+| `LargeGridMaxCruise` | 110 m/s | Cruise speed of a large grid at or above `LargeGridMaxMass`. |
+| `LargeGridMinMass` | 200,000 kg | Mass below which a large grid holds its light cruise speed. |
+| `LargeGridMidMass` | 5,000,000 kg | The middle point of the large-grid curve. |
+| `LargeGridMaxMass` | 8,000,000 kg | Mass above which a large grid holds its heavy cruise speed. |
+| `LargeGridResistance` | 1.5 | How hard a large grid is held to its cruise speed: the force is `resistance × mass × (1 − cruise / speed)` along the velocity. |
+| `LargeGridMaxBoostSpeed` | 140 N | Ceiling on that force for a large grid. |
+| `SmallGridMinCruise` | 90 m/s | Cruise speed of a small grid at or below `SmallGridMinMass`. |
+| `SmallGridMidCruise` | 95 m/s | Cruise speed of a small grid at `SmallGridMidMass`. |
+| `SmallGridMaxCruise` | 110 m/s | Cruise speed of a small grid at or above `SmallGridMaxMass`. |
+| `SmallGridMinMass` | 10,000 kg | Mass below which a small grid holds its light cruise speed. |
+| `SmallGridMidMass` | 300,000 kg | The middle point of the small-grid curve. |
+| `SmallGridMaxMass` | 400,000 kg | Mass above which a small grid holds its heavy cruise speed. |
+| `SmallGridResistance` | 1.0 | The same for a small grid. |
+| `SmallGridMaxBoostSpeed` | 140 N | Ceiling on that force for a small grid. |
+
 ## Time and pace
 
-Three settings affect pace and they do different things:
+Two settings affect pace and they do different things:
 
 ```
 StepSeconds    = 1 / Frequency              simulated seconds in one solver step
-StepsPerSecond = Frequency × SimulationSpeed
+StepsPerSecond = Frequency                  steps run per real second
 Capacity       = SpecificHeat × Mass / HeatTimeScale
 ```
 
-* **`Frequency` is accuracy** — how finely a simulated second is integrated.
-* **`SimulationSpeed` is how fast simulated time runs.** Honest, and linear in CPU.
+* **`Frequency` is both accuracy and rate** — how finely a simulated second is integrated, and how
+  many of those steps run per real second. It is linear in CPU on a soft grid and free on a stiff
+  one; see [Frequency is not the cost dial it looks like](#frequency-is-not-the-cost-dial-it-looks-like).
+  The `SimulationSpeed` multiplier that used to sit beside it was retired on 2026-09-01: it did
+  nothing but scale this.
 * **`HeatTimeScale` is how fast heat moves within a simulated second.** Free in CPU terms, and the
   reason the definitions can carry real material values without a hull taking hours to cool.
   Dividing every capacity by *k* is exactly running thermal time at *k*×: every rate scales
   together, so equilibrium temperatures, the balance between mechanisms and the ratios between
   block types are all unchanged. Only the clock moves.
 
-Total acceleration over real physics is `SimulationSpeed × HeatTimeScale`. **The shipped value is
+Total acceleration over real physics is `HeatTimeScale`. **The shipped value is
 90**, and 225 is what made steel's real 450 J/(kg·K) behave the way the old flat value of 2 did —
 the calibration the real-unit conversion was checked against, and two and a half times faster than
 what ships. `C24` slowed it, and multiplied the conduction pace by four at the same time, because
@@ -1390,5 +1463,11 @@ one with a migration risk — is late rather than first.
 | 2026-08-22 | Brought the loop and planet definitions into the menu as world settings, replicated and reachable from `/thermal set` and the mod API. |
 | 2026-08-19 | Documented the twenty-one settings the reference had never listed — the whole `Loop*` and `Planet*` families, `MaxSubsteps` and `ClampEnvironmentOvershoot` — and added `ConfigurationDocTests`, which fails when a setting exists in one place and not the other. Let an admin change world settings from a client, over a secure channel rather than the shared one. |
 | 2026-08-18 | Added the five profiles as a ladder on two axes, and fixed the clamp defect that had to be fixed before they were safe. *(The profiles were removed on 2026-08-22; the clamp fix stands — see [realism.md](realism.md).)* |
+| 2026-09-01 | **RelativeTopSpeed absorbed** (`K10`): the world's speed cap, the per-mass cruise curve and the boost are world settings on a new **Top speed** page, and a server-side force holds each physical group under the cruise speed its combined mass earns. Off by default, like the drag switch and for the same reason. The curve is the original's arithmetic, quirks included, so a world moving over flies the same. |
+| 2026-09-01 | **Ctrl and a click on a slider turns it into a field**, for the ranges a slider can nearly divide but not exactly. |
+| 2026-09-01 | **Thirteen settings became four**, at the same behaviour a fresh install ships. `ShadowDetail` replaces five solar-occlusion switches with one level ordered by cost; `ClampOvershoot` replaces the two overshoot clamps, which were the same decision asked twice; `LoopFlowRate` and `LoopContactMultiplier` replace two pairs that shipped identical; the per-pipe coolant override is gone, since zero meant "use the density" and `Loops.xml` still carries it; and `SimulationSpeed` is gone, because it only ever multiplied `Frequency`. The solver keeps every one of the switches these derive, and the definition files keep the pairs. The config version moved to 8, so an existing world is replaced with defaults rather than half-migrated. |
+| 2026-09-01 | The menu is fifteen pages instead of twenty-three — five pages that held a single switch each folded into the page whose mechanism they belong to — and each page is in two tiers, with the dials a world tunes once or never below an **Advanced** line. Every label carries its unit where it has one, and every tooltip is one sentence: the longest was five, and the terminal's clipping was what had kept the labels short. |
+| 2026-09-01 | Kept one page in the Rich HUD terminal, holding a button that opens the window and the keystroke that does the same. The mod had disappeared from the terminal's mod list entirely, which reads as a mod with nothing to configure. |
+| 2026-09-01 | Took the menu out of the Rich HUD terminal and into a window this mod draws itself. The terminal put a fixed bordered tile around every control, with a scroll bar under each row, and offered the client no way to turn either off — and a section longer than three controls overran the box and drew over itself. Same pages, same settings, same keystroke; the panels are gone and a setting sits on the page. |
 | 2026-08-17 | Moved the settings menu onto Rich HUD at Ctrl+Shift+S. |
 | 2026-08-12 | Opened the reference against `ThermodynamicsConfig.cfg`. |

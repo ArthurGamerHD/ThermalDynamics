@@ -24,6 +24,25 @@ namespace Thermodynamics
     }
 
     /// <summary>
+    /// How much work a shadow is worth, as one ordered level rather than five switches. Ordered by
+    /// cost, so the answer to "this is too expensive" is always the next one down.
+    /// </summary>
+    public enum ShadowLevel
+    {
+        /// <summary>Nothing shadows anything: a face pointing at the sun is lit.</summary>
+        None = 0,
+
+        /// <summary>Planets only — night, and a world's shadow from orbit. Analytic, no raycast.</summary>
+        Planets = 1,
+
+        /// <summary>Planets, terrain, asteroids, and the ship shadowing itself.</summary>
+        World = 2,
+
+        /// <summary>As <see cref="World"/>, and another grid's shadow lands on the faces it covers.</summary>
+        Everything = 3,
+    }
+
+    /// <summary>
     /// The world's configuration file: the serialised shape, the defaults, and the write-through into
     /// the <see cref="Core.ThermalSettings"/> instance every grid already holds. Every field is
     /// reachable by name, booleans as 0 and 1. See configuration.md.
@@ -38,7 +57,7 @@ namespace Thermodynamics
         /// Incremented whenever the file's shape changes. A file at a different version is replaced
         /// with defaults rather than partially applied.
         /// </summary>
-        public const int CurrentVersion = 7;
+        public const int CurrentVersion = 8;
 
         public static Settings Instance;
 
@@ -56,43 +75,72 @@ namespace Thermodynamics
         [ProtoMember(14)] public bool EnableSolarHeat = true;
 
         /// <summary>
-        /// Whether a grid shadows itself, so a face behind the grid's own structure takes no
-        /// sunlight. Costs a pass over the grid's cells each time the sun moves appreciably. When
-        /// off, any face pointing at the sun is lit.
+        /// How carefully the mod works out what stands between a grid and the sun:
+        /// <list type="bullet">
+        /// <item>0 — nothing shadows anything; a face pointing at the sun is lit.</item>
+        /// <item>1 — planets only: night, and a world's shadow seen from orbit. Analytic, no
+        /// raycast, and the cheapest thing here that is not off.</item>
+        /// <item>2 — the world: planets, terrain, asteroids, and the ship's own hull shadowing
+        /// itself. Other grids cast a single whole-grid shadow.</item>
+        /// <item>3 — everything: as 2, and another grid's shadow lands on the faces it actually
+        /// covers rather than dimming the whole ship.</item>
+        /// </list>
+        ///
+        /// <para>
+        /// **Five switches became this one level.** Self-shadowing, planets, terrain, asteroids and
+        /// the three-way grid-shadow mode were five independent dials over one question — how much
+        /// work is a shadow worth — and their sixteen combinations were neither documented nor
+        /// tested. The levels are ordered by what each costs, so the answer to "it is too
+        /// expensive" is to go down one. The solver still carries the individual switches and
+        /// <see cref="Apply"/> derives them from here.
+        /// </para>
         /// </summary>
-        [ProtoMember(58)] public bool SolarSelfShadowing = true;
+        [ProtoMember(141)] public int ShadowDetail = (int)ShadowLevel.Everything;
+
+        /// <summary>Whether a planet's own bulk can shadow the grid.</summary>
+        [XmlIgnore] public bool SolarOcclusionPlanets
+        {
+            get { return ShadowDetail >= (int)ShadowLevel.Planets; }
+        }
+
+        /// <summary>Whether terrain can shadow the grid: a ridge at sunrise, a cliff to park against.</summary>
+        [XmlIgnore] public bool SolarOcclusionTerrain
+        {
+            get { return ShadowDetail >= (int)ShadowLevel.World; }
+        }
+
+        /// <summary>Whether asteroids and other voxels can shadow the grid.</summary>
+        [XmlIgnore] public bool SolarOcclusionVoxels
+        {
+            get { return ShadowDetail >= (int)ShadowLevel.World; }
+        }
+
+        /// <summary>Whether a grid shadows itself, so a face behind its own structure takes no sun.</summary>
+        [XmlIgnore] public bool SolarSelfShadowing
+        {
+            get { return ShadowDetail >= (int)ShadowLevel.World; }
+        }
 
         /// <summary>
-        /// Whether a planet can shadow a grid, covering both night and a planet's shadow seen from
-        /// orbit. Computed analytically from an angle against the planet's radius, with no raycast.
+        /// Fidelity of shadows cast by other grids, derived from the level: none below
+        /// <see cref="ShadowLevel.World"/>, one ray at it, and projected geometry above it.
         /// </summary>
-        [ProtoMember(59)] public bool SolarOcclusionPlanets = true;
+        [XmlIgnore] public int SolarGridShadows
+        {
+            get
+            {
+                if (ShadowDetail >= (int)ShadowLevel.Everything) return (int)GridShadowMode.Full;
+                if (ShadowDetail >= (int)ShadowLevel.World) return (int)GridShadowMode.Basic;
 
-        /// <summary>
-        /// Whether planetary terrain can shadow a grid, such as a ridge at sunrise or a cliff a base
-        /// is parked against. Costs a short walk of ground-height lookups, and only for grids near a
-        /// surface.
-        /// </summary>
-        [ProtoMember(74)] public bool SolarOcclusionTerrain = true;
+                return (int)GridShadowMode.None;
+            }
+        }
 
         /// <summary>
         /// Distance the terrain walk follows the sun ray, in metres. Deliberately short: nearby
         /// terrain accounts for almost all real shadowing, and every metre costs height lookups.
         /// </summary>
         [ProtoMember(75)] public float SolarTerrainRange = 4000f;
-
-        /// <summary>
-        /// Whether asteroids and other voxels can shadow a grid. Costs a physics raycast per
-        /// candidate voxel per sample.
-        /// </summary>
-        [ProtoMember(71)] public bool SolarOcclusionVoxels = true;
-
-        /// <summary>
-        /// Fidelity of shadows cast by other grids: none, one ray, or projected geometry.
-        /// <see cref="GridShadowMode.Full"/> needs <see cref="SolarSelfShadowing"/>, whose pass it
-        /// rides on. See configuration.md, External shadow.
-        /// </summary>
-        [ProtoMember(77)] public int SolarGridShadows = (int)GridShadowMode.Full;
 
         /// <summary>
         /// Points across a grid tested for occlusion, 1..9. One is a single ray from the centre,
@@ -157,14 +205,20 @@ namespace Thermodynamics
 
         // ---- solver ------------------------------------------------------------------------
 
-        [ProtoMember(30)] public bool ClampConductionOvershoot = true;
-
         /// <summary>
-        /// Clamp radiation and convection so a node cannot overshoot ambient in one substep. See the
-        /// core setting of the same name: it bounds the integrator when <see cref="MaxSubsteps"/>
-        /// refuses the substeps the stability estimate demanded.
+        /// Stop a substep carrying a node past what it is exchanging with — past a neighbour's
+        /// temperature by conduction, or past ambient by radiation and convection. It bounds the
+        /// integrator when <see cref="MaxSubsteps"/> refuses the substeps the stability estimate
+        /// asked for, and it should be left on.
+        ///
+        /// <para>
+        /// **One switch where there were two.** `ClampConductionOvershoot` and
+        /// `ClampEnvironmentOvershoot` were the same decision asked twice, both shipped on, both
+        /// documented "leave on", and no world had a reason to hold them apart. The solver still
+        /// carries the pair and <see cref="Apply"/> sets both from this.
+        /// </para>
         /// </summary>
-        [ProtoMember(37)] public bool ClampEnvironmentOvershoot = true;
+        [ProtoMember(142)] public bool ClampOvershoot = true;
         [ProtoMember(31)] public bool DamageIsPerSecond = true;
 
         /// <summary>
@@ -172,7 +226,6 @@ namespace Thermodynamics
         /// substep figure in the documentation is quoted on.
         /// </summary>
         [ProtoMember(32)] public int Frequency = 4;
-        [ProtoMember(33)] public float SimulationSpeed = 1f;
         [ProtoMember(34)] public float HeatTimeScale = 90f;
 
         /// <summary>
@@ -322,20 +375,6 @@ namespace Thermodynamics
         [ProtoMember(133)] public float LoopCoolantKilogramsPerCubicMetre = 33f;
 
         /// <summary>
-        /// A flat coolant mass per pipe block, kg, or **zero to charge from
-        /// <see cref="LoopCoolantKilogramsPerCubicMetre"/> and the cell**, which is what ships.
-        ///
-        /// <para>
-        /// **The name is kept rather than repurposed** (`P15`): a world that moved this dial moved
-        /// kilograms in a pipe, and reading the same number as a density would give it sixteen times
-        /// the fluid on a large grid. It shipped at 50 until `C43`; a config still carrying that is
-        /// replaced wholesale rather than reinterpreted, because <see cref="CurrentVersion"/> moved
-        /// with it.
-        /// </para>
-        /// </summary>
-        [ProtoMember(85)] public float LoopCoolantMassPerPipe = 0f;
-
-        /// <summary>
         /// The excess a refill is priced at, K: restoring a kilogram costs the heat that kilogram
         /// holds this far above ambient, so it is the excess at which venting and refilling exactly
         /// break even. Above it dumping coolant pays, below it costs.
@@ -366,17 +405,29 @@ namespace Thermodynamics
         /// <summary>Coolant's specific heat, J/(kg K). Water-glycol is about 3400.</summary>
         [ProtoMember(87)] public float LoopSpecificHeat = 3400f;
 
-        /// <summary>Scales the coupling between the fluid and the pipe carrying it.</summary>
-        [ProtoMember(88)] public float LoopPipeContactMultiplier = 1f;
+        /// <summary>
+        /// Scales the coupling between the coolant and the metal it touches, at the pipe wall and
+        /// at a sink face alike.
+        ///
+        /// <para>
+        /// **One trim where there were two.** A pipe multiplier and a sink multiplier were two
+        /// dials on one coefficient, both shipped at 1, and a world that wants the joints to differ
+        /// wants it per fluid rather than per world — which `Loops.xml` already offers.
+        /// </para>
+        /// </summary>
+        [ProtoMember(143)] public float LoopContactMultiplier = 1f;
 
-        /// <summary>Scales the coupling through a sink face into whatever is mounted against it.</summary>
-        [ProtoMember(89)] public float LoopSinkContactMultiplier = 1f;
-
-        /// <summary>How fast coolant moves on a large grid with one pump at full speed, m/s.</summary>
-        [ProtoMember(90)] public float LoopLargeGridFlowRate = 10f;
-
-        /// <summary>The same for a small grid, split because it is a balance dial rather than a constant.</summary>
-        [ProtoMember(91)] public float LoopSmallGridFlowRate = 10f;
+        /// <summary>
+        /// How fast coolant moves with one pump at full speed, m/s. Flow rises with the square root
+        /// of combined pumping, so four pumps carry twice this rather than four times.
+        ///
+        /// <para>
+        /// **One rate where there were two.** The large- and small-grid rates shipped identical and
+        /// were never moved apart; a fluid that should flow differently by grid size says so in
+        /// `Loops.xml`, which still carries both.
+        /// </para>
+        /// </summary>
+        [ProtoMember(144)] public float LoopFlowRate = 10f;
 
         /// <summary>What a stopped ring still carries between neighbouring parcels, 0..1.</summary>
         [ProtoMember(92)] public float LoopStagnantTransferFraction = 0.16f;
@@ -582,6 +633,89 @@ namespace Thermodynamics
         // Retired ProtoMember numbers, left unused so an older config file or peer message cannot
         // land on a different field: 72 and 76 were the switches SolarGridShadows replaced, 53-56
         // the block-colouring debug modes, and 60-70 the thermal vision overlay.
+        //
+        // Retired on 2026-09-01, when thirteen settings became four: 58, 59, 71, 74 and 77 were the
+        // solar occlusion switches ShadowDetail replaced; 30 and 37 the two clamps ClampOvershoot
+        // replaced; 88 and 89 the two contact multipliers, 90 and 91 the two flow rates; 85 the
+        // per-pipe coolant override, which Loops.xml still carries; and 33 SimulationSpeed, which
+        // multiplied Frequency and nothing else.
+
+
+        // ---- top speed ---------------------------------------------------------------------
+        //
+        // RelativeTopSpeed's configuration, absorbed (`K10`). The world's speed cap is raised and
+        // each grid is held under a cruise speed that falls with its mass, by a force rather than by
+        // a cap — so a ship can be pushed past its cruise speed and is dragged back to it. The
+        // curve is authored here exactly as it is there: three masses and three speeds a side.
+
+        /// <summary>
+        /// Whether this mod governs top speed at all. **Off**, like <see cref="EnableDrag"/> and for
+        /// the same reason: a world already running RelativeTopSpeed, or happy with the engine's own
+        /// flat cap, should not have a second mod pulling on its ships. On, this raises the engine's
+        /// cap to <see cref="SpeedLimit"/> and holds every grid under its own cruise speed.
+        /// </summary>
+        [ProtoMember(145)] public bool EnableTopSpeed = false;
+
+        /// <summary>
+        /// The engine's speed cap while <see cref="EnableTopSpeed"/> is on, m/s — the ceiling no
+        /// ship passes whatever its mass or its boost. Written into the environment definition, which
+        /// is what makes the game itself allow more than 100.
+        /// </summary>
+        [ProtoMember(146)] public float SpeedLimit = 140f;
+
+        /// <summary>
+        /// Whether a ship may be pushed past its cruise speed by its own thrust, and dragged back
+        /// toward it, rather than simply being unable to accelerate past it.
+        /// </summary>
+        [ProtoMember(147)] public bool EnableSpeedBoost = true;
+
+        /// <summary>Cruise speed of a large grid at or below <see cref="LargeGridMinMass"/>, m/s.</summary>
+        [ProtoMember(148)] public float LargeGridMinCruise = 60f;
+
+        /// <summary>Cruise speed of a large grid at <see cref="LargeGridMidMass"/>, m/s.</summary>
+        [ProtoMember(149)] public float LargeGridMidCruise = 80f;
+
+        /// <summary>Cruise speed of a large grid at or above <see cref="LargeGridMaxMass"/>, m/s.</summary>
+        [ProtoMember(150)] public float LargeGridMaxCruise = 110f;
+
+        /// <summary>Mass below which a large grid holds <see cref="LargeGridMinCruise"/>, kg.</summary>
+        [ProtoMember(151)] public float LargeGridMinMass = 200000f;
+
+        /// <summary>The middle mass point of the large-grid curve, kg.</summary>
+        [ProtoMember(152)] public float LargeGridMidMass = 5000000f;
+
+        /// <summary>Mass above which a large grid holds <see cref="LargeGridMaxCruise"/>, kg.</summary>
+        [ProtoMember(153)] public float LargeGridMaxMass = 8000000f;
+
+        /// <summary>Ceiling on the force that drags a boosting large grid back to its cruise speed, N.</summary>
+        [ProtoMember(154)] public float LargeGridMaxBoostSpeed = 140f;
+
+        /// <summary>How hard a large grid is held to its cruise speed. Higher is a firmer hold.</summary>
+        [ProtoMember(155)] public float LargeGridResistance = 1.5f;
+
+        /// <summary>Cruise speed of a small grid at or below <see cref="SmallGridMinMass"/>, m/s.</summary>
+        [ProtoMember(156)] public float SmallGridMinCruise = 90f;
+
+        /// <summary>Cruise speed of a small grid at <see cref="SmallGridMidMass"/>, m/s.</summary>
+        [ProtoMember(157)] public float SmallGridMidCruise = 95f;
+
+        /// <summary>Cruise speed of a small grid at or above <see cref="SmallGridMaxMass"/>, m/s.</summary>
+        [ProtoMember(158)] public float SmallGridMaxCruise = 110f;
+
+        /// <summary>Mass below which a small grid holds <see cref="SmallGridMinCruise"/>, kg.</summary>
+        [ProtoMember(159)] public float SmallGridMinMass = 10000f;
+
+        /// <summary>The middle mass point of the small-grid curve, kg.</summary>
+        [ProtoMember(160)] public float SmallGridMidMass = 300000f;
+
+        /// <summary>Mass above which a small grid holds <see cref="SmallGridMaxCruise"/>, kg.</summary>
+        [ProtoMember(161)] public float SmallGridMaxMass = 400000f;
+
+        /// <summary>Ceiling on the force that drags a boosting small grid back to its cruise speed, N.</summary>
+        [ProtoMember(162)] public float SmallGridMaxBoostSpeed = 140f;
+
+        /// <summary>How hard a small grid is held to its cruise speed. Higher is a firmer hold.</summary>
+        [ProtoMember(163)] public float SmallGridResistance = 1f;
 
         // ---- multiplayer -------------------------------------------------------------------
 
@@ -679,20 +813,24 @@ namespace Thermodynamics
             // which is a half-working protocol that reports as working. EnableTemperatureSync is
             // the way to turn it off.
             if (TemperatureSyncInterval < 0.5f) TemperatureSyncInterval = 0.5f;
-            if (SimulationSpeed <= 0f) SimulationSpeed = 1f;
             if (HeatTimeScale <= 0f) HeatTimeScale = 1f;
             if (MaxElementVisitsPerStep < 0) MaxElementVisitsPerStep = 0;
             if (MaxSubsteps < 1) MaxSubsteps = 1;
             if (MaxSubstepsPerBlock < 0) MaxSubstepsPerBlock = 0;
             if (TelemetrySampleStride < 1) TelemetrySampleStride = 1;
             if (SolarOcclusionInterval < 1) SolarOcclusionInterval = 1;
+            if (SpeedLimit < 1f) SpeedLimit = 1f;
+            if (LargeGridResistance < 0f) LargeGridResistance = 0f;
+            if (SmallGridResistance < 0f) SmallGridResistance = 0f;
+            if (LargeGridMaxBoostSpeed < 0f) LargeGridMaxBoostSpeed = 0f;
+            if (SmallGridMaxBoostSpeed < 0f) SmallGridMaxBoostSpeed = 0f;
             if (SolarTerrainRange < 0f) SolarTerrainRange = 0f;
             if (ClimateGroundInfluence < 0f) ClimateGroundInfluence = 0f;
             if (ClimateGroundInfluence > 1f) ClimateGroundInfluence = 1f;
             if (ClimateWeatherInfluence < 0f) ClimateWeatherInfluence = 0f;
             if (ClimateWeatherInfluence > 1f) ClimateWeatherInfluence = 1f;
-            if (SolarGridShadows < 0) SolarGridShadows = 0;
-            if (SolarGridShadows > (int)GridShadowMode.Full) SolarGridShadows = (int)GridShadowMode.Full;
+            if (ShadowDetail < 0) ShadowDetail = 0;
+            if (ShadowDetail > (int)ShadowLevel.Everything) ShadowDetail = (int)ShadowLevel.Everything;
             if (SolarOcclusionSamples < 1) SolarOcclusionSamples = 1;
             if (SolarOcclusionSamples > Core.SolarOcclusionSampler.MaxSamples)
                 SolarOcclusionSamples = Core.SolarOcclusionSampler.MaxSamples;
@@ -846,7 +984,7 @@ namespace Thermodynamics
             core.EnableRadiation = EnableRadiation;
             core.EnableConvection = EnableConvection;
             core.EnableSolarHeat = EnableSolarHeat;
-            core.SolarSelfShadowing = SolarSelfShadowing;
+            core.SolarSelfShadowing = SolarSelfShadowing;   // derived from ShadowDetail
             core.EnableHeatSources = EnableHeatSources;
             core.EnableWasteHeat = EnableWasteHeat;
             core.EnablePlanets = EnablePlanets;
@@ -857,11 +995,15 @@ namespace Thermodynamics
             core.EnableRoomAir = EnableRoomAir;
             core.EnableHeatPumps = EnableHeatPumps;
 
-            core.ClampConductionOvershoot = ClampConductionOvershoot;
-            core.ClampEnvironmentOvershoot = ClampEnvironmentOvershoot;
+            // Two solver switches from one world switch: the integrator keeps them apart because
+            // it clamps in two places, and nothing a world does needs them to differ.
+            core.ClampConductionOvershoot = ClampOvershoot;
+            core.ClampEnvironmentOvershoot = ClampOvershoot;
             core.DamageIsPerSecond = DamageIsPerSecond;
             core.Frequency = Frequency;
-            core.SimulationSpeed = SimulationSpeed;
+            // The world no longer carries a time multiplier: it only ever multiplied Frequency,
+            // which is the dial that says the same thing in units a reader can price.
+            core.SimulationSpeed = 1f;
             core.HeatTimeScale = HeatTimeScale;
             core.MaxElementVisitsPerStep = MaxElementVisitsPerStep;
             core.MaxSubsteps = MaxSubsteps;
@@ -911,7 +1053,7 @@ namespace Thermodynamics
         [XmlIgnore]
         public float StepsPerSecond
         {
-            get { return core == null ? Frequency * SimulationSpeed : core.StepsPerSecond; }
+            get { return core == null ? Frequency : core.StepsPerSecond; }
         }
 
         // ---- access by name ----------------------------------------------------------------
@@ -937,15 +1079,12 @@ namespace Thermodynamics
             return new List<string>
             {
                 "EnableEnvironment", "EnableConduction", "EnableRadiation", "EnableConvection",
-                "EnableSolarHeat", "SolarSelfShadowing",
-                "SolarOcclusionPlanets", "SolarOcclusionTerrain", "SolarTerrainRange",
-                "SolarOcclusionVoxels", "SolarGridShadows",
-                "SolarOcclusionSamples",
+                "EnableSolarHeat", "ShadowDetail", "SolarTerrainRange", "SolarOcclusionSamples",
                 "EnableHeatSources", "EnableWasteHeat", "EnablePlanets",
                 "EnableFriction", "EnableWind", "EnableDamage", "EnableCoolantLoops", "EnableRoomAir",
                 "EnableHeatPumps", "WellMixedCoolant",
-                "ClampConductionOvershoot", "ClampEnvironmentOvershoot", "DamageIsPerSecond",
-                "Frequency", "SimulationSpeed", "HeatTimeScale", "MaxElementVisitsPerStep",
+                "ClampOvershoot", "DamageIsPerSecond",
+                "Frequency", "HeatTimeScale", "MaxElementVisitsPerStep",
                 "MaxSubsteps", "MaxSubstepsPerBlock", "FloorBlocksWhenOverBudget",
                 "VacuumTemperature", "SolarEnergy", "FrictionAtSpeedsAbove", "FrictionScale",
                 "EnableDrag", "DragCoefficient", "EnableWindwardShielding", "EnableShapeDrag",
@@ -967,10 +1106,9 @@ namespace Thermodynamics
                 "EnableTemperatureSync", "TemperatureSyncInterval", "ParallelGrids",
                 "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes",
 
-                "LoopLargeGridFlowRate", "LoopSmallGridFlowRate", "LoopCoolantMassPerPipe",
-                "LoopCoolantKilogramsPerCubicMetre",
-                "LoopSpecificHeat", "LoopHeatTransferCoefficient", "LoopPipeContactMultiplier",
-                "LoopSinkContactMultiplier", "LoopStagnantTransferFraction",
+                "LoopFlowRate", "LoopCoolantKilogramsPerCubicMetre",
+                "LoopSpecificHeat", "LoopHeatTransferCoefficient", "LoopContactMultiplier",
+                "LoopStagnantTransferFraction",
                 "LoopRefillEquivalentKelvin", "LoopRefillKilogramsPerSecond",
 
                 "PlanetDayTemperature", "PlanetNightTemperature", "PlanetPoleTemperatureDrop",
@@ -979,6 +1117,14 @@ namespace Thermodynamics
                 "PlanetSolarDecay", "PlanetUndergroundTemperature",
                 "PlanetUndergroundDampingDepth", "PlanetCoreTemperature",
                 "PlanetSealevelDeadzone",
+
+                "EnableTopSpeed", "SpeedLimit", "EnableSpeedBoost",
+                "LargeGridMinCruise", "LargeGridMidCruise", "LargeGridMaxCruise",
+                "LargeGridMinMass", "LargeGridMidMass", "LargeGridMaxMass",
+                "LargeGridMaxBoostSpeed", "LargeGridResistance",
+                "SmallGridMinCruise", "SmallGridMidCruise", "SmallGridMaxCruise",
+                "SmallGridMinMass", "SmallGridMidMass", "SmallGridMaxMass",
+                "SmallGridMaxBoostSpeed", "SmallGridResistance",
             };
         }
 
@@ -987,17 +1133,32 @@ namespace Thermodynamics
         {
             switch (name)
             {
+                case "EnableTopSpeed": return Flag(EnableTopSpeed);
+                case "SpeedLimit": return SpeedLimit;
+                case "EnableSpeedBoost": return Flag(EnableSpeedBoost);
+                case "LargeGridMinCruise": return LargeGridMinCruise;
+                case "LargeGridMidCruise": return LargeGridMidCruise;
+                case "LargeGridMaxCruise": return LargeGridMaxCruise;
+                case "LargeGridMinMass": return LargeGridMinMass;
+                case "LargeGridMidMass": return LargeGridMidMass;
+                case "LargeGridMaxMass": return LargeGridMaxMass;
+                case "LargeGridMaxBoostSpeed": return LargeGridMaxBoostSpeed;
+                case "LargeGridResistance": return LargeGridResistance;
+                case "SmallGridMinCruise": return SmallGridMinCruise;
+                case "SmallGridMidCruise": return SmallGridMidCruise;
+                case "SmallGridMaxCruise": return SmallGridMaxCruise;
+                case "SmallGridMinMass": return SmallGridMinMass;
+                case "SmallGridMidMass": return SmallGridMidMass;
+                case "SmallGridMaxMass": return SmallGridMaxMass;
+                case "SmallGridMaxBoostSpeed": return SmallGridMaxBoostSpeed;
+                case "SmallGridResistance": return SmallGridResistance;
                 case "EnableEnvironment": return Flag(EnableEnvironment);
                 case "EnableConduction": return Flag(EnableConduction);
                 case "EnableRadiation": return Flag(EnableRadiation);
                 case "EnableConvection": return Flag(EnableConvection);
                 case "EnableSolarHeat": return Flag(EnableSolarHeat);
-                case "SolarSelfShadowing": return Flag(SolarSelfShadowing);
-                case "SolarOcclusionPlanets": return Flag(SolarOcclusionPlanets);
-                case "SolarOcclusionTerrain": return Flag(SolarOcclusionTerrain);
+                case "ShadowDetail": return ShadowDetail;
                 case "SolarTerrainRange": return SolarTerrainRange;
-                case "SolarOcclusionVoxels": return Flag(SolarOcclusionVoxels);
-                case "SolarGridShadows": return SolarGridShadows;
                 case "SolarOcclusionSamples": return SolarOcclusionSamples;
                 case "EnableHeatSources": return Flag(EnableHeatSources);
                 case "EnableWasteHeat": return Flag(EnableWasteHeat);
@@ -1009,11 +1170,9 @@ namespace Thermodynamics
                 case "WellMixedCoolant": return Flag(WellMixedCoolant);
                 case "EnableRoomAir": return Flag(EnableRoomAir);
                 case "EnableHeatPumps": return Flag(EnableHeatPumps);
-                case "ClampConductionOvershoot": return Flag(ClampConductionOvershoot);
-                case "ClampEnvironmentOvershoot": return Flag(ClampEnvironmentOvershoot);
+                case "ClampOvershoot": return Flag(ClampOvershoot);
                 case "DamageIsPerSecond": return Flag(DamageIsPerSecond);
                 case "Frequency": return Frequency;
-                case "SimulationSpeed": return SimulationSpeed;
                 case "HeatTimeScale": return HeatTimeScale;
                 case "MaxElementVisitsPerStep": return MaxElementVisitsPerStep;
                 case "MaxSubsteps": return MaxSubsteps;
@@ -1069,16 +1228,13 @@ namespace Thermodynamics
                 case "TelemetrySampleStride": return TelemetrySampleStride;
                 case "TelemetryPlanetProbes": return TelemetryPlanetProbes;
 
-                case "LoopCoolantMassPerPipe": return LoopCoolantMassPerPipe;
                 case "LoopCoolantKilogramsPerCubicMetre": return LoopCoolantKilogramsPerCubicMetre;
                 case "LoopRefillEquivalentKelvin": return LoopRefillEquivalentKelvin;
                 case "LoopRefillKilogramsPerSecond": return LoopRefillKilogramsPerSecond;
                 case "LoopHeatTransferCoefficient": return LoopHeatTransferCoefficient;
                 case "LoopSpecificHeat": return LoopSpecificHeat;
-                case "LoopPipeContactMultiplier": return LoopPipeContactMultiplier;
-                case "LoopSinkContactMultiplier": return LoopSinkContactMultiplier;
-                case "LoopLargeGridFlowRate": return LoopLargeGridFlowRate;
-                case "LoopSmallGridFlowRate": return LoopSmallGridFlowRate;
+                case "LoopContactMultiplier": return LoopContactMultiplier;
+                case "LoopFlowRate": return LoopFlowRate;
                 case "LoopStagnantTransferFraction": return LoopStagnantTransferFraction;
 
                 case "PlanetDayTemperature": return PlanetDayTemperature;
@@ -1105,17 +1261,32 @@ namespace Thermodynamics
         {
             switch (name)
             {
+                case "EnableTopSpeed": EnableTopSpeed = Flag(value); return true;
+                case "SpeedLimit": SpeedLimit = value; return true;
+                case "EnableSpeedBoost": EnableSpeedBoost = Flag(value); return true;
+                case "LargeGridMinCruise": LargeGridMinCruise = value; return true;
+                case "LargeGridMidCruise": LargeGridMidCruise = value; return true;
+                case "LargeGridMaxCruise": LargeGridMaxCruise = value; return true;
+                case "LargeGridMinMass": LargeGridMinMass = value; return true;
+                case "LargeGridMidMass": LargeGridMidMass = value; return true;
+                case "LargeGridMaxMass": LargeGridMaxMass = value; return true;
+                case "LargeGridMaxBoostSpeed": LargeGridMaxBoostSpeed = value; return true;
+                case "LargeGridResistance": LargeGridResistance = value; return true;
+                case "SmallGridMinCruise": SmallGridMinCruise = value; return true;
+                case "SmallGridMidCruise": SmallGridMidCruise = value; return true;
+                case "SmallGridMaxCruise": SmallGridMaxCruise = value; return true;
+                case "SmallGridMinMass": SmallGridMinMass = value; return true;
+                case "SmallGridMidMass": SmallGridMidMass = value; return true;
+                case "SmallGridMaxMass": SmallGridMaxMass = value; return true;
+                case "SmallGridMaxBoostSpeed": SmallGridMaxBoostSpeed = value; return true;
+                case "SmallGridResistance": SmallGridResistance = value; return true;
                 case "EnableEnvironment": EnableEnvironment = Flag(value); return true;
                 case "EnableConduction": EnableConduction = Flag(value); return true;
                 case "EnableRadiation": EnableRadiation = Flag(value); return true;
                 case "EnableConvection": EnableConvection = Flag(value); return true;
                 case "EnableSolarHeat": EnableSolarHeat = Flag(value); return true;
-                case "SolarSelfShadowing": SolarSelfShadowing = Flag(value); return true;
-                case "SolarOcclusionPlanets": SolarOcclusionPlanets = Flag(value); return true;
-                case "SolarOcclusionTerrain": SolarOcclusionTerrain = Flag(value); return true;
+                case "ShadowDetail": ShadowDetail = (int)value; return true;
                 case "SolarTerrainRange": SolarTerrainRange = value; return true;
-                case "SolarOcclusionVoxels": SolarOcclusionVoxels = Flag(value); return true;
-                case "SolarGridShadows": SolarGridShadows = (int)value; return true;
                 case "SolarOcclusionSamples": SolarOcclusionSamples = (int)value; return true;
                 case "EnableHeatSources": EnableHeatSources = Flag(value); return true;
                 case "EnableWasteHeat": EnableWasteHeat = Flag(value); return true;
@@ -1127,11 +1298,9 @@ namespace Thermodynamics
                 case "WellMixedCoolant": WellMixedCoolant = Flag(value); return true;
                 case "EnableRoomAir": EnableRoomAir = Flag(value); return true;
                 case "EnableHeatPumps": EnableHeatPumps = Flag(value); return true;
-                case "ClampConductionOvershoot": ClampConductionOvershoot = Flag(value); return true;
-                case "ClampEnvironmentOvershoot": ClampEnvironmentOvershoot = Flag(value); return true;
+                case "ClampOvershoot": ClampOvershoot = Flag(value); return true;
                 case "DamageIsPerSecond": DamageIsPerSecond = Flag(value); return true;
                 case "Frequency": Frequency = (int)value; return true;
-                case "SimulationSpeed": SimulationSpeed = value; return true;
                 case "HeatTimeScale": HeatTimeScale = value; return true;
                 case "MaxElementVisitsPerStep": MaxElementVisitsPerStep = (int)value; return true;
                 case "MaxSubsteps": MaxSubsteps = (int)value; return true;
@@ -1193,17 +1362,14 @@ namespace Thermodynamics
                 case "TelemetrySampleStride": TelemetrySampleStride = (int)value; return true;
                 case "TelemetryPlanetProbes": TelemetryPlanetProbes = (int)value; return true;
 
-                case "LoopCoolantMassPerPipe": LoopCoolantMassPerPipe = value; return true;
                 case "LoopCoolantKilogramsPerCubicMetre":
                     LoopCoolantKilogramsPerCubicMetre = value; return true;
                 case "LoopRefillEquivalentKelvin": LoopRefillEquivalentKelvin = value; return true;
                 case "LoopRefillKilogramsPerSecond": LoopRefillKilogramsPerSecond = value; return true;
                 case "LoopHeatTransferCoefficient": LoopHeatTransferCoefficient = value; return true;
                 case "LoopSpecificHeat": LoopSpecificHeat = value; return true;
-                case "LoopPipeContactMultiplier": LoopPipeContactMultiplier = value; return true;
-                case "LoopSinkContactMultiplier": LoopSinkContactMultiplier = value; return true;
-                case "LoopLargeGridFlowRate": LoopLargeGridFlowRate = value; return true;
-                case "LoopSmallGridFlowRate": LoopSmallGridFlowRate = value; return true;
+                case "LoopContactMultiplier": LoopContactMultiplier = value; return true;
+                case "LoopFlowRate": LoopFlowRate = value; return true;
                 case "LoopStagnantTransferFraction": LoopStagnantTransferFraction = value; return true;
 
                 case "PlanetDayTemperature": PlanetDayTemperature = value; return true;
@@ -1228,12 +1394,7 @@ namespace Thermodynamics
             return name != null && name != "DebugBlockOverlay" && name != "DebugWindOverlay"
                 && name != "DebugOverlayMaxBoxes"
                 && (name.StartsWith("Enable") || name.StartsWith("Debug")
-                || name == "SolarSelfShadowing"
-                || name == "SolarOcclusionPlanets"
-                || name == "SolarOcclusionTerrain"
-                || name == "SolarOcclusionVoxels"
-                || name == "SolarOcclusionTerrain"
-                || name == "ClampConductionOvershoot" || name == "ClampEnvironmentOvershoot"
+                || name == "ClampOvershoot"
                 || name == "DamageIsPerSecond"
 
                 // **Six switches the prefix rule missed**, found 2026-08-31 when the menu's last

@@ -194,6 +194,7 @@ namespace Thermodynamics
             // it before would apply the previous frame's air to this frame's motion. Returns
             // immediately unless `EnableDrag` is on and this is the server.
             ThermalGridDrag.Tick();
+            ThermalGridTopSpeed.Tick();
 
             // The planet-wide wind sweep. Once per frame at most, never per grid, and it returns
             // immediately unless telemetry and the probe interval are both on.
@@ -214,7 +215,7 @@ namespace Thermodynamics
             // is fine resolution, and the pass costs a bounding-box test per live grid per player.
             if (_frame % SuitFrames == 0)
             {
-                ThermalCharacters.Step(SuitFrames / 60f * Settings.Instance.SimulationSpeed);
+                ThermalCharacters.Step(SuitFrames / 60f);
             }
 
             // The statistics page is read off the running grids, so it has to be re-read rather
@@ -255,7 +256,7 @@ namespace Thermodynamics
 
             if (MyAPIGateway.Input.IsNewKeyPressed(MyKeys.S))
             {
-                ThermalSettingsMenu.Open();
+                ThermalSettingsMenu.Toggle();
                 return;
             }
 

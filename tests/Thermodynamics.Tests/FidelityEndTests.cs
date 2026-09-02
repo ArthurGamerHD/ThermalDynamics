@@ -155,25 +155,39 @@ namespace Thermodynamics.Tests
         /// perfectly while the surface a player actually reads said nothing, which is the state
         /// this was in. Read from the source because the menu binds Rich HUD and no test project
         /// compiles it.
+        ///
+        /// <para>
+        /// **One place builds every tooltip now**, where there were four call sites appending the
+        /// sentence separately and a fifth that could have forgotten to. So this judges the builder
+        /// — that it appends the sentence and names its one exception — and then that the window
+        /// takes every control's tip from it rather than writing one of its own.
+        /// </para>
         /// </summary>
         [Fact]
         public void TheMenuRendersTheSentenceIntoEveryDialsTip()
         {
             string menu = File.ReadAllText(Path.Combine(ShippedBlocks.RepoRoot(),
                 "Data", "Scripts", "Thermodynamics", "ThermalSettingsMenu.cs"));
+            string window = File.ReadAllText(Path.Combine(ShippedBlocks.RepoRoot(),
+                "Data", "Scripts", "Thermodynamics", "ThermalSettingsWindow.cs"));
 
-            Assert.Contains("FidelityEnds.Sentence(name)", menu);
-
-            // Every control that carries a per-setting tip appends it. A control that did not
-            // would be a dial whose faithful end is invisible in exactly one place.
-            int tips = Occurrences(menu, "Tip(entry.Tip");
-            int appended = Occurrences(menu, "Tip(entry.Tip + FidelityEnds.Sentence(name)");
-
-            Assert.True(tips > 1, "only " + tips + " per-setting tips were found, so this judged"
-                + " almost nothing");
+            // The one builder, appending the sentence in the one place a tooltip is made.
+            Assert.Equal(1, Occurrences(menu, "internal static ToolTip TipFor"));
+            Assert.Equal(1, Occurrences(menu, "FidelityEnds.Sentence(name)"));
 
             // The overlay dropdown is a view chooser rather than a dial and is the one exception.
-            Assert.Equal(tips - 1, appended);
+            int builder = menu.IndexOf("internal static ToolTip TipFor", StringComparison.Ordinal);
+            Assert.Contains("DebugBlockOverlay", menu.Substring(builder, 600));
+
+            // Every control the window offers is given that tip, and none of them builds its own —
+            // a control with a tooltip made elsewhere is a dial whose faithful end is invisible in
+            // exactly one place.
+            Assert.Equal(1, Occurrences(window, "ThermalSettingsMenu.TipFor("));
+            Assert.Equal(0, Occurrences(window, "new ToolTip"));
+
+            int given = Occurrences(window, "ToolTip = tip");
+            Assert.True(given >= 4, "only " + given + " controls were given a tip, so either a"
+                + " control kind has lost its tooltip or this is reading the wrong file");
         }
 
         private static float Faithful(string setting)

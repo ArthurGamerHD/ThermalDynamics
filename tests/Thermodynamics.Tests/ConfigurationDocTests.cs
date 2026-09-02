@@ -459,6 +459,19 @@ namespace Thermodynamics.Tests
                 body.Append(File.ReadAllText(file)).Append('\n');
             }
 
+            // **The bridge into the solver is a reader**, even though it lives in the excluded file.
+            // A world setting whose whole job is to set a solver setting — `ClampOvershoot` sets
+            // both of the solver's overshoot clamps — is read by the solver on the next step, and
+            // `SettingsDialReachTests` proves the solver setting reaches an outcome. Only the
+            // right-hand side counts: the declaration and the enumerations stay excluded, so a
+            // setting wired to nothing at all still fails here.
+            foreach (Match assignment in Regex.Matches(
+                File.ReadAllText(Path.Combine(scripts, "Settings.cs")),
+                @"\bcore\.[A-Za-z0-9_]+\s*=\s*([^;]+);"))
+            {
+                body.Append(assignment.Groups[1].Value).Append('\n');
+            }
+
             string source = body.ToString();
             Assert.True(source.Length > 100000,
                 "only " + source.Length + " characters of source were read, so this test is looking"
