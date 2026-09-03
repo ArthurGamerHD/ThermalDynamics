@@ -1,5 +1,6 @@
 using System;
 using Thermodynamics.Core;
+using Thermodynamics.Harness;
 using VRageMath;
 using Xunit;
 
@@ -279,16 +280,16 @@ namespace Thermodynamics.Tests
         public void AParkedShipIsNotFlying()
         {
             // The defect this exists to fix, stated as a test: on an earthlike world at sea level,
-            // the wind a stationary grid stands in must be under the speed at which the model
-            // starts heating things by friction.
-            ThermalSettings settings = new ThermalSettings();
-
+            // the wind a stationary grid stands in must be under the speed at which friction
+            // heating becomes material. The bound is the harness's constant now — friction is
+            // live at every speed and merely negligible below this one — but the claim on the
+            // wind field is unchanged: fair-weather wind must not heat a parked ship noticeably.
             for (int latitude = -85; latitude <= 85; latitude += 5)
             {
                 float speed = WindField.Speed(80f, 0f, WindField.Variation(new Vector3D(latitude * 700, 0, 0)));
 
-                Assert.True(speed < settings.FrictionAtSpeedsAbove,
-                    "wind at " + latitude + " was " + speed + " m/s, over the friction threshold");
+                Assert.True(speed < WindScenarios.FrictionThreshold,
+                    "wind at " + latitude + " was " + speed + " m/s, into material friction heating");
             }
         }
     }

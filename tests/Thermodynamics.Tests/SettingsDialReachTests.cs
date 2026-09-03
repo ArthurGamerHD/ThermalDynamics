@@ -516,6 +516,12 @@ namespace Thermodynamics.Tests
             // it is in cannot see a number that small. Its slider goes to 300.
             if (field.Name == "VacuumTemperature") return new object[] { 1f, 250f };
 
+            // **The aero floor ships at zero — live at every speed — so the generic levels for a
+            // zero (1 and 10 m/s) sit below the flying rigs' airspeed and gate nothing.** What a
+            // set floor does is cut the whole term below it, so the level that shows the dial is
+            // live is one above the speed the rigs fly at.
+            if (field.Name == "FrictionAtSpeedsAbove") return new object[] { 1000f };
+
             float number = (float)field.GetValue(shipped);
             if (number == 0f) return new object[] { 1f, 10f };
             return new object[] { number * 0.25f, number * 4f };

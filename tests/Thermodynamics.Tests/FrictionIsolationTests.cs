@@ -9,12 +9,13 @@ namespace Thermodynamics.Tests
     /// Wind and grid velocity, separately and together, against the friction system.
     ///
     /// The hull feels one thing: the relative wind, composed as ambient wind minus grid velocity.
-    /// Friction, its 50 m/s threshold and forced convection all read that one scalar, which makes
-    /// the composed cases impossible to attribute in play — a session with a storm and a moving
-    /// ship shows a heat that could belong to either. These tests hold each contributor still while
-    /// the other moves, and then pin the compositions where the sum does something neither part
-    /// does: a headwind that trips friction though neither wind nor speed alone reaches the
-    /// threshold, and a downwind run that switches it off at full throttle.
+    /// Friction and forced convection both read that one scalar, which makes the composed cases
+    /// impossible to attribute in play — a session with a storm and a moving ship shows a heat
+    /// that could belong to either. These tests hold each contributor still while the other
+    /// moves, and then pin the compositions where the sum surprises: a headwind that doubles the
+    /// airflow neither part supplies alone, and a downwind run that heats at walking-pace airflow
+    /// at full throttle. Since 2026-09-02 friction is live at every speed — the old 50 m/s
+    /// threshold ships at 0 — so the compositions move watts smoothly rather than tripping a gate.
     /// </summary>
     public class FrictionIsolationTests
     {
@@ -48,17 +49,23 @@ namespace Thermodynamics.Tests
         // ---- each contributor alone ----------------------------------------------------------
 
         [Fact]
-        public void MotionAloneHeatsAboveTheThreshold()
+        public void MotionAloneHeatsAtEverySpeed()
         {
-            Assert.True(FrictionWatts(Worlds.Flight(ThickAir, 80f)) > 0f);
-            Assert.Equal(0f, FrictionWatts(Worlds.Flight(ThickAir, 40f)));
+            float fast = FrictionWatts(Worlds.Flight(ThickAir, 80f));
+            float slow = FrictionWatts(Worlds.Flight(ThickAir, 40f));
+
+            Assert.True(slow > 0f, "slow flight has to heat now that the floor ships at zero");
+            Assert.True(fast > slow, "faster airflow has to heat harder");
         }
 
         [Fact]
-        public void WindAloneHeatsAboveTheThreshold()
+        public void WindAloneHeatsAtEverySpeed()
         {
-            Assert.True(FrictionWatts(Worlds.Storm(ThickAir, 80f)) > 0f);
-            Assert.Equal(0f, FrictionWatts(Worlds.Storm(ThickAir, 40f)));
+            float fast = FrictionWatts(Worlds.Storm(ThickAir, 80f));
+            float slow = FrictionWatts(Worlds.Storm(ThickAir, 40f));
+
+            Assert.True(slow > 0f, "a slow wind has to heat now that the floor ships at zero");
+            Assert.True(fast > slow, "a faster wind has to heat harder");
         }
 
         /// <summary>
@@ -92,11 +99,12 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// A headwind sums: 40 m/s of wind against 40 m/s of speed trips the 50 m/s threshold that
-        /// neither reaches alone, and heats exactly as 80 m/s of either would.
+        /// A headwind sums: 40 m/s of wind against 40 m/s of speed is 80 of airflow, and heats
+        /// exactly as 80 m/s of either alone would — eight times what either part makes by the
+        /// cube, not twice.
         /// </summary>
         [Fact]
-        public void AHeadwindTripsTheThresholdNeitherPartReaches()
+        public void AHeadwindHeatsAsTheSumOfItsParts()
         {
             EnvironmentSample headwind = Worlds.WindAndMotion(
                 ThickAir, 40f, Vector3.Forward, Vector3.Backward * 40f);
@@ -110,16 +118,23 @@ namespace Thermodynamics.Tests
 
         /// <summary>
         /// A downwind run subtracts: 80 m/s of speed in a 60 m/s tailwind is 20 m/s of airflow,
-        /// below the threshold, so friction is off at a ground speed well above it.
+        /// so the hull heats as a hull doing 20 does — a sixty-fourth of the 80 m/s figure by the
+        /// cube — at a ground speed of 80. This is the case that reads as "friction is broken" in
+        /// play, and it is correct.
         /// </summary>
         [Fact]
-        public void ATailwindSwitchesFrictionOffAtFullSpeed()
+        public void ATailwindHeatsAtTheAirflowNotTheGroundSpeed()
         {
             EnvironmentSample downwind = Worlds.WindAndMotion(
                 ThickAir, 60f, Vector3.Forward, Vector3.Forward * 80f);
 
             Assert.Equal(20f, downwind.RelativeWindSpeed, 3);
-            Assert.Equal(0f, FrictionWatts(downwind));
+
+            float watts = FrictionWatts(downwind);
+            Assert.True(watts > 0f, "20 m/s of airflow has to heat now that the floor ships at zero");
+            Assert.Equal(FrictionWatts(Worlds.Flight(ThickAir, 20f)), watts, 2);
+            Assert.True(watts < FrictionWatts(Worlds.Flight(ThickAir, 80f)) / 32f,
+                "the tailwind case has to sit far below the ground-speed figure, or composition is broken");
         }
 
         [Fact]

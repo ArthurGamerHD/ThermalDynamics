@@ -344,9 +344,9 @@ namespace Thermodynamics.Harness
             knobs.Add(new Knob
             {
                 Name = "friction-threshold",
-                Intent = "the speed friction starts at, m/s",
-                Multiplier = false, Shipped = 50f,
-                Levels = new[] { 10f, 25f, 50f, 100f }, Scenarios = Moving,
+                Intent = "the floor below which the whole aero term is off, m/s; 0 ships",
+                Multiplier = false, Shipped = 0f,
+                Levels = new[] { 0f, 25f, 50f, 100f }, Scenarios = Moving,
                 World = (s, x) => s.FrictionAtSpeedsAbove = x,
             });
 

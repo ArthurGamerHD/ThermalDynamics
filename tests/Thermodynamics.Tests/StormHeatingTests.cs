@@ -20,11 +20,12 @@ namespace Thermodynamics.Tests
     /// <para>
     /// The faults are fixed: the weather's own wind modifier moved the intensity instead of
     /// multiplying the share, so the same storm is no longer counted twice, and the composed speed
-    /// is bounded by the planet's own figure again. What is left is that a storm at that figure is
-    /// still over `FrictionAtSpeedsAbove`, and **that is the model working rather than failing** —
-    /// `v_rel` is relative wind by design, so a ship parked in a hurricane heats like a ship flying
-    /// at hurricane speed. This measures how much, because "acceptable" is an assertion until it is
-    /// a number.
+    /// is bounded by the planet's own figure again. What is left is that a storm's wind heats a
+    /// parked hull by friction, and **that is the model working rather than failing** — `v_rel`
+    /// is relative wind by design, so a ship parked in a hurricane heats like a ship flying at
+    /// hurricane speed, and since 2026-09-02 the term is live at every speed rather than gated at
+    /// a floor (the v³ law is the guard now). This measures how much, because "acceptable" is an
+    /// assertion until it is a number.
     /// </para>
     /// </summary>
     public class StormHeatingTests
@@ -70,13 +71,11 @@ namespace Thermodynamics.Tests
         [Fact]
         public void AParkedHullInAHurricaneWarmsByDegreesRatherThanHundreds()
         {
-            ThermalSettings settings = new ThermalSettings();
-
             float still = Settled(0f, 600f);
-            float storm = Settled(settings.FrictionAtSpeedsAbove * 1.4f, 600f);
+            float storm = Settled(70f, 600f);
 
             Assert.True(storm > still,
-                "a wind over the friction threshold has to heat something, or the term is dead");
+                "a hurricane-speed wind has to heat something, or the term is dead");
 
             float rise = storm - still;
             Assert.True(rise < 25f,
@@ -85,19 +84,70 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// Below the threshold there is no friction term at all — not a small one, none. That is
-        /// what makes the threshold a threshold, and it is the half of `B17` that is a contract
-        /// rather than a judgement.
+        /// The floor, when a world sets one, cuts friction entirely below it — not a small term,
+        /// none. The mechanism `B17` made a contract survives as the opt-in legacy cut; what
+        /// changed on 2026-09-02 is only that nothing ships set.
         /// </summary>
         [Fact]
-        public void BelowTheThresholdThereIsNoFrictionAtAll()
+        public void AWorldThatSetsTheFloorGetsNoFrictionBelowIt()
         {
-            ThermalSettings settings = new ThermalSettings();
+            Assert.Equal(0f, FrictionWatts(40f, 50f), 4);
+            Assert.Equal(0f, FrictionWatts(50f, 50f), 4);
+            Assert.True(FrictionWatts(70f, 50f) > 0f,
+                "past the floor the term has to do something, or it is dead");
+        }
 
-            Assert.Equal(0f, FrictionWatts(settings.FrictionAtSpeedsAbove * 0.8f), 4);
-            Assert.Equal(0f, FrictionWatts(settings.FrictionAtSpeedsAbove), 4);
-            Assert.True(FrictionWatts(settings.FrictionAtSpeedsAbove * 1.4f) > 0f,
-                "past the threshold the term has to do something, or it is dead");
+        /// <summary>
+        /// At the shipped floor of zero the term is live at every speed and continuous at rest:
+        /// no step anywhere, and the low-speed watts vanishing by the v³ law rather than by a
+        /// gate. Ten m/s against a hundred must sit near the thousandfold the cube predicts —
+        /// the windward weighting is speed-independent, so the ratio is the law's own.
+        /// </summary>
+        [Fact]
+        public void AtTheShippedDefaultFrictionIsLiveAtEverySpeedAndVanishesByTheCube()
+        {
+            float slow = FrictionWatts(10f, 0f);
+            float fast = FrictionWatts(100f, 0f);
+
+            Assert.True(slow > 0f, "friction at 10 m/s is zero, so the floor is still gating");
+            Assert.True(fast > slow, "friction has to grow with speed");
+
+            float ratio = fast / slow;
+            Assert.True(ratio > 900f && ratio < 1100f,
+                "10 to 100 m/s moved friction by " + ratio.ToString("n0")
+                + "x where the v^3 law says 1,000x");
+        }
+
+        /// <summary>
+        /// The crossover the old floor pretended to be, pinned as the emergent thing it is: the
+        /// same 2 MW hull is *cooler* than still air in a 45 m/s wind — the convection gain beats
+        /// the v³ term — and *hotter* than still air at 300 m/s, where the cube has won. The flip
+        /// speed belongs to the hull's own temperature, not to a setting, which is why no setting
+        /// names it.
+        /// </summary>
+        [Fact]
+        public void AirspeedCoolsAHotHullSlowAndHeatsItFast()
+        {
+            ThermalSettings world = new ThermalSettings();
+            world.EnableDamage = false;
+            world.EnableSolarHeat = false;
+            world.Derive();
+
+            GridBuilder builder = GridBuilder.Large();
+            builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 3, 8));
+            builder.Remove(new Vector3I(1, 1, 1));
+            builder.Place(Catalog.Reactor(), new Vector3I(1, 1, 1)).Producing(2e6f);
+
+            float still = Mean(builder, world, Worlds.PlanetSurface(1f, 0.5f), 600f);
+            float breezy = Mean(builder, world, Worlds.Storm(1f, 45f), 600f);
+            float screaming = Mean(builder, world, Worlds.Storm(1f, 300f), 600f);
+
+            Assert.True(breezy < still,
+                "45 m/s left the hull at " + breezy.ToString("n1") + " K against "
+                + still.ToString("n1") + " K still — the wind should net-cool a hot hull");
+            Assert.True(screaming > still,
+                "300 m/s left the hull at " + screaming.ToString("n1") + " K against "
+                + still.ToString("n1") + " K still — the cube should have won by here");
         }
 
         /// <summary>
@@ -122,7 +172,6 @@ namespace Thermodynamics.Tests
         [Fact]
         public void AWindyDayCoolsAHullThatIsMakingHeat()
         {
-            ThermalSettings settings = new ThermalSettings();
             ThermalSettings world = new ThermalSettings();
             world.EnableDamage = false;
             world.EnableSolarHeat = false;
@@ -135,9 +184,10 @@ namespace Thermodynamics.Tests
 
             float still = Mean(builder, world, Worlds.PlanetSurface(1f, 0.5f), 600f);
 
-            // Every speed under the threshold, so this is about the convection factor and not
-            // about friction: none of these has a friction term at all.
-            for (float speed = 5f; speed < settings.FrictionAtSpeedsAbove; speed += 5f)
+            // Every fair-weather speed, with the friction term live at each of them — a stronger
+            // claim than this test could once make: the v³ watts at these speeds must lose to the
+            // convection gain, or removing the floor was wrong and the floor goes back.
+            for (float speed = 5f; speed < 50f; speed += 5f)
             {
                 float windy = Mean(builder, world, Worlds.Storm(1f, speed), 600f);
 
@@ -149,13 +199,15 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
-        /// Watts the friction term put into a hull over one step in a wind of a given speed.
+        /// Watts the friction term put into a hull over one step in a wind of a given speed, at a
+        /// given floor.
         /// </summary>
-        private static float FrictionWatts(float windSpeed)
+        private static float FrictionWatts(float windSpeed, float floor)
         {
             ThermalSettings settings = new ThermalSettings();
             settings.EnableDamage = false;
             settings.EnableSolarHeat = false;
+            settings.FrictionAtSpeedsAbove = floor;
             settings.Derive();
 
             GridBuilder builder = GridBuilder.Large();

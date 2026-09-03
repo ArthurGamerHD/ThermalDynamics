@@ -232,6 +232,7 @@ namespace Thermodynamics
             ThermalDebugView.Draw();
             ThermalGlow.Draw();
             WindOverlay.Draw();
+            AeroOverlay.Draw();
             ThermalDebugPanel.Update();
         }
 
@@ -367,6 +368,13 @@ namespace Thermodynamics
                 return;
             }
 
+            if (lowered == "aero")
+            {
+                Settings.Instance.DebugAeroOverlay = !Settings.Instance.DebugAeroOverlay;
+                Reply("aero debug view: " + (Settings.Instance.DebugAeroOverlay ? "on" : "off"));
+                return;
+            }
+
             if (lowered == "settings" || lowered == "list")
             {
                 ListSettings();
@@ -448,7 +456,7 @@ namespace Thermodynamics
             }
 
             Reply("commands: status | problems | settings | set <name> <value> | save"
-                + " | sync [fetch] | overlay | menu | telemetry on | telemetry off"
+                + " | sync [fetch] | overlay | aero | menu | telemetry on | telemetry off"
                 + " | stride <n> | heat <k> | dump");
         }
 

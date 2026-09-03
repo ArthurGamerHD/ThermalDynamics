@@ -74,6 +74,11 @@ namespace Thermodynamics
                 // groups where every member is still, not members of a moving group.
                 if (thermals.Simulation.FrictionWatts <= 0f) continue;
 
+                // A base standing in wind has friction watts now that the floor is zero, and no
+                // use for a force; skipping it here is what keeps its group unresolved. A dynamic
+                // grid docked to it walks its own entry and stops on the static member inside.
+                if (thermals.Grid.IsStatic) continue;
+
                 ApplyToGroupOf(thermals);
             }
         }
@@ -118,6 +123,12 @@ namespace Thermodynamics
             {
                 IMyCubeGrid grid = GroupGrids[i];
                 if (grid == null || grid.Physics == null || grid.GameLogic == null) continue;
+
+                // **A group with a static member is anchored and takes no force at all.** With the
+                // friction floor at zero the term is live in any breeze, so every base standing in
+                // wind reaches here every tick — and a force on an anchored assembly buys nothing
+                // and loads the joints between the station and whatever is docked to it.
+                if (grid.IsStatic) return;
 
                 ThermalGrid thermals = grid.GameLogic.GetAs<ThermalGrid>();
                 if (thermals == null || thermals.Simulation == null) continue;

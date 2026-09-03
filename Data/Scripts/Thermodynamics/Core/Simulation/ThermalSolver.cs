@@ -378,6 +378,25 @@ namespace Thermodynamics.Core
         /// </summary>
         public Vector3 LastPressureWatts { get; private set; }
 
+        /// <summary>
+        /// One node's reconstructed surface normal, grid-local, or zero while the shape pass has
+        /// not run for it — off, or not yet reached by its budgeted slice.
+        ///
+        /// <para>
+        /// **This is the per-block half of the lift story, and it is a normal, not six faces.**
+        /// The drag weighting is per face, but the pressure sum lift is taken from carries one
+        /// blended normal per node — so a per-block readout can show the direction this block
+        /// pushes and how hard, and nothing finer exists to show. Read by the crosshair readout;
+        /// costs an index check and three loads.
+        /// </para>
+        /// </summary>
+        public Vector3 NodeShapeNormal(int index)
+        {
+            int b = index * 3;
+            if (index < 0 || b + 2 >= nodeShapeNormal.Length) return Vector3.Zero;
+            return new Vector3(nodeShapeNormal[b], nodeShapeNormal[b + 1], nodeShapeNormal[b + 2]);
+        }
+
         private float environmentWattsAccumulator;
         private float heatGainAccumulator;
         private float frictionAccumulator;

@@ -306,7 +306,7 @@ namespace Thermodynamics
 
         [ProtoMember(40)] public float VacuumTemperature = 2.7f;
         [ProtoMember(41)] public float SolarEnergy = 1000f;
-        [ProtoMember(42)] public float FrictionAtSpeedsAbove = 50f;
+        [ProtoMember(42)] public float FrictionAtSpeedsAbove = 0f;
         [ProtoMember(43)] public float FrictionScale = 0.001f;
 
         /// <summary>
@@ -534,6 +534,13 @@ namespace Thermodynamics
 
         /// <summary>Draws the relative wind vector.</summary>
         [ProtoMember(52)] public bool DebugWindRaycast = false;
+
+        /// <summary>
+        /// The aerodynamics debug view: the centre of mass the force is applied at, the drag,
+        /// lift and relative-wind vectors on the targeted grid, and the name of whichever gate is
+        /// stopping a force from being applied. Client side.
+        /// </summary>
+        [ProtoMember(164)] public bool DebugAeroOverlay = false;
 
         /// <summary>
         /// Value the block overlay starts a session showing, as a
@@ -1064,7 +1071,8 @@ namespace Thermodynamics
         /// </summary>
         public static readonly HashSet<string> ClientOwned = new HashSet<string>
         {
-            "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast", "DebugBlockOverlay",
+            "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast", "DebugAeroOverlay",
+            "DebugBlockOverlay",
             "DebugWindOverlay", "DebugWindIndicator", "DebugOverlayMaxBoxes",
             "ShowEnvironmentReadout",
             "HeatGlow", "HeatWarningSound", "HeatTerminalPanel",
@@ -1097,7 +1105,7 @@ namespace Thermodynamics
                 "WindRoughnessLength", "WindGradientHeight",
                 "WindDiurnalAmplitude", "WindDiurnalCrossover",
                 "WindTerrainInfluence", "WindTerrainRadius", "WindSlopeStrength",
-                "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast",
+                "DebugTextOnScreen", "DebugSolarRaycast", "DebugWindRaycast", "DebugAeroOverlay",
                 "DebugBlockOverlay", "DebugWindOverlay", "DebugWindIndicator",
                 "ShowEnvironmentReadout",
                 "DebugOverlayMaxBoxes",
@@ -1211,6 +1219,7 @@ namespace Thermodynamics
                 case "DebugTextOnScreen": return Flag(DebugTextOnScreen);
                 case "DebugSolarRaycast": return Flag(DebugSolarRaycast);
                 case "DebugWindRaycast": return Flag(DebugWindRaycast);
+                case "DebugAeroOverlay": return Flag(DebugAeroOverlay);
                 case "DebugBlockOverlay": return DebugBlockOverlay;
                 case "DebugOverlayMaxBoxes": return DebugOverlayMaxBoxes;
                 case "DebugWindOverlay": return DebugWindOverlay;
@@ -1339,6 +1348,7 @@ namespace Thermodynamics
                 case "DebugTextOnScreen": DebugTextOnScreen = Flag(value); return true;
                 case "DebugSolarRaycast": DebugSolarRaycast = Flag(value); return true;
                 case "DebugWindRaycast": DebugWindRaycast = Flag(value); return true;
+                case "DebugAeroOverlay": DebugAeroOverlay = Flag(value); return true;
                 case "RoomOverlayMinKelvin": RoomOverlayMinKelvin = value; return true;
                 case "RoomOverlayMaxKelvin": RoomOverlayMaxKelvin = value; return true;
                 case "DebugBlockOverlay":

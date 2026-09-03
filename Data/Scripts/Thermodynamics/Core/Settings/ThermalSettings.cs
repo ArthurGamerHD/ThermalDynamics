@@ -108,8 +108,18 @@ namespace Thermodynamics.Core
         /// <summary>Solar irradiance above the atmosphere, W/m^2.</summary>
         public float SolarEnergy = 1000f;
 
-        /// <summary>Relative airspeed, m/s, above which aerodynamic heating starts.</summary>
-        public float FrictionAtSpeedsAbove = 50f;
+        /// <summary>
+        /// Relative airspeed, m/s, below which the whole aerodynamic term — heating, drag and
+        /// lift — is switched off. **Zero, so the term is live at every speed**: the v³ law makes
+        /// low-speed friction vanish on its own (1 W/m² at 10 m/s against 1,000 at 100), so no
+        /// floor is needed to keep slow flight cool, and any floor above zero puts a step in both
+        /// the heat and the force at the speed it names. The cooling-to-heating crossover a
+        /// threshold used to fake is emergent — convection removes `h·A·(T−T_ambient)` growing
+        /// with √v while friction adds `∝ v³`, so slow air net-cools a hot hull and fast air
+        /// net-heats it, at a speed that depends on how hot the hull is. Kept as a dial for worlds
+        /// that want the legacy cut.
+        /// </summary>
+        public float FrictionAtSpeedsAbove = 0f;
 
         /// <summary>Coefficient on the v^3 aerodynamic heating term.</summary>
         public float FrictionScale = 0.001f;

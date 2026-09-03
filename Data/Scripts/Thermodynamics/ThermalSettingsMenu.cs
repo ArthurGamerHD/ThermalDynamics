@@ -149,7 +149,7 @@ namespace Thermodynamics
             { "ClimateWeatherInfluence", new Entry(Environment, "Weather shifts air temperature (0..1)", "How much the weather changes the air around a grid; 1 applies the game's own figures in full.", 0f, 1f) },
             { "VacuumTemperature", new Entry(Environment, "Vacuum temperature (K)", "Sky temperature in space, K. 2.7 is the real background.", 0f, 300f) },
             { "SolarEnergy", new Entry(Solar, "Sunlight at the planet (W/m2)", "Irradiance at the planet, W/m2.", 0f, 5000f) },
-            { "FrictionAtSpeedsAbove", new Entry(Aero, "Heating starts above (m/s)", "Relative airspeed at which atmospheric heating starts, m/s.", 0f, 300f) },
+            { "FrictionAtSpeedsAbove", new Entry(Aero, "Aero term floor (m/s)", "Relative airspeed below which the whole aerodynamic term - heating, drag and lift - is off. 0 applies it at every speed; the cooling-to-heating crossover emerges on its own.", 0f, 300f) },
             { "FrictionScale", new Entry(Aero, "Friction heating scale", "Multiplier on the v3 heating term, so moving it retunes temperatures and leaves handling alone.", 0f, 0.01f) },
 
             // The drag three had no entry at all, so they fell through to "Other" unlabelled and
@@ -159,7 +159,7 @@ namespace Thermodynamics
             { "EnableDrag", new Entry(Aero, "Apply drag", "Takes the drag the friction term already computes out of the ship's motion; off, so an aerodynamics mod is not doubled.", 0, 1) },
             { "DragCoefficient", new Entry(Aero, "Drag coefficient", "The coefficient a hull is treated as having; 0.5 is measured, and authored rather than read off the shape.", 0f, 2f) },
             { "EnableShapeDrag", new Entry(Aero, "Correct area for hull shape", "Corrects the projected area for which way the hull actually faces, which moves temperatures as well as handling.", 0, 1) },
-            { "EnableLift", new Entry(Aero, "Lift", "Applies the aerodynamic force across the airflow rather than along it; needs Hull shape, and is small on real ships.", 0, 1) },
+            { "EnableLift", new Entry(Aero, "Lift", "Applies the aerodynamic force across the airflow rather than along it; needs Apply drag AND Hull shape both on, and is small on real ships.", 0, 1) },
             { "LiftCoefficient", new Entry(Aero, "Lift coefficient", "How much of the computed transverse force is applied; 1 is the model's own answer.", 0f, 2f) },
             { "EnableWindwardShielding", new Entry(Aero, "Shelter blocks behind others", "A block behind another is sheltered from the wind, for heat and for drag, at a second sliced pass over the hull.", 0, 1) },
             { "RoomConvectionCoefficient", new Entry(Environment, "Room air convection (W/m2 K)", "Convective coefficient between a block and room air, W/(m2 K).", 0f, 50f) },
@@ -184,6 +184,7 @@ namespace Thermodynamics
             { "DebugTextOnScreen", new Entry(Display, "Crosshair readout", "Everything the simulation knows about the block being looked at; also records per-mechanism watts.", 0, 1) },
             { "DebugSolarRaycast", new Entry(Display, "Draw sun ray", "The sun ray from each grid, white when lit and red when occluded.", 0, 1) },
             { "DebugWindRaycast", new Entry(Display, "Draw wind vector", "The relative wind each grid is flying through, drawn from the grid.", 0, 1) },
+            { "DebugAeroOverlay", new Entry(Display, "Aero debug view", "The centre of mass, the drag, lift and wind vectors on your ship, and the name of whichever switch is stopping a force from applying.", 0, 1) },
             { "DebugWindOverlay", new Entry(Display, "Wind map", "Draws the wind field as arrows: 1 a lattice around you, 2 the whole planet. Ctrl+Shift+W cycles it.", 0, WindOverlay.ModeCount - 1, true) },
             { "DebugWindIndicator", new Entry(Display, "Wind indicator", "A needle and a speed beside the crosshair whenever there is wind where you are.", 0, 1) },
             { "DebugBlockOverlay", new Entry(Display, "Block overlay", "The x-ray box overlay. Ctrl+Shift+= cycles it in play.", 0, ThermalDebugView.ModeCount - 1, true) },
@@ -525,7 +526,7 @@ namespace Thermodynamics
         private static readonly Leaf DebugPage = new Leaf("Debug",
                 "HeatGlow", "HeatWarningSound", "HeatTerminalPanel", "ShowEnvironmentReadout",
                 "DebugBlockOverlay", "DebugTextOnScreen", "DebugWindOverlay", "DebugWindIndicator")
-            .Then("DebugSolarRaycast", "DebugWindRaycast", "DebugOverlayMaxBoxes",
+            .Then("DebugSolarRaycast", "DebugWindRaycast", "DebugAeroOverlay", "DebugOverlayMaxBoxes",
                 "RoomOverlayMinKelvin", "RoomOverlayMaxKelvin",
                 "EnableTelemetry", "TelemetrySampleStride", "TelemetryPlanetProbes");
 

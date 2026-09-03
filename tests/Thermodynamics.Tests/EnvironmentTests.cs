@@ -121,8 +121,11 @@ namespace Thermodynamics.Tests
             ThermalSettings settings = new ThermalSettings();
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
 
-            Assert.False(EnvironmentSolver.Solve(settings, planet, Worlds.Flight(0.8f, 10f)).FrictionActive);
+            // Any airspeed at all is enough since the floor ships at zero — the v³ law is what
+            // keeps slow flight cool, not a gate — but no airspeed, or no air, is still nothing.
+            Assert.False(EnvironmentSolver.Solve(settings, planet, Worlds.Flight(0.8f, 0f)).FrictionActive);
             Assert.False(EnvironmentSolver.Solve(settings, planet, Worlds.Flight(0.001f, 300f)).FrictionActive);
+            Assert.True(EnvironmentSolver.Solve(settings, planet, Worlds.Flight(0.8f, 10f)).FrictionActive);
             Assert.True(EnvironmentSolver.Solve(settings, planet, Worlds.Flight(0.8f, 300f)).FrictionActive);
         }
 
@@ -393,12 +396,17 @@ namespace Thermodynamics.Tests
                 "friction must raise the temperature");
         }
 
+        /// <summary>
+        /// A world that sets the aero floor gets the legacy cut: nothing below it, not a small
+        /// term. The shipped floor is zero, so the floor is set here rather than inherited.
+        /// </summary>
         [Fact]
-        public void BelowTheThresholdFrictionDoesNothing()
+        public void BelowAConfiguredFloorFrictionDoesNothing()
         {
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
+            settings.FrictionAtSpeedsAbove = 50f;
             settings.Derive();
 
             GridBuilder builder = GridBuilder.Large();

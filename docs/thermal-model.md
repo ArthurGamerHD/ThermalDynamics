@@ -252,7 +252,7 @@ of `P` watts at distance `r`,
 ### Aerodynamic friction
 
 ```
-if airDensity > 0.01 and v_rel > FrictionAtSpeedsAbove:
+if airDensity > 0.01 and v_rel > FrictionAtSpeedsAbove:   # the floor ships at 0
     watts = FrictionScale × airDensity × v_rel³ × A_exposed × faceWeight(wind)
 ```
 
@@ -261,6 +261,19 @@ game-feel coefficient. `v_rel` is the wind minus the grid's own velocity, compos
 `EnvironmentSample.ComposeRelativeWind`, so a stationary ship in a storm heats like a fast ship in
 still air. The wind is the mod's own field rather than the engine's rating — see
 [environment.md](environment.md#wind).
+
+**The term is live at every speed, and the cooling-to-heating crossover is emergent.**
+`FrictionAtSpeedsAbove` shipped at 50 m/s for ten months as a guard against low-speed heating, and
+the v³ law makes the guard redundant: at 10 m/s the term is about 1 W per windward m² against
+1,000 at 100 m/s, so slow flight is cool by arithmetic rather than by a gate — and the gate put a
+step in the heat, the drag and the lift at the one speed it named. What the gate looked like it
+was doing happens on its own: convection removes `h·A·(T − T_ambient)` and grows with `√v`
+([environment.md](environment.md#wind)), friction adds `∝ v³`, so slow air net-cools a hull that
+is warmer than ambient and fast air net-heats it — at a speed that depends on how hot the hull
+is, which is why no constant could name it. A hull *at* ambient is heated by any airspeed,
+because there is nothing for the convection half to remove. The floor remains a dial for worlds
+that want the legacy cut, and the aero debug view (`DebugAeroOverlay`) reports the net air watts
+and the crossover speed for the hull as it stands.
 
 **This expression is drag power, and the momentum is not taken.** Real drag power is
 `½ C_d ρ A v³` — the same expression, with `FrictionScale` in the place of `½ C_d` and

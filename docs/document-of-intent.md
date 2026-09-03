@@ -1376,8 +1376,11 @@ frame buffer. That is a statement about difficulty, not about intent — it is w
   published hull at reentry. Applying the force does not add a claim; it closes an accounting hole
   the mod already had.
 
-  **That is the line, and it is why `K8`'s lift is refused below.** Drag corrects something the mod
-  computes wrongly. Lift would assert something the mod does not compute at all.
+  **That was the line, and it is why `K8` refused lift at first.** Drag corrects something the mod
+  computes wrongly; lift asserted something the mod did not then compute at all. `K22`'s
+  reconstructed normals made lift the transverse component of a sum already computed, and `K23`
+  reversed the refusal by decision — see *Not a flight model*, below, where the reversal and the
+  reasoning it keeps are recorded.
 
 ---
 

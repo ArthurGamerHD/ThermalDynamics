@@ -99,6 +99,46 @@ namespace Thermodynamics
 
             MyAPIGateway.Utilities.ShowNotification(
                 "[Faces] " + Exposure(simulation, node.Block), 1, "White");
+
+            MyAPIGateway.Utilities.ShowNotification("[Aero] " + Aero(solver, node, state), 1, "White");
+        }
+
+        /// <summary>
+        /// This block's share of the aerodynamic force: its friction watts, the one blended
+        /// surface normal the shape term reconstructed for it, and the pressure push those two
+        /// make together, grid-local along `−n̂`.
+        ///
+        /// <para>
+        /// **Per node and per normal, not per face — because that is the design.** The drag
+        /// weighting is per face (the windward projection the [Faces] line describes), but lift is
+        /// taken from one reconstructed normal per block, so a per-face lift figure does not exist
+        /// to display. A zero normal names its own reason: the shape term off, or its budgeted
+        /// pass not yet at this block.
+        /// </para>
+        /// </summary>
+        private static string Aero(ThermalSolver solver, ThermalNode node, EnvironmentState state)
+        {
+            Vector3 normal = solver.NodeShapeNormal(node.Index);
+            float watts = node.LastFrictionWatts;
+
+            string text = "friction: " + watts.ToString("n1") + "W"
+                + "  wind(local): " + Compact(state.WindDirectionLocal * state.WindSpeed) + "m/s";
+
+            if (normal == Vector3.Zero)
+            {
+                return text + "  normal: none (shape term off, or its pass has not reached this block)";
+            }
+
+            // The node's contribution to LastPressureWatts: its friction watts pointed inward
+            // along the reconstructed normal. What LiftForce keeps of the grid's sum is the part
+            // of these, summed, that lies across the flow.
+            Vector3 push = watts > 0f ? -normal * watts : Vector3.Zero;
+            return text + "  normal: " + Compact(normal) + "  pressure push: " + Compact(push) + "W";
+        }
+
+        private static string Compact(Vector3 v)
+        {
+            return "(" + v.X.ToString("n1") + " " + v.Y.ToString("n1") + " " + v.Z.ToString("n1") + ")";
         }
 
         /// <summary>

@@ -259,16 +259,21 @@ namespace Thermodynamics.Harness
         public const float ParkedHeightMetres = 100f;
 
         /// <summary>
-        /// Speed at which the shipped configuration starts heating a hull by friction.
+        /// Speed at which friction heating on a hull becomes material — the bound wind scenarios
+        /// judge parked and calm air against.
         ///
-        /// Read from the settings rather than transcribed. It was a `100f` here against a shipped
-        /// `50f` for as long as both existed, so every scenario judged a parked grid against twice
-        /// the threshold the game uses (`D3`).
+        /// <para>
+        /// **A constant now, because the setting it read stopped meaning this.** It was read from
+        /// `FrictionAtSpeedsAbove` while that was the speed heating started at (`D3`'s lesson —
+        /// a transcribed `100f` here judged parked grids against twice the shipped figure). The
+        /// shipped floor is 0 since 2026-09-02 — friction is live at every speed and vanishes at
+        /// low ones by the v³ law — so "where heating starts" no longer exists as a setting, and
+        /// what these scenarios actually ask is *where it starts to matter*: 50 m/s is where the
+        /// term reaches ~150 W per windward m², the same order as convection on a mildly warm
+        /// hull, and it is the figure the wind field was originally shaped against.
+        /// </para>
         /// </summary>
-        public static float FrictionThreshold
-        {
-            get { return new ThermalSettings().FrictionAtSpeedsAbove; }
-        }
+        public const float FrictionThreshold = 50f;
 
         public static Outcome Run(Scenario scenario)
         {

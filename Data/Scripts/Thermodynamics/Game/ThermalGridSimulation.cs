@@ -252,6 +252,7 @@ namespace Thermodynamics
 
             bool wanted = Telemetry.Enabled
                 || (client && Settings.Instance.DebugTextOnScreen)
+                || (client && Settings.Instance.DebugAeroOverlay)
                 || (client && ThermalDebugView.NeedsWatts);
 
             Simulation.Solver.CollectDiagnostics = wanted;
