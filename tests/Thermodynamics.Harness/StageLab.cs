@@ -258,7 +258,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        private static ThermalSimulation Registered(GridBuilder builder)
+        internal static ThermalSimulation Registered(GridBuilder builder)
         {
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings().Derive(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
@@ -268,7 +268,7 @@ namespace Thermodynamics.Harness
             return simulation;
         }
 
-        private static Row Measure(string stage, GridBuilder builder)
+        internal static Row Measure(string stage, GridBuilder builder)
         {
             switch (stage)
             {
@@ -298,7 +298,7 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>Collects twice and waits, so a stage is timed against a settled heap rather than the last stage's garbage.</summary>
-        private static void Settle()
+        internal static void Settle()
         {
             GC.Collect();
             GC.WaitForPendingFinalizers();
@@ -314,12 +314,12 @@ namespace Thermodynamics.Harness
         /// nothing came to read half a megabyte and fail. Alone it passed, which is the worst way
         /// for a check to be wrong. See performance.md, Pass 3, Iteration 10.
         /// </summary>
-        private static long Allocated()
+        internal static long Allocated()
         {
             return GC.GetAllocatedBytesForCurrentThread();
         }
 
-        private static void Take(Row row, double ms)
+        internal static void Take(Row row, double ms)
         {
             if (TraceRepeat != null) TraceRepeat(row.Stage + " " + ms.ToString("n3", CultureInfo.InvariantCulture));
             row.Samples.Add(ms);
@@ -346,7 +346,7 @@ namespace Thermodynamics.Harness
         /// then <see cref="ConfirmingRepeats"/> of them within <see cref="ConfirmingBand"/> of it,
         /// or <see cref="MaxRepeats"/> in all. <see cref="Row.Stop"/> records which.
         /// </summary>
-        private static bool Settled(Row row)
+        internal static bool Settled(Row row)
         {
             if (row == null) return false;
             if (row.Repeats < Repeats) return false;
@@ -374,7 +374,7 @@ namespace Thermodynamics.Harness
         /// By nearest rank on the sorted samples, so the figure reported is a reading the instrument
         /// actually took rather than the average of two it did not.
         /// </summary>
-        private static void Summarise(Row row)
+        internal static void Summarise(Row row)
         {
             if (row == null || row.Samples.Count == 0) return;
 
@@ -384,7 +384,7 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>Whether a work figure repeated exactly; a stage whose work moves between repeats is not one stage.</summary>
-        private static void Work(Row row, long work, int repeat)
+        internal static void Work(Row row, long work, int repeat)
         {
             if (repeat == 0) { row.Work = work; return; }
             if (row.Work != work)

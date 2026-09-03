@@ -820,6 +820,9 @@ namespace Thermodynamics.Sim
         ///   bench parallel --size 600           one grid per thread: does a fleet pay for it
         ///   bench report --csv out/            the full performance report, as a CSV to diff
         ///   bench report --baseline out/performance.csv   the same, against an earlier one
+        ///   bench se2tax --factors 1,2,5,10     the same hull on an SE2-fine lattice, per stage
+        ///   bench coarserooms --refine 10       the supercell room flood against the mapper
+        ///   bench condlayout --threads 1,4,16   the conduction kernel in SE2's job shapes
         /// </summary>
         private static int BenchCommand(string[] args)
         {
@@ -1260,6 +1263,125 @@ namespace Thermodynamics.Sim
                     string statPath = Path.Combine(statOut, "samplestats.csv");
                     File.WriteAllText(statPath, SampleStatisticLab.Csv(statRows));
                     Console.WriteLine("csv -> " + statPath);
+                    return 0;
+                }
+
+                case "se2tax":
+                {
+                    // What the SE2 lattice costs each structure: the same dealt hull re-expressed
+                    // on a lattice up to ten times finer per axis, which is 25 cm under 2.5 m.
+                    // Per-cell structures should climb by the factor squared or cubed and
+                    // per-node ones hold flat; this measures where each stage actually lands.
+                    int taxBlocks = OptionInt(args, "--size", 8904);
+                    int[] factors = ParseInts(Option(args, "--factors", "1,2,5,10"));
+
+                    // The effects under test are multiples, not percents, and a `place` repeat at
+                    // factor ten is nine million cell inserts — so the floor is lowered unless
+                    // the caller raises it back.
+                    StageLab.Repeats = Math.Max(1, OptionInt(args, "--repeats", 10));
+
+                    Console.WriteLine();
+                    Console.WriteLine("== se2 lattice tax, " + shape + " "
+                        + taxBlocks.ToString("n0") + " blocks, factors "
+                        + string.Join(",", Array.ConvertAll(factors,
+                            delegate (int v) { return v.ToString(); })) + " ==");
+                    Console.WriteLine("  The same blocks at every rung; only the lattice under"
+                        + " them divides. Factor 10 is SE2's 25 cm under SE1's 2.5 m.");
+                    Console.WriteLine();
+
+                    List<Se2LatticeLab.Summary> taxSummaries = new List<Se2LatticeLab.Summary>();
+                    List<Se2LatticeLab.StageRow> taxStages = new List<Se2LatticeLab.StageRow>();
+                    Se2LatticeLab.Run(shape, taxBlocks, factors, taxSummaries, taxStages,
+                        message => Console.Error.WriteLine("  " + message));
+
+                    Console.WriteLine(Se2LatticeLab.SummaryTable(taxSummaries));
+                    Console.WriteLine();
+                    Console.WriteLine(Se2LatticeLab.StageTable(taxStages));
+
+                    string taxOut = csvDirectory ?? "out";
+                    Directory.CreateDirectory(taxOut);
+                    string taxSummaryPath = Path.Combine(taxOut, "se2tax-summary.csv");
+                    File.WriteAllText(taxSummaryPath, Se2LatticeLab.SummaryCsv(taxSummaries));
+                    Console.WriteLine("csv -> " + taxSummaryPath);
+                    string taxStagePath = Path.Combine(taxOut, "se2tax-stages.csv");
+                    File.WriteAllText(taxStagePath, Se2LatticeLab.StageCsv(taxStages));
+                    Console.WriteLine("csv -> " + taxStagePath);
+                    return 0;
+                }
+
+                case "coarserooms":
+                {
+                    // The supercell flood against the shipped mapper on one grid: same rooms,
+                    // and at what price. --refine walks it on the SE2-refined lattice, where the
+                    // question actually lives.
+                    int roomBlocks = OptionInt(args, "--size", 126731);
+                    int refine = OptionInt(args, "--refine", 1);
+                    int[] edges = ParseInts(Option(args, "--edges", refine > 1
+                        ? refine.ToString() + "," + (refine * 2)
+                        : "2,4,8"));
+
+                    StageLab.Repeats = Math.Max(1, OptionInt(args, "--repeats", 20));
+
+                    Console.WriteLine();
+                    Console.WriteLine("== coarse rooms, " + shape + " "
+                        + roomBlocks.ToString("n0") + " blocks"
+                        + (refine > 1 ? ", lattice refined x" + refine : "") + " ==");
+                    Console.WriteLine("  Every prototype row is verified cell for cell against"
+                        + " the shipped mapper before its clock is trusted.");
+                    Console.WriteLine();
+
+                    GridBuilder roomBuilder = GridBuilder.Large();
+                    roomBuilder.PlaceCensus(LoadShapes.Build(shape, roomBlocks));
+                    if (refine > 1) roomBuilder = Se2Refine.Refined(roomBuilder, refine);
+
+                    List<CoarseRoomLab.Row> roomRows = CoarseRoomLab.Run(roomBuilder, edges,
+                        message => Console.Error.WriteLine("  " + message));
+
+                    Console.WriteLine(CoarseRoomLab.Table(roomRows));
+
+                    string roomOut = csvDirectory ?? "out";
+                    Directory.CreateDirectory(roomOut);
+                    string roomPath = Path.Combine(roomOut, "coarserooms.csv");
+                    File.WriteAllText(roomPath, CoarseRoomLab.Csv(roomRows));
+                    Console.WriteLine("csv -> " + roomPath);
+
+                    for (int i = 0; i < roomRows.Count; i++)
+                    {
+                        if (roomRows[i].Mismatch != null) return 1;
+                    }
+                    return 0;
+                }
+
+                case "condlayout":
+                {
+                    // The conduction kernel in the shapes SE2's job system wants — CSR gather,
+                    // serial and across a thread ladder, placement order and Morton order —
+                    // against the scatter shape the solver ships.
+                    int condBlocks = OptionInt(args, "--size", 126731);
+                    int[] condThreads = ParseInts(Option(args, "--threads",
+                        string.Join(",", Array.ConvertAll(ConductionLayoutLab.DefaultThreads,
+                            delegate (int v) { return v.ToString(); }))));
+
+                    StageLab.Repeats = Math.Max(1, OptionInt(args, "--repeats", StageLab.Repeats));
+
+                    Console.WriteLine();
+                    Console.WriteLine("== conduction layout, " + shape + " "
+                        + condBlocks.ToString("n0") + " blocks ==");
+                    Console.WriteLine("  Plain flux arithmetic on the solver's own graph — the"
+                        + " kernels compare with each other, not with bench stepphases.");
+                    Console.WriteLine();
+
+                    List<ConductionLayoutLab.Row> condRows = ConductionLayoutLab.Run(
+                        shape, condBlocks, condThreads,
+                        message => Console.Error.WriteLine("  " + message));
+
+                    Console.WriteLine(ConductionLayoutLab.Table(condRows));
+
+                    string condOut = csvDirectory ?? "out";
+                    Directory.CreateDirectory(condOut);
+                    string condPath = Path.Combine(condOut, "condlayout.csv");
+                    File.WriteAllText(condPath, ConductionLayoutLab.Csv(condRows));
+                    Console.WriteLine("csv -> " + condPath);
                     return 0;
                 }
 
@@ -1737,6 +1859,18 @@ namespace Thermodynamics.Sim
             return raw != null && int.TryParse(raw, out value) ? value : fallback;
         }
 
+        /// <summary>A comma-separated integer list, for a flag naming a ladder's rungs.</summary>
+        private static int[] ParseInts(string list)
+        {
+            string[] parts = list.Split(',');
+            int[] values = new int[parts.Length];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                values[i] = int.Parse(parts[i].Trim(), CultureInfo.InvariantCulture);
+            }
+            return values;
+        }
+
         private static float OptionFloat(string[] args, string flag, float fallback)
         {
             string raw = Option(args, flag, null);
@@ -1857,6 +1991,9 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench stages            one stage of a grid's life on its own clock, fastest of a settled sample; --stages a,b; --repeats N (the floor); --isolate (a process per stage); --trace");
             Console.WriteLine("  bench samplestats       which summary of a stage's repeats two runs agree on; --from dir1,dir2,...");
             Console.WriteLine("  bench stepphases        where a step's own time goes: environment, conduction, coupled, apply, publish");
+            Console.WriteLine("  bench se2tax            the same hull on an SE2-fine lattice, stage by stage; --factors 1,2,5,10");
+            Console.WriteLine("  bench coarserooms       the supercell room flood against the shipped mapper, verified cell for cell; --refine K --edges a,b");
+            Console.WriteLine("  bench condlayout        the conduction kernel in SE2's job shapes: scatter, CSR gather, a thread ladder, Morton order; --threads a,b");
             Console.WriteLine("  bench stepfloor         what those passes would cost touching the same memory and computing nothing");
             Console.WriteLine("  bench smallgrids        what one grid costs before any of its blocks do");
             Console.WriteLine("  bench wattsclear        what zeroing the watts row costs, up a size ladder");

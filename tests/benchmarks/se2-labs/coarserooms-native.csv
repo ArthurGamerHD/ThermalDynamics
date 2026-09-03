@@ -1,0 +1,6 @@
+walk,edge,blocks,best_ms,median_ms,repeats,stopped,work,supercells,fine_cells,sealing_bytes,match,taken_utc,host
+mapper,1,128820,14.9487,15.9004,30,confirmed,1671523,0,0,0,yes,2026-09-03T03:30:28Z,fedora
+super2,2,128820,16.2005,18.1065,26,confirmed,276851,176047,100804,229624,yes,2026-09-03T03:30:28Z,fedora
+super4,4,128820,17.7818,19.5254,119,confirmed,299160,20652,278508,407328,yes,2026-09-03T03:30:28Z,fedora
+super8,8,128820,25.4699,26.5583,30,confirmed,439758,2690,437068,565888,yes,2026-09-03T03:30:28Z,fedora
+super16,16,128820,40.9367,42.4111,31,confirmed,788358,346,788012,916832,yes,2026-09-03T03:30:28Z,fedora

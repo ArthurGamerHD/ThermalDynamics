@@ -24,6 +24,7 @@ in the prose. The conventions are in
 | [thermal-model.md](thermal-model.md) | Every equation the simulation evaluates, and the surface geometry every area term reads. |
 | [environment.md](environment.md) | The air, ground, sun and wind outside a grid: how each is computed and what evidence stands behind it. |
 | [scale-design.md](scale-design.md) | Where the model is going: variable block sizes, and grids to a million blocks. |
+| [se2-labs.md](se2-labs.md) | What Space Engineers 2's architecture costs each structure of the model, measured: the lattice tax, the room map at supercell stride, and the conduction kernel in job shapes. |
 
 **Using it**
 
