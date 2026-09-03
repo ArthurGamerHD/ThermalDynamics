@@ -481,6 +481,8 @@ namespace Thermodynamics.Core
                 solver.RefreshExposureAround(rooms.Map, rooms.Map.ChangedRooms);
                 solver.RebuildRoomAir(rooms.Map);
             }
+
+            appliedOnce = true;
             End(SimulationPhase.Exposure);
         }
 
@@ -656,18 +658,66 @@ namespace Thermodynamics.Core
             if (appliedRevision == settings.Revision) return;
             appliedRevision = settings.Revision;
 
-            IList<ThermalNode> nodes = solver.Nodes;
-            for (int i = 0; i < nodes.Count; i++)
+            // **A revision is not a reason to do all three.** Every settings write bumps the
+            // revision — a slider, a chat command, a value arriving from the server — and this used
+            // to answer each one with a walk over every node, a loop rebuild and a room-air rebuild
+            // whatever had actually moved. On a fleet that is tens of milliseconds per write, which
+            // is what turned a slider drag into input lag rather than into a slow menu. Each of the
+            // three now asks whether its own input changed.
+            if (!appliedOnce || appliedHeatTimeScale != settings.HeatTimeScale)
             {
-                nodes[i].HeatTimeScale = settings.HeatTimeScale;
+                appliedHeatTimeScale = settings.HeatTimeScale;
+
+                IList<ThermalNode> nodes = solver.Nodes;
+                for (int i = 0; i < nodes.Count; i++)
+                {
+                    nodes[i].HeatTimeScale = settings.HeatTimeScale;
+                }
             }
 
-            RebuildLoops();
-            solver.RebuildRoomAir(rooms.Map);
+            if (!appliedOnce || appliedCoolantLoops != settings.EnableCoolantLoops
+                || appliedWellMixedCoolant != settings.WellMixedCoolant)
+            {
+                appliedCoolantLoops = settings.EnableCoolantLoops;
+                appliedWellMixedCoolant = settings.WellMixedCoolant;
+                RebuildLoops();
+            }
+
+            if (!appliedOnce || appliedRoomAir != settings.EnableRoomAir
+                || appliedRoomConvection != settings.RoomConvectionCoefficient
+                || appliedRoomDensity != settings.RoomAirDensity)
+            {
+                appliedRoomAir = settings.EnableRoomAir;
+                appliedRoomConvection = settings.RoomConvectionCoefficient;
+                appliedRoomDensity = settings.RoomAirDensity;
+                solver.RebuildRoomAir(rooms.Map);
+            }
         }
 
         /// <summary>The settings revision this simulation has already acted on.</summary>
         private int appliedRevision = -1;
+
+        /// <summary>
+        /// Whether a revision has been acted on at all. **The first one must do all three whatever
+        /// the compares say**: a simulation is built with loops already rebuilt and room air
+        /// already made, so the fields below start describing nothing, and a world that switches
+        /// coolant loops *off* as its first change would compare `false` against a `false` that
+        /// only means "not yet asked" — which is how `CoolantLoopsSwitchOffMidSession` caught this
+        /// before it shipped.
+        /// </summary>
+        private bool appliedOnce;
+
+        /// <summary>
+        /// The inputs behind each of the three things a revision can require, as they were when it
+        /// was last required. A revision whose values all match costs the compares below and
+        /// nothing else. Seeded to values nothing ships, so the first revision does all three.
+        /// </summary>
+        private float appliedHeatTimeScale = float.NaN;
+        private bool appliedCoolantLoops;
+        private bool appliedWellMixedCoolant;
+        private bool appliedRoomAir;
+        private float appliedRoomConvection = float.NaN;
+        private float appliedRoomDensity = float.NaN;
 
         private void Begin(SimulationPhase phase)
         {

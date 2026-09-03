@@ -749,12 +749,28 @@ namespace Thermodynamics
 
             value.Text = ThermalSettingsMenu.ValueText(slider.Value, entry);
 
+            // **A drag writes once, when it ends.** Every write applies the whole configuration:
+            // it publishes to the network, bumps the solver revision every grid then notices, and
+            // has each of them walk its nodes and rebuild its room air. A slider dragged for a
+            // second used to do that sixty times, which on a fleet is far more work than a frame
+            // can carry and reads as input lag rather than as a slow menu. The label follows the
+            // handle live; the setting follows the mouse button.
+            bool held = false;
+            float pending = 0f;
+
             slider.ValueChanged += (sender, args) =>
             {
                 if (refreshing || typed.Visible) return;
 
                 float moved = entry.Integer ? (float)Math.Round(slider.Value) : slider.Value;
                 value.Text = ThermalSettingsMenu.ValueText(moved, entry);
+
+                if (slider.MouseInput.IsLeftClicked)
+                {
+                    held = true;
+                    pending = moved;
+                    return;
+                }
 
                 ThermalSettingsMenu.Write(name, moved);
             };
@@ -796,6 +812,14 @@ namespace Thermodynamics
 
             polls.Add(() =>
             {
+                // The end of a drag: the button is up and the last value the handle passed has not
+                // been written yet.
+                if (held && !slider.MouseInput.IsLeftClicked)
+                {
+                    held = false;
+                    ThermalSettingsMenu.Write(name, pending);
+                }
+
                 if (typed.Visible)
                 {
                     // Escape leaves the setting alone; Enter and losing the field's focus commit.

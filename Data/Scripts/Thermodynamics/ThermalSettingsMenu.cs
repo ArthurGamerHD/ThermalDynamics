@@ -738,6 +738,19 @@ namespace Thermodynamics
         /// </summary>
         public static void Refresh()
         {
+            Refresh(true);
+        }
+
+        /// <summary>
+        /// Brings the controls back in step, and the statistics page with them when asked.
+        ///
+        /// **A write asks for the controls only.** Rebuilding the statistics text walks every live
+        /// grid, and a settings write is already the most expensive thing the menu does; the page
+        /// refreshes itself twice a second from <see cref="Tick"/> regardless, so a figure is at
+        /// most half a second stale rather than costing a fleet walk per slider tick.
+        /// </summary>
+        public static void Refresh(bool statistics)
+        {
             if (window == null || shipped == null) return;
 
             try
@@ -751,7 +764,7 @@ namespace Thermodynamics
                 }
 
                 window.Refresh();
-                window.SetStatistics(StatisticsText(changed, names));
+                if (statistics) window.SetStatistics(StatisticsText(changed, names));
             }
             catch (Exception e)
             {
@@ -1168,7 +1181,7 @@ namespace Thermodynamics
 
             Settings.Instance.SetValue(name, value);
             Settings.Instance.Apply();
-            Refresh();
+            Refresh(false);
         }
 
         /// <summary>

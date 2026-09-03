@@ -428,6 +428,33 @@ namespace Thermodynamics.Core
             externalCount += count;
         }
 
+        /// <summary>
+        /// Empties this map for another pass, keeping every array it has already grown.
+        ///
+        /// <para>
+        /// **A pass used to build a whole map and throw the last one away** — 4,768 KB on a
+        /// 126,731-block hull and about 38 MB at a million, most of it the cell store, and paid
+        /// again on every sealing change rather than only at load (`D20`). The two bitsets are not
+        /// cleared here: <see cref="SetSearchBounds"/> resets both, and a restart always sets its
+        /// bounds before it walks anything.
+        /// </para>
+        ///
+        /// <para>
+        /// **Only the mapper may call this, and only on a map two publishes old.** A published map
+        /// is read until the publish after next — the solver holds one across a budgeted exposure
+        /// refresh — so <see cref="RoomMapper"/> rotates three slots rather than swapping two.
+        /// </para>
+        /// </summary>
+        internal void Reset()
+        {
+            externalCount = 0;
+            roomCount = 0;
+            roomCellCount = 0;
+            frozen = false;
+            portals.Clear();
+            changedRooms.Clear();
+        }
+
         /// <summary>Records the box the pass classified, so open air can be enumerated from it.</summary>
         internal void SetSearchBounds(Vector3I min, Vector3I maxExclusive)
         {

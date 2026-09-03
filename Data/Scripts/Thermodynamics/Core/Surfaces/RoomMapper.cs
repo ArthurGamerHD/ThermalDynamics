@@ -114,6 +114,12 @@ namespace Thermodynamics.Core
         private RoomMap working;
         private RoomMap published = RoomMap.AllExternal;
 
+        /// <summary>The map published before the current one, still readable and not yet reusable.</summary>
+        private RoomMap supersededPrevious;
+
+        /// <summary>A map two publishes old, which the next pass writes into instead of allocating.</summary>
+        private RoomMap spare;
+
         private Phase phase = Phase.Idle;
         private bool restartRequested;
 
@@ -373,7 +379,22 @@ namespace Thermodynamics.Core
                 hasPendingBounds = false;
             }
 
-            working = new RoomMap();
+            // **Three slots rather than a new map a pass.** A published map is read until the
+            // publish after next — `ThermalSolver.exposureMap` holds one across a budgeted refresh,
+            // and a publish only schedules the restart that replaces it — so the map free to be
+            // written again is the one two publishes back. It keeps every array it grew, which is
+            // what makes a pass stop allocating its own map (`D20`).
+            if (spare != null)
+            {
+                working = spare;
+                spare = null;
+                working.Reset();
+            }
+            else
+            {
+                working = new RoomMap();
+            }
+
             working.SetSearchBounds(searchMin, searchMaxExclusive);
 
             // A rebuild is not a guess: the pass before it found this many room cells, and a hull
@@ -1110,8 +1131,14 @@ namespace Thermodynamics.Core
                 knownDoors.Add(door);
             }
 
+            RoomMap superseded = published;
             published = working;
             working = null;
+
+            // The map published before this one is still readable for one more publish; the one
+            // before *that* is not, and becomes the buffer the next pass writes into.
+            spare = supersededPrevious;
+            supersededPrevious = superseded == RoomMap.AllExternal ? null : superseded;
             phase = Phase.Done;
             CompletedPasses++;
 
