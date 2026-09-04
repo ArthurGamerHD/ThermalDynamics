@@ -26,6 +26,7 @@ reader proposes again.
 | 14 | **Iteration 8's wrappers had themselves become three copies.** The default-at-the-call-site decision left `panel.py`, `typical.py` and `pack-bench.py` each restating the wrapper over `scoring.number` — mechanism and shared boilerplate included — around one paragraph of genuinely local justification. `scoring.number_or` holds the mechanism once and takes no default of its own, so the caller still states the choice; each wrapper keeps only its own paragraph. | The contract that made iteration 8 right is preserved and now pinned: `test_number_or_defaults_only_where_number_is_unmeasured` asserts a measured nought comes back as the measurement, never the default. Verified by reproduction as iteration 10 was — `panel.csv`, `typical.csv` and `bench.json` byte-identical on the 2026-08-21 datasets. 199 python tests and C# suite 2,237 green (2026-09-04, commit `c4ca7f8`). |
 | 15 | **Two waste-fraction labs, one cache policy stated twice.** `ReactorLab` and `OxygenGeneratorLab` already share their rig (`SoloBlockRig`) and deliberately mirror each other's prose; what they also shared, without saying so, was an identical fraction-keyed results cache — same lock discipline, same compute-outside-the-lock choice. `FractionCache<TRow>` states it once, with the benign second-write-wins race documented. | The two `Row` classes were considered for merging and left apart, by the standing test: a producer's fields and a consumer's differ (`LoadFraction` against a `Draw` enum, rated output against stated draw), so changing one does not imply changing the other. The cache is the opposite case — one copy losing its lock would be a silent fault in an eight-wide suite. The waste-heat tests sweep several fractions, so the cache path is exercised by its consumers. Suite 2,237 green (2026-09-04, commit `7cba2a9`). |
 | 16 | **The block under the crosshair, resolved once.** The crosshair readout and the extinguisher HUD each walked camera → 15 m ray → grid → adapter → nudged cell → bound block, and the 15 and the 0.005 were a contract between two copies: had one nudge moved, the two readouts would describe different blocks while the player looks at one. `Crosshair.Resolve` is the one statement, both constants named and argued. | Shipped client code no test reaches — the path needs a session — so the verification is what the rules give it: the `.slnx` build compiles the mod project (`C11`), the helper uses no API the two copies did not already use (`C2` unchanged by construction), and the extraction preserves the calls, constants and early-outs in their original order. Suite 2,237 green (2026-09-04, commit `1fedf38`). |
+| 17 | *Nothing changed* — the two voxel walks, [below](#two-voxel-walks-that-share-an-algorithm-and-not-a-definition). | They share Amanatides and Woo and differ in precision, origin and bounding, each for a reason its own comments state; merging would trade a documented pair for a mode flag or a hot-path precision change nothing asked for. Each walk keeps its own oracle. |
 
 ### Measuring cleanup 4, and why one reading was not enough
 
@@ -89,6 +90,30 @@ Two near-misses are worth naming because they look like the real thing and are n
 **The test that separates them from the real duplicates is whether changing one implies changing the
 other.** For `ThermalDamage` it does — there is one answer to *what killed this* — so it is one
 declaration now. For these two it does not.
+
+### Two voxel walks that share an algorithm and not a definition
+
+`SunShadowMap.BlockedBySelf` and `VoxelWalk.Blocked` both step a ray through grid cells by
+Amanatides and Woo, and a scan for duplicated blocks flags their inner loops as copies. They are
+not one thing twice:
+
+* **Different precision for a stated reason.** The self-shadow walk is `float` from an integer air
+  cell whose first boundary is always half a cell; the occluder walk is `double` from an arbitrary
+  point another grid's transform produced, where the origin can be kilometres from the box and
+  `float` steps would land between cells.
+* **Different bounding for a stated reason.** The self-shadow walk keeps walking while outside the
+  box — its cells are the hull's skin, so most rays *start* outside and may re-enter along a
+  flank — where the occluder walk computes box entry and skips ahead, because its origin can have
+  kilometres to cross.
+* **Both are pinned to an oracle independently** (`E7`): the self-shadow walk against the analytic
+  ray-versus-cube reference in `SunShadowTests`, the occluder walk by `GridShadowTests`.
+
+Merging them means either promoting the per-air-cell hot walk to `double` — a cost and a bitwise
+behaviour change on the exposure path, judged only through a held-window bench (`M7`) and a
+bit-identity pin (`D8`) — or a mode flag that makes one function carry two contracts. The test
+this page applies to constants applies to code too: changing one walk does not imply changing the
+other, so they stay two. What guards the pair is what already guards them — each walk's own
+oracle test fails if its behaviour drifts.
 
 ### Nine unused `TryGet*` methods in `DefinitionExtensionsAPI.cs`
 
