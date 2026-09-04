@@ -99,30 +99,11 @@ namespace Thermodynamics.Harness
         /// Results are cached by fraction: every row is a pure function of the shipped XML and the
         /// two figures above it, and a suite that asserts on five of them should pay for one run.
         /// </summary>
-        private static readonly Dictionary<float, List<Row>> Cache = new Dictionary<float, List<Row>>();
+        private static readonly FractionCache<Row> Cache = new FractionCache<Row>(At);
 
         private static List<Row> SweepAt(float[] fractions)
         {
-            List<Row> rows = new List<Row>();
-
-            foreach (float fraction in fractions)
-            {
-                List<Row> cached;
-                lock (Cache)
-                {
-                    if (Cache.TryGetValue(fraction, out cached))
-                    {
-                        rows.AddRange(cached);
-                        continue;
-                    }
-                }
-
-                cached = At(fraction);
-                lock (Cache) Cache[fraction] = cached;
-                rows.AddRange(cached);
-            }
-
-            return rows;
+            return Cache.SweepAt(fractions);
         }
 
         private static List<Row> At(float fraction)
