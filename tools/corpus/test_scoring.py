@@ -447,6 +447,17 @@ class NoughtAndNothingAreDifferentAnswers(unittest.TestCase):
         self.assertEqual(-2.5, scoring.number({"a": "-2.5"}, "a"))
         self.assertEqual(1200.0, scoring.number({"a": "1.2e3"}, "a"))
 
+    def test_number_or_defaults_only_where_number_is_unmeasured(self):
+        """The caller's default answers exactly the cells `number` calls unmeasured — no more.
+
+        A measured nought must come back as the measurement, not the default, or the
+        distinction the class above defends is silently lost one wrapper out.
+        """
+        self.assertEqual(7.0, scoring.number_or({"a": "1"}, "b", 7.0))
+        self.assertEqual(7.0, scoring.number_or({"a": ""}, "a", 7.0))
+        self.assertEqual(0.0, scoring.number_or({"a": "0"}, "a", 7.0))
+        self.assertEqual(-2.5, scoring.number_or({"a": "-2.5"}, "a", 7.0))
+
 
 
 class ARowIsNamedByAShipAndAnId(unittest.TestCase):
