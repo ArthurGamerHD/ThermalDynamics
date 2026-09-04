@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using Thermodynamics.Core;
@@ -273,19 +272,7 @@ namespace Thermodynamics.Harness
 
         private static void Time(Action action, out double fastest, out double slowest)
         {
-            fastest = double.MaxValue;
-            slowest = 0d;
-
-            for (int r = 0; r < Repeats; r++)
-            {
-                Stopwatch watch = Stopwatch.StartNew();
-                action();
-                watch.Stop();
-
-                double ms = watch.Elapsed.TotalMilliseconds;
-                if (ms < fastest) fastest = ms;
-                if (ms > slowest) slowest = ms;
-            }
+            LabTiming.FastestOf(Repeats, action, out fastest, out slowest);
         }
 
         public static string Table(IList<Row> rows)
