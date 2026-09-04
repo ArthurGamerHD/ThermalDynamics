@@ -243,30 +243,18 @@ namespace Thermodynamics.Core
         {
             if (!IsBuilt || block == null) return 1f;
 
-            Vector3I offset = Face.Offsets[face];
-            int axis = Face.Axis(face);
-            bool positive = BoxGeometry.Component(offset, axis) > 0;
-
-            Vector3I min = block.Min;
-            Vector3I maxExclusive = block.MaxExclusive;
-
-            int slab = positive
-                ? BoxGeometry.Component(maxExclusive, axis) - 1
-                : BoxGeometry.Component(min, axis);
-
-            int u = (axis + 1) % 3;
-            int v = (axis + 2) % 3;
+            BoxGeometry.FaceSpan span = BoxGeometry.Span(block.Min, block.MaxExclusive, face);
 
             int cells = 0;
             int lit = 0;
 
-            for (int a = BoxGeometry.Component(min, u); a < BoxGeometry.Component(maxExclusive, u); a++)
+            for (int a = span.MinU; a < span.MaxExclusiveU; a++)
             {
-                for (int b = BoxGeometry.Component(min, v); b < BoxGeometry.Component(maxExclusive, v); b++)
+                for (int b = span.MinV; b < span.MaxExclusiveV; b++)
                 {
-                    Vector3I cell = BoxGeometry.WithComponent(Vector3I.Zero, axis, slab);
-                    cell = BoxGeometry.WithComponent(cell, u, a);
-                    cell = BoxGeometry.WithComponent(cell, v, b);
+                    Vector3I cell = BoxGeometry.WithComponent(Vector3I.Zero, span.Axis, span.Slab);
+                    cell = BoxGeometry.WithComponent(cell, span.U, a);
+                    cell = BoxGeometry.WithComponent(cell, span.V, b);
 
                     cells++;
                     if (IsFaceLit(cell, face)) lit++;
