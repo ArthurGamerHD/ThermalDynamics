@@ -164,9 +164,9 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
-        /// The installed game's `Content/Data`, or null. The same candidate list
-        /// <c>BalanceTests.GameContentPath</c> walks, kept here so the harness can be used from the
-        /// command line rather than only from a test.
+        /// The installed game's `Content/Data`, or null: SE_BIN's parent first, then the Steam
+        /// defaults. Null is not a failure — most machines running this suite have no copy. This is
+        /// the one statement of the candidate list; the tests that need the game read it from here.
         /// </summary>
         public static string ContentPath()
         {

@@ -40,7 +40,7 @@ namespace Thermodynamics.Tests
         [Fact]
         public void TheVanillaReferenceStillMatchesTheInstalledGame()
         {
-            string content = GameContentPath();
+            string content = GameBlocks.ContentPath();
             if (content == null) return;      // no install here; nothing to check against
 
             Dictionary<string, float> componentMass = new Dictionary<string, float>();
@@ -133,33 +133,6 @@ namespace Thermodynamics.Tests
         private static string Name(Vanilla.Block block)
         {
             return block.Subtype.Length > 0 ? block.Subtype : block.TypeId + " (no subtype)";
-        }
-
-        /// <summary>
-        /// The Steam default, or SE_BIN's parent. Returns null when the game is not installed,
-        /// which is not a failure — most machines running this suite have no copy.
-        /// </summary>
-        private static string GameContentPath()
-        {
-            List<string> candidates = new List<string>();
-
-            string bin = Environment.GetEnvironmentVariable("SE_BIN");
-            if (!string.IsNullOrEmpty(bin))
-            {
-                DirectoryInfo parent = Directory.GetParent(bin.TrimEnd('/', '\\'));
-                if (parent != null) candidates.Add(Path.Combine(parent.FullName, "Content", "Data"));
-            }
-
-            string home = Environment.GetEnvironmentVariable("HOME") ?? "";
-            candidates.Add(Path.Combine(home,
-                "Steam/SteamLibrary/steamapps/common/SpaceEngineers/Content/Data"));
-            candidates.Add("C:/Program Files (x86)/Steam/steamapps/common/SpaceEngineers/Content/Data");
-
-            foreach (string candidate in candidates)
-            {
-                if (File.Exists(Path.Combine(candidate, "Components.sbc"))) return candidate;
-            }
-            return null;
         }
 
         // ---- the loader ----------------------------------------------------------------------
