@@ -29,6 +29,7 @@ reader proposes again.
 | 17 | *Nothing changed* — the two voxel walks, [below](#two-voxel-walks-that-share-an-algorithm-and-not-a-definition). | They share Amanatides and Woo and differ in precision, origin and bounding, each for a reason its own comments state; merging would trade a documented pair for a mode flag or a hot-path precision change nothing asked for. Each walk keeps its own oracle. |
 | 18 | **Two copies of the analytic sun oracle, and one was the other's parent.** `Reference.Lit` was extracted from `SunShadowMapTests` for the scenario claims, and the class kept its private `ReferenceLit` and `Penetrates` — identical to the constant (`1e-3f`, `1e-9f`, same final condition, verified line by line before deletion). The tests read `Reference.Lit` now. | `E7` asks an oracle to be independent of the *model*, not of other tests — two tests sharing one slow analytic reference is the intended shape, and two copies of an oracle drift as silently as two copies of anything else. The exactness sweep still checks every face of every block against it. Suite 2,237 green (2026-09-04, commit `4e6c709`). |
 | 19 | **Cleanup 4, finished.** `SunShadowMap.FaceLitFraction` was a fourth site hand-deriving the per-face frame that `BoxGeometry.Span` extracted from the other three, and it was left behind. It reads `Span` now. | The arithmetic is identical and doubly pinned: `FaceSpanTests` is written against the numbers themselves, and the shadow map's exactness sweep checks every face of every block against the analytic oracle, fractional cases included. No cost claim is made — the call sites are the environment-row fills on shadow-pass completion, colder than the surfaces path where cleanup 4 measured this same transformation shape at worst neutral, and an unmeasured claim is not one (`M5`). Suite 2,237 green (2026-09-04, commit `2ee609d`). |
+| 20 | **One claim on a grid group, and the copies' comments had already split.** The drag pass and the top-speed pass each walked leader → physical group → scratch → smallest-entity-id identity → handled set, and the two `Handled` summaries disagreed — one said *keyed by the grid that led them*, which is not what either copy does. `GridGroups.TryClaim` states the mechanism and the id convention once, so a later pass — lift is on the roadmap — cannot pick a different convention and handle every group once per member. | The drift had already reached the prose, which is how the code drift starts. Session-only server path, so the check is `C11`'s: the `.slnx` build compiles the mod project, the helper uses only APIs the two copies already used, and each pass keeps its own scratch and handled set — the systems stay uncoupled. Suite 2,237 green (2026-09-04, commit `87956b2`). |
 
 ### Measuring cleanup 4, and why one reading was not enough
 
@@ -117,6 +118,17 @@ this page applies to constants applies to code too: changing one walk does not i
 other, so they stay two. What guards the pair is what already guards them — each walk's own
 oracle test fails if its behaviour drifts.
 
+### The room mapper's two run walks are specialisation, not duplication
+
+`StepExternalRun` and `StepInteriorRun` read as near-copies to a scan, and the interior one's own
+summary already answers it: *the same walk … and it has one thing to do that the external one does
+not* — a cell it reaches is either air joining the room or sealed structure recorded as the room's
+boundary, where the external walk counts cells and stores nothing. These are the loops passes 4
+through 10 of the performance effort spent their time in; merging them puts a mode branch in the
+per-cell body of the hottest stage the repository has, to remove a duplication whose two halves
+already document their difference. Held by `RoomMappingNeverExceedsItsBudgetInOneTick` and the room
+map's own comparison tests either way.
+
 ### Nine unused `TryGet*` methods in `DefinitionExtensionsAPI.cs`
 
 `TryGetString`, `TryGetInt`, `TryGetLong`, `TryGetFloat`, `TryGetColor`, `TryGetVector2I`,
@@ -140,5 +152,5 @@ somebody else's live code that this repository does not happen to call.
 
 | Date | Change |
 | --- | --- |
-| 2026-09-04 | Second pass opened, ten iterations. Iteration 11 merged: the census's tool list, which claimed to mirror `ShipLoad`'s and had drifted over the jump drive, dissolved into the one public list. Suite figures in this pass are dated and stamped with the commit they were taken at, per the standing requirement that a test result is transitory. |
+| 2026-09-04 | **Second pass closed: ten iterations, eight merged and two recorded as verdicts.** Merged: the census's drifted tool-list mirror (11), the duplicated game-install candidate list (12), the duration labs' shared stopwatch (13), the corpus tools' one default-taking cell read (14), the waste-fraction labs' one cache policy (15), the crosshair resolution (16), the sun oracle its own extraction had left behind (18), cleanup 4 finished in the shadow map (19), and the grid-group claim whose two comments had already split (20). Not changed, with the reasons above: the two voxel walks (17) and the room mapper's two run walks — both share an algorithm and not a definition. Every suite figure in the pass is dated and stamped with its commit; the baseline was 2,237 green at `358797b` and the pass ends 2,237 green, with one python test added (198 → 199). Two live drifts were found and closed by construction rather than described: `tool_n` counted the jump drive as a tool after the load model stopped doing so, and a `Handled` summary described a keying neither copy used. |
 | 2026-08-29 | Opened. Two changes merged — one preamble for the API's grid accessors, and the three dead null checks against a `LiveGrids` that cannot be null — and one finding recorded rather than acted on: the nine unused `TryGet*` methods in the vendored `DefinitionExtensionsAPI.cs`, which stay because trimming a vendored client to the subset this mod happens to call turns every future update from a copy into a merge. |

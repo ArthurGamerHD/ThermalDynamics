@@ -48,7 +48,7 @@ namespace Thermodynamics
         /// <summary>Scratch for a group's grids, so a tick allocates nothing.</summary>
         private static readonly List<IMyCubeGrid> GroupGrids = new List<IMyCubeGrid>();
 
-        /// <summary>Groups already handled this tick, keyed by the smallest entity id in them.</summary>
+        /// <summary>Groups already handled this tick, keyed as GridGroups.TryClaim keys them.</summary>
         private static readonly HashSet<long> Handled = new HashSet<long>();
 
         /// <summary>
@@ -146,23 +146,7 @@ namespace Thermodynamics
         /// </summary>
         private static void ApplyToGroupOf(IMyCubeGrid leader, Settings settings)
         {
-            IMyGridGroupData group = leader.GetGridGroup(GridLinkTypeEnum.Physical);
-            if (group == null) return;
-
-            GroupGrids.Clear();
-            group.GetGrids(GroupGrids);
-            if (GroupGrids.Count == 0) return;
-
-            long identity = long.MaxValue;
-            for (int i = 0; i < GroupGrids.Count; i++)
-            {
-                if (GroupGrids[i] != null && GroupGrids[i].EntityId < identity)
-                {
-                    identity = GroupGrids[i].EntityId;
-                }
-            }
-
-            if (!Handled.Add(identity)) return;
+            if (!GridGroups.TryClaim(leader, GroupGrids, Handled)) return;
 
             IMyCubeGrid physical = null;
             float mass = 0f;
