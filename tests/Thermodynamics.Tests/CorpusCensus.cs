@@ -298,7 +298,10 @@ namespace Thermodynamics.Tests
                 }
                 else other++;
 
-                if (IsToolType(definition.TypeId)) tools++;
+                // Counted as well as in its power category, because "how many tools" and "how many
+                // consumers" are different questions about the same block. The list is the load
+                // model's own, so what counts as a tool cannot drift from what runs as one.
+                if (ShipLoad.IsTool(definition.TypeId)) tools++;
             }
 
             // ---- what it makes, at each load ---------------------------------------------------
@@ -435,31 +438,5 @@ namespace Thermodynamics.Tests
             return censused;
         }
 
-        /// <summary>
-        /// Blocks that run only when a player is using them. Mirrors <c>ShipLoad</c>'s own list,
-        /// which is private to it; a tool is counted here as well as in its power category, because
-        /// "how many tools" and "how many consumers" are different questions about the same block.
-        /// </summary>
-        private static bool IsToolType(string typeId)
-        {
-            switch (typeId)
-            {
-                case "Drill":
-                case "ShipGrinder":
-                case "ShipWelder":
-                case "Refinery":
-                case "Assembler":
-                case "SmallGatlingGun":
-                case "LargeGatlingTurret":
-                case "InteriorTurret":
-                case "SmallMissileLauncher":
-                case "SmallMissileLauncherReload":
-                case "LargeMissileTurret":
-                case "JumpDrive":
-                    return true;
-                default:
-                    return false;
-            }
-        }
     }
 }

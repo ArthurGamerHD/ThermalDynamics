@@ -322,8 +322,13 @@ namespace Thermodynamics.Harness
         /// that reads as *the ship's electrical load* — never reached the block carrying 71.3 % of
         /// the corpus's full-load waste heat. Every published figure is unaffected, because the two
         /// shares agree in all four states that existed; what it cost was a dial nobody could use.
+        ///
+        /// **Public because the census counts tools too, and its own copy of this list drifted.**
+        /// The census kept a mirror that still filed the jump drive as a tool after this list
+        /// stopped doing so, so `tool_n` and the load model disagreed about what a tool is. One
+        /// list, two readers, per rules.md P5.
         /// </summary>
-        private static bool IsTool(string typeId)
+        public static bool IsTool(string typeId)
         {
             switch (typeId)
             {
