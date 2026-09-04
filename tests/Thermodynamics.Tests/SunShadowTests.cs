@@ -177,74 +177,10 @@ namespace Thermodynamics.Tests
         }
 
         // ---- exactness, against a reference that cannot be wrong ---------------------------
-
-        /// <summary>
-        /// The answer, worked out the slow obvious way: intersect the ray with every other cell's
-        /// cube and see whether it passes through any of them. O(cells) per cell and analytic
-        /// rather than sampled — a sampled walk rounds at cell boundaries and cannot tell a ray
-        /// that passes through a cube from one that grazes its corner, which is precisely the
-        /// distinction under test.
-        ///
-        /// A ray that only touches a cube — entering and leaving at the same point — is not
-        /// blocked by it. Anything else would have a wall of blocks shadow the cells beside it.
-        /// </summary>
-        private static bool ReferenceLit(GridModel grid, Vector3I cell, Vector3 sun)
-        {
-            sun = Vector3.Normalize(sun);
-            Vector3 origin = new Vector3(cell.X, cell.Y, cell.Z);
-
-            IList<BlockInstance> blocks = grid.Blocks;
-            for (int i = 0; i < blocks.Count; i++)
-            {
-                Vector3I[] cells = blocks[i].Cells;
-                for (int c = 0; c < cells.Length; c++)
-                {
-                    if (cells[c] == cell) continue;
-                    if (Penetrates(origin, sun, cells[c])) return false;
-                }
-            }
-
-            return true;
-        }
-
-        /// <summary>Slab test: does the ray pass through this cell's cube with length to spare?</summary>
-        private static bool Penetrates(Vector3 origin, Vector3 direction, Vector3I cell)
-        {
-            const float Epsilon = 1e-3f;
-
-            float enter = 0f;
-            float exit = float.MaxValue;
-
-            for (int axis = 0; axis < 3; axis++)
-            {
-                float o = axis == 0 ? origin.X : axis == 1 ? origin.Y : origin.Z;
-                float d = axis == 0 ? direction.X : axis == 1 ? direction.Y : direction.Z;
-                float centre = axis == 0 ? cell.X : axis == 1 ? cell.Y : cell.Z;
-
-                float low = centre - 0.5f;
-                float high = centre + 0.5f;
-
-                if (Math.Abs(d) < 1e-9f)
-                {
-                    if (o < low || o > high) return false;
-                    continue;
-                }
-
-                float t1 = (low - o) / d;
-                float t2 = (high - o) / d;
-                if (t1 > t2)
-                {
-                    float swap = t1;
-                    t1 = t2;
-                    t2 = swap;
-                }
-
-                if (t1 > enter) enter = t1;
-                if (t2 < exit) exit = t2;
-            }
-
-            return exit - enter > Epsilon && exit > Epsilon;
-        }
+        //
+        // The reference is Reference.Lit — the shared analytic oracle. It began life in this
+        // class; when it was extracted for the scenario claims, this class kept a private copy,
+        // and two copies of an oracle drift as silently as two copies of anything else.
 
         /// <summary>
         /// Checks every face of every block against the reference. The map answers for the air just
@@ -265,7 +201,7 @@ namespace Thermodynamics.Tests
                         Vector3I outside = cells[c] + Face.Offsets[face];
                         if (grid.IsOccupied(outside)) continue;
 
-                        Assert.Equal(ReferenceLit(grid, outside, sun), map.IsFaceLit(cells[c], face));
+                        Assert.Equal(Reference.Lit(grid, outside, sun), map.IsFaceLit(cells[c], face));
                     }
                 }
             }
@@ -362,7 +298,7 @@ namespace Thermodynamics.Tests
 
             Assert.True(map.IsFaceLit(Vector3I.Zero, Face.Right));
             Assert.Equal(
-                ReferenceLit(builder.Grid, new Vector3I(1, 0, 0), sun),
+                Reference.Lit(builder.Grid, new Vector3I(1, 0, 0), sun),
                 map.IsFaceLit(Vector3I.Zero, Face.Right));
         }
 
