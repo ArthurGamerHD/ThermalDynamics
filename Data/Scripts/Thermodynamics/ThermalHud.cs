@@ -172,22 +172,12 @@ namespace Thermodynamics
             ToolText.Clear();
             if (!UsingExtinguisherTool()) return;
 
-            MatrixD matrix = MyAPIGateway.Session.Camera.WorldMatrix;
+            Crosshair.Target target;
+            if (!Crosshair.Resolve(out target)) return;
 
-            Vector3D start = matrix.Translation;
-            Vector3D end = start + (matrix.Forward * 15);
-
-            IHitInfo hit;
-            MyAPIGateway.Physics.CastRay(start, end, out hit);
-            MyCubeGrid grid = hit == null ? null : hit.HitEntity as MyCubeGrid;
-            if (grid == null) return;
-
-            ThermalGrid thermals = grid.GameLogic.GetAs<ThermalGrid>();
-            if (thermals == null || thermals.Simulation == null) return;
-
-            Vector3I position = grid.WorldToGridInteger(hit.Position + (matrix.Forward * 0.005f));
-            ThermalBlock bound = thermals.GetAtCell(position);
-            if (bound == null || bound.Node == null) return;
+            ThermalGrid thermals = target.Thermals;
+            ThermalBlock bound = target.Block;
+            MatrixD matrix = target.Camera;
 
             DrawBillboard(thermals, bound, matrix);
 

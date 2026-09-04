@@ -1,7 +1,5 @@
-using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
 using Thermodynamics.Core;
-using VRage.Game.ModAPI;
 using VRageMath;
 
 namespace Thermodynamics
@@ -20,24 +18,12 @@ namespace Thermodynamics
             if (MyAPIGateway.Utilities.IsDedicated) return;
             if (Settings.Instance == null || !Settings.Instance.DebugTextOnScreen) return;
 
-            MatrixD matrix = MyAPIGateway.Session.Camera.WorldMatrix;
+            Crosshair.Target target;
+            if (!Crosshair.Resolve(out target)) return;
 
-            Vector3D start = matrix.Translation;
-            Vector3D end = start + (matrix.Forward * 15);
-
-            IHitInfo hit;
-            MyAPIGateway.Physics.CastRay(start, end, out hit);
-            MyCubeGrid grid = hit == null ? null : hit.HitEntity as MyCubeGrid;
-            if (grid == null) return;
-
-            ThermalGrid thermals = grid.GameLogic.GetAs<ThermalGrid>();
-            if (thermals == null || thermals.Simulation == null) return;
-
-            Vector3I cell = grid.WorldToGridInteger(hit.Position + (matrix.Forward * 0.005f));
-            ThermalBlock bound = thermals.GetAtCell(cell);
-            if (bound == null || bound.Node == null) return;
-
-            ThermalNode node = bound.Node;
+            ThermalGrid thermals = target.Thermals;
+            Vector3I cell = target.Cell;
+            ThermalNode node = target.Block.Node;
             BlockThermalProperties thermal = node.Thermal;
             ThermalSimulation simulation = thermals.Simulation;
 
