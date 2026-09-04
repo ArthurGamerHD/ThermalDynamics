@@ -40,19 +40,12 @@ REQUIRED = {"idle", "vacuum-sunlit", "full-electrical", "burn-forward", "recover
 
 
 def number(row, key, default=0.0):
-    """A cell as a float, defaulting where the dataset does not carry it.
-
-    **The parsing is `scoring.number` and the default is this tool's own choice.**
-    `scoring.number` reports an absent cell as *unmeasured* because nought and nothing are
-    different answers (`E8`) — twelve copies of that parse had already drifted into three
-    behaviours, one of which was a live defect in `censusdiff.py`. Where a tool wants a
-    default it says so here rather than burying it in a second parser.
+    """A cell as a float, defaulting to nought — this tool's own choice (`scoring.number_or`).
 
     The panel is picked from a census that carries every column it names, and a ship
     missing one is a ship with none of that thing rather than a ship we cannot read.
     """
-    value = scoring.number(row, key)
-    return default if value is None else value
+    return scoring.number_or(row, key, default)
 
 
 

@@ -328,6 +328,19 @@ def number(row, key):
         return None
 
 
+def number_or(row, key, default):
+    """`number`, with the caller's own answer for a cell the dataset does not carry.
+
+    **The default has no default: the caller states it, at the call site, every time.** That is the
+    contract iteration 8 of the cleanup effort settled — parsing is one definition and the default
+    is the tool's own visible choice — and this function exists so the three tools that want one do
+    not each restate the mechanism. A tool that wraps this says *why* its default is right for its
+    columns; this says only how the mechanism works.
+    """
+    value = number(row, key)
+    return default if value is None else value
+
+
 # ---- what identifies a row ------------------------------------------------------------------
 
 #: The columns that name the ship a row is about.
