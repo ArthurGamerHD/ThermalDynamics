@@ -3293,7 +3293,8 @@ blocks, warm, allocating 12 KB where it allocated 7,484 (iteration 5); the first
 distribution (iteration 8); retained memory measured at **723 B/block**, the page's own items-2–5
 projection landed (iteration 9).
 
-**The pass's shape.** Ten iterations: three that measured and corrected the record (1, 8, 9), three
+**The pass's shape.** Ten iterations to this close, and an eleventh — the benchmark baseline
+re-take — as a postscript below it: three that measured and corrected the record (1, 8, 9), three
 that landed or completed code (2, 4 finishing 3's landing, 5, 6), one measured refusal kept in the
 history with its revert (7), and the instrument corrections without which two of the wins were
 invisible — the stage lab's rooms allocation sample read the warm-up as the steady state, and the
@@ -3308,10 +3309,30 @@ structural trio — fewer nodes, fewer substeps, fewer visits — of which lumpi
 left on this branch of work is structural or session-gated, and the record now says so with
 figures rather than adjectives.
 
+## Pass 10, iteration 11 — the committed baseline had outlived its own era
+
+**What was found.** `tests/benchmarks/performance.csv` — the baseline every `bench report
+--baseline` comparison reads — was recorded on **2026-08-22**, four days before `M13` made the
+harness compile optimised and two census refreshes ago. Every baseline comparison of the whole
+optimised era crossed both boundaries, which is the comparison `M7` forbids; nothing failed,
+because `BenchmarkBaselineTests` pins the case-key contract (`M6`) and deliberately not the
+values. The same headline-outlives-the-paragraphs shape pass 10 opened on, one instrument deeper.
+
+**What the era-crossing comparison looks like, as a warning rather than a result**: steps read
+−50 to −74 % (three eras at once — the optimiser, the census, and the passes), sixteen ladder
+rungs at 500,000 and 1,000,000 blocks exist only on the new side, and four sub-millisecond step
+shape rows read +200 to +540 % from inside the old baseline's noise floor — which the comparison
+itself flags and declines to count (`M5`).
+
+**What changed.** The baseline is re-taken on today's build and committed; iteration-log row 19 on
+[benchmarks.md](benchmarks.md#the-iteration-log) carries the pass and the re-take. The first
+comparison against the new baseline will be the first one since 2026-08-22 that means anything.
+
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **Pass 10, iteration 11: the committed benchmark baseline was the 2026-08-22 unoptimised one for the whole optimised era — re-taken.** The key-contract pins (`M6`) could not see it, because they pin keys and not eras. Iteration-log row 19 on benchmarks.md carries pass 10. |
 | 2026-09-04 | **Pass 10 closes.** Start against tip, interleaved, two rounds: register −3,020 KB a repeat (`E4`, exact), a steady room pass at 0 KB where it bought 4,881 (`D20`), rooms timing lower on both statistics in all four pairs, both controls flat, and the solver's overlapping medians left unclaimed. The per-event wins are in their own iterations: first step 26.16 → 12.53 ms warm at 505,566 blocks, first sunlit step 34.87 → 25.97 with the drift churn gone, hitch p99 26.47 → 3.11, memory at 723 B/block. What is left is structural (`D1`, `D2`, `D5`, `D6`) or session-gated (`D19`, `D14`, `D15`). |
 | 2026-09-04 | **Pass 10, iteration 9: the memory pages re-measured — 723 B/block retained at 126,731 blocks and 744 at 505,566, against the 1,023/1,141 memory.md carried and the 1.8 KB known-issues did.** The items-2–5 projection (~730) has landed; the room-map slope between the rungs is 21 B/block where the page said 101; nothing is left on the page that predates the current tables. |
 | 2026-09-04 | **Pass 10, iteration 8: the hitch distribution re-taken (p99 26.47 → 3.11 ms at 126,731 blocks, 28.71 → 6.90 at 505,566) and the tick-0 outlier attributed to the per-process JIT; the lane refresh tagged `UncalledCodeTests` (2.45 s) and the fast lane is 1,923 cases in 4 s.** |
