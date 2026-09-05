@@ -35,16 +35,12 @@ namespace Thermodynamics.Tests
 
                 Assert.True(baseHeat > 0f, "the baseline block has no specific heat to scale");
 
-                Blueprints.MaterialOverride = (typeId, subtype, source) => new BlockThermalProperties
+                Blueprints.MaterialOverride = (typeId, subtype, source) =>
                 {
-                    Conductivity = source.Conductivity,
-                    SpecificHeat = source.SpecificHeat * 4f,
-                    Emissivity = source.Emissivity * 0.5f,
-                    ExposedSurfaceMultiplier = source.ExposedSurfaceMultiplier,
-                    ProducerWasteEnergy = source.ProducerWasteEnergy,
-                    ConsumerWasteEnergy = source.ConsumerWasteEnergy,
-                    CriticalTemperature = source.CriticalTemperature,
-                    OverheatDamagePerKelvin = source.OverheatDamagePerKelvin,
+                    BlockThermalProperties scaled4 = source.Clone();
+                    scaled4.SpecificHeat = source.SpecificHeat * 4f;
+                    scaled4.Emissivity = source.Emissivity * 0.5f;
+                    return scaled4;
                 };
 
                 BlockThermalProperties scaled = Blueprints.Model(definition).Thermal;
@@ -101,17 +97,9 @@ namespace Thermodynamics.Tests
                 {
                     if (typeId != "Thrust") return source;
 
-                    return new BlockThermalProperties
-                    {
-                        Conductivity = source.Conductivity,
-                        SpecificHeat = source.SpecificHeat * 3f,
-                        Emissivity = source.Emissivity,
-                        ExposedSurfaceMultiplier = source.ExposedSurfaceMultiplier,
-                        ProducerWasteEnergy = source.ProducerWasteEnergy,
-                        ConsumerWasteEnergy = source.ConsumerWasteEnergy,
-                        CriticalTemperature = source.CriticalTemperature,
-                        OverheatDamagePerKelvin = source.OverheatDamagePerKelvin,
-                    };
+                    BlockThermalProperties tripled = source.Clone();
+                    tripled.SpecificHeat = source.SpecificHeat * 3f;
+                    return tripled;
                 };
 
                 Assert.Equal(targetBefore * 3f, Blueprints.Model(target).Thermal.SpecificHeat, 3);

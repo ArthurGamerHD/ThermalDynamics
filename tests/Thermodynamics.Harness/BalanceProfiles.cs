@@ -139,17 +139,11 @@ namespace Thermodynamics.Harness
         /// </summary>
         public BlockThermalProperties Material(BlockThermalProperties source)
         {
-            BlockThermalProperties copy = new BlockThermalProperties
-            {
-                Conductivity = source.Conductivity * (ConductionPace / ThermalConstants.ConductionScale),
-                SpecificHeat = source.SpecificHeat,
-                Emissivity = source.Emissivity,
-                ExposedSurfaceMultiplier = source.ExposedSurfaceMultiplier,
-                ProducerWasteEnergy = source.ProducerWasteEnergy,
-                ConsumerWasteEnergy = source.ConsumerWasteEnergy,
-                CriticalTemperature = source.CriticalTemperature,
-                OverheatDamagePerKelvin = source.OverheatDamagePerKelvin,
-            };
+            // The definition's own Clone carries every field; only the pace is this profile's to
+            // change. The hand copy this replaces silently dropped ExcludeFromSimulation,
+            // SolarAbsorptivity and HeatSourceWatts.
+            BlockThermalProperties copy = source.Clone();
+            copy.Conductivity = source.Conductivity * (ConductionPace / ThermalConstants.ConductionScale);
             return copy;
         }
 
