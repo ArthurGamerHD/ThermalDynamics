@@ -40,7 +40,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import scoring
 
-args = [a for a in sys.argv[1:] if not a.startswith("--")]
+args = scoring.positionals(())
 CENSUS = args[0] if len(args) > 0 else "out/census-2026-08-21/census.csv"
 OUTCOMES = args[1] if len(args) > 1 else "out/corpus-2026-08-21/outcomes.csv"
 TARGET = args[2] if len(args) > 2 else "tools/corpus/typical.csv"

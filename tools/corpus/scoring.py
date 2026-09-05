@@ -406,6 +406,23 @@ def load(data_dir, name):
         return list(csv.DictReader(handle))
 
 
+def load_required(path):
+    """The rows of a CSV the tool cannot run without: absent means exit, with the path named.
+
+    The other side of `load`'s contract — there, an absent page is a legitimate empty answer and
+    the caller prints its own guidance; here the page *is* the dataset, and continuing without it
+    would score nothing and call it a result (`E8`). Two tools carried this body identically; a
+    tool whose guidance is more specific than the path (which sweep to run, say) keeps its own
+    loader and says so.
+    """
+    if not os.path.exists(path):
+        print("no dataset at " + path)
+        sys.exit(1)
+
+    with open(path, newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
 def number_or(row, key, default):
     """`number`, with the caller's own answer for a cell the dataset does not carry.
 

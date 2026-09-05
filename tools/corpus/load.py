@@ -47,8 +47,12 @@ from pairs import (  # noqa: E402
     crossing_median,
     crossings,
     median,
-    number,
 )
+
+# The cell parse is scoring.number — cleanup 7 consolidated the twelve copies and deleted
+# pairs.number while this import still named it, and this tool would not import for six days
+# because nothing imports the tools (the record's iteration 41, and the gate is iteration 42).
+number = scoring.number
 
 DATA = sys.argv[1] if len(sys.argv) > 1 else "out/load-2026-08-23"
 
@@ -61,13 +65,7 @@ CASES = {
 
 
 def load(name):
-    import csv
-
-    path = os.path.join(DATA, name + ".csv")
-    if not os.path.exists(path):
-        return []
-    with open(path) as handle:
-        return list(csv.DictReader(handle))
+    return scoring.load(DATA, name)
 
 
 def share(rows, predicate):
