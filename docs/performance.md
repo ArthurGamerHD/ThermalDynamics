@@ -3261,10 +3261,58 @@ indexed by bounding volume — a description of a mod that predates the packed t
 and the recycled room map. All three corrected in place, with the superseded figures kept visible
 (`E10`).
 
+## Pass 10 — what the pass moved
+
+The pass's starting commit (`52f30e2`, the tree before iteration 2's first code change) against
+its tip, both built the same way, interleaved in one window at 126,731 blocks, two rounds of
+`bench stages --isolate` each, minimum and median both read (`M4`, `M7`):
+
+| stage | start, best (r1 / r2) | tip, best | start, median | tip, median | allocated, start → tip |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| place *(control)* | 8.140 / 8.141 | 8.148 / 8.113 | 8.82 / 8.81 | 9.02 / 8.82 | 32,443 KB, unmoved |
+| register | 3.496 / 3.183 | 3.167 / 3.221 | 4.43 / 4.00 | 3.73 / 3.76 | **23,364 → 20,344 KB** |
+| links *(control)* | 12.175 / 12.072 | 11.956 / 11.967 | 12.89 / 12.49 | 12.44 / 12.41 | 0, unmoved |
+| rooms | 14.364 / 14.242 | **13.833 / 13.394** | 15.10 / 14.93 | **14.20 / 13.66** | 4,881 → **0 KB** |
+| solver | 18.322 / 17.688 | 17.121 / 17.195 | 19.82 / 19.61 | 18.54 / 19.76 | 0, unmoved |
+
+**What is claimed.** The two allocation columns, which are exact: `register` gives back 3,020 KB —
+`E4`'s 24 bytes a node to the kilobyte — and a steady room pass allocates nothing where it bought
+its own 4,881 KB map (`D20`; the start binary's figure is its repeat-1 sample, which iteration 4
+showed is the slot-building pass — the *steady* pass is the comparable claim and the tip's
+instrument is the one that can read it). The rooms *timing* reads lower on both statistics in all
+four pairs — best −0.5 / −0.8 ms, median −0.9 / −1.3 — which is consistent with the recycled map's
+locality and is reported as observed rather than claimed as designed. The solver's minimum reads
+lower in all four pairs and its median ranges overlap, so it is not claimed (`M5`). The two
+controls are flat.
+
+**What the pass moved that a stage table cannot show**, each measured in its own iteration, in one
+window there: the first step of a grid's life 26.16 → **12.53 ms** against a steady 8.3 at 505,566
+blocks, warm, allocating 12 KB where it allocated 7,484 (iteration 5); the first *sunlit* step
+34.87 → **25.97 ms** at 126,731 blocks with the sun-drift rebuild churn gone entirely (iteration
+6); hitch **p99 26.47 → 3.11 ms** at 126,731 blocks and 28.71 → 6.90 at 505,566 on the re-taken
+distribution (iteration 8); retained memory measured at **723 B/block**, the page's own items-2–5
+projection landed (iteration 9).
+
+**The pass's shape.** Ten iterations: three that measured and corrected the record (1, 8, 9), three
+that landed or completed code (2, 4 finishing 3's landing, 5, 6), one measured refusal kept in the
+history with its revert (7), and the instrument corrections without which two of the wins were
+invisible — the stage lab's rooms allocation sample read the warm-up as the steady state, and the
+first-step instrument conflated per-process JIT with per-grid cost. That is pass 9's ratio again:
+half the pass's value was making the instruments tell the truth.
+
+**Where a pass 11 starts.** The stage table above is the floor the mechanisable work has reached:
+place and register are `E12`'s measured refusal, links is `D3b`'s six-scheme floor, the room pass
+is flat per cell and budget-bound (`D2` — the lever is fewer cells), and the solver is `D1`'s
+structural trio — fewer nodes, fewer substeps, fewer visits — of which lumping (`D5`) and multirate
+(`D6`) are designed and unbuilt, and `D19`'s parallel fleet ships off pending a session. What is
+left on this branch of work is structural or session-gated, and the record now says so with
+figures rather than adjectives.
+
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **Pass 10 closes.** Start against tip, interleaved, two rounds: register −3,020 KB a repeat (`E4`, exact), a steady room pass at 0 KB where it bought 4,881 (`D20`), rooms timing lower on both statistics in all four pairs, both controls flat, and the solver's overlapping medians left unclaimed. The per-event wins are in their own iterations: first step 26.16 → 12.53 ms warm at 505,566 blocks, first sunlit step 34.87 → 25.97 with the drift churn gone, hitch p99 26.47 → 3.11, memory at 723 B/block. What is left is structural (`D1`, `D2`, `D5`, `D6`) or session-gated (`D19`, `D14`, `D15`). |
 | 2026-09-04 | **Pass 10, iteration 9: the memory pages re-measured — 723 B/block retained at 126,731 blocks and 744 at 505,566, against the 1,023/1,141 memory.md carried and the 1.8 KB known-issues did.** The items-2–5 projection (~730) has landed; the room-map slope between the rungs is 21 B/block where the page said 101; nothing is left on the page that predates the current tables. |
 | 2026-09-04 | **Pass 10, iteration 8: the hitch distribution re-taken (p99 26.47 → 3.11 ms at 126,731 blocks, 28.71 → 6.90 at 505,566) and the tick-0 outlier attributed to the per-process JIT; the lane refresh tagged `UncalledCodeTests` (2.45 s) and the fast lane is 1,923 cases in 4 s.** |
 | 2026-09-04 | **Pass 10, iteration 7: deriving the face weights from the packed counts is +10 % on the solver stage — tried, measured, dropped.** Bit-identical by construction and green through every suite, but 17.3 → 19.1 ms on the minimum and 19.0 → 20.9 on the median, both rounds, identical work. `E2`'s "derivable, but at what cost" question is answered with a refusal: the mirrored row is cheaper to read than to derive. The attempt and its revert are both in the branch. |
