@@ -485,11 +485,7 @@ def main():
 
 def write_summary(path):
     """The figures as `statistic,value,unit`, which is what makes them quotable (`E5`)."""
-    with open(path, "w", newline="", encoding="utf-8") as handle:
-        writer = csv.writer(handle)
-        writer.writerow(["statistic", "value", "unit"])
-        for statistic, value, unit in FIGURES:
-            writer.writerow([statistic, value, unit])
+    scoring.write_summary(path, FIGURES)
     print(f"\ncsv -> {path}  ({len(FIGURES)} figures)")
 
 

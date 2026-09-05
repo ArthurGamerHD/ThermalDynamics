@@ -586,11 +586,7 @@ print("  under-massed, or too weakly coupled to its neighbours — a dozen defin
 # ---- the summary --------------------------------------------------------------------------
 
 if CSV_OUT:
-    with open(CSV_OUT, "w", newline="") as handle:
-        writer = csv.writer(handle)
-        writer.writerow(["statistic", "value", "unit"])
-        for statistic, value, unit in FIGURES:
-            writer.writerow([statistic, value, unit])
+    scoring.write_summary(CSV_OUT, FIGURES)
     print(f"\ncsv -> {CSV_OUT}  ({len(FIGURES)} figures)")
 
 if BASELINE:

@@ -328,6 +328,22 @@ def number(row, key):
         return None
 
 
+def write_summary(path, figures):
+    """The `statistic,value,unit` summary page, as one statement of the format.
+
+    Seven tools wrote this page independently, and it is a contract rather than a convention:
+    the committed `summary-*.csv` files quoted by the docs are this page (`E5` — the page is
+    what makes a figure quotable), and `verdict.py` reads one back as its `--baseline`. The
+    encoding is pinned so the page does not depend on the machine's locale; the callers keep
+    their own closing print, which is operator chat rather than the page.
+    """
+    with open(path, "w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["statistic", "value", "unit"])
+        for statistic, value, unit in figures:
+            writer.writerow([statistic, value, unit])
+
+
 def load(data_dir, name):
     """The rows of `<data_dir>/<name>.csv`, or an empty list where the file does not exist.
 

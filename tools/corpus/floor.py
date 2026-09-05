@@ -271,11 +271,7 @@ def main():
             print("        %10.4f K  %-44s %s" % (delta, key[0][:44], key[2]))
 
     if CSV_OUT:
-        with open(CSV_OUT, "w", newline="", encoding="utf-8") as handle:
-            writer = csv.writer(handle)
-            writer.writerow(["statistic", "value", "unit"])
-            for statistic, value, unit in FIGURES:
-                writer.writerow([statistic, value, unit])
+        scoring.write_summary(CSV_OUT, FIGURES)
         print("\ncsv -> %s  (%d figures)" % (CSV_OUT, len(FIGURES)))
 
 
