@@ -364,10 +364,7 @@ namespace Thermodynamics.Harness
 
         private static float Percentile(List<float> sorted, float fraction)
         {
-            if (sorted.Count == 0) return 0f;
-
-            int index = (int)(fraction * (sorted.Count - 1));
-            return sorted[index];
+            return LabStats.PercentileOfSorted(sorted, fraction);
         }
 
         public override string ToString()
