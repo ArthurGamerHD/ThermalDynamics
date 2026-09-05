@@ -720,17 +720,9 @@ namespace Thermodynamics.Harness
 
         private static BlockThermalProperties Clone(BlockThermalProperties source)
         {
-            return new BlockThermalProperties
-            {
-                Conductivity = source.Conductivity,
-                SpecificHeat = source.SpecificHeat,
-                Emissivity = source.Emissivity,
-                ExposedSurfaceMultiplier = source.ExposedSurfaceMultiplier,
-                ProducerWasteEnergy = source.ProducerWasteEnergy,
-                ConsumerWasteEnergy = source.ConsumerWasteEnergy,
-                CriticalTemperature = source.CriticalTemperature,
-                OverheatDamagePerKelvin = source.OverheatDamagePerKelvin,
-            };
+            // The definition's own Clone; the hand copy this replaces silently dropped
+            // ExcludeFromSimulation, SolarAbsorptivity and HeatSourceWatts.
+            return source.Clone();
         }
 
         /// <summary>The same panel, but bolted on by every face rather than only top and bottom.</summary>
