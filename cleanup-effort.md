@@ -52,6 +52,7 @@ reader proposes again.
 | 41 | **The straggler sweep, run as the pass-opener it was prescribed to be — five fixes and a live break.** `core.py` read `--score`'s value raw (34's crash form); `typical.py` kept the bare comprehension (35's); `load.py` carried a fourth page loader (21's); `cap.py` and `floor.py` shared an identical load-or-die contract, now `scoring.load_required`. **And `load.py` had been broken since 2026-08-29**: cleanup 7 deleted `pairs.number` while `load.py` imported it, and the tool would not import for six days across four green passes — the python twin of the first pass's recorded C# lesson, because nothing imports the tools. | The fix is proven by reproduction: the repaired tool's report on `out/load-2026-08-23` is byte-identical to the last working version's (`bf647d9^`). `knob.py` keeps its own loader for its own guidance message — the caller's half of `load`'s contract. cap, floor, panel, typical byte-identical. 203 python and 2,238 C# green (2026-09-04, commit `f018f3c`). The gate that closes the import class is iteration 42. |
 | 42 | **The import gate.** Nothing imports the tools — several run a report at module level — so the gate parses instead: every tool under `tools/corpus` and `tools/lanes` must compile, and every from-import naming a local module must name something that module binds at top level. Refuses to pass when it matched almost nothing (`E8`); its limit — from-imports, not uses — is stated on it. Proven against the deliberate reintroduction of `load.py`'s exact break before being believed. | Two process notes, both owned in the history: commit `dce7757` landed with the C# suite red, because `EveryToolIsNamedByItsReadme` — the repository's own reachability guard — refused the gate the moment it was added, and the failure was masked in the terminal by a pipeline whose exit status was `tail`'s rather than `dotnet test`'s. The README names the gate now. 204 python and 2,238 C# green (2026-09-04, commit `6f2956d`). |
 | 43 | **`test_lanes.py` was run by nothing.** `D2`'s class in the test tooling itself: built, named by its README, and reached by no command — the documented discovery starts at `tools/corpus`, and `discover -s tools` finds zero tests and exits OK, a discovery that judged nothing, passing. The corpus discovery bridges to the lanes suite now, refusing to pass if it shrinks to nothing, proven by a sabotaged lanes assertion the bridge reported by name. `lanes.py`'s bare positional comprehension stays, with the reason: no value flags, so 35's leak cannot occur, and importing corpus `scoring` across tool families couples two independent tools for nothing. | One operational note: proving the bridge left a stale `__pycache__` serving sabotaged bytecode after a same-size restore — the python twin of the stale-DLL note — and the suite stayed red until it was cleared. 205 python green (the bridge adds one and reaches ten more); 2,238 C# green with the exit code read directly (2026-09-04, commit `0b5397a`). |
+| 44 | *Nothing changed* — the sweep's tail triaged into [standing exclusions](#the-straggler-sweeps-standing-exclusions), so the next pass's sweep starts from a list instead of re-deriving each verdict. | An oracle keeps its old spelling because the old spelling is what makes it evidence (`D8`); a tool with no value flags cannot leak one; a caller's guidance stays with the caller; and a shared word is not a shared contract. |
 | 40 | *Nothing changed* — the fourth pass's examined-and-left-alone shapes and the one question only a game session can settle, [above](#shapes-examined-in-the-fourth-pass-and-left-alone), and the pass closes. | An assembly convention is not a pipeline, a shared name is not a shared contract, and an in-game fact is recorded as a question rather than asserted from the lab. |
 
 ### Measuring cleanup 4, and why one reading was not enough
@@ -155,6 +156,25 @@ oracle test fails if its behaviour drifts.
   private helpers; a name-frequency sweep over every `public`/`internal` harness method found none
   mentioned only at its declaration (2026-09-04, at commit `2f4c195`). A clean result is a result:
   the labs' reachability guard (`SimCommandTests`) is doing its job on the public side too.
+
+### The straggler sweep's standing exclusions
+
+The fifth pass ran the sweep as its opener (iteration 41) and these are the hits a future sweep
+will re-flag and should skip, each with the reason it is not a straggler:
+
+* **`TwoDictionarySurfaceMap`'s hand face frames** (`SurfaceMapPackingTests`). The class *is* the
+  old code, kept verbatim as the oracle the packed map is compared against — its own summary says
+  so — and `D8` is precisely why an oracle does not get modernised to `BoxGeometry.Span`: the old
+  spelling is what makes it evidence.
+* **`lanes.py`'s bare positional comprehension.** No flag of that tool takes a value, so
+  iteration 35's leak cannot occur, and importing corpus `scoring` across tool families would
+  couple two independent tools for nothing.
+* **`knob.py`'s own page loader.** Its guidance message names which sweep to run — the caller's
+  half of `scoring.load`'s contract, kept where the caller is.
+* **`reproduce.py`'s `key` and `compare`.** Same words as `scoring.key_of` and
+  `scoring.compare`, different contracts: its key normalises the cap arm so an unpaired walk keys
+  like a control (its own documented decision), and its compare is a per-row tolerance check, not
+  a summary diff. Same-word near-misses, like the three C# `Percentile`s.
 
 ### Shapes examined in the fourth pass and left alone
 
