@@ -36,7 +36,7 @@ namespace Thermodynamics.Tests
                 if (rows[i].Surface == surface) return rows[i];
             }
 
-            Assert.True(false, "no row for " + surface);
+            Assert.Fail( "no row for " + surface);
             return null;
         }
 

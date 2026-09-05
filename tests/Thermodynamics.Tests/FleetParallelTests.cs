@@ -88,7 +88,7 @@ namespace Thermodynamics.Tests
                     judged++;
                     if (sequential[g][i] == parallel[g][i]) continue;
 
-                    Assert.True(false, "grid " + g + " node " + i + " is " + parallel[g][i]
+                    Assert.Fail( "grid " + g + " node " + i + " is " + parallel[g][i]
                         + " in parallel against " + sequential[g][i] + " in order");
                 }
             }
