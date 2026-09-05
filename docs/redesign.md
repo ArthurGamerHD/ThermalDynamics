@@ -157,6 +157,67 @@ the hull at some rate this lab did not measure. The design must treat an environ
 event like any other, and what a moving sun does to the quiet share is the first measurement the
 design phase owes.
 
+## The second sweep — additional alternatives, considered 2026-09-05
+
+The first sweep took the candidates the record pointed at. This one widened the net to the
+structures nobody had asked a redesign question of, and most of the answers are reasoning against
+figures already on file rather than new measurements. One survived to a lab.
+
+| Candidate | Verdict | Why |
+| --- | --- | --- |
+| Chunking the grid for cache locality | **already collected** | node numbering is already local — 97.8 % of links span fewer than 1,024 node indices, which is why node reordering was refused before building (performance.md, pass 5); chunking survives only as `D22`'s granularity question, and as SE2 design where the engine chunks for its own reasons |
+| Change-local exposure and room-air refresh | **folds into `D21`** | both walk the whole grid today only because the map republishes whole; a change-local publish makes both change-local for free, and the venting path (`RefreshExposureAround`) already shows the shape |
+| Incremental sun-shadow updates | **refused by geometry** | a sun *direction* change invalidates every ray by construction — there is no unchanged region to keep — so the levers that exist are the restart tolerance (`SunRebuildCosine`) and the tick budget, both already in place, and a drift rebuild has allocated nothing since pass 10 |
+| SIMD / vectorised kernels | **platform-gated** | the game's compiler is the authority (`P7`, `C2`): `System` types reach the whitelist one by one and no vector type is among them, so a vectorised kernel would run in the harness and not in the game — a speedup for the instrument, which is `M13`'s lesson pointed the other way |
+| Persisting derived state in the save (links, rooms, exposure) | **refused on value and risk** | a full build is 0.9 s at a million blocks behind a loading screen (`D3`); a serialized derived state is a `P15` liability — frozen in every world it ships to — that must be invalidated against every definition, mod-set and version change, and the rebuild is the safer codec by far |
+| Whole-grid sleep | **`D22`'s first rung, not a new candidate** | the activity lab's own finding — 100 % of the hull quiet at steady state, driven included — makes one flag per grid the natural first rung of `D22`'s ladder: it skips the per-node walk, the mirror and the pacing visit (`D13`) with a single test, and needs none of the per-node bookkeeping; noted on the `D22` row |
+| Cheap-form physics (per-step radiation linearisation and kin) | **different machinery** | these are fidelity trades under `P14`/`C15`, not visit-count redesigns: each needs an accuracy criterion and corpus validation before a cost argument means anything, and [realism.md](realism.md) is where those trades are made — out of this page's scope, deliberately |
+
+### 3. The environment read over a compacted exposed index
+
+**The candidate that survived to a lab, and why it is smaller than it looks.** "Skip the buried
+nodes" is the obvious environment-pass version of visiting fewer elements — 30 to 70 per cent of
+a hull is buried, and the share grows with size. But the shipped read already branches on
+`nodeExposedFaces[i] <= 0` and a buried node costs one compare, one row load and one store; what a
+compacted walk could still remove is exactly that residue, times the twenty-seven read substeps of
+a step. Whether the residue is worth a design is a number.
+
+**The instrument.** `EnvironmentWalkLab` (`bench envwalk`), in `StepFloorLab`'s tradition: the
+real hull's exposure pattern — because the question is how buried and exposed interleave, and a
+synthetic pattern would answer about itself — with the shipped branchy shape and the
+clear-plus-compact-index shape run over the same rows, required to produce the same watts row
+exactly before either is timed, best of thirty.
+
+**The criterion, fixed 2026-09-05 before the first run.** The compacted shape earns a design row
+if it beats the shipped shape by **ten per cent or more at 505,566 blocks**, where about two
+thirds of the hull is buried. Anything less is a refusal with the figure attached: the buried
+branch already collected the win, and the record should say so where the next reader will look.
+
+**Findings, 2026-09-05 — criterion met at five times its bar.** `bench envwalk`, best of thirty,
+identical watts rows proven before timing:
+
+| blocks | buried share | branchy (shipped shape) | clear + compact | ratio |
+| ---: | ---: | ---: | ---: | ---: |
+| 32,800 | 38.9 % | 0.84 ns/node | 0.64 | **0.763** |
+| 126,731 | 51.3 % | 0.68 ns/node | 0.44 | **0.651** |
+| 505,566 | 64.5 % | 0.68 ns/node | 0.33 | **0.490** |
+
+The ratio tracks the buried share exactly, which is the mechanism confirming itself: the saving
+is the buried residue and nothing else — about half a nanosecond per buried node per walk, which
+the branch, the row load and the store cost even when the branch is perfectly predicted. At
+505,566 blocks that residue, taken twenty-seven read substeps a step, bounds the shipped saving
+at roughly 4–5 ms of a ~27 ms step — and the share grows toward a million blocks, where seven
+tenths of the hull is buried. **Filed as `D23`.**
+
+**What the figure is and is not** (`P4`): the lab prices the two *shapes* on the real sparsity,
+not the shipped pass — the prototype's exposed arithmetic is leaner than the real read's (no
+friction, no lift, no clamp), so the *relative* saving in the shipped pass will be smaller than
+the table's ratios even though the buried residue it removes is the same absolute cost. The
+design's acceptance measurement is `bench stepphases` on the real pass, not this table. And the
+one exactness question is named by the lab's own loose accumulator check: the compact walk sums
+the heat-gain total in a different order, so a shipped version either merges in index order or
+re-pins the baselines the way the span flood did.
+
 ## Limits
 
 Everything here is measured on census hulls, not the workshop corpus: these are structural
@@ -170,6 +231,8 @@ problem, and this page only prices the prize.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-05 | **The second sweep's lab decides for the candidate**: the compacted environment walk reads 0.490 of the shipped shape at 505,566 blocks against a criterion of 0.90, and the ratio tracks the buried share exactly. Filed as `D23`, with the honest bound: the prototype's exposed arithmetic is leaner than the real read's, so the shipped saving is the buried residue (~0.5 ns a buried node a walk) rather than the table's ratio, and the acceptance instrument is `bench stepphases`. |
+| 2026-09-05 | **The second sweep opened**: seven more alternatives considered — chunking-for-locality (already collected), change-local exposure and room air (folds into `D21`), incremental sun shadow (refused by geometry), SIMD (platform-gated), persisted derived state (refused on `P15` risk against a 0.9 s build), whole-grid sleep (`D22`'s first rung) and cheap-form physics (different machinery, realism.md's) — and one survived to a lab: the environment read over a compacted exposed index, `bench envwalk`, criterion fixed before the run. |
 | 2026-09-05 | **The revised criterion's confirming run holds it with an order of magnitude to spare**: 100 % quiet at every threshold by step 20,000 on both hulls at 126,731 blocks, and the disturbance at 0.15 % of the grid — roughly the same absolute node count as at a quarter the size, so the skippable share grows with the hull. `D22` is filed, carrying the fixed-sky caveat: the lab measured quiet under a constant environment, and what a moving sun re-wakes is the design phase's first measurement. |
 | 2026-09-05 | **Findings recorded.** The remap candidate meets its criterion decisively (median one changed cell in ~1.7 million visited; worst case 0.58 %) and is filed as `D21`. The activity criterion **fails as written** — 0.1 % quiet at its step-200 clock — and the long marks show the clock was the error: both hulls are 100 % quiet by step 20,000 and a 300 K disturbance peaks at 0.48 % of the grid on a quiet background. A revised criterion (the mark moves to 20,000; thresholds and shares unmoved) is stated per `E11`, with its confirming run left to the next commit. The wavefront's first run also corrected the lab: measured on a 200-step background the whole grid read active, so the number described the background, not the disturbance (`P2`). |
 | 2026-09-05 | Opened: the survey of measured refusals, the two open candidates — change-local room remapping and activity tracking — and their criteria, committed before the labs first run at evaluation size (`E1`). |
