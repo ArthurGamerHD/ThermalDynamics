@@ -3222,10 +3222,30 @@ the direction that refuses harm rather than nothing).
 because it is cheaper to read than to derive, by a tenth of the step. The sun-lit half of the row
 was never derivable and stands as it was.
 
+## Pass 10, iteration 8 — the hitch distribution is re-taken, and the lanes are refreshed
+
+**No code moved in this iteration; two instruments were brought back to the truth.**
+
+**The hitch table was three regimes old.** [load-and-hitching.md](load-and-hitching.md)'s
+distribution rows predated the bounded step, the spread step and iteration 5's prologue hoist —
+the same `E5` shape pass 10 opened on. Re-taken on the play-path instrument (`bench hitch`, 400
+ticks, one window): **p99 26.47 → 3.11 ms** at 126,731 blocks and **28.71 → 6.90** at 505,566;
+max 60.83 → 24.38 and 208.68 → 50.13. The one outlier left is tick 0, and its attribution is the
+per-process JIT — at 505,566 blocks it reads 50 ms with *one substep*, which is not integration —
+where iteration 5's warm measurement puts the same first step at 12.5 ms against a steady 8.3. The
+superseded rows stay printed beside the new ones, and the medians are marked non-comparable across
+the regime change: most ticks under the spread step do not step at all.
+
+**The lane refresh found one straggler.** `tools/lanes/lanes.py` over a fresh trx: 281 classes,
+280.1 s of test time, and one class over the threshold untagged — `UncalledCodeTests` at 2.45 s,
+which has been growing with the tree it scans. Tagged. The classes this pass added all sit under
+the threshold, and the fast lane is **1,923 cases in 4 s**.
+
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **Pass 10, iteration 8: the hitch distribution re-taken (p99 26.47 → 3.11 ms at 126,731 blocks, 28.71 → 6.90 at 505,566) and the tick-0 outlier attributed to the per-process JIT; the lane refresh tagged `UncalledCodeTests` (2.45 s) and the fast lane is 1,923 cases in 4 s.** |
 | 2026-09-04 | **Pass 10, iteration 7: deriving the face weights from the packed counts is +10 % on the solver stage — tried, measured, dropped.** Bit-identical by construction and green through every suite, but 17.3 → 19.1 ms on the minimum and 19.0 → 20.9 on the median, both rounds, identical work. `E2`'s "derivable, but at what cost" question is answered with a refusal: the mirrored row is cheaper to read than to derive. The attempt and its revert are both in the branch. |
 | 2026-09-04 | **Pass 10, iteration 6: the sun-shadow sets are bitsets over the padded grid box.** Three `HashSet<Vector3I>`s were 21.6 MB on the first sunlit step of a 126,731-block hull and ~1 MB per sun-drift rebuild; as `CellBitset`s with the completed pass published by swap, the first sunlit step reads 25.97 ms and 6.5 MB (the pending list, bought once) and a drift rebuild allocates nothing. Pinned by four new cases in `SunShadowMapTests`, including the padded-box edge cell an unpadded set would silently call lit. |
 | 2026-09-04 | **Pass 10, iteration 5: the first-step spike was a third JIT, half step prologue, and barely page faults at all.** `bench firststep` measures the first steps with faults and allocation beside them; `--warm` separates per-process JIT (~11.6 ms at 505,566 blocks) from per-grid cost. The prologue — full node mirror, link-mass fill and its 7,484 KB allocation — now runs on the tick that rebuilds the topology (`ThermalSolver.PrepareForSteps`), so a warm first step falls 26.16 → **12.53 ms** against a steady 8.3, allocating 12 KB where it allocated 7,484. `StepPrologueTests` pins the no-full-resync claim, the allocation, and bit-identity of a prepared step against an unprepared one; `D4`'s "first touch of every flat array" attribution is corrected in place — the faults are one to two milliseconds of it. What remains of `D4` is the sunlit residual: the sun-shadow structure's 21.6 MB first build. |

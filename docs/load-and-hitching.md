@@ -269,13 +269,22 @@ half-million-block grid means sustained construction is essentially flat: the ti
 are the steady cost being over budget, not stalls. That is the incremental topology working — the
 same run before it would have paid a 200 ms rebuild on every one of the 120 ticks.
 
-The `hitch` rows above were taken before findings 6 to 8. Afterwards, with the worst tick in each
-run attributed by stage:
+The `hitch` rows above were taken before findings 6 to 8. Re-taken 2026-09-04, after the bounded
+step, the spread step and the step prologue's move to the rebuild tick, with the worst tick in
+each run attributed by stage:
 
 | run | blocks | median | p95 | p99 | max | worst tick is |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| hitch | 126,731 | 11.28 | 19.34 | **26.47** | 60.83 | the first step |
-| hitch | 505,566 | 23.96 | 26.36 | **28.71** | 208.68 | the first step |
+| hitch | 126,731 | 0.31 | 2.54 | **3.11** | 24.38 | tick 0 — the process's first walk of the step path, which is mostly the JIT |
+| hitch | 505,566 | 0.25 | 5.47 | **6.90** | 50.13 | tick 0, as above (one substep: the 50 ms is not integration) |
+
+*The 2026-09-04 medians are not comparable with the rows they replace — most ticks do not step at
+all under the spread step, and the earlier rows' regime stepped whole. What is comparable is the
+tail: p99 26.47 → 3.11 and 28.71 → 6.90 on the same hulls. The tick-0 outlier is per-process, not
+per-grid: warmed, the same first step reads 12.5 ms against a steady 8.3
+([performance.md](performance.md#pass-10-iteration-5--the-first-step-was-paying-the-rebuilds-bills-and-a-third-of-the-spike-was-the-jit)),
+and a game session pays its JIT once, on its first grid.* The rows they replace: median 11.28 /
+19.34 / 26.47 / 60.83 at 126,731 and 23.96 / 26.36 / 28.71 / 208.68 at 505,566.
 
 The tail is what moved. At 500k the p99 went from 173 ms to 29 ms against a median of 24, and the
 median itself halved because a step is now bounded. What is left is a very tight distribution and
@@ -953,6 +962,7 @@ reasoning that produced it was sound and the premise was not.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **The hitch distribution is re-taken** after the bounded step, the spread step and the prologue hoist: p99 26.47 → 3.11 ms at 126,731 blocks and 28.71 → 6.90 at 505,566, max 60.83 → 24.38 and 208.68 → 50.13, with the one outlier attributed to the process's first walk of the step path (the JIT) rather than to anything a second grid would pay. The superseded rows stay printed beside the new ones. Also: `UncalledCodeTests` crossed two seconds and is tagged slow — the lane checker found it on this pass's refresh. |
 | 2026-09-04 | **The first-step outlier is corrected and mostly gone**: the step prologue runs on the rebuild tick (`D4`), a warm first step reads 12.5 ms against a steady 8.3 at 505,566 blocks, and the old first-touch attribution is measured at one to two milliseconds of the spike it was blamed for. |
 | 2026-09-04 | **The room map is recycled (`D20` done), and section 12's "looked at and left" is taken.** Three rotating slots, a published map readable until the publish after next, and a steady-state pass at **0 KB** allocated on 126,731 blocks where it bought a 4,768 KB map before. The stage lab's rooms allocation sample moved to the first recycled repeat — at repeat 1 it was reading slot-building and showed the change as absent. |
 | 2026-08-31 | **Gave the harness build the same capacity hint, and measured that it does not pay on the corpus.** A 2,000-ship census is 16.44 s before and 16.57 s after — noise. The median published ship is 1,112 blocks, where the list growth this removes is about 17 KB against 4 MB at 125,000, so the saving scales with the hull and the corpus is mostly small ships. Kept because it is correct and matches what `ThermalGrid` does on the game's own load path, and recorded as a negative result so nobody measures it again expecting one. |
