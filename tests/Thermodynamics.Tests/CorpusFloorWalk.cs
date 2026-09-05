@@ -41,19 +41,7 @@ namespace Thermodynamics.Tests
 
         private static List<Battery.Scenario> Scenarios()
         {
-            Dictionary<string, Battery.Scenario> byName =
-                new Dictionary<string, Battery.Scenario>(StringComparer.Ordinal);
-            foreach (Battery.Scenario scenario in Battery.All()) byName[scenario.Name] = scenario;
-
-            List<Battery.Scenario> chosen = new List<Battery.Scenario>();
-            foreach (string name in PairLab.AirScenarios)
-            {
-                Assert.True(byName.ContainsKey(name),
-                    "the floor walk asks for scenario '" + name + "' and the battery has no such case");
-                chosen.Add(byName[name]);
-            }
-
-            return chosen;
+            return ScenarioIndex.Resolve(PairLab.AirScenarios, "the floor walk");
         }
 
         /// <summary>Settings for one arm. The switch is the only thing that differs.</summary>
