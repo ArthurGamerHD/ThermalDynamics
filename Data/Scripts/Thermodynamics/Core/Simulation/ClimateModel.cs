@@ -101,7 +101,7 @@ namespace Thermodynamics.Core
         /// </summary>
         public static float AmbientDensityFactor(float airDensity)
         {
-            float inverse = 1f - Clamp01(airDensity);
+            float inverse = 1f - ThermalMath.Clamp01(airDensity);
             float squared = inverse * inverse;
             float fourth = squared * squared;
             return 1f - (fourth * fourth);
@@ -152,13 +152,6 @@ namespace Thermodynamics.Core
             if (descended > 1f) descended = 1f;
 
             return ambient + ((planet.CoreTemperature - ambient) * descended);
-        }
-
-        private static float Clamp01(float value)
-        {
-            if (value < 0f) return 0f;
-            if (value > 1f) return 1f;
-            return value;
         }
 
         /// <summary>

@@ -91,21 +91,14 @@ namespace Thermodynamics
         /// <summary>Throttle setting, 0..1. Defaults to full rating.</summary>
         public float PowerSetting
         {
-            get { return powerSetting == null ? 1f : Clamp01(powerSetting.Value); }
+            get { return powerSetting == null ? 1f : ThermalMath.Clamp01(powerSetting.Value); }
         }
 
         /// <summary>Sets the throttle and replicates it. Called by the terminal slider.</summary>
         public void SetPowerSetting(float value)
         {
             if (powerSetting == null) return;
-            powerSetting.Value = Clamp01(value);
-        }
-
-        private static float Clamp01(float value)
-        {
-            if (value < 0f) return 0f;
-            if (value > 1f) return 1f;
-            return value;
+            powerSetting.Value = ThermalMath.Clamp01(value);
         }
 
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)

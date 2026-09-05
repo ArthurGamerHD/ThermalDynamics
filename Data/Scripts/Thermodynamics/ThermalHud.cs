@@ -500,7 +500,7 @@ namespace Thermodynamics
 
             // Strength in the colour as well as the length, matching the wind map's ramp so the two
             // readouts cannot disagree about what counts as a gale.
-            float share = Clamp01(speed / GaleSpeed);
+            float share = ThermalMath.Clamp01(speed / GaleSpeed);
             Vector4 colour = WindOverlay.Colour(share).ToVector4();
 
             Vector3D tail = centre - (needle * (length * 0.35d));
@@ -582,13 +582,6 @@ namespace Thermodynamics
 
             ThermalGrid thermals = grid.GameLogic.GetAs<ThermalGrid>();
             return thermals == null || thermals.Simulation == null ? null : thermals;
-        }
-
-        private static float Clamp01(float value)
-        {
-            if (value < 0f) return 0f;
-            if (value > 1f) return 1f;
-            return value;
         }
 
         private static void DrawBillboard(ThermalGrid thermals, ThermalBlock bound, MatrixD cameraMatrix)

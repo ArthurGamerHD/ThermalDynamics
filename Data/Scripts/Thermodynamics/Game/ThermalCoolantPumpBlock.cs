@@ -51,14 +51,14 @@ namespace Thermodynamics
         /// <summary>Speed setting, 0..1. Defaults to full, so a pump built and left alone works.</summary>
         public float Speed
         {
-            get { return speed == null ? 1f : Clamp01(speed.Value); }
+            get { return speed == null ? 1f : ThermalMath.Clamp01(speed.Value); }
         }
 
         /// <summary>Sets the speed and replicates it. Called by the terminal slider.</summary>
         public void SetSpeed(float value)
         {
             if (speed == null) return;
-            speed.Value = Clamp01(value);
+            speed.Value = ThermalMath.Clamp01(value);
         }
 
         /// <summary>
@@ -136,7 +136,7 @@ namespace Thermodynamics
         {
             if (!IsRunning) return 0f;
 
-            float watts = (MaxPowerWatts * Clamp01(Speed)) + refillDemandWatts;
+            float watts = (MaxPowerWatts * ThermalMath.Clamp01(Speed)) + refillDemandWatts;
             return watts * ThermalConstants.WattsToMegawatts;
         }
 
@@ -211,13 +211,6 @@ namespace Thermodynamics
             {
                 Telemetry.Exception("ThermalCoolantPumpBlock.Init", e);
             }
-        }
-
-        private static float Clamp01(float value)
-        {
-            if (value < 0f) return 0f;
-            if (value > 1f) return 1f;
-            return value;
         }
     }
 }
