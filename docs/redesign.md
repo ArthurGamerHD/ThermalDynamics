@@ -218,6 +218,91 @@ one exactness question is named by the lab's own loose accumulator check: the co
 the heat-gain total in a different order, so a shipped version either merges in index order or
 re-pins the baselines the way the span flood did.
 
+## The third sweep — the step's own walk structure, considered 2026-09-05
+
+The first two sweeps asked which *elements* a pass visits. This one asks how many times the
+passes visit them: the step sweeps the node arrays three times per substep — environment,
+conduction, apply — and once more per step for the temperature mirror, and none of those walk
+counts had ever been questioned. Three candidates closed by reasoning, two survived to a lab.
+
+| Candidate | Verdict | Why |
+| --- | --- | --- |
+| A cached substep estimate (skip the per-step stability walk) | **refused on `C6`** | a stale estimate that under-provisions substeps breaks boundedness — the invariant the whole solver is built on — and proving a cached bound still conservative costs the walk it would skip; the environment-linearised terms in `ΣG` legitimately move with every sample, and the lever that exists is the safety factor already shipped |
+| Half-precision rows | **platform- and fidelity-gated** | `net48` C# 6 under the game's whitelist has no half type to offer, and the rows feed an integrator whose invariants are argued in single precision; this is a fidelity trade with no cheap half to take |
+| Room mapping on a worker thread | **session-gated, like `D19`** | the mapper is already budget-sliced so the main thread never blocks on it; moving it to a worker answers no cost the budget has not already amortised, and every threading question this repository has (the engine's scheduler, thread ownership, worker exceptions) is recorded on `D19` as a session's to answer |
+
+### 4. Fusing the apply pass with the next substep's environment pass
+
+**The candidate.** Per substep the node arrays are swept three times. The conduction pass must
+sit between an environment fill and the apply that consumes it — but the *apply of substep n* and
+the *environment fill of substep n+1* are adjacent with nothing between them, so the schedule
+env(1), cond(1), [apply(1)+env(2)], cond(2), … , apply(K) does the same work in two sweeps per
+substep instead of three, and the same operations land in the same per-node order — which makes
+bit-identity plausible rather than hoped for.
+
+**The instrument.** `StepWalksLab` (`bench stepwalks`): both schedules run sixteen substeps on
+the real hull's exposure sparsity and must land on identical bits — every temperature, every
+watts entry, the accumulator — before either is timed, best of twenty. The prototype's named
+blind spot (`P4`): the real conduction pass between fused walks cools the cache the pair shares,
+so acceptance for a built design is `bench stepphases` on the real pass.
+
+**The criterion, fixed 2026-09-05 before the first run.** Fusion earns a design row if the fused
+schedule runs at **0.85 or less** of the separate one at 505,566 blocks.
+
+### 5. Temperature ownership inverted — the per-step mirror walk removed
+
+**The candidate.** Every step opens by walking every `ThermalNode` object to re-read its
+temperature into the flat row, because "temperature is the one value the host can change from
+outside a step". That is a pointer chase through the cold handles, once per step, sized by the
+grid. Inverting ownership — the flat row as the source of truth, the node object a view over it —
+removes the walk entirely and turns a host write into a marked write, the way every other
+mirrored value already works.
+
+**The instrument.** The same lab times the real `SyncNodeState` on its clean incremental path —
+not a prototype, since the harness can reach the internal seam — beside a settled step on the
+same grid in the same window.
+
+**The criterion, fixed 2026-09-05 before the first run.** The inversion earns a design row if the
+mirror walk costs **three per cent or more of a settled step** at 505,566 blocks. Below that it
+is a refusal with the figure: the walk is real but the blast radius — every writer of
+`ThermalNode.Temperature` in the mod, the adapter and the tests — is not worth less than that.
+
+**Findings, 2026-09-05.** `bench stepwalks`, best of twenty, the two schedules held to a tight
+relative tolerance (see below on why not the bit):
+
+| blocks | fused / separate | mirror ms | settled step ms | mirror share |
+| ---: | ---: | ---: | ---: | ---: |
+| 126,731 | **0.801** | 0.128 | 6.765 | 1.9 % |
+| 505,566 | **0.888** | 1.613 | 27.335 | 5.9 % |
+
+**Fusion (candidate 4) is refused, and its size dependence is the finding.** It clears its 0.85
+bar at 126,731 blocks (0.801) and *misses* it at 505,566 (0.888) — the criterion's size — because
+the win is a shared-cache effect: at 126k the node rows are warm between the fused apply and env,
+and at half a million they outrun the cache and the fused pair reloads them anyway. A saving that
+shrinks as the grid grows is the wrong shape for a change whose whole justification is scale, and
+the real solver's colder cache (the conduction pass streams grid-sized memory between the fused
+walks — the prototype's named blind spot) can only push the shipped figure further toward 1.0. The
+walk-count arithmetic was sound and the locality did not cooperate; refused with the curve
+attached.
+
+**And the prototype cannot prove its own correctness, which is itself a result** (`P4`). Run in
+lockstep the fused and separate schemes are bit-identical; run as two whole loops they diverge in
+the last bits, because the JIT auto-vectorises the simple apply and env loops and not the combined
+fused loop, and a vectorised float reduction rounds differently from a scalar one. Rescheduling
+work changes which loops vectorise — so *any* fusion or reordering redesign must prove its
+correctness through `SolverAb` against the code it replaces (`D8`), never through a prototype that
+reschedules. The lab records this by holding the schemes to a relative tolerance that rules out a
+scheduling bug while admitting the rounding, and a first draft's runaway (radiation coefficients
+four orders too large) was caught by that same check before any timing was believed.
+
+**The mirror inversion (candidate 5) is filed as `D24`.** The real `SyncNodeState`'s incremental
+path costs **5.9 % of a settled step at 505,566 blocks**, past its 3 % bar — and the share *grows*
+with size, 1.9 % at 126k to 5.9 % at 505k, which is 12.6× the cost for 3.9× the nodes. That
+superlinearity is the diagnosis: the mirror walks every `ThermalNode` object to re-read one float,
+a pointer chase through the cold handles that falls off a cache cliff as the grid grows, which is
+exactly the size where the mod's stated goal lives. Inverting ownership — the flat row authoritative,
+the object a view — removes the walk and the cliff with it.
+
 ## Limits
 
 Everything here is measured on census hulls, not the workshop corpus: these are structural
@@ -231,6 +316,8 @@ problem, and this page only prices the prize.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-05 | **The third sweep decides: one refusal, one design.** Fusing apply(n) with env(n+1) clears 0.85 at 126k (0.801) but misses at 505k (0.888) — the win is shared-cache locality and it evaporates as the rows outrun cache, the wrong shape for a scale change; refused with the curve, and with the finding that a rescheduling prototype cannot prove its own bit-identity (the JIT vectorises the fused loop differently), so fusion correctness is `SolverAb`'s job. The per-step mirror walk costs 5.9 % of a settled step at 505k and *grows* with size (1.9 % at 126k — 12.6× the cost for 3.9× the nodes), a cold-handle pointer chase off a cache cliff; filed as `D24`. |
+| 2026-09-05 | **The third sweep opened**: the step's own walk structure. Three candidates closed by reasoning — the cached substep estimate (refused on `C6`: proving a cached bound conservative costs the walk it skips), half-precision rows (platform- and fidelity-gated), room mapping on a worker (session-gated like `D19`) — and two survived to `bench stepwalks` with criteria fixed before the run: fusing apply(n) with env(n+1), and inverting temperature ownership to remove the per-step mirror walk. |
 | 2026-09-05 | **The second sweep's lab decides for the candidate**: the compacted environment walk reads 0.490 of the shipped shape at 505,566 blocks against a criterion of 0.90, and the ratio tracks the buried share exactly. Filed as `D23`, with the honest bound: the prototype's exposed arithmetic is leaner than the real read's, so the shipped saving is the buried residue (~0.5 ns a buried node a walk) rather than the table's ratio, and the acceptance instrument is `bench stepphases`. |
 | 2026-09-05 | **The second sweep opened**: seven more alternatives considered — chunking-for-locality (already collected), change-local exposure and room air (folds into `D21`), incremental sun shadow (refused by geometry), SIMD (platform-gated), persisted derived state (refused on `P15` risk against a 0.9 s build), whole-grid sleep (`D22`'s first rung) and cheap-form physics (different machinery, realism.md's) — and one survived to a lab: the environment read over a compacted exposed index, `bench envwalk`, criterion fixed before the run. |
 | 2026-09-05 | **The revised criterion's confirming run holds it with an order of magnitude to spare**: 100 % quiet at every threshold by step 20,000 on both hulls at 126,731 blocks, and the disturbance at 0.15 % of the grid — roughly the same absolute node count as at a quarter the size, so the skippable share grows with the hull. `D22` is filed, carrying the fixed-sky caveat: the lab measured quiet under a constant environment, and what a moving sun re-wakes is the design phase's first measurement. |
