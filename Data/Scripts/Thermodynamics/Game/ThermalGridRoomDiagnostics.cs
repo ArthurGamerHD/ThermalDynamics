@@ -334,10 +334,8 @@ namespace Thermodynamics
 
             for (int i = 0; i < vents.Count; i++)
             {
-                ThermalBlock bound = vents[i];
-                IMyAirVent vent = bound.Vent;
-                if (vent == null || bound.Block.FatBlock == null || bound.Block.FatBlock.Closed) continue;
-                if (!TouchesRegion(bound, cells)) continue;
+                IMyAirVent vent = LiveVentOn(i, cells);
+                if (vent == null) continue;
 
                 try
                 {
@@ -414,6 +412,21 @@ namespace Thermodynamics
         /// <summary>Set when the gas system throws, so the fallback is taken without retrying.</summary>
         private bool gasSystemFailed;
 
+        /// <summary>
+        /// The vent at this index when it is worth asking — live, still on the grid, and opening
+        /// onto these cells — else null. One statement of that filter, because three readers each
+        /// restated it, and a liveness rule added to two of three would leave the diagnostic
+        /// disagreeing with itself about which vents exist.
+        /// </summary>
+        private IMyAirVent LiveVentOn(int index, HashSet<Vector3I> cells)
+        {
+            ThermalBlock bound = vents[index];
+            IMyAirVent vent = bound.Vent;
+            if (vent == null || bound.Block.FatBlock == null || bound.Block.FatBlock.Closed) return null;
+            if (!TouchesRegion(bound, cells)) return null;
+            return vent;
+        }
+
         /// <summary>Highest oxygen level any vent on these cells reports, or -1 when none does.</summary>
         private float VentOxygenAround(HashSet<Vector3I> cells)
         {
@@ -421,10 +434,8 @@ namespace Thermodynamics
 
             for (int i = 0; i < vents.Count; i++)
             {
-                ThermalBlock bound = vents[i];
-                IMyAirVent vent = bound.Vent;
-                if (vent == null || bound.Block.FatBlock == null || bound.Block.FatBlock.Closed) continue;
-                if (!TouchesRegion(bound, cells)) continue;
+                IMyAirVent vent = LiveVentOn(i, cells);
+                if (vent == null) continue;
 
                 try
                 {
@@ -445,10 +456,8 @@ namespace Thermodynamics
         {
             for (int i = 0; i < vents.Count; i++)
             {
-                ThermalBlock bound = vents[i];
-                IMyAirVent vent = bound.Vent;
-                if (vent == null || bound.Block.FatBlock == null || bound.Block.FatBlock.Closed) continue;
-                if (!TouchesRegion(bound, cells)) continue;
+                IMyAirVent vent = LiveVentOn(i, cells);
+                if (vent == null) continue;
 
                 try
                 {
