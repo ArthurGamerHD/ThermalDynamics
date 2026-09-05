@@ -46,20 +46,7 @@ namespace Thermodynamics.Tests
         public void AClosedRingWithNoPumpIsALoopThatCirculatesNothing()
         {
             GridBuilder builder = GridBuilder.Large();
-            List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3);
-
-            for (int i = 0; i < cells.Count; i++)
-            {
-                Vector3I cell = cells[i];
-                Vector3I toPrevious = cells[(i - 1 + cells.Count) % cells.Count] - cell;
-                Vector3I toNext = cells[(i + 1) % cells.Count] - cell;
-
-                BlockModel model = toPrevious == -toNext
-                    ? Catalog.CoolantPipeStraight()
-                    : Catalog.CoolantPipeCorner();
-
-                builder.Place(model, cell, PipeFitter.Orient(model, toPrevious, toNext));
-            }
+            PipeFitter.BuildPumplessRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
 
             ThermalSimulation simulation = builder.BuildSimulation(Isolated());
             CoolantLoopDiagnostics diagnostics = simulation.DiagnoseLoops();
