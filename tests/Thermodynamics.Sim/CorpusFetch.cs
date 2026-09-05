@@ -456,20 +456,12 @@ namespace Thermodynamics.Sim
 
         private static string Value(string[] args, string name)
         {
-            for (int i = 0; i < args.Length - 1; i++)
-            {
-                if (args[i] == name) return args[i + 1];
-            }
-            return null;
+            return Cli.Value(args, name);
         }
 
         private static bool Has(string[] args, string name)
         {
-            for (int i = 0; i < args.Length; i++)
-            {
-                if (args[i] == name) return true;
-            }
-            return false;
+            return Cli.Has(args, name);
         }
 
         private static int Int(string text, int fallback)
