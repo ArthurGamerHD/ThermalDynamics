@@ -232,7 +232,7 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < outcomes.Count; i++)
             {
                 Outcome o = outcomes[i];
-                csv.Append('"').Append((o.Prefab ?? "").Replace("\"", "\"\"")).Append("\",")
+                csv.Append(CsvLine.Text(o.Prefab)).Append(',')
                    .Append(o.Category).Append(',')
                    .Append(o.Blocks).Append(',').Append(o.Grids).Append(',')
                    .Append(o.UnknownBlocks).Append(',')

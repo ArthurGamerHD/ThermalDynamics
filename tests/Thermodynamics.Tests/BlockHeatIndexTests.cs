@@ -318,7 +318,7 @@ namespace Thermodynamics.Tests
 
         private static string Csv(string value)
         {
-            return "\"" + (value ?? "").Replace("\"", "\"\"") + "\"";
+            return Thermodynamics.Harness.CsvLine.Text(value);
         }
 
         private static string Num(float value)

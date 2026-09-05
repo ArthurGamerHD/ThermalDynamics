@@ -16,6 +16,18 @@ namespace Thermodynamics.Harness
     /// </summary>
     public static class CsvLine
     {
+        /// <summary>
+        /// A text field as the writers quote it: always quoted, quotes doubled, null as an empty
+        /// quoted field. The escape <see cref="Split"/> honours, declared beside it — six sites
+        /// stated this idiom independently before it lived here, which is the writer half of the
+        /// drift the reader half already had.
+        /// </summary>
+        public static string Text(string value)
+        {
+            if (value == null) return "\"\"";
+            return "\"" + value.Replace("\"", "\"\"") + "\"";
+        }
+
         public static List<string> Split(string line)
         {
             List<string> fields = new List<string>();
