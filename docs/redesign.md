@@ -193,7 +193,30 @@ if it beats the shipped shape by **ten per cent or more at 505,566 blocks**, whe
 thirds of the hull is buried. Anything less is a refusal with the figure attached: the buried
 branch already collected the win, and the record should say so where the next reader will look.
 
-**Findings.** *This subsection is filled by the commit that runs the lab at evaluation size.*
+**Findings, 2026-09-05 — criterion met at five times its bar.** `bench envwalk`, best of thirty,
+identical watts rows proven before timing:
+
+| blocks | buried share | branchy (shipped shape) | clear + compact | ratio |
+| ---: | ---: | ---: | ---: | ---: |
+| 32,800 | 38.9 % | 0.84 ns/node | 0.64 | **0.763** |
+| 126,731 | 51.3 % | 0.68 ns/node | 0.44 | **0.651** |
+| 505,566 | 64.5 % | 0.68 ns/node | 0.33 | **0.490** |
+
+The ratio tracks the buried share exactly, which is the mechanism confirming itself: the saving
+is the buried residue and nothing else — about half a nanosecond per buried node per walk, which
+the branch, the row load and the store cost even when the branch is perfectly predicted. At
+505,566 blocks that residue, taken twenty-seven read substeps a step, bounds the shipped saving
+at roughly 4–5 ms of a ~27 ms step — and the share grows toward a million blocks, where seven
+tenths of the hull is buried. **Filed as `D23`.**
+
+**What the figure is and is not** (`P4`): the lab prices the two *shapes* on the real sparsity,
+not the shipped pass — the prototype's exposed arithmetic is leaner than the real read's (no
+friction, no lift, no clamp), so the *relative* saving in the shipped pass will be smaller than
+the table's ratios even though the buried residue it removes is the same absolute cost. The
+design's acceptance measurement is `bench stepphases` on the real pass, not this table. And the
+one exactness question is named by the lab's own loose accumulator check: the compact walk sums
+the heat-gain total in a different order, so a shipped version either merges in index order or
+re-pins the baselines the way the span flood did.
 
 ## Limits
 
@@ -208,6 +231,7 @@ problem, and this page only prices the prize.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-05 | **The second sweep's lab decides for the candidate**: the compacted environment walk reads 0.490 of the shipped shape at 505,566 blocks against a criterion of 0.90, and the ratio tracks the buried share exactly. Filed as `D23`, with the honest bound: the prototype's exposed arithmetic is leaner than the real read's, so the shipped saving is the buried residue (~0.5 ns a buried node a walk) rather than the table's ratio, and the acceptance instrument is `bench stepphases`. |
 | 2026-09-05 | **The second sweep opened**: seven more alternatives considered — chunking-for-locality (already collected), change-local exposure and room air (folds into `D21`), incremental sun shadow (refused by geometry), SIMD (platform-gated), persisted derived state (refused on `P15` risk against a 0.9 s build), whole-grid sleep (`D22`'s first rung) and cheap-form physics (different machinery, realism.md's) — and one survived to a lab: the environment read over a compacted exposed index, `bench envwalk`, criterion fixed before the run. |
 | 2026-09-05 | **The revised criterion's confirming run holds it with an order of magnitude to spare**: 100 % quiet at every threshold by step 20,000 on both hulls at 126,731 blocks, and the disturbance at 0.15 % of the grid — roughly the same absolute node count as at a quarter the size, so the skippable share grows with the hull. `D22` is filed, carrying the fixed-sky caveat: the lab measured quiet under a constant environment, and what a moving sun re-wakes is the design phase's first measurement. |
 | 2026-09-05 | **Findings recorded.** The remap candidate meets its criterion decisively (median one changed cell in ~1.7 million visited; worst case 0.58 %) and is filed as `D21`. The activity criterion **fails as written** — 0.1 % quiet at its step-200 clock — and the long marks show the clock was the error: both hulls are 100 % quiet by step 20,000 and a 300 K disturbance peaks at 0.48 % of the grid on a quiet background. A revised criterion (the mark moves to 20,000; thresholds and shares unmoved) is stated per `E11`, with its confirming run left to the next commit. The wavefront's first run also corrected the lab: measured on a 200-step background the whole grid read active, so the number described the background, not the disturbance (`P2`). |
