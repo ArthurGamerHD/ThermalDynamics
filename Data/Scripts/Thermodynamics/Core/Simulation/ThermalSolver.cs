@@ -2293,6 +2293,7 @@ namespace Thermodynamics.Core
             // A node index changes when the block list does, which invalidates every row.
             bool all = resyncAll;
             resyncAll = false;
+            if (all) Work.FullNodeResyncs++;
 
             // A full resync is the only place the lowest critical temperature can rise, because
             // every other pass here visits only the rows that changed. See
@@ -3866,6 +3867,29 @@ namespace Thermodynamics.Core
 
             /// <summary>Nodes whose demand is entirely environment, which a conduction-only floor would miss.</summary>
             public long EnvironmentDominatedNodes;
+        }
+
+        /// <summary>
+        /// Runs the step prologue early — the full node-state mirror, the link mass factors, the
+        /// buffers, the conductance totals — so it lands on the tick that rebuilt the topology
+        /// rather than on the next stepping one. After a full rebuild the first step otherwise
+        /// pays a mirror of every row and the whole link-mass fill on top of its own work, which
+        /// is most of the first-step spike `D4` is about. Exact by construction: this is the same
+        /// prologue the step runs, and anything that changes between this call and the step is
+        /// caught the way it always is — per-node dirty rows, and temperatures re-read at every
+        /// step. Refused while a step is in flight, as <see cref="ProfileSubsteps"/> is and for
+        /// the same reason: a step spans many frames and the publish stage measures its change
+        /// against the mirrored row.
+        /// </summary>
+        public void PrepareForSteps()
+        {
+            if (StepInFlight) return;
+            PrepareStepState();
+
+            // BeginStep is the prologue's only other caller that refreshes these, and the mass
+            // floor the line above applied has just invalidated them: refreshed here, the first
+            // step's refresh finds nothing stale and the link array is allocated on this tick.
+            RefreshLinkMassFactors();
         }
 
         /// <summary>

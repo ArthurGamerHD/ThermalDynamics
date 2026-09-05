@@ -127,6 +127,14 @@ namespace Thermodynamics.Tests
                 reference.RefreshExposure();
 
                 ThermalNode packed = Node();
+                bool expectDirty = false;
+                for (int f = 0; f < Face.Count; f++)
+                {
+                    int clamped = counts[f] < 0 ? 0
+                        : counts[f] > ThermalNode.MaxExposedPerFace ? ThermalNode.MaxExposedPerFace
+                        : counts[f];
+                    if (clamped != packed.GetExposedFaces(f)) expectDirty = true;
+                }
                 packed.SetExposedFaces(counts);
 
                 string where = "counts " + string.Join(",", counts);
@@ -141,7 +149,15 @@ namespace Thermodynamics.Tests
                 Assert.True(reference.RadiationCoefficient.Equals(packed.RadiationCoefficient),
                     where + ": radiation coefficient " + reference.RadiationCoefficient
                     + " became " + packed.RadiationCoefficient);
-                Assert.True(packed.StateDirty, where + ": the node was not marked for resync");
+                // Dirty exactly when the write moved a face: the overload deliberately marks
+                // nothing on a no-change write, because it is the path the solver refreshes
+                // every node through on a room republish (see its own comment, and performance.md
+                // Pass 9, Iteration 7). Until the `D4` prologue consumed the build's dirty flags
+                // on the rebuild tick, every node arrived here already dirty and the no-change
+                // case could not tell a skipped mark from an inherited one.
+                Assert.True(expectDirty == packed.StateDirty,
+                    where + ": the write " + (expectDirty ? "moved a face" : "changed nothing")
+                    + " and left the node " + (packed.StateDirty ? "dirty" : "clean"));
             }
         }
 

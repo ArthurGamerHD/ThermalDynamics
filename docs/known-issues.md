@@ -744,12 +744,14 @@ is now timed as `of which room pressure` with counters for compartments visited,
 vent scans and vents walked — so the next dump from a large station answers the question with a
 number rather than an argument.
 
-**The first step of a grid's life is several times an ordinary one** — 28.3 ms above a 13.2 ms tick
-at half a million blocks, and 53 ms above a 26 ms tick at a million — from first touch of every flat
-array and the first fill of every mirrored row. It happens once, immediately after a world load that
-took four seconds, so it is a warm-up rather than a stutter. It is still the largest number in the
-distribution at the top rung, and it grew relative to the tick as the tick shrank: the ticks either
-side of it got three to five times cheaper and the first touch did not.
+**The first step of a grid's life is about one and a half times an ordinary one** — 12.5 ms against
+a steady 8.3 at half a million blocks, measured with the JIT warm — since the step prologue moved
+onto the tick that rebuilds the topology (2026-09-04, `bench firststep`). The "first touch of every
+flat array" this paragraph used to blame was measured at one to two milliseconds of a 26 ms spike:
+the bulk was the full node mirror and the link-mass fill, which now land with the rebuild, plus
+~11.6 ms of JIT that is per process rather than per grid. **What is left is the sunlit case**: the
+sun-shadow structure builds on the first sunlit step — 34.9 ms and 21.6 MB allocated at 126,731
+blocks — and that remains open as the tail of `D4`.
 
 **A grid holds about 1.8 KB a block, against a design budget of ~110 bytes a node.** Measured at
 126,731 blocks: 213 MB retained, 278 MB peak. Half of the retained figure is indexed by *bounding
@@ -1127,6 +1129,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **Corrected the first-step warm-up in place (`E10`)**: the spike was never mostly first touch — measured, the faults are one to two milliseconds of it — and since the step prologue moved onto the rebuild tick the first step is ~1.5× a steady one, not several times. The sunlit sun-shadow build is the remaining tail. |
 | 2026-08-28 | **Corrected the room map's convergence figure, which had been stale for nine days and was quoted here from `D2`** (`E10`, `E5`). It read 7,207 ticks — twenty minutes — on a million blocks; re-measured by `bench scale --max 1000000` it is **3,934 ticks, about eleven minutes**, on 1,000,294 blocks and a 14,278,796-cell box. The 7,207 predated the 2026-08-26 word skip and the 2026-08-27 span flood, both of which `D2`'s own body already recorded — the headline outlived the paragraph that superseded it. **And the figure is structural**: convergence is the box over a 4,096-cell tick budget, so no work on milliseconds a cell can move it, which `RoomMapConvergenceIsTheBoxDividedByItsBudget` now pins. |
 | 2026-08-28 | **The input sweep covers twenty of twenty-one inputs; it covered eighteen of twenty-one.** Position needed a scenario that changes altitude before it could be measured at all, and on the new `descent` it is **0.8 K at worst and 0.00 K standing** — covered, and it does not matter. Weather needed nothing but asking, and it is **168.8 K at worst and 87.1 K standing**, the largest single-input divergence the sweep can express and a bias rather than a perturbation. Both were inert on the first attempt because `EnvironmentSample` is a **struct** and the helpers were mutating copies, which is why the sweep now marks a case its scenario cannot express rather than printing the zero that looked identical. |
 | 2026-08-28 | Priced the inline-radiator limit against `C40` instead of leaving it as plumbing waiting to be done. Running coolant through a radiator is internal transport, and the ceiling on every internal path is **9.13 % of the peak** — the hull already carries 1,457 W/K against the loop's 40. Stated as a bound rather than a measurement, because nobody has run this one. |
