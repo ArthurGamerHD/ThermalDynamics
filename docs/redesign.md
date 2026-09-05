@@ -63,10 +63,12 @@ knob before a performance one" open. The ceiling on any sleeping scheme is the q
 real grid — reached only by a scheme with no bookkeeping at all, so a measured ceiling that is
 already low kills the idea cheaply.
 
-**The instrument.** `NodeActivityLab` (`bench activity`) reports, at steps 10, 50 and 200 after
-an event, the share of nodes whose per-step movement is under 0.0001 / 0.001 / 0.01 / 0.1 K, and
-the share of links with both ends quiet — on a parked hull in air and on a driven hull in vacuum
-— then disturbs one node by 300 K and tracks the active set for fifty steps. No equilibrium is
+**The instrument.** `NodeActivityLab` (`bench activity`) reports, at marks after an event —
+steps 10, 50 and 200 as first built, with 2,000 and 20,000 added after the first run showed the
+short marks measure only the transient — the share of nodes whose per-step movement is under
+0.0001 / 0.001 / 0.01 / 0.1 K, and the share of links with both ends quiet, on a parked hull in
+air and on a driven hull in vacuum; then it disturbs one node by 300 K on the quietest background
+it has and tracks the active set for fifty steps. No equilibrium is
 claimed anywhere (`M12`): activity is a function of steps since the last event, which is the
 shape a sleeping scheme actually faces.
 
@@ -82,8 +84,63 @@ much less, and a scheme that hurts working ships is worth nothing.
 
 ## Findings
 
-The labs above have not yet run at evaluation size; this section is filled by the commit that
-runs them, so the criteria in this page's history demonstrably predate the data.
+### The change-local remap: criterion met, decisively
+
+`bench remaplocality`, 2026-09-05, census hulls, exact map diffs:
+
+| mutation | 32,800 blocks: visited → changed | 126,731 blocks: visited → changed |
+| --- | ---: | ---: |
+| skin add | 381,239 → **1** | 1,678,096 → **1** |
+| skin remove | 381,238 → **1** | 1,678,109 → **1** |
+| buried remove | 378,397 → **1** | 1,671,526 → **1** |
+| room boundary remove | 378,395 → **2,206** (0.58 %) | 1,671,523 → **6,846** (0.41 %) |
+
+The median changed-to-visited ratio is one cell in ~1.7 million — the criterion asked for under
+one per cent and the panel's *worst* row is under half of one. Three of the four mutations change
+exactly the mutated cell's own classification; even opening a whole compartment reclassifies 0.4 %
+of what the full pass visits. **A change-local remap earns its design row**: the full reflood a
+mid-session block change pays — 410 budgeted ticks at 126,731 blocks, 3,934 at a million — is more
+than 99.5 % rediscovery in every case measured, and the room-boundary case shows the change region
+is discoverable (it is the opened room plus the mutated cell's neighbourhood, both reachable from
+the mutation). Filed as `D21` in [backlog.md](backlog.md).
+
+### Activity tracking: the criterion as written fails, and what failed was its clock
+
+`bench activity`, 2026-09-05, 32,800 blocks, node shares quiet at each threshold:
+
+| scenario | step | <0.0001 K | <0.001 K | <0.01 K | <0.1 K | links quiet (<0.001 K) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| parked in air | 200 | 0.0 % | **0.1 %** | 0.2 % | 5.5 % | 0.0 % |
+| parked in air | 2,000 | 32.1 % | 51.5 % | 82.4 % | 100 % | 52.5 % |
+| parked in air | 20,000 | **100 %** | **100 %** | 100 % | 100 % | **100 %** |
+| driven in vacuum | 200 | 0.0 % | 0.0 % | 0.0 % | 0.1 % | 0.0 % |
+| driven in vacuum | 2,000 | 0.0 % | 0.0 % | 29.1 % | 92.5 % | 0.0 % |
+| driven in vacuum | 20,000 | **100 %** | **100 %** | 100 % | 100 % | **100 %** |
+
+**The criterion as fixed is not met and the verdict stands against it as written** (`E1`): at step
+200 the parked hull is 0.1 % quiet against the 50 % the criterion demanded, and its second clause
+was unjudgeable on the first run because the wavefront was measured against a background that had
+never gone quiet — the whole grid read active, which said nothing about the disturbance (`P2`).
+
+What the longer marks then showed is that the criterion's *clock* was the error, chosen by guess
+at 50 simulated seconds when the physics of a hull's decay puts the quiet horizon at the order of
+a simulated hour: by step 20,000 (≈ 83 simulated minutes) **both** hulls are completely quiet at a
+tenth of a millikelvin — the driven one included, because a ship at thermal steady state moves
+nothing per step even with every producer running. And on that quiet background, a 300 K
+disturbance's active set peaks at **159 nodes of 32,800 — 0.48 % of the grid** — and is shrinking
+again by step 50.
+
+### The revised criterion, changed in the open
+
+Per `E11`: the original criterion stays above, this revision names what moved and why, and the
+run that decides it is not in the commit that states it. **Revised**: activity tracking earns a
+design row if, at the millikelvin-per-step threshold, both hulls are more than 90 % quiet by step
+20,000 *and* the disturbance clause holds as originally written (under ten per cent of the grid
+across its first fifty steps, measured on a background that is itself quiet). What moved is only
+the mark the first clause is read at — 200 → 20,000 steps — because 200 steps was an arbitrary
+clock that measured the transient, not the regime a sleeping scheme lives in; the thresholds and
+the shares did not move. The confirming run, at a size this page has not yet judged, follows in
+its own commit.
 
 ## Limits
 
@@ -98,4 +155,5 @@ problem, and this page only prices the prize.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-05 | **Findings recorded.** The remap candidate meets its criterion decisively (median one changed cell in ~1.7 million visited; worst case 0.58 %) and is filed as `D21`. The activity criterion **fails as written** — 0.1 % quiet at its step-200 clock — and the long marks show the clock was the error: both hulls are 100 % quiet by step 20,000 and a 300 K disturbance peaks at 0.48 % of the grid on a quiet background. A revised criterion (the mark moves to 20,000; thresholds and shares unmoved) is stated per `E11`, with its confirming run left to the next commit. The wavefront's first run also corrected the lab: measured on a 200-step background the whole grid read active, so the number described the background, not the disturbance (`P2`). |
 | 2026-09-05 | Opened: the survey of measured refusals, the two open candidates — change-local room remapping and activity tracking — and their criteria, committed before the labs first run at evaluation size (`E1`). |

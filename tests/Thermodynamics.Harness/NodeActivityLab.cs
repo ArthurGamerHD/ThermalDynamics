@@ -17,7 +17,7 @@ namespace Thermodynamics.Harness
     /// and the sleep threshold `G5` left open — and it measures *potential*, not a design: the
     /// quiet share is the ceiling on what any sleeping scheme could skip, reached only by a
     /// scheme with no bookkeeping cost at all. **The criteria, fixed before the first run**
-    /// (`E1`, [redesign.md](../../docs/redesign.md)): activity tracking earns a design row if,
+    /// (`E1`, redesign.md): activity tracking earns a design row if,
     /// at a millikelvin per step — below anything a readout shows — the parked hull is more than
     /// half quiet by step 200, and a 300 K disturbance's active set stays under ten per cent of
     /// the grid across its first fifty steps. The driven hull's share is reported either way,
@@ -62,10 +62,18 @@ namespace Thermodynamics.Harness
             public int WavefrontNodes;
         }
 
-        public static Result Run(int blocks, Action<string> log = null)
+        /// <summary>
+        /// The default marks. Steps 10–200 are what the criterion on redesign.md reads; the long
+        /// marks were added after the first run showed 50 simulated seconds is nowhere on a
+        /// thermal decay's timescale — they characterise the horizon, and the criterion itself
+        /// was not moved (`E11`): its verdict is read at step 200 as written.
+        /// </summary>
+        public static readonly int[] DefaultMarks = { 10, 50, 200, 2000, 20000 };
+
+        public static Result Run(int blocks, Action<string> log = null, int[] marks = null)
         {
             Result result = new Result();
-            int[] marks = { 10, 50, 200 };
+            if (marks == null) marks = DefaultMarks;
 
             // A parked hull in air, from spread temperatures: the everyday case sleeping is for.
             if (log != null) log("parked in air");
@@ -80,8 +88,11 @@ namespace Thermodynamics.Harness
             MeasureAtMarks(driven, Worlds.Shadow(), "driven in vacuum", marks, result.Rows);
 
             // A single disturbed node on the parked hull, tracked step by step: how local a local
-            // event stays. The parked hull has already run its 200 steps above, so the background
-            // is as quiet as this lab ever sees it, and what grows is the disturbance alone.
+            // event stays. The parked hull has already run to the last mark above, so the
+            // background is as quiet as this lab ever sees it — the first run measured the
+            // wavefront on a 200-step background and the whole grid was still active, so the
+            // number said nothing about the disturbance at all (`P2`: the background was the
+            // blind spot).
             if (log != null) log("hot spot wavefront");
             ThermalNode victim = parked.Solver.Nodes[parked.Solver.Nodes.Count / 2];
             victim.Temperature += 300f;

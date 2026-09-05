@@ -5,7 +5,7 @@ namespace Thermodynamics.Tests
 {
     /// <summary>
     /// The remap-locality lab is the instrument that decides the change-local remap candidate on
-    /// [redesign.md](../../docs/redesign.md), so what is pinned is the instrument's honesty: the
+    /// redesign.md, so what is pinned is the instrument's honesty: the
     /// diff sees change where a mutation made one, sees a *lot* of change where a mutation opened
     /// a room — the case where a big answer is the right answer — and a full pass's visited count
     /// dwarfs the changed count for a skin change, which is the asymmetry the whole evaluation

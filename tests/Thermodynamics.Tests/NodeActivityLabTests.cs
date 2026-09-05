@@ -5,7 +5,7 @@ namespace Thermodynamics.Tests
 {
     /// <summary>
     /// The activity lab is the instrument that decides the sleep-threshold candidate on
-    /// [redesign.md](../../docs/redesign.md), so what is pinned is that it can tell quiet from
+    /// redesign.md, so what is pinned is that it can tell quiet from
     /// busy at all: thresholds are monotone (a looser threshold never reports fewer quiet nodes),
     /// the driven hull is busier than the parked one at the same mark, the disturbance makes the
     /// background it lands on measurably busier, and every judged population is the whole grid —
@@ -17,7 +17,9 @@ namespace Thermodynamics.Tests
 
         private static NodeActivityLab.Result Result()
         {
-            if (result == null) result = NodeActivityLab.Run(4000);
+            // Short marks: the tests pin the instrument, and the long default marks are the
+            // evaluation run's business.
+            if (result == null) result = NodeActivityLab.Run(4000, null, new[] { 10, 50, 200 });
             return result;
         }
 

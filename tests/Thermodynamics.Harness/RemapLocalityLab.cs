@@ -14,7 +14,7 @@ namespace Thermodynamics.Harness
     ///
     /// <para>
     /// This is the evaluation instrument for the change-local remap redesign
-    /// ([redesign.md](../../docs/redesign.md)). `D2`'s wait is structural — the box over a
+    /// (redesign.md). `D2`'s wait is structural — the box over a
     /// 4,096-cell tick budget — so no per-cell work can shorten it; what could is visiting fewer
     /// cells, and the upper bound of that win is exactly the rediscovery share measured here.
     /// **The criterion, fixed before the first run** (`E1`): a change-local remap earns a design
