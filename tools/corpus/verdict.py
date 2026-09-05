@@ -41,7 +41,7 @@ import provenance as provenance_lib
 import scoring
 from scoring import oversubscription_note
 
-ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
+ARGS = scoring.positionals(("--csv", "--baseline", "--population"))
 DATA = ARGS[0] if ARGS else "out/corpus-2026-08-21"
 
 CSV_OUT = scoring.flag("--csv", "summary.csv") if "--csv" in sys.argv else None

@@ -288,12 +288,7 @@ def main():
         return score(sys.argv[sys.argv.index("--score") + 1],
                      load_weights(scoring.flag("--weights", WEIGHTS_DEFAULT)))
 
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    seen = set()
-    for name in ("--out", "--weights", "--score"):
-        if name in sys.argv:
-            seen.add(sys.argv[sys.argv.index(name) + 1])
-    args = [a for a in args if a not in seen]
+    args = scoring.positionals(("--out", "--weights", "--score"))
     if not args:
         raise SystemExit("core.py <reference-dataset> [--out <file>] [--weights <file>]"
                          "  |  core.py --score <core-dataset>")

@@ -64,7 +64,7 @@ def deltas(rows, scenario):
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    args = scoring.positionals(("--csv",))
 
     path = args[0] if args else "out/shape-2026-08-31"
     out = scoring.flag("--csv", None)

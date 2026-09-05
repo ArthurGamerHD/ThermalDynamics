@@ -33,12 +33,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import provenance as provenance_lib
 import scoring
 
-ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
-FLAGGED = set()
-_value = scoring.flag("--csv")
-if _value is not None:
-    FLAGGED.add(_value)
-ARGS = [a for a in ARGS if a not in FLAGGED]
+ARGS = scoring.positionals(("--csv",))
 
 DATA = ARGS[0] if ARGS else "out/floor-2026-08-29"
 CSV_OUT = scoring.flag("--csv")

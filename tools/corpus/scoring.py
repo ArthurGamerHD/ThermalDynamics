@@ -346,6 +346,34 @@ def flag(name, fallback=None, argv=None):
     return argv[at + 1] if at + 1 < len(argv) else fallback
 
 
+def positionals(value_flags, argv=None):
+    """Positional arguments: argv past the program name, minus flags and the values of the
+    flags that take one.
+
+    **Position-aware rather than a value filter, because the parse had eight statements in five
+    behaviours.** Four tools kept the bare comprehension, so `tool.py --csv out.csv` read
+    `out.csv` as its dataset — which happened live in this repository's own cleanup record
+    (iteration 22). Four grew a filter that removes matching *values* from the positional list,
+    in three spellings: one indexed past a dangling flag and crashed, one declined to filter an
+    empty value, and all four would drop a genuine positional that happens to equal some flag's
+    value. Skipping the token after a value flag has none of those cases. A flag that takes no
+    value is simply not named in `value_flags`.
+    """
+    if argv is None:
+        argv = sys.argv
+    out = []
+    skip = False
+    for token in argv[1:]:
+        if skip:
+            skip = False
+            continue
+        if token.startswith("--"):
+            skip = token in value_flags
+            continue
+        out.append(token)
+    return out
+
+
 def write_summary(path, figures):
     """The `statistic,value,unit` summary page, as one statement of the format.
 

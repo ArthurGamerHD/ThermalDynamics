@@ -103,7 +103,7 @@ def shape_of(row, enabled):
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    args = scoring.positionals(("--cd", "--rho", "--csv"))
 
     path = args[0] if args else "out/census-2026-08-25/census.csv"
     coefficient = float(scoring.flag("--cd", SHIPPED_DRAG_COEFFICIENT))
