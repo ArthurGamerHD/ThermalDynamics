@@ -87,14 +87,7 @@ def pairs(rows, knob):
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-
-    flagged = set()
-    for name in ("--knob", "--csv"):
-        value = scoring.flag(name)
-        if value:
-            flagged.add(value)
-    args = [a for a in args if a not in flagged]
+    args = scoring.positionals(("--knob", "--csv"))
 
     directory = args[0] if args else "out/knobs-2026-08-30"
     rows = load(directory)

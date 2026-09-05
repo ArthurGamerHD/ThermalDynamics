@@ -461,6 +461,22 @@ class NoughtAndNothingAreDifferentAnswers(unittest.TestCase):
         self.assertEqual("x", scoring.flag("--baseline", "x", argv=argv))
         self.assertEqual("x", scoring.flag("--csv", "x", argv=["tool.py", "--csv"]))
 
+    def test_positionals_skip_flags_and_their_values_by_position(self):
+        """The shared positional parse, pinned at each fault the eight copies had among them.
+
+        A flag's value must not read as a dataset (the bare form's leak, which bit a real
+        session), a dangling flag must not crash (one filter's fault), an empty value must
+        still be skipped (another's), and a positional that merely equals a flag's value
+        must survive (all four filters').
+        """
+        flags = ("--csv",)
+        self.assertEqual(["data"], scoring.positionals(flags, ["t", "data", "--csv", "out"]))
+        self.assertEqual(["data"], scoring.positionals(flags, ["t", "--csv", "out", "data"]))
+        self.assertEqual(["data"], scoring.positionals(flags, ["t", "data", "--csv"]))
+        self.assertEqual(["data"], scoring.positionals(flags, ["t", "--csv", "", "data"]))
+        self.assertEqual(["out"], scoring.positionals(flags, ["t", "--csv", "out", "out"]))
+        self.assertEqual(["data"], scoring.positionals(flags, ["t", "--sweep", "data"]))
+
     def test_write_summary_round_trips_through_the_reader_verdict_uses(self):
         """The summary page format, pinned from both sides of its contract.
 
