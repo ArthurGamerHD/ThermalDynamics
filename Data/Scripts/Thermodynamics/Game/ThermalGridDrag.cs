@@ -96,59 +96,20 @@ namespace Thermodynamics
         {
             if (!GridGroups.TryClaim(leader.Grid, GroupGrids, Handled)) return;
 
-            Vector3D centre = Vector3D.Zero;
-            float mass = 0f;
-            Vector3 newtons = Vector3.Zero;
-            bool any = false;
+            // **A group with a static member is anchored and takes no force at all.** With the
+            // friction floor at zero the term is live in any breeze, so every base standing in
+            // wind reaches here every tick — and the test touches no thermal adapter, so bailing
+            // here is what keeps those bases free.
+            if (AeroGroupForces.Anchored(GroupGrids)) return;
 
-            for (int i = 0; i < GroupGrids.Count; i++)
-            {
-                IMyCubeGrid grid = GroupGrids[i];
-                if (grid == null || grid.Physics == null || grid.GameLogic == null) continue;
+            Vector3D centre;
+            float mass;
+            Vector3 drag, lift;
+            AeroGroupForces.Sum(GroupGrids, out centre, out mass, out drag, out lift);
 
-                // **A group with a static member is anchored and takes no force at all.** With the
-                // friction floor at zero the term is live in any breeze, so every base standing in
-                // wind reaches here every tick — and a force on an anchored assembly buys nothing
-                // and loads the joints between the station and whatever is docked to it.
-                if (grid.IsStatic) return;
-
-                ThermalGrid thermals = grid.GameLogic.GetAs<ThermalGrid>();
-                if (thermals == null || thermals.Simulation == null) continue;
-
-                float watts = thermals.Simulation.FrictionWatts;
-                if (watts > 0f)
-                {
-                    // **The same airflow the heat was computed from**, not a second reading of it.
-                    // `EnvironmentState.WindDirectionLocal` and `WindSpeed` are the *relative* wind
-                    // — the sample's `RelativeWind*`, which is the air's motion minus the grid's —
-                    // held in grid-local coordinates because that is what the six-face weighting
-                    // wants. Rotated back to world here because a force is applied in world space.
-                    EnvironmentState state = thermals.LastState;
-                    Vector3 localWind = state.WindDirectionLocal * state.WindSpeed;
-                    Vector3 worldWind = Vector3.TransformNormal(localWind, grid.WorldMatrix);
-
-                    newtons += DragForce.Vector(watts, worldWind, thermals.Simulation.Settings);
-
-                    // **Lift, added to the same resultant and applied at the same point.** The
-                    // pressure sum is grid-local like the wind was, so it is rotated the same way.
-                    // Returns zero unless the shape term and lift are both on, so a world with
-                    // neither pays a length and a branch.
-                    Vector3 pressure = Vector3.TransformNormal(
-                        thermals.Simulation.Solver.LastPressureWatts, grid.WorldMatrix);
-
-                    newtons += LiftForce.Vector(pressure, worldWind, thermals.Simulation.Settings);
-                    any = true;
-                }
-
-                float gridMass = grid.Physics.Mass;
-                if (gridMass > 0f)
-                {
-                    centre += grid.Physics.CenterOfMassWorld * gridMass;
-                    mass += gridMass;
-                }
-            }
-
-            if (!any || mass <= 0f || newtons.LengthSquared() <= 0f) return;
+            // **Lift joins the same resultant and is applied at the same point.**
+            Vector3 newtons = drag + lift;
+            if (mass <= 0f || newtons.LengthSquared() <= 0f) return;
 
             IMyCubeGrid applyTo = null;
             for (int i = 0; i < GroupGrids.Count; i++)
