@@ -31,12 +31,7 @@ namespace Thermodynamics.Tests
         /// <summary>Settings with nothing but conduction and the source: no sky, no sun, no air.</summary>
         private static ThermalSettings Isolated()
         {
-            ThermalSettings settings = new ThermalSettings();
-            settings.EnableEnvironment = false;
-            settings.EnableSolarHeat = false;
-            settings.EnableFriction = false;
-            settings.EnableDamage = false;
-            return settings.Derive();
+            return Isolation.DeadWorld();
         }
 
         private static BlockModel Smouldering(float watts)

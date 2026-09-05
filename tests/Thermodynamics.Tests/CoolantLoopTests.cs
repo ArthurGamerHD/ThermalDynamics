@@ -22,12 +22,7 @@ namespace Thermodynamics.Tests
     {
         private static ThermalSettings Isolated()
         {
-            ThermalSettings settings = new ThermalSettings();
-            settings.EnableEnvironment = false;
-            settings.EnableSolarHeat = false;
-            settings.EnableFriction = false;
-            settings.EnableDamage = false;
-            return settings.Derive();
+            return Isolation.DeadWorld();
         }
 
         [Fact]
