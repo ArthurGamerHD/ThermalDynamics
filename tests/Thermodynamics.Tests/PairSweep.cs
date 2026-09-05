@@ -61,25 +61,9 @@ namespace Thermodynamics.Tests
         [Fact]
         public void EveryPairOfConductionAndClockGetsAMeasuredCell()
         {
-            if (CorpusFixture.Files().Count == 0) return;
-
-            List<ShipSet.Entry> set = ShipSet.Read("THERMAL_PANEL", "tools/corpus/typical.csv");
-            Assert.True(set.Count > 0,
-                "the corpus is opted in but no ship set was read. Build one with "
-                + "tools/corpus/typical.py, or point THERMAL_PANEL at another.");
-
-            List<Blueprints.Ship> ships = ShipSet.Load(set, Progress);
-            Assert.True(ships.Count > 0, "the set named ships but none of them could be read");
-
-            Dictionary<string, Battery.Scenario> scenarios =
-                new Dictionary<string, Battery.Scenario>(StringComparer.Ordinal);
-            foreach (Battery.Scenario scenario in Battery.All()) scenarios[scenario.Name] = scenario;
-
-            foreach (string name in PairLab.Scenarios)
-            {
-                Assert.True(scenarios.ContainsKey(name),
-                    "the grid asks for scenario '" + name + "' and the battery has no such case");
-            }
+            List<Blueprints.Ship> ships;
+            Dictionary<string, Battery.Scenario> scenarios;
+            if (!Prologue(out ships, out scenarios)) return;
 
             Sweep(Pairs, PairLab.All(), PairLab.Scenarios, ships, scenarios);
         }
@@ -102,25 +86,9 @@ namespace Thermodynamics.Tests
         [Fact]
         public void EveryCandidateCellIsPricedInAir()
         {
-            if (CorpusFixture.Files().Count == 0) return;
-
-            List<ShipSet.Entry> set = ShipSet.Read("THERMAL_PANEL", "tools/corpus/typical.csv");
-            Assert.True(set.Count > 0,
-                "the corpus is opted in but no ship set was read. Build one with "
-                + "tools/corpus/typical.py, or point THERMAL_PANEL at another.");
-
-            List<Blueprints.Ship> ships = ShipSet.Load(set, Progress);
-            Assert.True(ships.Count > 0, "the set named ships but none of them could be read");
-
-            Dictionary<string, Battery.Scenario> scenarios =
-                new Dictionary<string, Battery.Scenario>(StringComparer.Ordinal);
-            foreach (Battery.Scenario scenario in Battery.All()) scenarios[scenario.Name] = scenario;
-
-            foreach (string name in PairLab.AirScenarios)
-            {
-                Assert.True(scenarios.ContainsKey(name),
-                    "the air pass asks for scenario '" + name + "' and the battery has no such case");
-            }
+            List<Blueprints.Ship> ships;
+            Dictionary<string, Battery.Scenario> scenarios;
+            if (!Prologue(out ships, out scenarios)) return;
 
             Sweep(Air, PairLab.Decision(), PairLab.AirScenarios, ships, scenarios);
         }
@@ -143,21 +111,38 @@ namespace Thermodynamics.Tests
         [Fact]
         public void EveryLoadAndClockPairGetsAMeasuredCell()
         {
-            if (CorpusFixture.Files().Count == 0) return;
+            List<Blueprints.Ship> ships;
+            Dictionary<string, Battery.Scenario> scenarios;
+            if (!Prologue(out ships, out scenarios)) return;
+
+            Sweep(LoadDial, PairLab.Load(), PairLab.LoadScenarios, ships, scenarios);
+        }
+
+        /// <summary>
+        /// The prologue every grid shares: the opt-in guard, the ship set and the battery index.
+        /// False means the corpus is not opted in and the test is a quiet skip, which is the
+        /// fixture's own convention. Three copies of this had already drifted — two checked their
+        /// scenario names against the battery and the third did not — so the check lives in
+        /// <see cref="Sweep"/> now, where no pass can be written without it.
+        /// </summary>
+        private static bool Prologue(
+            out List<Blueprints.Ship> ships, out Dictionary<string, Battery.Scenario> scenarios)
+        {
+            ships = null;
+            scenarios = null;
+            if (CorpusFixture.Files().Count == 0) return false;
 
             List<ShipSet.Entry> set = ShipSet.Read("THERMAL_PANEL", "tools/corpus/typical.csv");
             Assert.True(set.Count > 0,
                 "the corpus is opted in but no ship set was read. Build one with "
                 + "tools/corpus/typical.py, or point THERMAL_PANEL at another.");
 
-            List<Blueprints.Ship> ships = ShipSet.Load(set, Progress);
+            ships = ShipSet.Load(set, Progress);
             Assert.True(ships.Count > 0, "the set named ships but none of them could be read");
 
-            Dictionary<string, Battery.Scenario> scenarios =
-                new Dictionary<string, Battery.Scenario>(StringComparer.Ordinal);
+            scenarios = new Dictionary<string, Battery.Scenario>(StringComparer.Ordinal);
             foreach (Battery.Scenario scenario in Battery.All()) scenarios[scenario.Name] = scenario;
-
-            Sweep(LoadDial, PairLab.Load(), PairLab.LoadScenarios, ships, scenarios);
+            return true;
         }
 
         /// <summary>
@@ -171,6 +156,16 @@ namespace Thermodynamics.Tests
         private static void Sweep(Pass pass, List<PairLab.Cell> cells, string[] scenarioNames,
             List<Blueprints.Ship> ships, Dictionary<string, Battery.Scenario> scenarios)
         {
+            // Every scenario the pass names must exist, checked here so no pass can be written
+            // without the check: Run skips an unknown name silently, so a misspelled scenario
+            // would otherwise thin the dataset without an error — and the load grid shipped
+            // without this check for as long as it was a per-test copy.
+            foreach (string name in scenarioNames)
+            {
+                Assert.True(scenarios.ContainsKey(name),
+                    pass.Dataset + " asks for scenario '" + name + "' and the battery has no such case");
+            }
+
             // Exactly one control, and it runs first, so a grid killed early still carries the row
             // every other row is read against.
             int controls = 0;
