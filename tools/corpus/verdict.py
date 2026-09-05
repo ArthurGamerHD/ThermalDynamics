@@ -62,9 +62,8 @@ WARM_KELVIN = 400.0
 
 
 
-# The key that identifies a ship. A workshop id alone is not enough: fourteen corpus blueprints
-# sit outside a numbered workshop folder and all of them get id 0.
-KEY = ("ship", "workshop_id")
+# The key that identifies a ship — scoring.ROW_KEY, which owns the argument for both halves.
+KEY = scoring.ROW_KEY
 
 
 def load(name, *extra_key):
@@ -230,8 +229,14 @@ _blocks = [scoring.number(r, "blocks") for r in ships]
 _blocks = sorted(b for b in _blocks if b is not None)
 if _blocks:
     record("population blocks", int(sum(_blocks)))
-    record("population blocks p50", int(_blocks[len(_blocks) // 2]))
-    record("population blocks p99", int(_blocks[min(len(_blocks) - 1, int(0.99 * len(_blocks)))]))
+    # scoring.percentile, not the index form: the index form is what that function's own
+    # docstring banned, and one copy of it survived here — in the rows the documentation
+    # quotes — until 2026-09-04. On this population the two agree to a fraction of a per
+    # cent, so a re-run moves these rows slightly against a committed summary, for this
+    # stated reason and not because the population moved (E11: the definition changes in
+    # a commit that carries no dataset).
+    record("population blocks p50", int(scoring.percentile(_blocks, 0.5)))
+    record("population blocks p99", int(scoring.percentile(_blocks, 0.99)))
 
 _sealed = [scoring.number(r, "sealed_blocks") for r in ships]
 _sealed = [v for v in _sealed if v is not None]

@@ -125,8 +125,7 @@ def pair(rows, weight_by_ship):
             continue
 
         caps.add(int(cap))
-        key = (row.get("ship"), row.get("workshop_id"), row.get("scenario"))
-        byKey[key][int(cap)] = row
+        byKey[scoring.key_of(row, "scenario")][int(cap)] = row
 
     capped_at = sorted(c for c in caps if c != OFF)
     pairs = []

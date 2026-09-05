@@ -79,7 +79,7 @@ def pair(rows):
         arm = scoring.number(row, "cap")
         if arm is None:
             continue
-        by_key[(row.get("ship"), row.get("workshop_id"), row.get("scenario"))][int(arm)] = row
+        by_key[scoring.key_of(row, "scenario")][int(arm)] = row
 
     pairs = []
     orphans = 0

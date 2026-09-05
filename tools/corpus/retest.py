@@ -37,7 +37,7 @@ CONTROL = "shipped"
 
 # The key that identifies one measurement: a ship in a scenario. The world is the axis being
 # compared, so it is not part of the key.
-KEY = ("ship", "workshop_id", "scenario")
+KEY = scoring.ROW_KEY + ("scenario",)
 
 
 
