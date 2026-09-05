@@ -176,23 +176,14 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>A CSV line, respecting the quotes a ship name needs.</summary>
+        /// <summary>
+        /// A CSV line, respecting the quotes a ship name needs. This lab's own copy was the naive
+        /// quote-toggle, which silently dropped the escaped quote the writers legitimately
+        /// produce — the drift CsvLine.Split's summary records.
+        /// </summary>
         private static string[] Split(string line)
         {
-            List<string> fields = new List<string>();
-            StringBuilder current = new StringBuilder();
-            bool quoted = false;
-
-            for (int i = 0; i < line.Length; i++)
-            {
-                char c = line[i];
-                if (c == '"') { quoted = !quoted; continue; }
-                if (c == ',' && !quoted) { fields.Add(current.ToString()); current.Length = 0; continue; }
-                current.Append(c);
-            }
-
-            fields.Add(current.ToString());
-            return fields.ToArray();
+            return CsvLine.Split(line).ToArray();
         }
 
         /// <summary>

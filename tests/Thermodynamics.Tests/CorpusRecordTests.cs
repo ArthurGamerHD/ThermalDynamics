@@ -109,5 +109,24 @@ namespace Thermodynamics.Tests
             CorpusRecord.Provenance("a-walk");
             Assert.False(Directory.Exists(scratch));
         }
+
+        /// <summary>
+        /// What Text writes, CsvLine.Split reads back — pinned at the field the drifted reader
+        /// got wrong. Three readers carried the split and one was a naive quote-toggle that
+        /// silently dropped the doubled quote this writer legitimately produces, so a ship name
+        /// carrying a quote parsed differently depending on which lab read it (`D3`).
+        /// </summary>
+        [Fact]
+        public void ANameWithAQuoteAndACommaRoundTripsThroughTheOneSplit()
+        {
+            string name = "The \"Iron\" Maiden, Mk II";
+            string line = CorpusRecord.Text(name) + "," + CorpusRecord.Text("plain");
+
+            var fields = Thermodynamics.Harness.CsvLine.Split(line);
+
+            Assert.Equal(2, fields.Count);
+            Assert.Equal(name, fields[0]);
+            Assert.Equal("plain", fields[1]);
+        }
     }
 }
