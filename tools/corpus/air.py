@@ -90,7 +90,7 @@ def main():
         value = scoring.number(row, "substeps_demanded")
         if value is None:
             continue
-        cell = (float(row["conductivity"]), float(row["clock"]))
+        cell = scoring.pair_cell(row)
         demand.setdefault((cell, row["scenario"]), {})[row["ship"]] = value
 
     cells = sorted({cell for cell, _ in demand}, key=lambda c: (c[0], -c[1]))

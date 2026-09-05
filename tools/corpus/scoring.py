@@ -431,6 +431,19 @@ def number_or(row, key, default):
 ROW_KEY = ("ship", "workshop_id")
 
 
+def pair_cell(row):
+    """The cell of the pair grid a row belongs to: `(conductivity, clock)`.
+
+    The identity that joins one pair-walk document's rows to another's, the way `ROW_KEY`
+    joins a ship's. It was stated twice — `pairs.py`'s own helper and an inline copy in
+    `air.py` — and the two documents it keys are read side by side, which is exactly where a
+    drifted key is silent (`P5`). A row without its cell columns raises, on purpose: a pair
+    dataset that cannot say which cell a row is from is unreadable, and loudly is the only
+    honest way to be unreadable.
+    """
+    return (float(row["conductivity"]), float(row["clock"]))
+
+
 def key_of(row, *extra):
     """The identity of an outcome row: the ship, plus any column the caller adds.
 

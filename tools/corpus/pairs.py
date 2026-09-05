@@ -74,8 +74,9 @@ def median(values):
     return statistics.median(values) if values else None
 
 
-def cell_key(row):
-    return (float(row["conductivity"]), float(row["clock"]))
+# One definition, in scoring.py, shared with air.py — the two documents this keys are read
+# side by side.
+cell_key = scoring.pair_cell
 
 
 def crossings(rows):
