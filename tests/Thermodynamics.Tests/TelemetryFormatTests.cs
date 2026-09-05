@@ -200,5 +200,29 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(3, sb.ToString().TrimEnd('\n').Split(',').Length);
         }
+
+        /// <summary>
+        /// What the shipped telemetry writer quotes, the harness's one CSV reader parses back.
+        ///
+        /// The mod cannot reference the harness, so this writer is necessarily its own copy of
+        /// the escape rather than a call into <c>CsvLine.Text</c> — the exemption
+        /// `ConsolidationTests` carries — and a pair that cannot be one definition is held
+        /// together by a round trip instead (`D3`): the field dumps this writer produces are
+        /// exactly what the harness's readers consume.
+        /// </summary>
+        [Fact]
+        public void WhatTheShippedWriterQuotesTheHarnessReaderParsesBack()
+        {
+            string name = "The \"Iron\" Maiden, Mk II";
+            string line = TelemetryFormat.Quote(name) + "," + TelemetryFormat.Quote("plain")
+                + "," + TelemetryFormat.Quote("");
+
+            var fields = Thermodynamics.Harness.CsvLine.Split(line);
+
+            Assert.Equal(3, fields.Count);
+            Assert.Equal(name, fields[0]);
+            Assert.Equal("plain", fields[1]);
+            Assert.Equal("", fields[2]);
+        }
     }
 }
