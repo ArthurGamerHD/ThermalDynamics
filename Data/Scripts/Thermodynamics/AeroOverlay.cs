@@ -60,14 +60,16 @@ namespace Thermodynamics
             ThermalGrid thermals = Target();
             if (thermals == null || thermals.Grid == null || thermals.Simulation == null) return;
 
-            // The same figures ThermalGridDrag sums, walked read-only over the same group, so the
-            // arrows are the force the server applies rather than a second opinion about it.
+            // The same summation ThermalGridDrag applies, read through the same helper, so the
+            // arrows are the force the server applies rather than a second opinion about it —
+            // including the anchored-group veto, which zeroes them.
             Vector3D centre;
             float mass;
             Vector3 drag;
             Vector3 lift;
             Vector3 worldWind;
-            SumGroup(thermals, out centre, out mass, out drag, out lift, out worldWind);
+            bool anchored;
+            SumGroup(thermals, out centre, out mass, out drag, out lift, out worldWind, out anchored);
             if (mass <= 0f) return;
 
             Vector3D eye = MyAPIGateway.Session.Camera.WorldMatrix.Translation;
@@ -81,7 +83,7 @@ namespace Thermodynamics
             if (hasPressureCentre) DrawCentreOfPressure(ref pressureCentre, ref centre, ref eye, thermals.Grid);
 
             Report(thermals, ref drag, ref lift, ref worldWind, mass,
-                hasPressureCentre ? Vector3D.Distance(pressureCentre, centre) : -1d);
+                hasPressureCentre ? Vector3D.Distance(pressureCentre, centre) : -1d, anchored);
         }
 
         /// <summary>
@@ -184,52 +186,31 @@ namespace Thermodynamics
         /// the leader's relative wind in world space, which is what the arrows are drawn against.
         /// </summary>
         private static void SumGroup(ThermalGrid leader, out Vector3D centre, out float mass,
-            out Vector3 drag, out Vector3 lift, out Vector3 worldWind)
+            out Vector3 drag, out Vector3 lift, out Vector3 worldWind, out bool anchored)
         {
-            centre = Vector3D.Zero;
-            mass = 0f;
-            drag = Vector3.Zero;
-            lift = Vector3.Zero;
-            worldWind = Vector3.Zero;
-
             IMyGridGroupData group = leader.Grid.GetGridGroup(GridLinkTypeEnum.Physical);
 
             GroupGrids.Clear();
             if (group != null) group.GetGrids(GroupGrids);
             if (GroupGrids.Count == 0) GroupGrids.Add(leader.Grid);
 
-            for (int i = 0; i < GroupGrids.Count; i++)
-            {
-                IMyCubeGrid grid = GroupGrids[i];
-                if (grid == null || grid.Physics == null || grid.GameLogic == null) continue;
+            // The leader's own relative wind, which is what the arrows are drawn against.
+            EnvironmentState state = leader.LastState;
+            worldWind = Vector3.TransformNormal(
+                state.WindDirectionLocal * state.WindSpeed, leader.Grid.WorldMatrix);
 
-                ThermalGrid thermals = grid.GameLogic.GetAs<ThermalGrid>();
-                if (thermals == null || thermals.Simulation == null) continue;
-
-                EnvironmentState state = thermals.LastState;
-                Vector3 localWind = state.WindDirectionLocal * state.WindSpeed;
-                Vector3 wind = Vector3.TransformNormal(localWind, grid.WorldMatrix);
-                if (grid == leader.Grid) worldWind = wind;
-
-                float watts = thermals.Simulation.FrictionWatts;
-                if (watts > 0f)
-                {
-                    drag += DragForce.Vector(watts, wind, thermals.Simulation.Settings);
-
-                    Vector3 pressure = Vector3.TransformNormal(
-                        thermals.Simulation.Solver.LastPressureWatts, grid.WorldMatrix);
-                    lift += LiftForce.Vector(pressure, wind, thermals.Simulation.Settings);
-                }
-
-                float gridMass = grid.Physics.Mass;
-                if (gridMass > 0f)
-                {
-                    centre += grid.Physics.CenterOfMassWorld * gridMass;
-                    mass += gridMass;
-                }
-            }
-
+            AeroGroupForces.Sum(GroupGrids, out centre, out mass, out drag, out lift);
             if (mass > 0f) centre /= mass;
+
+            // The drag pass applies nothing to an anchored group, and these arrows promise to be
+            // the force the server applies rather than a second opinion — so an anchored group
+            // shows its centre of mass and its wind, and no force. Gates names the veto.
+            anchored = AeroGroupForces.Anchored(GroupGrids);
+            if (anchored)
+            {
+                drag = Vector3.Zero;
+                lift = Vector3.Zero;
+            }
         }
 
         /// <summary>
@@ -324,7 +305,7 @@ namespace Thermodynamics
         /// way the crosshair readout works.
         /// </summary>
         private static void Report(ThermalGrid thermals, ref Vector3 drag, ref Vector3 lift,
-            ref Vector3 worldWind, float mass, double pressureArm)
+            ref Vector3 worldWind, float mass, double pressureArm, bool anchored)
         {
             EnvironmentState state = thermals.LastState;
             float friction = thermals.Simulation.FrictionWatts;
@@ -340,7 +321,7 @@ namespace Thermodynamics
                     ? "  CoP offset: " + pressureArm.ToString("n1") + " m (no torque is applied from it)"
                     : ""), 1, "White");
 
-            string blocked = Gates(thermals, ref worldWind);
+            string blocked = Gates(thermals, ref worldWind, anchored);
             if (blocked.Length > 0)
             {
                 MyAPIGateway.Utilities.ShowNotification("[Aero gates] " + blocked, 1, "Red");
@@ -445,10 +426,12 @@ namespace Thermodynamics
         /// Every gate between the model and the ship's motion that is currently shut, in the order
         /// the chain tests them. Empty when force is flowing.
         /// </summary>
-        private static string Gates(ThermalGrid thermals, ref Vector3 worldWind)
+        private static string Gates(ThermalGrid thermals, ref Vector3 worldWind, bool anchored)
         {
             Settings settings = Settings.Instance;
             string blocked = "";
+
+            if (anchored) blocked += "anchored: a static grid is in the group, so no force is applied; ";
 
             if (!settings.EnableFriction) blocked += "EnableFriction off; ";
             if (thermals.LastState.AirDensity <= 0.01f) blocked += "no atmosphere; ";
