@@ -13,17 +13,37 @@ namespace Thermodynamics.Core
     /// </summary>
     public class SunShadowMap
     {
-        /// <summary>Cells found to be in shadow by the last completed pass.</summary>
-        private readonly HashSet<Vector3I> shadowed = new HashSet<Vector3I>();
+        /// <summary>
+        /// Cells found to be in shadow by the last completed pass, one bit per cell of that
+        /// pass's padded grid box.
+        ///
+        /// <para>
+        /// These three sets were `HashSet&lt;Vector3I&gt;` — about forty bytes a member plus the
+        /// growth copies, which on a 126,731-block hull made the first sunlit step allocate
+        /// 21.6 MB and every hull-sized rebuild churn the heap as the sun drifted. A bitset over
+        /// the box is an eighth of a byte a cell, kept between passes, and answers
+        /// <see cref="IsLit"/> with a bit read where there was a hash probe. The box is the block
+        /// bounds padded by one, because the cells walked are the air just outside the hull — and
+        /// the padding is load-bearing: <see cref="CellBitset.Add"/> silently drops a cell outside
+        /// its box, which here would read as lit for ever. See performance.md, Pass 10,
+        /// Iteration 6, and the same trade on the room map's solid set in Iteration 7 of the
+        /// first pass.
+        /// </para>
+        /// </summary>
+        private CellBitset shadowed = new CellBitset();
 
-        /// <summary>Cells found so far by the pass currently running.</summary>
-        private readonly HashSet<Vector3I> building = new HashSet<Vector3I>();
+        /// <summary>
+        /// Cells found so far by the pass currently running. Swapped with
+        /// <see cref="shadowed"/> when the pass completes, so publishing an answer costs two
+        /// reference writes rather than an element-by-element copy.
+        /// </summary>
+        private CellBitset building = new CellBitset();
 
         /// <summary>Air cells the running pass has yet to walk.</summary>
         private readonly List<Vector3I> pending = new List<Vector3I>();
 
         /// <summary>Air cells already queued, so a cell shared by several faces is walked once.</summary>
-        private readonly HashSet<Vector3I> queued = new HashSet<Vector3I>();
+        private readonly CellBitset queued = new CellBitset();
 
         /// <summary>
         /// Another grid that may stand in the way, with the transform into its cell space.
@@ -116,15 +136,20 @@ namespace Thermodynamics.Core
         /// </summary>
         public void Restart(GridModel model, Vector3 sunLocal, IList<Occluder> others)
         {
-            building.Clear();
             pending.Clear();
-            queued.Clear();
             occluders.Clear();
             occluderSun.Clear();
             cursor = 0;
 
             grid = model;
             if (grid == null || sunLocal.LengthSquared() < 1e-6f) return;
+
+            // The air being walked sits one cell outside the hull, so the sets' box is the block
+            // bounds padded by one on every side (and one more because the bound is exclusive).
+            Vector3I setMin = grid.Min - Vector3I.One;
+            Vector3I setMaxExclusive = grid.Max + new Vector3I(2, 2, 2);
+            building.Reset(setMin, setMaxExclusive);
+            queued.Reset(setMin, setMaxExclusive);
 
             passSun = Vector3.Normalize(sunLocal);
 
@@ -188,12 +213,13 @@ namespace Thermodynamics.Core
 
             if (IsRunning) return false;
 
-            shadowed.Clear();
-            foreach (Vector3I cell in building) shadowed.Add(cell);
+            // The completed pass becomes the answer by swap: the superseded answer's words are
+            // recycled as the next pass's working set, so a rebuild stops allocating anything.
+            CellBitset finished = building;
+            building = shadowed;
+            shadowed = finished;
 
-            building.Clear();
             pending.Clear();
-            queued.Clear();
             cursor = 0;
 
             sun = passSun;

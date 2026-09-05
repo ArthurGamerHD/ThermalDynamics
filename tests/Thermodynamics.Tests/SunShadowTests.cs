@@ -393,6 +393,127 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(1, completions);
         }
+
+        /// <summary>
+        /// The shadow sets are bitsets over the grid box padded by one, and the padding is
+        /// load-bearing: the cells walked are the air just outside the hull, and
+        /// <c>CellBitset.Add</c> silently drops a cell outside its box — which here would read
+        /// as lit for ever. This puts skin cells on every extreme of the box and requires the
+        /// shadow to land on them.
+        /// </summary>
+        [Fact]
+        public void TheSkinCellsOnTheBoxsOwnEdgeAreStillTracked()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            for (int x = 0; x <= 3; x++) builder.Place(Catalog.LightArmor(), new Vector3I(x, 0, 0));
+
+            SunShadowMap map = Build(builder.Grid, SunAlongX);
+
+            // The cell at grid.Min − 1 on the anti-sun side: the whole column stands between it
+            // and the sun. A set whose box missed the padding drops this cell and calls it lit.
+            Assert.False(map.IsLit(new Vector3I(-1, 0, 0)));
+
+            // And the cell at grid.Max + 1 on the sunward side is lit, so the assertion above is
+            // not a map that shadows everything (`E8`).
+            Assert.True(map.IsLit(new Vector3I(4, 0, 0)));
+        }
+
+        /// <summary>
+        /// Publishing a completed pass swaps the two bitsets instead of copying cell by cell, so
+        /// the map that answers after a restart is the recycled instance. A map restarted onto a
+        /// new sun must therefore agree exactly with a fresh map built for that sun — count for
+        /// count, face for face — or the swap is publishing stale words.
+        /// </summary>
+        [Fact]
+        public void ARestartedMapMatchesAFreshOneExactly()
+        {
+            GridBuilder a = GridBuilder.Large();
+            GridBuilder b = GridBuilder.Large();
+            a.PlaceCensus(LoadShapes.Build("ship", 2000));
+            b.PlaceCensus(LoadShapes.Build("ship", 2000));
+
+            Vector3 first = new Vector3(1f, 0.7f, 0.3f);
+            Vector3 second = new Vector3(-0.4f, 1f, -0.8f);
+
+            SunShadowMap restarted = Build(a.Grid, first);
+            restarted.Restart(a.Grid, second);
+            restarted.RunToCompletion();
+
+            SunShadowMap fresh = Build(b.Grid, second);
+
+            Assert.True(fresh.ShadowedCount > 100,
+                "the fresh map shadows " + fresh.ShadowedCount + " cells, too few for agreement to mean anything");
+            Assert.Equal(fresh.ShadowedCount, restarted.ShadowedCount);
+
+            int litSomewhere = 0;
+            int shadedSomewhere = 0;
+            for (int i = 0; i < a.Placed.Count; i++)
+            {
+                for (int face = 0; face < Face.Count; face++)
+                {
+                    float expected = fresh.FaceLitFraction(b.Placed[i], face);
+                    float actual = restarted.FaceLitFraction(a.Placed[i], face);
+                    Assert.True(expected == actual,
+                        "block " + i + " face " + face + " reads " + actual + " restarted and " + expected + " fresh");
+                    if (expected > 0f) litSomewhere++;
+                    if (expected < 1f) shadedSomewhere++;
+                }
+            }
+            Assert.True(litSomewhere > 0 && shadedSomewhere > 0,
+                "the fixture never exercised both classes of answer (`E8`)");
+        }
+
+        /// <summary>
+        /// A map reused across a grid that grew must cover the new skin: the recycled bitset's box
+        /// is re-derived from the grid's bounds on every restart, and a stale box would silently
+        /// drop exactly the cells the new blocks added.
+        /// </summary>
+        [Fact]
+        public void AReusedMapCoversTheSkinAGrowingGridAdds()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            for (int x = 0; x <= 2; x++) builder.Place(Catalog.LightArmor(), new Vector3I(x, 0, 0));
+
+            SunShadowMap map = Build(builder.Grid, SunAlongX);
+
+            // The grid grows past its old bounds on the sunward side.
+            for (int x = 3; x <= 6; x++) builder.Place(Catalog.LightArmor(), new Vector3I(x, 0, 0));
+
+            map.Restart(builder.Grid, SunAlongX);
+            map.RunToCompletion();
+
+            // The new far end's anti-sun skin — outside the old box entirely — is shadowed by the
+            // column, and the new sunward tip is lit.
+            Assert.False(map.IsLit(new Vector3I(-1, 0, 0)));
+            Assert.True(map.IsLit(new Vector3I(7, 0, 0)));
+            Assert.False(map.IsFaceLit(new Vector3I(3, 0, 0), Face.Right));
+        }
+
+        /// <summary>
+        /// A warm rebuild allocates nothing: the two bitsets and the pending list are kept
+        /// between passes, which is what took the first sunlit step's 21.6 MB away (`D4`'s tail).
+        /// A hull-sized figure here is the hash sets coming back.
+        /// </summary>
+        [Fact]
+        public void AWarmRebuildAllocatesNothing()
+        {
+            GridBuilder builder = GridBuilder.Large();
+            builder.PlaceCensus(LoadShapes.Build("ship", 2000));
+
+            SunShadowMap map = Build(builder.Grid, SunAlongX);
+            map.Restart(builder.Grid, SunAlongX);
+            map.RunToCompletion();
+            Assert.True(map.ShadowedCount > 100,
+                "the map shadows " + map.ShadowedCount + " cells, so a rebuild is not doing hull-sized work");
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            map.Restart(builder.Grid, SunAlongX);
+            map.RunToCompletion();
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.True(allocated < 16 * 1024,
+                "a warm rebuild allocated " + allocated + " B; the sets are being bought again");
+        }
     }
 
     /// <summary>
@@ -533,5 +654,6 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(0f, lone.LastSolarWatts, 5);
         }
+
     }
 }

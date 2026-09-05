@@ -749,9 +749,9 @@ a steady 8.3 at half a million blocks, measured with the JIT warm — since the 
 onto the tick that rebuilds the topology (2026-09-04, `bench firststep`). The "first touch of every
 flat array" this paragraph used to blame was measured at one to two milliseconds of a 26 ms spike:
 the bulk was the full node mirror and the link-mass fill, which now land with the rebuild, plus
-~11.6 ms of JIT that is per process rather than per grid. **What is left is the sunlit case**: the
-sun-shadow structure builds on the first sunlit step — 34.9 ms and 21.6 MB allocated at 126,731
-blocks — and that remains open as the tail of `D4`.
+~11.6 ms of JIT that is per process rather than per grid. **The sunlit case closed the same day**: the
+sun-shadow sets are bitsets published by swap, so the first sunlit step is 26.0 ms and 6.5 MB
+(a pending list bought once and kept) and a sun-drift rebuild allocates nothing. `D4` is done.
 
 **A grid holds about 1.8 KB a block, against a design budget of ~110 bytes a node.** Measured at
 126,731 blocks: 213 MB retained, 278 MB peak. Half of the retained figure is indexed by *bounding

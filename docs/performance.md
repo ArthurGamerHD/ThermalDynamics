@@ -3160,10 +3160,41 @@ and the test now asserts it.
 against 9.0 steady, with **21.6 MB** allocated: the sun-shadow structure's first build, plus a
 periodic ~1.8 MB on later steps as the sun drifts. That is its own subject.
 
+## Pass 10, iteration 6 — the sun-shadow sets are bitsets, and the drift churn is gone
+
+**What was found.** Iteration 5 left the sunlit first step at 34.9 ms against 9.0 steady with
+**21.6 MB** allocated, and a periodic ~0.9–1.8 MB on later steps as the sun drifted. All of it was
+three `HashSet<Vector3I>`s in `SunShadowMap` — the shadowed answer, the building pass and the
+queued dedupe — at about forty bytes a member plus growth copies, with the completed pass
+*copied element by element* into the answer set on the tick it landed. The same shape the room
+map's solid set had before the first pass's iteration 7 turned it into a bitset.
+
+**What changed.** The three sets are `CellBitset`s over the grid box padded by one — the padding
+is load-bearing, because the cells walked are the air just outside the hull and a bitset silently
+drops a cell outside its box, which would read as lit for ever. Publishing a completed pass swaps
+the two bitsets instead of copying, so the superseded answer's words become the next pass's
+working set and a warm rebuild allocates nothing at all.
+
+**What it measures.** `bench firststep --sunlit --warm`, 126,731 blocks, one window:
+
+| first sunlit step, 126,731 blocks | before | after | |
+| --- | ---: | ---: | ---: |
+| step 1 | 34.87 ms | **25.97 ms** | the DDA walk itself is what remains, and it is already budgeted by `SunShadowBudget` |
+| step 1, allocated | 21,624 KB | **6,552 KB** | what is left is the pending list buying itself once, retained thereafter |
+| later steps, allocated (sun drift) | 864–1,780 KB | **12 KB** | the recurring churn is the half a session feels, and it is gone |
+
+**Pinned**, in `SunShadowMapTests`: the skin cells on the box's own edges are still tracked — the
+exact cell an unpadded box would drop and call lit; a restarted map agrees with a fresh one to the
+last face fraction after the swap, on a fixture proven to hold both lit and shaded answers
+(`E8`); a map reused across a grid that grew covers the skin the new blocks added; and a warm
+rebuild allocates under 16 KB. The scenario suite's ray-versus-cube oracle (`E7`) and the 94
+standing sun tests held unchanged through the conversion.
+
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **Pass 10, iteration 6: the sun-shadow sets are bitsets over the padded grid box.** Three `HashSet<Vector3I>`s were 21.6 MB on the first sunlit step of a 126,731-block hull and ~1 MB per sun-drift rebuild; as `CellBitset`s with the completed pass published by swap, the first sunlit step reads 25.97 ms and 6.5 MB (the pending list, bought once) and a drift rebuild allocates nothing. Pinned by four new cases in `SunShadowMapTests`, including the padded-box edge cell an unpadded set would silently call lit. |
 | 2026-09-04 | **Pass 10, iteration 5: the first-step spike was a third JIT, half step prologue, and barely page faults at all.** `bench firststep` measures the first steps with faults and allocation beside them; `--warm` separates per-process JIT (~11.6 ms at 505,566 blocks) from per-grid cost. The prologue — full node mirror, link-mass fill and its 7,484 KB allocation — now runs on the tick that rebuilds the topology (`ThermalSolver.PrepareForSteps`), so a warm first step falls 26.16 → **12.53 ms** against a steady 8.3, allocating 12 KB where it allocated 7,484. `StepPrologueTests` pins the no-full-resync claim, the allocation, and bit-identity of a prepared step against an unprepared one; `D4`'s "first touch of every flat array" attribution is corrected in place — the faults are one to two milliseconds of it. What remains of `D4` is the sunlit residual: the sun-shadow structure's 21.6 MB first build. |
 | 2026-09-04 | **Pass 10, iteration 4: `D20`'s recycling was in the tree unpinned, and the stage lab read the warm-up as the steady state.** The rooms row sampled allocation on the mapper's second pass, which with three rotating slots is still slot-building, so the row read 4,881 KB after the change exactly as before it. Sampled at the first recycled pass it reads **0 KB** at 126,731 blocks. `RoomMapRecyclingTests` pins the three-slot rotation, the two-publish read window at the moment a two-slot design would break it, cell-for-cell identity of a recycled map against a fresh one, and the warm-pass allocation; the as-built ownership rule — a published map is readable until the publish after next — replaces the restart-on-publish rule `D20` proposed. |
 | 2026-09-01 | **Pass 10 opened by re-taking the ladder, and it had gone stale by four to fifteen times**: 582 ms of build at a million blocks against the 5,429 the table carried, 145 of room mapping against 2,122, 43.5 of exposure against 513, a 61.3 ms step against 118, and 610 MB resident against 1,510. Every one of those was moved by a pass between the second and the ninth; the table other pages quote was never re-run. |
