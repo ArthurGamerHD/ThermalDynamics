@@ -642,6 +642,13 @@ namespace Thermodynamics.Core
             solver.RefreshHeatGeneration();
             End(SimulationPhase.Exposure);
 
+            // The step prologue, on the tick that already paid for the rebuild: the full mirror
+            // and the link-mass fill land here, behind the loading screen or on the paste tick,
+            // so the first step pays a step's cost and not the rebuild's (`D4`).
+            Begin(SimulationPhase.Topology);
+            solver.PrepareForSteps();
+            End(SimulationPhase.Topology);
+
             topologyDirty = false;
             roomsDirty = false;
             exposureDirty = false;
@@ -830,6 +837,11 @@ namespace Thermodynamics.Core
                 // A pump is bound to the nodes either side of it, either of which may have
                 // changed.
                 solver.RebuildHeatPumps();
+
+                // As in RebuildAll: the prologue the next step would otherwise open with runs on
+                // this tick, which already carries the rebuild, rather than on the stepping one
+                // (`D4`). A no-op while a sliced step is in flight.
+                solver.PrepareForSteps();
 
                 // Only when something could have changed the shape of a room. A remap walks the
                 // grid's bounding volume; the rest of this branch is proportional to what moved.

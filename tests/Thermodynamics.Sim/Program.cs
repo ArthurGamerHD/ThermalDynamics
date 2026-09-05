@@ -806,6 +806,7 @@ namespace Thermodynamics.Sim
         ///   bench hitch --size 250000         per-tick cost with a block welded mid-run
         ///   bench weld  --size 250000         a block welded on every tick
         ///   bench load  --size 1000000        what building the grid costs before tick one
+        ///   bench firststep --size 500000      the first steps of a grid's life, with faults
         ///   bench floor --size 42000           what a per-block substep cap buys, and costs
         ///   bench ceiling --size 42000         what refusing a substep demand costs, in air
         ///   bench ceiling --fixture rings       the same, where the plumbing sets the demand
@@ -1696,6 +1697,38 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "firststep":
+                {
+                    int firstBlocks = size > 0 ? size : 125000;
+                    int firstSteps = ticks > 0 ? ticks : 6;
+                    bool sunlit = Has(args, "--sunlit");
+
+                    Console.WriteLine();
+                    Console.WriteLine("== first steps, " + shape + " " + firstBlocks.ToString("n0")
+                        + " blocks, " + (sunlit ? "sunlit vacuum" : "shadow") + " ==");
+                    Console.WriteLine("  Each of the first " + firstSteps + " full steps on its own"
+                        + " clock, on a freshly built grid (`D4`).");
+                    Console.WriteLine("  A step whose extra time arrives with the faults is paying"
+                        + " first touch; one whose faults match a later step's is paying work.");
+                    Console.WriteLine();
+
+                    List<FirstStepLab.Row> firstRows = FirstStepLab.Run(
+                        shape, firstBlocks, firstSteps,
+                        sunlit ? Worlds.Ab.SunlitVacuum() : Worlds.Shadow(),
+                        Has(args, "--warm"));
+
+                    Console.WriteLine(FirstStepLab.Table(firstRows));
+
+                    if (csvDirectory != null)
+                    {
+                        Directory.CreateDirectory(csvDirectory);
+                        string firstPath = Path.Combine(csvDirectory, "firststep.csv");
+                        File.WriteAllText(firstPath, FirstStepLab.Csv(firstRows));
+                        Console.WriteLine("csv -> " + firstPath);
+                    }
+                    return 0;
+                }
+
                 case "floor":
                 {
                     int[] caps = { 0, 32, 16, 8, 6, 4, 3, 2, 1 };
@@ -1979,6 +2012,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench stagger --size N  whole steps against spread ones: what locality costs");
             Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare; --repeats N per case");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
+            Console.WriteLine("  bench firststep --size N  the first steps of a grid's life, with the page faults beside them; --sunlit; --warm (JIT the step path on a throwaway grid first); --ticks N steps");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
             Console.WriteLine("  bench stages            one stage of a grid's life on its own clock, fastest of a settled sample; --stages a,b; --repeats N (the floor); --isolate (a process per stage); --trace");
             Console.WriteLine("  bench samplestats       which summary of a stage's repeats two runs agree on; --from dir1,dir2,...");

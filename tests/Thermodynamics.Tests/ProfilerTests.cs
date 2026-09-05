@@ -85,7 +85,11 @@ namespace Thermodynamics.Tests
 
             simulation.RebuildAll();
 
-            Assert.Equal(1, profiler.Count("begin " + SimulationPhase.Topology));
+            // Two topology spans, not one: the graph rebuild opens the first, and the step
+            // prologue — the full node mirror and the link-mass fill, hoisted onto the rebuild
+            // tick so the first step does not pay it (`D4`) — is charged as the second, after
+            // exposure has run, rather than to no row at all.
+            Assert.Equal(2, profiler.Count("begin " + SimulationPhase.Topology));
             Assert.Equal(1, profiler.Count("begin " + SimulationPhase.RoomMapping));
             Assert.Equal(1, profiler.Count("begin " + SimulationPhase.Exposure));
             Assert.Equal(0, profiler.Count("begin " + SimulationPhase.Solver));

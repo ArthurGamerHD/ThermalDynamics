@@ -186,11 +186,12 @@ namespace Thermodynamics.Tests
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(), 3000);
 
-            // The bound is settled when a step syncs the node rows, which is also when the pass
-            // that uses it runs — so a step has to have happened for the question to mean anything.
-            Assert.True(float.IsInfinity(simulation.Solver.LowestCriticalTemperature),
-                "the bound was already finite before a step, so this test is not exercising the"
-                + " order it depends on");
+            // The bound settles when the node rows are mirrored, and since the `D4` prologue
+            // hoist that is the rebuild tick itself: a built hull arrives with the bound already
+            // finite, and the step below has to keep it right rather than establish it.
+            Assert.True(!float.IsInfinity(simulation.Solver.LowestCriticalTemperature),
+                "the bound was still infinite after a rebuild, so the prologue no longer settles"
+                + " it on the rebuild tick");
 
             simulation.Solver.Step(simulation.Settings.StepSeconds, EnvironmentSolver.Solve(
                 simulation.Settings, simulation.Planet, Worlds.Flight(1f, 300f)));

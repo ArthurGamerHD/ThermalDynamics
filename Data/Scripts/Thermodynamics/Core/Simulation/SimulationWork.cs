@@ -75,6 +75,14 @@ namespace Thermodynamics.Core
         /// had, which on a three-substep grid is half the step.
         /// </summary>
         public long NodeStateSyncs;
+
+        /// <summary>
+        /// Node-state syncs that mirrored every row rather than only the dirty ones. A full
+        /// resync is a walk of the whole grid, so where it lands matters: since `D4` it is run
+        /// on the tick that rebuilt the topology, and a step that performs one has been handed
+        /// a grid nothing prepared.
+        /// </summary>
+        public long FullNodeResyncs;
         public long StabilityEstimates;
 
         /// <summary>
@@ -121,6 +129,7 @@ namespace Thermodynamics.Core
             SolverSteps = 0;
             SolverSubsteps = 0;
             NodeStateSyncs = 0;
+            FullNodeResyncs = 0;
             StabilityEstimates = 0;
             EnvironmentRowFills = 0;
             StepAdvances = 0;
@@ -153,6 +162,7 @@ namespace Thermodynamics.Core
             copy.SolverSteps = SolverSteps;
             copy.SolverSubsteps = SolverSubsteps;
             copy.NodeStateSyncs = NodeStateSyncs;
+            copy.FullNodeResyncs = FullNodeResyncs;
             copy.EnvironmentRowFills = EnvironmentRowFills;
             copy.StabilityEstimates = StabilityEstimates;
             copy.StepAdvances = StepAdvances;

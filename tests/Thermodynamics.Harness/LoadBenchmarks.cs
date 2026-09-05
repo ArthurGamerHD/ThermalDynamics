@@ -155,7 +155,7 @@ namespace Thermodynamics.Harness
         public static readonly int[] DefaultSizes = { 8000, 32000, 125000, 500000, 1000000 };
 
         public static readonly string[] Names =
-            { "scale", "hitch", "weld", "load", "spike", "pace", "reach", "memory", "floor" };
+            { "scale", "hitch", "weld", "load", "spike", "firststep", "pace", "reach", "memory", "floor" };
 
         // ---- the ladder --------------------------------------------------------------------
 

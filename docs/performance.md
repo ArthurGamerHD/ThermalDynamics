@@ -1294,7 +1294,7 @@ that enqueues runs of cells rather than single cells reaches a room's cells in a
 and until now that would have moved every player's air temperatures in the last bits, which is why
 [the design note](#pass-3--what-is-designed-and-not-built) said it needed the air links made
 canonical first. That is done, and it was done in its own commit so that if it *had* moved a pinned
-figure, the move would have been attributable to it alone. It moved none: 2,027 tests pass unchanged.
+figure, the move would have been attributable to it alone. It moved none: the suite of that day — 2,027 cases — passed unchanged.
 
 **What it cost.** `bench stages --stages roomair,rooms,solver`, with the room pass and a settled step
 as controls:
@@ -3114,10 +3114,57 @@ three times, at load — and the second is what every pass after that costs, whi
 door built or destroyed on a large ship pays and the figure `D20` was about. At a million blocks
 the steady-state saving is the ~38 MB of garbage a remap no longer makes.
 
+## Pass 10, iteration 5 — the first step was paying the rebuild's bills, and a third of the spike was the JIT
+
+**The instrument first.** `bench firststep` times each of a fresh grid's first steps on its own
+clock, with the process's minor page faults and the step's allocation beside the milliseconds, and
+`--warm` steps a small throwaway grid first so the JIT compiles the step path before anything is
+measured. `D4` had attributed the spike to "first touch of every flat array" — a hypothesis this
+page repeated for nine days with nothing measuring it.
+
+**What the spike is actually made of**, at 505,566 blocks in shadow, one window:
+
+| first step, 505,566 blocks | ms | of which |
+| --- | ---: | --- |
+| cold process | 37.78 | ~11.6 ms is the JIT compiling the step path — paid once per *process*, not per grid (`P4`: the instrument conflated the two, and in a session only the first grid pays it) |
+| warm process, before | 26.16 | a full `SyncNodeState` mirror of every row, the whole link-mass fill, **7,484 KB** allocated (the `linkMassFactor` array and its doubling copy — 2 × 4 B × 952,523 links, found by matching the byte count), and 8,874 minor faults |
+| warm process, after | **12.53** | against a steady step's 8.3; 12 KB allocated, 1,559 faults |
+
+The faults the old attribution blamed are one to two milliseconds of the twenty-six.
+
+**What changed.** `ThermalSolver.PrepareForSteps` runs the step prologue — the full node mirror,
+the link mass factors, the buffers, the conductance totals — on the tick that rebuilt the
+topology: at the end of `RebuildAll`, charged to a second topology span rather than to no row, and
+in the `Update` topology branch, so a mid-session rebuild (a paste, a grind, a settings revision)
+is covered too. Refused while a step is in flight, as `ProfileSubsteps` is and for the same
+reason. Exact by construction: it is the same prologue the step runs, and anything that changes
+between the two is caught the way it always is — per-node dirty rows, temperatures re-read every
+step.
+
+**Pinned.** `StepPrologueTests`: a step after a rebuild performs no full resync (counted by the new
+`Work.FullNodeResyncs`, which is the observable the claim needed); the first step allocates like a
+later one, on a hull whose link array is proven big enough for the old allocation to have shown;
+and a grid prepared on the removal tick steps bit-identically to one that steps unprepared, on
+spread temperatures, with the fixture asserting the spread (`E8`). `FirstStepLabTests` pins the
+`/proc/self/stat` parse on a command name holding spaces and parentheses, and that an unreadable
+line is −1, never the 0 that means "no faults happened" (`P2`).
+
+**Three tests pinned the old timing and one of them was passing by luck.** `ProfilerTests` counts
+two topology spans now; `OverheatEventTests`' guard inverts — the lowest-critical bound settles on
+the rebuild tick, not the first step; and `FacePackingTests` asserted the array overload leaves a
+node dirty on a write that changed nothing, which held only because every node used to arrive at
+the assertion still dirty from its own build — the overload's documented contract is the opposite,
+and the test now asserts it.
+
+**Where the next iteration starts.** The first *sunlit* step at 126,731 blocks is still 34.9 ms
+against 9.0 steady, with **21.6 MB** allocated: the sun-shadow structure's first build, plus a
+periodic ~1.8 MB on later steps as the sun drifts. That is its own subject.
+
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **Pass 10, iteration 5: the first-step spike was a third JIT, half step prologue, and barely page faults at all.** `bench firststep` measures the first steps with faults and allocation beside them; `--warm` separates per-process JIT (~11.6 ms at 505,566 blocks) from per-grid cost. The prologue — full node mirror, link-mass fill and its 7,484 KB allocation — now runs on the tick that rebuilds the topology (`ThermalSolver.PrepareForSteps`), so a warm first step falls 26.16 → **12.53 ms** against a steady 8.3, allocating 12 KB where it allocated 7,484. `StepPrologueTests` pins the no-full-resync claim, the allocation, and bit-identity of a prepared step against an unprepared one; `D4`'s "first touch of every flat array" attribution is corrected in place — the faults are one to two milliseconds of it. What remains of `D4` is the sunlit residual: the sun-shadow structure's 21.6 MB first build. |
 | 2026-09-04 | **Pass 10, iteration 4: `D20`'s recycling was in the tree unpinned, and the stage lab read the warm-up as the steady state.** The rooms row sampled allocation on the mapper's second pass, which with three rotating slots is still slot-building, so the row read 4,881 KB after the change exactly as before it. Sampled at the first recycled pass it reads **0 KB** at 126,731 blocks. `RoomMapRecyclingTests` pins the three-slot rotation, the two-publish read window at the moment a two-slot design would break it, cell-for-cell identity of a recycled map against a fresh one, and the warm-pass allocation; the as-built ownership rule — a published map is readable until the publish after next — replaces the restart-on-publish rule `D20` proposed. |
 | 2026-09-01 | **Pass 10 opened by re-taking the ladder, and it had gone stale by four to fifteen times**: 582 ms of build at a million blocks against the 5,429 the table carried, 145 of room mapping against 2,122, 43.5 of exposure against 513, a 61.3 ms step against 118, and 610 MB resident against 1,510. Every one of those was moved by a pass between the second and the ninth; the table other pages quote was never re-run. |
 | 2026-09-01 | **A room pass allocates its own map**, 4,768 KB at 126,731 blocks and about 38 MB at a million, and a sealing change requests a pass — so this is a play-time figure and not only a load-path one. Recycling the map is `D20`, blocked on an ownership rule: the solver holds the published map across a budgeted exposure refresh. Also corrected `bench memory`'s **RoomMapper peak** row, whose description named the live bit-and-byte footprint (1.7 MB here) for a figure that is the uncollected high-water mark (18.4 MB). |
