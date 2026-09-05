@@ -3190,10 +3190,43 @@ last face fraction after the swap, on a fixture proven to hold both lit and shad
 rebuild allocates under 16 KB. The scenario suite's ray-versus-cube oracle (`E7`) and the 94
 standing sun tests held unchanged through the conversion.
 
+## Pass 10, iteration 7 — deriving the face weights costs a tenth of the step: tried and dropped
+
+**The question was already on file.** `E2` records that the solver's six per-node face-weight
+floats are derivable from the packed exposure counts "but only by putting a divide back into the
+hot loop those arrays exist to feed", and calls the row a cost measurement rather than a packing
+job (`D7`). This iteration took the measurement.
+
+**What was tried.** The stored row became a packed long and a stored reciprocal per node — twelve
+bytes where the six floats were twenty-four — with each weight derived where it is read as
+`count * inverse`: the same integer count and the same reciprocal the row was filled from, so
+every product is the same float to the last bit. The whole suite, bit-identity suites included,
+was green over it.
+
+**What it measured, and why it is dropped.** `bench stages --stages solver`, 126,731 blocks, the
+two binaries proven different, interleaved, two rounds:
+
+| solver stage | best ms | median ms |
+| --- | ---: | ---: |
+| stored weights, rounds 1 and 2 | 17.35 / 17.28 | 19.03 / 19.01 |
+| derived weights, rounds 1 and 2 | 19.14 / 19.00 | 21.03 / 20.86 |
+
+**+10 % on both statistics, in both rounds, on identical work** (560 substeps either side). The
+five shifts, masks and int-to-float conversions per node run in the environment fill, which pass 5
+measured as nearly half the step — a place where five extra operations per face are not free. The
+twelve bytes a node they would have saved are 1.5 MB on this hull. Reverted in the same branch, so
+the attempt is in the history and the tree carries no code that measured as a regression (`M5`, in
+the direction that refuses harm rather than nothing).
+
+**What it closes.** `E2`'s open half is now a measured refusal: the mirrored weight row stays
+because it is cheaper to read than to derive, by a tenth of the step. The sun-lit half of the row
+was never derivable and stands as it was.
+
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **Pass 10, iteration 7: deriving the face weights from the packed counts is +10 % on the solver stage — tried, measured, dropped.** Bit-identical by construction and green through every suite, but 17.3 → 19.1 ms on the minimum and 19.0 → 20.9 on the median, both rounds, identical work. `E2`'s "derivable, but at what cost" question is answered with a refusal: the mirrored row is cheaper to read than to derive. The attempt and its revert are both in the branch. |
 | 2026-09-04 | **Pass 10, iteration 6: the sun-shadow sets are bitsets over the padded grid box.** Three `HashSet<Vector3I>`s were 21.6 MB on the first sunlit step of a 126,731-block hull and ~1 MB per sun-drift rebuild; as `CellBitset`s with the completed pass published by swap, the first sunlit step reads 25.97 ms and 6.5 MB (the pending list, bought once) and a drift rebuild allocates nothing. Pinned by four new cases in `SunShadowMapTests`, including the padded-box edge cell an unpadded set would silently call lit. |
 | 2026-09-04 | **Pass 10, iteration 5: the first-step spike was a third JIT, half step prologue, and barely page faults at all.** `bench firststep` measures the first steps with faults and allocation beside them; `--warm` separates per-process JIT (~11.6 ms at 505,566 blocks) from per-grid cost. The prologue — full node mirror, link-mass fill and its 7,484 KB allocation — now runs on the tick that rebuilds the topology (`ThermalSolver.PrepareForSteps`), so a warm first step falls 26.16 → **12.53 ms** against a steady 8.3, allocating 12 KB where it allocated 7,484. `StepPrologueTests` pins the no-full-resync claim, the allocation, and bit-identity of a prepared step against an unprepared one; `D4`'s "first touch of every flat array" attribution is corrected in place — the faults are one to two milliseconds of it. What remains of `D4` is the sunlit residual: the sun-shadow structure's 21.6 MB first build. |
 | 2026-09-04 | **Pass 10, iteration 4: `D20`'s recycling was in the tree unpinned, and the stage lab read the warm-up as the steady state.** The rooms row sampled allocation on the mapper's second pass, which with three rotating slots is still slot-building, so the row read 4,881 KB after the change exactly as before it. Sampled at the first recycled pass it reads **0 KB** at 126,731 blocks. `RoomMapRecyclingTests` pins the three-slot rotation, the two-publish read window at the moment a two-slot design would break it, cell-for-cell identity of a recycled map against a fresh one, and the warm-pass allocation; the as-built ownership rule — a published map is readable until the publish after next — replaces the restart-on-publish rule `D20` proposed. |
