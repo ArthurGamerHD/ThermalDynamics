@@ -46,6 +46,7 @@ in the prose. The conventions are in
 | [load-and-hitching.md](load-and-hitching.md) | What a grid costs as it grows, what makes it stutter, and what live worlds measure. |
 | [stiffness.md](stiffness.md) | Why a handful of light fittings sets the cost of a capital ship, and what to do about it. |
 | [memory.md](memory.md) | Where a grid's memory goes, and what can be given back. |
+| [redesign.md](redesign.md) | The structural redesigns still available: measured refusals, the two open candidates, and the labs and criteria that decide them. |
 | [balance-lab.md](balance-lab.md) | Deciding good balance from a population of real ships: criteria, staging, and the corpus. |
 | [balance.md](balance.md) | Every block costed against the vanilla blocks it competes with, and what 8,132 real ships say about the targets. |
 

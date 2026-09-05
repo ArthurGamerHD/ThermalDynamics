@@ -807,6 +807,8 @@ namespace Thermodynamics.Sim
         ///   bench weld  --size 250000         a block welded on every tick
         ///   bench load  --size 1000000        what building the grid costs before tick one
         ///   bench firststep --size 500000      the first steps of a grid's life, with faults
+        ///   bench remaplocality --size 32000   what one block change moves of a full remap
+        ///   bench activity --size 32000        the quiet share of a grid, by steps since an event
         ///   bench floor --size 42000           what a per-block substep cap buys, and costs
         ///   bench ceiling --size 42000         what refusing a substep demand costs, in air
         ///   bench ceiling --fixture rings       the same, where the plumbing sets the demand
@@ -1697,6 +1699,32 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "remaplocality":
+                {
+                    int localityBlocks = size > 0 ? size : 32000;
+                    Console.WriteLine();
+                    Console.WriteLine("== remap locality, ship " + localityBlocks.ToString("n0") + " blocks ==");
+                    Console.WriteLine("  One block changes; the whole box refloods. The changed column is the");
+                    Console.WriteLine("  upper bound of what a change-local remap could skip (redesign.md).");
+                    Console.WriteLine();
+                    Console.WriteLine(RemapLocalityLab.Report(localityBlocks,
+                        message => Console.Error.WriteLine("  " + message)));
+                    return 0;
+                }
+
+                case "activity":
+                {
+                    int activityBlocks = size > 0 ? size : 32000;
+                    Console.WriteLine();
+                    Console.WriteLine("== node activity, ship " + activityBlocks.ToString("n0") + " blocks ==");
+                    Console.WriteLine("  What share of the grid is thermally quiet, by steps since the last");
+                    Console.WriteLine("  event - the ceiling on any sleeping scheme (redesign.md).");
+                    Console.WriteLine();
+                    Console.WriteLine(NodeActivityLab.Report(activityBlocks,
+                        message => Console.Error.WriteLine("  " + message)));
+                    return 0;
+                }
+
                 case "firststep":
                 {
                     int firstBlocks = size > 0 ? size : 125000;
@@ -2013,6 +2041,8 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare; --repeats N per case");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench firststep --size N  the first steps of a grid's life, with the page faults beside them; --sunlit; --warm (JIT the step path on a throwaway grid first); --ticks N steps");
+            Console.WriteLine("  bench remaplocality --size N  how much of a full room remap one block change actually moves");
+            Console.WriteLine("  bench activity --size N   what share of the grid is thermally quiet, by steps since the last event");
             Console.WriteLine("  bench steppath          a step at the solver, against a step through the host");
             Console.WriteLine("  bench stages            one stage of a grid's life on its own clock, fastest of a settled sample; --stages a,b; --repeats N (the floor); --isolate (a process per stage); --trace");
             Console.WriteLine("  bench samplestats       which summary of a stage's repeats two runs agree on; --from dir1,dir2,...");
