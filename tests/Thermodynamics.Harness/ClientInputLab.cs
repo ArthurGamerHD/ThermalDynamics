@@ -652,9 +652,9 @@ namespace Thermodynamics.Harness
 
             if (how.StaleSeconds > 0f)
             {
-                float[] stale = Temperatures(client);
+                float[] stale = GridState.Temperatures(client);
                 Advance(server, Sample(scenario, 0f, how, false), how.StaleSeconds);
-                Restore(client, stale);
+                GridState.Restore(client, stale);
             }
 
             // **The client's room map has not landed yet, when the case says so.** The mapper
@@ -1145,21 +1145,6 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < steps; i++) simulation.StepExact(1, environment);
 
             return steps * step;
-        }
-
-        private static float[] Temperatures(ThermalSimulation simulation)
-        {
-            IList<ThermalNode> nodes = simulation.Solver.Nodes;
-            float[] values = new float[nodes.Count];
-            for (int i = 0; i < nodes.Count; i++) values[i] = nodes[i].Temperature;
-            return values;
-        }
-
-        private static void Restore(ThermalSimulation simulation, float[] temperatures)
-        {
-            IList<ThermalNode> nodes = simulation.Solver.Nodes;
-            int count = Math.Min(nodes.Count, temperatures.Length);
-            for (int i = 0; i < count; i++) nodes[i].Temperature = temperatures[i];
         }
 
         /// <summary>
