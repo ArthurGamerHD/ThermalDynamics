@@ -44,15 +44,8 @@ from scoring import oversubscription_note
 ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
 DATA = ARGS[0] if ARGS else "out/corpus-2026-08-21"
 
-def flag(name, fallback=None):
-    if name not in sys.argv:
-        return fallback
-    at = sys.argv.index(name)
-    return sys.argv[at + 1] if at + 1 < len(sys.argv) else fallback
-
-
-CSV_OUT = flag("--csv", "summary.csv") if "--csv" in sys.argv else None
-BASELINE = flag("--baseline")
+CSV_OUT = scoring.flag("--csv", "summary.csv") if "--csv" in sys.argv else None
+BASELINE = scoring.flag("--baseline")
 
 # Every figure worth quoting, in the order it was produced.
 FIGURES = []
@@ -159,7 +152,7 @@ print(f"corpus dataset: {len(outcomes):,} outcome rows over {walked:,} ships, "
       f"{len(ships):,} ship rows")
 
 # ---- whole, or partial and said so (`E4`) -------------------------------------------------------
-population = scoring.corpus_population(flag("--population"))
+population = scoring.corpus_population(scoring.flag("--population"))
 share = scoring.walked_share(walked, population)
 
 if population is None:

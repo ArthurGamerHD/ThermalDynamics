@@ -50,13 +50,13 @@ import scoring
 ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
 FLAGGED = set()
 for _name in ("--csv",):
-    if _name in sys.argv and sys.argv.index(_name) + 1 < len(sys.argv):
-        FLAGGED.add(sys.argv[sys.argv.index(_name) + 1])
+    _value = scoring.flag(_name)
+    if _value is not None:
+        FLAGGED.add(_value)
 ARGS = [a for a in ARGS if a not in FLAGGED]
 
 DATA = ARGS[0] if ARGS else "out/cap-2026-08-24"
-CSV_OUT = (sys.argv[sys.argv.index("--csv") + 1]
-           if "--csv" in sys.argv and sys.argv.index("--csv") + 1 < len(sys.argv) else None)
+CSV_OUT = scoring.flag("--csv")
 
 # Every figure worth quoting, in the order it was produced, as `(statistic, value, unit)`. The
 # same shape `verdict.py` writes, so one reader can hold a cap summary and a survey summary

@@ -448,6 +448,19 @@ class NoughtAndNothingAreDifferentAnswers(unittest.TestCase):
         self.assertEqual(-2.5, scoring.number({"a": "-2.5"}, "a"))
         self.assertEqual(1200.0, scoring.number({"a": "1.2e3"}, "a"))
 
+    def test_flag_answers_and_a_dangling_flag_falls_back_instead_of_crashing(self):
+        """The shared CLI flag read, pinned at the case the drifted copies got wrong.
+
+        Six tools declared this helper and four of them indexed one past the flag
+        unguarded, so a command line ending in `--csv` with no value was a traceback
+        rather than the fallback. A mistyped command deserves an answer.
+        """
+        argv = ["tool.py", "data", "--csv", "out.csv"]
+        self.assertEqual("out.csv", scoring.flag("--csv", argv=argv))
+        self.assertIsNone(scoring.flag("--baseline", argv=argv))
+        self.assertEqual("x", scoring.flag("--baseline", "x", argv=argv))
+        self.assertEqual("x", scoring.flag("--csv", "x", argv=["tool.py", "--csv"]))
+
     def test_write_summary_round_trips_through_the_reader_verdict_uses(self):
         """The summary page format, pinned from both sides of its contract.
 

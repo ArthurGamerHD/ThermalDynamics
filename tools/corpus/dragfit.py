@@ -97,15 +97,10 @@ def verdict(share, p1):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
 
-    def flag(name, fallback):
-        if name not in sys.argv:
-            return fallback
-        return sys.argv[sys.argv.index(name) + 1]
-
     path = args[0] if args else "out/census-2026-08-31/census.csv"
-    density = float(flag("--rho", cruise.SEA_LEVEL_DENSITY))
+    density = float(scoring.flag("--rho", cruise.SEA_LEVEL_DENSITY))
     shaped = "--no-shape" not in sys.argv
-    out = flag("--csv", None)
+    out = scoring.flag("--csv", None)
 
     if not os.path.exists(path):
         raise SystemExit(path + " does not exist, so there is no census to read")
@@ -120,7 +115,7 @@ def main():
     print("  hull shape: %s" % ("applied" if shaped else "ignored (--no-shape)"))
     print()
 
-    coefficients = ([float(flag("--cd", 0.5))] if "--sweep" not in sys.argv
+    coefficients = ([float(scoring.flag("--cd", 0.5))] if "--sweep" not in sys.argv
                     else [0.5, 0.75, 1.0, 1.25, 1.5, 1.54, 1.75, 2.0])
 
     print("  %6s %14s %14s %8s  %s" % ("C_d", "beats thrust", "p1 ceiling", "hulls", "verdict"))

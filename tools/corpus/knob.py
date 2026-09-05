@@ -89,15 +89,9 @@ def pairs(rows, knob):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
 
-    def flag(name, fallback=None):
-        if name not in sys.argv:
-            return fallback
-        at = sys.argv.index(name)
-        return sys.argv[at + 1] if at + 1 < len(sys.argv) else fallback
-
     flagged = set()
     for name in ("--knob", "--csv"):
-        value = flag(name)
+        value = scoring.flag(name)
         if value:
             flagged.add(value)
     args = [a for a in args if a not in flagged]
@@ -105,7 +99,7 @@ def main():
     directory = args[0] if args else "out/knobs-2026-08-30"
     rows = load(directory)
 
-    wanted = flag("--knob")
+    wanted = scoring.flag("--knob")
     knobs = [wanted] if wanted else sorted(set(r.get("knob") for r in rows if r.get("knob")))
 
     figures = []
@@ -145,7 +139,7 @@ def main():
 
         print("  reached means the dial moved that cell's peak at all; the band is read against it")
 
-    out = flag("--csv")
+    out = scoring.flag("--csv")
     if out:
         scoring.write_summary(out, figures)
         print("\ncsv -> %s  (%d figures)" % (out, len(figures)))

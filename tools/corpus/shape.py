@@ -66,13 +66,8 @@ def deltas(rows, scenario):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
 
-    def flag(name, fallback):
-        if name not in sys.argv:
-            return fallback
-        return sys.argv[sys.argv.index(name) + 1]
-
     path = args[0] if args else "out/shape-2026-08-31"
-    out = flag("--csv", None)
+    out = scoring.flag("--csv", None)
 
     outcomes = os.path.join(path, "outcomes.csv")
     if not os.path.exists(outcomes):
