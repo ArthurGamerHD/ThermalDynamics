@@ -154,8 +154,9 @@ lattice-blind, the port can hold node count at one-per-block whatever the build 
    sealing, ÷k³ the cost, with misalignment as a declared approximation — not an exact
    hierarchical accelerator, which lab 2 shows cannot win.
 5. **Allocation discipline is now a platform rule.** SE2 meters scripts by allocation per update;
-   the steady path already allocates nothing, and the room pass's ~38 MB-per-remap (`D20`) becomes
-   a port blocker rather than a nicety.
+   the steady path already allocates nothing, and the room pass's ~38 MB-per-remap was closed on
+   the SE1 side on 2026-09-03 (`D20`: three rotating map slots, a steady remap at 0 KB) — the port
+   carries that design rather than re-deriving it.
 
 ## What these labs do not say
 
@@ -170,4 +171,5 @@ SE2 code API exists yet to hold any of this against; when one ships, the boundar
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | `D20` closed on the SE1 side (three rotating map slots, steady remap 0 KB); the allocation-discipline point now cites the shipped design instead of naming the remap a port blocker. |
 | 2026-09-02 | Created: the three labs built and run, the SE2 facts read off the installed game, and the port design the measurements settle. Artefacts committed under `tests/benchmarks/se2-labs/`. |

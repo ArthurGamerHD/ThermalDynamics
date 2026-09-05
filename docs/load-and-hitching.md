@@ -565,11 +565,14 @@ all. `RoomAirPoolTests` fills the room's own anchor cell in between, which moves
 makes the branch run — and it was proven to fail with the field deliberately unwritten before it was
 believed.
 
-**What was looked at and left.** `rooms` allocates **4,768 KB** and that is the `RoomMap` itself,
-whose recycling is gated on a stated threading invariant — every grid whose room pass has not
-finished publishes the same empty default, and the code says plainly that a mapper mutating its
-current map rather than replacing it would be a race across every grid at once. Not a buffer-reuse
-job.
+**What was looked at and left then, and taken since.** `rooms` allocated **4,768 KB** and that was
+the `RoomMap` itself; its recycling waited on an ownership rule and is done now (`D20`, 2026-09-03):
+the mapper rotates three map slots, a published map is readable until the publish after next, and a
+steady-state pass — the one a sealing change pays — allocates **0 KB** at 126,731 blocks. The first
+three passes of a grid's life still each build a slot, which is a load-path cost paid three times
+and never again. `RoomMapRecyclingTests` pins the rotation, the read window and the identity of a
+recycled map with a fresh one; see
+[performance.md](performance.md#pass-10-iteration-4--the-recycled-map-is-pinned-and-the-instrument-was-reading-the-warm-up).
 
 ### 13. The cell table is sized before a hull is built, not grown during it
 
@@ -947,6 +950,7 @@ reasoning that produced it was sound and the premise was not.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **The room map is recycled (`D20` done), and section 12's "looked at and left" is taken.** Three rotating slots, a published map readable until the publish after next, and a steady-state pass at **0 KB** allocated on 126,731 blocks where it bought a 4,768 KB map before. The stage lab's rooms allocation sample moved to the first recycled repeat — at repeat 1 it was reading slot-building and showed the change as absent. |
 | 2026-08-31 | **Gave the harness build the same capacity hint, and measured that it does not pay on the corpus.** A 2,000-ship census is 16.44 s before and 16.57 s after — noise. The median published ship is 1,112 blocks, where the list growth this removes is about 17 KB against 4 MB at 125,000, so the saving scales with the hull and the corpus is mostly small ships. Kept because it is correct and matches what `ThermalGrid` does on the game's own load path, and recorded as a negative result so nobody measures it again expecting one. |
 | 2026-08-31 | **The room air rebuild pools its nodes: 2,573 KB to 0.** A node and a link list per room were allocated every rebuild. Two silent hazards had to be closed first — the carry-over map held the very nodes the rebuild was about to reuse, and `Initialised` was written on one branch only — and `RoomAirPoolTests` was proven to fail against the second before it was believed. Its first version did not: a rebuild of an unchanged hull finds every anchor and never takes the branch, so the test now moves a room's anchor between rebuilds. |
 | 2026-08-31 | **The surface rebuild keeps its scratch: 1,980 KB to 0.** Two `long[cells]` were allocated per rebuild to snapshot a table being mutated; they are scratch, so they are kept and grown. `SurfaceRebuildScratchTests` holds a second rebuild against a first and a small hull against buffers a large one sized, which is the case a kept buffer could get wrong. Looked at and left: `roomair`'s 2,573 KB is per-room nodes whose pooling needs a full `Reset` and would fail as a silent physical bug, and `rooms`' 4,768 KB is the `RoomMap` itself, whose recycling is gated on the threading invariant that a published map is never mutated. |

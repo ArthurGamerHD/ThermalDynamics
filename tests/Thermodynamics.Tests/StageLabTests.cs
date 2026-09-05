@@ -450,7 +450,9 @@ namespace Thermodynamics.Tests
         /// stages that churn the heap from the ones that do not — which is the thing that made a
         /// figure in this lab unexplainable until the lab was made to say it. `place` allocates a
         /// block and a grid entry per block and must report megabytes; a settled step allocates
-        /// nothing per step and must report approximately zero (`C4`).
+        /// nothing per step and must report approximately zero (`C4`); and a *warm* room pass —
+        /// the rooms row samples the first recycled pass, after the mapper's three slots exist —
+        /// must report next to nothing, which is `D20` held where the benchmark reads it.
         /// </summary>
         [Fact]
         public void EveryStageReportsWhatItAllocatedAndTheSteppingPathAllocatesNothing()
@@ -461,17 +463,23 @@ namespace Thermodynamics.Tests
             {
                 List<StageLab.Row> rows = StageLab.Run("ship", 2000, StageLab.Stages);
                 StageLab.Row place = null;
+                StageLab.Row rooms = null;
                 StageLab.Row solver = null;
                 for (int i = 0; i < rows.Count; i++)
                 {
                     if (rows[i].Stage == "place") place = rows[i];
+                    if (rows[i].Stage == "rooms") rooms = rows[i];
                     if (rows[i].Stage == "solver") solver = rows[i];
                 }
 
                 Assert.NotNull(place);
+                Assert.NotNull(rooms);
                 Assert.NotNull(solver);
                 Assert.True(place.AllocatedBytes > 100 * 1024,
                     "place allocated " + place.AllocatedBytes + " bytes, which is too little to be building a block each");
+                Assert.True(rooms.AllocatedBytes < 64 * 1024,
+                    "a warm room pass allocated " + rooms.AllocatedBytes + " bytes; the row samples the first recycled"
+                    + " pass, so this figure is `D20` coming undone or the sample landing on a slot-building repeat");
                 Assert.True(solver.AllocatedBytes < 4 * 1024,
                     "a settled step allocated " + solver.AllocatedBytes + " bytes; nothing allocates on the stepping path (`C4`)");
             }

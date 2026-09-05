@@ -62,37 +62,6 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-        private static void AssertSameMap(RoomMap expected, RoomMap actual, string what)
-        {
-            Assert.True(expected.RoomCount > 0, what + ": the dictionary path found no rooms, so agreement proves nothing");
-            Assert.Equal(expected.RoomCount, actual.RoomCount);
-            Assert.Equal(expected.SolidCellCount, actual.SolidCellCount);
-            Assert.Equal(expected.ExternalCellCount, actual.ExternalCellCount);
-            Assert.Equal(expected.RoomCellCount, actual.RoomCellCount);
-
-            for (int r = 0; r < expected.RoomCount; r++)
-            {
-                RoomMap.RoomCells a = expected.CellsOf(r);
-                RoomMap.RoomCells b = actual.CellsOf(r);
-                Assert.True(a.Count == b.Count, what + ": room " + r + " has " + b.Count + " cells by snapshot and " + a.Count + " by rescan");
-                for (int i = 0; i < a.Count; i++)
-                {
-                    Assert.True(a[i] == b[i], what + ": room " + r + " cell " + i + " is " + b[i] + " by snapshot and " + a[i] + " by rescan");
-                }
-                Assert.Equal(expected.IsVented(r), actual.IsVented(r));
-            }
-
-            Assert.Equal(expected.Portals.Count, actual.Portals.Count);
-            for (int p = 0; p < expected.Portals.Count; p++)
-            {
-                Assert.Equal(expected.Portals[p].Block.Model.Name, actual.Portals[p].Block.Model.Name);
-                Assert.Equal(expected.Portals[p].Block.Min, actual.Portals[p].Block.Min);
-                Assert.Equal(expected.Portals[p].Face, actual.Portals[p].Face);
-                Assert.Equal(expected.Portals[p].RegionA, actual.Portals[p].RegionA);
-                Assert.Equal(expected.Portals[p].RegionB, actual.Portals[p].RegionB);
-            }
-        }
-
         /// <summary>
         /// The claim the interior scan's index rests on, tested where it is made rather than through
         /// the map: walking a box x fastest, then y, then z, the index advances by exactly one at
@@ -228,7 +197,7 @@ namespace Thermodynamics.Tests
             simulation.Rooms.RequestRestart(simulation.Grid);
             Assert.True(simulation.Rooms.RunToCompletion());
 
-            AssertSameMap(first, simulation.Rooms.Map, "after a wider pass");
+            RoomMapAssert.SameMap(first, simulation.Rooms.Map, "after a wider pass");
         }
 
         [Fact]
@@ -238,7 +207,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation bySnapshot = Shell(true);
 
             Assert.True(byDictionary.Rooms.Map.Portals.Count > 0, "the shell's door made no portal, so the portal half is untested");
-            AssertSameMap(byDictionary.Rooms.Map, bySnapshot.Rooms.Map, "shell");
+            RoomMapAssert.SameMap(byDictionary.Rooms.Map, bySnapshot.Rooms.Map, "shell");
         }
 
         [Fact]
@@ -247,7 +216,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation byDictionary = Census(false);
             ThermalSimulation bySnapshot = Census(true);
 
-            AssertSameMap(byDictionary.Rooms.Map, bySnapshot.Rooms.Map, "census hull");
+            RoomMapAssert.SameMap(byDictionary.Rooms.Map, bySnapshot.Rooms.Map, "census hull");
         }
 
         [Fact]
