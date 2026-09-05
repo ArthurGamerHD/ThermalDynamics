@@ -139,8 +139,23 @@ design row if, at the millikelvin-per-step threshold, both hulls are more than 9
 across its first fifty steps, measured on a background that is itself quiet). What moved is only
 the mark the first clause is read at — 200 → 20,000 steps — because 200 steps was an arbitrary
 clock that measured the transient, not the regime a sleeping scheme lives in; the thresholds and
-the shares did not move. The confirming run, at a size this page has not yet judged, follows in
-its own commit.
+the shares did not move.
+
+**The confirming run, 126,731 blocks — a size this page had not yet judged — 2026-09-05, in the
+commit after the revision:** both hulls read **100 % quiet at every threshold by step 20,000**,
+parked and driven alike, and the 300 K disturbance on the quiet background peaks at **196 nodes of
+128,820 — 0.15 % of the grid**, shrinking again by step 50. The revised criterion holds with an
+order of magnitude to spare on both clauses. And the wavefront's absolute size barely moves with
+hull size — 159 nodes at 32,800 blocks, 196 at 128,820 — so the active set is a property of the
+disturbance, not of the ship, and the skippable share *grows* with the grids that need it most.
+**Activity tracking earns its design row**: filed as `D22` in [backlog.md](backlog.md).
+
+**The caveat that goes with the prize, so the design does not inherit a blind spot** (`P2`): both
+scenarios hold the environment sample fixed, so "quiet" here means *quiet under a constant sky*. A
+live world's sun sweeps, its weather moves and its time-of-day drifts, and each of those re-wakes
+the hull at some rate this lab did not measure. The design must treat an environment delta as an
+event like any other, and what a moving sun does to the quiet share is the first measurement the
+design phase owes.
 
 ## Limits
 
@@ -155,5 +170,6 @@ problem, and this page only prices the prize.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-05 | **The revised criterion's confirming run holds it with an order of magnitude to spare**: 100 % quiet at every threshold by step 20,000 on both hulls at 126,731 blocks, and the disturbance at 0.15 % of the grid — roughly the same absolute node count as at a quarter the size, so the skippable share grows with the hull. `D22` is filed, carrying the fixed-sky caveat: the lab measured quiet under a constant environment, and what a moving sun re-wakes is the design phase's first measurement. |
 | 2026-09-05 | **Findings recorded.** The remap candidate meets its criterion decisively (median one changed cell in ~1.7 million visited; worst case 0.58 %) and is filed as `D21`. The activity criterion **fails as written** — 0.1 % quiet at its step-200 clock — and the long marks show the clock was the error: both hulls are 100 % quiet by step 20,000 and a 300 K disturbance peaks at 0.48 % of the grid on a quiet background. A revised criterion (the mark moves to 20,000; thresholds and shares unmoved) is stated per `E11`, with its confirming run left to the next commit. The wavefront's first run also corrected the lab: measured on a 200-step background the whole grid read active, so the number described the background, not the disturbance (`P2`). |
 | 2026-09-05 | Opened: the survey of measured refusals, the two open candidates — change-local room remapping and activity tracking — and their criteria, committed before the labs first run at evaluation size (`E1`). |
