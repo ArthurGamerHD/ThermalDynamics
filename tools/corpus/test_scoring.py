@@ -10,6 +10,7 @@ The rules these pin are stated canonically in [rules.md](../../docs/rules.md): `
 
     python3 -m unittest discover -s tools/corpus -p 'test_*.py'
 """
+import csv
 import os
 import sys
 import shutil
@@ -446,6 +447,25 @@ class NoughtAndNothingAreDifferentAnswers(unittest.TestCase):
     def test_a_negative_and_an_exponent_read_as_written(self):
         self.assertEqual(-2.5, scoring.number({"a": "-2.5"}, "a"))
         self.assertEqual(1200.0, scoring.number({"a": "1.2e3"}, "a"))
+
+    def test_write_summary_round_trips_through_the_reader_verdict_uses(self):
+        """The summary page format, pinned from both sides of its contract.
+
+        Seven tools write this page and `verdict.py --baseline` reads it back with a
+        DictReader keyed on these three column names — so the pin is a round trip, not a
+        header string: a page written here must come back as the figures that went in.
+        """
+        root = tempfile.mkdtemp()
+        try:
+            path = os.path.join(root, "summary.csv")
+            scoring.write_summary(path, [("ships", 8142, "blueprints"), ("share", 0.75, "")])
+            with open(path) as handle:
+                rows = list(csv.DictReader(handle))
+            self.assertEqual(
+                [{"statistic": "ships", "value": "8142", "unit": "blueprints"},
+                 {"statistic": "share", "value": "0.75", "unit": ""}], rows)
+        finally:
+            shutil.rmtree(root)
 
     def test_load_reads_rows_and_reads_a_missing_page_as_empty(self):
         """The shared loader: rows as dicts, and no file is an empty list, not an error.

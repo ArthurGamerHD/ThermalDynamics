@@ -31,6 +31,7 @@ reader proposes again.
 | 19 | **Cleanup 4, finished.** `SunShadowMap.FaceLitFraction` was a fourth site hand-deriving the per-face frame that `BoxGeometry.Span` extracted from the other three, and it was left behind. It reads `Span` now. | The arithmetic is identical and doubly pinned: `FaceSpanTests` is written against the numbers themselves, and the shadow map's exactness sweep checks every face of every block against the analytic oracle, fractional cases included. No cost claim is made — the call sites are the environment-row fills on shadow-pass completion, colder than the surfaces path where cleanup 4 measured this same transformation shape at worst neutral, and an unmeasured claim is not one (`M5`). Suite 2,237 green (2026-09-04, commit `2ee609d`). |
 | 20 | **One claim on a grid group, and the copies' comments had already split.** The drag pass and the top-speed pass each walked leader → physical group → scratch → smallest-entity-id identity → handled set, and the two `Handled` summaries disagreed — one said *keyed by the grid that led them*, which is not what either copy does. `GridGroups.TryClaim` states the mechanism and the id convention once, so a later pass — lift is on the roadmap — cannot pick a different convention and handle every group once per member. | The drift had already reached the prose, which is how the code drift starts. Session-only server path, so the check is `C11`'s: the `.slnx` build compiles the mod project, the helper uses only APIs the two copies already used, and each pass keeps its own scratch and handled set — the systems stay uncoupled. Suite 2,237 green (2026-09-04, commit `87956b2`). |
 | 21 | **One loader for a dataset page.** `air.py`, `pairs.py` and `retest.py` carried an identical six-line `load(name)`; `scoring.load` holds it once with the contract stated — an empty list is for a dataset that legitimately lacks a page, and each tool still prints its own guidance when the page it cannot run without is the empty one. `verdict.py` keeps its richer loader on purpose: dropping and counting duplicate rows is a statement about its datasets, not about reading a file. | Verified by reproduction: all three tools' reports byte-identical on the 2026-08-23 datasets, and the loader pinned by a new test. 200 python and 2,237 C# green (2026-09-04, commit `a4cc077`). |
+| 22 | **The summary page has one writer.** Seven tools wrote the `statistic,value,unit` page independently — and it is a contract, not a convention: the committed `summary-*.csv` artefacts are this page, `E5` makes figures quotable from it, and `verdict.py --baseline` reads it back. `scoring.write_summary` states it once, encoding pinned so the page does not depend on the machine's locale; each tool keeps its own closing print. | Pinned by a round trip through the `DictReader` that `verdict.py` uses, and verified by reproduction on six of seven tools — byte-identical summaries on the committed datasets. `knob.py` cannot run on either committed knob dataset: both fail its own shipped-level precondition, before and after alike (recorded below). 201 python and 2,237 C# green (2026-09-04, commit `1908294`). |
 
 ### Measuring cleanup 4, and why one reading was not enough
 
@@ -118,6 +119,17 @@ bit-identity pin (`D8`) — or a mode flag that makes one function carry two con
 this page applies to constants applies to code too: changing one walk does not imply changing the
 other, so they stay two. What guards the pair is what already guards them — each walk's own
 oracle test fails if its behaviour drifts.
+
+### `knob.py` cannot run on either committed knob dataset
+
+Found while reproducing iteration 22's writers: `knob.py out/knobs-2026-08-30` exits with
+*environment has no row at its shipped level, so nothing says what it moved from*, and
+`out/knobs-2026-08-21` the same — its own precondition, failing on every knob dataset this machine
+holds, before the iteration's change and after it alike. That is `D2`'s shape one step out: a tool
+that is built, documented, and runnable against nothing present. Not investigated further here —
+whether the datasets predate the `shipped` column or the environment knob genuinely lacks a
+shipped-level row is a question about the knob sweeps, not about this pass — but a tool whose
+every committed input fails it is worth a line where somebody will read it.
 
 ### The room mapper's two run walks are specialisation, not duplication
 

@@ -147,11 +147,7 @@ def main():
 
     out = flag("--csv")
     if out:
-        with open(out, "w", newline="", encoding="utf-8") as handle:
-            writer = csv.writer(handle)
-            writer.writerow(["statistic", "value", "unit"])
-            for statistic, value, unit in figures:
-                writer.writerow([statistic, value, unit])
+        scoring.write_summary(out, figures)
         print("\ncsv -> %s  (%d figures)" % (out, len(figures)))
 
 

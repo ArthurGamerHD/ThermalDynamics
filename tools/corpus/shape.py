@@ -128,11 +128,7 @@ def main():
     print("  forbids, so any at all is a defect rather than a finding.")
 
     if out:
-        with open(out, "w", newline="") as handle:
-            writer = csv.writer(handle)
-            writer.writerow(["statistic", "value", "unit"])
-            for name, value, unit in figures:
-                writer.writerow([name, value, unit])
+        scoring.write_summary(out, figures)
         print()
         print("csv -> " + out)
 

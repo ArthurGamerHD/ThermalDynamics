@@ -143,11 +143,7 @@ def main():
     figures.append(("hull shape applied", 1 if shaped else 0, ""))
 
     if out:
-        with open(out, "w", newline="") as handle:
-            writer = csv.writer(handle)
-            writer.writerow(["statistic", "value", "unit"])
-            for name, value, unit in figures:
-                writer.writerow([name, value, unit])
+        scoring.write_summary(out, figures)
         print()
         print("csv -> " + out)
 
