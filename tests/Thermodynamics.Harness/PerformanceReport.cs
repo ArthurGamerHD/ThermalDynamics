@@ -1109,8 +1109,7 @@ namespace Thermodynamics.Harness
 
         private static string Quote(string value)
         {
-            if (value == null) return "\"\"";
-            return "\"" + value.Replace("\"", "\"\"") + "\"";
+            return CsvLine.Text(value);
         }
 
         private static List<string> SplitCsv(string line)

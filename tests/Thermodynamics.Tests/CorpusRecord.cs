@@ -302,8 +302,7 @@ namespace Thermodynamics.Tests
         /// <summary>A CSV field: quoted, with any quotes doubled.</summary>
         public static string Text(string value)
         {
-            if (value == null) return "\"\"";
-            return "\"" + value.Replace("\"", "\"\"") + "\"";
+            return Thermodynamics.Harness.CsvLine.Text(value);
         }
 
         /// <summary>A number, invariant and with no thousands separators.</summary>

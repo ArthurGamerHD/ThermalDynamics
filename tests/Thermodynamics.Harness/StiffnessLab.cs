@@ -495,12 +495,12 @@ namespace Thermodynamics.Harness
                 Row row = rows[i];
                 if (row == null) continue;
 
-                sb.Append('"').Append((row.Ship ?? "").Replace("\"", "\"\"")).Append('"').Append(',');
+                sb.Append(CsvLine.Text(row.Ship)).Append(',');
                 sb.Append(row.Large ? 1 : 0).Append(',');
                 sb.Append(row.Blocks).Append(',');
                 sb.Append(row.Vacuum.ToString("r", System.Globalization.CultureInfo.InvariantCulture)).Append(',');
                 sb.Append(row.Air.ToString("r", System.Globalization.CultureInfo.InvariantCulture)).Append(',');
-                sb.Append('"').Append((row.StiffestInAir ?? "").Replace("\"", "\"\"")).Append('"').Append(',');
+                sb.Append(CsvLine.Text(row.StiffestInAir)).Append(',');
                 sb.Append(row.StiffestFaces).Append(',');
                 sb.Append(row.StiffestInVacuum.ToString("r", System.Globalization.CultureInfo.InvariantCulture));
                 sb.AppendLine();

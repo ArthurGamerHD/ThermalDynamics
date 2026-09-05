@@ -836,10 +836,10 @@ namespace Thermodynamics.Harness
                 Row row = rows[i];
                 if (row == null) continue;
 
-                sb.Append('"').Append((row.Ship ?? "").Replace("\"", "\"\"")).Append('"').Append(',');
+                sb.Append(CsvLine.Text(row.Ship)).Append(',');
                 sb.Append(row.Large ? 1 : 0).Append(',').Append(row.Blocks).Append(',');
                 sb.Append(Cell(row.BareK)).Append(',');
-                sb.Append('"').Append((row.HottestBlock ?? "").Replace("\"", "\"\"")).Append('"').Append(',');
+                sb.Append(CsvLine.Text(row.HottestBlock)).Append(',');
                 sb.Append(row.BoltedPlaced).Append(',');
                 sb.Append(Cell(row.BoltedK)).Append(',');
                 sb.Append(row.PlumbedPipes).Append(',');
