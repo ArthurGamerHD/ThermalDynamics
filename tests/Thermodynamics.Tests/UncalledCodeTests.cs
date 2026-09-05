@@ -38,6 +38,7 @@ namespace Thermodynamics.Tests
     /// same false negative the rules page already names for a misspelled declaration.
     /// </para>
     /// </summary>
+    [Trait("speed", "slow")]
     public class UncalledCodeTests
     {
         /// <summary>Every `.cs` this repository maintains, generated files excluded.</summary>
