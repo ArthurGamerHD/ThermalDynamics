@@ -447,6 +447,22 @@ class NoughtAndNothingAreDifferentAnswers(unittest.TestCase):
         self.assertEqual(-2.5, scoring.number({"a": "-2.5"}, "a"))
         self.assertEqual(1200.0, scoring.number({"a": "1.2e3"}, "a"))
 
+    def test_load_reads_rows_and_reads_a_missing_page_as_empty(self):
+        """The shared loader: rows as dicts, and no file is an empty list, not an error.
+
+        Three tools carried this body; the empty list is for a dataset that legitimately
+        lacks a page, and each tool still prints its own guidance when the page it cannot
+        run without is the empty one.
+        """
+        root = tempfile.mkdtemp()
+        try:
+            with open(os.path.join(root, "page.csv"), "w") as handle:
+                handle.write("a,b\n1,2\n")
+            self.assertEqual([{"a": "1", "b": "2"}], scoring.load(root, "page"))
+            self.assertEqual([], scoring.load(root, "absent"))
+        finally:
+            shutil.rmtree(root)
+
     def test_number_or_defaults_only_where_number_is_unmeasured(self):
         """The caller's default answers exactly the cells `number` calls unmeasured — no more.
 

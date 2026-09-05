@@ -26,7 +26,6 @@ printed because it says which way a cell moved; the cap is what decides it.
 
 Usage: air.py [data-dir]
 """
-import csv
 import os
 import statistics
 import sys
@@ -68,11 +67,7 @@ PROJECT_AT = 2.7321
 
 
 def load(name):
-    path = os.path.join(DATA, name + ".csv")
-    if not os.path.exists(path):
-        return []
-    with open(path) as handle:
-        return list(csv.DictReader(handle))
+    return scoring.load(DATA, name)
 
 
 # One definition, in scoring.py, shared with verdict.py — this is the one that survived, and every

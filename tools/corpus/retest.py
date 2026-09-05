@@ -23,7 +23,6 @@ so none of the forty carries a coolant pipe or a radiator.
 
 Usage: retest.py [data-dir]
 """
-import csv
 import os
 import statistics
 import sys
@@ -44,11 +43,7 @@ KEY = ("ship", "workshop_id", "scenario")
 
 
 def load(name):
-    path = os.path.join(DATA, name + ".csv")
-    if not os.path.exists(path):
-        return []
-    with open(path) as handle:
-        return list(csv.DictReader(handle))
+    return scoring.load(DATA, name)
 
 
 def median(values):
