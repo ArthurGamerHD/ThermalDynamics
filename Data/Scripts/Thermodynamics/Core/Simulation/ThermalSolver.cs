@@ -88,8 +88,19 @@ namespace Thermodynamics.Core
         /// </summary>
         private float[] nodeCritical = new float[0];
 
-        /// <summary>Exposed faces as a fraction of the node's total, six per node.</summary>
-        private float[] nodeFaceWeights = new float[0];
+        /// <summary>
+        /// Each node's six exposure counts, packed ten bits a face exactly as the node holds them
+        /// (`ThermalNode.FaceBits`), beside the reciprocal of the total. A face's weight — its
+        /// share of the node's exposed area — is derived where it is read, as
+        /// <c>count * inverse</c>, which is bit-for-bit the value the retired
+        /// <c>nodeFaceWeights</c> row stored: same integer count, same reciprocal, same multiply.
+        /// Twelve bytes a node where the six stored floats were twenty-four (`E2`), and the fill
+        /// loop reads one long and one float where it read six floats.
+        /// </summary>
+        private long[] nodeExposedPacked = new long[0];
+
+        /// <summary>Reciprocal of the node's total exposed faces, and zero for a buried node.</summary>
+        private float[] nodeFaceWeightInverse = new float[0];
 
         /// <summary>
         /// The effective surface normal at each node, three floats a node, from
@@ -2331,18 +2342,10 @@ namespace Thermodynamics.Core
                 int total = node.TotalExposedFaces;
                 nodeExposedFaces[i] = total;
 
-                int b = i * Face.Count;
-                if (total <= 0)
-                {
-                    for (int f = 0; f < Face.Count; f++) nodeFaceWeights[b + f] = 0f;
-                    continue;
-                }
-
-                float inverse = 1f / total;
-                for (int f = 0; f < Face.Count; f++)
-                {
-                    nodeFaceWeights[b + f] = node.GetExposedFaces(f) * inverse;
-                }
+                // A buried node's counts are all zero, so a zero reciprocal makes every derived
+                // weight the zero the stored row used to hold.
+                nodeExposedPacked[i] = node.PackedExposedFaces;
+                nodeFaceWeightInverse[i] = total <= 0 ? 0f : 1f / total;
             }
         }
 
@@ -2806,20 +2809,22 @@ namespace Thermodynamics.Core
                 {
                     float area = nodeExposedArea[i];
 
-                    // The node's six face weights, read once and shared by both sums below.
+                    // The node's six face weights, derived once and shared by every sum below.
                     //
-                    // They used to be read twice, because the two sums are two calls with a row
-                    // store between them and nothing can share loads across that: nodeFaceWeights,
-                    // nodeConvectionRow and nodeSolarRow are all float[] fields, so a compiler
-                    // cannot prove a store to one is not a store to another and has to assume the
-                    // weights moved. Hoisting them here says they did not.
+                    // Derived rather than stored: the counts and the reciprocal are the same
+                    // operands the retired nodeFaceWeights row was filled from, so each product
+                    // is the same float to the last bit — and hoisting them into locals still
+                    // says the row stores below cannot have moved them, which is why the sums
+                    // read f0..f5 rather than calling anything.
                     int b = i * Face.Count;
-                    float f0 = nodeFaceWeights[b];
-                    float f1 = nodeFaceWeights[b + 1];
-                    float f2 = nodeFaceWeights[b + 2];
-                    float f3 = nodeFaceWeights[b + 3];
-                    float f4 = nodeFaceWeights[b + 4];
-                    float f5 = nodeFaceWeights[b + 5];
+                    long packed = nodeExposedPacked[i];
+                    float inverse = nodeFaceWeightInverse[i];
+                    float f0 = (int)(packed & ThermalNode.FaceMask) * inverse;
+                    float f1 = (int)((packed >> ThermalNode.FaceBits) & ThermalNode.FaceMask) * inverse;
+                    float f2 = (int)((packed >> (2 * ThermalNode.FaceBits)) & ThermalNode.FaceMask) * inverse;
+                    float f3 = (int)((packed >> (3 * ThermalNode.FaceBits)) & ThermalNode.FaceMask) * inverse;
+                    float f4 = (int)((packed >> (4 * ThermalNode.FaceBits)) & ThermalNode.FaceMask) * inverse;
+                    float f5 = (int)((packed >> (5 * ThermalNode.FaceBits)) & ThermalNode.FaceMask) * inverse;
 
                     // One weighting against the wind, read by both the terms that want it. The
                     // convection factor and the friction row asked for the same six-face sum
@@ -2829,8 +2834,8 @@ namespace Thermodynamics.Core
                     {
                         // **A registered drag profile rides on the wind weighting and nowhere
                         // else.** These six face shares are also what the *solar* term reads, and a
-                        // nacelle that is slippery to the air is not slippery to sunlight — putting
-                        // the multiplier into `nodeFaceWeights` would have dimmed the sun on any
+                        // nacelle that is slippery to the air is not slippery to sunlight — folding
+                        // the multiplier into the face weights would have dimmed the sun on any
                         // block a mod registered. It belongs to the flow, so it is applied where the
                         // flow is (the drag milestone).
                         DragProfile profile = nodes[i].Drag;
@@ -3241,13 +3246,14 @@ namespace Thermodynamics.Core
         /// </summary>
         private float Weighted(int node, float[] weights)
         {
-            int b = node * Face.Count;
-            return (nodeFaceWeights[b] * weights[0])
-                + (nodeFaceWeights[b + 1] * weights[1])
-                + (nodeFaceWeights[b + 2] * weights[2])
-                + (nodeFaceWeights[b + 3] * weights[3])
-                + (nodeFaceWeights[b + 4] * weights[4])
-                + (nodeFaceWeights[b + 5] * weights[5]);
+            long packed = nodeExposedPacked[node];
+            float inverse = nodeFaceWeightInverse[node];
+            return ((int)(packed & ThermalNode.FaceMask) * inverse * weights[0])
+                + ((int)((packed >> ThermalNode.FaceBits) & ThermalNode.FaceMask) * inverse * weights[1])
+                + ((int)((packed >> (2 * ThermalNode.FaceBits)) & ThermalNode.FaceMask) * inverse * weights[2])
+                + ((int)((packed >> (3 * ThermalNode.FaceBits)) & ThermalNode.FaceMask) * inverse * weights[3])
+                + ((int)((packed >> (4 * ThermalNode.FaceBits)) & ThermalNode.FaceMask) * inverse * weights[4])
+                + ((int)((packed >> (5 * ThermalNode.FaceBits)) & ThermalNode.FaceMask) * inverse * weights[5]);
         }
 
         /// <summary>
@@ -4370,7 +4376,8 @@ namespace Thermodynamics.Core
                 nodeOverheatDamage = new float[size];
                 nodeOverheatPeak = new float[size];
                 InvalidateEnvironmentRows();
-                nodeFaceWeights = new float[size * Face.Count];
+                nodeExposedPacked = new long[size];
+                nodeFaceWeightInverse = new float[size];
                 nodeSunLit = new float[size * Face.Count];
 
                 // **Allocated only where the shielding is switched on.** The array is six floats a

@@ -75,9 +75,9 @@ namespace Thermodynamics.Core
         private long exposedFaces;
 
         /// <summary>Bits each face's count occupies. Ten holds 1,023 against a real worst case of 100.</summary>
-        private const int FaceBits = 10;
+        internal const int FaceBits = 10;
 
-        private const long FaceMask = (1L << FaceBits) - 1L;
+        internal const long FaceMask = (1L << FaceBits) - 1L;
 
         /// <summary>The largest count a face can hold before the packing would lose it.</summary>
         public const int MaxExposedPerFace = (int)FaceMask;
@@ -86,6 +86,16 @@ namespace Thermodynamics.Core
         public int GetExposedFaces(int face)
         {
             return (int)((exposedFaces >> (face * FaceBits)) & FaceMask);
+        }
+
+        /// <summary>
+        /// The six face counts as the solver mirrors them: one packed long, ten bits a face. The
+        /// mirror and <see cref="GetExposedFaces"/> unpack with the same constants, so the derived
+        /// face weights are bit-identical to ones computed from the unpacked counts.
+        /// </summary>
+        internal long PackedExposedFaces
+        {
+            get { return exposedFaces; }
         }
 
         /// <summary>
