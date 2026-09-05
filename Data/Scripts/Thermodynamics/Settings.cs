@@ -856,7 +856,7 @@ namespace Thermodynamics
             if (HeatPumpCarnotFraction > 1f) HeatPumpCarnotFraction = 1f;
             if (HeatPumpMaxCoefficient < 0f) HeatPumpMaxCoefficient = 0f;
             if (SuitConductance < 0f) SuitConductance = 0f;
-            if (SuitHeatCapacity <= 0f) SuitHeatCapacity = 1f;
+            if (SuitHeatCapacity <= 0f) SuitHeatCapacity = Core.ThermalSettings.MinimumSuitHeatCapacity;
             if (SuitCoolingWatts < 0f) SuitCoolingWatts = 0f;
             if (SuitCriticalTemperature < 0f) SuitCriticalTemperature = 0f;
             if (SuitDamagePerKelvin < 0f) SuitDamagePerKelvin = 0f;
