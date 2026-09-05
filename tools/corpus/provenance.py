@@ -35,6 +35,10 @@ import re
 import sys
 from collections import Counter
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import scoring
+
 # What the four jump drives wasted when a census was taken before 2026-08-23, and what they waste
 # now that it is derived from the PowerEfficiency each states. Named rather than folded into a
 # ratio so a reader can see which census a restatement applies to.
@@ -308,13 +312,6 @@ def per_ship(composition, type_id):
     return len(ship_watts), instances, shares
 
 
-def percentile(sorted_values, fraction):
-    """The value at `fraction` through an already-sorted list, or 0 for an empty one."""
-    if not sorted_values:
-        return 0.0
-    return sorted_values[min(len(sorted_values) - 1, int(fraction * len(sorted_values)))]
-
-
 def main(argv):
     if len(argv) == 4 and argv[2] == "--type":
         ships, instances, shares = per_ship(argv[1], argv[3])
@@ -327,7 +324,7 @@ def main(argv):
               f" ({len(shares) / ships * 100:.1f} %), {instances:,} instances")
         print("  its share of that ship's own full-load waste:")
         for name, point in (("median", 0.5), ("p75", 0.75), ("p90", 0.9), ("p99", 0.99)):
-            print(f"    {name:>6} {percentile(shares, point) * 100:6.1f} %")
+            print(f"    {name:>6} {scoring.percentile(shares, point) * 100:6.1f} %")
         print(f"    {'max':>6} {shares[-1] * 100:6.1f} %")
         print()
         print("basis: full electrical load, every jump drive charging, no thrust, and the drives"
