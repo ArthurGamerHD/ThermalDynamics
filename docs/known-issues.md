@@ -753,9 +753,11 @@ the bulk was the full node mirror and the link-mass fill, which now land with th
 sun-shadow sets are bitsets published by swap, so the first sunlit step is 26.0 ms and 6.5 MB
 (a pending list bought once and kept) and a sun-drift rebuild allocates nothing. `D4` is done.
 
-**A grid holds about 1.8 KB a block, against a design budget of ~110 bytes a node.** Measured at
-126,731 blocks: 213 MB retained, 278 MB peak. Half of the retained figure is indexed by *bounding
-volume* rather than by block, so a hull pays for the empty space it encloses. [memory.md](memory.md)
+**A grid holds about 723 bytes a block, against a design budget of ~110 bytes a node.** Measured
+2026-09-04 at 126,731 blocks: 88.9 MB retained, 100.8 MB peak — from the 213 and 278 this
+paragraph carried, which predated the passes that keyed the tables on packed longs, turned the
+sets into bitsets and recycled the room map. Nothing is indexed by *bounding volume* any more;
+what still scales with enclosed volume, the room cells, is 21 B/block between 126k and 505k. [memory.md](memory.md)
 has the breakdown and the changes that roughly halve it — none of which help SE2, where the problem
 is that three structures are indexed per cell rather than per block.
 
@@ -1129,6 +1131,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **Re-took the memory paragraph**: 723 B/block retained (88.9 MB at 126,731 blocks) against the 1.8 KB and 213 MB it carried — the figure predated most of the passes on [memory.md](memory.md). |
 | 2026-09-04 | **Corrected the first-step warm-up in place (`E10`)**: the spike was never mostly first touch — measured, the faults are one to two milliseconds of it — and since the step prologue moved onto the rebuild tick the first step is ~1.5× a steady one, not several times. The sunlit sun-shadow build is the remaining tail. |
 | 2026-08-28 | **Corrected the room map's convergence figure, which had been stale for nine days and was quoted here from `D2`** (`E10`, `E5`). It read 7,207 ticks — twenty minutes — on a million blocks; re-measured by `bench scale --max 1000000` it is **3,934 ticks, about eleven minutes**, on 1,000,294 blocks and a 14,278,796-cell box. The 7,207 predated the 2026-08-26 word skip and the 2026-08-27 span flood, both of which `D2`'s own body already recorded — the headline outlived the paragraph that superseded it. **And the figure is structural**: convergence is the box over a 4,096-cell tick budget, so no work on milliseconds a cell can move it, which `RoomMapConvergenceIsTheBoxDividedByItsBudget` now pins. |
 | 2026-08-28 | **The input sweep covers twenty of twenty-one inputs; it covered eighteen of twenty-one.** Position needed a scenario that changes altitude before it could be measured at all, and on the new `descent` it is **0.8 K at worst and 0.00 K standing** — covered, and it does not matter. Weather needed nothing but asking, and it is **168.8 K at worst and 87.1 K standing**, the largest single-input divergence the sweep can express and a bias rather than a perturbation. Both were inert on the first attempt because `EnvironmentSample` is a **struct** and the helpers were mutating copies, which is why the sweep now marks a case its scenario cannot express rather than printing the zero that looked identical. |

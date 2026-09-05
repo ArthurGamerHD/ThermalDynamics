@@ -3241,10 +3241,31 @@ the regime change: most ticks under the spread step do not step at all.
 which has been growing with the tree it scans. Tagged. The classes this pass added all sit under
 the threshold, and the fast lane is **1,923 cases in 4 s**.
 
+## Pass 10, iteration 9 — the memory pages catch up with the passes that changed them
+
+**`bench memory`, both rungs, one window (2026-09-04):**
+
+| | 126,731 blocks | 505,566 blocks |
+| --- | ---: | ---: |
+| retained | **88.9 MB — 723 B/block** | **360.3 MB — 744 B/block** |
+| peak | 100.8 MB — 821 B/block | 408.3 MB — 843 B/block |
+
+Three findings, all `E5`-shaped and none of them code. **The projection has landed**:
+[memory.md](memory.md)'s items 2–5 were projected at ~730 B/block and the page still carried
+1,023 as "today"; measured, 723. **The flat-with-size claim is back**: the page reported per-block
+cost climbing 1,023 → 1,141 between the rungs with the room map as the whole difference (128 → 229
+B/block); today the climb is 723 → 744 and the room map's share of it is 53 → 68 — a twentieth of
+the total, not the row that matters. **And [known-issues.md](known-issues.md) was two eras stale**,
+still telling a reader a grid holds 1.8 KB a block (213 MB retained at 126,731) with half of it
+indexed by bounding volume — a description of a mod that predates the packed tables, the bitsets
+and the recycled room map. All three corrected in place, with the superseded figures kept visible
+(`E10`).
+
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **Pass 10, iteration 9: the memory pages re-measured — 723 B/block retained at 126,731 blocks and 744 at 505,566, against the 1,023/1,141 memory.md carried and the 1.8 KB known-issues did.** The items-2–5 projection (~730) has landed; the room-map slope between the rungs is 21 B/block where the page said 101; nothing is left on the page that predates the current tables. |
 | 2026-09-04 | **Pass 10, iteration 8: the hitch distribution re-taken (p99 26.47 → 3.11 ms at 126,731 blocks, 28.71 → 6.90 at 505,566) and the tick-0 outlier attributed to the per-process JIT; the lane refresh tagged `UncalledCodeTests` (2.45 s) and the fast lane is 1,923 cases in 4 s.** |
 | 2026-09-04 | **Pass 10, iteration 7: deriving the face weights from the packed counts is +10 % on the solver stage — tried, measured, dropped.** Bit-identical by construction and green through every suite, but 17.3 → 19.1 ms on the minimum and 19.0 → 20.9 on the median, both rounds, identical work. `E2`'s "derivable, but at what cost" question is answered with a refusal: the mirrored row is cheaper to read than to derive. The attempt and its revert are both in the branch. |
 | 2026-09-04 | **Pass 10, iteration 6: the sun-shadow sets are bitsets over the padded grid box.** Three `HashSet<Vector3I>`s were 21.6 MB on the first sunlit step of a 126,731-block hull and ~1 MB per sun-drift rebuild; as `CellBitset`s with the completed pass published by swap, the first sunlit step reads 25.97 ms and 6.5 MB (the pending list, bought once) and a drift rebuild allocates nothing. Pinned by four new cases in `SunShadowMapTests`, including the padded-box edge cell an unpadded set would silently call lit. |

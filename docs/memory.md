@@ -91,12 +91,13 @@ hull, and are **89 MB and 117 MB** on the census hull.
 > taken. That is 33 B/block bought deliberately, and
 > [`bench report`](benchmarks.md) is where the time it buys is recorded.
 
-**Per-block cost is no longer flat with grid size.** At 505,566 blocks the census hull measures
-1,141 B/block retained against 1,023 at 126,731, and the whole of that difference is the room map:
-128 B/block against 229. Room cells scale with the enclosed *volume* of a ship rather than with the
-number of blocks in it, and a bigger ship encloses disproportionately more. §4 is the row that
-matters now, and §1b's answer — count the cells instead of storing them — does not reach it,
-because a room cell has to be enumerable.
+**Per-block cost is very nearly flat with grid size now.** Re-taken 2026-09-04: at 505,566 blocks
+the census hull measures **744 B/block retained against 723 at 126,731**, and the difference is
+still the room map — 68 B/block against 53 — but it is a twentieth of the total where this
+paragraph used to report 229 against 128 and call it the row that matters. Room cells still scale
+with the enclosed *volume* of a ship rather than with the number of blocks in it; what changed is
+§4 and its neighbours, which shrank the per-cell price until the slope stopped mattering at any
+size a blueprint reaches.
 
 **Bounding volume used to be the whole story and now is not.** A hull encloses about fifteen times
 more empty space than it has blocks, and two of the structures above were indexed by that space
@@ -181,17 +182,19 @@ appended to in a tight loop; these grow when a block is placed, which is not tha
 second added for O(1) removal. A slot *is* a block, so the key map was redundant: it is gone, and
 `GetByKey` goes through the slot map to the flat list. Folding the two into a struct, which is what
 this was first written down as, was never needed.
-`bench memory --size 126731` reads the *GridModel indexes* row at **86 B/block against 120**, and
-the retained total at 1,061 against 1,095. `LookupByKeySurvivesARemovalFromTheMiddle` pins the one
+`bench memory --size 126731` read the *GridModel indexes* row at **86 B/block against 120** when
+the change landed, and the retained total at 1,061 against 1,095; the row is 42 today, the key
+change and the capacity hints having taken the rest. `LookupByKeySurvivesARemovalFromTheMiddle` pins the one
 thing the change put at risk: the slot map is the structure a removal rewrites, moving the list's
 last entry into the hole.
 
 ## What is worth doing next
 
-The solver is the largest consumer at 501 bytes a block — half the total — and it is all per-node
-rather than per-volume, so it is a different kind of problem from the ones above. The room map is
-second at 128 B/block and it is the only row that still climbs with grid size, so on a large ship
-it is first.
+The solver is the largest consumer at 394 bytes a block (2026-09-04) — over half the total — and
+it is all per-node rather than per-volume, so it is a different kind of problem from the ones
+above; `E12` in [backlog.md](backlog.md) is the measured argument for leaving its two object rows
+alone. The room map is 53 B/block and its climb with grid size is down to 68 at half a million,
+so nothing below it is worth a design.
 
 ### 2. ~~Drop the solver's node lookup dictionary~~ — **done**, 49 B/block
 
@@ -220,10 +223,11 @@ round-trip.
 
 **The other two halves are not done, and they are a different kind of trade.** The solver mirrors
 six floats of face weight and six of sun-lit fraction per node in flat arrays — 24 bytes each, with
-no per-node header to save. The weights are derivable from the counts, but only by putting a divide
-back into the hot loop the flat arrays exist to feed; the sun-lit array is meaningful only when
-`SolarSelfShadowing` is on, which is the shipped default, so allocating it lazily buys nothing for
-most worlds. Both are a cost measurement rather than a packing job (`D7`).
+no per-node header to save. The weights are derivable from the counts, **and the cost was
+measured on 2026-09-04: +10 % on the solver stage**, so the mirrored row stays and the derivation
+is a recorded refusal ([performance.md](performance.md#pass-10-iteration-7--deriving-the-face-weights-costs-a-tenth-of-the-step-tried-and-dropped));
+the sun-lit array is meaningful only when `SolarSelfShadowing` is on, which is the shipped
+default, so allocating it lazily buys nothing for most worlds.
 
 ### 4. Rooms as one cell array with per-room ranges — **done**
 
@@ -352,17 +356,18 @@ where one exists. [scale-design.md](scale-design.md#room-mapping-is-the-one-that
 | --- | ---: | ---: | --- |
 | armour hull, before 1a–1d | 279 MB (2,311 B/block) | — | hopeless |
 | armour hull, after 1a–1d | 113 MB (932 B/block) | 459 MB (952 B/block) | still needs §8 and §9 |
-| **census hull, today** | **126 MB (1,023 B/block)** | **552 MB (1,141 B/block)** | still needs §8 and §9 |
-| after 2, 3, 4 and 5 | ~90 MB (~730 B/block) | ~390 MB (~800 B/block) | unchanged |
+| census hull, 2026-08-26 | 126 MB (1,023 B/block) | 552 MB (1,141 B/block) | still needs §8 and §9 |
+| after 2, 3, 4 and 5 — projected | ~90 MB (~730 B/block) | ~390 MB (~800 B/block) | unchanged |
+| **census hull, 2026-09-04, measured** | **88.9 MB (723 B/block)** | **360.3 MB (744 B/block)** | still needs §8 and §9 |
 
 Nothing is indexed by *bounding volume* any more, which is what the second row was celebrating. It
-is still indexed by *enclosed* volume, which is why the third row climbs with grid size where the
-second did not: a bigger ship is a larger fraction rooms. Everything else on the page is honest
-per-node and per-block state.
+is still indexed by *enclosed* volume, and that slope is down to 21 B/block between the two rungs.
+Everything else on the page is honest per-node and per-block state.
 
-Items 2 to 5 are local changes with no design work behind them and would take another 20 %. They
-do not change the SE2 picture, because that is not about constants — it is about which things are
-counted per cell, which is §8 and §9.
+Items 2 to 5 were local changes with no design work behind them, projected here at another 20 % —
+and the 2026-09-04 row above is the projection landed: 723 measured against the ~730 projected.
+They do not change the SE2 picture, because that is not about constants — it is about which things
+are counted per cell, which is §8 and §9.
 
 ---
 
@@ -370,6 +375,7 @@ counted per cell, which is §8 and §9.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **Re-took both rungs and the projection has landed**: retained **723 B/block** at 126,731 blocks (88.9 MB) and **744** at 505,566 (360.3 MB), against the ~730/~800 projected for items 2–5 and the 1,023/1,141 the page carried as "today". The room-map slope is 21 B/block between the rungs where it was 106, so the flat-with-size claim is back within a few per cent. §3's derivability question is closed as a measured refusal (+10 % on the solver stage), and §1's evidence figure is scoped to its date. |
 | 2026-08-31 | **Audited item 5 before doing it, and it was wrong in the direction that breaks something.** It said eight floats exist only for telemetry and the overlay; `LastDeltaTemperature` is not one of them — it is written on every publish, outside the `CollectDiagnostics` branch, and `ThermalTerminal` reads it for the `K/s` line on a panel that ships on. Moving it with the rest would blank that readout in every world, on a path no test covers because the panel is drawn rather than asserted. Seven floats, 28 bytes. Also recorded that the obvious side-array shape is the wrong one: keyed on the node index, both removal paths would leave every node past a hole reading its neighbour's watts until the next step. |
 | 2026-08-27 | **The room map is 70 → 53 bytes a block and the mapper's peak 297 → 152**, at 126,731 blocks, over the fourth performance pass ([performance.md](performance.md#pass-4--what-the-pass-moved)). Retained: the cell-to-room dictionary is gone, the per-room lists are ranges into one store carrying no slack, and the sorted key and room arrays are one room index per room cell read through a rank. Peak: the flood's retained frontier held millions of cells and now holds tens of thousands, because the walk takes a run at a time. Whole simulation, retained 739 → 722 and peak 967 → **821**. And the transient this page first measured on 2026-08-27 — a pass *allocating* 253 MB at 505,566 blocks — is **25 MB**. |
 | 2026-08-27 | §4 again: the sorted key and room arrays are gone as well. The membership set the pass already fills is ranked instead, so a room is an array lookup at a cell's rank — four bytes a cell, no keys, no sort. The measured per-block row here still says 72 and predates this; it is re-taken in the row above. |
