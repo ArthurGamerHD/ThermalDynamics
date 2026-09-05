@@ -24,8 +24,6 @@ whole of the difference between reading conduction x8 as a win and reading it as
 
 Usage: pairs.py [data-dir]
 """
-import csv
-import os
 import statistics
 import sys
 
@@ -69,11 +67,7 @@ CENSORED = 1500.0
 
 
 def load(name):
-    path = os.path.join(DATA, name + ".csv")
-    if not os.path.exists(path):
-        return []
-    with open(path) as handle:
-        return list(csv.DictReader(handle))
+    return scoring.load(DATA, name)
 
 
 def median(values):

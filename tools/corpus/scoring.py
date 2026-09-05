@@ -328,6 +328,22 @@ def number(row, key):
         return None
 
 
+def load(data_dir, name):
+    """The rows of `<data_dir>/<name>.csv`, or an empty list where the file does not exist.
+
+    **The empty list is for a dataset that legitimately lacks a page**, not for a missing dataset:
+    the tools that call this print their own "no <page>.csv in <dir>" guidance when the page they
+    cannot run without is the one that came back empty. Three tools carried this identical body;
+    `verdict.py` keeps its own richer loader on purpose — it drops duplicate rows and counts them,
+    which is a statement about its datasets and not about reading a file.
+    """
+    path = os.path.join(data_dir, name + ".csv")
+    if not os.path.exists(path):
+        return []
+    with open(path) as handle:
+        return list(csv.DictReader(handle))
+
+
 def number_or(row, key, default):
     """`number`, with the caller's own answer for a cell the dataset does not carry.
 
