@@ -63,6 +63,31 @@ def module_bindings(tree):
     return names
 
 
+class TheLanesSuiteIsReachedByTheOneDiscoveryCommand(unittest.TestCase):
+    """`tools/lanes`' tests were built, documented and run by nothing (`D2`'s class, in the test
+    tooling itself): the documented discovery starts at `tools/corpus`, no command anywhere named
+    `test_lanes.py`, and `discover -s tools` finds zero tests and exits OK — a discovery that
+    judged nothing, passing (`E8`'s shape, in the runner). This bridges them: the one command
+    everyone runs loads and runs the lanes suite too, and fails if it shrinks to nothing.
+    """
+
+    def test_the_lanes_tests_are_found_and_pass(self):
+        lanes = os.path.normpath(os.path.join(HERE, "..", "lanes"))
+        suite = unittest.TestLoader().discover(
+            start_dir=lanes, pattern="test_*.py", top_level_dir=lanes)
+
+        count = suite.countTestCases()
+        self.assertGreaterEqual(count, 5,
+                                "the lanes suite came back with %d cases, so the bridge is not"
+                                " reaching it (E8)" % count)
+
+        result = unittest.TestResult()
+        suite.run(result)
+        problems = ["%s: %s" % (case, trace.strip().splitlines()[-1])
+                    for case, trace in result.failures + result.errors]
+        self.assertEqual([], problems)
+
+
 class EveryToolStillImportsItsSiblings(unittest.TestCase):
     __doc__ = __doc__
 

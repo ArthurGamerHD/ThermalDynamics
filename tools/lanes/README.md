@@ -36,7 +36,7 @@ a prompt to look rather than a verdict.
 | File | What it is |
 | --- | --- |
 | `lanes.py` | The checker. Takes a trx path and, optionally, the test source directory. |
-| `test_lanes.py` | What it pins: how a duration is read, how the trait is found above a class, and which direction fails a run. |
+| `test_lanes.py` | What it pins: how a duration is read, how the trait is found above a class, and which direction fails a run. Run by the corpus discovery — `python3 -m unittest discover -s tools/corpus -p 'test_*.py'` reaches it through `test_tool_imports.py`'s bridge, because a discovery rooted here is a command nobody runs and `discover -s tools` finds zero tests and exits OK. |
 
 ## Change log
 
