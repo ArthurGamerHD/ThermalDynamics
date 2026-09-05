@@ -29,17 +29,7 @@ namespace Thermodynamics.Tests
             }
             else
             {
-                BlockModel armour = Catalog.LightArmor();
-                BlockModel door = Catalog.SlideDoor();
-                for (int x = -1; x <= 4; x++)
-                for (int y = -1; y <= 4; y++)
-                for (int z = -1; z <= 4; z++)
-                {
-                    bool wall = x == -1 || x == 4 || y == -1 || y == 4 || z == -1 || z == 4;
-                    if (!wall) continue;
-                    bool isDoor = x == 2 && y == 1 && z == -1;
-                    builder.Place(isDoor ? door : armour, new Vector3I(x, y, z), BlockOrientation.Identity);
-                }
+                RoomFixtures.AddDooredShell(builder);
             }
             return builder.BuildSimulation(Hulls.Uncapped(), 293.15f);
         }
