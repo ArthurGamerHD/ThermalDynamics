@@ -282,6 +282,15 @@ namespace Thermodynamics.Core
         /// </summary>
         public float SuitHeatCapacity = 240000f;
 
+        /// <summary>
+        /// The floor an invalid (nonpositive) <see cref="SuitHeatCapacity"/> is raised to, and it
+        /// is one value for both copies of the clamp — the world's and this one. They had drifted
+        /// a thousandfold: this side used <see cref="ThermalConstants.MinimumThermalMass"/>, a
+        /// constant about blocks that report zero mass, so a rig authoring nonsense heated its
+        /// suit a thousand times faster than the same nonsense would through a world.
+        /// </summary>
+        public const float MinimumSuitHeatCapacity = 1f;
+
         /// <summary>Heat the suit can move, either way, W.</summary>
         public float SuitCoolingWatts = 500f;
 
@@ -423,7 +432,7 @@ namespace Thermodynamics.Core
             if (HeatPumpMaxCoefficient < 0f) HeatPumpMaxCoefficient = 0f;
 
             if (SuitConductance < 0f) SuitConductance = 0f;
-            if (SuitHeatCapacity <= 0f) SuitHeatCapacity = ThermalConstants.MinimumThermalMass;
+            if (SuitHeatCapacity <= 0f) SuitHeatCapacity = MinimumSuitHeatCapacity;
             if (SuitCoolingWatts < 0f) SuitCoolingWatts = 0f;
             if (SuitCriticalTemperature < 0f) SuitCriticalTemperature = 0f;
             if (SuitDamagePerKelvin < 0f) SuitDamagePerKelvin = 0f;

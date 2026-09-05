@@ -315,6 +315,108 @@ namespace Thermodynamics.Tests
         }
 
         /// <summary>
+        /// **The world's copy and the solver's clamp the fields they share the same way.**
+        ///
+        /// <para>
+        /// The bridge test below holds the *copy* together; nothing held the two clamp lists
+        /// together, and they are the one place the discipline has no reflection to lean on —
+        /// both are hand-written `if` lines over different storages (`D3`). Found live:
+        /// `SuitHeatCapacity`'s floor was `1f` in the world's list and `MinimumThermalMass` —
+        /// 0.001 — in the solver's, so a rig authoring nonsense heated its suit a thousand times
+        /// faster than the same nonsense would through a world, and the suite was testing a
+        /// different floor than any world runs.
+        /// </para>
+        ///
+        /// <para>
+        /// A clamp value is compared by its last name segment, so the world spelling a shared
+        /// constant through `Core.` and the solver spelling it bare still agree — what must match
+        /// is which constant, not how it is reached.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void TheTwoClampListsAgreeOnEveryFieldTheyShare()
+        {
+            Dictionary<string, string> world =
+                ClampLines(MethodBody(Source(), "private void Clamp()"));
+            Dictionary<string, string> solver = ClampLines(MethodBody(
+                File.ReadAllText(Path.Combine(RepoRoot(),
+                    "Data", "Scripts", "Thermodynamics", "Core", "Settings", "ThermalSettings.cs")),
+                "public ThermalSettings Derive()"));
+
+            List<string> differ = new List<string>();
+            int shared = 0;
+            foreach (KeyValuePair<string, string> pair in world)
+            {
+                string other;
+                if (!solver.TryGetValue(pair.Key, out other)) continue;
+                shared++;
+                if (pair.Value != other)
+                {
+                    differ.Add(pair.Key + ": world [" + pair.Value + "] solver [" + other + "]");
+                }
+            }
+
+            Assert.True(shared >= 10,
+                "the scan matched only " + shared + " shared clamped fields, so it is not seeing"
+                + " the lists it claims to compare (E8)");
+            Assert.True(differ.Count == 0,
+                differ.Count + " shared fields are clamped differently by the two copies:\n  "
+                + string.Join("\n  ", differ.ToArray()));
+        }
+
+        /// <summary>The body of the method the anchor names, by brace matching from its declaration.</summary>
+        private static string MethodBody(string source, string anchor)
+        {
+            int start = source.IndexOf(anchor, StringComparison.Ordinal);
+            Assert.True(start >= 0, "could not find '" + anchor + "'");
+
+            int open = source.IndexOf('{', start);
+            Assert.True(open > 0);
+
+            int depth = 0;
+            for (int i = open; i < source.Length; i++)
+            {
+                if (source[i] == '{') depth++;
+                else if (source[i] == '}')
+                {
+                    depth--;
+                    if (depth == 0) return source.Substring(open, i - open);
+                }
+            }
+
+            Assert.Fail("'" + anchor + "' has no closing brace this test can find");
+            return null;
+        }
+
+        private static readonly Regex ClampLine = new Regex(
+            @"if \((\w+) (<=?|>=?) ([^)]+)\)\s*(\w+) = ([^;]+);");
+
+        /// <summary>
+        /// Every self-clamp in a method body — `if (X op bound) X = value;` — as
+        /// field → "op bound → value", with dotted names reduced to their last segment.
+        /// </summary>
+        private static Dictionary<string, string> ClampLines(string body)
+        {
+            Dictionary<string, string> clamps = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (Match match in ClampLine.Matches(body))
+            {
+                if (match.Groups[1].Value != match.Groups[4].Value) continue;
+
+                string value = match.Groups[5].Value.Trim();
+                int dot = value.LastIndexOf('.');
+                if (dot >= 0 && Regex.IsMatch(value, @"^[\w.]+$")) value = value.Substring(dot + 1);
+
+                string rule = match.Groups[2].Value + " " + match.Groups[3].Value.Trim()
+                    + " -> " + value;
+                clamps[match.Groups[1].Value] =
+                    clamps.ContainsKey(match.Groups[1].Value)
+                        ? clamps[match.Groups[1].Value] + "; " + rule
+                        : rule;
+            }
+            return clamps;
+        }
+
+        /// <summary>
         /// **Every setting the solver has is copied into the solver.**
         ///
         /// <para>
