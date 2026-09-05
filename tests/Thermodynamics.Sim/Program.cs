@@ -737,20 +737,12 @@ namespace Thermodynamics.Sim
         /// <summary>Whether a bare flag is present, for options that take no value.</summary>
         private static bool HasFlag(string[] args, string flag)
         {
-            for (int i = 0; i < args.Length; i++)
-            {
-                if (args[i] == flag) return true;
-            }
-            return false;
+            return Cli.Has(args, flag);
         }
 
         private static string ValueAfter(string[] args, string flag)
         {
-            for (int i = 0; i < args.Length - 1; i++)
-            {
-                if (args[i] == flag) return args[i + 1];
-            }
-            return null;
+            return Cli.Value(args, flag);
         }
 
         private static int RunCommand(string[] args)
