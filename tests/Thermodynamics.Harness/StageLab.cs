@@ -500,10 +500,20 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = Registered(builder);
             simulation.Surfaces.Rebuild(simulation.Grid);
             Row row = NewRow("rooms", simulation, "cells visited");
-            for (int r = 0; !Settled(row); r++)
+
+            // The allocation sample is taken at the fourth repeat, not the second like the other
+            // stages': the mapper rotates three map slots (a published map is readable until the
+            // publish after next, so the recyclable one is two publishes old — `D20`), and its
+            // first three passes each build a slot. Repeat 3 is the first recycled pass, which is
+            // the one a sealing change pays in play. Sampled at repeat 1 this column read the
+            // warm-up — 4,881 KB of slot-building on a 126,731-block hull — for a steady state
+            // that allocates next to nothing, and the read was indistinguishable from `D20`'s
+            // change never having landed. See performance.md, Pass 10, Iteration 4.
+            const int WarmRepeat = 3;
+            for (int r = 0; r <= WarmRepeat || !Settled(row); r++)
             {
                 long before = simulation.Work.RoomCellsVisited;
-                long allocated = r == 1 ? Allocated() : 0;
+                long allocated = r == WarmRepeat ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Rooms.RequestRestart(simulation.Grid);
                 if (!simulation.Rooms.RunToCompletion())
@@ -511,7 +521,7 @@ namespace Thermodynamics.Harness
                     throw new InvalidOperationException("the room pass did not finish, so there is no stage to time");
                 }
                 watch.Stop();
-                if (r == 1) row.AllocatedBytes = Allocated() - allocated;
+                if (r == WarmRepeat) row.AllocatedBytes = Allocated() - allocated;
                 Take(row, watch.Elapsed.TotalMilliseconds);
                 Work(row, simulation.Work.RoomCellsVisited - before, r);
             }

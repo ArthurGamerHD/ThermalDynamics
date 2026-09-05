@@ -3070,10 +3070,55 @@ across a *budgeted* exposure refresh, which can span several publishes, so a map
 generations back can still be the one a refresh in flight is reading. Recycling needs an ownership
 rule before it needs code, and that is a row rather than an iteration: `D20`.
 
+## Pass 10, iteration 4 — the recycled map is pinned, and the instrument was reading the warm-up
+
+**What was found.** `D20`'s change was already in the tree — commit `a8ac54f` gave `RoomMap` a
+capacity-keeping `Reset` and the mapper three rotating slots — and it had arrived with no test, no
+after-measurement and no record on this page. Re-taking the stage baseline for this iteration read
+**4,881 KB** allocated per room pass at 126,731 blocks, indistinguishable from the change never
+having landed. The change was fine; **the instrument was sampling the mapper's second pass ever**,
+and with three slots the first three passes each build a slot — recycling begins on the fourth.
+`StageLab.Rooms` took its allocation figure at repeat 1, which is warm for every other stage and is
+slot-building for this one. That is `P2` inside the lab itself: the blind spot read as a value, in
+the direction that makes a real saving look like nothing.
+
+**What the design actually is, written where the next reader looks.** The ownership rule `D20`
+stated — a publish restarts any refresh in flight — is not what was built. What was built is
+stronger for the holder and needs no restart: **a published map may be read until the publish after
+next**, so the map free to be recycled is the one *two* publishes old, and the mapper rotates three
+slots rather than swapping two. The solver's held `exposureMap` is re-begun on the first `Update`
+after any publish, so it is never more than one publish old and sits inside the window with a
+publish to spare.
+
+**Pinned** (`D8`, the half that was missing). `RoomMapRecyclingTests`: the published maps cycle
+with period three and no fourth instance ever appears; a map two publishes old still answers —
+counts, venting, per-cell rooms — *while the pass recycling its successor is in flight*, which is
+the exact moment a two-slot swap would reset it under its reader; a recycled map is cell-for-cell
+identical to a fresh one, through the same `RoomMapAssert.SameMap` the snapshot suite compares
+with, after proving the fixture recycled at all (`E8`); and a warm pass allocates less than a
+tenth of a cold one. The lab's own claim is pinned too:
+`EveryStageReportsWhatItAllocatedAndTheSteppingPathAllocatesNothing` now requires the rooms row
+under 64 KB.
+
+**What it measures, on the corrected instrument.** `bench stages --isolate --stages rooms`,
+126,731 blocks, the allocation sample moved to the first recycled repeat:
+
+| rooms, 126,731 blocks | slot-building pass (old sample) | steady-state pass | |
+| --- | ---: | ---: | ---: |
+| allocated | 4,881 KB | **0 KB** | — |
+| best / median | 14.22 / 14.48 ms | 13.83 / 14.24 ms | within the window's own spread |
+
+The two allocation figures are different questions, not a before-and-after through one instrument
+(`M7`, and pass 8's `A11` finding): the first is what a pass costs while the rotation fills — paid
+three times, at load — and the second is what every pass after that costs, which is the figure a
+door built or destroyed on a large ship pays and the figure `D20` was about. At a million blocks
+the steady-state saving is the ~38 MB of garbage a remap no longer makes.
+
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **Pass 10, iteration 4: `D20`'s recycling was in the tree unpinned, and the stage lab read the warm-up as the steady state.** The rooms row sampled allocation on the mapper's second pass, which with three rotating slots is still slot-building, so the row read 4,881 KB after the change exactly as before it. Sampled at the first recycled pass it reads **0 KB** at 126,731 blocks. `RoomMapRecyclingTests` pins the three-slot rotation, the two-publish read window at the moment a two-slot design would break it, cell-for-cell identity of a recycled map against a fresh one, and the warm-pass allocation; the as-built ownership rule — a published map is readable until the publish after next — replaces the restart-on-publish rule `D20` proposed. |
 | 2026-09-01 | **Pass 10 opened by re-taking the ladder, and it had gone stale by four to fifteen times**: 582 ms of build at a million blocks against the 5,429 the table carried, 145 of room mapping against 2,122, 43.5 of exposure against 513, a 61.3 ms step against 118, and 610 MB resident against 1,510. Every one of those was moved by a pass between the second and the ninth; the table other pages quote was never re-run. |
 | 2026-09-01 | **A room pass allocates its own map**, 4,768 KB at 126,731 blocks and about 38 MB at a million, and a sealing change requests a pass — so this is a play-time figure and not only a load-path one. Recycling the map is `D20`, blocked on an ownership rule: the solver holds the published map across a budgeted exposure refresh. Also corrected `bench memory`'s **RoomMapper peak** row, whose description named the live bit-and-byte footprint (1.7 MB here) for a figure that is the uncollected high-water mark (18.4 MB). |
 | 2026-09-01 | **The node diagnostics come off the node** (`E4`): seven floats that only the readouts and the telemetry report ever look at are a record the node makes on the first non-zero write. **24 bytes a node**, measured on the `register` stage's allocation column with `place` as an unmoved control. |
