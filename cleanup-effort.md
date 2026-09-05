@@ -39,6 +39,7 @@ reader proposes again.
 | 27 | **The doored shell is one fixture.** Four test classes hand-built the same 6×6×6 shell around a 4×4×4 pocket with one slide door at (2, 1, −1) — iteration 6's rig class again: a shell with a misplaced door still builds a room, so a sealing test against the wrong fixture fails for the wrong reason and passes. `RoomFixtures.DooredShell`/`AddDooredShell` state it once, and `DoorCell` is a named constant. `RoomMapSnapshotTests` keeps its second sealed pocket as its own addition. | One process note, kept because the trap is documented and still caught me: the branch's first test run was `--no-build` against a DLL the broken build had left behind, and it passed — void, per the stale-test-build note in development.md. The recorded figure is from the run after a real rebuild. Suite 2,237 green (2026-09-04, commit `7903e56`). |
 | 28 | **One snapshot of a grid's temperatures, and one way to put it back.** `SolverAb`, `ClientDriftLab` and `ClientInputLab` each carried an identical `Temperatures(simulation)`; the labs also shared an identical `Restore`. `GridState` holds both, with `Restore`'s contract stated: it writes only `Temperature` because that is the one value a host may write from outside a step — what loading a saved world does. `SolverAb` keeps its public name as the A/B contract and delegates. | The deletion produced `R14`'s defect live: the drift lab's `Restore` summary was left orphaned over `MaxDifference`, caught in the same diff, and the summary now lives on `GridState.Restore` where its subject is. Suite 2,237 green after a real rebuild (2026-09-04, commit `beb3e60`). |
 | 29 | **Cleanup 6, finished.** Two hand-derived pumpless rings outlived the consolidation that was built for them — one in `CoolantLoopTests`, and one in `CoolantFaultTests`, the very file iteration 6's record says was consolidated. Both read `PipeFitter.BuildPumplessRing` now, which also validates the ring instead of trusting it. | Iteration 10's words apply verbatim: a half-done consolidation leaves two conventions and a reader cannot tell which is current. The loop and fault tests the rings feed assert on the built ring's behaviour, so a fitter that built a different ring would fail them. Suite 2,237 green (2026-09-04, commit `446cfb7`). |
+| 30 | *Nothing changed* — the three shapes examined and left alone, [above](#three-shapes-examined-in-the-third-pass-and-left-alone), and the pass closes. | A call is not a constant pair, a convention is not a definition, and a clean dead-scan is a result worth writing down so the next pass does not redo it. |
 
 ### Measuring cleanup 4, and why one reading was not enough
 
@@ -127,6 +128,21 @@ this page applies to constants applies to code too: changing one walk does not i
 other, so they stay two. What guards the pair is what already guards them — each walk's own
 oracle test fails if its behaviour drifts.
 
+### Three shapes examined in the third pass and left alone
+
+* **The A/B suites' arrange expression.** Four bit-identity suites spell out
+  `EnvironmentSolver.Solve(whole.Settings, whole.Planet, Worlds.Ab.MildAtmosphere())`. The sample
+  and the solver are each already one definition; what repeats is a call, and a wrapper for a call
+  is indirection bought with nothing — there is no constant pair to drift.
+* **The overlay `Cycle`/`Set`/`Announce` trio.** `ThermalDebugView`, `WindOverlay` and
+  `AeroOverlay` share the pattern over *their own* `Mode` enums, and each `Announce` names its own
+  modes. Merging needs generics over enums or an int-mode indirection in shipped C# 6 code; the
+  shared thing is a convention, and a convention is kept by reading, not by a type parameter.
+* **A dead-scan of the harness's public surface came back clean.** `UncalledCodeTests` covers
+  private helpers; a name-frequency sweep over every `public`/`internal` harness method found none
+  mentioned only at its declaration (2026-09-04, at commit `2f4c195`). A clean result is a result:
+  the labs' reachability guard (`SimCommandTests`) is doing its job on the public side too.
+
 ### `knob.py` cannot run on either committed knob dataset
 
 Found while reproducing iteration 22's writers: `knob.py out/knobs-2026-08-30` exits with
@@ -172,5 +188,6 @@ somebody else's live code that this repository does not happen to call.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **Third pass closed: ten iterations, eight merged, one iteration a set of recorded verdicts, and two prior consolidations finished.** Merged: one dataset-page loader (21), one writer for the `statistic,value,unit` summary page with both sides of its contract pinned (22), one clone for the block definition — where all five hand copies had already dropped fields (23), one dead-world control (24), one prologue for the pair grids — which found a missing scenario check in the load grid (25), one scenario resolver for the walks (26), one doored-shell fixture (27), one grid-state snapshot and restore (28), and cleanup 6 finished at last (29). Recorded rather than acted on: the A/B arrange call, the overlay cycle convention, a clean dead-scan of the harness's public surface (30), and the `knob.py` observation. Two drifts were live in code: the five clone copies (23, latent in results — the one affected lab runs sunless by design) and the load grid's absent scenario check (25). The pass opened at 2,237 C# / 199 python green (`75e48f0`) and closes at 2,237 C# / 201 python green — two python tests added, pinning `scoring.load` and `scoring.write_summary`. Twice during the pass a `--no-build` test run went green against a stale DLL from a broken build; both are recorded void where they happened, which is the stale-test-build note earning its keep. |
 | 2026-09-04 | **Second pass closed: ten iterations, eight merged and two recorded as verdicts.** Merged: the census's drifted tool-list mirror (11), the duplicated game-install candidate list (12), the duration labs' shared stopwatch (13), the corpus tools' one default-taking cell read (14), the waste-fraction labs' one cache policy (15), the crosshair resolution (16), the sun oracle its own extraction had left behind (18), cleanup 4 finished in the shadow map (19), and the grid-group claim whose two comments had already split (20). Not changed, with the reasons above: the two voxel walks (17) and the room mapper's two run walks — both share an algorithm and not a definition. Every suite figure in the pass is dated and stamped with its commit; the baseline was 2,237 green at `358797b` and the pass ends 2,237 green, with one python test added (198 → 199). Two live drifts were found and closed by construction rather than described: `tool_n` counted the jump drive as a tool after the load model stopped doing so, and a `Handled` summary described a keying neither copy used. |
 | 2026-08-29 | Opened. Two changes merged — one preamble for the API's grid accessors, and the three dead null checks against a `LiveGrids` that cannot be null — and one finding recorded rather than acted on: the nine unused `TryGet*` methods in the vendored `DefinitionExtensionsAPI.cs`, which stay because trimming a vendored client to the subset this mod happens to call turns every future update from a copy into a merge. |
