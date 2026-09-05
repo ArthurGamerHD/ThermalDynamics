@@ -127,14 +127,19 @@ figures moved so much.
 
 | blocks | links | bbox | exposed | build | topology | rooms | exposure | full step | sub | tick | cap | resident |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 8,904 | 18,333 | 68,800 | 72 % | 33 ms | 6.6 | 5.6 | 2.3 | 0.70 | 7 | 0.66 | 74 | 6 MB |
-| 32,800 | 64,964 | 328,640 | 61 % | 59 ms | 4.2 | 18.6 | 2.0 | 2.18 | 7 | 1.52 | 20 | 18 MB |
-| 126,731 | 247,350 | 1,499,616 | 49 % | 88 ms | 18.4 | 22.4 | 5.3 | 12.28 | 8 | 5.96 | 5 | 76 MB |
-| 505,566 | 952,523 | 6,838,104 | 35 % | 294 ms | 62.6 | 69.6 | 21.7 | 33.74 | 8 | 13.03 | 1 | 311 MB |
-| 1,000,294 | 1,826,153 | 14,278,796 | 30 % | 582 ms | 121.7 | 144.8 | 43.5 | 61.28 | 8 | 24.73 | 1 | 610 MB |
+| 8,904 | 18,333 | 68,800 | 72 % | 34 ms | 5.3 | 5.4 | 2.1 | 0.67 | 7 | 0.64 | 74 | 5 MB |
+| 32,800 | 64,964 | 328,640 | 61 % | 51 ms | 3.4 | 16.3 | 1.6 | 1.88 | 7 | 1.34 | 20 | 18 MB |
+| 126,731 | 247,350 | 1,499,616 | 49 % | 87 ms | 15.4 | 21.7 | 4.9 | 8.16 | 8 | 5.08 | 5 | 75 MB |
+| 505,566 | 952,523 | 6,838,104 | 35 % | 298 ms | 60.5 | 70.8 | 21.0 | 27.39 | 8 | 10.53 | 1 | 307 MB |
+| 1,000,294 | 1,826,153 | 14,278,796 | 30 % | 580 ms | 111.9 | 150.5 | 41.0 | 52.50 | 8 | 20.53 | 1 | 566 MB |
 
-*Re-taken 2026-09-01 by `bench scale`. **The table it replaces had gone stale by four to fifteen
-times** — it read 5,429 ms of build, 2,122 ms of room mapping and 1,510 MB resident at a million
+*Re-taken 2026-09-04 by `bench scale`, as pass 10's closing audit of its own opening finding: the
+2026-09-01 re-take survives — build 580 against 582 at a million blocks, the structural `settle`
+count exactly the pinned 3,934 ticks, and every stage column within the instrument's session
+spread, with the step prologue's move onto the rebuild tick invisible in the `build` column. Two
+columns read lower than 2026-09-01 for no change that could explain them — the step (52.5 against
+61.3) and resident (566 MB against 610) — and both are left to the session (`M7`) rather than
+claimed. **The table the 2026-09-01 re-take replaced had gone stale by four to fifteen times** — it read 5,429 ms of build, 2,122 ms of room mapping and 1,510 MB resident at a million
 blocks, against 582, 145 and 610 here. Every pass from the second to the ninth moved these columns
 and each recorded what it moved in its own change log; the table at the top of the page, which is
 what other pages quote, was never re-run. That is `E5` in its purest form — a headline outliving the
@@ -962,6 +967,7 @@ reasoning that produced it was sound and the premise was not.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **The ladder is re-audited and survives**: 580 ms of build at a million blocks against the published 582, settle exactly 3,934 ticks, every stage inside session spread. The step and resident columns read 14 % and 7 % lower with no change to explain them and are left to the session (`M7`). The table now carries the 2026-09-04 figures with the audit note. |
 | 2026-09-04 | **The hitch distribution is re-taken** after the bounded step, the spread step and the prologue hoist: p99 26.47 → 3.11 ms at 126,731 blocks and 28.71 → 6.90 at 505,566, max 60.83 → 24.38 and 208.68 → 50.13, with the one outlier attributed to the process's first walk of the step path (the JIT) rather than to anything a second grid would pay. The superseded rows stay printed beside the new ones. Also: `UncalledCodeTests` crossed two seconds and is tagged slow — the lane checker found it on this pass's refresh. |
 | 2026-09-04 | **The first-step outlier is corrected and mostly gone**: the step prologue runs on the rebuild tick (`D4`), a warm first step reads 12.5 ms against a steady 8.3 at 505,566 blocks, and the old first-touch attribution is measured at one to two milliseconds of the spike it was blamed for. |
 | 2026-09-04 | **The room map is recycled (`D20` done), and section 12's "looked at and left" is taken.** Three rotating slots, a published map readable until the publish after next, and a steady-state pass at **0 KB** allocated on 126,731 blocks where it bought a 4,768 KB map before. The stage lab's rooms allocation sample moved to the first recycled repeat — at repeat 1 it was reading slot-building and showed the change as absent. |

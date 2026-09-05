@@ -3328,10 +3328,32 @@ itself flags and declines to count (`M5`).
 [benchmarks.md](benchmarks.md#the-iteration-log) carries the pass and the re-take. The first
 comparison against the new baseline will be the first one since 2026-08-22 that means anything.
 
+## Pass 10, iteration 12 — the ladder is re-audited, and it survives
+
+**Why.** Pass 10 opened on a ladder that had silently gone stale by four to fifteen times, and
+this pass's own iterations then changed the load path under the 2026-09-01 re-take — the step
+prologue now runs inside `RebuildAll`, exactly the kind of change that quietly invalidates a
+`build` column. So the pass does not close without auditing its own table the way it audited its
+predecessors'.
+
+**`bench scale --max 1000000`, 2026-09-04, against the published 2026-09-01 row at a million
+blocks:** build **580 against 582 ms** — the prologue's move is invisible in the column it joined —
+topology 111.9 against 121.7, rooms 150.5 against 144.8, exposure 41.0 against 43.5, and `settle`
+at **exactly the pinned 3,934 ticks**, which is the structural figure
+`RoomMapConvergenceIsTheBoxDividedByItsBudget` holds. The published table stands; it now carries
+the 2026-09-04 figures with the audit recorded beside them.
+
+**What is deliberately not claimed.** The step column reads 52.5 ms against the published 61.3 and
+resident 566 MB against 610, and no change in this pass can explain either — nothing touched the
+substep loop, and the pass *added* a retained map slot. Both are left to the session (`M7`): a
+figure travels only inside its own window, which is pass 9's closing rule doing its job in the
+direction that refuses a free win.
+
 ## Change log
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **Pass 10, iteration 12: the ladder is re-audited and survives** — 580 ms of build at a million blocks against the published 582, settle exactly 3,934 ticks, stages inside session spread. The step and resident columns read lower with nothing to explain them and are left to the session rather than claimed (`M7`). |
 | 2026-09-04 | **Pass 10, iteration 11: the committed benchmark baseline was the 2026-08-22 unoptimised one for the whole optimised era — re-taken.** The key-contract pins (`M6`) could not see it, because they pin keys and not eras. Iteration-log row 19 on benchmarks.md carries pass 10. |
 | 2026-09-04 | **Pass 10 closes.** Start against tip, interleaved, two rounds: register −3,020 KB a repeat (`E4`, exact), a steady room pass at 0 KB where it bought 4,881 (`D20`), rooms timing lower on both statistics in all four pairs, both controls flat, and the solver's overlapping medians left unclaimed. The per-event wins are in their own iterations: first step 26.16 → 12.53 ms warm at 505,566 blocks, first sunlit step 34.87 → 25.97 with the drift churn gone, hitch p99 26.47 → 3.11, memory at 723 B/block. What is left is structural (`D1`, `D2`, `D5`, `D6`) or session-gated (`D19`, `D14`, `D15`). |
 | 2026-09-04 | **Pass 10, iteration 9: the memory pages re-measured — 723 B/block retained at 126,731 blocks and 744 at 505,566, against the 1,023/1,141 memory.md carried and the 1.8 KB known-issues did.** The items-2–5 projection (~730) has landed; the room-map slope between the rungs is 21 B/block where the page said 101; nothing is left on the page that predates the current tables. |
