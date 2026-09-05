@@ -217,15 +217,12 @@ namespace Thermodynamics.Harness
 
         private static float At(List<float> sorted, float fraction)
         {
-            if (sorted.Count == 0) return 0f;
-            return sorted[(int)(fraction * (sorted.Count - 1))];
+            return LabStats.PercentileOfSorted(sorted, fraction);
         }
 
         private static string Trim(string text, int width)
         {
-            if (text == null) return "";
-            text = text.Replace('\n', ' ').Trim();
-            return text.Length <= width ? text : text.Substring(0, width - 1) + "…";
+            return LabText.Trim(text, width);
         }
     }
 }
