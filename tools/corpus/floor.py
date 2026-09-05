@@ -59,13 +59,7 @@ def record(statistic, value, unit=""):
 
 
 
-def load(path):
-    if not os.path.exists(path):
-        print("no dataset at " + path)
-        sys.exit(1)
-
-    with open(path, newline="", encoding="utf-8") as handle:
-        return list(csv.DictReader(handle))
+load = scoring.load_required
 
 
 def pair(rows):

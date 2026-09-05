@@ -76,13 +76,7 @@ OFF = 0
 
 
 
-def load(path):
-    if not os.path.exists(path):
-        print(f"no dataset at {path}")
-        sys.exit(1)
-
-    with open(path, newline="", encoding="utf-8") as handle:
-        return list(csv.DictReader(handle))
+load = scoring.load_required
 
 
 def weights(rows):

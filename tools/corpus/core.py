@@ -285,7 +285,7 @@ def score(directory, weights):
 
 def main():
     if "--score" in sys.argv:
-        return score(sys.argv[sys.argv.index("--score") + 1],
+        return score(scoring.flag("--score"),
                      load_weights(scoring.flag("--weights", WEIGHTS_DEFAULT)))
 
     args = scoring.positionals(("--out", "--weights", "--score"))
