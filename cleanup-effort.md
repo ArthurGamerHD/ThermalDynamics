@@ -49,6 +49,7 @@ reader proposes again.
 | 37 | **The banned percentile form crept back.** `scoring.percentile` exists because there were two definitions and `values[int(q·n)]` is not a percentile on small samples — its own docstring says so. `provenance.py` declared that form again, in a tool the original consolidation never touched. It reads `scoring.percentile` now. | The delta is the finding: the JumpDrive console report moves in exactly one place, p99 93.2 → 93.1 — the tail, where the index form errs. Nothing published quotes the old figure: the console report is the only consumer, `summary_rows` never used it, and the cap summary reproduces byte-identically. 203 python and 2,238 C# green (2026-09-04, commit `4d190d5`). |
 | 38 | **The straggler sweep, and the worse instance of 37's find.** Sweeping every past consolidation for surviving copies of its banned form found `verdict.py`'s own `population blocks p99` — a row the documentation quotes — still computed as `values[int(0.99·n)]`, the exact copy `scoring.percentile`'s docstring says was consolidated away. It reads `scoring.percentile` now; the definition changed in a commit carrying no dataset (`E11`), moving the 2026-08-21 summary in exactly one row: p99 70,141 → 70,095, 0.066 %, definitional, with the reason in a comment where the row is made. The quoted 70,141 stays as the committed record of the run that made the `G5` decision. Also finished iteration 8's row identity: `verdict.KEY` and `retest.KEY` alias `scoring.ROW_KEY`, and `cap.py`/`floor.py` build their arm keys through `scoring.key_of`. | The key consolidations are byte-identical on all three tools' outputs; the p50 lands identically under both definitions on this population. 203 python and 2,238 C# green (2026-09-04, commit `663d108`). |
 | 39 | **The pair grid's cell identity, stated once.** `pairs.py` declared `cell_key` and `air.py` inlined the same tuple — the identity joining one pair-walk document's rows to another's, stated twice for two documents read side by side, exactly where a drifted key is silent. `scoring.pair_cell` owns it, with crash-on-missing-column kept and argued: a pair dataset that cannot say which cell a row is from is unreadable, and loudly is the only honest way to be unreadable. | Both tools' reports byte-identical on the 2026-08-23 datasets. 203 python and 2,238 C# green (2026-09-04, commit `d9e7b3e`). |
+| 40 | *Nothing changed* — the fourth pass's examined-and-left-alone shapes and the one question only a game session can settle, [above](#shapes-examined-in-the-fourth-pass-and-left-alone), and the pass closes. | An assembly convention is not a pipeline, a shared name is not a shared contract, and an in-game fact is recorded as a question rather than asserted from the lab. |
 
 ### Measuring cleanup 4, and why one reading was not enough
 
@@ -152,6 +153,35 @@ oracle test fails if its behaviour drifts.
   mentioned only at its declaration (2026-09-04, at commit `2f4c195`). A clean result is a result:
   the labs' reachability guard (`SimCommandTests`) is doing its job on the public side too.
 
+### Shapes examined in the fourth pass and left alone
+
+* **The two report pipelines.** `build-report.sh`/`build-bench.sh` and their six HTML templates
+  share an eight-line assembly convention and nothing else — the corpus report and the balance
+  bench are different documents by design, and a parameterised assembler would trade two readable
+  scripts for one with two modes.
+* **Three C# `Percentile`s that share a name and not a contract.** `TimeToLossTests` takes an
+  integer per cent, `ShipProfile` a fraction, and `BuildCostLab` computes the inverse — the rank
+  of a value. The same-word near-miss the first pass documented for `SinkGroup`: changing one does
+  not imply changing the others, and none of their figures crosses into another's document.
+* **The two python `median` one-liners.** `pairs.py` answers an empty series with `None` and
+  `retest.py` with `nan` — each tool's own absence answer over a mechanism that is already one
+  definition (`statistics.median`), which is the `number_or` precedent exactly.
+* **The overlay `Cycle` trio and the register pattern** were re-confirmed as conventions, not
+  definitions (third pass, entry above).
+
+### An asymmetry only a game session can settle
+
+`Session.UnloadData` unregisters four of the five things `LoadData` registers;
+`SettingsSync.Register(this)` has no counterpart, and `SettingsSync.synced` is a static that is
+never nulled. Whether that matters turns on whether mod statics survive across world loads in one
+game process — if the script assembly is rebuilt per world, the guard `if (synced != null) return`
+is only a same-session re-entry check and the asymmetry is harmless; if statics survive, the
+second world of a session keeps a `NetSync` bound to a dead session and settings sync goes dark.
+The tree's own design assumes per-world statics everywhere (`ThermalGrid.LiveGrids` would leak
+grids between worlds otherwise), so harmless is the likely answer — but it is an in-game fact
+(`E2` names the class), nothing in the lab can establish it, and it is recorded here as a question
+for a session rather than asserted either way.
+
 ### Two tools whose committed inputs fail them
 
 Both found while reproducing an iteration's outputs, both pre-existing, and both the same shape:
@@ -210,6 +240,7 @@ somebody else's live code that this repository does not happen to call.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-04 | **Fourth pass closed: ten iterations, nine merged, and the drifts got player-visible.** Merged: the aero overlay's broken mirror of the drag pass — a base in wind drew forces the server never applies — with one summation and the veto named as a gate (31); the two clamp lists' thousandfold `SuitHeatCapacity` disagreement, now one constant with a source-reading agreement test that failed on the deliberately reintroduced drift before being believed (32); one statement of which vents are worth asking (33); one CLI flag read, where four of six copies crashed on a dangling flag (34); one positional parse, whose leak had bitten this record's own iteration 22 (35); `Clamp01` stated once instead of ten times (36); the banned index-form percentile evicted from `provenance.py` (37) and then from `verdict.py`'s own quoted rows, found by sweeping every past consolidation for stragglers — p99 70,141 → 70,095, definitional, changed in a commit carrying no dataset (38); and the pair grid's cell identity (39). Recorded: four near-miss shapes and one asymmetry only a game session can settle (40). The pass opened at 2,237 C# / 201 python green (`b87d5e7`) and closes at 2,238 C# / 203 python — three tests added, pinning the clamp agreement, `scoring.flag` and `scoring.positionals`. The pattern of the pass: consolidations decay — three of this pass's finds were previous passes' consolidations with a surviving or re-created copy — so a straggler sweep belongs at the top of every future pass. |
 | 2026-09-04 | **Third pass closed: ten iterations, eight merged, one iteration a set of recorded verdicts, and two prior consolidations finished.** Merged: one dataset-page loader (21), one writer for the `statistic,value,unit` summary page with both sides of its contract pinned (22), one clone for the block definition — where all five hand copies had already dropped fields (23), one dead-world control (24), one prologue for the pair grids — which found a missing scenario check in the load grid (25), one scenario resolver for the walks (26), one doored-shell fixture (27), one grid-state snapshot and restore (28), and cleanup 6 finished at last (29). Recorded rather than acted on: the A/B arrange call, the overlay cycle convention, a clean dead-scan of the harness's public surface (30), and the `knob.py` observation. Two drifts were live in code: the five clone copies (23, latent in results — the one affected lab runs sunless by design) and the load grid's absent scenario check (25). The pass opened at 2,237 C# / 199 python green (`75e48f0`) and closes at 2,237 C# / 201 python green — two python tests added, pinning `scoring.load` and `scoring.write_summary`. Twice during the pass a `--no-build` test run went green against a stale DLL from a broken build; both are recorded void where they happened, which is the stale-test-build note earning its keep. |
 | 2026-09-04 | **Second pass closed: ten iterations, eight merged and two recorded as verdicts.** Merged: the census's drifted tool-list mirror (11), the duplicated game-install candidate list (12), the duration labs' shared stopwatch (13), the corpus tools' one default-taking cell read (14), the waste-fraction labs' one cache policy (15), the crosshair resolution (16), the sun oracle its own extraction had left behind (18), cleanup 4 finished in the shadow map (19), and the grid-group claim whose two comments had already split (20). Not changed, with the reasons above: the two voxel walks (17) and the room mapper's two run walks — both share an algorithm and not a definition. Every suite figure in the pass is dated and stamped with its commit; the baseline was 2,237 green at `358797b` and the pass ends 2,237 green, with one python test added (198 → 199). Two live drifts were found and closed by construction rather than described: `tool_n` counted the jump drive as a tool after the load model stopped doing so, and a `Handled` summary described a keying neither copy used. |
 | 2026-08-29 | Opened. Two changes merged — one preamble for the API's grid accessors, and the three dead null checks against a `LiveGrids` that cannot be null — and one finding recorded rather than acted on: the nine unused `TryGet*` methods in the vendored `DefinitionExtensionsAPI.cs`, which stay because trimming a vendored client to the subset this mod happens to call turns every future update from a copy into a merge. |
