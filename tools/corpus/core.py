@@ -284,14 +284,9 @@ def score(directory, weights):
 
 
 def main():
-    def flag(name, fallback):
-        if name not in sys.argv:
-            return fallback
-        return sys.argv[sys.argv.index(name) + 1]
-
     if "--score" in sys.argv:
         return score(sys.argv[sys.argv.index("--score") + 1],
-                     load_weights(flag("--weights", WEIGHTS_DEFAULT)))
+                     load_weights(scoring.flag("--weights", WEIGHTS_DEFAULT)))
 
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     seen = set()
@@ -335,7 +330,7 @@ def main():
         error = 100.0 * (estimate - truth) / truth if truth else float("nan")
         print("  %-16s %14.6g %16.6g %+8.1f %%" % (label, truth, estimate, error))
 
-    out = flag("--out", None)
+    out = scoring.flag("--out", None)
     if out:
         missing = [s for s in chosen if s not in where]
         if missing:
@@ -352,7 +347,7 @@ def main():
                 handle.write(where[ship] + "\n")
         print("\nwrote %s" % out)
 
-    weights_out = flag("--weights", None)
+    weights_out = scoring.flag("--weights", None)
     if weights_out:
         with open(weights_out, "w") as handle:
             handle.write("workshop_id,weight,rule\n")

@@ -35,13 +35,13 @@ import scoring
 
 ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
 FLAGGED = set()
-if "--csv" in sys.argv and sys.argv.index("--csv") + 1 < len(sys.argv):
-    FLAGGED.add(sys.argv[sys.argv.index("--csv") + 1])
+_value = scoring.flag("--csv")
+if _value is not None:
+    FLAGGED.add(_value)
 ARGS = [a for a in ARGS if a not in FLAGGED]
 
 DATA = ARGS[0] if ARGS else "out/floor-2026-08-29"
-CSV_OUT = (sys.argv[sys.argv.index("--csv") + 1]
-           if "--csv" in sys.argv and sys.argv.index("--csv") + 1 < len(sys.argv) else None)
+CSV_OUT = scoring.flag("--csv")
 
 # The order the scenarios print in: the anchor first, then the three with air in them, in rising
 # wind. The same order `air.py` and `cap.py` use, so three reports of one corpus read alike.

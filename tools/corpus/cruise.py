@@ -105,15 +105,10 @@ def shape_of(row, enabled):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
 
-    def flag(name, fallback):
-        if name not in sys.argv:
-            return fallback
-        return sys.argv[sys.argv.index(name) + 1]
-
     path = args[0] if args else "out/census-2026-08-25/census.csv"
-    coefficient = float(flag("--cd", SHIPPED_DRAG_COEFFICIENT))
-    density = float(flag("--rho", SEA_LEVEL_DENSITY))
-    out = flag("--csv", None)
+    coefficient = float(scoring.flag("--cd", SHIPPED_DRAG_COEFFICIENT))
+    density = float(scoring.flag("--rho", SEA_LEVEL_DENSITY))
+    out = scoring.flag("--csv", None)
 
     # A census written before 2026-08-31 carries no `shape_factor`, and those rows read as 1 —
     # so this defaults on and degrades to the old answer rather than refusing an old file.

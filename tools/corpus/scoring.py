@@ -7,6 +7,7 @@ without running a report.
 """
 import csv
 import os
+import sys
 
 
 
@@ -326,6 +327,23 @@ def number(row, key):
         return float(row[key])
     except (KeyError, TypeError, ValueError):
         return None
+
+
+def flag(name, fallback=None, argv=None):
+    """The value after a `--name` flag, or the fallback when the flag is absent — or dangling.
+
+    **The dangling case is why this is one definition.** Six tools each declared this helper and
+    they had drifted into two behaviours: four indexed one past the flag unguarded, so a command
+    line ending in `--csv` with no value crashed with an IndexError instead of answering, while
+    `verdict.py` and `knob.py` bounds-checked and fell back. A mistyped command deserves the
+    fallback, not a traceback. `argv` exists for the tests; the tools read the real one.
+    """
+    if argv is None:
+        argv = sys.argv
+    if name not in argv:
+        return fallback
+    at = argv.index(name)
+    return argv[at + 1] if at + 1 < len(argv) else fallback
 
 
 def write_summary(path, figures):

@@ -43,6 +43,7 @@ reader proposes again.
 | 31 | **The aero overlay's declared mirror had broken where a player can see it.** `AeroOverlay.SumGroup` said it mirrors `ThermalGridDrag.ApplyToGroupOf` *without applying anything* — and the copy did not know the anchored-group veto, so a base standing in wind drew drag and lift arrows the server never applies, against the overlay's own promise of showing the force applied rather than a second opinion. `AeroGroupForces` holds the one summation and the one anchored test; the overlay zeroes its force arrows for an anchored group and names *anchored* in the red gate line, which configuration.md's gate list now includes. | The veto stays the applier's policy, separate from the sum: the drag pass bails on it before touching a thermal adapter (cheaper than the old mid-walk bail), and the overlay still sums the group so its centre-of-mass marker survives. Two accepted deltas stated in the commit: component-wise rather than per-grid float summation order (last-bit, multi-grid groups only), and a redundant flag removed with its equivalence argued. Session-only paths: verified by the `.slnx` build (`C11`), no new API (`C2`), suite 2,237 green after a clean rebuild (2026-09-04, commit `fca3e83`). |
 | 32 | **The two clamp lists, and the thousandfold drift between them.** Fourteen fields are clamped by both the world's `Settings` and the solver's `ThermalSettings`; `SuitHeatCapacity`'s floor was `1f` in one and `MinimumThermalMass` — 0.001, a constant about zero-mass blocks — in the other, so the suite tested a floor no world runs (`R8`'s bridge gap, in the clamp direction). One constant now, `ThermalSettings.MinimumSuitHeatCapacity`, referenced by both. `TheTwoClampListsAgreeOnEveryFieldTheyShare` holds the pair together from here on. | The new check reads both clamp bodies as text — the way the rest of `SettingsWiringTests` reads what it cannot link — refuses a scan that matched under ten shared fields (`E8`), and failed on the deliberately reintroduced drift before being believed, on exactly the one field. Suite 2,238 green — one test added (2026-09-04, commit `8531848`). |
 | 33 | **One statement of which vents are worth asking.** `ThermalGridRoomDiagnostics` read its vents through three loops that each restated the same filter — live, still on the grid, opening onto these cells. `LiveVentOn` states it once; each reader keeps its own `try/catch`, whose telemetry names the reader. | A liveness rule added to two of three copies would have left the diagnostic disagreeing with itself about which vents exist. Session-only path: `.slnx` build (`C11`), identical checks in the original order, suite 2,238 green (2026-09-04, commit `8fe58bf`). |
+| 34 | **One CLI flag read, six declarations, two behaviours.** `core`, `cruise`, `dragfit` and `shape` indexed one past the flag unguarded — a command line ending in `--csv` with no value was a traceback; `verdict` and `knob` bounds-checked and fell back, and `cap` and `floor` carried the checked form inline. `scoring.flag` is the one definition, in the checked form, with an `argv` parameter so its test patches nothing. | The `number` story on the command line: one mechanism, drifted copies, and the drifted form's failure is loud in the wrong way. Demonstrated live — `shape.py` with a dangling `--csv` finishes its report instead of dying. Six tools' summaries byte-identical; 202 python and 2,238 C# green (2026-09-04, commit `cafa47d`). Also observed, pre-existing: `core.py --score` fails on the 2026-08-21 dataset with a `TypeError` from a `None` percentile, byte-identical either side of this change — recorded below with `knob.py`'s. |
 
 ### Measuring cleanup 4, and why one reading was not enough
 
@@ -145,6 +146,19 @@ oracle test fails if its behaviour drifts.
   private helpers; a name-frequency sweep over every `public`/`internal` harness method found none
   mentioned only at its declaration (2026-09-04, at commit `2f4c195`). A clean result is a result:
   the labs' reachability guard (`SimCommandTests`) is doing its job on the public side too.
+
+### Two tools whose committed inputs fail them
+
+Both found while reproducing an iteration's outputs, both pre-existing, and both the same shape:
+`D2` one step out — a tool that is built, documented, and runnable against nothing this machine
+holds. Whether each is a dataset that predates a column or a tool that outgrew its datasets is a
+question about the sweeps, not about a cleanup pass, so they are recorded here rather than fixed
+in passing.
+
+* **`core.py --score out/corpus-2026-08-21`** dies with a `TypeError`: `weighted_percentile`
+  returns `None` — a column the scorer needs that the dataset does not carry — and the print
+  formats it as a number (found 2026-09-04; the traceback is byte-identical either side of
+  iteration 34's change).
 
 ### `knob.py` cannot run on either committed knob dataset
 
