@@ -22,20 +22,10 @@ namespace Thermodynamics.Tests
     {
         private static ThermalSimulation Shell(bool snapshot)
         {
-            GridBuilder builder = GridBuilder.Large();
+            GridBuilder builder = RoomFixtures.DooredShell();
             BlockModel armour = Catalog.LightArmor();
-            BlockModel door = Catalog.SlideDoor();
 
-            // A 6x6x6 shell around a 4x4x4 pocket, one door in a wall, a second sealed pocket beside it.
-            for (int x = -1; x <= 4; x++)
-            for (int y = -1; y <= 4; y++)
-            for (int z = -1; z <= 4; z++)
-            {
-                bool wall = x == -1 || x == 4 || y == -1 || y == 4 || z == -1 || z == 4;
-                if (!wall) continue;
-                bool isDoor = x == 2 && y == 1 && z == -1;
-                builder.Place(isDoor ? door : armour, new Vector3I(x, y, z), BlockOrientation.Identity);
-            }
+            // The standard doored shell, plus a second sealed pocket beside it.
             for (int x = 6; x <= 8; x++)
             for (int y = 0; y <= 2; y++)
             for (int z = 0; z <= 2; z++)
