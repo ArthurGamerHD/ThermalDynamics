@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Thermodynamics.Core;
+using Thermodynamics.Harness;
 
 namespace Thermodynamics.Tests
 {
@@ -18,13 +19,10 @@ namespace Thermodynamics.Tests
     /// </summary>
     public static class SolverAb
     {
-        /// <summary>Every node's temperature.</summary>
+        /// <summary>Every node's temperature: the harness's snapshot, kept under the A/B name.</summary>
         public static float[] Temperatures(ThermalSimulation simulation)
         {
-            IList<ThermalNode> nodes = simulation.Solver.Nodes;
-            float[] values = new float[nodes.Count];
-            for (int i = 0; i < nodes.Count; i++) values[i] = nodes[i].Temperature;
-            return values;
+            return GridState.Temperatures(simulation);
         }
 
         /// <summary>The six per-mechanism watt figures a node publishes, in a flat row per node.</summary>

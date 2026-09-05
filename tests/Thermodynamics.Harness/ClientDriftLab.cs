@@ -312,14 +312,14 @@ namespace Thermodynamics.Harness
             float warm = 120f;
             Step(server, environment, warm);
 
-            float[] stale = Temperatures(server);
+            float[] stale = GridState.Temperatures(server);
             Step(server, environment, staleSeconds);
 
             // The client is the same hull, built the same way, put into the state the server was in
             // staleSeconds ago. Built rather than copied so nothing is shared between them.
             ThermalSimulation client = Hulls.DrivenPastCritical(world, blocks);
             Step(client, environment, warm);
-            Restore(client, stale);
+            GridState.Restore(client, stale);
 
             Run run = new Run
             {
@@ -472,25 +472,6 @@ namespace Thermodynamics.Harness
         {
             int steps = (int)Math.Round(seconds / simulation.Settings.StepSeconds);
             for (int i = 0; i < steps; i++) simulation.StepExact(1, environment(0f));
-        }
-
-        private static float[] Temperatures(ThermalSimulation simulation)
-        {
-            IList<ThermalNode> nodes = simulation.Solver.Nodes;
-            float[] values = new float[nodes.Count];
-            for (int i = 0; i < nodes.Count; i++) values[i] = nodes[i].Temperature;
-            return values;
-        }
-
-        /// <summary>
-        /// Puts a run into a saved state, exactly as loading a world does: the temperature is the
-        /// one value a host may write from outside a step, and the solver re-reads it.
-        /// </summary>
-        private static void Restore(ThermalSimulation simulation, float[] temperatures)
-        {
-            IList<ThermalNode> nodes = simulation.Solver.Nodes;
-            int count = Math.Min(nodes.Count, temperatures.Length);
-            for (int i = 0; i < count; i++) nodes[i].Temperature = temperatures[i];
         }
 
         private static float MaxDifference(ThermalSimulation a, ThermalSimulation b)
