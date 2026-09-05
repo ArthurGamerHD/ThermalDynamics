@@ -91,7 +91,7 @@ namespace Thermodynamics.Core
         public BlockThermalProperties Clamp()
         {
             Conductivity = Math.Max(0f, Conductivity);
-            Emissivity = Clamp01(Emissivity);
+            Emissivity = ThermalMath.Clamp01(Emissivity);
 
             // Only the upper bound, because a negative value is the sentinel for "follow the
             // emissivity" rather than a mistake to be corrected to zero.
@@ -124,13 +124,6 @@ namespace Thermodynamics.Core
         public BlockThermalProperties Clone()
         {
             return (BlockThermalProperties)MemberwiseClone();
-        }
-
-        private static float Clamp01(float v)
-        {
-            if (v < 0f) return 0f;
-            if (v > 1f) return 1f;
-            return v;
         }
     }
 }

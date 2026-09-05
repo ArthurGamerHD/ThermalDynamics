@@ -35,7 +35,7 @@ namespace Thermodynamics.Core
             // ---- solar ---------------------------------------------------------------------
             // The occlusion flag and the fraction must agree in both directions, since a caller may
             // set only the flag.
-            state.SolarOcclusion = Clamp01(sample.SolarOcclusion);
+            state.SolarOcclusion = ThermalMath.Clamp01(sample.SolarOcclusion);
             if (sample.IsSolarOccluded || !settings.EnableSolarHeat) state.SolarOcclusion = 1f;
 
             state.IsSolarOccluded = state.SolarOcclusion >= 1f;
@@ -53,16 +53,16 @@ namespace Thermodynamics.Core
                 return state;
             }
 
-            float density = Clamp01(sample.AirDensity);
+            float density = ThermalMath.Clamp01(sample.AirDensity);
             state.AirDensity = density;
             state.AtmosphereFactor = AtmosphereFactor(density);
 
             // ---- weather -------------------------------------------------------------------
             // Resolved once against its intensity, so nothing below handles intensity. Clear air
             // softens to Calm, whose terms are all the identity.
-            WeatherResponse.Weather weather = WeatherResponse.Soften(sample.Weather, Clamp01(sample.WeatherIntensity));
+            WeatherResponse.Weather weather = WeatherResponse.Soften(sample.Weather, ThermalMath.Clamp01(sample.WeatherIntensity));
 
-            state.WeatherIntensity = Clamp01(sample.WeatherIntensity);
+            state.WeatherIntensity = ThermalMath.Clamp01(sample.WeatherIntensity);
             state.WeatherTemperatureOffset = weather.TemperatureOffset;
 
             // ---- ambient -------------------------------------------------------------------
@@ -170,16 +170,9 @@ namespace Thermodynamics.Core
         /// </summary>
         public static float AtmosphereFactor(float airDensity)
         {
-            float inverse = 1f - Clamp01(airDensity);
+            float inverse = 1f - ThermalMath.Clamp01(airDensity);
             float squared = inverse * inverse;
             return 1f - (squared * squared);
-        }
-
-        private static float Clamp01(float v)
-        {
-            if (v < 0f) return 0f;
-            if (v > 1f) return 1f;
-            return v;
         }
 
         private static Vector3 SafeNormalize(Vector3 v)

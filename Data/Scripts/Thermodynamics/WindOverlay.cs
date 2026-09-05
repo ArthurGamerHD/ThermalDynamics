@@ -539,7 +539,7 @@ namespace Thermodynamics
             // planet's maximum and calm air is a tenth of it, so scaling against it would draw every
             // ordinary day as a field of stubs. This puts a still day near zero and the worst
             // weather the game reports near one.
-            arrow.Share = Clamp01(speed / (ceiling * WindField.StormFraction));
+            arrow.Share = ThermalMath.Clamp01(speed / (ceiling * WindField.StormFraction));
 
             into.Add(arrow);
         }
@@ -635,7 +635,7 @@ namespace Thermodynamics
         /// </summary>
         public static Color Colour(float share)
         {
-            share = Clamp01(share);
+            share = ThermalMath.Clamp01(share);
 
             if (share < 0.5f) return Lerp(new Color(60, 130, 235), new Color(90, 220, 120), share * 2f);
             return Lerp(new Color(90, 220, 120), new Color(235, 70, 55), (share - 0.5f) * 2f);
@@ -647,13 +647,6 @@ namespace Thermodynamics
                 (int)(from.R + ((to.R - from.R) * amount)),
                 (int)(from.G + ((to.G - from.G) * amount)),
                 (int)(from.B + ((to.B - from.B) * amount)));
-        }
-
-        private static float Clamp01(float value)
-        {
-            if (value < 0f) return 0f;
-            if (value > 1f) return 1f;
-            return value;
         }
     }
 }

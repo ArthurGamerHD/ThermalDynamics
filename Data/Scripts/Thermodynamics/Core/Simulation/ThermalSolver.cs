@@ -2195,7 +2195,7 @@ namespace Thermodynamics.Core
                 float wanted = Limit(coefficient * settable, pump.RatedWatts, headroom);
                 pump.DemandEnergy += (wanted / coefficient) * h;
 
-                float available = settable * Clamp01(pump.PowerAvailable);
+                float available = settable * ThermalMath.Clamp01(pump.PowerAvailable);
                 if (available <= 0f) continue;
 
                 // The smallest of: what the available power can pay for, the pump's rating, and
@@ -2210,13 +2210,6 @@ namespace Thermodynamics.Core
                 pump.PowerEnergy += work * h;
                 pump.RejectedEnergy += (lift + work) * h;
             }
-        }
-
-        private static float Clamp01(float value)
-        {
-            if (value < 0f) return 0f;
-            if (value > 1f) return 1f;
-            return value;
         }
 
         /// <summary>Smallest of the three limits on what a pump may move this substep.</summary>

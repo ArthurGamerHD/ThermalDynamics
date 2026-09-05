@@ -56,7 +56,7 @@ namespace Thermodynamics.Core
             get
             {
                 if (!Enabled) return 0f;
-                return Direction * Clamp01(Speed) * Clamp01(PowerAvailable);
+                return Direction * ThermalMath.Clamp01(Speed) * ThermalMath.Clamp01(PowerAvailable);
             }
         }
 
@@ -71,15 +71,8 @@ namespace Thermodynamics.Core
             get
             {
                 if (!Enabled) return 0f;
-                return MaxPowerWatts * Clamp01(Speed);
+                return MaxPowerWatts * ThermalMath.Clamp01(Speed);
             }
-        }
-
-        private static float Clamp01(float value)
-        {
-            if (value < 0f) return 0f;
-            if (value > 1f) return 1f;
-            return value;
         }
     }
 }

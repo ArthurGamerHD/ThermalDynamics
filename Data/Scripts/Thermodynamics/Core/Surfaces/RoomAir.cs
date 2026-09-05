@@ -101,7 +101,7 @@ namespace Thermodynamics.Core
         /// <summary>Air mass in the room, kg.</summary>
         public float AirMass
         {
-            get { return Volume * airDensity * Clamp01(Pressure); }
+            get { return Volume * airDensity * ThermalMath.Clamp01(Pressure); }
         }
 
         /// <summary>Total stored energy, J. Part of the grid's conservation check.</summary>
@@ -114,13 +114,6 @@ namespace Thermodynamics.Core
         {
             float capacity = (AirMass * ThermalConstants.AirSpecificHeat) / heatTimeScale;
             ThermalMass = Math.Max(ThermalConstants.MinimumThermalMass, capacity);
-        }
-
-        private static float Clamp01(float v)
-        {
-            if (v < 0f) return 0f;
-            if (v > 1f) return 1f;
-            return v;
         }
 
         public override string ToString()
