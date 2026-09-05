@@ -39,7 +39,7 @@ namespace Thermodynamics.Tests
                 if (rows[i].Fit == fit) return rows[i];
             }
 
-            Assert.True(false, "no row for " + fit);
+            Assert.Fail( "no row for " + fit);
             return null;
         }
 
