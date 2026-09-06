@@ -807,6 +807,7 @@ namespace Thermodynamics.Sim
         ///   bench weld  --size 250000         a block welded on every tick
         ///   bench load  --size 1000000        what building the grid costs before tick one
         ///   bench firststep --size 500000      the first steps of a grid's life, with faults
+        ///   bench heatsourcewalk --size 126731 a registered source's per-substep cost against a fold
         ///   bench stepwalks --size 126731      the fused apply+env pair, and the mirror
         ///   bench envwalk --size 126731        the buried branch against a compacted walk
         ///   bench remaplocality --size 32000   what one block change moves of a full remap
@@ -1701,6 +1702,19 @@ namespace Thermodynamics.Sim
                     return 0;
                 }
 
+                case "heatsourcewalk":
+                {
+                    int hsBlocks = size > 0 ? size : 126731;
+                    Console.WriteLine();
+                    Console.WriteLine("== heat source walk, ship " + hsBlocks.ToString("n0") + " blocks ==");
+                    Console.WriteLine("  What a registered source costs a step, per-substep as shipped -");
+                    Console.WriteLine("  a fold into the source row removes all but one (redesign.md, fourth sweep).");
+                    Console.WriteLine();
+                    Console.WriteLine(HeatSourceWalkLab.Report(shape, hsBlocks,
+                        message => Console.Error.WriteLine("  " + message)));
+                    return 0;
+                }
+
                 case "stepwalks":
                 {
                     int walkBlocks = size > 0 ? size : 126731;
@@ -2069,6 +2083,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  bench report            full performance report; --baseline <csv> to compare; --repeats N per case");
             Console.WriteLine("  bench spike --size N    one block placed, split by stage");
             Console.WriteLine("  bench firststep --size N  the first steps of a grid's life, with the page faults beside them; --sunlit; --warm (JIT the step path on a throwaway grid first); --ticks N steps");
+            Console.WriteLine("  bench heatsourcewalk --size N  what a registered heat source costs a step, per-substep against a fold");
             Console.WriteLine("  bench stepwalks --size N  the fused apply+env pair against the separate walks, and the per-step mirror's cost");
             Console.WriteLine("  bench envwalk --size N    the environment read's buried-branch walk against a compacted exposed index");
             Console.WriteLine("  bench remaplocality --size N  how much of a full room remap one block change actually moves");
