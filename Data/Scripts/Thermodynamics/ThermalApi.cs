@@ -150,6 +150,8 @@ namespace Thermodynamics
             methods["GetRoom"] = Guard(new Func<IMyCubeGrid, Vector3I, MyTuple<bool, float, float, float>>(GetRoom), "GetRoom");
             methods["GetGridHeatBalance"] = Guard(new Func<IMyCubeGrid, MyTuple<float, float>>(GetGridHeatBalance), "GetGridHeatBalance");
             methods["GetGridFrictionWatts"] = Guard(new Func<IMyCubeGrid, float>(GetGridFrictionWatts), "GetGridFrictionWatts");
+            methods["GetGridAeroForces"] = Guard(new Func<IMyCubeGrid, MyTuple<Vector3, Vector3>>(GetGridAeroForces), "GetGridAeroForces");
+            methods["GetCoolantLoop"] = Guard(new Func<IMySlimBlock, MyTuple<bool, float, float, float, int>>(GetCoolantLoop), "GetCoolantLoop");
             methods["SetBlockDragProfile"] = Guard(new Func<IMySlimBlock, float[], bool>(SetBlockDragProfile), "SetBlockDragProfile");
             methods["ClearBlockDragProfile"] = Guard(new Func<IMySlimBlock, bool>(ClearBlockDragProfile), "ClearBlockDragProfile");
 
@@ -343,6 +345,96 @@ namespace Thermodynamics
 
             bound.Node.Drag = default(DragProfile);
             return true;
+        }
+
+        /// <summary>
+        /// The grid's aerodynamic forces in world newtons: drag first, then lift.
+        ///
+        /// <para>
+        /// **The vectors <see cref="GetGridFrictionWatts"/> only gave the magnitude of.** The
+        /// solver turns the wind into a friction power and a pressure field; drag is that power
+        /// aligned with the flow and lift is the transverse remainder, each divided into newtons
+        /// by the same law (`DragForce.Newtons`). A mod that wants to *apply* these — a flight
+        /// model, an atmospheric-entry effect — needs the vectors, not the watts, and this is the
+        /// same assembly `AeroGroupForces` uses so a caller and the mod cannot disagree about the
+        /// force on one grid.
+        /// </para>
+        ///
+        /// <para>
+        /// Lift is zero unless both the shape term and lift are switched on (`EnableShapeDrag`,
+        /// `EnableLift`); drag is zero unless the friction term is. Both are zero for a grid with
+        /// no simulation and for a still grid, which is what every accessor here returns for
+        /// nothing to report (`E8`). The mod applies these forces itself only where its own
+        /// aerodynamics are enabled; a consumer reading them where the mod does not apply them is
+        /// what this exists for.
+        /// </para>
+        /// </summary>
+        private static MyTuple<Vector3, Vector3> GetGridAeroForces(IMyCubeGrid grid)
+        {
+            ThermalGrid thermals = GridOf(grid);
+            if (thermals == null || thermals.Simulation == null || grid.Physics == null)
+            {
+                return new MyTuple<Vector3, Vector3>(Vector3.Zero, Vector3.Zero);
+            }
+
+            float watts = thermals.Simulation.FrictionWatts;
+            if (watts <= 0f) return new MyTuple<Vector3, Vector3>(Vector3.Zero, Vector3.Zero);
+
+            EnvironmentState state = thermals.LastState;
+            Vector3 localWind = state.WindDirectionLocal * state.WindSpeed;
+            MatrixD world = grid.WorldMatrix;
+            Vector3 worldWind = Vector3.TransformNormal(localWind, world);
+
+            Vector3 drag = DragForce.Vector(watts, worldWind, thermals.Simulation.Settings);
+            Vector3 pressure = Vector3.TransformNormal(
+                thermals.Simulation.Solver.LastPressureWatts, world);
+            Vector3 lift = LiftForce.Vector(pressure, worldWind, thermals.Simulation.Settings);
+
+            return new MyTuple<Vector3, Vector3>(drag, lift);
+        }
+
+        /// <summary>
+        /// The coolant loop a pipe block belongs to: found, mean temperature K, hottest pipe K,
+        /// coldest pipe K, pipe count.
+        ///
+        /// <para>
+        /// **`GetGridSummary` gave the loop *count* and nothing to read off a loop.** Cooling is
+        /// the feature the mod is named for, and a mod building a coolant readout or an automation
+        /// on it could see how many loops a grid had and not one of their temperatures. Keyed on a
+        /// pipe block rather than a loop index, because a loop index is a slot in a list that a
+        /// rebuild reorders while the block a player put down is stable — the same reason the
+        /// threshold callback hands back a block.
+        /// </para>
+        ///
+        /// <para>
+        /// The hottest and coldest pipe are given beside the mean because a loop that is doing its
+        /// job has a gradient — it picks heat up at one end and sheds it at the other — and the
+        /// mean alone hides exactly the spread a troubleshooter is looking for. Not found (false,
+        /// and zeros) for a block that is not a pipe, is on no loop, or is not simulated (`E8`).
+        /// </para>
+        /// </summary>
+        private static MyTuple<bool, float, float, float, int> GetCoolantLoop(IMySlimBlock block)
+        {
+            ThermalBlock bound = Bound(block);
+            if (bound == null || bound.Node == null)
+            {
+                return new MyTuple<bool, float, float, float, int>(false, 0f, 0f, 0f, 0);
+            }
+
+            ThermalGrid thermals = GridOf(block);
+            if (thermals == null || thermals.Simulation == null)
+            {
+                return new MyTuple<bool, float, float, float, int>(false, 0f, 0f, 0f, 0);
+            }
+
+            CoolantLoop loop = thermals.Simulation.FindLoopContaining(bound.Node.Block);
+            if (loop == null)
+            {
+                return new MyTuple<bool, float, float, float, int>(false, 0f, 0f, 0f, 0);
+            }
+
+            return new MyTuple<bool, float, float, float, int>(
+                true, loop.Temperature, loop.HottestSegment, loop.ColdestSegment, loop.PipeCount);
         }
 
         /// <summary>Is a sealed room, air temperature K, pressure 0..1, volume m^3.</summary>
