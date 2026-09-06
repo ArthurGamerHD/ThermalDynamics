@@ -338,7 +338,31 @@ default has no sources, so a graduation here is a **conditional** design: worth 
 that uses sources, invisible to one that does not (`P8` — off already costs nothing; this is the
 on cost).
 
-**Findings.** *This subsection is filled by the commit that runs the lab at evaluation size.*
+**Findings, 2026-09-05 — criterion met 40× over, and it is the largest per-item cost this
+evaluation has found.** `bench heatsourcewalk`, settled step, substeps held at 8 across all rows
+(so the figure is pure per-source overhead, not a changed substep count):
+
+| blocks | 0 src | 1 src | 8 src | 32 src | per source | fold removes |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 126,731 | 6.81 ms | 8.14 | 15.79 | 43.59 | **1.15 ms — 16.9 % of a step** | 88 % (7 of 8 substeps) |
+| 505,566 | 28.08 ms | 31.12 | 55.80 | 141.87 | **3.56 ms — 12.7 % of a step** | 88 % |
+
+**One source costs a sixth of a step.** The reason it dwarfs the environment residue of sweep 2 is
+`Weighted(i, sourceWeights)`: the source pass re-reads the node's six face weights and forms the
+directional sum *per node per source per substep*, which is roughly triple the environment read's
+own per-node cost — and it is layered on top of that read, not instead of it. A world with a
+handful of sources pays several steps' worth of extra work for nothing that changes across the
+step. **Filed as `D25`.** The fold removes seven eighths of it at eight substeps, and more at the
+higher substep counts a stiff hull demands.
+
+**Why it is filed conditional, not shipped.** The mod registers no heat-source block yet (`B11` is
+backlog), so a shipped world has zero sources and pays nothing (`P8`). But the API is public and
+the cost is per source, so the first mod or debug block that uses it pays 13–17 % of every step per
+source — which makes this the fold to have built *before* the source block ships, not after. The
+correctness obligation is the usual one for a reorder (`P4`): folding the source watts into
+`nodeSourceRow` changes the order the terms sum, so it is `SolverAb`'s to prove bit-identical, and
+the fold must preserve the per-source diagnostic (`LastHeatSourceWatts`) that the crosshair readout
+reads, which a naive row-merge would lose.
 
 ## Limits
 
@@ -353,6 +377,7 @@ problem, and this page only prices the prize.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-05 | **The fourth sweep decides: `D25`, the largest per-item cost the evaluation has found.** Folding registered heat sources into the precomputed source row (as solar already is) removes 88 % of a per-source cost measured at **16.9 % of a step at 126,731 blocks and 12.7 % at 505,566** — one source, a sixth of a step, because `Weighted` re-reads the face weights per node per source per substep. Filed conditional (shipped worlds have no sources), and the fold to have before the source block ships. The other four feared O(n²) hazards were measured or read absent. |
 | 2026-09-05 | **The fourth sweep opened**: costs that scale on something other than node count. Four feared hazards were measured or read to be absent — point-source falloff is O(sources) not O(sources × nodes) (resolved at the grid centre), the coolant solve is O(pipes) not O(pipes²), threshold crossings and the overheat scan are already bounded — and one candidate survived to `bench heatsourcewalk` with its criterion fixed before the run: folding registered sources into the precomputed source row the way solar already is. |
 | 2026-09-05 | **The third sweep decides: one refusal, one design.** Fusing apply(n) with env(n+1) clears 0.85 at 126k (0.801) but misses at 505k (0.888) — the win is shared-cache locality and it evaporates as the rows outrun cache, the wrong shape for a scale change; refused with the curve, and with the finding that a rescheduling prototype cannot prove its own bit-identity (the JIT vectorises the fused loop differently), so fusion correctness is `SolverAb`'s job. The per-step mirror walk costs 5.9 % of a settled step at 505k and *grows* with size (1.9 % at 126k — 12.6× the cost for 3.9× the nodes), a cold-handle pointer chase off a cache cliff; filed as `D24`. |
 | 2026-09-05 | **The third sweep opened**: the step's own walk structure. Three candidates closed by reasoning — the cached substep estimate (refused on `C6`: proving a cached bound conservative costs the walk it skips), half-precision rows (platform- and fidelity-gated), room mapping on a worker (session-gated like `D19`) — and two survived to `bench stepwalks` with criteria fixed before the run: fusing apply(n) with env(n+1), and inverting temperature ownership to remove the per-step mirror walk. |
