@@ -14,6 +14,53 @@ authoritative on how to use them.
 | The settings a call addresses by name | [configuration.md](configuration.md) |
 | Extending the core in-process, past the message API | [api.md](api.md#in-process-extension) |
 
+## The fast path: the drop-in client
+
+If you want to be calling the API in five minutes, copy one file —
+[`tools/modkit/ThermalDynamicsApi.cs`](../tools/modkit/ThermalDynamicsApi.cs) — into your mod's
+`Data/Scripts` folder. It does all of the setup and teardown below for you and exposes the whole
+API as typed methods that return friendly structs instead of raw tuples. The rest of this guide is
+what that file does and why, for when you want to understand or extend it; you do not need any of
+it to use the client.
+
+```csharp
+using ThermalDynamics.Client;   // or whatever you rename the namespace to
+
+[MySessionComponentDescriptor(MyUpdateOrder.NoUpdate)]
+public class MyMod : MySessionComponentBase
+{
+    private readonly ThermalDynamicsApi thermal = new ThermalDynamicsApi();
+
+    public override void LoadData()      { thermal.Init(); }     // register + request, once
+    protected override void UnloadData() { thermal.Dispose(); }  // unregister, once
+
+    private void Somewhere(IMySlimBlock block)
+    {
+        // Safe before the API has bound and against a block the sim does not know: you get the
+        // documented default (0 / false / NaN), never an exception.
+        float kelvin = thermal.GetBlockTemperature(block);
+
+        BlockThermals t = thermal.GetBlockThermals(block);   // t.Temperature, t.HeatCapacity, ...
+        if (t.HeatCapacity > 0f && t.Temperature > t.Critical) { /* overheating */ }
+    }
+}
+```
+
+Everything is on the one instance: `thermal.GetGridSummary(grid)`, `thermal.AddBlockHeat(block,
+joules)`, `thermal.AddHeatSource(entity, watts, range)`, `thermal.AddThreshold(450f,
+ThresholdDirection.Rising, e => { ... })`, `thermal.GetCoolantLoop(pipe)`,
+`thermal.GetGridAeroForces(grid)`, `thermal.GetSetting(name)`. Check `thermal.IsReady` (or pass a
+callback to `Init`) if you need the moment it binds; read `thermal.MissingKeys` if you want to know
+whether a key you use is absent on the player's build of Thermal Dynamics.
+
+Change the `namespace ThermalDynamics.Client` line to anything you like if it clashes with your
+own. The file is plain C# 6 and references only game types, so it compiles wherever your mod does,
+and Thermal Dynamics' own test suite holds it identical to the API it wraps, so a copy you take
+today will not silently disagree with the contract.
+
+The rest of this page is the manual path — use it to understand the client, or if you would rather
+bind the delegate table yourself.
+
 ## What the API is, in one paragraph
 
 Space Engineers mods cannot reference one another's compiled assemblies, so Thermal Dynamics
@@ -318,4 +365,5 @@ the simulation core directly — it has no dependency on the game session and it
 
 | Date | Change |
 | --- | --- |
+| 2026-09-05 | **Added the drop-in client** ([`tools/modkit/ThermalDynamicsApi.cs`](../tools/modkit/ThermalDynamicsApi.cs)) and the fast-path section: one file a consumer copies in, `Init`/`Dispose` and typed methods returning structs, held identical to the API table by `ThermalDynamicsClientTests`. The manual binding walkthrough stays below it. |
 | 2026-09-05 | Written, alongside an audit that added `GetGridAeroForces` and `GetCoolantLoop` to close the two shipped systems that had no read accessor. Covers setup, the binding lifecycle, a task per system, and the multiplayer and threading rules; the key-by-key contract stays in [api.md](api.md). |
