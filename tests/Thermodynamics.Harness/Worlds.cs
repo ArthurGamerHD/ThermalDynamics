@@ -23,6 +23,34 @@ namespace Thermodynamics.Harness
         }
 
         /// <summary>
+        /// Dark vacuum with <paramref name="count"/> registered heat sources, each a distinct
+        /// direction and a plausible irradiance — the on-cost fixture for the heat-source fold
+        /// evaluation (redesign.md, fourth sweep). Dark so the sources are the only directional
+        /// term and their cost is not lost in the sun's.
+        /// </summary>
+        public static EnvironmentSample DarkVacuumWithSources(int count)
+        {
+            EnvironmentSample sample = EnvironmentSample.DarkVacuum();
+            if (count <= 0) return sample;
+
+            HeatSourceState[] sources = new HeatSourceState[count];
+            for (int i = 0; i < count; i++)
+            {
+                // Directions spread around the sphere so no two sources share a face weighting,
+                // and irradiances in the range a small reactor a few metres off would deliver.
+                double a = i * 2.399963f;   // the golden angle, radians
+                double z = 1.0 - (2.0 * (i + 0.5) / count);
+                double r = Math.Sqrt(Math.Max(0.0, 1.0 - (z * z)));
+                Vector3 direction = new Vector3((float)(Math.Cos(a) * r), (float)(Math.Sin(a) * r), (float)z);
+                sources[i] = new HeatSourceState(direction, 400f + (i % 5) * 120f);
+            }
+
+            sample.HeatSources = sources;
+            sample.HeatSourceCount = count;
+            return sample;
+        }
+
+        /// <summary>
         /// Standing on a planet.
         /// </summary>
         /// <param name="airDensity">0..1.</param>
