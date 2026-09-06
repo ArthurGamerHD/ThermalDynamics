@@ -35,6 +35,7 @@ in the prose. The conventions are in
 | [realism.md](realism.md) | How far the model is from physics, measured, and what each departure costs. |
 | [definitions.md](definitions.md) | Block, planet and loop properties, and how to add support for another mod's blocks. |
 | [api.md](api.md) | The mod API: reading, writing, heat sources, thresholds, settings. |
+| [api-guide.md](api-guide.md) | How to bind another mod or script to the API and drive it: setup, the binding lifecycle, a task per system, and the multiplayer and threading rules. |
 
 **Measurement and evidence**
 
