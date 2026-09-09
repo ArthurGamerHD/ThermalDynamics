@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Thermodynamics.Harness;
 using Xunit;
@@ -9,9 +10,10 @@ using Xunit;
 namespace Thermodynamics.Tests
 {
     /// <summary>
-    /// Cross-checks the shipped XML against itself. These are the failures a green solver suite
-    /// cannot see: the simulation is correct, and the numbers it is handed are not the ones the
-    /// definitions author.
+    /// Cross-checks the shipped XML against itself, and against the code that binds to it. These
+    /// are the failures a green solver suite cannot see: the simulation is correct, and the numbers
+    /// it is handed are not the ones the definitions author — or the block the definitions author
+    /// has no logic attached to it at all.
     ///
     /// The defect that prompted this: every one of the mod's own blocks declared its thermal
     /// properties under <c>&lt;TypeId&gt;CubeBlocks&lt;/TypeId&gt;</c>, which is not an object
@@ -195,6 +197,99 @@ namespace Thermodynamics.Tests
             // placement. Zero watts of intrinsic heat is exactly what a block that is not a heat
             // source should have, so omission is the correct default rather than a trap.
         };
+
+        /// <summary>Every subtype named by a MyEntityComponentDescriptor under Data/Scripts.</summary>
+        private static Dictionary<string, string> BoundSubtypes()
+        {
+            Dictionary<string, string> bound = new Dictionary<string, string>();
+            string scripts = Path.Combine(RepoRoot(), "Data", "Scripts");
+
+            foreach (string file in Directory.GetFiles(scripts, "*.cs", SearchOption.AllDirectories))
+            {
+                string source = File.ReadAllText(file);
+
+                foreach (Match descriptor in Regex.Matches(
+                    source, @"MyEntityComponentDescriptor\s*\((.*?)\)\s*\]", RegexOptions.Singleline))
+                {
+                    foreach (Match subtype in Regex.Matches(descriptor.Groups[1].Value, "\"([^\"]+)\""))
+                    {
+                        bound[subtype.Groups[1].Value] = Path.GetFileName(file);
+                    }
+                }
+            }
+
+            return bound;
+        }
+
+        /// <summary>
+        /// **A game logic component bound to a subtype that does not ship is bound to nothing**, and
+        /// nothing says so: the attribute compiles, the class is reachable, the suite is green, and
+        /// the block simply never gains the behaviour in a session. A typo in a subtype name is the
+        /// whole failure, and it is invisible from either side on its own.
+        ///
+        /// <para>
+        /// Written over every descriptor rather than over the block being added at the time, for the
+        /// reason `wired-to-nothing` gives: a check that enumerates one instance cannot see the
+        /// next one.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryBlockLogicComponentIsBoundToASubtypeThatShips()
+        {
+            Dictionary<string, string> shipped = ShippedBlockTypes();
+            List<string> dangling = new List<string>();
+
+            foreach (KeyValuePair<string, string> entry in BoundSubtypes())
+            {
+                if (!shipped.ContainsKey(entry.Key))
+                {
+                    dangling.Add(entry.Value + " binds logic to " + entry.Key
+                        + ", which no .sbc in Data/CubeBlocks defines");
+                }
+            }
+
+            dangling.Sort(StringComparer.Ordinal);
+            Assert.True(dangling.Count == 0, string.Join("\n  ", dangling.ToArray()));
+        }
+
+        /// <summary>
+        /// The same rule read from the other end, which is the direction that catches an *absent*
+        /// instance rather than a wrong one.
+        ///
+        /// <para>
+        /// Every upgrade module this mod ships exists to carry behaviour — the coolant pump, the
+        /// heat pump and the debug heat source are all upgrade modules precisely because a plain
+        /// cube block has no terminal to switch and no component to attach. So one with no logic
+        /// bound to it is a block that appears in the G-menu, builds, draws its model and does
+        /// nothing whatever, and the only symptom is a player saying it seems to have no effect.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public void EveryUpgradeModuleTheModShipsHasLogicBoundToIt()
+        {
+            Dictionary<string, string> bound = BoundSubtypes();
+            List<string> inert = new List<string>();
+            int modules = 0;
+
+            foreach (KeyValuePair<string, string> block in ShippedBlockTypes())
+            {
+                if (block.Value != "UpgradeModule") continue;
+
+                modules++;
+                if (!bound.ContainsKey(block.Key))
+                {
+                    inert.Add(block.Key + " is an UpgradeModule with no MyEntityComponentDescriptor"
+                        + " naming it, so it builds and does nothing");
+                }
+            }
+
+            Assert.True(modules >= 6,
+                "only " + modules + " upgrade modules were found, so this test is reading the wrong"
+                + " thing and would pass over a tree with none");
+
+            inert.Sort(StringComparer.Ordinal);
+            Assert.True(inert.Count == 0, string.Join("\n  ", inert.ToArray()));
+        }
 
         /// <summary>
         /// **An entry in Cubes.xml must be complete, because a property it omits reads as zero and

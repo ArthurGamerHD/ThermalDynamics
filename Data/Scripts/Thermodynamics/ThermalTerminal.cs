@@ -67,8 +67,9 @@ namespace Thermodynamics
         }
 
         /// <summary>
-        /// Adds the throttle slider to a coolant pump or a heat pump. Built once and carrying its own
-        /// visibility test, because a terminal control is global to a block *interface*.
+        /// Adds the dials the mod's own upgrade modules carry: a coolant pump's speed, a heat pump's
+        /// power limit, a debug heat source's output and reach. Built once and carrying their own
+        /// visibility tests, because a terminal control is global to a block *interface*.
         /// </summary>
         private static void AppendThrottle(IMyTerminalBlock block, List<IMyTerminalControl> controls)
         {
@@ -76,12 +77,25 @@ namespace Thermodynamics
 
             EnsureControls();
 
-            if (IsCoolantPump(block)) controls.Add(pumpSpeed);
-            else if (IsHeatPump(block)) controls.Add(heatPumpPower);
+            if (IsCoolantPump(block))
+            {
+                controls.Add(pumpSpeed);
+            }
+            else if (IsHeatPump(block))
+            {
+                controls.Add(heatPumpPower);
+            }
+            else if (IsHeatSource(block))
+            {
+                controls.Add(sourceLevel);
+                controls.Add(sourceRange);
+            }
         }
 
         private static IMyTerminalControlSlider pumpSpeed;
         private static IMyTerminalControlSlider heatPumpPower;
+        private static IMyTerminalControlSlider sourceLevel;
+        private static IMyTerminalControlSlider sourceRange;
 
         private static bool IsCoolantPump(IMyTerminalBlock block)
         {
@@ -105,6 +119,18 @@ namespace Thermodynamics
             return block == null || block.GameLogic == null
                 ? null
                 : block.GameLogic.GetAs<ThermalHeatPumpBlock>();
+        }
+
+        private static bool IsHeatSource(IMyTerminalBlock block)
+        {
+            return HeatSourceControl(block) != null;
+        }
+
+        private static ThermalHeatSourceBlock HeatSourceControl(IMyTerminalBlock block)
+        {
+            return block == null || block.GameLogic == null
+                ? null
+                : block.GameLogic.GetAs<ThermalHeatSourceBlock>();
         }
 
         private static void EnsureControls()
@@ -161,6 +187,79 @@ namespace Thermodynamics
             {
                 ThermalHeatPumpBlock pump = HeatPumpControl(b);
                 sb.Append(((pump == null ? 1f : pump.PowerSetting) * 100f).ToString("n0")).Append('%');
+            };
+
+            // **The slider carries a 0..1 position, and `HeatSourceBlockSetting` turns it into
+            // watts.** The dial has to reach both zero and a gigawatt: zero because that is what
+            // takes the source out of the registry, and a gigawatt because that is a second sun.
+            // The game's own `SetLogLimits` spans decades but needs a floor above zero, and a
+            // linear dial that reaches zero cannot be put on 5 MW — half a per cent of its travel.
+            // So the curve is the mod's, it lives in the half a test can reach, and this is the
+            // only control here whose value is not the quantity it is named after. The Writer shows
+            // the watts, which is what a player reads.
+            sourceLevel = MyAPIGateway.TerminalControls
+                .CreateControl<IMyTerminalControlSlider, IMyUpgradeModule>("Gauge_HeatSourceLevel");
+            sourceLevel.Title = MyStringId.GetOrCompute("Output");
+            sourceLevel.Tooltip = MyStringId.GetOrCompute(
+                "How much this source radiates, from nothing to a gigawatt over six decades of"
+                + " travel. It spreads over the sphere at whatever distance it is read at, so a"
+                + " megawatt is 2 W/m\u00b2 at 200 m and 78 W/m\u00b2 at 32 m, against"
+                + " 1,000 W/m\u00b2 for the sun. At zero the source is removed outright rather"
+                + " than left registered at nothing, so it costs no simulation time at all. This"
+                + " block draws no power and takes nothing from the grid: it is a debug fixture and"
+                + " its energy comes from nowhere.");
+            sourceLevel.SetLimits(0f, 1f);
+            sourceLevel.Visible = IsHeatSource;
+            sourceLevel.Enabled = IsHeatSource;
+            sourceLevel.Getter = b =>
+            {
+                ThermalHeatSourceBlock source = HeatSourceControl(b);
+                return HeatSourceBlockSetting.PositionOfWatts(source == null
+                    ? HeatSourceBlockSetting.DefaultWatts
+                    : source.Setting.Watts);
+            };
+            sourceLevel.Setter = (b, value) =>
+            {
+                ThermalHeatSourceBlock source = HeatSourceControl(b);
+                if (source != null) source.SetWatts(HeatSourceBlockSetting.WattsAtPosition(value));
+            };
+            sourceLevel.Writer = (b, sb) =>
+            {
+                ThermalHeatSourceBlock source = HeatSourceControl(b);
+                float watts = source == null ? HeatSourceBlockSetting.DefaultWatts : source.Setting.Watts;
+
+                // "0 W" is a number; "off" is what it means, and it is the one setting on this dial
+                // that changes what the block costs rather than what it does.
+                if (watts <= 0f) sb.Append("off");
+                else sb.Append(Units.Watts(watts, 2));
+            };
+
+            sourceRange = MyAPIGateway.TerminalControls
+                .CreateControl<IMyTerminalControlSlider, IMyUpgradeModule>("Gauge_HeatSourceRange");
+            sourceRange.Title = MyStringId.GetOrCompute("Range");
+            sourceRange.Tooltip = MyStringId.GetOrCompute(
+                "How far the source is felt. Beyond it nothing samples the source at all, which is"
+                + " a cliff rather than a fade \u2014 and it is what the range is for: every grid"
+                + " inside it pays one pass over its exposed blocks per step, so keep it to the"
+                + " distance the effect should actually be measured at.");
+            sourceRange.SetLimits(HeatSourceBlockSetting.MinRange, HeatSourceBlockSetting.MaxRange);
+            sourceRange.Visible = IsHeatSource;
+            sourceRange.Enabled = IsHeatSource;
+            sourceRange.Getter = b =>
+            {
+                ThermalHeatSourceBlock source = HeatSourceControl(b);
+                return source == null ? HeatSourceBlockSetting.DefaultRange : source.Setting.Range;
+            };
+            sourceRange.Setter = (b, value) =>
+            {
+                ThermalHeatSourceBlock source = HeatSourceControl(b);
+                if (source != null) source.SetRange(value);
+            };
+            sourceRange.Writer = (b, sb) =>
+            {
+                ThermalHeatSourceBlock source = HeatSourceControl(b);
+                sb.Append((source == null ? HeatSourceBlockSetting.DefaultRange : source.Setting.Range)
+                    .ToString("n0")).Append(" m");
             };
         }
 
@@ -289,8 +388,59 @@ namespace Thermodynamics
 
             AppendHeatPump(bound);
             AppendCoolant(bound);
+            AppendHeatSource(block);
 
             return Text;
+        }
+
+        /// <summary>
+        /// A debug heat source's line. Nothing for any other block.
+        ///
+        /// **The dial is already on the sliders above, so what this adds is whether the dial is
+        /// doing anything** — the three ways a source set to 5 MW delivers nothing are the block
+        /// being off, the world having `EnableHeatSources` off, and the registration having failed,
+        /// and none of them changes the number the slider shows. That is the shape `wired to
+        /// nothing` keeps taking, one readout further out.
+        /// </summary>
+        private static void AppendHeatSource(IMyTerminalBlock block)
+        {
+            ThermalHeatSourceBlock source = HeatSourceControl(block);
+            if (source == null) return;
+
+            HeatSourceBlockSetting setting = source.Setting;
+
+            Text.Append('\n');
+            Row("Source");
+
+            if (!source.IsRunning)
+            {
+                Text.Append("off\n");
+                return;
+            }
+
+            // A separate line from "off", because the two want different fixes and a player who
+            // has switched the block on and seen nothing happen is owed the difference.
+            if (!setting.HasOutput)
+            {
+                Text.Append("output at zero, not registered\n");
+                return;
+            }
+
+            if (!source.IsRadiating)
+            {
+                // Named rather than shown as a zero, because the fix is a world setting and not
+                // anything the player can reach from this panel.
+                Text.Append("point sources are switched off for this world\n");
+                return;
+            }
+
+            Text.Append(Units.Watts(setting.Watts, 2)).Append("  to ")
+                .Append(setting.Range.ToString("n0")).Append(" m\n");
+
+            // What a hull one grid away actually receives, against the sun the player already has
+            // an intuition for. The dial is a power; this is the quantity the solver uses.
+            Row("At 50m");
+            Text.Append(setting.IrradianceAt(50f).ToString("n1")).Append(" W/m\u00b2\n");
         }
 
         /// <summary>

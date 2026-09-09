@@ -229,6 +229,86 @@ The efficiency fraction and the cap are tuned for the whole mod in
 Its waste-energy fractions in `Cubes.xml` are deliberately zero. The simulation already puts every
 watt the block draws into the hot side; a waste fraction on top would charge the same energy twice.
 
+## Debug heat source
+
+`Gauge_LG_HeatSource` (1×1×1) / `Gauge_SG_HeatSource` (3×3×1) — an `UpgradeModule`, for the same
+reason the heat pump is one: it needs a terminal and an on/off switch. It carries no upgrades.
+
+**A block that radiates like a small sun**, so the point-source path can be seen in a session
+rather than only in the harness. It registers itself through
+[ThermalHeatSources](../Data/Scripts/Thermodynamics/Game/ThermalHeatSources.cs) — the same entry
+point the mod API's `AddHeatSource` hands out and the same one `/thermal heat` drives — so a
+session that shows this block working has shown that path working for every consumer of it. Its
+output falls off as `P / 4πr²` with a hard cutoff at its range, exactly as a source registered by
+another mod does; see [api.md](api.md#heat-sources).
+
+| Terminal control | Range | Default |
+| --- | --- | --- |
+| **Output** | 0 W – 1 GW, six decades of travel | 5 MW |
+| **Range** | 10 m – 1,000 m | 200 m |
+| On/off | the block's own | on |
+
+**Zero is a real setting on the output dial, and it is the one that costs nothing.** A registered
+source is charged one pass over the exposed blocks of every grid in its range, every sampled step,
+before anything looks at how many watts it carries — so a source turned down to nothing would go on
+costing what a gigawatt costs. At zero the block takes its entry out of the registry instead, which
+is `P8` applied to a dial rather than to a switch: turning it off removes its own cost. The terminal
+writes `off` beside the slider there, not `0 W`.
+
+That is also why the dial is not the game's own logarithmic slider, which needs a floor above zero.
+The curve is `floor × (10^6ᵖ − 1)` over a 0–1 position — a logarithm everywhere it matters, finite
+and exactly zero at the bottom. Six decades of travel, because a kilowatt is where the question is
+whether a face is looking at the source at all and a gigawatt is a second sun; a linear dial over
+the same span cannot be put on 5 MW, which is half a per cent of its travel.
+
+| Position | 0 | 0.1 | 0.25 | 0.5 | 0.75 | 0.9 | 1 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Output | **off** | 3 kW | 31 kW | 1 MW | 32 MW | 251 MW | 1 GW |
+
+Both dials are replicated, and unlike the coolant pump's speed and the heat pump's throttle they are
+**saved with the world** — a debug rig is built once and then left, so a slider that reset on reload
+would be a rig that had to be rebuilt every session.
+
+> The output control is the one slider in this mod whose terminal *value* is not the quantity it is
+> named after: it carries the 0–1 position, and the watts are what the panel writes beside it. A
+> script reading `Gauge_HeatSourceLevel` gets the position, which is why it is named that.
+
+Some scale for the output dial, since a power is not an intuition. What a surface actually receives
+is the figure spread over the sphere at whatever distance it is read at:
+
+| Output | at 32 m | at 200 m | at 1 km |
+| --- | ---: | ---: | ---: |
+| 1 MW | 78 W/m² | 2.0 W/m² | 0.08 W/m² |
+| 1 GW | 78 kW/m² | 2.0 kW/m² | 80 W/m² |
+
+The sun is 1,000 W/m² at the `SolarEnergy` default, so roughly a gigawatt at 280 m is a second sun.
+
+> **It draws no power and takes nothing from the grid: its energy comes from nowhere, and that is
+> deliberate.** Every other heat term in this mod is conserved against something — power drawn,
+> power produced, thrust, a gradient a pump paid to climb. This block's job is to put a *known*
+> number of watts into a world so that cooling can be measured against it, and a fixture that
+> browned out when the reactors did would be measuring the reactors. That is why its name says
+> debug, and why the block is the one thing on this page a survival balance argument does not
+> apply to.
+
+The terminal's detail panel says whether the dial is doing anything, which is the one thing echoing
+the sliders back cannot say. A source set to 5 MW delivers nothing when the block is off, and
+nothing when the world has `EnableHeatSources` off — and neither changes the number on the slider.
+Both are named in the panel, along with the irradiance the setting puts at 50 m.
+
+It shares the heat pump's model and a hue-shifted copy of its icon. The block exists to make a
+mechanism visible and has no art of its own; a mesh for it would be a re-export of a family for a
+fixture. See `ShippedIdentityTests.TheModelTreeKeepsItsShape` — a model added moves the pinned
+digest, and this block deliberately adds none.
+
+Where it fits against the other two ways of making one:
+
+| | Saved with the world | Placed by | Moves with a ship |
+| --- | --- | --- | --- |
+| This block | yes | building it | yes |
+| `/thermal heat <watts>` | no | a chat command, ahead of the camera | no |
+| `AddHeatSource` | the caller's business | another mod | if bound to an entity |
+
 ## Extinguisher (hand tool)
 
 A rifle-class hand item. Today it is a **thermal scanner**; the intent is that it also **cools a
@@ -334,6 +414,18 @@ Pump     23.1 kW for 20.0 kW   x1.15
 Optimal  -48°C
 ```
 
+A debug heat source reports what it is registering, and — the part the sliders cannot say — whether
+anything is receiving it:
+
+```
+Source   5.00 MW  to 200 m
+At 50m   159.2 W/m²
+```
+
+Switched off it says `off`; at an output of zero it says `output at zero, not registered`, because
+those are different fixes; and in a world with `EnableHeatSources` off it says so in words rather
+than showing a zero, because that fix is a world setting and not anything reachable from the panel.
+
 **`Optimal` is the gap this pump has left before it stops reaching its rating**, and it goes negative
 once the gap is past that. `-48°C` means the two sides are forty-eight degrees further apart than they
 need to be — bring either one that far toward the other and the pump reaches its rating. A positive
@@ -377,6 +469,7 @@ all, so it is the readout that works in any world.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-08 | **Added the debug heat source** ([backlog.md](backlog.md) `B11`), which is a block with two sliders that registers through `ThermalHeatSources` and nothing else — so what a session sees it do is what every consumer of that path gets. Its dials are saved with the world, which the coolant pump's speed and the heat pump's throttle are not. Its output dial runs from zero to a gigawatt over its own six-decade curve rather than the game's logarithmic slider, which cannot have a floor of zero — and zero **removes the registration** rather than emptying it, so a source turned down costs nothing rather than costing what a gigawatt costs. It draws no power by decision, and says so in three places, because a heat term that is not conserved against anything is the sort of thing that reads as a defect to whoever finds it next. |
 | 2026-08-26 | **The build advice on ring length was written against a model that has changed twice**, and every number in it was wrong. It said the fluid mass does not grow with the ring and that a 32-pipe and an 8-pipe ring carry the same 500 kg — true when the charge was per loop and false since it became per pipe — and it quoted 32,000 W/K against 8,000, which predates `C42`'s 6.25× on the pickup. It also cited `LongerRingsCoupleHarderAndCarryTheSameFluid`, a test that no longer exists. Re-measured: 56,250 W/K at 8 pipes and 181,250 at 28, taking a 500 kW block from **722.7 K to 577.5 K**, and the reason is the coupling rather than the mass. Pinned by `LongerRingsDeliverColderBlocks`, which is what actually asserts it. |
 | 2026-08-24 | **Re-quoted every measured figure on this page at `C24`'s pair**, which moved the ones a bolt joint is in. A radiator bolted to a source is worth 228.6 K where it was 42.9 K and 26× armour per tonne where it was 48×, because solid conduction runs four times faster: the stack now keeps paying to the eighth panel instead of saturating at the second. *Plumb it, do not bolt it* holds on **reach** rather than on rate — plumbing a panel is worth 73.5 K over bolting it, while the joint itself now carries 1,168 W/K against a sink face's 1,000 ([backlog.md](backlog.md) `C25`). Ring, layout and air-conditioning figures re-read from their own scenarios. |
 | 2026-08-23 | Re-quoted the `loop-layout` and `air-conditioning` figures after `C4`: the scenario catalogue's blocks derive from the ones they stand in for now, and the rigs state their load in watts of heat rather than in a reactor's output. Bunched-against-spread is 140 C against 91 C, four rings 93 C; the cabin settles at −60 C with the pump off and −106 C with it on. |

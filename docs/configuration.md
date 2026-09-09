@@ -1363,7 +1363,7 @@ code. Two of the three definition files are settings now — [the loop and plane
 — and what is left is the third, the config file's own shape, and a Status page worth opening.
 
 **Per-subtype block overrides.** `Cubes.xml` is 114 entries — 96 per-type defaults and 18 per-subtype
-— and it is different in kind from the other two: 656 authored values, whose interesting ones belong
+— and it is different in kind from the other two: 674 authored values, whose interesting ones belong
 to the block a player is looking at rather than to a list they scroll. Properties are cached per definition in `ThermalBlockCatalog`, so
 changing one at runtime needs the cache invalidated and every node of that type refreshed. A mod
 folder is read-only in a workshop install, so this writes a per-world override layer into world

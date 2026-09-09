@@ -265,16 +265,21 @@ an electric motor at 0.05–0.15 waste, a lithium-ion store at 0.02–0.06 one w
 engine at 0.55–0.70, a radio transmitter at 0.60–0.85, a solid-state laser at 0.50–0.90, and *all of
 it* — the first law's bound on a device that does no work outside itself and radiates nothing away.
 
-**The counts are the finding.** Of the 228 waste fractions, **43** name a conversion, **1** is derived
-from the game, **108** are producer fractions on types that produce nothing, and **76** are
-inventions. Of the 120 that anything ever multiplies, **76 are opinions** — but counting fractions
+**The counts are the finding.** Of the 232 waste fractions, **45** name a conversion, **1** is derived
+from the game, **110** are fractions nothing multiplies, and **76** are
+inventions. Of the 122 that anything ever multiplies, **76 are opinions** — but counting fractions
 and weighting them by the heat they carry disagree about how much that matters:
 
 | | Share of the fractions | Share of the corpus's full-load waste heat |
 | --- | ---: | ---: |
 | derived from the game | 0.4 % | **76.4 %** |
-| sourced to a conversion | 18.9 % | 8.8 % |
-| invented | 33.3 % | 14.8 % |
+| sourced to a conversion | 19.4 % | 8.8 % |
+| invented | 32.8 % | 14.8 % |
+
+> **The heat column does not move when this mod adds a block of its own**, and that is not an
+> oversight. It is measured over the workshop corpus, which is ships built by players who did not
+> have this mod installed — so every fraction the mod authors for its own blocks carries 0 % of it,
+> the radiator and the two pumps included.
 
 > **27 fractions moved from *invented* to *sourced* on 2026-08-24**, when `C21`'s
 > computer-and-screen third closed: the counts were 15 / 1 / 108 / 104 and the heat shares 8.4 % and
@@ -506,6 +511,7 @@ Tuning guidance:
 
 | Date | Change |
 | --- | --- |
+| 2026-09-08 | The debug heat source's two subtypes bring the file to **674 authored values and 232 waste fractions**, and the counts are 45 / 1 / 110 / 76. Nothing was invented: its producer fractions are `no producer:` like every other `UpgradeModule`'s, and its consumer fractions are `waste: all of it` — the first law on a block that does no work leaving it by any path power could take. It has no resource sink at all, so nothing multiplies them today; they are authored so that they stay right if one is ever attached. See [blocks.md](blocks.md#debug-heat-source). |
 | 2026-08-26 | `CoolantKilogramsPerCubicMetre` is the coolant charge in `Loops.xml`, and `CoolantMassPerPipe` is kept as a flat-mass override defaulting to zero rather than repurposed (`P15`): a third-party file stating 50 there means fifty kilograms in a pipe, and reading it as a density would give a large-grid ring sixteen times the fluid it asked for. `HeatTransferCoefficient`'s default in the table was corrected from 160 to the 1,000 `C42` shipped. |
 | 2026-08-26 | Gave `StagnantTransferFraction` the leg it describes. It was authored for the segment-to-segment transport, which `Advect` already stops dead on zero flow, so the field multiplied nothing anywhere in the simulation — found by `LoopDialReachTests`, which enumerates this table's fields by reflection rather than reciting them. It now scales the fluid-to-wall coupling, where a flow dependence is physically real. Same name, same range, same default of 1. |
 | 2026-08-25 | **Corrected the ship's-share figure beside the heat table, because the census could not see the block it is about** (`E10`). It said 2,277 carriers and a median 48.1 %; the blueprint reader built every empty-`SubtypeName` block as armour, and the vanilla large oxygen generator is one of thirteen definitions the game gives no subtype. A 400-ship parse through the fixed reader put it at 64.5 % of ships and a median 10.4 %; the re-censused population settles it at **64.5 % and a median 14.4 %**, over **31,214** vanilla generators the old census held none of. The heat table above still rests on the 2026-08-21 census and the stepped walks still do, which is `A13`. |

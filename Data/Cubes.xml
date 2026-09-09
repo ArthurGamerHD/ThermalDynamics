@@ -2286,6 +2286,67 @@
 			</ModExtensions>
 		</Definition>
 
+		<!--
+			The debug heat source. Thermally it is an ordinary steel box: the block's own function
+			is to register a point source through ThermalHeatSources, and a point source is not a
+			property of the block that carries it. So there is no HeatSourceWatts here - that
+			property is a block that is hot because of what it is, and this block is not hot, it is
+			bright. The heat it makes arrives back at its own hull down the solar path with
+			everything else's, which is exactly what a fixture for testing that path should do.
+		-->
+		<Definition>
+			<Id>
+				<TypeId>UpgradeModule</TypeId>
+				<SubtypeId>Gauge_LG_HeatSource</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: steel casing-->
+					<Decimal Name="Conductivity" Value="50" />
+					<!--J/(kg K), real units: steel casing-->
+					<Decimal Name="SpecificHeat" Value="450" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--waste: all of it. The block does no work that leaves it by any path power could take - what it
+					    radiates is conjured rather than drawn - so the first law fixes this at 1.0. It has no resource
+					    sink today and nothing multiplies it; the figure is here so that it is still right if one is
+					    ever attached. See blocks.md, Debug heat source.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
+					<Decimal Name="CriticalTemperature" Value="1000" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+		<Definition>
+			<Id>
+				<TypeId>UpgradeModule</TypeId>
+				<SubtypeId>Gauge_SG_HeatSource</SubtypeId>
+			</Id>
+			<ModExtensions>
+				<Group Name="ThermalBlockProperties">
+					<Bool Name="ExcludeFromSimulation" Value="false" />
+					<!--W/(m K), real units: steel casing-->
+					<Decimal Name="Conductivity" Value="50" />
+					<!--J/(kg K), real units: steel casing-->
+					<Decimal Name="SpecificHeat" Value="450" />
+					<Decimal Name="Emissivity" Value="0.125" />
+					<Decimal Name="ExposedSurfaceMultiplier" Value ="1" />
+					<!--no producer: no definition of this type declares power output, so this fraction is never read.-->
+					<Decimal Name="ProducerWasteEnergy" Value="0" />
+					<!--waste: all of it. The block does no work that leaves it by any path power could take - what it
+					    radiates is conjured rather than drawn - so the first law fixes this at 1.0. It has no resource
+					    sink today and nothing multiplies it; the figure is here so that it is still right if one is
+					    ever attached. See blocks.md, Debug heat source.-->
+					<Decimal Name="ConsumerWasteEnergy" Value="1" />
+					<Decimal Name="CriticalTemperature" Value="1000" />
+					<Decimal Name="OverheatDamagePerKelvin" Value="1"/>
+				</Group>
+			</ModExtensions>
+		</Definition>
+
 		<Definition>
 			<Id>
 				<TypeId>CubeBlock</TypeId>

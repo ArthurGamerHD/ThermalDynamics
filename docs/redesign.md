@@ -355,10 +355,15 @@ handful of sources pays several steps' worth of extra work for nothing that chan
 step. **Filed as `D25`.** The fold removes seven eighths of it at eight substeps, and more at the
 higher substep counts a stiff hull demands.
 
-**Why it is filed conditional, not shipped.** The mod registers no heat-source block yet (`B11` is
-backlog), so a shipped world has zero sources and pays nothing (`P8`). But the API is public and
-the cost is per source, so the first mod or debug block that uses it pays 13–17 % of every step per
-source — which makes this the fold to have built *before* the source block ships, not after. The
+**Why it was filed conditional, and what changed on 2026-09-08.** It was filed on the ground that
+the mod registered no heat-source block, so a shipped world had zero sources and paid nothing
+(`P8`), against an API that was public and priced per source — which made this the fold to have
+built *before* the source block shipped. **The source block has now shipped** (`B11`, and see
+[blocks.md](blocks.md#debug-heat-source)), so the second half of that sentence is the one that
+applies: a world with one of these blocks built and switched on pays 13–17 % of every step for it.
+The premise has moved and the conclusion has not — the fold is worth more now than when it was
+measured, not less. What still holds the priority down is that the block is a debug fixture and a
+player has to build one, so the *default* world is still a world with no sources in it. The
 correctness obligation is the usual one for a reorder (`P4`): folding the source watts into
 `nodeSourceRow` changes the order the terms sum, so it is `SolverAb`'s to prove bit-identical, and
 the fold must preserve the per-source diagnostic (`LastHeatSourceWatts`) that the crosshair readout

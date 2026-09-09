@@ -298,7 +298,7 @@ namespace Thermodynamics.Tests
                 else if (Invented(entry.Note)) invented++;
             }
 
-            Assert.Equal(228, authored.Count);
+            Assert.Equal(232, authored.Count);
             Assert.Equal(sourced + derived + unreachable + invented, authored.Count);
 
             // 15 / 1 / 108 / 104 until 2026-08-24, when the computer-and-screen third closed:
@@ -311,9 +311,17 @@ namespace Thermodynamics.Tests
             // figure beside it closed the other way round from the reactor's: the oxygen
             // generator's 0.6 put two of six vanilla blocks past critical in open space, and it is
             // 0.40 against `water electrolysis` now.
-            Assert.Equal(43, sourced);
+            //
+            // 43 / 1 / 108 / 76 until 2026-09-08 and the debug heat source, which is two blocks
+            // and so four fractions: two producer fractions on a type that produces nothing, and
+            // two consumer fractions at `all of it`. The second pair is the first law on a block
+            // that does no work leaving it by any path power could take — it has no resource sink
+            // at all, so nothing multiplies them, and the figure is authored so that it stays
+            // right if one is ever attached. Nothing was invented, which is the point of writing
+            // the counts down.
+            Assert.Equal(45, sourced);
             Assert.Equal(1, derived);
-            Assert.Equal(108, unreachable);
+            Assert.Equal(110, unreachable);
             Assert.Equal(76, invented);
         }
 

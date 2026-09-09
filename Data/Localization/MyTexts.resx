@@ -195,4 +195,13 @@
   <data name="DisplayName_Gauge_SG_Radiator" xml:space="preserve">
     <value>Radiator</value>
   </data>
+  <data name="Description_Gauge_HeatSource" xml:space="preserve">
+    <value>A debug fixture. Radiates a set number of watts in every direction, falling off as one over distance squared exactly as the sun does, so any ship inside its range warms on the faces looking at it. Set the output and the reach in the terminal. It draws no power and takes nothing from the grid - its energy comes from nowhere, which is the point: it puts a known load into a world so cooling can be measured against it.</value>
+  </data>
+  <data name="DisplayName_Gauge_LG_HeatSource" xml:space="preserve">
+    <value>Debug Heat Source</value>
+  </data>
+  <data name="DisplayName_Gauge_SG_HeatSource" xml:space="preserve">
+    <value>Debug Heat Source</value>
+  </data>
 </root>

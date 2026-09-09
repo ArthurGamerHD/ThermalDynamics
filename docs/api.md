@@ -116,6 +116,12 @@ var addSource = api["AddHeatSource"] as Func<IMyEntity, float, float, int>;
 int id = addSource(missile, 5e6f, 300f);       // 5 MW, felt out to 300 m
 ```
 
+**There is a worked example of this in the mod itself.** The
+[Debug Heat Source](blocks.md#debug-heat-source) block is two terminal sliders over `Add`, `Update`
+and `Remove` on the same registry these four keys reach — so a session that shows that block warming
+a hull has shown what a mod calling these will get. Build one to see the falloff before writing
+against it.
+
 ## Thresholds
 
 Register a temperature; get called when any block crosses it.
