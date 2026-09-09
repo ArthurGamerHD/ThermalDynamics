@@ -2026,7 +2026,7 @@ already, so this only orders each run of equal `NodeA` by `NodeB` — six at mos
 Chains are rebuilt from the sorted list; chain order is not an answer, because the one walk over a
 chain sorts what it collects.
 
-**It moves the bits once and nothing was pinned to them**: 2,047 tests pass. It costs **1.02** at
+**It moves the bits once and nothing was pinned to them**: the whole suite passes. It costs **1.02** at
 505,566 blocks and 0.99 at 126,731. `CanonicalLinkOrderTests` checks that the list comes out sorted,
 that sorting is a permutation of the same graph, and — the check that matters — that **the walk's
 own order is not already sorted**, because a canonicalisation that reorders nothing would buy no

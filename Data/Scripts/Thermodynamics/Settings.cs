@@ -316,7 +316,7 @@ namespace Thermodynamics
         /// with a name on it, and this mod's answer to *something else is doing this too* is a
         /// switch rather than a detection (`C7`).
         /// </summary>
-        [ProtoMember(135)] public bool EnableDrag = false;
+        [ProtoMember(135)] public bool EnableDrag = true;
 
         /// <summary>
         /// The drag coefficient a hull is treated as having, dimensionless. A bluff body by default,
@@ -327,7 +327,7 @@ namespace Thermodynamics
         /// derived rather than assumed. It is authored rather than read off the hull because the
         /// solver's windward term is a projected area, and a projected area is not a shape.
         /// </summary>
-        [ProtoMember(136)] public float DragCoefficient = 0.5f;
+        [ProtoMember(136)] public float DragCoefficient = 1.54f;
 
         /// <summary>
         /// Whether a block behind another is sheltered from the wind, for heat and for drag.
@@ -338,8 +338,8 @@ namespace Thermodynamics
         /// a 126,731-block hull, which a world not using it should not carry.
         /// </summary>
         [ProtoMember(137)] public bool EnableWindwardShielding = false;
-        [ProtoMember(138)] public bool EnableShapeDrag = false;
-        [ProtoMember(139)] public bool EnableLift = false;
+        [ProtoMember(138)] public bool EnableShapeDrag = true;
+        [ProtoMember(139)] public bool EnableLift = true;
         [ProtoMember(140)] public float LiftCoefficient = 1f;
         [ProtoMember(44)] public float RoomConvectionCoefficient = 8f;
         [ProtoMember(45)] public float RoomAirDensity = 1.225f;
@@ -661,7 +661,7 @@ namespace Thermodynamics
         /// flat cap, should not have a second mod pulling on its ships. On, this raises the engine's
         /// cap to <see cref="SpeedLimit"/> and holds every grid under its own cruise speed.
         /// </summary>
-        [ProtoMember(145)] public bool EnableTopSpeed = false;
+        [ProtoMember(145)] public bool EnableTopSpeed = true;
 
         /// <summary>
         /// The engine's speed cap while <see cref="EnableTopSpeed"/> is on, m/s — the ceiling no
@@ -694,7 +694,11 @@ namespace Thermodynamics
         /// <summary>Mass above which a large grid holds <see cref="LargeGridMaxCruise"/>, kg.</summary>
         [ProtoMember(153)] public float LargeGridMaxMass = 8000000f;
 
-        /// <summary>Ceiling on the force that drags a boosting large grid back to its cruise speed, N.</summary>
+        /// <summary>
+        /// The fastest a boosting large grid may travel, m/s. **A speed and not a force**, whatever
+        /// this comment said before 2026-09-09: the value is <c>AddForce</c>'s <c>maxSpeed</c>, which
+        /// clamps the body's velocity. Read only while <see cref="EnableSpeedBoost"/> is on.
+        /// </summary>
         [ProtoMember(154)] public float LargeGridMaxBoostSpeed = 140f;
 
         /// <summary>How hard a large grid is held to its cruise speed. Higher is a firmer hold.</summary>
@@ -718,7 +722,7 @@ namespace Thermodynamics
         /// <summary>Mass above which a small grid holds <see cref="SmallGridMaxCruise"/>, kg.</summary>
         [ProtoMember(161)] public float SmallGridMaxMass = 400000f;
 
-        /// <summary>Ceiling on the force that drags a boosting small grid back to its cruise speed, N.</summary>
+        /// <summary>The same for a small grid, m/s. See <see cref="LargeGridMaxBoostSpeed"/>.</summary>
         [ProtoMember(162)] public float SmallGridMaxBoostSpeed = 140f;
 
         /// <summary>How hard a small grid is held to its cruise speed. Higher is a firmer hold.</summary>

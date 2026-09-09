@@ -43,6 +43,12 @@ namespace Thermodynamics.Tests
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
             settings.EnableDamage = false;
+            // **The shape term is pinned off, because this suite is the measurement of what the
+            // model does *without* it.** It ships on since 2026-09-09; inheriting that default here
+            // would turn the counter-example these tests exist to hold — a brick and a wedge reading
+            // identically — into a demonstration that they do not, which is `ShapeDragTests`' job
+            // one file over. A claim about a configuration states the configuration.
+            settings.EnableShapeDrag = false;
             settings.Derive();
             return settings;
         }

@@ -134,7 +134,7 @@ namespace Thermodynamics.Core
         /// off and keeps the heat; a world running only this one turns it on.
         /// </para>
         /// </summary>
-        public bool EnableDrag = false;
+        public bool EnableDrag = true;
 
         /// <summary>
         /// Whether a block behind another is sheltered from the wind, for heat and for drag.
@@ -153,11 +153,19 @@ namespace Thermodynamics.Core
         /// Whether the hull's own shape corrects the projected area the friction term charges for.
         ///
         /// <para>
-        /// **Off, and not because it is unfinished.** It moves heat as well as force — the friction
-        /// watts it scales are what warm the hull — so a world that switches it on gets different
-        /// temperatures as well as different handling, and a feature that changes the shipped
-        /// answer is not an addition. What stands between this and a default is a corpus re-walk
-        /// with the drag milestone's population criterion re-scored (backlog.md `K22`).
+        /// **On since 2026-09-09, and what turned it on was the re-walk it was waiting for.** It
+        /// moves heat as well as force — the friction watts it scales are what warm the hull — so
+        /// switching it on changes the shipped answer, which is why it needed the drag milestone's
+        /// population criterion re-scored rather than an argument (backlog.md `K22`). Re-scored, it
+        /// reads **3.42 % and 78.2 m/s** against a criterion of 5 % and 60 m/s registered before
+        /// the walk, and the cruise altitude medians reproduce exactly.
+        /// </para>
+        ///
+        /// <para>
+        /// **It does not travel alone: <see cref="DragCoefficient"/> is 1.54 because this is on.**
+        /// The population's median shape factor is 0.325, so the term takes about two thirds of the
+        /// drag off an average hull, and shipping it with the old 0.5 would have quietly made every
+        /// ship in the game slipperier than the coefficient was ever measured to make it.
         /// </para>
         ///
         /// <para>
@@ -167,13 +175,13 @@ namespace Thermodynamics.Core
         /// how windward shielding came to be worth 7.4 K on a sheltered hull.
         /// </para>
         /// </summary>
-        public bool EnableShapeDrag = false;
+        public bool EnableShapeDrag = true;
 
         /// <summary>
         /// Whether the transverse half of the aerodynamic force is applied — lift.
         ///
         /// <para>
-        /// **Off, and it needs both this and <see cref="EnableShapeDrag"/>.** Lift is the component
+        /// **On since 2026-09-09, and it needs both this and <see cref="EnableShapeDrag"/>.** Lift is the component
         /// of the Newtonian pressure sum perpendicular to the flow, and that sum only has a
         /// direction worth keeping once every node carries a reconstructed normal: with the shape
         /// term off, every surface is one of six axis planes and the transverse part is an artefact
@@ -185,7 +193,7 @@ namespace Thermodynamics.Core
         /// on or off. A world that wants the handling it has keeps it.
         /// </para>
         /// </summary>
-        public bool EnableLift = false;
+        public bool EnableLift = true;
 
         /// <summary>
         /// How much of the computed transverse force is applied, dimensionless.
@@ -220,23 +228,34 @@ namespace Thermodynamics.Core
         /// </para>
         ///
         /// <para>
-        /// **The default is 0.5 and was measured rather than reasoned to.** A bluff body's own
-        /// coefficient is about 1, and at 1 this fails the drag milestone on the population: drag at 100 m/s in
-        /// sea-level air beats the ship's own thrust on **14.06 %** of hulls that can lift
-        /// themselves, and the worst percentile of them cannot hold **55.7 m/s** — against a
-        /// criterion of 5 % and 60 m/s registered before the walk. At 0.5 it passes both, 3.13 %
-        /// and 78.8 m/s.
+        /// **The default is 1.54, and it is 1.54 because <see cref="EnableShapeDrag"/> is on.** The
+        /// two are one setting wearing two names: the shape term multiplies the projected area by
+        /// `sin²θ`, whose population median is **0.3250**, and `0.5 / 0.325 ≈ 1.54` restores what
+        /// the coefficient was measured to deliver before the shape term existed. Re-scored on the
+        /// population at 1.54 with shape, the drag milestone's criterion reads **3.42 % and
+        /// 78.2 m/s** against the 5 % and 60 m/s registered before the walk — and against the
+        /// 3.13 % and 78.8 m/s the old pairing gave, so the population barely moves and **which
+        /// ships** it moves is the finding: drag comes off slippery hulls (median shape factor
+        /// 0.243 among the 25 rescued) and goes onto blunt ones (0.438 among the 41 condemned).
         /// </para>
         ///
         /// <para>
-        /// **And half is the physically expected place for it to land.** What multiplies this is a
-        /// *Newtonian flat-plate* projection: every exposed face, weighted by its incidence, with no
-        /// wake and no pressure recovery behind the hull. That over-predicts a real bluff body's
-        /// drag at the speeds a ship actually flies, so the coefficient that matches reality is
-        /// below the one an aerodynamicist would quote for the shape.
+        /// **Turning the shape term off without putting this back to 0.5 is the mistake to avoid**,
+        /// and it is not one a check can catch: it makes every hull three times draggier, passes
+        /// every test, and reads as a mysteriously unflyable world.
+        /// </para>
+        ///
+        /// <para>
+        /// **Until 2026-09-09 this was 0.5 with no shape term**, and half was the physically
+        /// expected place for it: what multiplies it is a *Newtonian flat-plate* projection — every
+        /// exposed face weighted by its incidence, no wake, no pressure recovery — which
+        /// over-predicts a real bluff body at the speeds a ship flies, so the coefficient that
+        /// matched reality sat below the one an aerodynamicist would quote. With the shape term
+        /// carrying that correction instead, this rises past 1 toward the bluff body's own figure,
+        /// which is `P7`'s prize: a dial that was compensating for a missing model stops having to.
         /// </para>
         /// </summary>
-        public float DragCoefficient = 0.5f;
+        public float DragCoefficient = 1.54f;
 
         // ---- room air ---------------------------------------------------------------------
 

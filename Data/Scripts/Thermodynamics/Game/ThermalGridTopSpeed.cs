@@ -172,20 +172,27 @@ namespace Thermodynamics
 
             float speed = physical.Physics.Speed;
             float cruise = CruiseSpeed(settings, mass, largeGrid);
-            if (speed <= cruise) return;
-
-            // Boosting off means a ship may not exceed its cruise speed at all; on, it may be pushed
-            // past and is dragged back, which is what makes a burst of thrust worth something.
-            if (!settings.EnableSpeedBoost && speed <= cruise) return;
 
             float resistance = largeGrid ? settings.LargeGridResistance : settings.SmallGridResistance;
-            float ceiling = largeGrid ? settings.LargeGridMaxBoostSpeed : settings.SmallGridMaxBoostSpeed;
+            float newtons = Core.TopSpeedForce.Newtons(resistance, mass, cruise, speed);
+            if (newtons <= 0f) return;
 
-            float newtons = resistance * mass * (1f - (cruise / speed));
+            // **What `EnableSpeedBoost` decides is the ceiling, not whether the force is applied**,
+            // and until 2026-09-09 it decided nothing: it was read in a condition the `speed > cruise`
+            // test above had already returned on. Off, the ceiling is cruise and a ship cannot pass
+            // it; on, it is the world's boost speed and a ship is dragged back toward cruise from
+            // wherever thrust took it. `TopSpeedForce.Ceiling` owns the choice so a test can ask
+            // what the switch changes.
+            float boost = largeGrid ? settings.LargeGridMaxBoostSpeed : settings.SmallGridMaxBoostSpeed;
+            float ceiling = Core.TopSpeedForce.Ceiling(settings.EnableSpeedBoost, cruise, boost);
+
             Vector3 force = physical.Physics.LinearVelocity * -newtons;
 
+            // The last argument is `AddForce`'s `maxSpeed`, which clamps the body's velocity — it is
+            // a speed in m/s and never a cap on the newtons above, whatever the dial's old
+            // documentation said.
             physical.Physics.AddForce(VRage.Game.Components.MyPhysicsForceType.APPLY_WORLD_FORCE, force,
-                physical.Physics.CenterOfMassWorld, null, ceiling);
+                physical.Physics.CenterOfMassWorld, null, maxSpeed: ceiling);
         }
     }
 }

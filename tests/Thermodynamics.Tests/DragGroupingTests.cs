@@ -36,6 +36,9 @@ namespace Thermodynamics.Tests
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
             settings.EnableDamage = false;
+            // Pinned off for the reason DragShapeTests gives: the additivity below is a property
+            // of the projected area, and the shape term is the correction to it. It ships on.
+            settings.EnableShapeDrag = false;
             settings.Derive();
             return settings;
         }

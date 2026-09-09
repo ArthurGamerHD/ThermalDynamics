@@ -65,10 +65,17 @@ PROJECTED_SHARE = 0.25
 #: and 22.4 % of hulls drag-limited where it is 11.6 %. A figure whose stated scope is untrue is
 #: `P1` from the other side.
 #:
+#: **And it moved again on 2026-09-09, from 0.5 to 1.54, when `EnableShapeDrag` began shipping on.**
+#: The two are one setting wearing two names: the shape term multiplies the projected area by a
+#: `sin²θ` whose population median is 0.3250, and `0.5 / 0.325 ≈ 1.54` restores what the coefficient
+#: was measured to deliver before it existed. Scoring at 1.54 *without* also passing a shape factor
+#: describes a world three times draggier than the one that ships — pass `--shape` per hull, or read
+#: the `shape_factor` column the census carries.
+#:
 #: It moves when the default does, deliberately, so this scores the configuration that ships rather
 #: than one nobody runs — the same rule `scoring.SHIPPED_VISIT_ALLOWANCE` is pinned under, and
 #: `TheCruiseToolScoresTheCoefficientTheModShips` is the guard that says so.
-SHIPPED_DRAG_COEFFICIENT = 0.5
+SHIPPED_DRAG_COEFFICIENT = 1.54
 
 
 def cruise(thrust, area, coefficient, density, shape=1.0):
