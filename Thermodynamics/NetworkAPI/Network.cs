@@ -119,8 +119,8 @@ namespace SENetworkAPI
 				MyAPIGateway.Utilities.MessageEntered += HandleChatInput;
 			}
 
-			MyAPIGateway.Multiplayer.UnregisterMessageHandler(ComId, HandleIncomingPacket);
-			MyAPIGateway.Multiplayer.RegisterMessageHandler(ComId, HandleIncomingPacket);
+			MyAPIGateway.Multiplayer.UnregisterSecureMessageHandler(ComId, HandleIncomingPacket);
+			MyAPIGateway.Multiplayer.RegisterSecureMessageHandler(ComId, HandleIncomingPacket);
 
 			MyLog.Default.Info($"[NetworkAPI] Initialized. Version: {Version} Type: {GetType().Name} ComId: {ComId} Name: {ModName} Keyword: {Keyword}");
 		}
@@ -200,7 +200,7 @@ namespace SENetworkAPI
 			}
 		}
 
-		private void HandleIncomingPacket(byte[] msg)
+		private void HandleIncomingPacket(ushort @ushort, byte[] msg, ulong arg3, bool arg4)
 		{
 			try
 			{
@@ -431,7 +431,7 @@ namespace SENetworkAPI
 				MyAPIGateway.Utilities.MessageEntered -= HandleChatInput;
 			}
 
-			MyAPIGateway.Multiplayer.UnregisterMessageHandler(ComId, HandleIncomingPacket);
+			MyAPIGateway.Multiplayer.UnregisterSecureMessageHandler(ComId, HandleIncomingPacket);
 
 		}
 

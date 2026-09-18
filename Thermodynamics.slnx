@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="tests/Thermodynamics.Core/Thermodynamics.Core.csproj" />
+  <Project Path="tests/Thermodynamics.Harness/Thermodynamics.Harness.csproj" />
+  <Project Path="tests/Thermodynamics.Sim/Thermodynamics.Sim.csproj" />
+  <Project Path="tests/Thermodynamics.Tests/Thermodynamics.Tests.csproj" />
+  <Project Path="Thermodynamics\Thermodynamics.csproj" />
+</Solution>

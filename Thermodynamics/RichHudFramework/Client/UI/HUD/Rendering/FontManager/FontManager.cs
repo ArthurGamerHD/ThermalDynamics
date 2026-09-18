@@ -150,7 +150,7 @@ namespace RichHudFramework
 				/// <summary>
 				/// Retrieves a registered font by its index in the global font list.
 				/// </summary>
-				/// <exception cref="IndexOutOfRangeException">Thrown if the index is invalid.</exception>
+				// <exception cref="IndexOutOfRangeException">Thrown if the index is invalid.</exception>
 				public static IFontMin GetFont(int index) =>
 					Instance.fonts[index];
 
