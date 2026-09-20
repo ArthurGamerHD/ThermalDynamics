@@ -599,9 +599,9 @@ namespace Thermodynamics
         /// </summary>
         public void RefreshTelemetry()
         {
-            if (!Telemetry.Enabled)
+            if (!Telemetry.Enabled || Simulation == null)
             {
-                Simulation.Profiler = null;
+                if (Simulation != null) Simulation.Profiler = null;
                 Stats = null;
                 return;
             }

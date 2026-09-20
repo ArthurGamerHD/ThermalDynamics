@@ -43,6 +43,7 @@
     <Compile Include="$(TelemetrySourceRoot)OverlayTelemetry.cs" LinkBase="Telemetry" />
     <Compile Include="$(TelemetrySourceRoot)ThermalVisionTelemetry.cs" LinkBase="Telemetry" />
     <Compile Include="$(TelemetrySourceRoot)../OverlayBudget.cs" LinkBase="Telemetry" />
+    <Compile Include="../../Data/Scripts/Thermodynamics/Game/SessionCleanup.cs" LinkBase="Game" />
     <Compile Include="$(TelemetrySourceRoot)FrameCost.cs" LinkBase="Telemetry" />
   </ItemGroup>
 
