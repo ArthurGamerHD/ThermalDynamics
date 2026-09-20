@@ -70,5 +70,6 @@ in the prose. The conventions are in
 
 | Date | Change |
 | --- | --- |
+| 2026-09-20 | Index the natural overheating glow design and validation record. |
 | 2026-09-18 | Indexed the thermal vision design and feasibility assessment. |
 | 2026-08-22 | Opened, taking the documentation index off the [README](../README.md). The README is written to be pasted into the workshop and read by a player, and an index of twenty-one developer pages is not something that audience needs ([backlog.md](backlog.md) `H5`). |

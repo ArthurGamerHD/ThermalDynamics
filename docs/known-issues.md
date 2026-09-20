@@ -240,14 +240,14 @@ balance question, not a code one.
 
 ---
 
-### Armour cannot glow, and no block without an emissive material can
+### Heat glow is a surface approximation
 
-The block glow is written through the model's emissive material, which is the only per-block
-rendering channel the engine exposes to a mod. A model that has none — armour, most structural
-blocks — takes the write and shows nothing. **That is a limit on models rather than on the physics**,
-and it is why the cue that warns a pilot is keyed to each block's own rating and carried by sound:
-between the two channels, what the glow cannot reach the cue can. See
-[document-of-intent.md](document-of-intent.md#natural-feedback--built).
+Armour and blocks without emissive materials receive the drawn soft heat glow. Only the additional
+emissive-material write depends on model support. Radial patches use exposed bounding faces;
+they do not follow slopes, holes, deformation or moving subparts exactly. Depth testing prevents
+ordinary through-wall patches, while shadowless heat lights can leak through walls. The 4,000-quad
+and 32-light limits can omit effects in overloaded scenes. No live game visual acceptance is
+claimed for this replacement; see [thermal-glow.md](thermal-glow.md) for its verification scope.
 
 ### The whitelist is not the assemblies, and building the mod project does not check it
 
@@ -1131,6 +1131,7 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-20 | Correct the obsolete armour-emissive limitation; record bounding-face glow and shadowless-light limits. |
 | 2026-09-04 | **Re-took the memory paragraph**: 723 B/block retained (88.9 MB at 126,731 blocks) against the 1.8 KB and 213 MB it carried — the figure predated most of the passes on [memory.md](memory.md). |
 | 2026-09-04 | **Corrected the first-step warm-up in place (`E10`)**: the spike was never mostly first touch — measured, the faults are one to two milliseconds of it — and since the step prologue moved onto the rebuild tick the first step is ~1.5× a steady one, not several times. The sunlit sun-shadow build is the remaining tail. |
 | 2026-08-28 | **Corrected the room map's convergence figure, which had been stale for nine days and was quoted here from `D2`** (`E10`, `E5`). It read 7,207 ticks — twenty minutes — on a million blocks; re-measured by `bench scale --max 1000000` it is **3,934 ticks, about eleven minutes**, on 1,000,294 blocks and a 14,278,796-cell box. The 7,207 predated the 2026-08-26 word skip and the 2026-08-27 span flood, both of which `D2`'s own body already recorded — the headline outlived the paragraph that superseded it. **And the figure is structural**: convergence is the box over a 4,096-cell tick budget, so no work on milliseconds a cell can move it, which `RoomMapConvergenceIsTheBoxDividedByItsBudget` now pins. |

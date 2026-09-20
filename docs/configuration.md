@@ -1014,6 +1014,11 @@ failing, colour says how hot it actually got. See
 [document-of-intent.md](document-of-intent.md#natural-feedback--built) for why the brightness is not
 incandescence.
 
+The surface cue uses soft depth-tested patches with grazing-angle and distance fades, plus
+bounded nearby heat lights. `HeatGlow=false` removes both; `true` is the most faithful implemented
+form, with no separate cheaper mode. The geometry and lighting limits, including the 4,000-quad
+and 32-light caps, are documented in [thermal-glow.md](thermal-glow.md).
+
 **And the colour is a between-blocks signal rather than a within-block one**, measured: across one
 block's hundred-kelvin band the colour moves less than a just-noticeable difference for 88 of the
 101 block types the game ships, while the coolest-rated block against the hottest is ΔE 13.72. So
@@ -1022,8 +1027,8 @@ nothing a player has to act on is carried by hue — see
 
 **`HeatWarningSound` is the same warning in sound**: a cue about three seconds before a block
 crosses its rating and a distinct one as it crosses, heard only by the player at the controls. It
-reaches what the glow cannot — a block with no emissive material in its model cannot glow whatever
-its temperature.
+reaches blocks that are hidden, off screen, or outside the visual draw budget. Models without
+emissive materials still receive the drawn glow.
 
 The lead is a forecast rather than a straight line: a block levelling off below its rating is never
 cued, however fast it is warming at the moment. A block heating *faster* than it was has no
@@ -1418,6 +1423,7 @@ one with a migration risk — is late rather than first.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-20 | Document the soft glow and rendering caps; correct the sound cue description. |
 | 2026-09-04 | **The aero overlay honours the anchored-group veto, and names it as a gate.** The overlay's summation was a hand copy of the drag pass's that did not know a group with a static member takes no force, so a base standing in wind drew drag and lift arrows the server never applies — against the overlay's own promise of being the force applied rather than a second opinion. Both now read one summation (`AeroGroupForces`); an anchored group shows its centre of mass and wind, zero force, and *anchored* in the red gate line. |
 | 2026-09-02 | **`FrictionAtSpeedsAbove` ships at 0: the aerodynamic term — heating, drag and lift — is live at every speed.** The 50 m/s guard was created against low-speed heating the v³ law already prevents by arithmetic (~1 W/m² at 10 m/s), and it cost a discontinuity in heat and force at 50 and the absence of lift and drag below it. The cooling-to-heating crossover the guard imitated is emergent (convection ∝ √v·(T−T_amb) against friction ∝ v³, so it depends on hull temperature) and the aero debug view now reports the hull's net air watts and its own crossover speed. The dial remains for worlds wanting the legacy cut; a force is never applied to a group with a static grid in it, which is what keeps bases standing in wind free now that the term reaches them. Also added `DebugAeroOverlay` (this page, above) and the `EnableDrag` dependency to `EnableLift`'s row, which was documented as needing only `EnableShapeDrag`. |
 | 2026-08-31 | **The menu's *Other* page is empty, and three defects were found emptying it.** Eleven settings had no layout entry and lived there with their field name for a label and a 0..1,000 slider whatever they were — the six suit dials, `ParallelGrids`, `FloorBlocksWhenOverBudget`, `ShowEnvironmentReadout`, `DebugOverlayMaxBoxes` and `PlanetUndergroundConvectionCoefficient`. They have pages now: **Suit** under Ship systems and **Threading** under Solver are new. **`IsFlag` missed six switches**, three of them already on the Debug page and drawn as *sliders from 0 to 1* — it decides the menu's control, whether `/thermal` prints `on` or a number, and whether telemetry records a bool, so each was wrong three ways. **And `WellMixedCoolant` was reachable by nothing**: a documented rung of the coolant ladder, in the config and read by the solver, but missing from `Names()`, so only hand-editing a world's XML could set it. Two guards added — every setting reaches a page, and every `bool` is a flag and nothing else is. |
