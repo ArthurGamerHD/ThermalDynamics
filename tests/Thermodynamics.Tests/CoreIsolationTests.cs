@@ -1,3 +1,4 @@
+using Thermodynamics.Presentation;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -44,6 +45,26 @@ namespace Thermodynamics.Tests
                 || assemblyName == "netstandard"
                 || assemblyName == "System"
                 || assemblyName.StartsWith("System.", StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void SimulationAssemblyContainsNoThermalVisionPresentation()
+        {
+            foreach(Type type in Core.GetTypes())
+            {
+                Assert.False(type.Name.StartsWith("ThermalVision",StringComparison.Ordinal),type.FullName);
+                Assert.False((type.Namespace ?? "").StartsWith("Thermodynamics.Presentation",StringComparison.Ordinal),type.FullName);
+            }
+        }
+
+        [Fact]
+        public void ThermalPresentationIsSeparateAndHasNoEngineRuntimeDependency()
+        {
+            Assembly presentation=typeof(ThermalVisionSurfaceField).Assembly;
+            Assert.NotEqual(Core,presentation);
+            Assert.Equal("Thermodynamics.Presentation",presentation.GetName().Name);
+            foreach(AssemblyName reference in presentation.GetReferencedAssemblies())
+                Assert.True(IsAllowed(reference.Name),reference.FullName);
         }
 
         [Fact]

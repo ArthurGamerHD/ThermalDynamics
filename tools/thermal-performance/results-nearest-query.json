@@ -1,0 +1,15 @@
+{
+  "blocks": 4096,
+  "queries": 16384,
+  "exactOutput": true,
+  "baseline": {
+    "medianMs": 4.8263,
+    "allocatedBytes": 40,
+    "checksum": 8163025
+  },
+  "optimized": {
+    "medianMs": 3.9192,
+    "allocatedBytes": 40,
+    "checksum": 8163025
+  }
+}

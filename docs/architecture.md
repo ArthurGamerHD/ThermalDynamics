@@ -11,6 +11,45 @@ The model is what [`tests/`](../tests) builds and tests outside the game; the ad
 compiles around it. Everything the game supplies crosses one of three boundaries — block layout, an
 environment sample, and results out — and nothing else.
 
+### Thermal vision is presentation, not simulation
+
+Thermal vision consumes temperatures; its palettes, exposure, LOD, surface
+approximations and camera/HUD policies do not belong to the physical model.
+These sources live under `Presentation/ThermalVision/`, in namespace
+`Thermodynamics.Presentation`, and compile separately as `Thermodynamics.Presentation`.
+They were previously misplaced under `Core/Simulation`; being testable without
+the game was not sufficient reason to include them in the simulation assembly.
+
+The dependency direction is:
+
+```text
+SE1 adapter → simulation Core (layout, environment, temperatures)
+SE1 adapter → Presentation (copied bounds/temperatures, camera inputs, draw geometry)
+Presentation → framework + VRage.Math only
+Core → framework + VRage.Math only
+```
+
+The `ThermalVisionProbe` partials live under `Game/ThermalVision/` as SE1 adapter code: they read live
+grids/nodes, supply scalar values and bounds to presentation helpers, schedule
+refreshes and submit engine billboards. They do not change solver temperatures.
+Their camera, HUD, input, physics and billboard APIs would need an SE2 adapter.
+The presentation approximation is not a replacement simulation or authoritative
+temperature source. Neither presentation nor SE1 rendering is needed to build or
+run `Thermodynamics.Core`.
+
+`CoreIsolationTests` checks both the core's assembly dependencies and the absence
+of thermal-vision types inside it, and checks the presentation assembly has no
+engine-runtime dependency. The current math dependency remains the documented
+`VRage.Math` exception; SE2 uses different math types, so this is separation for
+porting, not a claim of a drop-in SE2 build or finished SE2 support.
+
+Within presentation, `ThermalVisionBlockField` indexes source heat and answers
+temperature queries; `ThermalVisionSurfaceField` prepares interpolated surfaces,
+transitions and near-camera caps. These are separate source files and share no
+SE1 entity state. The performance tool references presentation directly and does
+not reference the simulation assembly. Archived visual experiments remain available
+alongside the SE1 adapter; grouping them does not enable or remove any lab mode.
+
 > The rules argued here are stated canonically in [rules.md](rules.md): `C5` `P9`.
 
 | Looking for | Go to |
@@ -216,6 +255,8 @@ pumps `ThermalSimulation` — which is exactly what the test harness does.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-19 | Grouped SE1 thermal vision under Game, split heat lookup from surface preparation, and removed the performance tool's unused model reference. |
+| 2026-09-19 | Separated thermal-vision presentation from the simulation model, with an independent project and assembly isolation checks. |
 | 2026-09-01 | Added `ThermalSettingsWindow`, and said what the settings menu file now is: the menu moved out of the Rich HUD terminal into a window this mod draws. |
 | 2026-08-25 | Said what `SimulationScheduler` holds rather than what it no longer holds (`R12`). The removed accumulator is a revision and belongs in a change log, which is where `F23` recorded it. |
 | 2026-08-24 | Corrected the update order and the pacing paragraph. The tick calls `Simulation.NeedsEnvironmentSample`, not `scheduler.WouldStep`, and step pacing is `ThermalSimulation.Update`'s work credit rather than `SimulationScheduler`'s — whose parallel step-credit accumulator no shipped path called and has been removed. Added what the constant frame length means: simulated time is counted in simulation ticks, so a machine below 1.0 sim speed has a thermal clock that runs slow ([backlog.md](backlog.md) `F23`). |

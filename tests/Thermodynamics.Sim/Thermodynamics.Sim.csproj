@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../Thermodynamics.Presentation/Thermodynamics.Presentation.csproj" />
     <ProjectReference Include="../Thermodynamics.Harness/Thermodynamics.Harness.csproj" />
   </ItemGroup>
 

@@ -1,6 +1,87 @@
 <?xml version="1.0"?>
 <Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
 	<TransparentMaterials>
+        <TransparentMaterial>
+            <Id><TypeId>TransparentMaterialDefinition</TypeId><SubtypeId>GaugeThermalRampColour</SubtypeId></Id>
+            <AlphaMistingEnable>false</AlphaMistingEnable>
+            <AlphaSaturation>0</AlphaSaturation>
+            <CanBeAffectedByOtherLights>false</CanBeAffectedByOtherLights>
+            <IgnoreDepth>false</IgnoreDepth>
+            <SoftParticleDistanceScale>0.0001</SoftParticleDistanceScale>
+            <Texture>Textures\Particles\GaugeThermalRampColour.dds</Texture>
+            <UseAtlas>false</UseAtlas>
+        </TransparentMaterial>
+        <TransparentMaterial>
+            <Id><TypeId>TransparentMaterialDefinition</TypeId><SubtypeId>GaugeThermalRampGrey</SubtypeId></Id>
+            <AlphaMistingEnable>false</AlphaMistingEnable>
+            <AlphaSaturation>0</AlphaSaturation>
+            <CanBeAffectedByOtherLights>false</CanBeAffectedByOtherLights>
+            <IgnoreDepth>false</IgnoreDepth>
+            <SoftParticleDistanceScale>0.0001</SoftParticleDistanceScale>
+            <Texture>Textures\Particles\GaugeThermalRampGrey.dds</Texture>
+            <UseAtlas>false</UseAtlas>
+        </TransparentMaterial>
+
+        <!-- HUD uses the identical palette texture, without scene-depth clipping. -->
+        <TransparentMaterial>
+            <Id><TypeId>TransparentMaterialDefinition</TypeId><SubtypeId>GaugeThermalLegendColour</SubtypeId></Id>
+            <AlphaMistingEnable>false</AlphaMistingEnable>
+            <AlphaSaturation>0</AlphaSaturation>
+            <CanBeAffectedByOtherLights>false</CanBeAffectedByOtherLights>
+            <IgnoreDepth>true</IgnoreDepth>
+            <SoftParticleDistanceScale>0.0001</SoftParticleDistanceScale>
+            <Texture>Textures\Particles\GaugeThermalRampColour.dds</Texture>
+            <UseAtlas>false</UseAtlas>
+        </TransparentMaterial>
+        <TransparentMaterial>
+            <Id><TypeId>TransparentMaterialDefinition</TypeId><SubtypeId>GaugeThermalLegendGrey</SubtypeId></Id>
+            <AlphaMistingEnable>false</AlphaMistingEnable>
+            <AlphaSaturation>0</AlphaSaturation>
+            <CanBeAffectedByOtherLights>false</CanBeAffectedByOtherLights>
+            <IgnoreDepth>true</IgnoreDepth>
+            <SoftParticleDistanceScale>0.0001</SoftParticleDistanceScale>
+            <Texture>Textures\Particles\GaugeThermalRampGrey.dds</Texture>
+            <UseAtlas>false</UseAtlas>
+        </TransparentMaterial>
+
+        <!-- PostPP measured surfaces sit 2 mm above original geometry. Keep the soft
+             intersection band at 0.03 mm, so the palette is not diluted by scene depth. -->
+        <TransparentMaterial>
+            <Id><TypeId>TransparentMaterialDefinition</TypeId><SubtypeId>GaugeThermalCompositeSurface</SubtypeId></Id>
+            <AlphaMistingEnable>false</AlphaMistingEnable>
+            <AlphaSaturation>0</AlphaSaturation>
+            <CanBeAffectedByOtherLights>false</CanBeAffectedByOtherLights>
+            <IgnoreDepth>false</IgnoreDepth>
+            <SoftParticleDistanceScale>0.0001</SoftParticleDistanceScale>
+            <Texture>Textures\Particles\Square.dds</Texture>
+            <UseAtlas>false</UseAtlas>
+        </TransparentMaterial>
+		<!-- Native-depth diagnostic. Small positive softness avoids division by zero;
+		     PostPP does ordered premultiplied blending against the original scene depth. -->
+		<TransparentMaterial>
+			<Id><TypeId>TransparentMaterialDefinition</TypeId><SubtypeId>GaugeThermalDepthLayer</SubtypeId></Id>
+			<AlphaMistingEnable>false</AlphaMistingEnable>
+			<AlphaSaturation>0</AlphaSaturation>
+			<CanBeAffectedByOtherLights>false</CanBeAffectedByOtherLights>
+			<IgnoreDepth>false</IgnoreDepth>
+			<SoftParticleDistanceScale>0.02</SoftParticleDistanceScale>
+			<Texture>Textures\Particles\Square.dds</Texture>
+			<UseAtlas>false</UseAtlas>
+		</TransparentMaterial>
+		<!-- Opaque, unlit, depth-tested triangle probe. No alpha brightening of the palette. -->
+		<TransparentMaterial>
+			<Id>
+				<TypeId>TransparentMaterialDefinition</TypeId>
+				<SubtypeId>GaugeThermalVisionProbe</SubtypeId>
+			</Id>
+			<AlphaMistingEnable>false</AlphaMistingEnable>
+			<AlphaSaturation>0</AlphaSaturation>
+			<CanBeAffectedByOtherLights>false</CanBeAffectedByOtherLights>
+			<IgnoreDepth>false</IgnoreDepth>
+			<SoftParticleDistanceScale>1000</SoftParticleDistanceScale>
+			<Texture>Textures\Particles\Square.dds</Texture>
+			<UseAtlas>false</UseAtlas>
+		</TransparentMaterial>
 		<!-- The extinguisher tool's heat billboard. Textured, and only that tool uses it. -->
 		<TransparentMaterial>
 			<Id>

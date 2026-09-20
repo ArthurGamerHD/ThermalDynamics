@@ -49,6 +49,9 @@ namespace Thermodynamics
 
         private static List<Planet> Planets = new List<Planet>();
 
+        /// <summary>Copies registered planets without depending on loaded terrain meshes.</summary>
+        public static void CopyPlanets(List<Planet> target) { target.Clear(); target.AddRange(Planets); }
+
         public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
             MyAPIGateway.Entities.OnEntityAdd += AddPlanet;

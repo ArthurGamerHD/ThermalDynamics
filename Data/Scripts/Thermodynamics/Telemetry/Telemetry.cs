@@ -128,6 +128,7 @@ namespace Thermodynamics
         /// second world starts a second overlay.
         /// </summary>
         public static OverlayTelemetry Overlay = new OverlayTelemetry();
+        public static ThermalVisionTelemetry Vision = new ThermalVisionTelemetry();
 
         /// <summary>Wall clock spent inside the mod's own per-frame entry points.</summary>
         public static readonly TimingStat SessionFrameTime = new TimingStat("session frame");
@@ -370,6 +371,7 @@ namespace Thermodynamics
             PlanetProperties.Clear();
             GameVersion = "(unknown)";
             Overlay = new OverlayTelemetry();
+            Vision = new ThermalVisionTelemetry();
 
             lock (RegistryLock)
             {

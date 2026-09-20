@@ -1,0 +1,38 @@
+[
+  {
+    "name": "quad-opportunity-hot-strip",
+    "patches": 3,
+    "uniformPatches": 1,
+    "currentBillboards": 6,
+    "potentialBillboards": 5,
+    "gpuTriangles": 6,
+    "nativeQuadPathEnabled": false
+  },
+  {
+    "name": "quad-opportunity-cooled-patch",
+    "patches": 7,
+    "uniformPatches": 3,
+    "currentBillboards": 14,
+    "potentialBillboards": 11,
+    "gpuTriangles": 14,
+    "nativeQuadPathEnabled": false
+  },
+  {
+    "name": "quad-opportunity-linear-gradient",
+    "patches": 1,
+    "uniformPatches": 0,
+    "currentBillboards": 2,
+    "potentialBillboards": 2,
+    "gpuTriangles": 2,
+    "nativeQuadPathEnabled": false
+  },
+  {
+    "name": "quad-opportunity-diagonal-gradient",
+    "patches": 1,
+    "uniformPatches": 0,
+    "currentBillboards": 2,
+    "potentialBillboards": 2,
+    "gpuTriangles": 2,
+    "nativeQuadPathEnabled": false
+  }
+]

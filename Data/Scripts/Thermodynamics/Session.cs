@@ -1,3 +1,4 @@
+using Thermodynamics.Presentation;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -123,6 +124,7 @@ namespace Thermodynamics
             // A dynamic light this mod created outlives the grid it was lighting unless it is
             // handed back, and the renderer has no session to end it with.
             ThermalGlow.Clear();
+            ThermalVisionProbe.Reset();
             ThermalApi.Unregister();
             ThermalTerminal.Unregister();
             SettingsRequests.Unregister();
@@ -231,6 +233,7 @@ namespace Thermodynamics
             ThermalHud.Draw();
             ThermalDebugView.Draw();
             ThermalGlow.Draw();
+            ThermalVisionProbe.Draw();
             WindOverlay.Draw();
             AeroOverlay.Draw();
             ThermalDebugPanel.Update();
@@ -243,6 +246,7 @@ namespace Thermodynamics
         /// </summary>
         private void PollKeys()
         {
+            ThermalVisionProbe.PollVisionKey();
             if (MyAPIGateway.Utilities == null || MyAPIGateway.Utilities.IsDedicated) return;
             if (MyAPIGateway.Input == null || MyAPIGateway.Gui == null) return;
             if (MyAPIGateway.Gui.ChatEntryVisible || MyAPIGateway.Gui.IsCursorVisible) return;
@@ -320,6 +324,12 @@ namespace Thermodynamics
         private void RunCommand(string argument)
         {
             string lowered = argument.ToLower();
+
+            if (lowered == "vision" || lowered.StartsWith("vision "))
+            {
+                Reply(ThermalVisionProbe.Run(argument.Length > 6 ? argument.Substring(6).Trim() : ""));
+                return;
+            }
 
             if (lowered == "telemetry on")
             {
@@ -457,7 +467,7 @@ namespace Thermodynamics
 
             Reply("commands: status | problems | settings | set <name> <value> | save"
                 + " | sync [fetch] | overlay | aero | menu | telemetry on | telemetry off"
-                + " | stride <n> | heat <k> | dump");
+                + " | stride <n> | heat <k> | vision [[scene|survey|depth] colour|grey|scan|detail|quick|off|range auto|range <low C> <high C>|note <text>] | dump");
         }
 
 

@@ -43,6 +43,8 @@
       project fails to compile. Space Engineers itself only ever compiles Data/Scripts.
     -->
     <Compile Remove="tests/**" />
+    <!-- Offline analyzer tooling is not part of the game mod. -->
+    <Compile Remove="tools/**" />
     <None Remove="tests/**" />
     <EmbeddedResource Remove="tests/**" />
   </ItemGroup>

@@ -10,6 +10,16 @@
 | What the engine provides | [engine-notes.md](engine-notes.md) |
 | Open work | [backlog.md](backlog.md) |
 
+## Thermal-vision boundary
+
+The simulation project compiles `Core/` only. The separate
+`tests/Thermodynamics.Presentation` project links `Presentation/`, which contains
+thermal-vision approximation and display policies, with no solver or engine-runtime
+reference. Both libraries currently use the documented `VRage.Math` exception.
+SE1 billboard, HUD, camera and input integration remains adapter code. See
+[architecture.md](architecture.md#thermal-vision-is-presentation-not-simulation).
+Do not put display behavior back into `Core/Simulation` merely to test it offline.
+
 ## Prerequisites
 
 * Space Engineers installed (the project references DLLs from `Bin64/` directly).
@@ -39,7 +49,7 @@ test projects compile `Core/**/*.cs` and a named list of adapters; `Game/`, `Def
 session and the HUD compile only in `Generic.csproj`. So `dotnet build tests/Thermodynamics.Tests`
 followed by `dotnet test --no-build` can be entirely green while the mod does not compile — which
 happened on 2026-08-30, when a cleanup pointed `ThermalLoopDefinition` at `Core`'s
-`LoopThermalProperties` without the `using` and 2,141 tests passed over it. **Build the `.slnx`**;
+`LoopThermalProperties` without the `using` and 2,141 historical test cases passed over it. **Build the `.slnx`**;
 it catches that in four errors, and building the test project by name catches it in none.
 
 **And the mod project is not a stand-in for the solution either, because the two disagree about what
@@ -341,6 +351,7 @@ already parameterises the game location.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-19 | Separated thermal-vision presentation from the simulation model, with an independent project and assembly isolation checks. |
 | 2026-08-27 | **The mod project had not built for three commits and nothing said so.** Pass 9's fourth iteration wrote a `--` into an XML comment in `Generic.csproj`; MSBuild refuses the file, so it left the build rather than failing it, and every other command kept passing. Fixed, and `ProjectFileTests` now asserts that every MSBuild file in the tree parses — `C11`'s solution membership catches a rename, not an unreadable project. |
 | 2026-08-22 | Added the comment convention to [Documentation conventions](#documentation-conventions): a comment names a definition and points at the page that argues it, and the pointer is plain text rather than a relative markdown link, because a link inside a `.cs` renders nowhere and nothing checks it. Both of the two that existed had rotted. |
 | 2026-08-22 | Corrected the multiplayer row, which said no commands were registered on the network channel; three replicated properties and a second secure channel exist. |

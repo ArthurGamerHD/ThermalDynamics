@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../Thermodynamics.Presentation/Thermodynamics.Presentation.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
 
@@ -40,6 +41,7 @@
     <Compile Include="$(TelemetrySourceRoot)TelemetryFormat.cs" LinkBase="Telemetry" />
     <Compile Include="$(TelemetrySourceRoot)WorldSettings.cs" LinkBase="Telemetry" />
     <Compile Include="$(TelemetrySourceRoot)OverlayTelemetry.cs" LinkBase="Telemetry" />
+    <Compile Include="$(TelemetrySourceRoot)ThermalVisionTelemetry.cs" LinkBase="Telemetry" />
     <Compile Include="$(TelemetrySourceRoot)../OverlayBudget.cs" LinkBase="Telemetry" />
     <Compile Include="$(TelemetrySourceRoot)FrameCost.cs" LinkBase="Telemetry" />
   </ItemGroup>

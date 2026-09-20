@@ -1,0 +1,15 @@
+{
+  "caps": 1024,
+  "triangles": 54466,
+  "exactOutput": true,
+  "baseline": {
+    "medianMs": 2.9856,
+    "allocatedBytes": 40,
+    "checksum": 54466
+  },
+  "optimized": {
+    "medianMs": 2.4412,
+    "allocatedBytes": 40,
+    "checksum": 54466
+  }
+}

@@ -1,0 +1,357 @@
+[
+  {
+    "name": "dense",
+    "blocks": 2880,
+    "queries": 23040,
+    "unique": 3549,
+    "maxError": 0,
+    "oldBuild": {
+      "medianMs": 0.9068,
+      "allocatedBytes": 2379448,
+      "checksum": 2880
+    },
+    "newBuild": {
+      "medianMs": 0.9292,
+      "allocatedBytes": 1259392,
+      "checksum": 2880
+    },
+    "oldQuery": {
+      "medianMs": 9.1035,
+      "allocatedBytes": 40,
+      "checksum": 12081600
+    },
+    "newQuery": {
+      "medianMs": 3.6811,
+      "allocatedBytes": 40,
+      "checksum": 12081600
+    },
+    "cached": {
+      "medianMs": 0.7623,
+      "allocatedBytes": 338560,
+      "checksum": 12081600
+    },
+    "baselineTotal": {
+      "medianMs": 9.9591,
+      "allocatedBytes": 2379448,
+      "checksum": 12081600
+    },
+    "adaptiveTotal": {
+      "medianMs": 1.78,
+      "allocatedBytes": 1597939,
+      "checksum": 12081600
+    }
+  },
+  {
+    "name": "hull",
+    "blocks": 1080,
+    "queries": 8640,
+    "unique": 2172,
+    "maxError": 0,
+    "oldBuild": {
+      "medianMs": 0.3097,
+      "allocatedBytes": 1050256,
+      "checksum": 1080
+    },
+    "newBuild": {
+      "medianMs": 0.3278,
+      "allocatedBytes": 543856,
+      "checksum": 1080
+    },
+    "oldQuery": {
+      "medianMs": 1.3013,
+      "allocatedBytes": 40,
+      "checksum": 4284000.000228882
+    },
+    "newQuery": {
+      "medianMs": 0.6417,
+      "allocatedBytes": 40,
+      "checksum": 4284000.000228882
+    },
+    "cached": {
+      "medianMs": 0.2451,
+      "allocatedBytes": 338560,
+      "checksum": 4284000.000228882
+    },
+    "baselineTotal": {
+      "medianMs": 1.6514,
+      "allocatedBytes": 1050256,
+      "checksum": 4284000.000228882
+    },
+    "adaptiveTotal": {
+      "medianMs": 0.5953,
+      "allocatedBytes": 882383,
+      "checksum": 4284000.000228882
+    }
+  },
+  {
+    "name": "sparse",
+    "blocks": 2880,
+    "queries": 23040,
+    "unique": 23040,
+    "maxError": 0,
+    "oldBuild": {
+      "medianMs": 1.4586,
+      "allocatedBytes": 3190200,
+      "checksum": 2880
+    },
+    "newBuild": {
+      "medianMs": 0.9666,
+      "allocatedBytes": 1590844,
+      "checksum": 2880
+    },
+    "oldQuery": {
+      "medianMs": 0.9121,
+      "allocatedBytes": 40,
+      "checksum": 12081600
+    },
+    "newQuery": {
+      "medianMs": 0.8789,
+      "allocatedBytes": 40,
+      "checksum": 12081600
+    },
+    "cached": {
+      "medianMs": 1.4465,
+      "allocatedBytes": 3079520,
+      "checksum": 12081600
+    },
+    "baselineTotal": {
+      "medianMs": 2.1767,
+      "allocatedBytes": 3190200,
+      "checksum": 12081600
+    },
+    "adaptiveTotal": {
+      "medianMs": 2.0104,
+      "allocatedBytes": 1625698,
+      "checksum": 12081600
+    }
+  },
+  {
+    "name": "multi-cell",
+    "blocks": 2880,
+    "queries": 23040,
+    "unique": 3549,
+    "maxError": 0,
+    "oldBuild": {
+      "medianMs": 0.8762,
+      "allocatedBytes": 2606384,
+      "checksum": 2880
+    },
+    "newBuild": {
+      "medianMs": 1.008,
+      "allocatedBytes": 1366984,
+      "checksum": 2880
+    },
+    "oldQuery": {
+      "medianMs": 10.7026,
+      "allocatedBytes": 40,
+      "checksum": 12090566.546722412
+    },
+    "newQuery": {
+      "medianMs": 4.6528,
+      "allocatedBytes": 40,
+      "checksum": 12090566.546722412
+    },
+    "cached": {
+      "medianMs": 0.9183,
+      "allocatedBytes": 338560,
+      "checksum": 12090566.546722412
+    },
+    "baselineTotal": {
+      "medianMs": 11.6432,
+      "allocatedBytes": 2606384,
+      "checksum": 12090566.546722412
+    },
+    "adaptiveTotal": {
+      "medianMs": 2.0408,
+      "allocatedBytes": 1705501,
+      "checksum": 12090566.546722412
+    }
+  },
+  {
+    "name": "dense-large",
+    "blocks": 23040,
+    "queries": 184320,
+    "unique": 25625,
+    "maxError": 0,
+    "oldBuild": {
+      "medianMs": 10.048,
+      "allocatedBytes": 18673824,
+      "checksum": 23040
+    },
+    "newBuild": {
+      "medianMs": 9.8096,
+      "allocatedBytes": 9113761,
+      "checksum": 23040
+    },
+    "oldQuery": {
+      "medianMs": 85.1687,
+      "allocatedBytes": 40,
+      "checksum": 97609920
+    },
+    "newQuery": {
+      "medianMs": 33.4261,
+      "allocatedBytes": 40,
+      "checksum": 97609920
+    },
+    "cached": {
+      "medianMs": 7.8588,
+      "allocatedBytes": 3079520,
+      "checksum": 97609920
+    },
+    "baselineTotal": {
+      "medianMs": 97.8633,
+      "allocatedBytes": 18673824,
+      "checksum": 97609920
+    },
+    "adaptiveTotal": {
+      "medianMs": 16.7726,
+      "allocatedBytes": 9822798,
+      "checksum": 97609920
+    }
+  },
+  {
+    "name": "surface-patches",
+    "surfaces": 400,
+    "maxPatchError": 0,
+    "baseline": {
+      "medianMs": 11.874,
+      "allocatedBytes": 6537104,
+      "checksum": 95681.61936950684
+    },
+    "optimized": {
+      "medianMs": 2.4118,
+      "allocatedBytes": 6922000,
+      "checksum": 95681.61936950684
+    }
+  },
+  {
+    "name": "traversal-10",
+    "leaves": 8000,
+    "visible": 632,
+    "baseline": {
+      "medianMs": 0.1905,
+      "allocatedBytes": 40,
+      "checksum": 632
+    },
+    "optimized": {
+      "medianMs": 0.0359,
+      "allocatedBytes": 40,
+      "checksum": 632
+    }
+  },
+  {
+    "name": "traversal-40",
+    "leaves": 8000,
+    "visible": 7960,
+    "baseline": {
+      "medianMs": 0.2525,
+      "allocatedBytes": 40,
+      "checksum": 7960
+    },
+    "optimized": {
+      "medianMs": 0.0887,
+      "allocatedBytes": 40,
+      "checksum": 7960
+    }
+  },
+  {
+    "name": "traversal-100",
+    "leaves": 8000,
+    "visible": 8000,
+    "baseline": {
+      "medianMs": 0.249,
+      "allocatedBytes": 40,
+      "checksum": 8000
+    },
+    "optimized": {
+      "medianMs": 0.066,
+      "allocatedBytes": 40,
+      "checksum": 8000
+    }
+  },
+  {
+    "name": "celestial-32-discs",
+    "vertices": 40352,
+    "baseline": {
+      "medianMs": 1.4895,
+      "allocatedBytes": 40,
+      "checksum": 66.01498539010804
+    },
+    "optimized": {
+      "medianMs": 0.1057,
+      "allocatedBytes": 40,
+      "checksum": 66.01498539010791
+    }
+  },
+  {
+    "name": "near-plane-4096-caps",
+    "baseline": {
+      "medianMs": 0.6297,
+      "allocatedBytes": 3668984,
+      "checksum": 9452
+    },
+    "optimized": {
+      "medianMs": 0.2433,
+      "allocatedBytes": 40,
+      "checksum": 9452
+    }
+  },
+  {
+    "name": "face-traversal",
+    "faces": 38400,
+    "baseline": {
+      "medianMs": 3.7895,
+      "allocatedBytes": 6451240,
+      "checksum": 223787051.3605957
+    },
+    "optimized": {
+      "medianMs": 1.5378,
+      "allocatedBytes": 40,
+      "checksum": 223787051.3605957
+    }
+  },
+  {
+    "name": "lattice-sampling",
+    "samples": 102400,
+    "baseline": {
+      "medianMs": 2.5944,
+      "allocatedBytes": 40,
+      "checksum": 54363936.57373047
+    },
+    "optimized": {
+      "medianMs": 1.6724,
+      "allocatedBytes": 40,
+      "checksum": 54363936.57373047
+    }
+  },
+  {
+    "name": "deferred-surface-coordinates",
+    "surfaces": 400,
+    "baseline": {
+      "medianMs": 2.3056,
+      "allocatedBytes": 6537104,
+      "checksum": 95681.61936950684
+    },
+    "optimized": {
+      "medianMs": 2.4901,
+      "allocatedBytes": 6922000,
+      "checksum": 95681.61936950684
+    }
+  },
+  {
+    "name": "minimum-patch-partition",
+    "surfaces": 400,
+    "baselineTriangles": 52794,
+    "optimizedTriangles": 52794,
+    "baseline": {
+      "medianMs": 2.3646,
+      "allocatedBytes": 6922000,
+      "checksum": 95681.61936950684
+    },
+    "optimized": {
+      "medianMs": 2.3576,
+      "allocatedBytes": 6922000,
+      "checksum": 95681.61936950684
+    }
+  }
+]

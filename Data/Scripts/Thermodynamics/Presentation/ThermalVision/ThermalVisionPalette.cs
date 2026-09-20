@@ -1,0 +1,318 @@
+using System;
+using VRageMath;
+
+namespace Thermodynamics.Presentation
+{
+    /// <summary>
+    /// Windowed prototype palettes. Cividis data: Matplotlib 3.10.3, Nuñez, Anderton and
+    /// Renslow (2018), https://doi.org/10.1371/journal.pone.0199239. Values are sRGB;
+    /// convert to linear light before submitting them to the world-space billboard renderer.
+    /// See thermal-vision-design.md for the limits of palette-only accessibility validation.
+    /// </summary>
+    public static class ThermalVisionPalette
+    {
+        /// <summary>Default lower bound: -50 degrees Celsius, expressed in kelvin.</summary>
+        public const float LowKelvin = 223.15f;
+        /// <summary>Default upper bound: 50 degrees Celsius, expressed in kelvin.</summary>
+        public const float HighKelvin = 323.15f;
+
+        private static readonly Vector3[] Cividis =
+        {
+            new Vector3(0.000000f, 0.135112f, 0.304751f),
+            new Vector3(0.000000f, 0.138068f, 0.311105f),
+            new Vector3(0.000000f, 0.141013f, 0.317579f),
+            new Vector3(0.000000f, 0.143951f, 0.323982f),
+            new Vector3(0.000000f, 0.146877f, 0.330479f),
+            new Vector3(0.000000f, 0.149791f, 0.337065f),
+            new Vector3(0.000000f, 0.152673f, 0.343704f),
+            new Vector3(0.000000f, 0.155377f, 0.350500f),
+            new Vector3(0.000000f, 0.157932f, 0.357521f),
+            new Vector3(0.000000f, 0.160495f, 0.364534f),
+            new Vector3(0.000000f, 0.163058f, 0.371608f),
+            new Vector3(0.000000f, 0.165621f, 0.378769f),
+            new Vector3(0.000000f, 0.168204f, 0.385902f),
+            new Vector3(0.000000f, 0.170800f, 0.393100f),
+            new Vector3(0.000000f, 0.173420f, 0.400353f),
+            new Vector3(0.000000f, 0.176082f, 0.407577f),
+            new Vector3(0.000000f, 0.178802f, 0.414764f),
+            new Vector3(0.000000f, 0.181610f, 0.421859f),
+            new Vector3(0.000000f, 0.184550f, 0.428802f),
+            new Vector3(0.000000f, 0.186915f, 0.435532f),
+            new Vector3(0.000000f, 0.188769f, 0.439563f),
+            new Vector3(0.000000f, 0.190950f, 0.441085f),
+            new Vector3(0.000000f, 0.193366f, 0.441561f),
+            new Vector3(0.003602f, 0.195911f, 0.441564f),
+            new Vector3(0.017852f, 0.198528f, 0.441248f),
+            new Vector3(0.032110f, 0.201199f, 0.440785f),
+            new Vector3(0.046205f, 0.203903f, 0.440196f),
+            new Vector3(0.058378f, 0.206629f, 0.439531f),
+            new Vector3(0.068968f, 0.209372f, 0.438863f),
+            new Vector3(0.078624f, 0.212122f, 0.438105f),
+            new Vector3(0.087465f, 0.214879f, 0.437342f),
+            new Vector3(0.095645f, 0.217643f, 0.436593f),
+            new Vector3(0.103401f, 0.220406f, 0.435790f),
+            new Vector3(0.110658f, 0.223170f, 0.435067f),
+            new Vector3(0.117612f, 0.225935f, 0.434308f),
+            new Vector3(0.124291f, 0.228697f, 0.433547f),
+            new Vector3(0.130669f, 0.231458f, 0.432840f),
+            new Vector3(0.136830f, 0.234216f, 0.432148f),
+            new Vector3(0.142852f, 0.236972f, 0.431404f),
+            new Vector3(0.148638f, 0.239724f, 0.430752f),
+            new Vector3(0.154261f, 0.242475f, 0.430120f),
+            new Vector3(0.159733f, 0.245221f, 0.429528f),
+            new Vector3(0.165113f, 0.247965f, 0.428908f),
+            new Vector3(0.170362f, 0.250707f, 0.428325f),
+            new Vector3(0.175490f, 0.253444f, 0.427790f),
+            new Vector3(0.180503f, 0.256180f, 0.427299f),
+            new Vector3(0.185453f, 0.258914f, 0.426788f),
+            new Vector3(0.190303f, 0.261644f, 0.426329f),
+            new Vector3(0.195057f, 0.264372f, 0.425924f),
+            new Vector3(0.199764f, 0.267099f, 0.425497f),
+            new Vector3(0.204385f, 0.269823f, 0.425126f),
+            new Vector3(0.208926f, 0.272546f, 0.424809f),
+            new Vector3(0.213431f, 0.275266f, 0.424480f),
+            new Vector3(0.217863f, 0.277985f, 0.424206f),
+            new Vector3(0.222264f, 0.280702f, 0.423914f),
+            new Vector3(0.226598f, 0.283419f, 0.423678f),
+            new Vector3(0.230871f, 0.286134f, 0.423498f),
+            new Vector3(0.235120f, 0.288848f, 0.423304f),
+            new Vector3(0.239312f, 0.291562f, 0.423167f),
+            new Vector3(0.243485f, 0.294274f, 0.423014f),
+            new Vector3(0.247605f, 0.296986f, 0.422917f),
+            new Vector3(0.251675f, 0.299698f, 0.422873f),
+            new Vector3(0.255731f, 0.302409f, 0.422814f),
+            new Vector3(0.259740f, 0.305120f, 0.422810f),
+            new Vector3(0.263738f, 0.307831f, 0.422789f),
+            new Vector3(0.267693f, 0.310542f, 0.422821f),
+            new Vector3(0.271639f, 0.313253f, 0.422837f),
+            new Vector3(0.275513f, 0.315965f, 0.422979f),
+            new Vector3(0.279411f, 0.318677f, 0.423031f),
+            new Vector3(0.283240f, 0.321390f, 0.423211f),
+            new Vector3(0.287065f, 0.324103f, 0.423373f),
+            new Vector3(0.290884f, 0.326816f, 0.423517f),
+            new Vector3(0.294669f, 0.329531f, 0.423716f),
+            new Vector3(0.298421f, 0.332247f, 0.423973f),
+            new Vector3(0.302169f, 0.334963f, 0.424213f),
+            new Vector3(0.305886f, 0.337681f, 0.424512f),
+            new Vector3(0.309601f, 0.340399f, 0.424790f),
+            new Vector3(0.313287f, 0.343120f, 0.425120f),
+            new Vector3(0.316941f, 0.345842f, 0.425512f),
+            new Vector3(0.320595f, 0.348565f, 0.425889f),
+            new Vector3(0.324250f, 0.351289f, 0.426250f),
+            new Vector3(0.327875f, 0.354016f, 0.426670f),
+            new Vector3(0.331474f, 0.356744f, 0.427144f),
+            new Vector3(0.335073f, 0.359474f, 0.427605f),
+            new Vector3(0.338673f, 0.362206f, 0.428053f),
+            new Vector3(0.342246f, 0.364939f, 0.428559f),
+            new Vector3(0.345793f, 0.367676f, 0.429127f),
+            new Vector3(0.349341f, 0.370414f, 0.429685f),
+            new Vector3(0.352892f, 0.373153f, 0.430226f),
+            new Vector3(0.356418f, 0.375896f, 0.430823f),
+            new Vector3(0.359916f, 0.378641f, 0.431501f),
+            new Vector3(0.363446f, 0.381388f, 0.432075f),
+            new Vector3(0.366923f, 0.384139f, 0.432796f),
+            new Vector3(0.370430f, 0.386890f, 0.433428f),
+            new Vector3(0.373884f, 0.389646f, 0.434209f),
+            new Vector3(0.377371f, 0.392404f, 0.434890f),
+            new Vector3(0.380830f, 0.395164f, 0.435653f),
+            new Vector3(0.384268f, 0.397928f, 0.436475f),
+            new Vector3(0.387705f, 0.400694f, 0.437305f),
+            new Vector3(0.391151f, 0.403464f, 0.438096f),
+            new Vector3(0.394568f, 0.406236f, 0.438986f),
+            new Vector3(0.397991f, 0.409011f, 0.439848f),
+            new Vector3(0.401418f, 0.411790f, 0.440708f),
+            new Vector3(0.404820f, 0.414572f, 0.441642f),
+            new Vector3(0.408226f, 0.417357f, 0.442570f),
+            new Vector3(0.411607f, 0.420145f, 0.443577f),
+            new Vector3(0.414992f, 0.422937f, 0.444578f),
+            new Vector3(0.418383f, 0.425733f, 0.445560f),
+            new Vector3(0.421748f, 0.428531f, 0.446640f),
+            new Vector3(0.425120f, 0.431334f, 0.447692f),
+            new Vector3(0.428462f, 0.434140f, 0.448864f),
+            new Vector3(0.431817f, 0.436950f, 0.449982f),
+            new Vector3(0.435168f, 0.439763f, 0.451134f),
+            new Vector3(0.438504f, 0.442580f, 0.452341f),
+            new Vector3(0.441810f, 0.445402f, 0.453659f),
+            new Vector3(0.445148f, 0.448226f, 0.454885f),
+            new Vector3(0.448447f, 0.451053f, 0.456264f),
+            new Vector3(0.451759f, 0.453887f, 0.457582f),
+            new Vector3(0.455072f, 0.456718f, 0.458976f),
+            new Vector3(0.458366f, 0.459552f, 0.460457f),
+            new Vector3(0.461616f, 0.462405f, 0.461969f),
+            new Vector3(0.464947f, 0.465241f, 0.463395f),
+            new Vector3(0.468254f, 0.468083f, 0.464908f),
+            new Vector3(0.471501f, 0.470960f, 0.466357f),
+            new Vector3(0.474812f, 0.473832f, 0.467681f),
+            new Vector3(0.478186f, 0.476699f, 0.468845f),
+            new Vector3(0.481622f, 0.479573f, 0.469767f),
+            new Vector3(0.485141f, 0.482451f, 0.470384f),
+            new Vector3(0.488697f, 0.485318f, 0.471008f),
+            new Vector3(0.492278f, 0.488198f, 0.471453f),
+            new Vector3(0.495913f, 0.491076f, 0.471751f),
+            new Vector3(0.499552f, 0.493960f, 0.472032f),
+            new Vector3(0.503185f, 0.496851f, 0.472305f),
+            new Vector3(0.506866f, 0.499743f, 0.472432f),
+            new Vector3(0.510540f, 0.502643f, 0.472550f),
+            new Vector3(0.514226f, 0.505546f, 0.472640f),
+            new Vector3(0.517920f, 0.508454f, 0.472707f),
+            new Vector3(0.521643f, 0.511367f, 0.472639f),
+            new Vector3(0.525348f, 0.514285f, 0.472660f),
+            new Vector3(0.529086f, 0.517207f, 0.472543f),
+            new Vector3(0.532829f, 0.520135f, 0.472401f),
+            new Vector3(0.536553f, 0.523067f, 0.472352f),
+            new Vector3(0.540307f, 0.526005f, 0.472163f),
+            new Vector3(0.544069f, 0.528948f, 0.471947f),
+            new Vector3(0.547840f, 0.531895f, 0.471704f),
+            new Vector3(0.551612f, 0.534849f, 0.471439f),
+            new Vector3(0.555393f, 0.537807f, 0.471147f),
+            new Vector3(0.559181f, 0.540771f, 0.470829f),
+            new Vector3(0.562972f, 0.543741f, 0.470488f),
+            new Vector3(0.566802f, 0.546715f, 0.469988f),
+            new Vector3(0.570607f, 0.549695f, 0.469593f),
+            new Vector3(0.574417f, 0.552682f, 0.469172f),
+            new Vector3(0.578236f, 0.555673f, 0.468724f),
+            new Vector3(0.582087f, 0.558670f, 0.468118f),
+            new Vector3(0.585916f, 0.561674f, 0.467618f),
+            new Vector3(0.589753f, 0.564682f, 0.467090f),
+            new Vector3(0.593622f, 0.567697f, 0.466401f),
+            new Vector3(0.597469f, 0.570718f, 0.465821f),
+            new Vector3(0.601354f, 0.573743f, 0.465074f),
+            new Vector3(0.605211f, 0.576777f, 0.464441f),
+            new Vector3(0.609105f, 0.579816f, 0.463638f),
+            new Vector3(0.612977f, 0.582861f, 0.462950f),
+            new Vector3(0.616852f, 0.585913f, 0.462237f),
+            new Vector3(0.620765f, 0.588970f, 0.461351f),
+            new Vector3(0.624654f, 0.592034f, 0.460583f),
+            new Vector3(0.628576f, 0.595104f, 0.459641f),
+            new Vector3(0.632506f, 0.598180f, 0.458668f),
+            new Vector3(0.636412f, 0.601264f, 0.457818f),
+            new Vector3(0.640352f, 0.604354f, 0.456791f),
+            new Vector3(0.644270f, 0.607450f, 0.455886f),
+            new Vector3(0.648222f, 0.610553f, 0.454801f),
+            new Vector3(0.652178f, 0.613664f, 0.453689f),
+            new Vector3(0.656114f, 0.616780f, 0.452702f),
+            new Vector3(0.660082f, 0.619904f, 0.451534f),
+            new Vector3(0.664055f, 0.623034f, 0.450338f),
+            new Vector3(0.668008f, 0.626171f, 0.449270f),
+            new Vector3(0.671991f, 0.629316f, 0.448018f),
+            new Vector3(0.675981f, 0.632468f, 0.446736f),
+            new Vector3(0.679979f, 0.635626f, 0.445424f),
+            new Vector3(0.683950f, 0.638793f, 0.444251f),
+            new Vector3(0.687957f, 0.641966f, 0.442886f),
+            new Vector3(0.691971f, 0.645145f, 0.441491f),
+            new Vector3(0.695985f, 0.648334f, 0.440072f),
+            new Vector3(0.700008f, 0.651529f, 0.438624f),
+            new Vector3(0.704037f, 0.654731f, 0.437147f),
+            new Vector3(0.708067f, 0.657942f, 0.435647f),
+            new Vector3(0.712105f, 0.661160f, 0.434117f),
+            new Vector3(0.716177f, 0.664384f, 0.432386f),
+            new Vector3(0.720222f, 0.667618f, 0.430805f),
+            new Vector3(0.724274f, 0.670859f, 0.429194f),
+            new Vector3(0.728334f, 0.674107f, 0.427554f),
+            new Vector3(0.732422f, 0.677364f, 0.425717f),
+            new Vector3(0.736488f, 0.680629f, 0.424028f),
+            new Vector3(0.740589f, 0.683900f, 0.422131f),
+            new Vector3(0.744664f, 0.687181f, 0.420393f),
+            new Vector3(0.748772f, 0.690470f, 0.418448f),
+            new Vector3(0.752886f, 0.693766f, 0.416472f),
+            new Vector3(0.756975f, 0.697071f, 0.414659f),
+            new Vector3(0.761096f, 0.700384f, 0.412638f),
+            new Vector3(0.765223f, 0.703705f, 0.410587f),
+            new Vector3(0.769353f, 0.707035f, 0.408516f),
+            new Vector3(0.773486f, 0.710373f, 0.406422f),
+            new Vector3(0.777651f, 0.713719f, 0.404112f),
+            new Vector3(0.781795f, 0.717074f, 0.401966f),
+            new Vector3(0.785965f, 0.720438f, 0.399613f),
+            new Vector3(0.790116f, 0.723810f, 0.397423f),
+            new Vector3(0.794298f, 0.727190f, 0.395016f),
+            new Vector3(0.798480f, 0.730580f, 0.392597f),
+            new Vector3(0.802667f, 0.733978f, 0.390153f),
+            new Vector3(0.806859f, 0.737385f, 0.387684f),
+            new Vector3(0.811054f, 0.740801f, 0.385198f),
+            new Vector3(0.815274f, 0.744226f, 0.382504f),
+            new Vector3(0.819499f, 0.747659f, 0.379785f),
+            new Vector3(0.823729f, 0.751101f, 0.377043f),
+            new Vector3(0.827959f, 0.754553f, 0.374292f),
+            new Vector3(0.832192f, 0.758014f, 0.371529f),
+            new Vector3(0.836429f, 0.761483f, 0.368747f),
+            new Vector3(0.840693f, 0.764962f, 0.365746f),
+            new Vector3(0.844957f, 0.768450f, 0.362741f),
+            new Vector3(0.849223f, 0.771947f, 0.359729f),
+            new Vector3(0.853515f, 0.775454f, 0.356500f),
+            new Vector3(0.857809f, 0.778969f, 0.353259f),
+            new Vector3(0.862105f, 0.782494f, 0.350011f),
+            new Vector3(0.866421f, 0.786028f, 0.346571f),
+            new Vector3(0.870717f, 0.789572f, 0.343333f),
+            new Vector3(0.875057f, 0.793125f, 0.339685f),
+            new Vector3(0.879378f, 0.796687f, 0.336241f),
+            new Vector3(0.883720f, 0.800258f, 0.332599f),
+            new Vector3(0.888081f, 0.803839f, 0.328770f),
+            new Vector3(0.892440f, 0.807430f, 0.324968f),
+            new Vector3(0.896818f, 0.811030f, 0.320982f),
+            new Vector3(0.901195f, 0.814639f, 0.317021f),
+            new Vector3(0.905589f, 0.818257f, 0.312889f),
+            new Vector3(0.910000f, 0.821885f, 0.308594f),
+            new Vector3(0.914407f, 0.825522f, 0.304348f),
+            new Vector3(0.918828f, 0.829168f, 0.299960f),
+            new Vector3(0.923279f, 0.832822f, 0.295244f),
+            new Vector3(0.927724f, 0.836486f, 0.290611f),
+            new Vector3(0.932180f, 0.840159f, 0.285880f),
+            new Vector3(0.936660f, 0.843841f, 0.280876f),
+            new Vector3(0.941147f, 0.847530f, 0.275815f),
+            new Vector3(0.945654f, 0.851228f, 0.270532f),
+            new Vector3(0.950178f, 0.854933f, 0.265085f),
+            new Vector3(0.954725f, 0.858646f, 0.259365f),
+            new Vector3(0.959284f, 0.862365f, 0.253563f),
+            new Vector3(0.963872f, 0.866089f, 0.247445f),
+            new Vector3(0.968469f, 0.869819f, 0.241310f),
+            new Vector3(0.973114f, 0.873550f, 0.234677f),
+            new Vector3(0.977780f, 0.877281f, 0.227954f),
+            new Vector3(0.982497f, 0.881008f, 0.220878f),
+            new Vector3(0.987293f, 0.884718f, 0.213336f),
+            new Vector3(0.992218f, 0.888385f, 0.205468f),
+            new Vector3(0.994847f, 0.892954f, 0.203445f),
+            new Vector3(0.995249f, 0.898384f, 0.207561f),
+            new Vector3(0.995503f, 0.903866f, 0.212370f),
+            new Vector3(0.995737f, 0.909344f, 0.217772f),
+        };
+
+        /// <summary>Rejects invalid data; valid temperatures clamp to the displayed fixed window.</summary>
+        public static bool TrySample(float kelvin, ThermalVisionState.Mode mode, out Vector3 srgb)
+        {
+            return TrySample(kelvin, mode, LowKelvin, HighKelvin, out srgb);
+        }
+
+        public static bool TrySample(float kelvin, ThermalVisionState.Mode mode, float low, float high, out Vector3 srgb)
+        {
+            srgb = Vector3.Zero;
+            if (float.IsNaN(low) || float.IsNaN(high) || float.IsInfinity(low) || float.IsInfinity(high)
+                || low < 0f || high <= low) return false;
+            if (float.IsNaN(kelvin) || float.IsInfinity(kelvin) || kelvin < 0f
+                || (mode != ThermalVisionState.Mode.Cividis && mode != ThermalVisionState.Mode.WhiteHot))
+                return false;
+
+            float t = Math.Max(0f, Math.Min(1f, (kelvin - low) / (high - low)));
+            if (mode == ThermalVisionState.Mode.WhiteHot)
+            {
+                srgb = new Vector3((18f + 225f * t) / 255f);
+                return true;
+            }
+
+            float index = t * (Cividis.Length - 1);
+            int lower = Math.Min(Cividis.Length - 2, (int)index);
+            srgb = Vector3.Lerp(Cividis[lower], Cividis[lower + 1], index - lower);
+            return true;
+        }
+
+        /// <summary>Converts display-encoded palette colours into linear renderer inputs.</summary>
+        public static Vector3 ToLinear(Vector3 srgb)
+        {
+            return new Vector3(LinearChannel(srgb.X), LinearChannel(srgb.Y), LinearChannel(srgb.Z));
+        }
+
+        private static float LinearChannel(float value)
+        {
+            return value <= 0.04045f ? value / 12.92f : (float)Math.Pow((value + 0.055f) / 1.055f, 2.4);
+        }
+    }
+}

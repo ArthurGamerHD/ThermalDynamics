@@ -237,6 +237,7 @@ namespace Thermodynamics
 
         /// <summary>One per slider: whether that slider is showing its field.</summary>
         private readonly List<Func<bool>> typingCells = new List<Func<bool>>();
+        private readonly List<Action> closeTextInputs = new List<Action>();
 
         public void Show()
         {
@@ -247,6 +248,9 @@ namespace Thermodynamics
 
         public void Hide()
         {
+            // Hiding a parent does not clear a TextBox's explicit OpenInput state or focus.
+            // Release only our own editors; never override another mod's input blacklist.
+            foreach (Action close in closeTextInputs) close();
             Visible = false;
             HudMain.EnableCursor = false;
         }
@@ -658,6 +662,7 @@ namespace Thermodynamics
             };
 
             field.MouseInput.ToolTip = tip;
+            closeTextInputs.Add(() => { field.FocusHandler.ReleaseFocus(); field.CloseInput(); });
             field.UseCursor = enabled;
 
             // Anything that cannot be part of a number never reaches the field, so a typo is
@@ -796,6 +801,8 @@ namespace Thermodynamics
                 typed.Visible = false;
                 slider.Visible = true;
             };
+
+            closeTextInputs.Add(() => { typed.FocusHandler.ReleaseFocus(); typed.CloseInput(); close(); });
 
             Action commit = () =>
             {

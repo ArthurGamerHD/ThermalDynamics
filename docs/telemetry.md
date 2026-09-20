@@ -38,6 +38,33 @@ loading the world, or switch it on in chat during one:
 Repeated dumps are safe: the "final state" sections are rebuilt each time rather than appended
 to.
 
+## Thermal vision test results
+
+Use `/thermal vision range -50 50` to set a shared Celsius window for both palettes (also the default). Range changes are recorded, and different windows produce separate aggregate rows.
+
+Enable collection on the client performing the test with `/thermal telemetry on`, then activate `/thermal vision colour` or `/thermal vision grey`. `/thermal vision note <observation>` records a short visual observation with a session-relative timestamp. `/thermal dump` includes the results in the normal timestamped telemetry log in world storage. A dedicated server cannot observe client rendering.
+
+The `THERMAL VISION PROBE` section records every attempted draw while collection is enabled, independently of simulation sample stride. It includes:
+
+- CPU milliseconds, split into frames with and without a geometry cache miss; min/mean/max and sample counts. This includes target lookup, model extraction, HUD updates and instrumented draw work, but not GPU completion or the final telemetry accumulator update.
+- Rows by palette, locked temperature window in kelvin, block definition and outcome: submitted, partial, zero-submitted, armour submitted/partial/zero-submitted, unsupported armour deformation, missing grid parts, invalid temperature, no raycast target, or render error. Each row includes temperature in kelvin, examined/submitted triangle statistics, partial and empty frame counts, and backface/degenerate triangle totals.
+- Menu-suppressed frame and rendering error counts. Suppressed frames do not enter draw timings.
+- Recent activation/rejection, viewpoint-loss, manual-off and reset events; target grid/cell identity; model asset names and source/retained/unsupported-technique counts when a model enters the cache; model budget rejection; tester notes. Revision 3 supports models up to 65,536 triangles, retains up to 262,144 triangles / 128 models across target changes, and examines at most 98,304 triangles per frame. Budget rejections and cache-recycle messages belong to the diagnostic history. Model-build events require telemetry to be enabled before that model is cached.
+
+Memory is bounded at 128 aggregate rows and two independent histories of 64 events each (important notes/mode/range/error events and target/model diagnostics), with a 320-character message limit. Additional row samples merge into an `OTHER` row; the report states overflow and event eviction counts. Probe off/on does not erase accumulated results. World telemetry reset creates a fresh accumulator, and repeated dumps do not drain it. Collection toggles pause/resume accumulation; they do not clear it. Caught render exceptions also go through the always-on fault path and the game log.
+
+Revision 4 also measures `/thermal vision scene colour` and `/thermal vision scene grey`. Scene rows aggregate whole draw frames instead of individual target definitions. Their temperature sample is absent; the separate scene summary reports window bounds, scanned blocks, frustum/range candidates, attempted blocks, blocks with submissions, blocks with no submission/data and discovery/draw-limit frames. Automatic range rows use `AUTO` rather than creating a row for every changing window. Revision 5 adds discovery-refresh counts and per-frame discovery/sort and candidate-validation/draw CPU distributions (HUD publication and telemetry serialization are outside these two stages, but inside total probe CPU where applicable). Cached frames normally scan zero new blocks and revalidate retained candidates before drawing. A candidate is not proof of visibility; occluded candidates may affect the adaptive window. Scene limits and unsupported categories are described in [thermal-vision-design.md](thermal-vision-design.md#trying-the-scene-probe-revision-8).
+
+Revision 6 adds overlapping budget-reason frame counts (discovery, block cap, triangle cap, time, model extraction and armour pass quota), and separate armour/entity blocks-with-submissions statistics. A frame may hit several limits, so these counts must not be summed as distinct frames. The armour-first pass is bounded; the total 32,768-triangle and soft 4 ms scene budgets remain unchanged, while the block-attempt cap is 512.
+
+Revision 7 adds pending-build frame counts, extracted source triangles per frame and separate build CPU timings. Geometry extraction resumes across draws and is excluded from the validation/draw stage timing. Slow model draw events (8 ms or more) record the asset and number of submissions; these are elapsed-time observations, not GC/GPU attribution.
+
+Revision 8 reports batch tests and triangles rejected by conservative plane bounds. `examined` now counts only individually processed triangles after batch rejection; `backfaces-total` includes both whole-batch and individual rejection and can exceed `examined`. Do not compare these counters across revisions without accounting for that change.
+
+The [survey-scope candidate](thermal-vision-survey.md) adds important events for start, timeout and completed capture. Completion reports total queries (including discarded motion attempts), measured/unknown samples in the final capture, wall duration, accumulated query/temperature-lookup CPU time and maximum single-sample time. Its generic vision rows distinguish acquisition, capture and no-capture states; their model-triangle counts are zero because the image is submitted separately through Rich HUD. Frame timings do not measure Rich HUD's separate drawing cost. A query over the soft 2 ms issuance deadline is visible in the maximum sample time; the loop cannot preempt native calls.
+
+Triangle counts measure submissions, not visible pixels. A nonzero count cannot certify occlusion, alignment, correct colour or complete scene coverage. Include visual observations or screenshots when reporting those results. See [thermal-vision-design.md](thermal-vision-design.md) for the prototype's scope and test procedure.
+
 ## Faults are recorded whether or not collection is running
 
 Everything else in this document is *observation*: it costs something on every healthy frame, and
@@ -806,6 +833,7 @@ rest.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-18 | Added bounded client thermal-probe telemetry, outcome and CPU summaries, recent model/viewpoint events and tester notes in the normal report. |
 | 2026-08-25 | Two headings described what a row *used to* be rather than what it is (`R12`). `build` is a root of its own; the per-mechanism watts row is the one hardest to make free. |
 | 2026-08-22 | Renamed `game_temperature` to `game_comfort`. `GetTemperatureInPoint` returns a 0..1 fraction and zero wherever there is no oxygen, so the old name claimed two things it is not ([backlog.md](backlog.md) `B23`). A dump written under the old name is still read, and `TheComfortColumnIsReadableUnderEitherName` keeps it that way. |
 | 2026-08-22 | Added the standard header and this change log. |

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Thermodynamics.Presentation</AssemblyName>
+    <RootNamespace>Thermodynamics.Presentation</RootNamespace>
+    <LangVersion>6</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Data/Scripts/Thermodynamics/Presentation/**/*.cs" LinkBase="Presentation" />
+    <Reference Include="VRage.Math"><HintPath>$(SEBinPath)/VRage.Math.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

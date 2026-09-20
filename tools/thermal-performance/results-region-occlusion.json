@@ -1,0 +1,17 @@
+{
+  "regions": 4096,
+  "visible": 848,
+  "hiddenSubtrees": 284,
+  "exactVisibility": true,
+  "traversals": 100,
+  "flat": {
+    "medianMs": 39.1352,
+    "allocatedBytes": 40,
+    "checksum": 84800
+  },
+  "hierarchical": {
+    "medianMs": 7.5254,
+    "allocatedBytes": 40,
+    "checksum": 84800
+  }
+}

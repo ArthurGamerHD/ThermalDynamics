@@ -15,6 +15,14 @@ debugged in seconds instead of by loading a world.
 
 ## Layout
 
+`Thermodynamics.Core` builds only the simulation model. Thermal-vision algorithms
+compile separately in `Thermodynamics.Presentation`, linking
+`Data/Scripts/Thermodynamics/Presentation/**/*.cs`. The harness, visual benchmarks
+and tests reference presentation explicitly; the model does not. The SE1 renderer
+is still compile-checked by `Generic.csproj`, not linked into either library.
+`CoreIsolationTests` prevents presentation types from returning to the simulation
+assembly and checks both libraries' permitted assembly dependencies.
+
 > **Hulls are built from a measured block census.**
 > [`Census.cs`](Thermodynamics.Harness/Census.cs) holds the block population of a real ship —
 > eight bands by heat capacity, plus the share that generate waste heat — read out of a telemetry
@@ -422,6 +430,14 @@ derivation it reports is the same one that runs in game, in `BlockThermalDerivat
 view of live behaviour rather than of a generator. See
 [definitions.md](../docs/definitions.md#where-a-blocks-properties-come-from).
 
+## Thermal corpus appearance review
+
+`thermal-corpus-export <output>` exports per-block temperatures and block bounds from three fixed
+corpus ships using existing electrical/recovery scenarios. The offline Python renderer produces
+white-hot/Cividis exterior and cutaway comparison sheets, with an identical camera and scale across
+estimators. See [the visual panel protocol](../docs/thermal-vision-lab.md#corpus-visual-evaluation-panel)
+for reproduction, provenance, renderer checks and the limits of block-bound proxies.
+
 ## The blueprint corpus
 
 `corpus` reads real ships out of Space Engineers blueprint files and reports what came back.
@@ -664,7 +680,7 @@ hold — `A13` was a change to how *vanilla* blocks are read, and it moved the p
 | **Environment: air, climate, weather** | `EnvironmentSolverTests` `RadiationTests` `ConvectionSolarFrictionTests` `FrictionIsolationTests` `GridFrictionTotalTests` `DragShapeTests` `ShapeDragTests` `ShapeNormalOneCellTests` `GridCapacityTests` `SurfaceRebuildScratchTests` `RoomAirPoolTests` `CorpusShapeWalk` `LiftTests` `DragGroupingTests` `DragForceTests` `CruiseCurveTests` `TopSpeedForceTests` `WindShieldingCostTests` `WindShieldingTests` `CentreOfPressureTests` `DragProfileTests` `ClimateModelTests` `GroundRoughnessTests` `DayLengthTests` `WeatherAndDepthTests` `UndergroundContactTests` `PlanetThermalTests` `PlanetReferenceTests` `PlanetPropertyMergeTests` `DescentTests` |
 | **Sun, shadow and occlusion** | `SunShadowMapTests` `SolarSelfShadowingTests` `SunLitSliceTests` `SolarOcclusionTests` `SolarOcclusionSamplerTests` `OcclusionLadderTests` `OcclusionMathTests` `SolarSymmetryTests` `GridShadowTests` `TerrainHorizonTests` `SelfShadowScenarioTests` `FaceWeightPairingTests` |
 | **Wind** | `WindFieldTests` `WindProfileTests` `GradientHeightTests` `WindSlopeTests` `WindTerrainTests` `WindCompassTests` `StormHeatingTests` `WindScenarioTests` `WindSolverContractTests` `WindLabTests` |
-| **Heat sources, damage and thresholds** | `HeatGenerationTests` `OverheatSpillTests` `DamageTests` `CriticalTemperatureTests` `CriticalTemperatureMirrorTests` `OverheatEventTests` `SuitThermalTests` `IncandescenceTests` `HeatWarningTests` `HeatCueScanTests` `ThresholdTests` `HeatSourceTests` `HeatSourceMathTests` `HeatSourceCommandTests` `HeatSourceBlockTests` `CustomHeatSourceTests` `MultiCellAndDamageTests` `ReactorWasteHeatTests` `GridHeatBalanceTests` `HottestNodeTests` `GlowGeometryTests` |
+| **Heat sources, damage and thresholds** | `HeatGenerationTests` `OverheatSpillTests` `DamageTests` `CriticalTemperatureTests` `CriticalTemperatureMirrorTests` `OverheatEventTests` `SuitThermalTests` `IncandescenceTests` `HeatWarningTests` `HeatCueScanTests` `ThresholdTests` `HeatSourceTests` `HeatSourceMathTests` `HeatSourceCommandTests` `HeatSourceBlockTests` `CustomHeatSourceTests` `MultiCellAndDamageTests` `ReactorWasteHeatTests` `GridHeatBalanceTests` `HottestNodeTests` `GlowGeometryTests` `ThermalVisionTests` `ThermalVisionTelemetryTests` `ThermalVisionLabTests` `ThermalVisionRegionOrderTests` `ThermalVisionRegionScanTests` `ThermalVisionCelestialTests` `ThermalVisionHudProjectionTests` `ThermalVisionOcclusionTests` |
 | **Coolant loops and heat pumps** | `CoolantFillTests` `CoolantLoopTests` `PumpPowerTests` `CoolantFlowTests` `CoolantFaultTests` `HeatLaunderingTests` `PipeFitterTests` `HeatPumpTests` `CoolingScenarioClaimTests` |
 | **What a step costs, and what it must not change** | `LoadTests` `StepBudgetTests` `AllowanceTests` `CapVersusAllowanceTests` `StepWorkUnitTests` `PairedRunTests` `FrankenHullTests` `StepFixedCostTests` `StepPrologueTests` `StepPacingTests` `StepTermsTests` `SpreadStepTests` `StaggerTests` `PaceEquivalenceTests` `SweepSliceTests` `BufferGrowthTests` `IncrementalTopologyTests` `BlockRefreshTests` `CostRollupTests` `SolverReportingTests` `StressFindingsTests` |
 | **Bit-identity: an optimisation against what it replaced** | `PrecomputedEnvironmentTests` `HeatGainHoistTests` `CanonicalLinkOrderTests` `FixedSourceRowTests` `WattsClearFusionTests` `ConductionClampGateTests` `DiagnosticBatchingTests` `ExposureSkipTests` |
@@ -699,8 +715,15 @@ hold — `A13` was a change to how *vanilla* blocks are read, and it moved the p
 
 ## Change log
 
+The depth-layer additions to `ThermalVisionTests` cover ordered plane distances, neutral terminal
+background, camera rotation, off-centre projection, aspect ratios and a scalar blend-order
+counterexample. These are not native GPU or thermal-coverage acceptance tests.
+
 | Date | Change |
 | --- | --- |
+| 2026-09-19 | Separated thermal-vision presentation from the simulation model, with an independent project and assembly isolation checks. |
+| 2026-09-18 | Added `thermal-vision-volumes <out>` synthetic temperature-ownership study (exits 2: incomplete) and `ThermalVisionLabTests` regressions for missing hot surfaces, foreground heat leakage and foreign surfaces inside an open frame's thermal cell. |
+| 2026-09-18 | Added `thermal-vision-reuse <out>` temporal reuse/footprint experiments and stationary-control/query-bound/occluder counterexample checks in `ThermalVisionLabTests`. Added shared survey scheduling and optics checks: out-of-order/duplicate/foreign/stale completions, reset-safe work caps, complete-image publication, off-centre and rotated-camera rays, unknown hatching, reticle-clear layout and detailed capture work limits. Added `thermal-vision-rays <out>` synthetic sensor study with palette previews, resolution aliasing and query-workload arithmetic; tests check nearest-hit occlusion and estimate/no-return semantics. Indexed `ThermalVisionTests`: palette luminance ordering, cold-scene contrast, invalid samples/windows, configurable-window bounds and viewpoint loss for the opt-in rendering probe. Shared eligibility regressions cover client context, character ownership, death, third-person and camera failure with explicit reactivation. Telemetry tests cover independently bounded important-event history under target churn and bounded scene coverage reporting. Scene autorange tests cover missing-data rejection, cold/hot coverage, smooth expansion/contraction, frame-rate independence, empty views and reset. Geometry tests compare early rejection with transformed world winding, including mirrored/singular fallback; scene telemetry tests cover refresh counts, stage timing samples and overlapping budget reasons and progressive-build reporting. |
 | 2026-09-04 | **`RoomMapRecyclingTests` pins `D20`.** The mapper's three-slot rotation, the two-publish read window caught while the recycling pass is in flight, cell-for-cell identity of a recycled map against a fresh one through the shared `RoomMapAssert`, and the warm-pass allocation. The snapshot suite's private map comparison moved into `RoomMapAssert` so the two suites cannot drift apart (`P5`). |
 | 2026-08-31 | **The lane rule has a checker, and the drift it found was the direction nobody looks.** `tools/lanes/lanes.py` reads a trx and cross-references the traits. Nothing was over two seconds and untagged — the lane had not rotted — but **thirteen classes were tagged while costing under half a second each**, tagged when they were expensive and left that way after the performance passes made them cheap. The thirteen run together in **1 s for 107 cases**, and untagging them left the fast lane at **4 s** while taking it from 1,768 to **1,875 cases**. Only the slow direction exits non-zero: an over-tagged class costs coverage rather than time, and failing on it would make the checker refuse to pass on a machine that ran quickly. |
 | 2026-08-26 | The fast lane had rotted to 37 s inside two days of being re-sorted, and the rule refresh brought it back to 4 s: `DesignedHullTests` was 35 s of it on its own and ten more classes had crossed two seconds untagged — `DialReachTests`, `ModHardwareRetestTests`, `SettingsDialReachTests`, `LoopDialReachTests`, `LoopCoolantMassTests`, `ScenarioTests`, `ScriptWhitelistTests`, `HeatTimeScaleTests`, `CoolantLoopTests` and `DocumentationTests`. The whole suite is 1 m 22 s over 2,001 cases on the optimised build, from 2 m 34 s over 1,884 ([performance.md](../docs/performance.md)). |
@@ -736,3 +759,13 @@ hold — `A13` was a change to how *vanilla* blocks are read, and it moved the p
 | 2026-08-22 | Fitted cooling to ships people actually built, closing the retrofit gap the balance criteria depended on. |
 | 2026-08-21 | Brought the quoted suite size onto something the suite checks, so a count in prose cannot silently become a historical curiosity. Gated the one corpus test that was running ungated — 4 m 57 s of every run since its fixture landed. |
 | 2026-08-20 | Opened the page as the suite's index: every class of tests filed under a subject, checked by `EveryTestClassIsInTheIndex`, with what each suite is *for* living in its own summary where it cannot drift from the code. |
+
+## Offline thermal vision lab
+
+Run `dotnet run --project tests/Thermodynamics.Sim -- thermal-vision /tmp/thermal-vision-lab` to generate a workload report, synthetic Cividis/white-hot depth fixtures and an adaptation trace. Add `--require-complete` to enforce the currently failing full-scene readiness gate. See [the lab guide](../docs/thermal-vision-lab.md) for scope, reproducibility and remaining engine checks. `ThermalVisionLabTests` exercises the same extraction and projection core consumed by the mod, including the large-model deferral regression, 26-view dense-hull face-oracle comparison and batched/unbatched image equivalence.
+
+The Python `ContinuousSurfaceTests` in `tools/thermal-gradient-study/test_continuous_surface.py` validate the offline continuous-temperature appearance prototype: thermal extrema, field isolation, face cancellation, budget reporting, scalar interpolation and depth ownership. Run with `python3 -m unittest discover -s tools/thermal-gradient-study -p 'test_*.py'`.
+
+`SurfaceOptimizationTests` in `tools/thermal-gradient-study/test_optimize_surface.py` checks coplanar mesh reduction against uniform fields, linear gradients, hot/cooled extrema and disconnected geometry. It runs with the same Python discovery command.
+
+`DistanceLodTests` covers projected size, nearest-first scene budgets, coarse cell bounds, minimum coverage and transition costs. `tools/thermal-gradient-study/test_distance_preview.cjs` executes the gallery scheduler against its generated HTML to guard the global limit and transitions during travel.

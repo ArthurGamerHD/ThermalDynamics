@@ -1,3 +1,4 @@
+using Thermodynamics.Presentation;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -58,6 +59,31 @@ namespace Thermodynamics.Sim
 
                 case "prefabs":
                     return PrefabCommand(args);
+
+                case "thermal-corpus-export":
+                    if (args.Length != 2) { Console.Error.WriteLine("thermal-corpus-export requires output directory"); return 1; }
+                    return ThermalCorpusExport.Run(args[1]);
+                case "thermal-vision-volumes":
+                    if (args.Length != 2) { Console.Error.WriteLine("thermal-vision-volumes requires an output directory outside the mod tree"); return 1; }
+                    Console.WriteLine(ThermalVisionVolumeLab.WriteReport(args[1]));
+                    return 2; // Counterexamples leave the full-coverage/ownership gate failing.
+
+                case "thermal-vision-reuse":
+                    if (args.Length != 2) { Console.Error.WriteLine("thermal-vision-reuse requires an output directory outside the mod tree"); return 1; }
+                    Console.WriteLine(ThermalVisionReuseLab.WriteReport(args[1]));
+                    return 0;
+
+                case "thermal-vision-rays":
+                    if (args.Length != 2) { Console.Error.WriteLine("thermal-vision-rays requires an output directory outside the mod tree"); return 1; }
+                    Console.WriteLine(ThermalVisionRayLab.WriteReport(args[1]));
+                    return 0;
+
+                case "thermal-vision":
+                    if (args.Length < 2) { Console.Error.WriteLine("thermal-vision requires an output directory outside the mod tree"); return 1; }
+                    Console.WriteLine(ThermalVisionLab.WriteReport(args[1]));
+                    if (args.Length > 2 && args[2] == "--require-complete")
+                    { Console.Error.WriteLine("Full-scene readiness gate: INCOMPLETE (see report)."); return 2; }
+                    return 0;
 
                 case "occlusion":
                     Console.Write(OcclusionLadderLab.Report());
@@ -2060,6 +2086,10 @@ namespace Thermodynamics.Sim
             Console.WriteLine("    --load                    full load instead of idle: the control, not G7");
             Console.WriteLine("  drift                   how long a client that joined stale stays wrong");
             Console.WriteLine("  inputs                  each input a client drives its sim from, degraded");
+            Console.WriteLine("  thermal-vision <out> [--require-complete]  shared rendering core, synthetic depth and readiness report");
+            Console.WriteLine("  thermal-vision-rays <out>  synthetic sensor resolution and query-workload study (not game rendering)");
+            Console.WriteLine("  thermal-vision-reuse <out>  bounded sample reuse, camera motion and new occluder counterexamples");
+            Console.WriteLine("  thermal-vision-volumes <out>  temperature ownership counterexamples; exits 2 (incomplete)");
             Console.WriteLine("  occlusion               what a terminator crossing costs at each rung of the shadow ladder");
             Console.WriteLine("  roomsweep               what the room pressure sweep costs as a grid gains compartments");
             Console.WriteLine("    --scenario shadow|sunlit|planet  --watch <s> --size N --csv <dir>");

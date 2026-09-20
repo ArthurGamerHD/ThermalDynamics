@@ -329,6 +329,7 @@ namespace Thermodynamics
             Build();
             ThermalDebugPanel.Build();
             ThermalHud.Build();
+            ThermalVisionProbe.Build();
         }
 
         private static void OnReset()
@@ -336,6 +337,7 @@ namespace Thermodynamics
             window = null;
             ThermalDebugPanel.Reset();
             ThermalHud.Reset();
+            ThermalVisionProbe.ResetHud();
         }
 
         /// <summary>

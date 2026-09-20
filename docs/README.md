@@ -58,6 +58,10 @@ in the prose. The conventions are in
 | [development.md](development.md) | Building, deploying, repo layout, conventions. |
 | [known-issues.md](known-issues.md) | Deliberate limits, open defects, and the failure patterns worth carrying forward. |
 | [engine-notes.md](engine-notes.md) | What both engines actually provide, and what an SE2 adapter would bind to. |
+| [thermal-vision-lab.md](thermal-vision-lab.md) | Selected mixed-detail thermal candidate, corpus appearance comparisons, archived experiments and explicit readiness gaps. |
+| [thermal-vision-optimization-audit.md](thermal-vision-optimization-audit.md) | Synthetic CPU/allocation measurements, retained optimizations, rejected strategies and validation limits. |
+| [thermal-vision-survey.md](thermal-vision-survey.md) | Implemented snapshot survey-scope alternative, compromises, work limits and consolidated in-game test procedure. |
+| [thermal-vision-design.md](thermal-vision-design.md) | Proposed colour/greyscale vision, suit/camera eligibility, rendering evidence and prototype acceptance criteria. |
 | [tests/README.md](../tests/README.md) | The isolated simulation environment: running the tests and scenarios. |
 | [tools/corpus/README.md](../tools/corpus/README.md) | The corpus tooling: the verdict script and the report builder. |
 
@@ -65,4 +69,5 @@ in the prose. The conventions are in
 
 | Date | Change |
 | --- | --- |
+| 2026-09-18 | Indexed the thermal vision design and feasibility assessment. |
 | 2026-08-22 | Opened, taking the documentation index off the [README](../README.md). The README is written to be pasted into the workshop and read by a player, and an index of twenty-one developer pages is not something that audience needs ([backlog.md](backlog.md) `H5`). |

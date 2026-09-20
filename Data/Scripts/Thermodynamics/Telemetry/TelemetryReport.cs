@@ -100,6 +100,7 @@ namespace Thermodynamics
             AppendClimate(sb);
             WritePerformance(sb);
             WriteOverlay(sb);
+            Telemetry.Vision.Write(sb);
             WriteSubsteps(sb);
             WriteGridTable(sb);
             WriteGridDetails(sb);
