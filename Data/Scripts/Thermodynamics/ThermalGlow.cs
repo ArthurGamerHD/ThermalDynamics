@@ -18,6 +18,10 @@ namespace Thermodynamics
 
         /// <summary>Quads submitted during the most recent draw.</summary>
         public static int LastQuads { get; private set; }
+        public static int LastHotBlocks { get; private set; }
+        public static int LastSurfaceBlocks { get; private set; }
+        public static int ActiveLights { get { return Lights.Count; } }
+        public static string LastState { get; private set; }
 
         /// <summary>
         /// Brightest a grid's heat light gets, at the moment its hottest block reaches its rating.
@@ -48,12 +52,14 @@ namespace Thermodynamics
 
         public static void Draw()
         {
-            LastQuads = 0;
+            LastQuads = LastHotBlocks = LastSurfaceBlocks = 0;
+            LastState = "no hot cues";
 
             Settings settings = Settings.Instance;
             if (settings == null || !settings.HeatGlow)
             {
                 Clear();
+                LastState = "off";
                 return;
             }
 
@@ -61,6 +67,7 @@ namespace Thermodynamics
                 || MyAPIGateway.Session == null || MyAPIGateway.Session.Camera == null)
             {
                 Clear();
+                LastState = "no client camera";
                 return;
             }
 
@@ -78,6 +85,7 @@ namespace Thermodynamics
                 if (thermals == null || thermals.LitBlocks.Count == 0) continue;
                 if (thermals.Grid == null || thermals.Grid.MarkedForClose) continue;
 
+                LastHotBlocks += thermals.LitBlocks.Count;
                 BoundingBoxD bounds = thermals.Grid.PositionComp.WorldAABB;
                 double distance = Math.Max(0.0, Vector3D.Distance(bounds.Center, eye) - bounds.HalfExtents.Length());
                 if (distance >= HeatGlowStyle.DrawRange) continue;
@@ -93,6 +101,7 @@ namespace Thermodynamics
             Extinguished.Clear();
 
             LastQuads = quads;
+            if (LastHotBlocks > 0) LastState = quads > 0 ? "submitted" : "culled";
         }
 
         /// <summary>
@@ -101,7 +110,8 @@ namespace Thermodynamics
         /// </summary>
         public static void Clear()
         {
-            LastQuads = 0;
+            LastQuads = LastHotBlocks = LastSurfaceBlocks = 0;
+            LastState = "cleared";
             Extinguished.Clear();
             foreach (KeyValuePair<long, MyLight> entry in Lights) Extinguished.Add(entry.Key);
             for (int i = 0; i < Extinguished.Count; i++) Extinguish(Extinguished[i]);
@@ -218,7 +228,8 @@ namespace Thermodynamics
                 if (fade <= 0f) continue;
 
                 Vector3 half = FaceQuad.HalfExtents(bound.Block.Min, bound.Block.Max, gridSize);
-                Vector4 colour = Colour(block) * (fade * HeatGlowStyle.SurfaceIntensity);
+                LastSurfaceBlocks++;
+                Vector4 colour = Colour(block) * fade;
 
                 for (int face = 0; face < Face.Count && quads < budget; face++)
                 {
@@ -259,7 +270,7 @@ namespace Thermodynamics
 
             MyTransparentGeometry.AddBillboardOriented(
                 GlowMaterial,
-                colour * facing,
+                HeatGlowStyle.BillboardColour(colour, facing),
                 position,
                 left,
                 up,
@@ -271,12 +282,11 @@ namespace Thermodynamics
             return true;
         }
 
-        /// <summary>Premultiplied colour: one warning ramp in RGB and its matching alpha.</summary>
+        /// <summary>Linear emission before view fades and the billboard API colour encoding.</summary>
         private static Vector4 Colour(LitBlock block)
         {
             Vector3 locus = Incandescence.Colour(block.Kelvin);
-            float glow = block.Glow;
-            return new Vector4(locus * glow, glow);
+            return HeatGlowStyle.LinearEmission(locus, block.Glow);
         }
     }
 

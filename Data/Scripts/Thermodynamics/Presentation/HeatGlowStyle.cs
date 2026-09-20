@@ -1,3 +1,5 @@
+using VRageMath;
+
 namespace Thermodynamics.Presentation
 {
     /// <summary>View-dependent shaping and work limits for the natural heat cue; see thermal-glow.md.</summary>
@@ -7,7 +9,21 @@ namespace Thermodynamics.Presentation
         public const int MaxQuads = 4000;
         public const int MaxLights = 32;
         public const float HaloScale = 1.12f;
-        public const float SurfaceIntensity = 0.7f;
+        public const float SurfaceIntensity = 8f;
+
+        /// <summary>Scene-linear emission; warning brightness is applied after decoding the sRGB locus.</summary>
+        public static Vector4 LinearEmission(Vector3 srgb, float glow)
+        {
+            float brightness = !(glow > 0f) ? 0f : glow > 1f ? 1f : glow;
+            return new Vector4(srgb.ToLinearRGB() * (brightness * SurfaceIntensity), brightness);
+        }
+
+        /// <summary>Encode only at the API boundary; CreateBillboard decodes RGB before additive rendering.</summary>
+        public static Vector4 BillboardColour(Vector4 linearEmission, float visibility)
+        {
+            float fade = !(visibility > 0f) ? 0f : visibility > 1f ? 1f : visibility;
+            return (linearEmission * fade).ToSRGB();
+        }
 
         /// <summary>Metres between the surface and glow plane, scaled for small and large grids.</summary>
         public static float StandOff(float gridSize)

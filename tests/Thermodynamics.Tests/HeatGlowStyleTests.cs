@@ -1,6 +1,7 @@
 using System;
 using Thermodynamics.Presentation;
 using Xunit;
+using VRageMath;
 
 namespace Thermodynamics.Tests
 {
@@ -10,6 +11,34 @@ namespace Thermodynamics.Tests
     /// </summary>
     public class HeatGlowStyleTests
     {
+        /// <summary>Uses the installed engine's decoder, independently of the production colour encoder.</summary>
+        [Theory]
+        [InlineData(0f, 0f)]
+        [InlineData(0.1f, 0.8f)]
+        [InlineData(0.5f, 4f)]
+        [InlineData(1f, 8f)]
+        public void EngineReceivesLinearHdrWarningRamp(float glow, float expected)
+        {
+            Vector4 emission = HeatGlowStyle.LinearEmission(new Vector3(1f, 0.5f, 0f), glow);
+            Vector4 received = HeatGlowStyle.BillboardColour(emission, 1f).ToLinearRGB();
+            Assert.Equal(expected, received.X, 4);
+            Assert.Equal(expected * 0.21404114f, received.Y, 4);
+            Assert.Equal(0f, received.Z);
+            Assert.Equal(glow, received.W);
+        }
+
+        [Fact]
+        public void DistanceAndGrazingFadeScaleRadianceWithoutChangingHue()
+        {
+            Vector4 emission = HeatGlowStyle.LinearEmission(new Vector3(1f, 0.5f, 0.25f), 1f);
+            Vector4 received = HeatGlowStyle.BillboardColour(emission * 0.5f, 0.5f).ToLinearRGB();
+            Assert.Equal(2f, received.X, 4);
+            Assert.Equal(0.42808228f, received.Y, 4);
+            Assert.Equal(0.10175218f, received.Z, 4);
+            Assert.Equal(0.25f, received.W);
+            Assert.Equal(Vector4.Zero, HeatGlowStyle.BillboardColour(emission, 0));
+        }
+
         [Theory]
         [InlineData(-1, 0)]
         [InlineData(0, 0)]
@@ -70,12 +99,20 @@ namespace Thermodynamics.Tests
         public void WarmedViewShapingAllocatesNoManagedMemory()
         {
             double sum = 0;
+            Vector3 locus = new Vector3(1f, 0.5f, 0.25f);
             for (int i = 0; i < 10000; i++)
+            {
                 sum += HeatGlowStyle.FacingFade(i * 0.0001) + HeatGlowStyle.RangeFade(i, 2000);
+                sum += HeatGlowStyle.BillboardColour(HeatGlowStyle.LinearEmission(locus, 0.5f), 0.5f).X;
+            }
             long before = GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 100000; i++)
-                sum += HeatGlowStyle.FacingFade((i % 1000) * 0.001)
-                    * HeatGlowStyle.RangeFade(i % 2500, 2000) * HeatGlowStyle.StandOff(2.5f);
+            {
+                float fade = HeatGlowStyle.FacingFade((i % 1000) * 0.001)
+                    * HeatGlowStyle.RangeFade(i % 2500, 2000);
+                sum += HeatGlowStyle.BillboardColour(HeatGlowStyle.LinearEmission(locus, 0.5f), fade).X;
+                sum += HeatGlowStyle.StandOff(2.5f);
+            }
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
             Assert.True(sum > 0);
             Assert.Equal(0, allocated);

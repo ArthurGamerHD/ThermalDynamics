@@ -441,6 +441,11 @@ namespace Thermodynamics
                     + ", block models " + ThermalBlockCatalog.ModelCount
                     + ", bridges " + ThermalBridges.Count
                     + ", validation problems " + Core.ThermalValidation.Count);
+                Reply("heat glow " + ThermalGlow.LastState
+                    + ", hot blocks " + ThermalGlow.LastHotBlocks
+                    + ", exposed/in-range blocks " + ThermalGlow.LastSurfaceBlocks
+                    + ", quads " + ThermalGlow.LastQuads
+                    + ", lights " + ThermalGlow.ActiveLights);
                 return;
             }
 
