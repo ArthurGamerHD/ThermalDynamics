@@ -18,7 +18,7 @@ namespace Thermodynamics.Harness
     /// scenario asking a qualitative question. It is the wrong thing for a balance pass, where the
     /// entire point is what the numbers *are*. This class closes the gap: mass comes from the
     /// block's component list priced through <see cref="Vanilla.ComponentMasses"/>, size and mount
-    /// faces from its <c>.sbc</c>, thermal properties from <c>Data/Cubes.xml</c>, and coolant and
+    /// faces from its <c>.sbc</c>, thermal properties from <c>Thermodynamics/Content/Data/Cubes.xml</c>, and coolant and
     /// heat-pump geometry from the same two tables the game adapter uses.
     ///
     /// Nothing here is transcribed. Change a definition and the next run measures the change,
@@ -85,9 +85,8 @@ namespace Thermodynamics.Harness
         private static string repoRoot;
 
         /// <summary>
-        /// Walks up from the running assembly for the repository root, identified by the data
-        /// files themselves rather than by a fixed depth, so this survives a change of target
-        /// framework or output layout. Same approach as <c>ShippedDefinitionTests</c>.
+        /// Walks up from the running assembly for the solution file, rather than assuming
+        /// a fixed depth, so this survives a change of target framework or output layout.
         /// </summary>
         public static string RepoRoot()
         {
@@ -108,7 +107,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>The first directory at or above <paramref name="start"/> holding the mod's data.</summary>
+        /// <summary>The first directory at or above <paramref name="start"/> holding the solution.</summary>
         private static string Above(string start)
         {
             if (string.IsNullOrEmpty(start)) return null;
@@ -116,7 +115,7 @@ namespace Thermodynamics.Harness
             DirectoryInfo directory = new DirectoryInfo(start);
             while (directory != null)
             {
-                if (File.Exists(Path.Combine(directory.FullName, "Data", "Cubes.xml")))
+                if (File.Exists(Path.Combine(directory.FullName, "ThermalDynamics.sln")))
                 {
                     return directory.FullName;
                 }
@@ -135,6 +134,23 @@ namespace Thermodynamics.Harness
         private static string SourceDirectory([CallerFilePath] string file = "")
         {
             return string.IsNullOrEmpty(file) ? null : Path.GetDirectoryName(file);
+        }
+
+        /// <summary>Path to the mod's data after the MDK2 content-layout migration.</summary>
+        public static string DataRoot()
+        {
+            return Path.Combine(ContentRoot(), "Data");
+        }
+        
+        /// <summary>Path to the mod's data after the MDK2 content-layout migration.</summary>
+        public static string ContentRoot()
+        {
+            return Path.Combine(ModRoot(), "Content");
+        }
+        
+        public static string ModRoot()
+        {
+            return Path.Combine(RepoRoot(), "Thermodynamics");
         }
 
         /// <summary>Every block the mod ships, keyed by subtype.</summary>
@@ -216,7 +232,7 @@ namespace Thermodynamics.Harness
         private static Dictionary<string, Definition> Load()
         {
             Dictionary<string, Definition> blocks = new Dictionary<string, Definition>(StringComparer.Ordinal);
-            string folder = Path.Combine(RepoRoot(), "Data", "CubeBlocks");
+            string folder = Path.Combine(DataRoot(), "CubeBlocks");
 
             foreach (string file in Directory.GetFiles(folder, "*.sbc"))
             {
@@ -370,7 +386,7 @@ namespace Thermodynamics.Harness
                 new Dictionary<string, Function>(StringComparer.Ordinal);
             BlockThermalProperties fallback = null;
 
-            XDocument cubes = XDocument.Load(Path.Combine(RepoRoot(), "Data", "Cubes.xml"));
+            XDocument cubes = XDocument.Load(Path.Combine(DataRoot(), "Cubes.xml"));
             foreach (XElement element in cubes.Descendants("Definition"))
             {
                 XElement id = element.Element("Id");

@@ -32,7 +32,7 @@ namespace Thermodynamics.Tests
         private static string Source()
         {
             return File.ReadAllText(Path.Combine(
-                RepoRoot(), "Data", "Scripts", "Thermodynamics", "Settings.cs"));
+                RepoRoot(), "Thermodynamics", "Settings.cs"));
         }
 
         private static readonly Regex Declaration = new Regex(
@@ -340,7 +340,7 @@ namespace Thermodynamics.Tests
                 ClampLines(MethodBody(Source(), "private void Clamp()"));
             Dictionary<string, string> solver = ClampLines(MethodBody(
                 File.ReadAllText(Path.Combine(RepoRoot(),
-                    "Data", "Scripts", "Thermodynamics", "Core", "Settings", "ThermalSettings.cs")),
+                    "Thermodynamics", "Core", "Settings", "ThermalSettings.cs")),
                 "public ThermalSettings Derive()"));
 
             List<string> differ = new List<string>();

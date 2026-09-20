@@ -67,8 +67,7 @@ namespace Thermodynamics.Tests
         /// <summary>Every <c>methods["Name"] = Guard(new Func&lt;…&gt;(…), …)</c> in the API table.</summary>
         private static Dictionary<string, string> ApiTable()
         {
-            string source = File.ReadAllText(Path.Combine(RepoRoot(),
-                "Data", "Scripts", "Thermodynamics", "ThermalApi.cs"));
+            string source = File.ReadAllText(Path.Combine(RepoRoot(), "Thermodynamics", "ThermalApi.cs"));
 
             Dictionary<string, string> shapes = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (Match match in Regex.Matches(source, @"methods\[""(\w+)""\]"))
@@ -152,7 +151,7 @@ namespace Thermodynamics.Tests
         public void TheClientChannelAndVersionMatchTheMod()
         {
             string apiSource = File.ReadAllText(Path.Combine(RepoRoot(),
-                "Data", "Scripts", "Thermodynamics", "ThermalApi.cs"));
+                "Thermodynamics", "ThermalApi.cs"));
             string clientSource = File.ReadAllText(Path.Combine(RepoRoot(),
                 "tools", "modkit", "ThermalDynamicsApi.cs"));
 

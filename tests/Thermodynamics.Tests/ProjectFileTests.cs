@@ -38,7 +38,7 @@ namespace Thermodynamics.Tests
         public static IEnumerable<object[]> MsBuildFiles()
         {
             string root = ShippedBlocks.RepoRoot();
-            string[] patterns = { "*.csproj", "*.props", "*.targets", "*.slnx" };
+            string[] patterns = { "*.csproj", "*.props", "*.targets", "*.slnx"};
 
             foreach (string pattern in patterns)
             {

@@ -38,7 +38,7 @@ namespace Thermodynamics.Tests
         private static Dictionary<string, float> Defaults()
         {
             string source = File.ReadAllText(Path.Combine(ShippedBlocks.RepoRoot(),
-                "Data", "Scripts", "Thermodynamics", "Settings.cs"));
+                "Thermodynamics", "Settings.cs"));
 
             Dictionary<string, float> defaults = new Dictionary<string, float>(StringComparer.Ordinal);
 
@@ -167,9 +167,9 @@ namespace Thermodynamics.Tests
         public void TheMenuRendersTheSentenceIntoEveryDialsTip()
         {
             string menu = File.ReadAllText(Path.Combine(ShippedBlocks.RepoRoot(),
-                "Data", "Scripts", "Thermodynamics", "ThermalSettingsMenu.cs"));
+                "Thermodynamics", "ThermalSettingsMenu.cs"));
             string window = File.ReadAllText(Path.Combine(ShippedBlocks.RepoRoot(),
-                "Data", "Scripts", "Thermodynamics", "ThermalSettingsWindow.cs"));
+                "Thermodynamics", "ThermalSettingsWindow.cs"));
 
             // The one builder, appending the sentence in the one place a tooltip is made.
             Assert.Equal(1, Occurrences(menu, "internal static ToolTip TipFor"));

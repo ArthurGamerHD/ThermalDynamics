@@ -257,7 +257,7 @@ namespace Thermodynamics.Tests
         [InlineData("CriticalTemperatureScaler", "OverheatDamagePerKelvin")]
         public void TheRetiredPropertyNamesAreStillRead(string legacy, string current)
         {
-            string cubes = File.ReadAllText(Path.Combine(ShippedBlocks.RepoRoot(), "Data", "Cubes.xml"));
+            string cubes = File.ReadAllText(Path.Combine(ShippedBlocks.DataRoot(), "Cubes.xml"));
 
             Assert.Contains(current, cubes);
             Assert.DoesNotContain(legacy + "\"", cubes);

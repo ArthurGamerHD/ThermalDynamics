@@ -44,11 +44,6 @@ namespace Thermodynamics.Tests
         /// <summary>The account the workshop item belongs to.</summary>
         private const string SteamIdOwner = "76561198079985653";
 
-        private static string RepoRoot()
-        {
-            return ShippedBlocks.RepoRoot();
-        }
-
         /// <summary>
         /// **The workshop id is the one this mod has always been published under** (`R5`).
         ///
@@ -59,7 +54,7 @@ namespace Thermodynamics.Tests
         [Fact]
         public void TheWorkshopIdentityIsTheOneTheModIsPublishedUnder()
         {
-            string path = Path.Combine(RepoRoot(), "modinfo.sbmi");
+            string path = Path.Combine(ShippedBlocks.RepoRoot(), "Workshop", "modinfo.sbmi");
             Assert.True(File.Exists(path), "modinfo.sbmi is gone, which is the whole failure");
 
             XDocument info = XDocument.Load(path);
@@ -98,7 +93,7 @@ namespace Thermodynamics.Tests
         [Fact]
         public void TheSecondIdentityFileIsStillThere()
         {
-            string path = Path.Combine(RepoRoot(), "metadata.mod");
+            string path = Path.Combine(ShippedBlocks.RepoRoot(), "Workshop", "metadata.mod");
             Assert.True(File.Exists(path),
                 "metadata.mod is gone; the workshop identity is two files and this is the other one");
         }
@@ -124,13 +119,13 @@ namespace Thermodynamics.Tests
         [Fact]
         public void TheModelTreeKeepsItsShape()
         {
-            string models = Path.Combine(RepoRoot(), "Models");
+            string models = Path.Combine(ShippedBlocks.ContentRoot(), "Models");
             Assert.True(Directory.Exists(models), "Models/ is gone");
 
             List<string> paths = new List<string>();
             foreach (string file in Directory.GetFiles(models, "*.mwm", SearchOption.AllDirectories))
             {
-                paths.Add(file.Substring(RepoRoot().Length)
+                paths.Add(file.Substring(ShippedBlocks.ContentRoot().Length)
                     .TrimStart('/', '\\').Replace('\\', '/'));
             }
 

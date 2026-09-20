@@ -4,6 +4,7 @@
     <AssemblyName>Thermodynamics.Harness</AssemblyName>
     <RootNamespace>Thermodynamics.Harness</RootNamespace>
     <LangVersion>latest</LangVersion>
+    <SpaceEngineersBinCopyLocal>true</SpaceEngineersBinCopyLocal>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,10 +28,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="VRage.Math">
-      <HintPath>$(SEBinPath)/VRage.Math.dll</HintPath>
-      <Private>true</Private>
-    </Reference>
+    <PackageReference Include="Mal.Mdk2.References" Version="2.2.9">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

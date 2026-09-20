@@ -259,7 +259,7 @@ namespace Thermodynamics.Tests
         public void BothParsersKnowTheSamePropertyNames()
         {
             string source = System.IO.File.ReadAllText(System.IO.Path.Combine(
-                ShippedBlocks.RepoRoot(), "Data", "Scripts", "Thermodynamics",
+                ShippedBlocks.RepoRoot(), "Thermodynamics",
                 "Definitions", "ThermalCellDefinition.cs"));
 
             // Names the in-game reader asks Definition Extensions for.

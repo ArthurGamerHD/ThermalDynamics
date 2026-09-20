@@ -42,7 +42,7 @@ namespace Thermodynamics.Tests
         private static Dictionary<string, string> Declared()
         {
             string source = File.ReadAllText(Path.Combine(RepoRoot(),
-                "Data", "Scripts", "Thermodynamics", "ThermalApi.cs"));
+                "Thermodynamics", "ThermalApi.cs"));
 
             Dictionary<string, string> shapes = new Dictionary<string, string>(StringComparer.Ordinal);
 
@@ -104,7 +104,7 @@ namespace Thermodynamics.Tests
         public void EveryEntryInTheTableIsWrappedSoItCannotThrowIntoItsCaller()
         {
             string source = File.ReadAllText(Path.Combine(RepoRoot(),
-                "Data", "Scripts", "Thermodynamics", "ThermalApi.cs"));
+                "Thermodynamics", "ThermalApi.cs"));
 
             List<string> bare = new List<string>();
 
@@ -265,7 +265,7 @@ namespace Thermodynamics.Tests
         private static int DeclaredVersion()
         {
             string source = File.ReadAllText(Path.Combine(RepoRoot(),
-                "Data", "Scripts", "Thermodynamics", "ThermalApi.cs"));
+                "Thermodynamics", "ThermalApi.cs"));
 
             Match match = Regex.Match(source, @"public\s+const\s+int\s+Version\s*=\s*(\d+)");
             Assert.True(match.Success, "ThermalApi.cs declares no `public const int Version`");

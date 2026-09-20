@@ -18,22 +18,18 @@ namespace Thermodynamics.Tests
     /// </summary>
     public class DefinitionFileTests
     {
-        private static string DataRoot()
-        {
-            return Path.Combine(ShippedBlocks.RepoRoot(), "Data");
-        }
 
         /// <summary>The files definitionextensions.txt names, which is what the importer walks.</summary>
         private static List<string> ExtensionFiles()
         {
-            string manifest = Path.Combine(DataRoot(), "definitionextensions.txt");
+            string manifest = Path.Combine(ShippedBlocks.DataRoot(), "definitionextensions.txt");
             Assert.True(File.Exists(manifest), "definitionextensions.txt missing");
 
             List<string> files = new List<string>();
             foreach (string line in File.ReadAllLines(manifest))
             {
                 string name = line.Trim();
-                if (name.Length > 0) files.Add(Path.Combine(DataRoot(), name));
+                if (name.Length > 0) files.Add(Path.Combine(ShippedBlocks.DataRoot(), name));
             }
 
             Assert.NotEmpty(files);
@@ -106,7 +102,7 @@ namespace Thermodynamics.Tests
         public void PlanetsCarryTheGeneratorSubtypesTheLookupAsksFor()
         {
             XmlDocument document = new XmlDocument();
-            document.Load(Path.Combine(DataRoot(), "Planets.xml"));
+            document.Load(Path.Combine(ShippedBlocks.DataRoot(), "Planets.xml"));
 
             HashSet<string> subtypes = new HashSet<string>();
             foreach (XmlNode id in document.SelectNodes(

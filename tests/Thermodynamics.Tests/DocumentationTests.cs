@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
+using Thermodynamics.Harness;
 
 namespace Thermodynamics.Tests
 {
@@ -350,7 +351,7 @@ namespace Thermodynamics.Tests
         /// <summary>Values authored in `Cubes.xml`, which is every Decimal and Bool in it.</summary>
         private static int AuthoredValueCount()
         {
-            string path = Path.Combine(RepoRoot(), "Data", "Cubes.xml");
+            string path = Path.Combine(ShippedBlocks.DataRoot(), "Cubes.xml");
             if (!File.Exists(path)) return -1;
 
             return Regex.Matches(File.ReadAllText(path), @"<(?:Decimal|Bool)\s+Name=").Count;
@@ -362,7 +363,7 @@ namespace Thermodynamics.Tests
         /// </summary>
         private static int WasteFractionCount()
         {
-            string path = Path.Combine(RepoRoot(), "Data", "Cubes.xml");
+            string path = Path.Combine(ShippedBlocks.DataRoot(), "Cubes.xml");
             if (!File.Exists(path)) return -1;
 
             return Regex.Matches(File.ReadAllText(path),
@@ -716,7 +717,7 @@ namespace Thermodynamics.Tests
         public void EveryPropertyTheGameReadsIsInTheReference(string file, string group, int least)
         {
             string reader = File.ReadAllText(Path.Combine(RepoRoot(),
-                "Data", "Scripts", "Thermodynamics", "Definitions", file));
+                "Thermodynamics", "Definitions", file));
 
             HashSet<string> read = new HashSet<string>(StringComparer.Ordinal);
             foreach (Match match in Regex.Matches(reader, @"GetOrCompute\(""(\w+)""\)"))
@@ -766,7 +767,7 @@ namespace Thermodynamics.Tests
         public void EveryModApiEntryIsDocumented()
         {
             string api = File.ReadAllText(Path.Combine(RepoRoot(),
-                "Data", "Scripts", "Thermodynamics", "ThermalApi.cs"));
+                "Thermodynamics", "ThermalApi.cs"));
 
             List<string> keys = new List<string>();
             foreach (Match match in Regex.Matches(api, @"methods\[""(\w+)""\]"))
@@ -880,7 +881,7 @@ namespace Thermodynamics.Tests
         {
             string[] roots =
             {
-                Path.Combine(RepoRoot(), "Data", "Scripts", "Thermodynamics"),
+                Path.Combine(RepoRoot(), "Thermodynamics"),
                 Path.Combine(RepoRoot(), "tests"),
             };
 

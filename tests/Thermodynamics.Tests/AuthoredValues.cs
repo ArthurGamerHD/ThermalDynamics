@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Xml.Linq;
+using Thermodynamics.Harness;
 
 namespace Thermodynamics.Tests
 {
@@ -47,7 +48,7 @@ namespace Thermodynamics.Tests
         {
             List<Entry> found = new List<Entry>();
 
-            string path = Path.Combine(RepoRoot(), "Data", "Cubes.xml");
+            string path = Path.Combine(ShippedBlocks.DataRoot(), "Cubes.xml");
             XDocument document = XDocument.Load(path, LoadOptions.PreserveWhitespace);
 
             foreach (XElement definition in document.Descendants("Definition"))

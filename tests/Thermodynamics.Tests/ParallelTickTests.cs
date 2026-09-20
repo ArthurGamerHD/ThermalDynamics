@@ -33,7 +33,7 @@ namespace Thermodynamics.Tests
         private static string Source(string file)
         {
             return File.ReadAllText(Path.Combine(
-                RepoRoot(), "Data", "Scripts", "Thermodynamics", "Game", file));
+                RepoRoot(), "Thermodynamics", "Game", file));
         }
 
         /// <summary>
@@ -129,7 +129,7 @@ namespace Thermodynamics.Tests
         public void TheParallelPathShipsOff()
         {
             string settings = File.ReadAllText(Path.Combine(
-                RepoRoot(), "Data", "Scripts", "Thermodynamics", "Settings.cs"));
+                RepoRoot(), "Thermodynamics", "Settings.cs"));
 
             Assert.Contains("public bool ParallelGrids = false;", settings);
         }

@@ -1,21 +1,4 @@
 <Project>
-
-  <!--
-    The root props sends build output outside the mod folder; see the note there. MSBuild stops at
-    the first Directory.Build.props it finds walking up, so this one has to ask for the parent
-    explicitly or the sim projects would keep writing their bin/ and obj/ into the published tree.
-  -->
-  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
-
-  <!--
-    Shared settings for the isolated simulation environment.
-
-    The only Space Engineers assembly any of these projects reference is VRage.Math.dll,
-    which is pure managed math (Vector3I, Vector3, Matrix, BoundingBox, Base6Directions)
-    and loads fine on .NET on Linux. Everything else is plain C#. $(SEBinPath) and the check
-    that it resolved are in the root props, because the mod project needs them too.
-  -->
-
   <PropertyGroup>
     <!--
       Server GC. The corpus passes parse tens of gigabytes of XML across thirty-one workers, which
@@ -80,9 +63,9 @@
     -->
     <NoWarn>$(NoWarn);CS1573;CS0419</NoWarn>
     <WarningsAsErrors>$(WarningsAsErrors);CS1570;CS1572;CS1574;CS1580;CS1581;CS1584;CS1587;CS1710;CS1734</WarningsAsErrors>
-    <CoreSourceRoot>$(MSBuildThisFileDirectory)../Data/Scripts/Thermodynamics/Core/</CoreSourceRoot>
-    <TelemetrySourceRoot>$(MSBuildThisFileDirectory)../Data/Scripts/Thermodynamics/Telemetry/</TelemetrySourceRoot>
-    <GameSourceRoot>$(MSBuildThisFileDirectory)../Data/Scripts/Thermodynamics/Game/</GameSourceRoot>
+    <CoreSourceRoot>$(MSBuildThisFileDirectory)../Thermodynamics/Core/</CoreSourceRoot>
+    <TelemetrySourceRoot>$(MSBuildThisFileDirectory)../Thermodynamics/Telemetry/</TelemetrySourceRoot>
+    <GameSourceRoot>$(MSBuildThisFileDirectory)../Thermodynamics/Game/</GameSourceRoot>
   </PropertyGroup>
 
 </Project>
