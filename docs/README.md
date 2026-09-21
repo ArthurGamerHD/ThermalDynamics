@@ -58,6 +58,7 @@ in the prose. The conventions are in
 | [development.md](development.md) | Building, deploying, repo layout, conventions. |
 | [known-issues.md](known-issues.md) | Deliberate limits, open defects, and the failure patterns worth carrying forward. |
 | [engine-notes.md](engine-notes.md) | What both engines actually provide, and what an SE2 adapter would bind to. |
+| [thermal-glow.md](thermal-glow.md) | Natural overheating glow, reference evidence, acceptance criteria and rendering limits. |
 | [thermal-vision-lab.md](thermal-vision-lab.md) | Selected mixed-detail thermal candidate, corpus appearance comparisons, archived experiments and explicit readiness gaps. |
 | [thermal-vision-optimization-audit.md](thermal-vision-optimization-audit.md) | Synthetic CPU/allocation measurements, retained optimizations, rejected strategies and validation limits. |
 | [thermal-vision-survey.md](thermal-vision-survey.md) | Implemented snapshot survey-scope alternative, compromises, work limits and consolidated in-game test procedure. |
@@ -69,5 +70,6 @@ in the prose. The conventions are in
 
 | Date | Change |
 | --- | --- |
+| 2026-09-20 | Index the natural overheating glow design and validation record. |
 | 2026-09-18 | Indexed the thermal vision design and feasibility assessment. |
 | 2026-08-22 | Opened, taking the documentation index off the [README](../README.md). The README is written to be pasted into the workshop and read by a player, and an index of twenty-one developer pages is not something that audience needs ([backlog.md](backlog.md) `H5`). |

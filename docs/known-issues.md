@@ -240,14 +240,51 @@ balance question, not a code one.
 
 ---
 
-### Armour cannot glow, and no block without an emissive material can
+### Failed telemetry teardown can poison the next world load
 
-The block glow is written through the model's emissive material, which is the only per-block
-rendering channel the engine exposes to a mod. A model that has none — armour, most structural
-blocks — takes the write and shows nothing. **That is a limit on models rather than on the physics**,
-and it is why the cue that warns a pilot is keyed to each block's own rating and carried by sound:
-between the two channels, what the glow cannot reach the cue can. See
-[document-of-intent.md](document-of-intent.md#natural-feedback--built).
+The 2026-09-20 session log records Telemetry.Reset throwing NullReferenceException at 12:25:31.720
+inside Session.UnloadData, followed by the engine's "Failed to cleanly unload session" report.
+The next load emits duplicate definitions, then fails in MyBlockVariantGroup.ResolveBlocks at
+12:25:37.532. The same process completes block-group initialization at 12:10:40 and 12:17:48.
+This sequence strongly implicates incomplete teardown; it is not proof of which object was null
+inside Reset, because the game stack has no source line and may inline calls.
+
+The installed ResolveBlocks consumes its pending ID array and sets it to null. Calling it again
+on an already-resolved object can produce the observed exception. Both variant groups shipped by
+this mod have nonempty Blocks arrays and all 14 references resolve against the shipped cube-block
+SBCs. The pre-existing cross-size pairing warnings also occur on successful loads, so changing
+block IDs or variant membership is not justified by this crash.
+
+Session teardown now runs each cleanup stage independently and logs each failure through MyLog,
+so a failed report/reset cannot skip light removal, callback unregistration, definition cleanup
+or the base unload. Telemetry detachment tolerates null grid entries and absent simulations;
+these are defensive checks, not a claim to have reproduced the exact null from the game.
+SessionCleanupTests injects a reset failure and a second cleanup failure, verifies later stages
+still run and both errors are reported, and checks the actual Session.UnloadData routes through
+that boundary. The helper requires a nonthrowing reporting callback; the adapter uses MyLog.
+
+Offline validation: the full Release solution compiles with zero errors against the installed
+SE1 assemblies; 91 selected tests pass with zero failures/skips, including three SessionCleanupTests
+and documentation, whitelist-syntax, telemetry and glow checks. The command uses the filter
+`FullyQualifiedName~SessionCleanupTests|FullyQualifiedName~DocumentationTests|FullyQualifiedName~ScriptWhitelistTests|FullyQualifiedName~TelemetryAnomalyTests|FullyQualifiedName~TelemetryFormatTests|FullyQualifiedName~ThermalVisionTelemetryTests|FullyQualifiedName~HeatGlowStyleTests`
+with the build/test procedure in [development.md](development.md#building). Local output is in
+`/tmp/thermal-unload-build.log`, `/tmp/thermal-unload-tests.log` and
+`/tmp/thermal-glow-results/unload-regression.trx`. The injected failures exercise the shared cleanup
+runner, not the live engine or the unidentified null inside Reset; no frame-time claim is made.
+
+Recovery from an already-aborted unload requires a complete game exit and fresh launch, rather
+than another reload in the same process. A post-fix live restart/reload remains to be observed.
+The subsequent AccessViolationException in this incident does not, by itself, establish damaged
+hardware or a corrupt save. Evidence source: SpaceEngineers_20260920_121018166.log.
+
+### Heat glow is a surface approximation
+
+Armour and blocks without emissive materials receive the drawn soft heat glow. Only the additional
+emissive-material write depends on model support. Radial patches use exposed bounding faces;
+they do not follow slopes, holes, deformation or moving subparts exactly. Depth testing prevents
+ordinary through-wall patches, while shadowless heat lights can leak through walls. The 4,000-quad
+and 32-light limits can omit effects in overloaded scenes. No live game visual acceptance is
+claimed for this replacement; see [thermal-glow.md](thermal-glow.md) for its verification scope.
 
 ### The whitelist is not the assemblies, and building the mod project does not check it
 
@@ -1131,6 +1168,8 @@ counters rather than milliseconds so it holds on any machine.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-20 | Trace the block-variant load crash to an earlier failed telemetry unload; document cleanup isolation and restart recovery. |
+| 2026-09-20 | Correct the obsolete armour-emissive limitation; record bounding-face glow and shadowless-light limits. |
 | 2026-09-04 | **Re-took the memory paragraph**: 723 B/block retained (88.9 MB at 126,731 blocks) against the 1.8 KB and 213 MB it carried — the figure predated most of the passes on [memory.md](memory.md). |
 | 2026-09-04 | **Corrected the first-step warm-up in place (`E10`)**: the spike was never mostly first touch — measured, the faults are one to two milliseconds of it — and since the step prologue moved onto the rebuild tick the first step is ~1.5× a steady one, not several times. The sunlit sun-shadow build is the remaining tail. |
 | 2026-08-28 | **Corrected the room map's convergence figure, which had been stale for nine days and was quoted here from `D2`** (`E10`, `E5`). It read 7,207 ticks — twenty minutes — on a million blocks; re-measured by `bench scale --max 1000000` it is **3,934 ticks, about eleven minutes**, on 1,000,294 blocks and a 14,278,796-cell box. The 7,207 predated the 2026-08-26 word skip and the 2026-08-27 span flood, both of which `D2`'s own body already recorded — the headline outlived the paragraph that superseded it. **And the figure is structural**: convergence is the box over a 4,096-cell tick budget, so no work on milliseconds a cell can move it, which `RoomMapConvergenceIsTheBoxDividedByItsBudget` now pins. |

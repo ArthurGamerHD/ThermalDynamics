@@ -391,7 +391,8 @@ namespace Thermodynamics
             IList<ThermalGrid> live = ThermalGrid.LiveGrids;
             for (int i = 0; i < live.Count; i++)
             {
-                live[i].RefreshTelemetry();
+                ThermalGrid grid = live[i];
+                if (grid != null) grid.RefreshTelemetry();
             }
         }
 

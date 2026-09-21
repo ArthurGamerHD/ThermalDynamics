@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Sandbox.Game.Lights;
 using Sandbox.ModAPI;
 using Thermodynamics.Core;
+using Thermodynamics.Presentation;
 using VRage.Game;
 using VRage.Utils;
 using VRageMath;
@@ -10,56 +11,17 @@ using static VRageRender.MyBillboard;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// A hot block drawn glowing: one additive quad over each of its exposed faces, coloured by the
-    /// Planckian locus and brightened by how near the block is to failing.
-    ///
-    /// <para>
-    /// **The emissive path could not carry this and the measurement is why.**
-    /// <c>MyCubeBlock.UpdateEmissiveParts</c> writes to a named material in the block's model, and
-    /// of the 1,992 base cube models the game ships **418 hold one** — of 479 armour models, four.
-    /// Where the material does exist it is a status lamp rather than a skin. So the emissive write
-    /// is kept, because a lamp that goes red on a hot reactor is right, and it is not the channel.
-    /// See document-of-intent.md, Natural feedback.
-    /// </para>
-    ///
-    /// <para>
-    /// **Exposed faces only**, which is both the cheap answer and the correct one: a face buried
-    /// inside a hull cannot be seen, and the solver already knows which faces those are.
-    /// </para>
-    ///
-    /// <para>
-    /// Client side, per frame, transparent geometry; nothing is written to the grid. A grid with no
-    /// glowing block costs a count, which is the same floor the cue pass holds itself to.
-    /// </para>
-    /// </summary>
+    /// <summary>Soft additive heat patches and bounded nearby heat lights; see thermal-glow.md.</summary>
     public static class ThermalGlow
     {
-        /// <summary>A flat white square: the face is filled, so its corners glow like its middle.</summary>
-        private static readonly MyStringId GlowMaterial = MyStringId.GetOrCompute("Square");
+        private static readonly MyStringId GlowMaterial = MyStringId.GetOrCompute("GaugeHeatGlow");
 
-        /// <summary>
-        /// Metres the quad stands off the hull. Enough to clear the surface it covers at any range
-        /// the glow is legible at, small enough not to read as a shell around the block.
-        /// </summary>
-        private const float StandOff = 0.03f;
-
-        /// <summary>
-        /// Metres beyond which a glowing block is not drawn. A glow is a warning to the person
-        /// flying the ship, and past this it is a pixel.
-        /// </summary>
-        private const double DrawRange = 2000.0;
-
-        /// <summary>
-        /// Quads handed to the renderer in one frame, across every grid.
-        ///
-        /// A hull with a thousand blocks over their rating is the case this exists for: the glow is
-        /// already the whole ship by then, and the blocks past the cap are the ones furthest away.
-        /// </summary>
-        private const int MaxQuads = 4000;
-
-        /// <summary>Quads drawn last frame, for the telemetry row.</summary>
+        /// <summary>Quads submitted during the most recent draw.</summary>
         public static int LastQuads { get; private set; }
+        public static int LastHotBlocks { get; private set; }
+        public static int LastSurfaceBlocks { get; private set; }
+        public static int ActiveLights { get { return Lights.Count; } }
+        public static string LastState { get; private set; }
 
         /// <summary>
         /// Brightest a grid's heat light gets, at the moment its hottest block reaches its rating.
@@ -90,17 +52,24 @@ namespace Thermodynamics
 
         public static void Draw()
         {
-            LastQuads = 0;
+            LastQuads = LastHotBlocks = LastSurfaceBlocks = 0;
+            LastState = "no hot cues";
 
             Settings settings = Settings.Instance;
             if (settings == null || !settings.HeatGlow)
             {
                 Clear();
+                LastState = "off";
                 return;
             }
 
-            if (MyAPIGateway.Utilities == null || MyAPIGateway.Utilities.IsDedicated) return;
-            if (MyAPIGateway.Session == null || MyAPIGateway.Session.Camera == null) return;
+            if (MyAPIGateway.Utilities == null || MyAPIGateway.Utilities.IsDedicated
+                || MyAPIGateway.Session == null || MyAPIGateway.Session.Camera == null)
+            {
+                Clear();
+                LastState = "no client camera";
+                return;
+            }
 
             Vector3D eye = MyAPIGateway.Session.Camera.WorldMatrix.Translation;
 
@@ -116,16 +85,23 @@ namespace Thermodynamics
                 if (thermals == null || thermals.LitBlocks.Count == 0) continue;
                 if (thermals.Grid == null || thermals.Grid.MarkedForClose) continue;
 
-                Extinguished.Remove(thermals.Grid.EntityId);
-                UpdateLight(thermals);
+                LastHotBlocks += thermals.LitBlocks.Count;
+                BoundingBoxD bounds = thermals.Grid.PositionComp.WorldAABB;
+                double distance = Math.Max(0.0, Vector3D.Distance(bounds.Center, eye) - bounds.HalfExtents.Length());
+                if (distance >= HeatGlowStyle.DrawRange) continue;
 
-                if (quads < MaxQuads) quads += DrawGrid(thermals, ref eye, MaxQuads - quads);
+                Extinguished.Remove(thermals.Grid.EntityId);
+                UpdateLight(thermals, ref eye);
+
+                if (quads < HeatGlowStyle.MaxQuads)
+                    quads += DrawGrid(thermals, ref eye, HeatGlowStyle.MaxQuads - quads);
             }
 
             for (int i = 0; i < Extinguished.Count; i++) Extinguish(Extinguished[i]);
             Extinguished.Clear();
 
             LastQuads = quads;
+            if (LastHotBlocks > 0) LastState = quads > 0 ? "submitted" : "culled";
         }
 
         /// <summary>
@@ -134,6 +110,8 @@ namespace Thermodynamics
         /// </summary>
         public static void Clear()
         {
+            LastQuads = LastHotBlocks = LastSurfaceBlocks = 0;
+            LastState = "cleared";
             Extinguished.Clear();
             foreach (KeyValuePair<long, MyLight> entry in Lights) Extinguished.Add(entry.Key);
             for (int i = 0; i < Extinguished.Count; i++) Extinguish(Extinguished[i]);
@@ -158,7 +136,7 @@ namespace Thermodynamics
         /// Sets one grid's heat light from the blocks it has glowing: the glow-weighted centre of
         /// them, the colour of its hottest, and a range that covers the set.
         /// </summary>
-        private static void UpdateLight(ThermalGrid thermals)
+        private static void UpdateLight(ThermalGrid thermals, ref Vector3D eye)
         {
             GlowRegion region;
             Vector3D centre;
@@ -169,9 +147,19 @@ namespace Thermodynamics
                 return;
             }
 
+            float lightRange = Math.Min(LightRangeCap, radius + LightReach);
+            float fade = HeatGlowStyle.RangeFade(Math.Max(0.0,
+                Vector3D.Distance(centre, eye) - lightRange), 200.0);
+            if (fade <= 0f)
+            {
+                Extinguish(thermals.Grid.EntityId);
+                return;
+            }
+
             MyLight light;
             if (!Lights.TryGetValue(thermals.Grid.EntityId, out light) || light == null)
             {
+                if (Lights.Count >= HeatGlowStyle.MaxLights) return;
                 light = MyLights.AddLight();
                 if (light == null) return;
 
@@ -186,8 +174,8 @@ namespace Thermodynamics
 
             light.Position = centre;
             light.Color = new Color(locus);
-            light.Intensity = region.Glow * LightIntensity;
-            light.Range = Math.Min(LightRangeCap, radius + LightReach);
+            light.Intensity = region.Glow * LightIntensity * fade;
+            light.Range = lightRange;
             light.LightOn = true;
             light.MarkPositionDirty();
             light.UpdateLight();
@@ -235,15 +223,18 @@ namespace Thermodynamics
 
                 Vector3D centre;
                 bound.Block.ComputeWorldCenter(out centre);
-                if (Vector3D.DistanceSquared(centre, eye) > DrawRange * DrawRange) continue;
+                double distance = Vector3D.Distance(centre, eye);
+                float fade = HeatGlowStyle.RangeFade(distance, HeatGlowStyle.DrawRange);
+                if (fade <= 0f) continue;
 
                 Vector3 half = FaceQuad.HalfExtents(bound.Block.Min, bound.Block.Max, gridSize);
-                Vector4 colour = Colour(block);
+                LastSurfaceBlocks++;
+                Vector4 colour = Colour(block) * fade;
 
                 for (int face = 0; face < Face.Count && quads < budget; face++)
                 {
                     if (node.GetExposedFaces(face) == 0) continue;
-                    if (DrawFace(face, ref centre, ref half, ref gridMatrix, ref eye, ref colour))
+                    if (DrawFace(face, ref centre, ref half, ref gridMatrix, ref eye, ref colour, gridSize))
                     {
                         quads++;
                     }
@@ -258,14 +249,18 @@ namespace Thermodynamics
         /// it is on the far side of the block that would occlude it.
         /// </summary>
         private static bool DrawFace(int face, ref Vector3D centre, ref Vector3 half,
-            ref MatrixD gridMatrix, ref Vector3D eye, ref Vector4 colour)
+            ref MatrixD gridMatrix, ref Vector3D eye, ref Vector4 colour, float gridSize)
         {
             Vector3 localNormal = Face.Normals[face];
             Vector3D normal = Vector3D.TransformNormal(localNormal, gridMatrix);
 
             float reach = FaceQuad.Extent(ref half, ref localNormal);
-            Vector3D position = centre + (normal * (reach + StandOff));
-            if (Vector3D.Dot(normal, position - eye) >= 0) return false;
+            Vector3D position = centre + (normal * (reach + HeatGlowStyle.StandOff(gridSize)));
+            Vector3D toEye = eye - position;
+            double distance = toEye.Length();
+            if (distance <= 0.0001) return false;
+            float facing = HeatGlowStyle.FacingFade(Vector3D.Dot(normal, toEye) / distance);
+            if (facing <= 0f) return false;
 
             Vector3 localLeft, localUp;
             FaceQuad.Tangents(face, out localLeft, out localUp);
@@ -275,31 +270,23 @@ namespace Thermodynamics
 
             MyTransparentGeometry.AddBillboardOriented(
                 GlowMaterial,
-                colour,
+                HeatGlowStyle.BillboardColour(colour, facing),
                 position,
                 left,
                 up,
-                FaceQuad.Extent(ref half, ref localLeft),
-                FaceQuad.Extent(ref half, ref localUp),
+                FaceQuad.Extent(ref half, ref localLeft) * HeatGlowStyle.HaloScale,
+                FaceQuad.Extent(ref half, ref localUp) * HeatGlowStyle.HaloScale,
                 Vector2.Zero,
                 BlendTypeEnum.AdditiveBottom);
 
             return true;
         }
 
-        /// <summary>
-        /// What one glowing block is drawn in.
-        ///
-        /// The colour carries no brightness and the brightness carries no colour — the locus is
-        /// normalised so its brightest channel is full — so multiplying the two here is what keeps a
-        /// dull red block dull rather than squaring its luminance. Additive blending reads the
-        /// alpha as well, so the ramp is applied once in each.
-        /// </summary>
+        /// <summary>Linear emission before view fades and the billboard API colour encoding.</summary>
         private static Vector4 Colour(LitBlock block)
         {
             Vector3 locus = Incandescence.Colour(block.Kelvin);
-            float glow = block.Glow;
-            return new Vector4(locus * glow, glow);
+            return HeatGlowStyle.LinearEmission(locus, block.Glow);
         }
     }
 

@@ -14,11 +14,9 @@ namespace Thermodynamics
     /// it heats, and a cue in the cockpit before one of them fails.
     ///
     /// <para>
-    /// The two channels are different kinds of thing and this file keeps them apart. **The glow is
-    /// a property of the block** — incandescence, from <see cref="Incandescence"/>, keyed to
-    /// temperature alone and identical for every block in the game. **The sound is information for
-    /// the pilot**, keyed to each block's own rating, and it is why the audio covers the quarter of
-    /// the game that fails before it ever glows. See document-of-intent.md, Natural feedback.
+    /// The glow's brightness follows the last 100 K before the block's rating; its colour follows
+    /// absolute temperature. Sound reaches the pilot when a hot block is hidden or off screen.
+    /// See document-of-intent.md, Natural feedback.
     /// </para>
     ///
     /// <para>

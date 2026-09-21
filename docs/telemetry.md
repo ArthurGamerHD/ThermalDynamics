@@ -404,6 +404,11 @@ record could outlive the clock its timestamps came from and go on accumulating o
 aggregate. It now detaches those references with the list. Whether that was the cause is a question
 for the next dump — a report written while the world was closing could equally explain it.
 
+Telemetry reset runs inside the session's independent cleanup stages. If it throws, the error is
+reported and the remaining unload actions still execute. The live-grid detachment checks for null
+entries and missing simulations. The failed-unload incident and its evidence are recorded in
+[known-issues.md](known-issues.md#failed-telemetry-teardown-can-poison-the-next-world-load).
+
 ## Grid heat balance
 
 `vented W` and `made W` per grid: what the grid sheds to its surroundings by radiation and
@@ -833,6 +838,7 @@ rest.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-20 | Document fault-isolated teardown after the live Telemetry.Reset unload exception. |
 | 2026-09-18 | Added bounded client thermal-probe telemetry, outcome and CPU summaries, recent model/viewpoint events and tester notes in the normal report. |
 | 2026-08-25 | Two headings described what a row *used to* be rather than what it is (`R12`). `build` is a root of its own; the per-mechanism watts row is the one hardest to make free. |
 | 2026-08-22 | Renamed `game_temperature` to `game_comfort`. `GetTemperatureInPoint` returns a 0..1 fraction and zero wherever there is no oxygen, so the old name claimed two things it is not ([backlog.md](backlog.md) `B23`). A dump written under the old name is still read, and `TheComfortColumnIsReadableUnderEitherName` keeps it that way. |

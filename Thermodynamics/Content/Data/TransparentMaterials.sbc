@@ -1,6 +1,17 @@
 <?xml version="1.0"?>
 <Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
 	<TransparentMaterials>
+        <!-- Radial premultiplied glow, shaded before bloom with scene depth preserved. -->
+        <TransparentMaterial>
+            <Id><TypeId>TransparentMaterialDefinition</TypeId><SubtypeId>GaugeHeatGlow</SubtypeId></Id>
+            <AlphaMistingEnable>false</AlphaMistingEnable>
+            <AlphaSaturation>0</AlphaSaturation>
+            <CanBeAffectedByOtherLights>false</CanBeAffectedByOtherLights>
+            <IgnoreDepth>false</IgnoreDepth>
+            <SoftParticleDistanceScale>0.0001</SoftParticleDistanceScale>
+            <Texture>Textures\Particles\GaugeHeatGlow.dds</Texture>
+            <UseAtlas>false</UseAtlas>
+        </TransparentMaterial>
         <TransparentMaterial>
             <Id><TypeId>TransparentMaterialDefinition</TypeId><SubtypeId>GaugeThermalRampColour</SubtypeId></Id>
             <AlphaMistingEnable>false</AlphaMistingEnable>

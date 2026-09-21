@@ -593,7 +593,7 @@ namespace Thermodynamics
         [ProtoMember(134)] public bool ShowEnvironmentReadout = true;
 
         /// <summary>
-        /// Blocks glow as they heat, from the Draper point up. Client side, and on by default: it
+        /// Blocks glow over the last 100 K before their critical temperature. Client side, and on by default: it
         /// is what a hot block looks like rather than a diagnostic, and it is the mod's answer to
         /// *a player should learn their ship is overheating without looking at an instrument*.
         /// See document-of-intent.md, Natural feedback.

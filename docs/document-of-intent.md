@@ -233,11 +233,12 @@ actually got, and a decorative block dying dull red beside a thruster dying oran
 **The glow is drawn, because the emissive path could not carry it.** `UpdateEmissiveParts` writes to
 a named material in the block's model, and of the 1,992 base cube models the game ships **418 hold
 one — of 479 armour models, four**; where the material exists at all it is a status lamp rather than
-a skin. So the glow is an additive quad over each *exposed* face of a hot block, coloured by the
-locus and brightened by the ramp, with one dynamic light per grid at the glow-weighted centre of its
-failing blocks so the heat falls on what is around it. The emissive write is kept beside it, because
-a lamp going red on a hot reactor is right. Exposed faces only, which is both the cheap answer and
-the correct one: a face buried in a hull cannot be seen.
+a skin. The glow is a soft radial additive patch over each exposed face, coloured by the locus
+and brightened by the warning ramp, with smooth grazing-angle and distance fades. At most one
+nearby dynamic light per grid, capped at 32 lights across the scene, makes the heat fall on its
+surroundings. The emissive write remains for models that provide it. The effect is attached to the
+object and depth-tested; its bounding-face geometry is an approximation, not a mesh emissive.
+The evidence, work limits and outstanding live visual checks are in [thermal-glow.md](thermal-glow.md).
 
 **The cue is the same warning in sound.** A short sound about three seconds before a block crosses
 its critical temperature and a distinct one as it crosses, heard only by the player at the controls,
@@ -1511,6 +1512,7 @@ as a *second* change rather than as a substitute. [backlog](backlog.md) `D19`.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-20 | Describe soft heat patches, bounded lights and explicit visual verification limits. |
 | 2026-08-28 | *Basic environmental information should be on screen as a matter of course* is built, and the page says which half of it is judged: what the readout **says** is a decision in `Core` and pinned by tests; whether it reads as the game's own HUD is the half only a session can settle. |
 | 2026-08-25 | Gave *realism wins where the difference is visible* its second worked example, which is the reactor's taken the other way. The oxygen generator's 0.6 was an invention with a sourced 0.20-0.40 sitting beside it, and what moved it was not the provenance: at 0.6 two of the game's six generators are past their own critical temperature alone in open space at their rated draw. The reactor kept an invention because the real number destroyed it; the generator lost one because the invention destroyed it. The prior reads better with both, because one case alone reads as *inventions are fine*.
 

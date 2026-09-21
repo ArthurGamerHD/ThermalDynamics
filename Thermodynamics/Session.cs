@@ -104,41 +104,40 @@ namespace Thermodynamics
 
         protected override void UnloadData()
         {
-            // The last point at which the mod is still live and world storage is still writable.
-            // The fault summary goes first and is not conditional on collection: a world that ran
-            // with telemetry off produces no report, and the faults it hit are the only thing worth
-            // saying about it.
-            Telemetry.LogFaultSummary();
-            Telemetry.Finish("world closing");
-            Telemetry.Reset();
-
-            // Definition and shape caches are keyed by definition and outlive a single grid, so they
-            // must be dropped with the session or a second world inherits them.
-            ThermalBlockCatalog.Clear();
-            ThermalCoolantShapes.Clear();
-            ThermalHeatPumpShapes.Clear();
-            ThermalBridges.Clear();
-            ThermalGrid.ResetEnvironmentCaches();
-            ThermalHeatSources.Clear();
-
-            // A dynamic light this mod created outlives the grid it was lighting unless it is
-            // handed back, and the renderer has no session to end it with.
-            ThermalGlow.Clear();
-            ThermalVisionProbe.Reset();
-            ThermalApi.Unregister();
-            ThermalTerminal.Unregister();
-            SettingsRequests.Unregister();
-            ThermalGridSync.Unregister();
-            Instance = null;
-
-            if (_commandRegistered && MyAPIGateway.Utilities != null)
+            SessionCleanup.Run(new Action[]
             {
-                MyAPIGateway.Utilities.MessageEntered -= OnMessageEntered;
-                _commandRegistered = false;
-            }
+                Telemetry.LogFaultSummary,
+                () => Telemetry.Finish("world closing"),
+                Telemetry.Reset,
+                ThermalBlockCatalog.Clear,
+                ThermalCoolantShapes.Clear,
+                ThermalHeatPumpShapes.Clear,
+                ThermalBridges.Clear,
+                ThermalGrid.ResetEnvironmentCaches,
+                ThermalHeatSources.Clear,
+                ThermalGlow.Clear,
+                ThermalVisionProbe.Reset,
+                ThermalApi.Unregister,
+                ThermalTerminal.Unregister,
+                SettingsRequests.Unregister,
+                ThermalGridSync.Unregister,
+                () => Instance = null,
+                UnregisterCommands,
+                () => { if (Definitions != null) Definitions.UnloadData(); },
+                () => base.UnloadData(),
+            }, ReportUnloadFailure);
+        }
 
-            Definitions?.UnloadData();
-            base.UnloadData();
+        private static void ReportUnloadFailure(int stage, Exception error)
+        {
+            MyLog.Default.Error("[Thermodynamics] unload stage " + stage + " failed: " + error);
+        }
+
+        private void UnregisterCommands()
+        {
+            if (_commandRegistered && MyAPIGateway.Utilities != null)
+                MyAPIGateway.Utilities.MessageEntered -= OnMessageEntered;
+            _commandRegistered = false;
         }
 
         /// <summary>Frames between deferred config writes; one second at 60 fps.</summary>
@@ -441,6 +440,11 @@ namespace Thermodynamics
                     + ", block models " + ThermalBlockCatalog.ModelCount
                     + ", bridges " + ThermalBridges.Count
                     + ", validation problems " + Core.ThermalValidation.Count);
+                Reply("heat glow " + ThermalGlow.LastState
+                    + ", hot blocks " + ThermalGlow.LastHotBlocks
+                    + ", exposed/in-range blocks " + ThermalGlow.LastSurfaceBlocks
+                    + ", quads " + ThermalGlow.LastQuads
+                    + ", lights " + ThermalGlow.ActiveLights);
                 return;
             }
 
