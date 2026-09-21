@@ -48,7 +48,7 @@ namespace Thermodynamics.Tests
         public void NothingInTheModAsksWhetherTheWorldsRulesAreSuspended()
         {
             string scripts = Path.Combine(
-                ShippedBlocks.RepoRoot(), "Data", "Scripts", "Thermodynamics");
+                ShippedBlocks.RepoRoot(), "Thermodynamics");
 
             Assert.True(Directory.Exists(scripts), "no mod sources at " + scripts);
 
@@ -115,7 +115,7 @@ namespace Thermodynamics.Tests
         public static ThermalSettingsFields Read()
         {
             string path = Path.Combine(
-                ShippedBlocks.RepoRoot(), "Data", "Scripts", "Thermodynamics", "Settings.cs");
+                ShippedBlocks.RepoRoot(), "Thermodynamics", "Settings.cs");
 
             Assert.True(File.Exists(path), "no Settings.cs at " + path);
             return new ThermalSettingsFields(File.ReadAllText(path));

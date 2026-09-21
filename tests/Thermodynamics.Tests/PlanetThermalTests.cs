@@ -301,7 +301,7 @@ namespace Thermodynamics.Tests
         [Fact]
         public void TheShippedPlanetsFileIsWhatThisCodeGenerates()
         {
-            string path = Path.Combine(RepoRoot(), "Data", "Planets.xml");
+            string path = Path.Combine(ShippedBlocks.DataRoot(), "Planets.xml");
             string onDisk = File.ReadAllText(path);
             string generated = PlanetLab.Xml();
 
@@ -335,7 +335,7 @@ namespace Thermodynamics.Tests
         [Fact]
         public void TheShippedPlanetsFileIsCompleteAndReadable()
         {
-            string path = Path.Combine(RepoRoot(), "Data", "Planets.xml");
+            string path = Path.Combine(ShippedBlocks.DataRoot(), "Planets.xml");
             string onDisk = File.ReadAllText(path);
 
             Assert.Contains("<SubtypeId>DefaultThermodynamics</SubtypeId>", onDisk);

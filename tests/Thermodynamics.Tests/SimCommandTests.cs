@@ -129,7 +129,7 @@ namespace Thermodynamics.Tests
         [Fact]
         public void EveryToolIsNamedByItsReadme()
         {
-            string tools = Path.Combine(Thermodynamics.Harness.ShippedBlocks.RepoRoot(), "tools");
+            string tools = Path.Combine(Harness.ShippedBlocks.RepoRoot(), "tools");
             List<string> orphans = new List<string>();
             int seen = 0;
 

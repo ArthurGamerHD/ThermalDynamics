@@ -47,7 +47,7 @@ namespace Thermodynamics.Tests
             List<string> files = new List<string>();
             string root = ShippedBlocks.RepoRoot();
 
-            foreach (string folder in new[] { "Data", "tests" })
+            foreach (string folder in new[] { "Thermodynamics/Content/Data/", "tests" })
             {
                 foreach (string path in Directory.GetFiles(Path.Combine(root, folder), "*.cs",
                     SearchOption.AllDirectories))

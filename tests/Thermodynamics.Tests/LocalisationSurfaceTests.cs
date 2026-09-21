@@ -67,7 +67,7 @@ namespace Thermodynamics.Tests
         public void TheSurfaceInsideTheGamesHudIsASmallFractionOfWhatTheModWrites()
         {
             string root = Path.Combine(
-                ShippedBlocks.RepoRoot(), "Data", "Scripts", "Thermodynamics");
+                ShippedBlocks.RepoRoot(), "Thermodynamics");
 
             Assert.True(Directory.Exists(root), "no mod sources at " + root);
 

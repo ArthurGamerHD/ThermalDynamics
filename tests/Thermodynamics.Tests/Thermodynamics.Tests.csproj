@@ -6,10 +6,15 @@
     <LangVersion>latest</LangVersion>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <SpaceEngineersBinCopyLocal>true</SpaceEngineersBinCopyLocal>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="../Thermodynamics.Presentation/Thermodynamics.Presentation.csproj" />
+    <PackageReference Include="Mal.Mdk2.References" Version="2.2.9">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
 
@@ -43,22 +48,13 @@
     <Compile Include="$(TelemetrySourceRoot)OverlayTelemetry.cs" LinkBase="Telemetry" />
     <Compile Include="$(TelemetrySourceRoot)ThermalVisionTelemetry.cs" LinkBase="Telemetry" />
     <Compile Include="$(TelemetrySourceRoot)../OverlayBudget.cs" LinkBase="Telemetry" />
-    <Compile Include="../../Data/Scripts/Thermodynamics/Game/SessionCleanup.cs" LinkBase="Game" />
+    <Compile Include="$(GameSourceRoot)SessionCleanup.cs" LinkBase="Game" />
     <Compile Include="$(TelemetrySourceRoot)FrameCost.cs" LinkBase="Telemetry" />
-  </ItemGroup>
-
-
-  <ItemGroup>
-    <Reference Include="VRage.Math">
-      <HintPath>$(SEBinPath)/VRage.Math.dll</HintPath>
-      <Private>true</Private>
-    </Reference>
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
-
 
   <ItemGroup>
     <!-- Caps how many corpus walks read the corpus at once; see xunit.runner.json. -->

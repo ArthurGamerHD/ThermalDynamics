@@ -108,7 +108,7 @@ namespace Thermodynamics.Tests
         public void EverySettingIsOnAMenuPageThatNamesIt()
         {
             string menu = File.ReadAllText(Path.Combine(
-                RepoRoot(), "Data", "Scripts", "Thermodynamics", "ThermalSettingsMenu.cs"));
+                RepoRoot(), "Thermodynamics", "ThermalSettingsMenu.cs"));
 
             int folders = menu.IndexOf("private static readonly Folder[] Folders", StringComparison.Ordinal);
             int debug = menu.IndexOf("private static readonly Leaf DebugPage", StringComparison.Ordinal);
@@ -142,7 +142,7 @@ namespace Thermodynamics.Tests
         private static HashSet<string> Declared()
         {
             string source = File.ReadAllText(Path.Combine(
-                RepoRoot(), "Data", "Scripts", "Thermodynamics", "Settings.cs"));
+                RepoRoot(), "Thermodynamics", "Settings.cs"));
 
             HashSet<string> names = new HashSet<string>();
             foreach (Match match in Regex.Matches(source,
@@ -328,10 +328,8 @@ namespace Thermodynamics.Tests
         [Fact]
         public void EveryCoreSettingIsReachableFromAWorldsConfiguration()
         {
-            string core = File.ReadAllText(Path.Combine(RepoRoot(), "Data", "Scripts",
-                "Thermodynamics", "Core", "Settings", "ThermalSettings.cs"));
-            string world = File.ReadAllText(Path.Combine(RepoRoot(), "Data", "Scripts",
-                "Thermodynamics", "Settings.cs"));
+            string core = File.ReadAllText(Path.Combine(ShippedBlocks.ModRoot(), "Core", "Settings", "ThermalSettings.cs"));
+            string world = File.ReadAllText(Path.Combine(ShippedBlocks.ModRoot(), "Settings.cs"));
 
             // Not tunable: `Version` is the schema number, `Revision` counts changes so a grid can
             // notice one, and the two step figures are derived from `Frequency` by `Derive`.
@@ -446,7 +444,7 @@ namespace Thermodynamics.Tests
         {
             HashSet<string> declared = Declared();
 
-            string scripts = Path.Combine(RepoRoot(), "Data", "Scripts", "Thermodynamics");
+            string scripts = Path.Combine(RepoRoot(), "Thermodynamics");
             System.Text.StringBuilder body = new System.Text.StringBuilder();
 
             foreach (string file in Directory.GetFiles(scripts, "*.cs", SearchOption.AllDirectories))

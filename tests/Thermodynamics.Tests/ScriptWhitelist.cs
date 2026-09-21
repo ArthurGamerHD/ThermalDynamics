@@ -168,7 +168,7 @@ namespace Thermodynamics.Tests
             string root = Harness.ShippedBlocks.RepoRoot();
             if (root == null) return null;
 
-            string candidate = Path.Combine(root, "Data", "Scripts", "Thermodynamics");
+            string candidate = Path.Combine(root, "Thermodynamics");
             return Directory.Exists(candidate) ? candidate : null;
         }
 

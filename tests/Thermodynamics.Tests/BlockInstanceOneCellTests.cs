@@ -123,7 +123,7 @@ namespace Thermodynamics.Tests
             string[] properties = { "SelfSurfaces", "StructuralSurfaces", "Cells" };
             List<string> writes = new List<string>();
 
-            foreach (string folder in new[] { "Data", "tests" })
+            foreach (string folder in new[] { "Thermodynamics/Content/Data/", "tests" })
             {
                 foreach (string path in Directory.GetFiles(Path.Combine(root, folder), "*.cs",
                     SearchOption.AllDirectories))

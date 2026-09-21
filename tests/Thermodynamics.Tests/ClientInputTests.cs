@@ -1513,7 +1513,7 @@ namespace Thermodynamics.Tests
             // build ratio or an integrity figure appearing anywhere in the mod would be an input
             // the sweep has no knob for and this file claims does not exist.
             string root = ShippedBlocks.RepoRoot();
-            string scripts = Path.Combine(root, "Data", "Scripts", "Thermodynamics");
+            string scripts = Path.Combine(root, "Thermodynamics");
             string[] routes = { "BuildLevelRatio", "BuildIntegrity", "CurrentDamage", "MaxIntegrity" };
             List<string> offenders = new List<string>();
 

@@ -24,32 +24,14 @@ namespace Thermodynamics.Tests
     /// </summary>
     public class ShippedDefinitionTests
     {
-        /// <summary>
-        /// Walks up from the test assembly for the repository root, identified by the data files
-        /// themselves rather than by a fixed depth, so the test survives a change of target
-        /// framework or output layout.
-        /// </summary>
-        private static string RepoRoot()
-        {
-            // Delegates rather than walking up from the assembly, because the build output no
-            // longer sits inside the repository — see Directory.Build.props. ShippedBlocks anchors
-            // itself to its own compiled-in source path, which survives the move.
-            return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
-        }
-
-        private static XDocument Load(params string[] parts)
-        {
-            string[] segments = new string[parts.Length + 1];
-            segments[0] = RepoRoot();
-            Array.Copy(parts, 0, segments, 1, parts.Length);
-            return XDocument.Load(Path.Combine(segments));
-        }
+        const string CUBES_DEFINITION_PATH = "Cubes.xml";
+        private static XDocument LoadDefinition(string path) => XDocument.Load(Path.Combine(ShippedBlocks.DataRoot(), path));
 
         /// <summary>Subtype to object-builder TypeId, read from each shipped block definition.</summary>
         private static Dictionary<string, string> ShippedBlockTypes()
         {
             Dictionary<string, string> types = new Dictionary<string, string>();
-            string folder = Path.Combine(RepoRoot(), "Data", "CubeBlocks");
+            string folder = Path.Combine(ShippedBlocks.DataRoot(), "CubeBlocks");
 
             foreach (string file in Directory.GetFiles(folder, "*.sbc"))
             {
@@ -75,7 +57,7 @@ namespace Thermodynamics.Tests
         {
             List<KeyValuePair<string, string>> entries = new List<KeyValuePair<string, string>>();
 
-            foreach (XElement definition in Load("Data", "Cubes.xml").Descendants("Definition"))
+            foreach (XElement definition in LoadDefinition(CUBES_DEFINITION_PATH).Descendants("Definition"))
             {
                 XElement id = definition.Element("Id");
                 if (id == null) continue;
@@ -202,7 +184,7 @@ namespace Thermodynamics.Tests
         private static Dictionary<string, string> BoundSubtypes()
         {
             Dictionary<string, string> bound = new Dictionary<string, string>();
-            string scripts = Path.Combine(RepoRoot(), "Data", "Scripts");
+            string scripts = Path.Combine(ShippedBlocks.ModRoot());
 
             foreach (string file in Directory.GetFiles(scripts, "*.cs", SearchOption.AllDirectories))
             {
@@ -309,7 +291,7 @@ namespace Thermodynamics.Tests
         {
             List<string> incomplete = new List<string>();
 
-            foreach (XElement definition in Load("Data", "Cubes.xml").Descendants("Definition"))
+            foreach (XElement definition in LoadDefinition(CUBES_DEFINITION_PATH).Descendants("Definition"))
             {
                 XElement id = definition.Element("Id");
                 if (id == null) continue;
@@ -408,7 +390,7 @@ namespace Thermodynamics.Tests
         {
             List<string> invisible = new List<string>();
 
-            foreach (XElement definition in Load("Data", "Cubes.xml").Descendants("Definition"))
+            foreach (XElement definition in LoadDefinition(CUBES_DEFINITION_PATH).Descendants("Definition"))
             {
                 XElement id = definition.Element("Id");
                 if (id == null) continue;
@@ -440,7 +422,7 @@ namespace Thermodynamics.Tests
         /// <summary>The ThermalBlockProperties group of one subtype in Cubes.xml.</summary>
         private static Dictionary<string, double> PropertiesOf(string subtype)
         {
-            foreach (XElement definition in Load("Data", "Cubes.xml").Descendants("Definition"))
+            foreach (XElement definition in LoadDefinition(CUBES_DEFINITION_PATH).Descendants("Definition"))
             {
                 XElement id = definition.Element("Id");
                 if (id == null) continue;

@@ -38,7 +38,7 @@ namespace Thermodynamics.Tests
         public static IEnumerable<object[]> MsBuildFiles()
         {
             string root = ShippedBlocks.RepoRoot();
-            string[] patterns = { "*.csproj", "*.props", "*.targets", "*.slnx" };
+            string[] patterns = { "*.csproj", "*.props", "*.targets", "*.slnx"};
 
             foreach (string pattern in patterns)
             {
@@ -82,7 +82,9 @@ namespace Thermodynamics.Tests
             string solution = File.ReadAllText(
                 Path.Combine(ShippedBlocks.RepoRoot(), "tests", "Thermodynamics.slnx"));
 
-            Assert.Contains("Generic.csproj", solution);
+            Assert.Contains("../Thermodynamics/Thermodynamics.csproj", solution);
+            Assert.True(File.Exists(Path.Combine(ShippedBlocks.RepoRoot(),
+                "Thermodynamics", "Thermodynamics.csproj")));
         }
     }
 }

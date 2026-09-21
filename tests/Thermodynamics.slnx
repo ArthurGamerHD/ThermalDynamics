@@ -3,7 +3,7 @@
     The mod project is here so that one build command covers everything the game will compile.
     It is not a test project and runs nothing; see rules.md C11.
   -->
-  <Project Path="../Generic.csproj" />
+  <Project Path="../Thermodynamics/Thermodynamics.csproj" />
   <Project Path="Thermodynamics.Presentation/Thermodynamics.Presentation.csproj" />
   <Project Path="Thermodynamics.Core/Thermodynamics.Core.csproj" />
   <Project Path="Thermodynamics.Harness/Thermodynamics.Harness.csproj" />
