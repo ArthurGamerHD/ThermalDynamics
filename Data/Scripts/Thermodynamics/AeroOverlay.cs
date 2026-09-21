@@ -60,9 +60,8 @@ namespace Thermodynamics
             ThermalGrid thermals = Target();
             if (thermals == null || thermals.Grid == null || thermals.Simulation == null) return;
 
-            // The same summation ThermalGridDrag applies, read through the same helper, so the
-            // arrows are the force the server applies rather than a second opinion about it —
-            // including the anchored-group veto, which zeroes them.
+            // The arrows show the force the server applies (same as ThermalGridDrag summation),
+            // including the anchored-group veto which zeroes them.
             Vector3D centre;
             float mass;
             Vector3 drag;
@@ -202,9 +201,8 @@ namespace Thermodynamics
             AeroGroupForces.Sum(GroupGrids, out centre, out mass, out drag, out lift);
             if (mass > 0f) centre /= mass;
 
-            // The drag pass applies nothing to an anchored group, and these arrows promise to be
-            // the force the server applies rather than a second opinion — so an anchored group
-            // shows its centre of mass and its wind, and no force. Gates names the veto.
+            // The drag pass does nothing for anchored groups; arrows show the server-applied force
+            // (second opinion vetoed), so anchored groups show only centre of mass and wind.
             anchored = AeroGroupForces.Anchored(GroupGrids);
             if (anchored)
             {
@@ -351,11 +349,8 @@ namespace Thermodynamics
                 return; // Nothing to extrapolate from while the air is still.
             }
 
-            // Convective watts the wind is removing right now, summed over the target group's
-            // nodes: the convection row is negative while a block sheds, so removal is the
-            // negated sum. Friction is re-summed over the same group so the two sides of the
-            // balance cover the same hull. Solar and radiation are deliberately not in this line —
-            // the question is what the *airspeed* does.
+            // Convective watts removed by wind (summed over nodes; negative while shedding). Friction re-summed over same group.
+            // Balance covers same hull; solar/radiation excluded. Question: what does airspeed do?
             double removing = 0d;
             double adding = 0d;
             for (int g = 0; g < GroupGrids.Count; g++)

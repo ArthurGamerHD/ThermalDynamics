@@ -1,11 +1,13 @@
+// Defines the baseline near-plane cap algorithm.
 using Thermodynamics.Presentation;
-// Frozen allocation-heavy implementation; offline benchmark only.
+// Returns the cap vectors of a region after clipping with the near plane.
 using VRageMath;
 using Region=Thermodynamics.Presentation.ThermalVisionRegionPartition.Region;
 namespace ThermalPerformance.Baseline;
 internal static class NearPlane
 {
     internal static Vector3D[] Cap(Region region,MatrixD world,MatrixD projection,double near)
+    // Returns the cap vectors of a region after clipping with the near plane.
     {
         ThermalVisionDepthLayers.Plane(near,projection,world,out var centre,out var width,out var height);
         var polygon=new List<Vector3D> {
@@ -32,5 +34,6 @@ internal static class NearPlane
         }
         return polygon.ToArray();
     }
+    // Gets the coordinate value (X, Y, or Z) of a vector based on the axis index.
     static double Coordinate(Vector3D p,int axis)=>axis==0?p.X:axis==1?p.Y:p.Z;
 }

@@ -2,11 +2,13 @@ using Thermodynamics.Presentation;
 using VRageMath;
 using TemperatureTriangle=Thermodynamics.Presentation.ThermalVisionSurfaceField.TemperatureTriangle;
 namespace ThermalPerformance;
-// Frozen pre-optimization near-camera sampling, for differential CPU benchmarks only.
+// Samples cap triangles for differential CPU benchmarks.
 public sealed class BaselineCapSampling
 {
     private readonly ThermalVisionSurfaceField field;
+    // Initializes a new instance with the specified field.
     public BaselineCapSampling(ThermalVisionSurfaceField field) { this.field=field; }
+    // Gets a blended sample value between previous and current field samples.
     private float BlendSample(ThermalVisionSurfaceField previous,Vector3D point,float blend)
     {
         float current=field.Sample(point);
@@ -14,12 +16,14 @@ public sealed class BaselineCapSampling
         blend=Math.Max(0f,Math.Min(1f,blend));
         return MathHelper.Lerp(previous.Sample(point),current,blend*blend*(3-2*blend));
     }
+        // Appends cap triangles for the specified edge to the output list.
         public void AppendCapTriangles(Vector3D a,Vector3D b,Vector3D c,
             ThermalVisionSurfaceField previous,float blend,float error,List<TemperatureTriangle> output)
         {
             AppendCap(a,b,c,BlendSample(previous,a,blend),BlendSample(previous,b,blend),
                 BlendSample(previous,c,blend),previous,blend,error,0,output);
         }
+        // Recursively subdivides and adds cap triangles within error tolerance.
         private void AppendCap(Vector3D a,Vector3D b,Vector3D c,float ta,float tb,float tc,
             ThermalVisionSurfaceField previous,float blend,float error,int depth,List<TemperatureTriangle> output)
         {
