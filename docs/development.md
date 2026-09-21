@@ -27,6 +27,16 @@ Do not put display behavior back into `Core/Simulation` merely to test it offlin
 * The mod's own runtime dependencies for testing in game: Definition Extensions
   (`2756894170`) and Rich HUD Master (`1965654081`).
 
+## Opening the MDK2 project
+
+In MDK Hub, choose **Add Existing Project** and select
+[`Thermodynamics/Thermodynamics.csproj`](../Thermodynamics/Thermodynamics.csproj).
+The adjacent [`mdk.ini`](../Thermodynamics/mdk.ini) identifies this as a mod;
+the NuGet package references alone are not sufficient for Hub recognition.
+Keep this shared configuration in Git. Put machine-specific game and output
+paths in `Thermodynamics/mdk.local.ini`, which stays ignored, or configure them
+in MDK Hub. Build `ThermalDynamics.sln` to compile the mod and isolated projects.
+
 ## Building
 
 `Generic.csproj` / `Generic.sln` exist **only to get IntelliSense and compiler errors**. Space

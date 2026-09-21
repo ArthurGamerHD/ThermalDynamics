@@ -6,6 +6,8 @@
 *.csproj
 *.sln
 *.ini
+!mdk.ini
+!*.mdk.ini
 *.props
 *.user
 *.claude/
