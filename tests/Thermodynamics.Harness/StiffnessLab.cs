@@ -5,91 +5,42 @@ using Thermodynamics.Core;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// **Is the hull every benchmark is built on a ship anybody has built?** The same quantity
-    /// <c>Census.Field</c> holds from two ships in two vanished sessions, measured over real workshop
-    /// blueprints where every input is visible and the run repeats (`E2`). It steps nothing, so a
-    /// thousand real ships cost seconds.
-    ///
-    /// <para>
-    /// **Everything is reported against one stated step length** (`E3`), because demand is
-    /// proportional to it and two figures on different bases are worse than one.
-    /// See stiffness.md, The same question asked of eight thousand real ships.
-    /// </para>
-    /// </summary>
     public static class StiffnessLab
     {
-        /// <summary>
-        /// The step length everything here is quoted at: a quarter of a second, which is
-        /// <c>Frequency 4</c>.
-        ///
-        /// Chosen because it is what <c>Census.Field</c>'s two observations were taken at, and the
-        /// whole point of this lab is to put them beside the population. The shipped default is
-        /// <c>Frequency 8</c> and asks exactly half as much.
-        /// </summary>
         public const int FieldFrequency = 4;
 
-        /// <summary>One ship, in both worlds, on one step length.</summary>
         public class Row
         {
             public string Ship;
             public bool Large;
             public int Blocks;
 
-            /// <summary>Substeps the stiffest block demands of a step, in vacuum.</summary>
             public float Vacuum;
 
-            /// <summary>The same, at sea level in still air.</summary>
             public float Air;
 
-            /// <summary>The subtype that set <see cref="Air"/> — what there is to tune.</summary>
             public string StiffestInAir;
 
-            /// <summary>Nodes on the ship, and how many of them each cap would hold back.</summary>
             public int Nodes;
             public int[] FlooredAtCap;
 
-            /// <summary>
-            /// Exposed faces on the block that set <see cref="Air"/>.
-            ///
-            /// The column that says *why* a hull is stiff. A stiffest block with faces open to the
-            /// sky is convectively stiff; one with none is stiff through conduction alone.
-            /// </summary>
             public int StiffestFaces;
 
-            /// <summary>
-            /// The <b>same block's</b> demand in vacuum, so the two can be divided.
-            ///
-            /// <para>
-            /// <see cref="Vacuum"/> is the hull's vacuum peak, which is frequently a different
-            /// block — a buried heavy one that conducts hard and does not care about air. Dividing
-            /// the two peaks therefore compares two different blocks and answers nothing; it read
-            /// the census hull at 1.02 and called it insensitive to air when the block itself is
-            /// three times stiffer in air than out of it. This is the ratio that means what it
-            /// looks like.
-            /// </para>
-            /// </summary>
             public float StiffestInVacuum;
         }
 
-        /// <summary>
-        /// The per-block caps to project, and the four a field dump reported so the two can be laid
-        /// side by side. <c>MaxSubstepsPerBlock</c> is chosen from this curve.
-        /// </summary>
         public static readonly int[] Caps = { 8, 4, 2, 1 };
 
+/// <summary>Sets the tings.</summary>
         private static ThermalSettings Settings()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.Frequency = FieldFrequency;
             return settings.Derive();
         }
 
-        /// <summary>
-        /// Measures one built simulation. Separate from the corpus walk so the census hull can be
-        /// put through exactly the same arithmetic as a workshop ship — a comparison where the two
-        /// sides are measured by different code is not a comparison.
-        /// </summary>
+/// <summary>MeasureSolver operation.</summary>
         public static void MeasureSolver(ThermalSolver solver, ref EnvironmentState air,
             ref float vacuum, ref float inAir, ref string stiffest, int[] flooredAtCap, ref int nodes,
             ref int stiffestFaces, ref float stiffestDry)
@@ -110,9 +61,6 @@ namespace Thermodynamics.Harness
                     stiffestDry = dry;
                 }
 
-                // A per-block cap holds a node back when the node asks for more substeps than the
-                // cap grants, so the share of blocks a cap reaches is a count over this demand —
-                // and it is the curve MaxSubstepsPerBlock is chosen from.
                 if (flooredAtCap == null) continue;
                 for (int c = 0; c < Caps.Length; c++)
                 {
@@ -121,15 +69,17 @@ namespace Thermodynamics.Harness
             }
         }
 
+/// <summary>SeaLevelAir operation.</summary>
         private static EnvironmentState SeaLevelAir(ThermalSettings settings)
         {
             return EnvironmentSolver.Solve(
                 settings, PlanetThermalProperties.Default(), Worlds.PlanetSurface(1f, 0.5f));
         }
 
-        /// <summary>The census hull the benchmarks are built on, measured the same way.</summary>
+/// <summary>Census operation.</summary>
         public static Row Census(int blocks)
         {
+/// <summary>Sets the tings.</summary>
             ThermalSettings settings = Settings();
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
@@ -140,6 +90,7 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
             simulation.RebuildAll();
 
+/// <summary>SeaLevelAir operation.</summary>
             EnvironmentState air = SeaLevelAir(settings);
             float vacuum = 0f, inAir = 0f;
             string stiffest = "";
@@ -164,12 +115,14 @@ namespace Thermodynamics.Harness
             };
         }
 
-        /// <summary>One workshop blueprint, every grid in it included.</summary>
+/// <summary>Measure operation.</summary>
         public static Row Measure(Blueprints.Ship ship)
         {
+/// <summary>Sets the tings.</summary>
             ThermalSettings settings = Settings();
             ShipAssembly assembly = ship.Build(settings);
 
+/// <summary>SeaLevelAir operation.</summary>
             EnvironmentState air = SeaLevelAir(settings);
             float vacuum = 0f, inAir = 0f;
             string stiffest = "";
@@ -198,13 +151,14 @@ namespace Thermodynamics.Harness
             };
         }
 
+/// <summary>Run operation.</summary>
         public static List<Row> Run(IList<Blueprints.Ship> ships, LabMode mode = LabMode.Parallel)
         {
             GameBlocks.Warm();
             return LabRun.Map(ships, Measure, mode);
         }
 
-        /// <summary>The share of a sorted list at or below <paramref name="value"/>, 0..1.</summary>
+/// <summary>ShareBelow operation.</summary>
         private static double ShareBelow(List<float> sorted, float value)
         {
             int below = 0;
@@ -215,6 +169,7 @@ namespace Thermodynamics.Harness
             return sorted.Count == 0 ? 0d : (double)below / sorted.Count;
         }
 
+/// <summary>At operation.</summary>
         private static float At(List<float> sorted, double q)
         {
             if (sorted.Count == 0) return 0f;
@@ -224,8 +179,10 @@ namespace Thermodynamics.Harness
             return sorted[index];
         }
 
+/// <summary>Report operation.</summary>
         public static string Report(string path, LabMode mode = LabMode.Parallel)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("STIFFNESS AGAINST REAL SHIPS  (nothing stepped)");
@@ -246,7 +203,9 @@ namespace Thermodynamics.Harness
             }
 
             System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
+/// <summary>Walk operation.</summary>
             Walk walk = new Walk();
+/// <summary>Stream operation.</summary>
             List<Row> rows = Stream(root, walk, mode);
             clock.Stop();
             LastRows = rows;
@@ -257,7 +216,9 @@ namespace Thermodynamics.Harness
                 return sb.ToString();
             }
 
+/// <summary>List operation.</summary>
             List<float> vacuum = new List<float>();
+/// <summary>List operation.</summary>
             List<float> air = new List<float>();
             Dictionary<string, List<float>> byBlock = new Dictionary<string, List<float>>();
 
@@ -275,9 +236,11 @@ namespace Thermodynamics.Harness
             vacuum.Sort();
             air.Sort();
 
+/// <summary>List operation.</summary>
             List<float> ratios = new List<float>();
             for (int i = 0; i < rows.Count; i++)
             {
+/// <summary>Ratio operation.</summary>
                 float ratio = Ratio(rows[i]);
                 if (ratio > 0f) ratios.Add(ratio);
             }
@@ -288,9 +251,6 @@ namespace Thermodynamics.Harness
             sb.Append("  in ").Append(clock.Elapsed.TotalSeconds.ToString("n1"))
                 .Append(" s, ").AppendLine(LabRun.Describe(mode));
 
-            // **Nothing is dropped silently.** A population figure quoted over an unstated subset
-            // is the failure this whole lab exists to correct, so every reason a blueprint did not
-            // reach the table is counted and named.
             sb.Append("  not measured: ").Append(walk.Modded.ToString("n0")).Append(" modded, ")
                 .Append(walk.TooSmall.ToString("n0")).Append(" under ")
                 .Append(CorpusLab.MinimumBlocks).Append(" blocks, ")
@@ -308,13 +268,13 @@ namespace Thermodynamics.Harness
             sb.AppendLine("  rows above it would divide two different blocks and mean nothing.");
             sb.AppendLine();
 
-            // The instrument, put in the population it claims to describe.
             sb.AppendLine("  the hull every benchmark is built on, measured the same way");
             sb.AppendLine("  hull                        hull vac  hull air   pct   its own vac   x air   faces");
 
             int[] sizes = { 2000, 4000, 32000 };
             for (int i = 0; i < sizes.Length; i++)
             {
+/// <summary>Census operation.</summary>
                 Row hull = Census(sizes[i]);
                 sb.Append("  ").Append(Trim(hull.Ship, 28).PadRight(30));
                 sb.Append(hull.Vacuum.ToString("n2").PadLeft(7));
@@ -392,7 +352,6 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        /// <summary>What a walk did not measure, and why. Counted, never dropped in silence.</summary>
         public class Walk
         {
             public int Files;
@@ -402,17 +361,7 @@ namespace Thermodynamics.Harness
             public int Failed;
         }
 
-        /// <summary>
-        /// The largest blueprint this will open, in megabytes of XML.
-        ///
-        /// <para>
-        /// A corpus holds a 1.9 GB blueprint and several over 400 MB, and a ship is held in memory
-        /// as every grid and every block in it. Reading thirty-one of those at once is how an
-        /// uncapped run on this corpus took a machine down. <c>THERMAL_CORPUS_MAX_MB</c> raises or
-        /// lowers it — the same name <c>CorpusFixture</c> uses — and whatever it excludes is
-        /// counted and reported rather than quietly missing.
-        /// </para>
-        /// </summary>
+/// <summary>MaxMegabytes operation.</summary>
         public static int MaxMegabytes()
         {
             string configured = Environment.GetEnvironmentVariable("THERMAL_CORPUS_MAX_MB");
@@ -423,21 +372,12 @@ namespace Thermodynamics.Harness
             return 64;
         }
 
-        /// <summary>
-        /// Reads and measures the corpus in batches, keeping one row per ship and nothing else.
-        ///
-        /// <para>
-        /// The screening pass parses every blueprint into a list of ships and then measures the
-        /// list, so a fifty-gigabyte corpus is resident all at once. Nothing here needs that: a
-        /// ship's stiffness is a number, and once it is taken the ship can go. Batching keeps the
-        /// parallelism and bounds the memory at a batch, which is what lets this run over the whole
-        /// corpus rather than over a sample of it.
-        /// </para>
-        /// </summary>
+/// <summary>Stream operation.</summary>
         public static List<Row> Stream(string root, Walk walk, LabMode mode = LabMode.Parallel)
         {
             GameBlocks.Warm();
 
+/// <summary>List operation.</summary>
             List<Row> rows = new List<Row>();
             List<string> files = Blueprints.Files(root);
             walk.Files = files.Count;
@@ -447,6 +387,7 @@ namespace Thermodynamics.Harness
 
             for (int start = 0; start < files.Count; start += Batch)
             {
+/// <summary>List operation.</summary>
                 List<Blueprints.Ship> batch = new List<Blueprints.Ship>();
 
                 for (int i = start; i < files.Count && i < start + Batch; i++)
@@ -481,12 +422,10 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        /// <summary>
-        /// One row per ship, so the distribution can be examined rather than taken on the summary's
-        /// word. The bimodality below is only visible in the rows.
-        /// </summary>
+/// <summary>Csv operation.</summary>
         public static string Csv(IList<Row> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("ship,large,blocks,vacuum,air,stiffest_in_air,stiffest_faces,stiffest_vacuum");
 
@@ -509,16 +448,16 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        /// <summary>The rows of the last <see cref="Report"/>, for a caller that wants the CSV.</summary>
         public static List<Row> LastRows { get; private set; }
 
-        /// <summary>How much stiffer air makes the block that sets the hull's air peak.</summary>
+/// <summary>Ratio operation.</summary>
         public static float Ratio(Row row)
         {
             if (row == null || row.StiffestInVacuum <= 0f) return 0f;
             return row.Air / row.StiffestInVacuum;
         }
 
+/// <summary>Band operation.</summary>
         private static void Band(StringBuilder sb, string label, List<float> sorted)
         {
             sb.Append("  ").Append(label.PadRight(10));
@@ -530,6 +469,7 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
         }
 
+/// <summary>Trim operation.</summary>
         private static string Trim(string value, int length)
         {
             if (value == null) return "";

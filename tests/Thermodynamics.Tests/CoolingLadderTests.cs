@@ -3,39 +3,15 @@ using Thermodynamics.Harness;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// What bolting a cooling block to a reactor actually buys, pinned so the answer cannot
-    /// quietly invert.
-    ///
-    /// <para>
-    /// `blocks.md` says the radiator is a block you **plumb**, not one you bolt, and `balance.md`
-    /// prices a coolant sink face at six times a bolt joint. Both were argued from conductances.
-    /// The ladder measures the end result instead — the largest reactor the game ships, at its
-    /// plate rating, in shadow, with every block that has a plausible claim to being the best
-    /// cooling in the game stacked against it — and the end result is starker than the argument:
-    /// the mod's own radiator takes **two kelvin off eight hundred and ninety**, and a stack of
-    /// thirty-two takes no more off than a stack of eight.
-    /// </para>
-    ///
-    /// <para>
-    /// These assertions are on directions and orders of magnitude rather than on figures, because
-    /// the figures move with any definition change and the conclusions are what a reader is
-    /// entitled to rely on. The lab prints the figures; this says they still mean what the pages
-    /// claim they mean.
-    /// </para>
-    /// </summary>
     [Trait("speed", "slow")]
     public class CoolingLadderTests
     {
+/// <summary>object operation.</summary>
         private static readonly object Gate = new object();
         private static List<CoolingLadder.Row> rows;
         private static float bareKelvin;
 
-        /// <summary>
-        /// The ladder, run once for the whole class. About a second and a half, and every case
-        /// below reads the same table — running it per case would be six times that for six
-        /// identical answers.
-        /// </summary>
+/// <summary>Rows operation.</summary>
         private static List<CoolingLadder.Row> Rows(out float bare)
         {
             lock (Gate)
@@ -46,8 +22,10 @@ namespace Thermodynamics.Tests
             }
         }
 
+/// <summary>Of operation.</summary>
         private static List<CoolingLadder.Row> Of(string block, out float bare)
         {
+/// <summary>List operation.</summary>
             List<CoolingLadder.Row> mine = new List<CoolingLadder.Row>();
             foreach (CoolingLadder.Row row in Rows(out bare))
             {
@@ -57,11 +35,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheBareReactorRunsHotEnoughForTheComparisonToMeanAnything operation.</summary>
         public void TheBareReactorRunsHotEnoughForTheComparisonToMeanAnything()
         {
             if (!GameBlocks.IsInstalled) return;
 
             float bare;
+/// <summary>Rows operation.</summary>
             List<CoolingLadder.Row> all = Rows(out bare);
 
             Assert.NotEmpty(all);
@@ -70,34 +50,14 @@ namespace Thermodynamics.Tests
                 + " K, which is not a cooling problem, so nothing below is being measured");
         }
 
-        /// <summary>
-        /// The headline. A bolted radiator is not a cooling solution and the table has to keep
-        /// saying so, because it is the claim two pages of documentation rest on.
-        ///
-        /// <para>
-        /// **The figure has moved twice and the claim has not.** This asked for under one per cent,
-        /// measured at 0.5 % when the conduction pace was 2.4; at the 9.6 that ships, a bolt joint
-        /// carries four times what it did and thirty-two radiators took 25.6 K off 890 K, or 2.9 %.
-        /// `C36` then raised the panel's emissivity from 0.35 to 0.85 and the same stack takes
-        /// **31.0 K off 890 K**, which is 3.5 %. A reactor cooled by 3.5 % is a reactor that is
-        /// still going to lose itself, so what the page rests on is unchanged — but the bound is
-        /// now four per cent and says why, rather than reading as though nothing had moved (`E11`).
-        /// </para>
-        ///
-        /// <para>
-        /// **The shape underneath the bound is the more useful reading.** One panel saves 27.6 K,
-        /// two save 29.9, eight save 31.0 — the stack is flat after the second. Multiplying the
-        /// panel's radiating power by 2.43 moved the first rung and left the saturation where it
-        /// was, which says the limit is not what the panel can emit but what the joint can carry
-        /// to it. That is the same wall the corpus retrofit hit, from the other side.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>BoltingTheRadiatorToAReactorSavesAFewPercentOfIt operation.</summary>
         public void BoltingTheRadiatorToAReactorSavesAFewPercentOfIt()
         {
             if (!GameBlocks.IsInstalled) return;
 
             float bare;
+/// <summary>Of operation.</summary>
             List<CoolingLadder.Row> radiator = Of("Gauge_LG_Radiator", out bare);
             Assert.NotEmpty(radiator);
 
@@ -114,16 +74,14 @@ namespace Thermodynamics.Tests
                 + " real then blocks.md's 'plumb it, do not bolt it' needs rewriting");
         }
 
-        /// <summary>
-        /// Nothing in the game turns the reactor into a solved problem by being bolted to it,
-        /// which is what makes coolant loops worth building at all.
-        /// </summary>
         [Fact]
+/// <summary>NoBoltedBlockInTheGameSolvesTheReactor operation.</summary>
         public void NoBoltedBlockInTheGameSolvesTheReactor()
         {
             if (!GameBlocks.IsInstalled) return;
 
             float bare;
+/// <summary>Rows operation.</summary>
             List<CoolingLadder.Row> all = Rows(out bare);
 
             foreach (CoolingLadder.Row row in all)
@@ -135,60 +93,39 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// **The control stopped losing, and that is `C24` rather than a rig fault.**
-        ///
-        /// <para>
-        /// A block bolted to a face is a face that was radiating to the sky and now radiates into a
-        /// neighbour, and at the conduction pace the conversion calibrated to that trade was a net
-        /// loss for plain armour: the control lost, which is what made it a control. At four times
-        /// that pace the joint carries more heat out of the reactor than the buried face was
-        /// shedding, so a plain armour block bolted on now *saves* **2.42 K of 890 K**.
-        /// </para>
-        ///
-        /// <para>
-        /// **What the ladder is for survives it**, and that is what this now asserts: the block
-        /// with no surface advantage is worth a fraction of the one built to have it — 2.42 K
-        /// against a radiator's 20.9 K on the same mounting, which is the eight-to-one that says
-        /// area is what a cooler is for. A control that has stopped losing is worth keeping while
-        /// it still loses to everything with a surface, and worth removing when it does not.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheBlockWithNoSurfaceAdvantageIsWorthAFractionOfOneBuiltForIt operation.</summary>
         public void TheBlockWithNoSurfaceAdvantageIsWorthAFractionOfOneBuiltForIt()
         {
             if (!GameBlocks.IsInstalled) return;
 
             float bare;
+/// <summary>Of operation.</summary>
             List<CoolingLadder.Row> armour = Of("LargeBlockArmorBlock", out bare);
+/// <summary>Of operation.</summary>
             List<CoolingLadder.Row> radiator = Of("Gauge_LG_Radiator", out bare);
 
             Assert.NotEmpty(armour);
             Assert.NotEmpty(radiator);
 
-            // Measured 2026-08-24: +2.42 K for armour against +20.90 K for the radiator, one of
-            // each, on the same face of the same reactor.
             Assert.True(armour[0].Saved < radiator[0].Saved * 0.25f,
                 "a plain armour block bolted to the reactor saved " + armour[0].Saved.ToString("n2")
                 + " K against a radiator's " + radiator[0].Saved.ToString("n2")
                 + " K, so the block built to shed heat is no longer worth building");
 
-            // And it is small in its own right rather than only small beside a radiator.
             Assert.True(armour[0].Saved < bare * 0.005f,
                 "a plain armour block took " + armour[0].Saved.ToString("n2") + " K off "
                 + bare.ToString("n0") + " K, which is a cooling solution made of hull");
         }
 
-        /// <summary>
-        /// A stack is a fin, so the saving flattens. Asserted as a shape rather than a number: the
-        /// marginal saving of the last rung is a small fraction of the first's.
-        /// </summary>
         [Fact]
+/// <summary>AStackOfCoolersSaturates operation.</summary>
         public void AStackOfCoolersSaturates()
         {
             if (!GameBlocks.IsInstalled) return;
 
             float bare;
+/// <summary>Of operation.</summary>
             List<CoolingLadder.Row> radiator = Of("Gauge_LG_Radiator", out bare);
             Assert.True(radiator.Count >= 3);
 
@@ -202,27 +139,17 @@ namespace Thermodynamics.Tests
                 + ", so the ladder has not reached the flat it exists to find");
         }
 
-        /// <summary>
-        /// The far-end column separates the two ways a ladder goes flat, and both kinds are
-        /// present: a stack that saturated is hot at the top, and a stack the heat never reached
-        /// is colder than the temperature it was built at, having radiated to the sky instead.
-        ///
-        /// <para>
-        /// The second is a fact about the block rather than a fault in the rig — an exhaust pipe
-        /// and a wind turbine cannot be stacked on each other in a way that conducts — and without
-        /// this column it reads in the saving column exactly like saturation.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheFarEndSaysWhetherHeatEverReachedIt operation.</summary>
         public void TheFarEndSaysWhetherHeatEverReachedIt()
         {
             if (!GameBlocks.IsInstalled) return;
 
             float bare;
+/// <summary>Of operation.</summary>
             List<CoolingLadder.Row> radiator = Of("Gauge_LG_Radiator", out bare);
             Assert.NotEmpty(radiator);
 
-            // A conducting stack: warmer than the sky at the far end, and cooling as it lengthens.
             Assert.True(radiator[0].TopKelvin > 293.15f,
                 "the block bolted straight to the reactor came back at "
                 + radiator[0].TopKelvin.ToString("n1") + " K, so the joint carried nothing");

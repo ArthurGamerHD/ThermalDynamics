@@ -6,23 +6,9 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **Sizing the cell table before a hull is built, and that it changes nothing but the garbage.**
-    ///
-    /// <para>
-    /// The table doubles as it fills and every doubling copies every entry it already holds, so on a
-    /// 125,000-block hull placing blocks allocated **10.5 MB** of nothing but old tables — 84 bytes a
-    /// block, and most of what the `place` stage allocates. `ThermalGrid` knows the block count
-    /// before it registers the first one, so it says so.
-    /// </para>
-    ///
-    /// <para>
-    /// **A hint, not a bound**: the table is keyed per cell and the count is a block count, so a
-    /// hull of multi-cell blocks still grows once. Nothing is refused for exceeding it.
-    /// </para>
-    /// </summary>
     public class GridCapacityTests
     {
+/// <summary>Hull operation.</summary>
         private static GridBuilder Hull()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -30,8 +16,10 @@ namespace Thermodynamics.Tests
             return builder;
         }
 
+/// <summary>Built operation.</summary>
         private static GridModel Built(GridBuilder source, int capacity)
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(source.Grid.GridSize);
             if (capacity > 0) grid.EnsureCellCapacity(capacity);
 
@@ -44,16 +32,16 @@ namespace Thermodynamics.Tests
             return grid;
         }
 
-        /// <summary>
-        /// **The claim that matters: a sized grid is the same grid.** Same blocks, same lookups,
-        /// same bounds — the capacity is an allocation decision and reaches nothing a caller reads.
-        /// </summary>
         [Fact]
+/// <summary>SizingTheTableChangesNothingAboutTheGrid operation.</summary>
         public void SizingTheTableChangesNothingAboutTheGrid()
         {
+/// <summary>Hull operation.</summary>
             GridBuilder source = Hull();
 
+/// <summary>Built operation.</summary>
             GridModel plain = Built(source, 0);
+/// <summary>Built operation.</summary>
             GridModel sized = Built(source, source.Placed.Count);
 
             Assert.Equal(plain.BlockCount, sized.BlockCount);
@@ -70,18 +58,16 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// **And it is what removes the garbage.** Measured rather than assumed: the sized build
-        /// allocates a small fraction of the unsized one, which is the whole reason for the call.
-        /// </summary>
         [Fact]
+/// <summary>SizingTheTableRemovesTheRegrowth operation.</summary>
         public void SizingTheTableRemovesTheRegrowth()
         {
+/// <summary>Hull operation.</summary>
             GridBuilder source = Hull();
 
-            // The instances are built outside the measured region in both legs, so what is compared
-            // is the table's growth and not the blocks that go into it.
+/// <summary>Allocated operation.</summary>
             long plain = Allocated(source, 0);
+/// <summary>Allocated operation.</summary>
             long sized = Allocated(source, source.Placed.Count);
 
             Assert.True(plain > 0, "the unsized build allocated nothing, so this compares nothing");
@@ -89,15 +75,18 @@ namespace Thermodynamics.Tests
                 "sizing the table saved little: " + sized + " B against " + plain + " B");
         }
 
+/// <summary>Allocated operation.</summary>
         private static long Allocated(GridBuilder source, int capacity)
         {
             BlockInstance[] blocks = new BlockInstance[source.Placed.Count];
             for (int i = 0; i < blocks.Length; i++)
             {
                 BlockInstance block = source.Placed[i];
+/// <summary>BlockInstance operation.</summary>
                 blocks[i] = new BlockInstance(block.Model, block.Min, block.Orientation);
             }
 
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(source.Grid.GridSize);
             if (capacity > 0) grid.EnsureCellCapacity(capacity);
 
@@ -109,26 +98,27 @@ namespace Thermodynamics.Tests
             return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
-        /// <summary>
-        /// **The solver's node lists take the same hint, and it is worth 4.2 MB.** Registering
-        /// 125,000 blocks allocated 187 bytes each; sized it is 153.4, which is the `ThermalNode`
-        /// objects and nothing else — every byte of list growth is gone.
-        /// </summary>
         [Fact]
+/// <summary>SizingTheNodeListsRemovesTheirRegrowth operation.</summary>
         public void SizingTheNodeListsRemovesTheirRegrowth()
         {
+/// <summary>Hull operation.</summary>
             GridBuilder source = Hull();
 
+/// <summary>Registers and opens communication.</summary>
             long plain = Registered(source, 0);
+/// <summary>Registers and opens communication.</summary>
             long sized = Registered(source, source.Placed.Count);
 
             Assert.True(plain > sized,
                 "sizing the node lists saved nothing: " + sized + " B against " + plain + " B");
         }
 
+/// <summary>Registers the API and message handler.</summary>
         private static long Registered(GridBuilder source, int capacity)
         {
             ThermalSimulation simulation =
+/// <summary>ThermalSimulation operation.</summary>
                 new ThermalSimulation(new ThermalSettings().Derive(), source.Grid);
 
             if (capacity > 0) simulation.EnsureCapacity(capacity);
@@ -145,45 +135,29 @@ namespace Thermodynamics.Tests
             return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
-        /// <summary>
-        /// **The block table is deliberately *not* sized, and this records why rather than leaving
-        /// it to look like an oversight.**
-        ///
-        /// <para>
-        /// A list's order is its index order whatever its capacity, so sizing one cannot be
-        /// observed. A dictionary's is not: capacity decides bucket layout and so decides
-        /// enumeration order. `ThermalGrid.blocks` is enumerated by the x-ray overlay, which stops
-        /// at `DebugOverlayMaxBoxes` — so a different order draws a different set of boxes on any
-        /// hull over the budget. Cosmetic, and still a behaviour change.
-        /// </para>
-        ///
-        /// <para>
-        /// `GridModel`'s cell table *is* sized, because the one thing that enumerates it takes a
-        /// min and a max over integers, which is order-independent.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheGridModelsOwnTableIsOrderIndependentWhereItIsEnumerated operation.</summary>
         public void TheGridModelsOwnTableIsOrderIndependentWhereItIsEnumerated()
         {
+/// <summary>Hull operation.</summary>
             GridBuilder source = Hull();
 
+/// <summary>Built operation.</summary>
             GridModel plain = Built(source, 0);
+/// <summary>Built operation.</summary>
             GridModel sized = Built(source, source.Placed.Count);
 
-            // The bounds are the only thing derived from enumerating the cell table, and they agree.
             Assert.Equal(plain.Min, sized.Min);
             Assert.Equal(plain.Max, sized.Max);
         }
 
-        /// <summary>
-        /// **A late call is ignored rather than obeyed**, because rebuilding a populated table would
-        /// copy every entry to save copying them later — and a caller that asks twice must not lose
-        /// the blocks it already placed.
-        /// </summary>
         [Fact]
+/// <summary>SizingAfterTheFirstBlockIsIgnoredAndLosesNothing operation.</summary>
         public void SizingAfterTheFirstBlockIsIgnoredAndLosesNothing()
         {
+/// <summary>Hull operation.</summary>
             GridBuilder source = Hull();
+/// <summary>Built operation.</summary>
             GridModel grid = Built(source, 0);
 
             int before = grid.BlockCount;
@@ -193,10 +167,11 @@ namespace Thermodynamics.Tests
             Assert.NotNull(grid.GetAtCell(source.Placed[0].Min));
         }
 
-        /// <summary>Nought and negatives are ignored, so a caller with no count may pass what it has.</summary>
         [Fact]
+/// <summary>ACountItDoesNotHaveIsIgnored operation.</summary>
         public void ACountItDoesNotHaveIsIgnored()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(Catalog.LargeGridSize);
 
             grid.EnsureCellCapacity(0);

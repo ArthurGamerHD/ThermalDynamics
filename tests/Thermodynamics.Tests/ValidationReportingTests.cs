@@ -4,38 +4,24 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// That a validator's finding reaches somebody.
-    ///
-    /// <para>
-    /// `BlockThermalProperties.Validate` and `ThermalSettings.Validate` were correct and tested for
-    /// as long as they existed, and were called from nowhere the game runs — the whole of
-    /// backlog.md `A19`, and the defect class `D2` exists to catch: built,
-    /// documented, reached by nothing. Tests that call a validator directly cannot see that, which
-    /// is why these test the collector instead: what it says, how often it says it, and that a
-    /// finding survives having nowhere to write it.
-    /// </para>
-    ///
-    /// <para>
-    /// The game side of the wiring — the two call sites and the log — is a game type and cannot run
-    /// here; `NoDocCommentDescribesSomethingThatIsNotThere` and the build are what hold it.
-    /// </para>
-    /// </summary>
     [Collection("ThermalValidation")]
     public class ValidationReportingTests
     {
-        /// <summary>Isolates the shared static, and leaves nothing installed behind it.</summary>
+/// <summary>Capture operation.</summary>
         private static List<string> Capture()
         {
             ThermalValidation.Reset();
+/// <summary>List operation.</summary>
             List<string> written = new List<string>();
             ThermalValidation.Writer = written.Add;
             return written;
         }
 
         [Fact]
+/// <summary>AnUnphysicalBlockPropertyIsNamedWithTheBlockThatCarriesIt operation.</summary>
         public void AnUnphysicalBlockPropertyIsNamedWithTheBlockThatCarriesIt()
         {
+/// <summary>Capture operation.</summary>
             List<string> written = Capture();
             try
             {
@@ -60,13 +46,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The reason the collector exists at all rather than a call straight to the log: a hull
-        /// holds thousands of one block type and a slider drag is a settings change a frame.
-        /// </summary>
         [Fact]
+/// <summary>TheSameProblemIsSaidOnceHoweverOftenItIsFound operation.</summary>
         public void TheSameProblemIsSaidOnceHoweverOftenItIsFound()
         {
+/// <summary>Capture operation.</summary>
             List<string> written = Capture();
             try
             {
@@ -79,8 +63,6 @@ namespace Thermodynamics.Tests
                 Assert.Single(written);
                 Assert.Single(ThermalValidation.Problems);
 
-                // A different block with the same fault is a different problem: an author has two
-                // definitions to go and fix, and one line names one of them.
                 ThermalValidation.Check("Another", new BlockThermalProperties { SpecificHeat = 0f });
                 Assert.Equal(2, written.Count);
             }
@@ -91,14 +73,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// A healthy definition and a healthy world say nothing at all. The mod ships 654 authored
-        /// values and every one of them goes through this on the definition pass; a validator that
-        /// chatted about correct values would be turned off within a session.
-        /// </summary>
         [Fact]
+/// <summary>NothingIsSaidAboutValuesThatAreFine operation.</summary>
         public void NothingIsSaidAboutValuesThatAreFine()
         {
+/// <summary>Capture operation.</summary>
             List<string> written = Capture();
             try
             {
@@ -115,16 +94,15 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// A settings fault is reported under a name an administrator can act on, and the derived
-        /// problems are reachable — `HeatTimeScale / Frequency` is a fault of neither value alone.
-        /// </summary>
         [Fact]
+/// <summary>ASettingsFaultIsReportedAfterItHasBeenDerived operation.</summary>
         public void ASettingsFaultIsReportedAfterItHasBeenDerived()
         {
+/// <summary>Capture operation.</summary>
             List<string> written = Capture();
             try
             {
+/// <summary>ThermalSettings operation.</summary>
                 ThermalSettings settings = new ThermalSettings();
                 settings.Frequency = 2;
                 settings.HeatTimeScale = 20000f;
@@ -143,11 +121,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The definition pass runs before the log exists, and a finding must survive that: the
-        /// writer is optional, the finding is not.
-        /// </summary>
         [Fact]
+/// <summary>AProblemFoundBeforeAnybodyIsListeningIsStillRecorded operation.</summary>
         public void AProblemFoundBeforeAnybodyIsListeningIsStillRecorded()
         {
             ThermalValidation.Reset();
@@ -163,8 +138,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>A writer that throws is not allowed to take the definition pass down with it.</summary>
         [Fact]
+/// <summary>AWriterThatThrowsIsNotTheReasonAWorldFailsToLoad operation.</summary>
         public void AWriterThatThrowsIsNotTheReasonAWorldFailsToLoad()
         {
             ThermalValidation.Reset();

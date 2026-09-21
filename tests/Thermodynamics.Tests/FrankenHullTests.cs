@@ -7,27 +7,17 @@ using Xunit.Abstractions;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The million-block grid welded out of real ships (`G5`), held to the things that make it a
-    /// grid rather than a pile.
-    ///
-    /// <para>
-    /// **Built from hulls this file makes, not from the corpus.** The tiling is the part that can
-    /// be wrong — two ships in the same cells, a lattice that is a line, a target overshot by a
-    /// whole ship — and none of that needs a blueprint to check. What needs the corpus is the
-    /// *mixture*, and that is what `bench franken` measures rather than what a test asserts.
-    /// </para>
-    /// </summary>
     public class FrankenHullTests
     {
         private readonly ITestOutputHelper output;
 
+/// <summary>FrankenHullTests operation.</summary>
         public FrankenHullTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-        /// <summary>A solid box of light armour, standing in for a ship's main grid.</summary>
+/// <summary>Part operation.</summary>
         private static Blueprints.Grid Part(string name, Vector3I size)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -42,12 +32,8 @@ namespace Thermodynamics.Tests
             };
         }
 
-        /// <summary>
-        /// **No two hulls may occupy the same cell**, which is the one way tiling can silently
-        /// produce a smaller grid than it reports: `GridModel.Add` would keep one block per cell
-        /// while the manifest counted both.
-        /// </summary>
         [Fact]
+/// <summary>TiledHullsNeverLandOnTopOfEachOther operation.</summary>
         public void TiledHullsNeverLandOnTopOfEachOther()
         {
             List<Blueprints.Grid> parts = new List<Blueprints.Grid>
@@ -61,10 +47,9 @@ namespace Thermodynamics.Tests
 
             output.WriteLine(manifest.Describe());
 
-            // Every placement is still in the grid, so the count the manifest reports is the count
-            // the grid holds.
             Assert.Equal(manifest.Blocks, hull.Placed.Count);
 
+/// <summary>HashSet operation.</summary>
             HashSet<Vector3I> occupied = new HashSet<Vector3I>();
             foreach (BlockInstance block in hull.Placed)
             {
@@ -72,18 +57,14 @@ namespace Thermodynamics.Tests
                     "two hulls were tiled into the same cell at " + block.Min);
             }
 
-            // The pitch is the largest box, in each axis independently, so neither part overhangs.
             Assert.Equal(new Vector3I(6, 5, 3), manifest.Pitch);
         }
 
-        /// <summary>
-        /// **A cube of hulls rather than a chain.** A grid's cost is set by how many neighbours a
-        /// block has, so a million blocks laid out end to end would be a million blocks with the
-        /// link count of a rope and would understate everything the rig exists to measure.
-        /// </summary>
         [Fact]
+/// <summary>TheLatticeIsACubeSoTheHullHasNeighboursInEveryDirection operation.</summary>
         public void TheLatticeIsACubeSoTheHullHasNeighboursInEveryDirection()
         {
+/// <summary>Part operation.</summary>
             List<Blueprints.Grid> parts = new List<Blueprints.Grid> { Part("cube", new Vector3I(4, 4, 4)) };
 
             FrankenHull.Manifest manifest = new FrankenHull.Manifest();
@@ -97,13 +78,11 @@ namespace Thermodynamics.Tests
                 "twenty-seven copies should need a lattice at least three a side");
         }
 
-        /// <summary>
-        /// It stops at the target rather than at the end of a pass, so asking for a million does not
-        /// silently build one and a half.
-        /// </summary>
         [Fact]
+/// <summary>ItStopsWithinOneHullOfWhatWasAskedFor operation.</summary>
         public void ItStopsWithinOneHullOfWhatWasAskedFor()
         {
+/// <summary>Part operation.</summary>
             List<Blueprints.Grid> parts = new List<Blueprints.Grid> { Part("cube", new Vector3I(4, 4, 4)) };
 
             FrankenHull.Manifest manifest = new FrankenHull.Manifest();
@@ -116,11 +95,8 @@ namespace Thermodynamics.Tests
                 "it overshot by more than the hull it was placing when it got there");
         }
 
-        /// <summary>
-        /// The hull it produces is one the solver can actually take: it builds, it links, and its
-        /// blocks are the ones that were placed.
-        /// </summary>
         [Fact]
+/// <summary>TheWeldedHullBuildsIntoOneSimulation operation.</summary>
         public void TheWeldedHullBuildsIntoOneSimulation()
         {
             List<Blueprints.Grid> parts = new List<Blueprints.Grid>
@@ -141,17 +117,12 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(manifest.Blocks, simulation.Solver.Nodes.Count);
 
-            // Tiled with no gap, so neighbouring hulls touch and the graph is not one component per
-            // ship. Fewer links than nodes would mean the seams carry nothing at all.
             Assert.True(simulation.Solver.LinkCount > simulation.Solver.Nodes.Count,
                 "the welded hull has fewer links than blocks, so the seams are not touching");
         }
 
-        /// <summary>
-        /// Nothing to build from is an empty grid rather than a throw: the corpus is opt-in, and a
-        /// machine without it runs this file too.
-        /// </summary>
         [Fact]
+/// <summary>NothingToBuildFromIsAnEmptyHull operation.</summary>
         public void NothingToBuildFromIsAnEmptyHull()
         {
             FrankenHull.Manifest manifest = new FrankenHull.Manifest();

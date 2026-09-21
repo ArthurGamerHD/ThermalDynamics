@@ -10,56 +10,26 @@ using Thermodynamics.Harness;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The performance report exists to be compared against itself across changes, so the thing
-    /// that must not rot is its <em>shape</em>: the sections it produces, the keys it produces
-    /// them under, and its ability to read back what it wrote.
-    ///
-    /// A benchmark suite fails quietly. If a case is renamed, a diff against last month's
-    /// baseline silently drops that row and reports no regression; if the CSV round-trip breaks,
-    /// every comparison reads as "everything is new". Neither shows up as a failure anywhere
-    /// else, which is why these are ordinary tests rather than something a person remembers to
-    /// check.
-    /// </summary>
     [Trait("speed", "slow")]
     [Collection("alone")]
     public class PerformanceReportTests
     {
-        /// <summary>Small enough to run in the ordinary suite; the shape is the same at any size.</summary>
+/// <summary>Small operation.</summary>
         private static List<ReportRow> Small()
         {
             PerformanceReport.Repeats = 1;
             return PerformanceReport.Run("ship", 600, 2, new int[] { 600 });
         }
 
-        /// <summary>
-        /// **Every stopwatch in the report is inside a repeat loop.**
-        ///
-        /// <para>
-        /// benchmarks.md states the report's method in one sentence —
-        /// *every case is timed three times and the fastest kept* — and two of its figures were not:
-        /// the ladder's `build` column, which is what a load-path change is judged by, and the
-        /// `calibration` row, which is the divisor two machines' reports are compared through. Both
-        /// had been single samples since the day they were written, and both looked exactly like
-        /// every other row.
-        /// </para>
-        ///
-        /// <para>
-        /// Fixing the two is not the check; a third would arrive the same way. This asserts the
-        /// shape instead — a `Stopwatch.StartNew()` with no enclosing loop over `Repeats` is a
-        /// single sample, whatever it is called — which is the only form of this that a new column
-        /// cannot walk past. It reads the source rather than the report, because a single sample
-        /// and a fastest-of-three produce the same kind of number and that is the whole problem
-        /// (`P2`).
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>EveryTimedCaseInTheReportIsRepeated operation.</summary>
         public void EveryTimedCaseInTheReportIsRepeated()
         {
             string path = Path.Combine(ShippedBlocks.RepoRoot(),
                 "tests", "Thermodynamics.Harness", "PerformanceReport.cs");
 
             SyntaxNode root = CSharpSyntaxTree.ParseText(File.ReadAllText(path)).GetRoot();
+/// <summary>List operation.</summary>
             List<string> single = new List<string>();
 
             foreach (InvocationExpressionSyntax call in root.DescendantNodes()
@@ -84,11 +54,7 @@ namespace Thermodynamics.Tests
                 + " in the report it lands in");
         }
 
-        /// <summary>
-        /// Whether a node sits inside a `for` whose condition counts against `Repeats` — the
-        /// report's own dial, by either the field's name or a local copy of it, which is how the
-        /// loops that clamp it to at least one are written.
-        /// </summary>
+/// <summary>InsideARepeatLoop operation.</summary>
         private static bool InsideARepeatLoop(SyntaxNode node)
         {
             for (SyntaxNode up = node.Parent; up != null; up = up.Parent)
@@ -110,26 +76,8 @@ namespace Thermodynamics.Tests
             return false;
         }
 
-        /// <summary>
-        /// **The ladder's build column is the fastest of `Repeats` builds, like every other case.**
-        ///
-        /// <para>
-        /// It was one stopwatch from the day the report was written, under a page that states the
-        /// method as *every case is timed three times and the fastest kept* — and the build column
-        /// is the one a reader compares between two runs to say a load-path change worked. A single
-        /// sample carries a whole sample's noise, and nothing in the report said which columns were
-        /// which (`D3`).
-        /// </para>
-        ///
-        /// <para>
-        /// The count is asserted, not the timing: whether three builds are faster than one is a
-        /// property of the machine, and a test that demanded it would fail on a busy one. What can
-        /// be asserted is that the repeat happened, that the kept figure is the smallest of the
-        /// ones taken, and that the repeats built the same graph — which is the guard that makes
-        /// keeping the fastest mean anything.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheLaddersBuildColumnIsTheFastestOfSeveralBuilds operation.</summary>
         public void TheLaddersBuildColumnIsTheFastestOfSeveralBuilds()
         {
             int repeats = PerformanceReport.Repeats;
@@ -149,9 +97,6 @@ namespace Thermodynamics.Tests
                     "the rung built " + thrice.Simulation.Solver.Nodes.Count + " nodes, so it"
                     + " would agree with itself for the wrong reason");
 
-                // One repeat is still one build, and still a figure — the report is run at
-                // `Repeats = 1` by every test above, and that must remain a report rather than an
-                // exception or a zero.
                 PerformanceReport.Repeats = 1;
                 PerformanceReport.BuiltHull once =
                     PerformanceReport.RepeatBuild(new ThermalSettings(), hull);
@@ -159,8 +104,6 @@ namespace Thermodynamics.Tests
                 Assert.Equal(1, once.Builds);
                 Assert.True(once.BuildMs > 0d);
 
-                // Three builds of one hull are three builds of the same graph, which `RepeatBuild`
-                // throws over rather than quietly reporting the fastest of two different walks.
                 Assert.Equal(once.Simulation.Solver.Nodes.Count,
                     thrice.Simulation.Solver.Nodes.Count);
                 Assert.Equal(once.Simulation.Solver.Links.Count,
@@ -172,60 +115,44 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The clamp A/B measures two regimes, and the whole point of it is that they are
-        /// different regimes.
-        ///
-        /// Both rows would still be produced, and both would still look plausible, if the resolved
-        /// case had drifted stiff or the refused case had been given enough substeps to resolve —
-        /// and the pair would then be one measurement printed twice, reporting a saving of nothing
-        /// and a worst case of nothing. The <c>clamp live</c> flags are what distinguish them, so
-        /// they are asserted rather than merely printed.
-        /// </summary>
         [Fact]
+/// <summary>TheClampComparisonMeasuresBothRegimes operation.</summary>
         public void TheClampComparisonMeasuresBothRegimes()
         {
+/// <summary>Small operation.</summary>
             List<ReportRow> rows = Small();
 
+/// <summary>Value operation.</summary>
             double resolved = Value(rows, "overshoot clamp", "resolved", "clamp live");
+/// <summary>Value operation.</summary>
             double refused = Value(rows, "overshoot clamp", "refused", "clamp live");
 
             Assert.Equal(0.0, resolved);
             Assert.Equal(1.0, refused);
 
-            // And both halves of each A/B are present, or a comparison has nothing to compare.
             Assert.True(Value(rows, "overshoot clamp", "resolved", "step, gated") > 0.0);
             Assert.True(Value(rows, "overshoot clamp", "resolved", "step, always clamped") > 0.0);
             Assert.True(Value(rows, "overshoot clamp", "refused", "step, gated") > 0.0);
             Assert.True(Value(rows, "overshoot clamp", "refused", "step, always clamped") > 0.0);
         }
 
-        /// <summary>
-        /// Diagnostics cost something, and the report has claimed otherwise before.
-        ///
-        /// `bench report --diagnostics` set a flag that this file never read, so the whole report
-        /// ran in the cheap configuration under a name that said it had not. Every field dump is
-        /// taken with the per-mechanism watts on — taking a dump is what turns them on — so a
-        /// report that cannot reach that configuration cannot be compared against one.
-        /// </summary>
         [Fact]
+/// <summary>TheDiagnosticsRowMeasuresBothConfigurations operation.</summary>
         public void TheDiagnosticsRowMeasuresBothConfigurations()
         {
+/// <summary>Small operation.</summary>
             List<ReportRow> rows = Small();
 
             Assert.True(Value(rows, "diagnostics", "per-mechanism watts", "step, off") > 0.0);
             Assert.True(Value(rows, "diagnostics", "per-mechanism watts", "step, on") > 0.0);
             Assert.True(Value(rows, "diagnostics", "per-mechanism watts", "step, every substep") > 0.0);
 
-            // What distinguishes the three cases, asserted off the node objects rather than off
-            // the timings. An earlier version of this test compared the milliseconds — a two-tick
-            // run on a six-hundred-block hull, where the difference is inside the scheduler's
-            // noise — and failed on a busy machine while the code was correct.
             Assert.Equal(0.0, Value(rows, "diagnostics", "per-mechanism watts", "written, off"));
             Assert.Equal(1.0, Value(rows, "diagnostics", "per-mechanism watts", "written, on"));
             Assert.Equal(1.0, Value(rows, "diagnostics", "per-mechanism watts", "written, every substep"));
         }
 
+/// <summary>Value operation.</summary>
         private static double Value(IList<ReportRow> rows, string section, string name, string metric)
         {
             for (int i = 0; i < rows.Count; i++)
@@ -239,11 +166,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheReportCoversEverySectionAndEveryFeature operation.</summary>
         public void TheReportCoversEverySectionAndEveryFeature()
         {
+/// <summary>Small operation.</summary>
             List<ReportRow> rows = Small();
 
+/// <summary>HashSet operation.</summary>
             HashSet<string> sections = new HashSet<string>();
+/// <summary>HashSet operation.</summary>
             HashSet<string> features = new HashSet<string>();
 
             for (int i = 0; i < rows.Count; i++)
@@ -259,8 +190,6 @@ namespace Thermodynamics.Tests
             Assert.Contains("overshoot clamp", sections);
             Assert.Contains("diagnostics", sections);
 
-            // Every switch a world can turn off has to be in the breakdown, or a feature can grow
-            // expensive without any report noticing.
             foreach (string expected in new string[]
             {
                 "conduction", "radiation", "convection", "solar", "self shadow", "waste heat",
@@ -274,9 +203,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EveryFigureHasAUniqueKey operation.</summary>
         public void EveryFigureHasAUniqueKey()
         {
+/// <summary>Small operation.</summary>
             List<ReportRow> rows = Small();
+/// <summary>HashSet operation.</summary>
             HashSet<string> keys = new HashSet<string>();
 
             for (int i = 0; i < rows.Count; i++)
@@ -287,8 +219,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheCsvRoundTrips operation.</summary>
         public void TheCsvRoundTrips()
         {
+/// <summary>Small operation.</summary>
             List<ReportRow> rows = Small();
             List<ReportRow> read = PerformanceReport.ParseCsv(PerformanceReport.Csv(rows));
 
@@ -300,16 +234,15 @@ namespace Thermodynamics.Tests
                 Assert.Equal(rows[i].Unit, read[i].Unit);
                 Assert.Equal(rows[i].LowerIsBetter, read[i].LowerIsBetter);
 
-                // Round-tripped exactly, not approximately: a comparison against a baseline is a
-                // subtraction, and a value that loses digits on the way to disk turns into a
-                // regression the next time anyone reads it.
                 Assert.Equal(rows[i].Value, read[i].Value);
             }
         }
 
         [Fact]
+/// <summary>ComparingAReportAgainstItselfFindsNothing operation.</summary>
         public void ComparingAReportAgainstItselfFindsNothing()
         {
+/// <summary>Small operation.</summary>
             List<ReportRow> rows = Small();
             string diff = PerformanceReport.Compare(rows, rows);
 
@@ -319,6 +252,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AWorseNumberIsReportedAsARegressionAndABetterOneIsNot operation.</summary>
         public void AWorseNumberIsReportedAsARegressionAndABetterOneIsNot()
         {
             List<ReportRow> baseline = new List<ReportRow>
@@ -340,11 +274,8 @@ namespace Thermodynamics.Tests
             Assert.Contains("improvements", diff);
         }
 
-        /// <summary>
-        /// A change smaller than the machine's own run-to-run spread is not a finding, and a
-        /// report that calls it one trains its reader to ignore the section.
-        /// </summary>
         [Fact]
+/// <summary>AChangeInsideTheThresholdIsNotReported operation.</summary>
         public void AChangeInsideTheThresholdIsNotReported()
         {
             List<ReportRow> baseline = new List<ReportRow>
@@ -361,14 +292,11 @@ namespace Thermodynamics.Tests
             Assert.Contains("regressions (1)", PerformanceReport.Compare(baseline, current, 0.01));
         }
 
-        /// <summary>
-        /// The report measures features by switching them off, so it is also a check that they
-        /// can be: a toggle that has quietly stopped being wired to anything would show as
-        /// costing exactly nothing in both columns.
-        /// </summary>
         [Fact]
+/// <summary>TheExpensiveFeaturesCostSomething operation.</summary>
         public void TheExpensiveFeaturesCostSomething()
         {
+/// <summary>Small operation.</summary>
             List<ReportRow> rows = Small();
 
             foreach (string feature in new string[] { "conduction", "radiation", "solar" })

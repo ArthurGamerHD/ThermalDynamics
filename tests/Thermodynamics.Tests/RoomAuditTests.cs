@@ -5,12 +5,9 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The audit is the diagnostic that answers "the room mapper says zero rooms, why". It has to
-    /// be right about a healthy grid before it can be trusted about a broken one.
-    /// </summary>
     public class RoomAuditTests
     {
+/// <summary>SealedShell operation.</summary>
         private static ThermalSimulation SealedShell()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -19,8 +16,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AHealthyShellAuditsClean operation.</summary>
         public void AHealthyShellAuditsClean()
         {
+/// <summary>SealedShell operation.</summary>
             ThermalSimulation simulation = SealedShell();
             RoomAudit audit = simulation.AuditRooms();
 
@@ -34,18 +33,17 @@ namespace Thermodynamics.Tests
             Assert.Equal(0, audit.UnsealedBlockFaces);
             Assert.Equal(0, audit.BlocksSealingNothing);
 
-            // padded search box is (-2..2)^3
             Assert.Equal(125, audit.SearchVolume);
             Assert.Equal(audit.SearchVolume, audit.ExternalCells + audit.SolidCells + audit.RoomCells);
         }
 
         [Fact]
+/// <summary>ABlockThatSealsNothingIsCountedAndNamed operation.</summary>
         public void ABlockThatSealsNothingIsCountedAndNamed()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Shell(Catalog.LightArmor(), new Vector3I(-1, -1, -1), new Vector3I(2, 2, 2));
 
-            // replace one wall block with a lattice: mounts everywhere, seals nothing
             BlockInstance solid = builder.Grid.GetAtCell(new Vector3I(0, 0, -1));
             builder.Grid.Remove(solid);
             builder.Place(Catalog.Grating(), new Vector3I(0, 0, -1));
@@ -55,8 +53,6 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(0, audit.RoomCount);
 
-            // the lattice seals nothing, so the fill walks straight through it: legitimately
-            // open space, and the reason the room is gone
             Assert.False(audit.HasLeak);
             Assert.Equal(1, audit.OpenBlockCells);
             Assert.Equal(1, audit.BlocksSealingNothing);
@@ -66,6 +62,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnOpenDoorLeaksAndTheExampleSaysSo operation.</summary>
         public void AnOpenDoorLeaksAndTheExampleSaysSo()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -83,21 +80,18 @@ namespace Thermodynamics.Tests
 
             RoomAudit audit = simulation.AuditRooms();
 
-            // the room survives the door opening; it is vented, and the audit says so
             Assert.Equal(1, audit.RoomCount);
             Assert.Equal(1, audit.VentedRooms);
             Assert.False(audit.HasLeak);
         }
 
-        /// <summary>
-        /// A grid whose mapper has never run holds the all-external default map. Auditing a grid
-        /// against that used to report its whole hull as unaccounted for — and it fired for real,
-        /// on the three-second paste previews a field session is full of.
-        /// </summary>
         [Fact]
+/// <summary>AGridThatHasNeverBeenMappedIsNotAudited operation.</summary>
         public void AGridThatHasNeverBeenMappedIsNotAudited()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(Catalog.LargeGridSize);
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
 
             BlockModel armour = Catalog.LightArmor();
@@ -123,14 +117,15 @@ namespace Thermodynamics.Tests
             Assert.Equal(0, audit.OpenBlockCells);
             Assert.Empty(audit.Examples);
 
-            // the half that does not depend on the map is still worth having
             Assert.Equal(26, audit.BlockCells);
             Assert.Equal(0, audit.UnsealedBlockFaces);
         }
 
         [Fact]
+/// <summary>OnceAPassHasRunTheSameGridAuditsAsBuilt operation.</summary>
         public void OnceAPassHasRunTheSameGridAuditsAsBuilt()
         {
+/// <summary>SealedShell operation.</summary>
             ThermalSimulation simulation = SealedShell();
 
             Assert.True(simulation.Rooms.CompletedPasses > 0);
@@ -138,6 +133,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheExampleListIsBounded operation.</summary>
         public void TheExampleListIsBounded()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -151,6 +147,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EveryCellOfTheSearchBoxIsClassifiedExactlyOnce operation.</summary>
         public void EveryCellOfTheSearchBoxIsClassifiedExactlyOnce()
         {
             GridBuilder builder = GridBuilder.Large();

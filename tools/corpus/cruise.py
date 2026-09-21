@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Whether a derived cruise speed lands where the authored one does, on real ships.
 
 [RelativeTopSpeed](https://github.com/Gauge/RelativeTopSpeed) holds each grid under a *cruise
@@ -30,54 +29,20 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import scoring
 
-#: RTS's authored cruise band, m/s: 60 at 200 t rising to 110 at 8 kt on large grids.
 AUTHORED_BAND = (60.0, 110.0)
 
-#: Sea-level air density, kg/m^3. The comparison is made where a ship flies fastest and where the
-#: authored curve was tuned; thinner air raises every derived speed by the same square root.
 SEA_LEVEL_DENSITY = 1.225
 
-#: Space Engineers' own large-grid speed cap, m/s. RTS raises it and then holds each grid down; the
-#: question here is how many ships never reach it because the air stops them first.
 ENGINE_CAP = 100.0
 
 
-#: What fraction of a hull's **total exposed area** is presented to the flow at any one moment.
-#:
-#: **Cauchy's surface-area formula**: the mean projection of a convex body over all orientations is
-#: exactly a quarter of its surface area. The census records the total — every exposed face,
-#: whichever way it points — and `½ C_d ρ A v²` wants the *frontal projection*, which is what the
-#: solver itself uses through its incidence weighting.
-#:
-#: **The first version of this file used the total and was wrong by this factor**, which put every
-#: cruise speed low by two and every drag high by four. See the change log below.
 PROJECTED_SHARE = 0.25
 
 
-#: The `DragCoefficient` the mod ships, and therefore the coefficient this file scores at unless a
-#: reader asks for another.
-#:
-#: **It defaulted to 1.0 until 2026-08-31, and every cruise figure ever published from this file was
-#: taken at that default while the mod shipped 0.5.** The drag milestone moved the setting from 1 to
-#: 0.5 on 2026-08-30 and this default was not moved with it, so `summary-cruise-2026-08-30.csv` and the
-#: four altitude medians quoted from it in thermal-model.md described **twice the drag the mod
-#: applies** — a median sea-level cruise of 140.9 m/s where the shipped configuration gives 199.2,
-#: and 22.4 % of hulls drag-limited where it is 11.6 %. A figure whose stated scope is untrue is
-#: `P1` from the other side.
-#:
-#: **And it moved again on 2026-09-09, from 0.5 to 1.54, when `EnableShapeDrag` began shipping on.**
-#: The two are one setting wearing two names: the shape term multiplies the projected area by a
-#: `sin²θ` whose population median is 0.3250, and `0.5 / 0.325 ≈ 1.54` restores what the coefficient
-#: was measured to deliver before it existed. Scoring at 1.54 *without* also passing a shape factor
-#: describes a world three times draggier than the one that ships — pass `--shape` per hull, or read
-#: the `shape_factor` column the census carries.
-#:
-#: It moves when the default does, deliberately, so this scores the configuration that ships rather
-#: than one nobody runs — the same rule `scoring.SHIPPED_VISIT_ALLOWANCE` is pinned under, and
-#: `TheCruiseToolScoresTheCoefficientTheModShips` is the guard that says so.
 SHIPPED_DRAG_COEFFICIENT = 1.54
 
 
+# cruise operation.
 def cruise(thrust, area, coefficient, density, shape=1.0):
     """Where thrust balances drag, m/s, or None where the ship has neither (`E8`).
 
@@ -101,6 +66,7 @@ def cruise(thrust, area, coefficient, density, shape=1.0):
                      / (coefficient * density * area * PROJECTED_SHARE * shape))
 
 
+# shape of operation.
 def shape_of(row, enabled):
     """A row's shape factor, or 1 where the census predates the column or it is switched off."""
     if not enabled:
@@ -109,6 +75,7 @@ def shape_of(row, enabled):
     return 1.0 if value is None or value <= 0 else value
 
 
+# main operation.
 def main():
     args = scoring.positionals(("--cd", "--rho", "--csv"))
 
@@ -117,8 +84,6 @@ def main():
     density = float(scoring.flag("--rho", SEA_LEVEL_DENSITY))
     out = scoring.flag("--csv", None)
 
-    # A census written before 2026-08-31 carries no `shape_factor`, and those rows read as 1 —
-    # so this defaults on and degrades to the old answer rather than refusing an old file.
     shaped = "--no-shape" not in sys.argv
 
     if not os.path.exists(path):
@@ -196,13 +161,6 @@ def main():
           " spread")
     print("  below is the size of what the mass curve throws away.")
 
-    # ---- what the engine's own cap does to this ------------------------------------------------
-    #
-    # **The reason the grid-speed milestone may not need a retarding force at all.** RTS holds each grid under a cruise
-    # speed because it has no drag: without one, a ship accelerates to the engine's global cap and
-    # stays there. This model *has* drag, so a ship stops where thrust balances it — and for most
-    # ships that is below the cap the engine already enforces, which means the retarding force would
-    # be holding them under a speed they cannot reach.
     print()
     print("  %-12s %14s %10s %28s" % ("air density", "", "median", "drag-limited below 100 m/s"))
     for rho, label in ((1.225, "sea level"), (0.6, "half"), (0.3, "thin"), (0.1, "very thin")):

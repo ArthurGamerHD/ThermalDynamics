@@ -4,31 +4,15 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The cheap pass of the balance lab: what a ship is, before anything is stepped.
-    ///
-    /// Every figure here becomes a row in the matrix the balance criteria are decided from, so an
-    /// error in one of them is an error in a default. The load model is the part most able to be
-    /// wrong while looking right, and the tests are weighted accordingly.
-    /// </summary>
     public class ScreeningTests
     {
-        /// <summary>
-        /// A ship accelerates one way at a time. The thrusters facing that way burn and the ones
-        /// facing the other five do not, so the sustained load is the **strongest single
-        /// direction** rather than the sum of every thruster on the hull.
-        ///
-        /// The first version of this pass summed them, which inflated the load on thruster-heavy
-        /// ships several-fold: one 349-block hull reported 16,926 W/m² and actually runs at 2,244,
-        /// a factor of 7.5. Every balance conclusion drawn from that would have been wrong in the
-        /// same direction, and a corpus of ten thousand ships would have agreed with it
-        /// enthusiastically.
-        /// </summary>
         [Fact]
+/// <summary>ThrustIsTheStrongestDirectionRatherThanTheSumOfAllOfThem operation.</summary>
         public void ThrustIsTheStrongestDirectionRatherThanTheSumOfAllOfThem()
         {
             if (!GameBlocks.IsInstalled) return;
 
+/// <summary>Measure operation.</summary>
             ShipProfile balanced = Measure(new string[]
             {
                 "LargeBlockArmorBlock:Forward:0",
@@ -38,29 +22,19 @@ namespace Thermodynamics.Tests
 
             if (balanced == null) return;
 
-            // Two thrusters one way and two the other: the ship can burn one pair at a time.
             Assert.True(balanced.ThrustNewtons > 0f, "no thrust was found at all");
             Assert.True(balanced.ThrustNewtonsAllDirections > balanced.ThrustNewtons,
                 "a ship with opposed thrusters reported the same figure both ways: "
                 + balanced.ThrustNewtons + " against " + balanced.ThrustNewtonsAllDirections);
         }
 
-        /// <summary>
-        /// **Only a thruster has thrust.** Gyros carry the same <c>ForceMagnitude</c> element and
-        /// it means torque in newton-metres, not thrust in newtons: a large gyro reads 3.36e7 and
-        /// a prototech one 2.016e8, against a real draw of ten kilowatts.
-        ///
-        /// Reading the element off every block that has it turned one gyro into 33.6 MW of waste
-        /// heat and drove a real 9,378-block hull to 342,000 K across half the battery. It looked
-        /// exactly like solver instability — the sort of finding that would have been written up as
-        /// a defect in the integrator — and it was arithmetic in the harness. The substep demand
-        /// was being met the whole time, which is what gave it away.
-        /// </summary>
         [Fact]
+/// <summary>OnlyAThrusterCarriesThrust operation.</summary>
         public void OnlyAThrusterCarriesThrust()
         {
             if (!GameBlocks.IsInstalled) return;
 
+/// <summary>List operation.</summary>
             List<string> wrong = new List<string>();
 
             foreach (GameBlocks.Definition definition in GameBlocks.All())
@@ -75,8 +49,8 @@ namespace Thermodynamics.Tests
             Assert.Empty(wrong);
         }
 
-        /// <summary>A gyro's heat comes from its draw, which is four orders of magnitude smaller.</summary>
         [Fact]
+/// <summary>AGyroIsRatedByItsDrawAndNotByItsTorque operation.</summary>
         public void AGyroIsRatedByItsDrawAndNotByItsTorque()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -90,17 +64,8 @@ namespace Thermodynamics.Tests
                 "a gyro drawing " + gyro.PowerDrawWatts + " W has picked up its torque again");
         }
 
-        /// <summary>
-        /// **A definition that lists no mount points is not a block that mounts nowhere.** Six per
-        /// cent of the game's definitions leave <c>MountPoints</c> out and let the game derive them
-        /// from model geometry, and <c>LargeBlockBatteryBlock</c> is one of them.
-        ///
-        /// Reading that silence as "no mounts" built a block with no conduction links and no
-        /// exposed faces — a thermally sealed box. 51.9 kW went into one with no exit of any kind
-        /// and it climbed to 7,634 K, which read as a balance problem with batteries and was a
-        /// parser falling through. Nothing about it looked wrong except the temperature.
-        /// </summary>
         [Fact]
+/// <summary>ABlockThatDeclaresNoMountPointsStillConducts operation.</summary>
         public void ABlockThatDeclaresNoMountPointsStillConducts()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -108,9 +73,9 @@ namespace Thermodynamics.Tests
             GameBlocks.Definition battery;
             if (!GameBlocks.BySubtype().TryGetValue("LargeBlockBatteryBlock", out battery)) return;
 
-            // The premise: this is one of the definitions that declares none.
             Assert.False(battery.HasDeclaredMounts);
 
+/// <summary>Measure operation.</summary>
             ShipProfile profile = Measure(new string[]
             {
                 "LargeBlockBatteryBlock:Forward:0",
@@ -124,12 +89,8 @@ namespace Thermodynamics.Tests
                 "a block with no declared mounts came back with no exposed surface at all");
         }
 
-        /// <summary>
-        /// A battery rates 12 MW out and 12 MW in and is never doing both. Counting both made a
-        /// ship full of them look like it was charging and discharging every one at once, which
-        /// doubled the load and stood the batteries beside the reactors as co-generators.
-        /// </summary>
         [Fact]
+/// <summary>AStoreIsNotBothChargingAndDischarging operation.</summary>
         public void AStoreIsNotBothChargingAndDischarging()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -141,7 +102,7 @@ namespace Thermodynamics.Tests
                 "the premise has changed: a battery no longer rates both ways");
             Assert.True(ShipLoad.IsStore(battery.TypeId));
 
-            // A hull of batteries with nothing to power draws nothing and so makes no heat.
+/// <summary>Measure operation.</summary>
             ShipProfile profile = Measure(new string[]
             {
                 "LargeBlockBatteryBlock:Forward:0",
@@ -153,12 +114,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, profile.WasteWatts, 1);
         }
 
-        /// <summary>
-        /// Thermal stress is the number the whole pass exists to produce, and it is a ratio: watts
-        /// of heat over square metres of skin. A ship with no exposed surface reports zero rather
-        /// than dividing by it.
-        /// </summary>
         [Fact]
+/// <summary>ThermalStressIsWattsOverExposedArea operation.</summary>
         public void ThermalStressIsWattsOverExposedArea()
         {
             ShipProfile profile = new ShipProfile { WasteWatts = 5000f, ExposedArea = 100f };
@@ -167,12 +124,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, new ShipProfile { WasteWatts = 5000f, ExposedArea = 0f }.ThermalStress);
         }
 
-        /// <summary>
-        /// The equilibrium estimate has to invert Stefan–Boltzmann, or the screening pass is
-        /// sorting ships by a number that means nothing. A grey body at 0.15 shedding 1 kW/m²
-        /// sits near 1,000 K.
-        /// </summary>
         [Fact]
+/// <summary>TheEquilibriumEstimateInvertsStefanBoltzmann operation.</summary>
         public void TheEquilibriumEstimateInvertsStefanBoltzmann()
         {
             ShipProfile profile = new ShipProfile { WasteWatts = 8500f, ExposedArea = 1f };
@@ -182,14 +135,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, new ShipProfile().EquilibriumKelvin());
         }
 
-        /// <summary>
-        /// A panel with no example at the end of an axis cannot say anything about that axis, so
-        /// the extremes are taken before anything else. The largest ship in the corpus must be in
-        /// any panel big enough to hold it.
-        /// </summary>
         [Fact]
+/// <summary>ThePanelAlwaysHoldsTheExtremesOfEveryAxis operation.</summary>
         public void ThePanelAlwaysHoldsTheExtremesOfEveryAxis()
         {
+/// <summary>Corpus operation.</summary>
             List<ShipProfile> corpus = Corpus();
             List<Specimens.Scored> panel = Specimens.Select(corpus, 8);
 
@@ -208,14 +158,11 @@ namespace Thermodynamics.Tests
             Assert.True(found, "the largest ship in the corpus is not in the panel");
         }
 
-        /// <summary>
-        /// Selection is by coverage rather than by frequency. Twenty near-identical ships and one
-        /// unusual one must not produce a panel of twenty duplicates: the interior of a cluster is
-        /// predictable from its edges, and the edges are where a balance figure fails first.
-        /// </summary>
         [Fact]
+/// <summary>ACrowdOfNearDuplicatesDoesNotCrowdOutTheOutlier operation.</summary>
         public void ACrowdOfNearDuplicatesDoesNotCrowdOutTheOutlier()
         {
+/// <summary>List operation.</summary>
             List<ShipProfile> corpus = new List<ShipProfile>();
 
             for (int i = 0; i < 20; i++)
@@ -254,14 +201,11 @@ namespace Thermodynamics.Tests
             Assert.True(found, "a panel of three took three clones and left the outlier out");
         }
 
-        /// <summary>
-        /// The redundancy measure is what says when a corpus has stopped being worth growing:
-        /// ships that sit on top of another in feature space are the ones the next thousand
-        /// downloads will mostly be.
-        /// </summary>
         [Fact]
+/// <summary>NearDuplicatesAreReportedAsRedundantAndTheOutlierIsNot operation.</summary>
         public void NearDuplicatesAreReportedAsRedundantAndTheOutlierIsNot()
         {
+/// <summary>List operation.</summary>
             List<ShipProfile> corpus = new List<ShipProfile>();
 
             for (int i = 0; i < 5; i++)
@@ -297,14 +241,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// A panel that is the whole corpus serves every ship perfectly. Anything less than that
-        /// is a fidelity above zero, and a panel that grows can only improve it — which is the
-        /// property that makes the number usable as a stopping rule.
-        /// </summary>
         [Fact]
+/// <summary>FidelityImprovesAsThePanelGrows operation.</summary>
         public void FidelityImprovesAsThePanelGrows()
         {
+/// <summary>Corpus operation.</summary>
             List<ShipProfile> corpus = Corpus();
 
             double small = Specimens.Fidelity(corpus, Specimens.Select(corpus, 3));
@@ -315,9 +256,10 @@ namespace Thermodynamics.Tests
             Assert.Equal(0d, whole, 6);
         }
 
-        /// <summary>A corpus spanning several orders of magnitude on every axis.</summary>
+/// <summary>Corpus operation.</summary>
         private static List<ShipProfile> Corpus()
         {
+/// <summary>List operation.</summary>
             List<ShipProfile> corpus = new List<ShipProfile>();
 
             for (int i = 0; i < 24; i++)
@@ -338,13 +280,7 @@ namespace Thermodynamics.Tests
             return corpus;
         }
 
-        /// <summary>
-        /// Builds a tiny ship out of named blocks and measures it, or returns null when a subtype
-        /// this test wants is not in the installed game.
-        ///
-        /// Each entry is <c>subtype:direction:cell</c>, placed along the x axis so nothing is
-        /// buried and every block keeps its exposure.
-        /// </summary>
+/// <summary>Measure operation.</summary>
         private static ShipProfile Measure(string[] entries)
         {
             Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();

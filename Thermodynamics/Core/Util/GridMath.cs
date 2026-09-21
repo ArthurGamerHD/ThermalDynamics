@@ -3,39 +3,22 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// Grid-space integer maths: position keys and block geometry helpers.
-    /// </summary>
     public static class GridMath
     {
-        /// <summary>
-        /// Stride used by the legacy 32-bit position key. A coordinate must stay inside
-        /// [-512, 511] on X and Y or two different positions collapse onto the same key.
-        /// </summary>
         public const int LegacyStride = 1024;
         public const int LegacyHalfStride = LegacyStride / 2;
         private const int LegacyStrideSquared = LegacyStride * LegacyStride;
 
-        /// <summary>
-        /// Stride used by the 64-bit position key. Safe for coordinates in
-        /// [-1048576, 1048575], which is far beyond any buildable grid.
-        /// </summary>
         public const int WideStrideBits = 21;
         private const long WideStride = 1L << WideStrideBits;
 
-        /// <summary>
-        /// The legacy 32-bit position key, bit-compatible with <c>Vector3I.Flatten()</c> so existing
-        /// save data keeps working. Prefer <see cref="Key"/> for anything new.
-        /// </summary>
+/// <summary>LegacyFlatten operation.</summary>
         public static int LegacyFlatten(Vector3I v)
         {
             return (LegacyStrideSquared * v.Z) + (LegacyStride * v.Y) + v.X;
         }
 
-        /// <summary>
-        /// True when a position can survive a <see cref="LegacyFlatten"/> round trip.
-        /// Positions outside the range alias onto other positions.
-        /// </summary>
+/// <summary>IsLegacySafe operation.</summary>
         public static bool IsLegacySafe(Vector3I v)
         {
             return v.X >= -LegacyHalfStride && v.X < LegacyHalfStride
@@ -43,38 +26,28 @@ namespace Thermodynamics.Core
                 && v.Z >= -LegacyHalfStride && v.Z < LegacyHalfStride;
         }
 
-        /// <summary>
-        /// Inverse of <see cref="LegacyFlatten"/>. Uses floor division, so it is correct for negative
-        /// coordinates where truncating division is not.
-        /// </summary>
+/// <summary>LegacyUnflatten operation.</summary>
         public static Vector3I LegacyUnflatten(int key)
         {
+/// <summary>Wrap operation.</summary>
             int x = Wrap(key, LegacyStride);
             int rest = (key - x) / LegacyStride;
+/// <summary>Wrap operation.</summary>
             int y = Wrap(rest, LegacyStride);
             int z = (rest - y) / LegacyStride;
             return new Vector3I(x, y, z);
         }
 
-        /// <summary>64-bit position key. Injective over any realistic grid.</summary>
+/// <summary>Key operation.</summary>
         public static long Key(Vector3I v)
         {
             return ((long)v.Z << (WideStrideBits * 2)) + ((long)v.Y << WideStrideBits) + v.X;
         }
 
-        /// <summary>
-        /// What <see cref="Key"/> changes by when a cell steps one along a face, indexed by face.
-        ///
-        /// <para>
-        /// A key is <c>z·2^42 + y·2^21 + x</c> — a *sum* of the components rather than a packing of
-        /// bit fields — so it is linear: <c>Key(v + d) == Key(v) + Key(d)</c> for every v and d,
-        /// including across zero and across a component's sign. A neighbour's key is therefore an
-        /// addition, where deriving it from coordinates is three of them and two shifts.
-        /// See performance.md, Pass 3, Iteration 6.
-        /// </para>
-        /// </summary>
+/// <summary>Builds the method table.</summary>
         public static readonly long[] KeyByFace = BuildKeyByFace();
 
+/// <summary>Builds the API method table.</summary>
         private static long[] BuildKeyByFace()
         {
             long[] byFace = new long[Face.Count];
@@ -82,16 +55,19 @@ namespace Thermodynamics.Core
             return byFace;
         }
 
-        /// <summary>Inverse of <see cref="Key"/>.</summary>
+/// <summary>FromKey operation.</summary>
         public static Vector3I FromKey(long key)
         {
+/// <summary>WrapLong operation.</summary>
             int x = WrapLong(key, WideStride);
             long rest = (key - x) >> WideStrideBits;
+/// <summary>WrapLong operation.</summary>
             int y = WrapLong(rest, WideStride);
             long z = (rest - y) >> WideStrideBits;
             return new Vector3I(x, y, (int)z);
         }
 
+/// <summary>Wrap operation.</summary>
         private static int Wrap(int value, int stride)
         {
             int m = value % stride;
@@ -100,6 +76,7 @@ namespace Thermodynamics.Core
             return m;
         }
 
+/// <summary>WrapLong operation.</summary>
         private static int WrapLong(long value, long stride)
         {
             long m = value % stride;
@@ -108,15 +85,7 @@ namespace Thermodynamics.Core
             return (int)m;
         }
 
-        /// <summary>
-        /// Area, in square grid cells, of the largest face of a box with the given cell extents.
-        /// That is the product of the two largest dimensions.
-        /// </summary>
-        /// <remarks>
-        /// Both running maxima are seeded from the extents rather than from 1, and the second is
-        /// updated independently of the first; seeding at 1 and only updating the second on a new
-        /// maximum returns 5 instead of 10 for a 1x5x2 shape.
-        /// </remarks>
+/// <summary>LargestFaceArea operation.</summary>
         public static int LargestFaceArea(Vector3I extents)
         {
             int a = Math.Max(1, extents.X);
@@ -127,20 +96,20 @@ namespace Thermodynamics.Core
             return (a * b * c) / smallest;
         }
 
-        /// <summary>Extent of a box in cells, from an inclusive minimum and an exclusive maximum.</summary>
+/// <summary>Extents operation.</summary>
         public static Vector3I Extents(Vector3I min, Vector3I maxExclusive)
         {
             return maxExclusive - min;
         }
 
-        /// <summary>Number of cells occupied by a box.</summary>
+/// <summary>CellCount operation.</summary>
         public static int CellCount(Vector3I min, Vector3I maxExclusive)
         {
             Vector3I e = maxExclusive - min;
             return Math.Max(0, e.X) * Math.Max(0, e.Y) * Math.Max(0, e.Z);
         }
 
-        /// <summary>True when <paramref name="cell"/> lies inside the half-open box.</summary>
+/// <summary>Contains operation.</summary>
         public static bool Contains(Vector3I min, Vector3I maxExclusive, Vector3I cell)
         {
             return cell.X >= min.X && cell.X < maxExclusive.X

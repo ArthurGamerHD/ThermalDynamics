@@ -5,21 +5,9 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The published map's solid set is a bitset over the search box, and it is checked against
-    /// something that is not the map (`E7`): a cell is solid exactly when the surface map says it
-    /// seals structurally on all six faces and it belongs to no door — which is the mapper's own
-    /// definition, applied here cell by cell over the whole box rather than trusted through the map.
-    ///
-    /// <para>
-    /// Every cell of the box is asked, inside and out, so a bit stored at the wrong index, a box
-    /// sized a cell short, or a set that was never reset between passes would each show up as a
-    /// cell answering differently from its definition. Each fixture asserts it found structure,
-    /// since an empty set agrees with anything (`E8`).
-    /// </para>
-    /// </summary>
     public class RoomMapSolidTests
     {
+/// <summary>Builds the API method table.</summary>
         private static ThermalSimulation Build(string which)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -37,19 +25,24 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData("shell")]
         [InlineData("census")]
+/// <summary>ACellIsSolidExactlyWhenTheSurfaceMapSealsItOnEveryFaceAndItIsNoDoor operation.</summary>
         public void ACellIsSolidExactlyWhenTheSurfaceMapSealsItOnEveryFaceAndItIsNoDoor(string which)
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = Build(which);
             RoomMap map = simulation.Rooms.Map;
             SurfaceMap surfaces = simulation.Surfaces;
 
+/// <summary>HashSet operation.</summary>
             HashSet<Vector3I> doorCells = new HashSet<Vector3I>(Vector3I.Comparer);
             foreach (BlockInstance door in simulation.Grid.StateDependentBlocks)
             {
                 foreach (Vector3I cell in door.Cells) doorCells.Add(cell);
             }
 
+/// <summary>Vector3I operation.</summary>
             Vector3I min = simulation.Grid.Min - new Vector3I(2, 2, 2);
+/// <summary>Vector3I operation.</summary>
             Vector3I max = simulation.Grid.Max + new Vector3I(2, 2, 2);
 
             int solid = 0;
@@ -58,6 +51,7 @@ namespace Thermodynamics.Tests
             for (int y = min.Y; y <= max.Y; y++)
             for (int z = min.Z; z <= max.Z; z++)
             {
+/// <summary>Vector3I operation.</summary>
                 Vector3I cell = new Vector3I(x, y, z);
                 bool expected = surfaces.IsFullySealedStructurally(cell) && !doorCells.Contains(cell);
                 Assert.True(expected == map.IsSolid(cell),
@@ -72,10 +66,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(solid, map.SolidCellCount);
         }
 
-        /// <summary>A second pass over a changed grid must not keep the first pass's bits.</summary>
         [Fact]
+/// <summary>ASecondPassStartsFromAnEmptySet operation.</summary>
         public void ASecondPassStartsFromAnEmptySet()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = Build("shell");
             int before = simulation.Rooms.Map.SolidCellCount;
 

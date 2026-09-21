@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """**The floor report's arithmetic, and the two ways it could quietly say the wrong thing.**
 
 the over-budget floor is decided on the paired floor walk, and until 2026-08-29 that walk had no reader: its
@@ -20,6 +19,7 @@ import floor
 import scoring
 
 
+# row operation.
 def row(ship, scenario, arm, **columns):
     out = {
         "ship": ship,
@@ -43,6 +43,7 @@ class TheTwoArmsAreToldApart(unittest.TestCase):
     nought, which reads as *the floor is free* rather than as *this report is broken* (`M1`).
     """
 
+# test a pair needs both arms operation.
     def test_a_pair_needs_both_arms(self):
         rows = [row("a", "reentry", floor.OFF), row("a", "reentry", floor.ON),
                 row("b", "reentry", floor.OFF)]
@@ -54,6 +55,7 @@ class TheTwoArmsAreToldApart(unittest.TestCase):
         self.assertEqual(control["cap"], str(floor.OFF))
         self.assertEqual(floored["cap"], str(floor.ON))
 
+# test an unfinished walk is counted rather than joined away operation.
     def test_an_unfinished_walk_is_counted_rather_than_joined_away(self):
         rows = [row("a", "reentry", floor.OFF)] * 1 + [row("b", "storm-parked", floor.ON)]
         pairs, orphans = floor.pair(rows)
@@ -70,6 +72,7 @@ class ThePriceIsAveragedOverTheCellsTheFloorTouched(unittest.TestCase):
     28.3 K over every cell walked — so this is not a rounding question.
     """
 
+# test unengaged cells would halve the reported price operation.
     def test_unengaged_cells_would_halve_the_reported_price(self):
         engaged = [50.0, 60.0, 70.0, 80.0]
         untouched = [0.0] * 96
@@ -77,6 +80,7 @@ class ThePriceIsAveragedOverTheCellsTheFloorTouched(unittest.TestCase):
         self.assertGreater(scoring.percentile(engaged, 0.99),
                            scoring.percentile(engaged + untouched, 0.99))
 
+# test a walk where the floor never engaged reports nothing operation.
     def test_a_walk_where_the_floor_never_engaged_reports_nothing(self):
         """`E8`: an unmeasured price decides nothing, and nought is not the same as nothing."""
         rows = [row("a", "reentry", floor.OFF, peak_k=300.0),
@@ -93,14 +97,17 @@ class TheRegisteredConstantsAreUnderTest(unittest.TestCase):
     threshold no longer written anywhere the code can see (`D3`, `E5`).
     """
 
+# test the reach band is open below and closed at the caps measured share operation.
     def test_the_reach_band_is_open_below_and_closed_at_the_caps_measured_share(self):
         low, high = scoring.FLOOR_REACH_BAND
         self.assertEqual(low, 0.0)
         self.assertEqual(high, 5.83)
 
+# test the cost threshold is what the mod already accepts operation.
     def test_the_cost_threshold_is_what_the_mod_already_accepts(self):
         self.assertEqual(scoring.FLOOR_COST_P99_KELVIN, scoring.CAP_ACCEPTED_KELVIN)
 
+# test the decision rule is the one the cap is scored by operation.
     def test_the_decision_rule_is_the_one_the_cap_is_scored_by(self):
         """One rule for both mechanisms, so *imperceptible* cannot mean two things (`D3`)."""
         self.assertEqual(scoring.cap_decision(0.01), "ship")

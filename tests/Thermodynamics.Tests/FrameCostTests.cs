@@ -2,20 +2,13 @@ using Thermodynamics;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The per-frame cost tracker, which is what a report says when someone asks why the game
-    /// stutters.
-    ///
-    /// Worth testing on its own because everything it does is bookkeeping that only shows up
-    /// after a session — a frame closed at the wrong moment, a worst-frame list that keeps the
-    /// most recent rather than the worst, or a hitch threshold that lets the list fill with
-    /// ordinary frames all produce a report that looks plausible and says nothing.
-    /// </summary>
     public class FrameCostTests
     {
         [Fact]
+/// <summary>AFrameWithNoWorkIsNotRecorded operation.</summary>
         public void AFrameWithNoWorkIsNotRecorded()
         {
+/// <summary>FrameCostTracker operation.</summary>
             FrameCostTracker tracker = new FrameCostTracker();
 
             tracker.EndFrame(1, 0.1);
@@ -26,13 +19,11 @@ namespace Thermodynamics.Tests
             Assert.Empty(tracker.Worst);
         }
 
-        /// <summary>
-        /// The whole reason this exists: a frame's cost is every grid's cost added together, not
-        /// the worst grid's.
-        /// </summary>
         [Fact]
+/// <summary>AFrameCostsWhatEveryGridOnItCostTogether operation.</summary>
         public void AFrameCostsWhatEveryGridOnItCostTogether()
         {
+/// <summary>FrameCostTracker operation.</summary>
             FrameCostTracker tracker = new FrameCostTracker();
 
             for (int i = 0; i < 20; i++)
@@ -51,8 +42,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheWorstGridOnAFrameIsNamed operation.</summary>
         public void TheWorstGridOnAFrameIsNamed()
         {
+/// <summary>FrameCostTracker operation.</summary>
             FrameCostTracker tracker = new FrameCostTracker();
 
             tracker.AddGrid("tug", 1d, 200);
@@ -68,8 +61,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>StagesAndWorkCountsAreCarriedWithTheFrame operation.</summary>
         public void StagesAndWorkCountsAreCarriedWithTheFrame()
         {
+/// <summary>FrameCostTracker operation.</summary>
             FrameCostTracker tracker = new FrameCostTracker();
 
             tracker.AddGrid("station", 30d, 300000);
@@ -89,14 +84,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(1500000, sample.RoomCellsVisited);
         }
 
-        /// <summary>
-        /// The two stages the host drives around a step. Neither is inside the simulation, so
-        /// neither reached a frame's breakdown until it was added — which is how a worst frame in a
-        /// field dump attributed five per cent of itself and left the rest unexplained.
-        /// </summary>
         [Fact]
+/// <summary>TheStagesAroundAStepReachTheFrameToo operation.</summary>
         public void TheStagesAroundAStepReachTheFrameToo()
         {
+/// <summary>FrameCostTracker operation.</summary>
             FrameCostTracker tracker = new FrameCostTracker();
 
             tracker.AddGrid("station", 30d, 300000);
@@ -112,14 +104,11 @@ namespace Thermodynamics.Tests
             Assert.Contains("after step 11.00", sample.Describe());
         }
 
-        /// <summary>
-        /// What no stage claimed is derived from the rows rather than measured, so it cannot drift
-        /// from them; and two stages timing the same milliseconds shows as a negative rather than
-        /// being clamped into looking correct.
-        /// </summary>
         [Fact]
+/// <summary>WhatNoStageClaimedIsTheRemainderAndCanGoNegative operation.</summary>
         public void WhatNoStageClaimedIsTheRemainderAndCanGoNegative()
         {
+/// <summary>FrameCostTracker operation.</summary>
             FrameCostTracker tracker = new FrameCostTracker();
 
             tracker.AddGrid("station", 20d, 300000);
@@ -131,6 +120,7 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(0d, tracker.Worst[0].UnattributedMs, 6);
 
+/// <summary>FrameCostTracker operation.</summary>
             FrameCostTracker overlapping = new FrameCostTracker();
             overlapping.AddGrid("station", 20d, 300000);
             overlapping.AddStage(3, 15d);
@@ -140,13 +130,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(-10d, overlapping.Worst[0].UnattributedMs, 6);
         }
 
-        /// <summary>
-        /// A frame's accumulation must not leak into the next one — the failure that would make
-        /// every frame after the first hitch look like a hitch.
-        /// </summary>
         [Fact]
+/// <summary>EndingAFrameClearsWhatItAccumulated operation.</summary>
         public void EndingAFrameClearsWhatItAccumulated()
         {
+/// <summary>FrameCostTracker operation.</summary>
             FrameCostTracker tracker = new FrameCostTracker();
 
             tracker.AddGrid("station", 30d, 300000);
@@ -162,22 +150,18 @@ namespace Thermodynamics.Tests
             Assert.Equal(2, tracker.Frame.Calls);
             Assert.Equal(1d, tracker.Frame.LastMilliseconds, 6);
 
-            // The cheap frame is under the hitch threshold, so only the expensive one is kept.
             Assert.Single(tracker.Worst);
             Assert.Equal(1, tracker.Worst[0].Frame);
             Assert.Equal(3d, tracker.Worst[0].SampleMs, 6);
         }
 
-        /// <summary>
-        /// The list is the session's worst frames, not its most recent expensive ones. Without
-        /// that a long session reports whatever happened last.
-        /// </summary>
         [Fact]
+/// <summary>TheListKeepsTheWorstFramesAndNotTheLatest operation.</summary>
         public void TheListKeepsTheWorstFramesAndNotTheLatest()
         {
+/// <summary>FrameCostTracker operation.</summary>
             FrameCostTracker tracker = new FrameCostTracker();
 
-            // One genuinely bad frame, then far more merely-expensive ones than the list holds.
             tracker.AddGrid("station", 500d, 300000);
             tracker.EndFrame(1, 1d);
 
@@ -191,20 +175,17 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, tracker.Worst[0].Frame);
             Assert.Equal(500d, tracker.Worst[0].TotalMs, 6);
 
-            // And sorted worst first, so a reader does not have to.
             for (int i = 1; i < tracker.Worst.Count; i++)
             {
                 Assert.True(tracker.Worst[i - 1].TotalMs >= tracker.Worst[i].TotalMs);
             }
         }
 
-        /// <summary>
-        /// A quiet session must produce an empty list rather than sixteen ordinary frames
-        /// dressed up as hitches.
-        /// </summary>
         [Fact]
+/// <summary>OrdinaryFramesDoNotFillTheHitchList operation.</summary>
         public void OrdinaryFramesDoNotFillTheHitchList()
         {
+/// <summary>FrameCostTracker operation.</summary>
             FrameCostTracker tracker = new FrameCostTracker();
 
             for (int i = 0; i < 500; i++)
@@ -218,13 +199,11 @@ namespace Thermodynamics.Tests
             Assert.Empty(tracker.Worst);
         }
 
-        /// <summary>
-        /// Spikiness is the worst frame against the mean one, and it is the number that separates
-        /// "slower" from "stuttering".
-        /// </summary>
         [Fact]
+/// <summary>SpikeRatioSeparatesUniformlySlowFromOccasionallyEnormous operation.</summary>
         public void SpikeRatioSeparatesUniformlySlowFromOccasionallyEnormous()
         {
+/// <summary>FrameCostTracker operation.</summary>
             FrameCostTracker uniform = new FrameCostTracker();
             for (int i = 0; i < 100; i++)
             {
@@ -232,6 +211,7 @@ namespace Thermodynamics.Tests
                 uniform.EndFrame(i, i);
             }
 
+/// <summary>FrameCostTracker operation.</summary>
             FrameCostTracker spiky = new FrameCostTracker();
             for (int i = 0; i < 99; i++)
             {

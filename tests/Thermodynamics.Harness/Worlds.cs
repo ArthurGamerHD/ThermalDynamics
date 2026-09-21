@@ -4,30 +4,21 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Canned environments. These stand in for everything the game would supply: planets,
-    /// raycasts, weather and grid velocity.
-    /// </summary>
     public static class Worlds
     {
-        /// <summary>Deep space, sun on the given local axis.</summary>
+/// <summary>Space operation.</summary>
         public static EnvironmentSample Space(Vector3 sunDirectionLocal)
         {
             return EnvironmentSample.Vacuum(Vector3.Normalize(sunDirectionLocal));
         }
 
-        /// <summary>Deep space in full shadow.</summary>
+/// <summary>Shadow operation.</summary>
         public static EnvironmentSample Shadow()
         {
             return EnvironmentSample.DarkVacuum();
         }
 
-        /// <summary>
-        /// Dark vacuum with <paramref name="count"/> registered heat sources, each a distinct
-        /// direction and a plausible irradiance — the on-cost fixture for the heat-source fold
-        /// evaluation (redesign.md, fourth sweep). Dark so the sources are the only directional
-        /// term and their cost is not lost in the sun's.
-        /// </summary>
+/// <summary>DarkVacuumWithSources operation.</summary>
         public static EnvironmentSample DarkVacuumWithSources(int count)
         {
             EnvironmentSample sample = EnvironmentSample.DarkVacuum();
@@ -36,12 +27,12 @@ namespace Thermodynamics.Harness
             HeatSourceState[] sources = new HeatSourceState[count];
             for (int i = 0; i < count; i++)
             {
-                // Directions spread around the sphere so no two sources share a face weighting,
-                // and irradiances in the range a small reactor a few metres off would deliver.
                 double a = i * 2.399963f;   // the golden angle, radians
                 double z = 1.0 - (2.0 * (i + 0.5) / count);
                 double r = Math.Sqrt(Math.Max(0.0, 1.0 - (z * z)));
+/// <summary>Vector3 operation.</summary>
                 Vector3 direction = new Vector3((float)(Math.Cos(a) * r), (float)(Math.Sin(a) * r), (float)z);
+/// <summary>HeatSourceState operation.</summary>
                 sources[i] = new HeatSourceState(direction, 400f + (i % 5) * 120f);
             }
 
@@ -50,24 +41,18 @@ namespace Thermodynamics.Harness
             return sample;
         }
 
-        /// <summary>
-        /// Standing on a planet.
-        /// </summary>
-        /// <param name="airDensity">0..1.</param>
-        /// <param name="timeOfDay">
-        /// 0 = midnight, 0.5 = noon. Drives both ambient temperature and the sun direction.
-        /// </param>
-        /// <param name="windSpeed">Weather wind, m/s.</param>
+/// <summary>PlanetSurface operation.</summary>
         public static EnvironmentSample PlanetSurface(float airDensity, float timeOfDay, float windSpeed = 0f)
         {
+/// <summary>EnvironmentSample operation.</summary>
             EnvironmentSample sample = new EnvironmentSample();
             sample.HasPlanet = true;
             sample.AirDensity = airDensity;
             sample.IsUnderground = false;
             sample.UpDirection = Vector3.Up;
 
-            // The sun swings from below the horizon at midnight to overhead at noon.
             double angle = (timeOfDay * 2d * Math.PI) - (Math.PI / 2d);
+/// <summary>Vector3 operation.</summary>
             Vector3 sun = new Vector3((float)Math.Cos(angle), (float)Math.Sin(angle), 0f);
             sample.SunDirection = sun;
             sample.SunDirectionLocal = sun;
@@ -78,9 +63,6 @@ namespace Thermodynamics.Harness
             sample.RelativeWindSpeed = windSpeed;
             sample.RelativeWindDirectionLocal = windSpeed > 0f ? Vector3.Forward : Vector3.Zero;
 
-            // Clear air on an earthlike ball, at sea level. A scenario that cares about altitude,
-            // depth or weather says so; everything else gets a world where none of the three is
-            // doing anything, which is what these fixtures meant before any of them existed.
             sample.Weather = WeatherResponse.Calm;
             sample.WeatherIntensity = 0f;
             sample.MeanRadius = EarthlikeRadius;
@@ -91,18 +73,12 @@ namespace Thermodynamics.Harness
             return sample;
         }
 
-        /// <summary>Metres from centre to sea level on the stand-in planet. An earthlike's radius.</summary>
         public const float EarthlikeRadius = 60000f;
 
-        /// <summary>
-        /// Buried in the ground: no sun, underground ambient.
-        ///
-        /// Deep enough that the surface's day has damped out entirely and shallow enough to stay
-        /// inside the sea-level deadzone, so this is the flat part of the depth curve — the one
-        /// place ambient is simply the planet's underground figure.
-        /// </summary>
+/// <summary>Underground operation.</summary>
         public static EnvironmentSample Underground(float airDensity = 1f, float depth = 100f)
         {
+/// <summary>PlanetSurface operation.</summary>
             EnvironmentSample sample = PlanetSurface(airDensity, 0.5f);
             sample.IsUnderground = true;
             sample.IsSolarOccluded = true;
@@ -112,75 +88,49 @@ namespace Thermodynamics.Harness
             return sample;
         }
 
-        /// <summary>
-        /// Flying fast through still air. Composed the way the game composes it — velocity against
-        /// a zero wind — so the airflow on the hull is the adapter's own arithmetic, not a fixture
-        /// asserting what it should have been.
-        /// </summary>
+/// <summary>Flight operation.</summary>
         public static EnvironmentSample Flight(float airDensity, float speed, float timeOfDay = 0.5f)
         {
+/// <summary>WindAndMotion operation.</summary>
             return WindAndMotion(airDensity, 0f, Vector3.Zero, Vector3.Backward * speed, timeOfDay);
         }
 
-        /// <summary>
-        /// The three worlds the A/B suites compare in, named once because they were written out as
-        /// literals in twenty-five places across six files and the suites are only comparable to
-        /// each other while they agree.
-        ///
-        /// <para>
-        /// They are chosen for which terms each one makes live, not for being realistic. Between
-        /// them every branch of the environment pass is taken: with all of them on, with friction
-        /// below its threshold, and with air absent entirely.
-        /// </para>
-        /// </summary>
         public static class Ab
         {
-            /// <summary>
-            /// Full air at 300 m/s of relative airflow: the only world where forced convection and
-            /// aerodynamic friction are both live. The suite ran at 22 m/s for months, below the
-            /// 50 m/s friction threshold, so no bit-identity test had ever had both on at once.
-            /// </summary>
+/// <summary>EveryTermLive operation.</summary>
             public static EnvironmentSample EveryTermLive()
             {
+/// <summary>PlanetSurface operation.</summary>
                 return PlanetSurface(1f, timeOfDay: 0.35f, windSpeed: 300f);
             }
 
-            /// <summary>
-            /// Thinner air at a breeze: convection carries the wind bonus, friction is below its
-            /// threshold and contributes nothing. The ordinary case.
-            /// </summary>
+/// <summary>MildAtmosphere operation.</summary>
             public static EnvironmentSample MildAtmosphere()
             {
+/// <summary>PlanetSurface operation.</summary>
                 return PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f);
             }
 
-            /// <summary>
-            /// Vacuum with the sun off-axis, so solar weights every face differently and radiation
-            /// is the only other environment term. The case where the environment row's contents
-            /// are smallest, and a stale figure in it proportionally largest.
-            /// </summary>
+/// <summary>SunlitVacuum operation.</summary>
             public static EnvironmentSample SunlitVacuum()
             {
                 return Space(new Vector3(0.3f, 0.9f, 0.2f));
             }
         }
 
-        /// <summary>A parked hull in an ambient wind — a storm, with the ship standing still.</summary>
+/// <summary>Storm operation.</summary>
         public static EnvironmentSample Storm(float airDensity, float windSpeed, float timeOfDay = 0.5f)
         {
+/// <summary>WindAndMotion operation.</summary>
             return WindAndMotion(airDensity, windSpeed, Vector3.Forward, Vector3.Zero, timeOfDay);
         }
 
-        /// <summary>
-        /// The general case: an ambient wind and a moving grid at once, composed exactly as the
-        /// game adapter composes them. The hull feels the *relative* wind — the one scalar friction
-        /// and forced convection read — so flying with the wind at the wind's own speed is calm air
-        /// at full ground speed, and flying into it is the sum. World and local frames coincide.
-        /// </summary>
+/// <summary>WindAndMotion operation.</summary>
         public static EnvironmentSample WindAndMotion(
             float airDensity, float windSpeed, Vector3 windDirection, Vector3 velocity,
             float timeOfDay = 0.5f)
         {
+/// <summary>PlanetSurface operation.</summary>
             EnvironmentSample sample = PlanetSurface(airDensity, timeOfDay);
             sample.GridVelocity = velocity;
             sample.ComposeRelativeWind(windDirection, windSpeed, Matrix.Identity);

@@ -6,54 +6,25 @@ using System.Text;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Checks a field telemetry dump against the claims the model makes about itself.
-    ///
-    /// <para>A dump is the only place the model meets a real world, and every past evaluation of one
-    /// was a hand-written script that left nothing behind. The claims being checked are not new —
-    /// they are the ones argued in the documents each check points at — but until now none of them
-    /// was checked against a dump by anything that could be re-run when the next dump arrives.</para>
-    ///
-    /// <para>Reads the environment CSV, which is the climate and wind half of a dump: one row per
-    /// profiled grid per sample. A column a dump does not carry skips its checks rather than failing
-    /// them, so a dump taken before a column existed still audits for everything else.</para>
-    ///
-    /// <para>Checks are of two kinds. A <b>defect</b> check asserts something the model must never
-    /// do, and a failure is a bug. An <b>observation</b> counts something open — a bound that is
-    /// known to be exceeded, a term that is known to be present — so the count moves when the
-    /// balance does, without turning an open question into a failing tool.</para>
-    /// </summary>
     public static class DumpAudit
     {
-        /// <summary>
-        /// How far a recomputed figure may sit from the reported one: two per cent, or 0.05 of the
-        /// unit, whichever is larger. The dump writes floats through a text format at fixed
-        /// precision, so an exact comparison would fail on rounding alone.
-        /// </summary>
         private const double RelativeTolerance = 0.02d;
         private const double AbsoluteTolerance = 0.05d;
 
         public sealed class CheckResult
         {
-            /// <summary>What is being checked, as a claim rather than a procedure.</summary>
             public string Name;
 
-            /// <summary>Where the claim is argued.</summary>
             public string Where;
 
-            /// <summary>Rows the check could read. Zero where the dump lacks a column it needs.</summary>
             public int Rows;
 
-            /// <summary>Rows that did not hold.</summary>
             public int Hits;
 
-            /// <summary>The worst row, in the check's own terms. Empty where nothing was hit.</summary>
             public string Worst = "";
 
-            /// <summary>The columns this check wanted and the dump did not carry.</summary>
             public string Missing = "";
 
-            /// <summary>Counted rather than asserted: a hit is a measurement, not a defect.</summary>
             public bool Observation;
 
             public bool Skipped { get { return Missing.Length > 0; } }
@@ -65,10 +36,11 @@ namespace Thermodynamics.Harness
             public string Path = "";
             public int Rows;
 
-            /// <summary>Rows in the grid and block-type CSVs beside it, or zero where absent.</summary>
             public int GridRows;
             public int BlockTypeRows;
+/// <summary>List operation.</summary>
             public readonly List<CheckResult> Checks = new List<CheckResult>();
+/// <summary>List operation.</summary>
             public readonly List<string> Summary = new List<string>();
 
             public bool Passed
@@ -81,15 +53,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// Where dumps are when a command was not told: `THERMAL_DUMPS`, else the installed game's
-        /// saves folder.
-        ///
-        /// Dumps are written into world storage, which is inside the save, which is outside this
-        /// repository — a mod folder is published to the workshop and a save is nobody's business
-        /// but the player's. On Linux the game runs under a compatibility prefix, so its AppData
-        /// sits beside the Steam library rather than in the user's home.
-        /// </summary>
+/// <summary>DefaultPath operation.</summary>
         public static string DefaultPath()
         {
             string configured = Environment.GetEnvironmentVariable("THERMAL_DUMPS");
@@ -105,7 +69,7 @@ namespace Thermodynamics.Harness
             string content = GameBlocks.ContentPath();
             if (content == null) return null;
 
-            // .../steamapps/common/SpaceEngineers/Content/Data -> .../steamapps
+/// <summary>DirectoryInfo operation.</summary>
             DirectoryInfo directory = new DirectoryInfo(content);
             for (int i = 0; i < 4 && directory != null; i++) directory = directory.Parent;
             if (directory == null) return null;
@@ -116,10 +80,7 @@ namespace Thermodynamics.Harness
             return Directory.Exists(prefix) ? prefix : null;
         }
 
-        /// <summary>
-        /// The newest environment CSV at or under a path. A path to a file is taken as it stands, so
-        /// one dump out of a folder of them can be named directly.
-        /// </summary>
+/// <summary>Newest operation.</summary>
         public static string Newest(string path)
         {
             if (string.IsNullOrEmpty(path)) return null;
@@ -143,12 +104,14 @@ namespace Thermodynamics.Harness
             return newest;
         }
 
+/// <summary>Run operation.</summary>
         public static Result Run(string path)
         {
             Table table = Table.Read(path);
             Table grids = Table.Read(Sibling(path, "Grids"));
             Table types = Table.Read(Sibling(path, "BlockTypes"));
 
+/// <summary>Result operation.</summary>
             Result result = new Result();
             result.Path = path;
             result.Rows = table.Rows.Count;
@@ -180,10 +143,7 @@ namespace Thermodynamics.Harness
             return result;
         }
 
-        /// <summary>
-        /// The grid or block-type CSV written alongside an environment CSV. The three share a stamp
-        /// and a directory by construction, so one names the others.
-        /// </summary>
+/// <summary>Sibling operation.</summary>
         private static string Sibling(string path, string kind)
         {
             if (string.IsNullOrEmpty(path)) return null;
@@ -197,8 +157,10 @@ namespace Thermodynamics.Harness
             return string.IsNullOrEmpty(directory) ? sibling : Path.Combine(directory, sibling);
         }
 
+/// <summary>Report operation.</summary>
         public static string Report(Result result)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("DUMP AUDIT");
@@ -229,6 +191,7 @@ namespace Thermodynamics.Harness
                 {
                     sb.Append("      not in this dump: ").AppendLine(check.Missing);
                 }
+/// <summary>if operation.</summary>
                 else if (check.Worst.Length > 0)
                 {
                     sb.Append("      ").AppendLine(check.Worst);
@@ -243,6 +206,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>Verdict operation.</summary>
         private static string Verdict(CheckResult check)
         {
             if (check.Skipped) return "skipped";
@@ -250,17 +214,11 @@ namespace Thermodynamics.Harness
             return check.Hits == 0 ? "held" : "FAILED";
         }
 
-        // ---- the checks -------------------------------------------------------------------
 
-        /// <summary>
-        /// Every factor the wind report carries multiplies back into the wind speed it reports.
-        ///
-        /// The offline suite already pins this on invented inputs; this is the same claim against a
-        /// planet. A speed *below* the product means a factor acted on the wind and was not
-        /// reported, which is the fault that makes a dump unarguable.
-        /// </summary>
+/// <summary>WindDecomposes operation.</summary>
         private static CheckResult WindDecomposes(Table table)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "wind decomposes into the factors reported beside it";
             check.Where = "WindSolverContractTests.TheReportedFactorsMultiplyBackIntoTheReportedSpeed";
@@ -268,9 +226,6 @@ namespace Thermodynamics.Harness
             string[] needs = { "wind_speed", "wind_ceiling", "wind_band_share", "wind_profile", "wind_speedup", "wind_shelter" };
             if (!table.Require(needs, check)) return check;
 
-            // The speed column is the *relative* wind: a ship flying downwind legitimately reads
-            // below the composed ambient product. Only a row known to be standing still can turn a
-            // shortfall into a verdict; without the column, the check observes rather than fails.
             bool motionKnown = table.Has("grid_speed");
             check.Observation = !motionKnown;
 
@@ -286,14 +241,10 @@ namespace Thermodynamics.Harness
                     * table.Number(i, "wind_speedup")
                     * table.Number(i, "wind_shelter");
 
-                // Burial joined the factors later, so an older dump does not carry the column and
-                // is audited without it.
                 if (table.Has("wind_burial")) predicted *= table.Number(i, "wind_burial");
 
                 check.Rows++;
 
-                // Only a shortfall is a defect: the slope term is a velocity added after the
-                // factors, so it can only carry the speed above their product.
                 double shortfall = predicted - speed;
                 if (shortfall <= Tolerance(predicted)) continue;
 
@@ -301,6 +252,7 @@ namespace Thermodynamics.Harness
                 if (shortfall <= worst) continue;
 
                 worst = shortfall;
+/// <summary>Fixed operation.</summary>
                 check.Worst = "worst " + Fixed(speed) + " m/s reported against " + Fixed(predicted)
                     + " m/s composed, on " + table.Text(i, "grid");
             }
@@ -308,13 +260,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-        /// <summary>
-        /// A grid the burial factor reports as wholly under the surface is in no wind at all. This
-        /// is the fault the factor was added for: a field dump recorded a grid 9.6 m under, flag
-        /// false, blowing 4.3 m/s. An older dump without the column is audited without the check.
-        /// </summary>
+/// <summary>NoWindWhollyBuried operation.</summary>
         private static CheckResult NoWindWhollyBuried(Table table)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "a wholly buried grid is in no wind";
             check.Where = "docs/environment.md, Under the surface; backlog A15";
@@ -336,19 +285,19 @@ namespace Thermodynamics.Harness
                 if (speed <= worst) continue;
 
                 worst = speed;
+/// <summary>Fixed operation.</summary>
                 check.Worst = "worst " + Fixed(speed) + " m/s at depth "
+/// <summary>Fixed operation.</summary>
                     + Fixed(table.Number(i, "depth_m")) + " m, on " + table.Text(i, "grid");
             }
 
             return check;
         }
 
-        /// <summary>
-        /// Where the reported speed exceeds the product of the factors, the slope wind is what did
-        /// it — so it is a near-ground term on sloping ground, not something that happens anywhere.
-        /// </summary>
+/// <summary>SlopeOnlyAdds operation.</summary>
         private static CheckResult SlopeOnlyAdds(Table table)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "slope wind is what adds to the composed speed";
             check.Where = "docs/environment.md, Slope winds; backlog B15";
@@ -378,20 +327,19 @@ namespace Thermodynamics.Harness
                 if (added <= worst) continue;
 
                 worst = added;
+/// <summary>Fixed operation.</summary>
                 check.Worst = "most added " + Fixed(added) + " m/s at "
+/// <summary>Fixed operation.</summary>
                     + Fixed(table.Number(i, "wind_agl_m")) + " m above ground";
             }
 
             return check;
         }
 
-        /// <summary>
-        /// The engine's own figure was adopted because it bounds the wind. Once the vertical profile
-        /// multiplies the band share above the reference height it no longer does, which is an open
-        /// balance call rather than a defect — so this counts rather than fails.
-        /// </summary>
+/// <summary>WindUnderTheCeiling operation.</summary>
         private static CheckResult WindUnderTheCeiling(Table table)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "wind stays under the engine's own figure";
             check.Where = "docs/backlog.md B18 — open";
@@ -414,20 +362,19 @@ namespace Thermodynamics.Harness
                 if (over <= worst) continue;
 
                 worst = over;
+/// <summary>Fixed operation.</summary>
                 check.Worst = "worst " + Fixed(speed) + " m/s against a ceiling of " + Fixed(ceiling)
+/// <summary>Fixed operation.</summary>
                     + " m/s, at " + Fixed(table.Number(i, "wind_agl_m")) + " m above ground";
             }
 
             return check;
         }
 
-        /// <summary>
-        /// Convection is zero exactly where there is no air, and non-zero exactly where there is.
-        /// A dump once reported 50 W/(m²·K) beside an air density of zero; that was a reporting
-        /// fault, and this is what would catch it coming back.
-        /// </summary>
+/// <summary>ConvectionNeedsAir operation.</summary>
         private static CheckResult ConvectionNeedsAir(Table table)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "convection is reported only where there is air";
             check.Where = "docs/known-issues.md, A6";
@@ -446,6 +393,7 @@ namespace Thermodynamics.Harness
                 check.Hits++;
                 if (check.Worst.Length > 0) continue;
 
+/// <summary>Fixed operation.</summary>
                 check.Worst = "first at " + Fixed(coefficient) + " W/m2K against an air density of "
                     + density.ToString("0.0000", CultureInfo.InvariantCulture);
             }
@@ -453,14 +401,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-        /// <summary>
-        /// Depth below the surface is reported for a buried grid and for nothing else. The column is
-        /// filled from the surface radius whatever the altitude, so a flying grid carries the
-        /// negative of its height in it; what must hold is that the positive half of the column and
-        /// the underground flag are the same set of rows.
-        /// </summary>
+/// <summary>DepthIsUndergroundOnly operation.</summary>
         private static CheckResult DepthIsUndergroundOnly(Table table)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "a positive depth means a buried grid";
             check.Where = "docs/environment.md, Underground";
@@ -479,6 +423,7 @@ namespace Thermodynamics.Harness
                 check.Hits++;
                 if (check.Worst.Length > 0) continue;
 
+/// <summary>Fixed operation.</summary>
                 check.Worst = "first at depth " + Fixed(table.Number(i, "depth_m"))
                     + " m with underground " + table.Text(i, "underground");
             }
@@ -486,13 +431,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-        /// <summary>
-        /// A weather's temperature offset is its table figure faded in by its intensity, so within
-        /// one kind the ratio between the two is a constant. A kind whose ratio wanders is either
-        /// being blended twice or reading a table it does not belong to.
-        /// </summary>
+/// <summary>WeatherScalesWithIntensity operation.</summary>
         private static CheckResult WeatherScalesWithIntensity(Table table)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "a weather's offset scales with its intensity";
             check.Where = "docs/environment.md, Weather";
@@ -507,8 +449,6 @@ namespace Thermodynamics.Harness
             {
                 double intensity = table.Number(i, "weather_intensity");
 
-                // Below a fifth of full, the offset is small enough that the dump's own rounding is
-                // a large share of the ratio.
                 if (intensity < 0.2d) continue;
 
                 string kind = table.Text(i, "weather");
@@ -531,6 +471,7 @@ namespace Thermodynamics.Harness
                 if (drift <= worst) continue;
 
                 worst = drift;
+/// <summary>Fixed operation.</summary>
                 check.Worst = kind + " offsets " + Fixed(ratio) + " K against " + Fixed(expected)
                     + " K per unit of intensity";
             }
@@ -538,19 +479,14 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-        /// <summary>
-        /// No column carries a NaN or an infinity, and the quantities that cannot be negative are
-        /// not. A dump is the last place a NaN can be seen before it is a black grid in someone's
-        /// world.
-        /// </summary>
+/// <summary>NothingIsNonsense operation.</summary>
         private static CheckResult NothingIsNonsense(Table table, string what, string[] positive)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "no " + what + " reading is a NaN, an infinity or impossibly negative";
             check.Where = "docs/known-issues.md, A11";
 
-            // A dump with no such file cannot be judged on it. Named after the file rather than a
-            // column, since it is the whole table that is absent.
             if (table.Columns.Count == 0)
             {
                 check.Missing = what + " CSV";
@@ -575,6 +511,7 @@ namespace Thermodynamics.Harness
                     if (check.Worst.Length > 0) break;
 
                     check.Worst = "first " + column + " = " + table.Text(i, column)
+/// <summary>Identity operation.</summary>
                         + " on " + Identity(table, i);
                     break;
                 }
@@ -583,20 +520,11 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-        // ---- the grid table ---------------------------------------------------------------
 
-        /// <summary>
-        /// A grid's stage timings fit inside its whole update. The cost table nests, and a child
-        /// larger than its parent means two timers overlapped or one is being merged into the wrong
-        /// row — the class of fault that once reported a mod costing a third of real time as
-        /// costing two thirds.
-        ///
-        /// Slack is expected and is not checked here: what a grid's update costs beyond its stages
-        /// is the environment sample, the after-step observation and pacing, which the report
-        /// attributes in its own row.
-        /// </summary>
+/// <summary>StagesFitInsideTheUpdate operation.</summary>
         private static CheckResult StagesFitInsideTheUpdate(Table table)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "a grid's stages fit inside its update";
             check.Where = "docs/telemetry.md#what-the-stages-leave-over";
@@ -626,6 +554,7 @@ namespace Thermodynamics.Harness
                 if (over <= worst) continue;
 
                 worst = over;
+/// <summary>Fixed operation.</summary>
                 check.Worst = "worst " + Fixed(stages) + " ms of stages inside " + Fixed(update)
                     + " ms of update, on " + table.Text(i, "name");
             }
@@ -633,12 +562,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-        /// <summary>
-        /// The same rule on the worst single call rather than the total: one solver call cannot
-        /// take longer than the update that contains it.
-        /// </summary>
+/// <summary>AWorstCallFitsItsParent operation.</summary>
         private static CheckResult AWorstCallFitsItsParent(Table table)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "a grid's worst solver call fits its worst update";
             check.Where = "docs/telemetry.md#frame-cost-and-hitching";
@@ -657,6 +584,7 @@ namespace Thermodynamics.Harness
                 check.Hits++;
                 if (check.Worst.Length > 0) continue;
 
+/// <summary>Fixed operation.</summary>
                 check.Worst = "first " + Fixed(solver) + " ms of solver inside " + Fixed(update)
                     + " ms of update, on " + table.Text(i, "name");
             }
@@ -664,13 +592,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-        /// <summary>
-        /// A clamped step is a step. A count above the steps taken means the clamp is being recorded
-        /// somewhere other than once a step, which would make every conclusion about the substep
-        /// cap wrong in the same direction.
-        /// </summary>
+/// <summary>ClampedStepsAreSteps operation.</summary>
         private static CheckResult ClampedStepsAreSteps(Table table)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "clamped steps are a subset of steps taken";
             check.Where = "docs/telemetry.md#substeps";
@@ -697,8 +622,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
+/// <summary>GridRangesAreOrdered operation.</summary>
         private static CheckResult GridRangesAreOrdered(Table table)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "a grid's minima, means and maxima are ordered";
             check.Where = "RunningStat, TelemetryStats.cs";
@@ -710,6 +637,7 @@ namespace Thermodynamics.Harness
             {
                 check.Rows++;
 
+/// <summary>Ordered operation.</summary>
                 string broke = Ordered(table, i,
                     "ambient_min", "ambient_mean", "ambient_max");
                 if (broke == null && table.Number(i, "mean_cells") > table.Number(i, "peak_cells") + 0.5d)
@@ -728,15 +656,11 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-        // ---- the block type table ----------------------------------------------------------
 
-        /// <summary>
-        /// What is live is what was placed less what was removed. The three are counted by separate
-        /// paths — a build, a removal, and the node list — so agreement between them is the one
-        /// thing that says the census a report is built on is the population that was there.
-        /// </summary>
+/// <summary>LiveBlocksAreWhatWasPlaced operation.</summary>
         private static CheckResult LiveBlocksAreWhatWasPlaced(Table table)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "live blocks are what was placed less what was removed";
             check.Where = "docs/telemetry.md#what-is-collected";
@@ -765,8 +689,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
+/// <summary>BlockRangesAreOrdered operation.</summary>
         private static CheckResult BlockRangesAreOrdered(Table table)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "a block type's temperatures and demands are ordered";
             check.Where = "RunningStat, TelemetryStats.cs";
@@ -780,12 +706,13 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < table.Rows.Count; i++)
             {
-                // A type nothing sampled carries zeros, which order trivially and mean nothing.
                 if (table.Number(i, "temp_max") <= 0d) continue;
 
                 check.Rows++;
 
+/// <summary>Ordered operation.</summary>
                 string broke = Ordered(table, i, "temp_min", "temp_mean", "temp_max", "peak_temp")
+/// <summary>Ordered operation.</summary>
                     ?? Ordered(table, i, "substep_demand_mean", "substep_demand_max");
                 if (broke == null) continue;
 
@@ -798,17 +725,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-        /// <summary>
-        /// Every block type reaches the solver with properties it can divide by.
-        ///
-        /// A specific heat of zero is a heat capacity of zero, which is a division by zero in the
-        /// step; a conductivity of zero is a block heat cannot reach; an emissivity outside 0..1 is
-        /// a surface that radiates more than a black body. The derivation from build components is
-        /// what fills these now, and a definition it cannot reach used to fall back to steel
-        /// silently.
-        /// </summary>
+/// <summary>EveryTypeHasUsableMaterialProperties operation.</summary>
         private static CheckResult EveryTypeHasUsableMaterialProperties(Table table)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "every block type has properties the solver can use";
             check.Where = "docs/definitions.md";
@@ -840,7 +760,7 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-        /// <summary>Whatever the table calls a row: a grid, a ship, or a block subtype.</summary>
+/// <summary>Identity operation.</summary>
         private static string Identity(Table table, int row)
         {
             if (table.Has("grid")) return table.Text(row, "grid");
@@ -849,10 +769,7 @@ namespace Thermodynamics.Harness
             return "row " + row;
         }
 
-        /// <summary>
-        /// Names the first pair out of order, or null when the whole run ascends. Equality passes:
-        /// a stat with one sample has its minimum, mean and maximum all equal.
-        /// </summary>
+/// <summary>Ordered operation.</summary>
         private static string Ordered(Table table, int row, params string[] columns)
         {
             for (int i = 1; i < columns.Length; i++)
@@ -867,13 +784,6 @@ namespace Thermodynamics.Harness
             return null;
         }
 
-        /// <summary>
-        /// Columns that cannot be negative in each of the three tables.
-        ///
-        /// Named rather than inferred, because plenty of columns legitimately are: a latitude, a
-        /// bearing, a Celsius temperature, an altitude below sea level, a depth reported as the
-        /// negative of a height.
-        /// </summary>
         private static readonly string[] ClimatePositive =
         {
             "air_density", "ambient_k", "solar_w", "wind_speed", "wind_ceiling",
@@ -899,17 +809,10 @@ namespace Thermodynamics.Harness
             "substep_demand_mean", "substep_demand_max", "substep_demand_peak",
         };
 
-        /// <summary>
-        /// A pump that drew no power over a whole session lifted no heat and reported no
-        /// coefficient.
-        ///
-        /// The narrowest claim these columns support. They are session *means* rather than totals,
-        /// and a mean of a ratio is not the ratio of the means, so the obvious check — that the
-        /// coefficient is the lift over the draw — holds only for a pump whose throttle never
-        /// moved. A mean of exactly zero is the one case where every step must have been zero.
-        /// </summary>
+/// <summary>AnIdlePumpLiftsNothing operation.</summary>
         private static CheckResult AnIdlePumpLiftsNothing(Table table)
         {
+/// <summary>CheckResult operation.</summary>
             CheckResult check = new CheckResult();
             check.Name = "a pump that drew nothing lifted nothing";
             check.Where = "docs/telemetry.md#coolant-loops-and-heat-pumps";
@@ -927,6 +830,7 @@ namespace Thermodynamics.Harness
                 check.Hits++;
                 if (check.Worst.Length > 0) continue;
 
+/// <summary>Fixed operation.</summary>
                 check.Worst = "first " + Fixed(table.Number(i, "pump_lift_w")) + " W lifted on no draw, on "
                     + table.Text(i, "name");
             }
@@ -934,15 +838,12 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-        // ---- the summary ------------------------------------------------------------------
 
-        /// <summary>
-        /// What the dump is, before what it proves: the ranges every check is being read against, so
-        /// a check that held against a dump with nothing in it says so on the same page.
-        /// </summary>
+/// <summary>Describe operation.</summary>
         private static void Describe(Table table, Result result)
         {
             result.Summary.Add(Distinct(table, "planet") + " planets, " + Distinct(table, "grid")
+/// <summary>Distinct operation.</summary>
                 + " grids, " + Distinct(table, "surface_material") + " ground materials");
 
             Range(table, "air_density", "air density", "0.000", result);
@@ -950,12 +851,15 @@ namespace Thermodynamics.Harness
             Range(table, "wind_speed", "wind m/s", "0.0", result);
             Range(table, "convection_coeff", "convection W/m2K", "0.0", result);
 
+/// <summary>Count operation.</summary>
             int buried = Count(table, "underground");
+/// <summary>Count operation.</summary>
             int weather = Count(table, "weather_intensity");
             result.Summary.Add("buried rows " + buried.ToString("n0") + ", rows under weather "
                 + weather.ToString("n0"));
         }
 
+/// <summary>Range operation.</summary>
         private static void Range(Table table, string column, string label, string format, Result result)
         {
             if (!table.Has(column)) return;
@@ -976,6 +880,7 @@ namespace Thermodynamics.Harness
                 + high.ToString(format, CultureInfo.InvariantCulture));
         }
 
+/// <summary>Distinct operation.</summary>
         private static int Distinct(Table table, string column)
         {
             if (!table.Has(column)) return 0;
@@ -990,6 +895,7 @@ namespace Thermodynamics.Harness
             return seen.Count;
         }
 
+/// <summary>Count operation.</summary>
         private static int Count(Table table, string column)
         {
             if (!table.Has(column)) return 0;
@@ -1003,39 +909,40 @@ namespace Thermodynamics.Harness
             return count;
         }
 
-        // ---- reading the file -------------------------------------------------------------
 
+/// <summary>Tolerance operation.</summary>
         private static double Tolerance(double magnitude)
         {
             double scaled = Math.Abs(magnitude) * RelativeTolerance;
             return scaled > AbsoluteTolerance ? scaled : AbsoluteTolerance;
         }
 
+/// <summary>Fixed operation.</summary>
         private static string Fixed(double value)
         {
             return value.ToString("0.00", CultureInfo.InvariantCulture);
         }
 
+/// <summary>Trim operation.</summary>
         private static string Trim(string value, int width)
         {
             if (value == null) return "";
             return value.Length <= width ? value : value.Substring(0, width - 1) + "~";
         }
 
-        /// <summary>
-        /// A telemetry CSV, read by column name so a dump that gained or lost a column still parses.
-        /// The mod writes its own CSV without quoting, replacing the separator in any field that
-        /// could contain one, so splitting on commas is the whole of the format.
-        /// </summary>
         private sealed class Table
         {
+/// <summary>List operation.</summary>
             public readonly List<string> Columns = new List<string>();
+/// <summary>List operation.</summary>
             public readonly List<string[]> Rows = new List<string[]>();
 
             private readonly Dictionary<string, int> index = new Dictionary<string, int>();
 
+/// <summary>Read operation.</summary>
             public static Table Read(string path)
             {
+/// <summary>Table operation.</summary>
                 Table table = new Table();
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return table;
 
@@ -1063,11 +970,10 @@ namespace Thermodynamics.Harness
                 return table;
             }
 
+/// <summary>Has operation.</summary>
             public bool Has(string column) { return index.ContainsKey(column); }
 
-            /// <summary>
-            /// Records the columns a check wanted and the dump lacks, and answers whether it can run.
-            /// </summary>
+/// <summary>Require operation.</summary>
             public bool Require(string[] columns, CheckResult check)
             {
                 string missing = "";
@@ -1082,6 +988,7 @@ namespace Thermodynamics.Harness
                 return missing.Length == 0;
             }
 
+/// <summary>Text operation.</summary>
             public string Text(int row, string column)
             {
                 int at;
@@ -1091,6 +998,7 @@ namespace Thermodynamics.Harness
                 return at < fields.Length ? fields[at] : "";
             }
 
+/// <summary>Number operation.</summary>
             public double Number(int row, string column)
             {
                 double value;
@@ -1099,7 +1007,7 @@ namespace Thermodynamics.Harness
                     ? value : 0d;
             }
 
-            /// <summary>By position, for a pass that walks every column of a row.</summary>
+/// <summary>TryNumber operation.</summary>
             public bool TryNumber(int row, int column, out double value)
             {
                 value = 0d;

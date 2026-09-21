@@ -4,109 +4,47 @@ using Thermodynamics.Core;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// **How physically true the model is**, as a simulated environment rather than as a setting — the
-    /// axis the mod itself has no dial for, because <c>HeatTimeScale</c> makes it deliberately
-    /// ninety times faster than the world and nothing shipped can turn that off.
-    ///
-    /// <para>
-    /// This carries every knob that moves the balance, not just the integration ones: the two pace
-    /// scales, the environment constants, which mechanisms run, how the coolant is modelled and what
-    /// a reactor's waste heat is. **Nothing here changes the shipped configuration** — the conduction
-    /// pace is expressed by scaling the materials the harness builds with, so the core needs no new
-    /// setting to be measured against.
-    /// </para>
-    ///
-    /// <para>
-    /// This is the only thing in the repository still called a profile. The five shipped presets are
-    /// gone; there is one configuration, and <see cref="Shipped"/> reads it rather than restating it.
-    /// </para>
-    /// </summary>
     public class BalanceProfile
     {
         public string Name;
         public string Intent;
 
-        // ---- the two pace scales ------------------------------------------------------------
 
-        /// <summary>
-        /// Divides every heat capacity. 1 is the world; the mod ships 90, and shipped 225 until
-        /// `C24`.
-        ///
-        /// The single largest departure from physics in the whole model, and the one that makes it
-        /// a game: real steel at real specific heat gives a large-grid armour block a time constant
-        /// of about half an hour.
-        ///
-        /// **The value here is a field default and not a claim about what ships** —
-        /// <see cref="Shipped"/> and <see cref="Candidate"/> read the real defaults, and every other
-        /// profile states its own. It is the shipped figure anyway, so that a profile added later
-        /// and left unset lands on the world rather than on a retired one.
-        /// </summary>
         public float HeatTimeScale = 90f;
 
-        /// <summary>
-        /// Multiplies every block's real conductivity. 1 is the world; the mod ships 9.6, and
-        /// shipped 2.4 until `C24`.
-        ///
-        /// Applied here by scaling the material figures the harness builds blocks from, so no core
-        /// setting has to exist for this to be measured.
-        /// </summary>
         public float ConductionPace = ThermalConstants.ConductionScale;
 
-        // ---- integration ---------------------------------------------------------------------
 
-        /// <summary>
-        /// Solver steps a second and the substep ceiling. **Defaulted to what ships**, on the same
-        /// rule as the two paces above: `MaxSubsteps` sat at 16 here long after the shipped figure
-        /// became 64, which is a default that describes a retired world.
-        /// </summary>
+/// <summary>ThermalSettings operation.</summary>
         public int Frequency = new ThermalSettings().Frequency;
 
-        /// <summary>See <see cref="Frequency"/>.</summary>
+/// <summary>ThermalSettings operation.</summary>
         public int MaxSubsteps = new ThermalSettings().MaxSubsteps;
 
         public bool ClampOvershoot = true;
 
-        // ---- environment ---------------------------------------------------------------------
 
-        /// <summary>W/m^2. The mod ships 1000; the real solar constant at 1 AU is 1361.</summary>
         public float SolarEnergy = 1000f;
 
-        /// <summary>K. 2.7 is the real cosmic microwave background and the shipped value.</summary>
         public float VacuumTemperature = 2.7f;
 
-        /// <summary>W/(m^2 K). 8 is a realistic still-air natural convection figure.</summary>
         public float RoomConvectionCoefficient = 8f;
 
-        // ---- mechanisms ------------------------------------------------------------------------
 
         public bool EnableRoomAir = true;
         public bool SolarSelfShadowing = true;
         public bool EnableFriction = true;
         public bool EnableCoolantLoops = true;
 
-        /// <summary>True collapses a ring to one lumped mass — cheaper, and no longer a fluid.</summary>
         public bool WellMixedCoolant = false;
 
-        // ---- the balance of the systems themselves ------------------------------------------------
 
-        /// <summary>
-        /// Fraction of a reactor's electrical output that becomes waste heat.
-        ///
-        /// A real fission plant is about a third efficient, so it sheds roughly two watts for every
-        /// watt it delivers — a fraction of 2.0 against its *electrical* output. The mod's
-        /// validator refuses anything above 1 as "creating energy from nothing", which is true of a
-        /// fraction of total energy and false of a fraction of electrical output. That mismatch is
-        /// one of the realism gaps this class exists to price.
-        /// </summary>
         public float ReactorWasteFraction = 0.25f;
 
-        /// <summary>Coolant speed at one pump, m/s.</summary>
         public float FlowRate = 10f;
 
-        // ---- deriving a runnable world ---------------------------------------------------------
 
-        /// <summary>The core settings this profile implies.</summary>
+/// <summary>ToSettings operation.</summary>
         public ThermalSettings ToSettings()
         {
             ThermalSettings settings = new ThermalSettings
@@ -129,34 +67,16 @@ namespace Thermodynamics.Harness
             return settings.Derive();
         }
 
-        /// <summary>
-        /// This profile's version of a material: the same block, at this world's conduction pace.
-        ///
-        /// The solver multiplies a definition's conductivity by the core's fixed
-        /// <see cref="ThermalConstants.ConductionScale"/>, so dividing that out and multiplying by
-        /// the profile's own pace lands on exactly the number a world configured that way would
-        /// use. It is the one trick that lets a pace be measured without a core setting existing.
-        /// </summary>
+/// <summary>Material operation.</summary>
         public BlockThermalProperties Material(BlockThermalProperties source)
         {
-            // The definition's own Clone carries every field; only the pace is this profile's to
-            // change. The hand copy this replaces silently dropped ExcludeFromSimulation,
-            // SolarAbsorptivity and HeatSourceWatts.
             BlockThermalProperties copy = source.Clone();
             copy.Conductivity = source.Conductivity * (ConductionPace / ThermalConstants.ConductionScale);
             return copy;
         }
 
-        // ---- the profiles ------------------------------------------------------------------------
 
-        /// <summary>
-        /// As physically true as this model can be made without changing its equations.
-        ///
-        /// Real heat capacities, real conductivities, the real solar constant, every mechanism on,
-        /// the fluid model that is actually a fluid, and enough substeps that nothing is ever
-        /// clamped. What is left between this and physics is the list in
-        /// <see cref="RealismGaps"/> — the departures that are structural rather than numerical.
-        /// </summary>
+/// <summary>Physical operation.</summary>
         public static BalanceProfile Physical()
         {
             return new BalanceProfile
@@ -176,13 +96,10 @@ namespace Thermodynamics.Harness
             };
         }
 
-        /// <summary>
-        /// What the mod ships today, for the comparison to have a middle — **read off
-        /// <see cref="ThermalSettings"/> rather than restated here**, which is the only way the two
-        /// cannot drift. They had: this carried <c>MaxSubsteps 16</c> against a shipped 64.
-        /// </summary>
+/// <summary>Shipped operation.</summary>
         public static BalanceProfile Shipped()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings shipped = new ThermalSettings();
 
             return new BalanceProfile
@@ -196,15 +113,7 @@ namespace Thermodynamics.Harness
             };
         }
 
-        /// <summary>
-        /// As responsive and as cheap as the model goes, with no pretence of being right.
-        ///
-        /// One substep, always clamped, transfer raised until the clamp alone decides what moves,
-        /// every optional mechanism off and the ring collapsed to one lumped mass. The
-        /// <c>HeatTimeScale / Frequency</c> ratio is held under 4,000 because past that the clamps
-        /// carry the whole step and blocks are driven to the ambient floor, which is not fast — it
-        /// is broken.
-        /// </summary>
+/// <summary>Arcade operation.</summary>
         public static BalanceProfile Arcade()
         {
             return new BalanceProfile
@@ -222,33 +131,10 @@ namespace Thermodynamics.Harness
             };
         }
 
-        /// <summary>
-        /// The candidate: real materials, played at a game's pace.
-        ///
-        /// Keeps every part of <c>physical</c> that costs nothing — the real conductivities, the
-        /// real solar constant, the segmented fluid, every mechanism on — and spends its budget
-        /// only where realism is genuinely expensive, which is the thermal clock. It is the
-        /// hypothesis this comparison exists to test, not a conclusion.
-        ///
-        /// <para>
-        /// **The clock and the integrator are read off <see cref="ThermalSettings"/>, for the same
-        /// reason <see cref="Shipped"/> reads them**, and realism.md records what correcting it cost.
-        /// *A game's pace* is
-        /// whatever pace the game is shipping, so restating it here made this profile a claim about
-        /// a world that no longer existed: it carried `HeatTimeScale = 225` and `MaxSubsteps = 16`,
-        /// the pair that shipped before `C24`, against a shipped 90 and 64. Nothing about the
-        /// comparison was wrong except which world it was about — which is the worst way for a
-        /// figure to be wrong, because every column still added up.
-        /// </para>
-        ///
-        /// <para>
-        /// What it states for itself is only what it departs on: real conductivity, the real solar
-        /// constant and background, the segmented fluid, and a reactor waste fraction between
-        /// <c>physical</c>'s and the shipped one.
-        /// </para>
-        /// </summary>
+/// <summary>Candidate operation.</summary>
         public static BalanceProfile Candidate()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings shipped = new ThermalSettings();
 
             return new BalanceProfile
@@ -266,18 +152,12 @@ namespace Thermodynamics.Harness
             };
         }
 
+/// <summary>All operation.</summary>
         public static List<BalanceProfile> All()
         {
             return new List<BalanceProfile> { Physical(), Candidate(), Shipped(), Arcade() };
         }
 
-        /// <summary>
-        /// Where this model departs from physics for reasons no setting can fix — the structural
-        /// gaps, as opposed to the numerical ones a profile can close.
-        ///
-        /// Kept beside the profiles because <c>physical</c> is only meaningful with this list
-        /// attached: it is as real as the equations allow, and the equations allow this much.
-        /// </summary>
         public static readonly string[] RealismGaps =
         {
             "Grey body by default: a block absorbs at its emissivity unless a definition declares "

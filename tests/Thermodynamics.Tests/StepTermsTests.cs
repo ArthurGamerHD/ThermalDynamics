@@ -3,30 +3,15 @@ using Thermodynamics.Harness;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// A step has three terms, not two.
-    ///
-    /// <para>
-    /// The report fits a step as fixed work plus one lot of per-substep work, through two points at
-    /// known substep counts. That fit has nowhere to put the first substep, which is the one that
-    /// fills the per-step environment rows every later substep reads — so it charges the fill to
-    /// the intercept, and the intercept gets read as the prologue and write-back. Measured on a
-    /// 32,800-block hull in flight, the fill is about half of it.
-    /// </para>
-    ///
-    /// <para>
-    /// The timing lives in `bench report`. What is pinned here is the structural fact underneath
-    /// it, which a stopwatch cannot assert: the rows are filled once a step however many substeps
-    /// the step is cut into, and once a substep when the cache is switched off.
-    /// </para>
-    /// </summary>
     public class StepTermsTests
     {
+/// <summary>Hull operation.</summary>
         private static ThermalSimulation Hull(int maxSubsteps)
         {
             return Hulls.Driven(Hulls.Uncapped(maxSubsteps), 600);
         }
 
+/// <summary>Flight operation.</summary>
         private static EnvironmentSample Flight()
         {
             return Worlds.Ab.EveryTermLive();
@@ -36,8 +21,10 @@ namespace Thermodynamics.Tests
         [InlineData(1)]
         [InlineData(4)]
         [InlineData(32)]
+/// <summary>TheEnvironmentRowsAreFilledOnceAStep operation.</summary>
         public void TheEnvironmentRowsAreFilledOnceAStep(int maxSubsteps)
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation simulation = Hull(maxSubsteps);
             simulation.StepExact(1, Flight());
 
@@ -49,13 +36,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(6, simulation.Work.EnvironmentRowFills);
         }
 
-        /// <summary>
-        /// With the cache off the fill runs on every substep, which is the cost the cache exists to
-        /// remove and the reason the first substep is dearer than the rest when it is on.
-        /// </summary>
         [Fact]
+/// <summary>SwitchingTheCacheOffFillsOnEverySubstep operation.</summary>
         public void SwitchingTheCacheOffFillsOnEverySubstep()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation simulation = Hull(32);
             simulation.Solver.PrecomputeEnvironment = false;
             simulation.StepExact(1, Flight());
@@ -68,15 +53,14 @@ namespace Thermodynamics.Tests
             Assert.Equal(simulation.Work.SolverSubsteps, simulation.Work.EnvironmentRowFills);
         }
 
-        /// <summary>
-        /// A fill spread across frames is still one fill. The pass is sliced like every other, and
-        /// counting a slice would make the figure a property of the frame budget.
-        /// </summary>
         [Fact]
+/// <summary>AFillSpreadAcrossFramesIsStillOneFill operation.</summary>
         public void AFillSpreadAcrossFramesIsStillOneFill()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation simulation = Hull(32);
             EnvironmentState state = EnvironmentSolver.Solve(
+/// <summary>Flight operation.</summary>
                 simulation.Settings, simulation.Planet, Flight());
 
             simulation.Solver.Step(simulation.Settings.StepSeconds, state);

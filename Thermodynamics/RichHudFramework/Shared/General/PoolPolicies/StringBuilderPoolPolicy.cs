@@ -5,16 +5,15 @@ using VRage;
 
 namespace RichHudFramework
 {
-	/// <summary>
-	/// <see cref="IPooledObjectPolicy{T}"/> implementation for <see cref="StringBuilder"/>.
-	/// Reuses instances by clearing them instead of allocating new ones.
-	/// </summary>
 	public class StringBuilderPoolPolicy : IPooledObjectPolicy<StringBuilder>
 	{
+/// <summary>Returns the newobject.</summary>
 		public StringBuilder GetNewObject() => new StringBuilder();
 
+/// <summary>ResetObject operation.</summary>
 		public void ResetObject(StringBuilder sb) => sb.Clear();
 
+/// <summary>ResetRange operation.</summary>
 		public void ResetRange(IReadOnlyList<StringBuilder> objects, int index, int count)
 		{
 			int end = Math.Min(index + count, objects.Count);
@@ -22,6 +21,7 @@ namespace RichHudFramework
 				objects[i].Clear();
 		}
 
+/// <summary>ResetRange operation.</summary>
 		public void ResetRange<T2>(IReadOnlyList<MyTuple<StringBuilder, T2>> objects, int index, int count)
 		{
 			int end = Math.Min(index + count, objects.Count);
@@ -29,9 +29,7 @@ namespace RichHudFramework
 				objects[i].Item1.Clear();
 		}
 
-		/// <summary>
-		/// Convenience factory returning a pool pre-configured with this policy.
-		/// </summary>
+/// <summary>Returns the newpool.</summary>
 		public static ObjectPool<StringBuilder> GetNewPool() => new ObjectPool<StringBuilder>(new StringBuilderPoolPolicy());
 	}
 }

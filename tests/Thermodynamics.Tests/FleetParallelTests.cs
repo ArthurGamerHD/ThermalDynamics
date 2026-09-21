@@ -8,25 +8,6 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **Whether one grid per thread is safe today**, which is the half of
-    /// backlog.md `D19` a test can settle without a session.
-    ///
-    /// <para>
-    /// The mod is not threaded and the intent is that it should be. Two things have to be true
-    /// before that is a change rather than a gamble: a fleet stepped one grid per thread has to
-    /// produce exactly what the same fleet stepped in order produces, and it has to keep producing
-    /// it — which means nothing in the core may hold mutable state that two grids could share.
-    /// Both are asserted here, and the second is the one that would rot silently: a static field
-    /// added for a cache is invisible until two threads meet in it.
-    /// </para>
-    ///
-    /// <para>
-    /// **Bit-identical, not close.** This is `D8`'s shape applied to a change that has not been
-    /// made yet: the sequential run is the oracle, and a parallel run that merely agrees to a
-    /// tolerance is a run with a race in it that happened not to lose this time.
-    /// </para>
-    /// </summary>
     public class FleetParallelTests
     {
         private const int Grids = 6;
@@ -35,15 +16,19 @@ namespace Thermodynamics.Tests
 
         private const int Steps = 8;
 
+/// <summary>Sets the tings.</summary>
         private static ThermalSettings Settings()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.MaxElementVisitsPerStep = 0;
             return settings.Derive();
         }
 
+/// <summary>Run operation.</summary>
         private static float[][] Run(bool parallel)
         {
+/// <summary>Sets the tings.</summary>
             ThermalSettings settings = Settings();
             List<ThermalSimulation> fleet = FleetParallelLab.Fleet(Grids, NodesEach, settings);
 
@@ -64,14 +49,13 @@ namespace Thermodynamics.Tests
             return result;
         }
 
-        /// <summary>
-        /// A fleet stepped one grid per thread lands exactly where the same fleet stepped in order
-        /// lands, on every node of every grid.
-        /// </summary>
         [Fact]
+/// <summary>SteppingAFleetInParallelIsIdenticalToSteppingItInOrder operation.</summary>
         public void SteppingAFleetInParallelIsIdenticalToSteppingItInOrder()
         {
+/// <summary>Run operation.</summary>
             float[][] sequential = Run(false);
+/// <summary>Run operation.</summary>
             float[][] parallel = Run(true);
 
             Assert.Equal(sequential.Length, parallel.Length);
@@ -94,16 +78,15 @@ namespace Thermodynamics.Tests
             }
 
             Assert.True(judged > Grids * NodesEach / 2,
+/// <summary>nothing operation.</summary>
                 "only " + judged + " nodes were compared, so this agreed about almost nothing (`E8`)");
         }
 
-        /// <summary>
-        /// And the fleet did something, or two runs of a grid that never moved agree perfectly and
-        /// the assertion above is a tautology (`E8`, and `D8`'s second half).
-        /// </summary>
         [Fact]
+/// <summary>TheFleetTheComparisonRunsOnActuallyMoves operation.</summary>
         public void TheFleetTheComparisonRunsOnActuallyMoves()
         {
+/// <summary>Sets the tings.</summary>
             ThermalSettings settings = Settings();
             List<ThermalSimulation> fleet = FleetParallelLab.Fleet(2, NodesEach, settings);
 
@@ -130,33 +113,15 @@ namespace Thermodynamics.Tests
                 "the fleet spans " + (high - low).ToString("n1") + " K, which is not a gradient");
         }
 
-        /// <summary>
-        /// **Every piece of static state in the core is named, and says why two grids on two
-        /// threads may share it.**
-        ///
-        /// <para>
-        /// A static field that is not a constant is state two solvers could meet in, and it is the
-        /// one way the bit-identity above could stop being true with no test noticing — a cache
-        /// added for speed reads as an optimisation and lands as a race. So this does not try to
-        /// judge safety by shape, which cannot be done from a field's type: a `static readonly`
-        /// array is a shared *buffer* or a shared *table* depending only on whether anything writes
-        /// to it. Each one is listed with the reason it is safe, and a new one fails until somebody
-        /// writes its reason down.
-        /// </para>
-        ///
-        /// <para>
-        /// Two of them are genuinely mutable and are here because they are off the stepping path,
-        /// which is a weaker claim than the others and is written as one.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>EveryPieceOfStaticStateInTheCoreSaysWhyTwoGridsMayShareIt operation.</summary>
         public void EveryPieceOfStaticStateInTheCoreSaysWhyTwoGridsMayShareIt()
         {
+/// <summary>typeof operation.</summary>
             Assembly core = typeof(ThermalSolver).Assembly;
 
             Dictionary<string, string> reasons = new Dictionary<string, string>
             {
-                // Lookup tables: filled by a static initialiser and only read afterwards.
                 { "Thermodynamics.Core.BlockMaterials.Table", "read-only table" },
                 { "Thermodynamics.Core.ReferenceMaterials.Table", "read-only table" },
                 { "Thermodynamics.Core.GroundTemperature.Grounds", "read-only table" },
@@ -167,22 +132,16 @@ namespace Thermodynamics.Tests
                 { "Thermodynamics.Core.ThermalSolver+SubstepProfile.DemandEdges", "read-only table" },
                 { "Thermodynamics.Core.ThermalSolver+SubstepProfile.ProjectedCaps", "read-only table" },
 
-                // The names of a step's own stages, for a lab to label its rows with.
                 { "Thermodynamics.Core.ThermalSolver+StepPhaseProfile.Names", "read-only table" },
 
-                // Empty arrays: zero length, so there is nothing to share. They exist so an unfilled
-                // room map hands out windows onto something rather than onto null.
                 { "Thermodynamics.Core.CellBitset.EmptyPrefix", "empty array" },
                 { "Thermodynamics.Core.RoomMap.EmptyCells", "empty array" },
                 { "Thermodynamics.Core.RoomMap.EmptyRanges", "empty array" },
 
-                // Which face index points along which axis, derived once from the offsets below.
                 { "Thermodynamics.Core.RoomMapper.MinusX", "geometry constant" },
                 { "Thermodynamics.Core.RoomMapper.PlusX", "geometry constant" },
                 { "Thermodynamics.Core.RoomMapper.LateralFaces", "geometry constant" },
 
-                // Geometry constants: the six faces and the unit cube, as arrays because C# has no
-                // array literal a const can hold.
                 { "Thermodynamics.Core.Face.Offsets", "geometry constant" },
                 { "Thermodynamics.Core.Face.Normals", "geometry constant" },
                 { "Thermodynamics.Core.Face.NamesByIndex", "geometry constant" },
@@ -191,8 +150,6 @@ namespace Thermodynamics.Tests
                 { "Thermodynamics.Core.BlockSurfaceBuilder.FaceMountBounds", "geometry constant" },
                 { "Thermodynamics.Core.SolarOcclusionSampler.Corners", "geometry constant" },
 
-                // Readonly values of a struct or class type: constants with a computed value, in a
-                // shape `const` cannot hold.
                 { "Thermodynamics.Core.BlockMaterials.Steel", "value constant" },
                 { "Thermodynamics.Core.GroundTemperature.Neutral", "value constant" },
                 { "Thermodynamics.Core.ReferenceMaterials.MildSteel", "value constant" },
@@ -201,38 +158,25 @@ namespace Thermodynamics.Tests
                 { "Thermodynamics.Core.ReferenceMaterials.SodaLimeGlass", "value constant" },
                 { "Thermodynamics.Core.WeatherResponse.Calm", "value constant" },
 
-                // Built once by the static constructor from the matrix path and never written
-                // after: the same signed permutation for every grid on every thread.
                 { "Thermodynamics.Core.BlockOrientation.rotatedAxes", "table built once, never written after" },
                 { "Thermodynamics.Core.BlockOrientation.rotatedFaces", "table built once, never written after" },
                 { "Thermodynamics.Core.BlockOrientation.legal", "table built once, never written after" },
 
-                // Built once from Face.Offsets: what a key changes by along each face.
                 { "Thermodynamics.Core.GridMath.KeyByFace", "table built once, never written after" },
 
-                // The 26 neighbours of a one-cell block and their unit vectors. A one-cell block's
-                // centre is its own cell, so both are the same for every block on every grid —
-                // which is the whole reason they are a table rather than 26 square roots a node.
                 { "Thermodynamics.Core.ShapeNormal.OneCellOffsets", "table built once, never written after" },
                 { "Thermodynamics.Core.ShapeNormal.OneCellUnits", "table built once, never written after" },
 
-                // The lock the mutable pair below is taken under, which is shared on purpose.
                 { "Thermodynamics.Core.ThermalValidation.Lock", "the lock itself" },
 
-                // **The one entry a future change could invalidate.** Every grid whose room pass
-                // has not finished yet publishes this same empty map, so it is shared by more
-                // solvers than anything else here. It is safe only while nothing writes into a
-                // published map in place — a mapper that mutated its current map rather than
-                // replacing it would make this a race across every grid at once.
                 { "Thermodynamics.Core.RoomMap.AllExternal", "shared empty default, never written" },
 
-                // Mutable, and off the stepping path: definition validation runs at load and
-                // accumulates what it has already said so it says it once.
                 { "Thermodynamics.Core.ThermalValidation.Said", "mutable, off the stepping path" },
                 { "Thermodynamics.Core.ThermalValidation.Found", "mutable, off the stepping path" },
                 { "Thermodynamics.Core.ThermalValidation.Writer", "mutable, off the stepping path" },
             };
 
+/// <summary>List operation.</summary>
             List<string> unexplained = new List<string>();
             int judged = 0;
             int explained = 0;
@@ -249,10 +193,8 @@ namespace Thermodynamics.Tests
                 {
                     FieldInfo field = fields[i];
 
-                    // A literal is compiled into its callers and is not state at all.
                     if (field.IsLiteral) continue;
 
-                    // A readonly value type is a constant with a computed value.
                     if (field.IsInitOnly && (field.FieldType.IsPrimitive || field.FieldType.IsEnum))
                     {
                         continue;
@@ -272,6 +214,7 @@ namespace Thermodynamics.Tests
             }
 
             Assert.True(judged > 15,
+/// <summary>nothing operation.</summary>
                 "only " + judged + " static fields were looked at, so this judged nothing (`E8`)");
             Assert.True(explained > 10,
                 "only " + explained + " of the listed fields were found, so the list has gone stale"

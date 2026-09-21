@@ -30,25 +30,15 @@ namespace RichHudFramework
 		using Internal;
 		using System.Reflection;
 		using static RichHudFramework.UI.NodeConfigIndices;
-		// Read-only length-1 array containing raw UI node data
 		using HudNodeDataHandle = IReadOnlyList<HudNodeData>;
 
-		/// <summary>
-		/// Abstract base for HUD elements to which other elements are parented. Types deriving from this class cannot be
-		/// parented to other elements; only types of <see cref="HudNodeBase"/> can be parented.
-		/// </summary>
 		public abstract partial class HudParentBase : IReadOnlyHudParent
 		{
-			/// <summary>
-			/// Node defining the coordinate space used to render the UI element
-			/// </summary>
 			public virtual IReadOnlyHudSpaceNode HudSpace { get; protected set; }
 
-			/// <summary>
-			/// Returns true if the element is enabled and able to be drawn and accept input.
-			/// </summary>
 			public bool Visible
 			{
+/// <summary>return operation.</summary>
 				get { return (Config[StateID] & (uint)HudElementStates.IsVisible) > 0; }
 				set
 				{
@@ -59,11 +49,9 @@ namespace RichHudFramework
 				}
 			}
 
-			/// <summary>
-			/// Returns true if input is enabled
-			/// </summary>
 			public bool InputEnabled
 			{
+/// <summary>return operation.</summary>
 				get { return (Config[StateID] & Config[InputMaskID]) == Config[InputMaskID]; }
 				set
 				{
@@ -74,17 +62,12 @@ namespace RichHudFramework
 				}
 			}
 
-			/// <summary>
-			/// Moves the UI element up or down in draw order. -1 will draw an element behind its immediate 
-			/// parent. +1 will draw it on top of siblings. Higher values will allow it to draw behind or over 
-			/// more distantly related elements.
-			/// </summary>
 			public sbyte ZOffset
 			{
+/// <summary>return operation.</summary>
 				get { return (sbyte)Config[ZOffsetID]; }
 				set
 				{
-					// Signal potential structural change on offset change if visible
 					bool isVisible = (Config[StateID] & Config[VisMaskID]) == Config[VisMaskID];
 
 					if (isVisible && Config[ZOffsetID] != (uint)value)
@@ -100,49 +83,20 @@ namespace RichHudFramework
 				}
 			}
 
-			// INTERNAL DATA
 			#region INTERNAL DATA
 
-			/// <summary>
-			/// Handle to node data used for registering with the Tree Manager. Do not modify.
-			/// </summary>
-			/// <exclude/>
 			public HudNodeDataHandle DataHandle { get; }
 
-			/// <summary>
-			/// Internal configuration and state. Do not modify.
-			/// </summary>
-			/// <exclude/>
 			public IReadOnlyList<uint> Config { get; }
 
-			/// <summary>
-			/// Internal configuration and state. Do not modify.
-			/// </summary>
-			/// <exclude/>
 			protected readonly uint[] _config;
 
-			/// <summary>
-			/// Handle to node data used for registering with the Tree Manager. Do not modify.
-			/// </summary>
-			/// <exclude/>
 			protected readonly HudNodeData[] _dataHandle;
 
-			/// <summary>
-			/// References to child API handles. Parallel with children list.
-			/// Do not modify.
-			/// </summary>
-			/// <exclude/>
 			protected readonly List<object> childHandles;
 
-			/// <summary>
-			/// Registered chlid nodes. Do not modify.
-			/// </summary>
-			/// <exclude/>
 			protected readonly List<HudNodeBase> children;
 
-			/// <summary>
-			/// Internal flag set for indicating update hook usage
-			/// </summary>
 			private struct HookUsages
 			{
 				public bool IsInputDepthCustom;
@@ -152,80 +106,52 @@ namespace RichHudFramework
 				public bool IsDrawCustom;
 			}
 
-			/// <summary>
-			/// Internal collection of reflected metadata for detecting UI node hook usage within
-			/// the constraints of the SE whitelist
-			/// </summary>
 			private sealed class HookCanary : HudParentBase
 			{
 				public static readonly bool IsInitialized;		
 
-				/// <summary>
-				/// Maps types to a set of flags indicating which hooks are overridden
-				/// </summary>
 				public static readonly IReadOnlyDictionary<Type, HookUsages> TypeHookMap;
 
-				/// <summary>
-				/// Unique MemberInfo for the base implementation of HudParentBase.InputDepth()
-				/// </summary>
 				public static readonly MemberInfo InputDepthBase;
 
-				/// <summary>
-				/// Unique MemberInfo for the base implementation of HudParentBase.HandleInput()
-				/// </summary>
 				public static readonly MemberInfo HandleInputBase;
 				
-				/// <summary>
-				/// Unique MemberInfo for the base implementation of HudParentBase.Measure()
-				/// </summary>
 				public static readonly MemberInfo MeasureBase;
 
-				/// <summary>
-				/// Unique MemberInfo for the base implementation of HudParentBase.Layout()
-				/// </summary>
 				public static readonly MemberInfo LayoutBase;
 
-				/// <summary>
-				/// Unique MemberInfo for the base implementation of HudParentBase.Draw()
-				/// </summary>
 				public static readonly MemberInfo DrawBase;
 
-				/// <summary>
-				/// Adds a new type to the hook usage map
-				/// </summary>
+/// <summary>Adds a type.</summary>
 				public static void AddType(HudParentBase node, Type objType)
 				{
+/// <summary>default operation.</summary>
 					var usages = default(HookUsages);
 
-					// InputDepth
 					{
 						Action InputDepthAction = node.InputDepth;
 
 						if (InputDepthAction.Method != InputDepthBase)
 							usages.IsInputDepthCustom = true;
 					}
-					// HandleInput
 					{
 						Action<Vector2> HandleInputAction = node.HandleInput;
 
 						if (HandleInputAction.Method != HandleInputBase)
 							usages.IsHandleInputCustom = true;
 					}
-					// Measure
 					{
 						Action MeasureAction = node.Measure;
 
 						if (MeasureAction.Method != MeasureBase)
 							usages.IsMeasureCustom = true;
 					}
-					// Layout
 					{
 						Action LayoutAction = node.Layout;
 
 						if (LayoutAction.Method != LayoutBase)
 							usages.IsLayoutCustom = true;
 					}
-					// Draw
 					{
 						Action DrawAction = node.Draw;
 
@@ -238,8 +164,10 @@ namespace RichHudFramework
 
 				private static readonly Dictionary<Type, HookUsages> _typeHookMap;
 
+/// <summary>HookCanary operation.</summary>
 				static HookCanary()
 				{
+/// <summary>HookCanary operation.</summary>
 					var temp = new HookCanary();
 
 					InputDepthBase = ((Action)temp.InputDepth).Method;
@@ -254,51 +182,46 @@ namespace RichHudFramework
 					IsInitialized = true;
 				}
 
+/// <summary>HookCanary operation.</summary>
 				private HookCanary() { }
 			}
 
 			#endregion
 
+/// <summary>HudParentBase operation.</summary>
 			public HudParentBase()
 			{
 				if (HookCanary.IsInitialized)
 				{
-					// Storage init
+/// <summary>List operation.</summary>
 					children = new List<HudNodeBase>();
+/// <summary>List operation.</summary>
 					childHandles = new List<object>();
 					_config = new uint[ConfigLength];
 					Config = _config;
 
-					// Shared data handle
 					_dataHandle = new HudNodeData[1];
-					// Shared state
 					_dataHandle[0].Item1 = _config;
 					_dataHandle[0].Item2 = new HudSpaceOriginFunc[1];
-					// Mandatory hooks
 					_dataHandle[0].Item3.Item1 = GetOrSetApiMember;
 					_dataHandle[0].Item3.Item5 = BeginLayout;
 
-					// Parent
 					_dataHandle[0].Item4 = null;
-					// Child handle list
 					_dataHandle[0].Item5 = childHandles;
 					DataHandle = _dataHandle;
 
-					// Initial state
 					_config[VisMaskID] = (uint)HudElementStates.IsVisible;
 					_config[InputMaskID] = (uint)HudElementStates.IsInputEnabled;
 					_config[StateID] = (uint)(HudElementStates.IsRegistered | HudElementStates.IsInputEnabled | HudElementStates.IsVisible);
 			
+/// <summary>Returns the type.</summary>
 					Type nodeType = GetType();
 
-					// Add usage flags if this type hasn't been seen before
 					if (!HookCanary.TypeHookMap.ContainsKey(nodeType))
 						HookCanary.AddType(this, nodeType);
 
-					// Get usage flags
 					HookUsages usages = HookCanary.TypeHookMap[nodeType];
 
-					// Optional hooks
 					if (usages.IsInputDepthCustom)
 						_dataHandle[0].Item3.Item2 = InputDepth;
 
@@ -319,10 +242,7 @@ namespace RichHudFramework
 				}
 			}
 
-			/// <summary>
-			/// Wraps HandleInput() input polling hook. Override HandleInput() for customization.
-			/// </summary>
-			/// <exclude/>
+/// <summary>BeginInput operation.</summary>
 			protected virtual void BeginInput()
 			{
 				if ((Config[StateID] & (uint)HudElementStates.IsInputHandlerCustom) > 0)
@@ -332,10 +252,7 @@ namespace RichHudFramework
 				}
 			}
 
-			/// <summary>
-			/// Updates internal state. Override Layout() for customization. Do not override.
-			/// </summary>
-			/// <exclude/>
+/// <summary>BeginLayout operation.</summary>
 			protected virtual void BeginLayout(bool _)
 			{
 				if (HudSpace != null)
@@ -347,59 +264,27 @@ namespace RichHudFramework
 					Layout();
 			}
 
-			/// <summary>
-			/// Automatic self-resizing and measurement hook. Required for correct and stable 
-			/// self-resizing. Unnecessary for elements that don't need to set their own size.
-			/// 
-			/// Updates in bottom-up order before anything else, with elements at the bottom of the node 
-			/// heirarchy (furthest from root) updating first, and nodes at the top (closer to root) 
-			/// updating last.
-			/// </summary>
+/// <summary>Measure operation.</summary>
 			protected virtual void Measure()
 			{ }
 
-			/// <summary>
-			/// Custom element arrangement/layout hook. Used for sizing and arranging child nodes within 
-			/// the bounds of the element. 
-			/// 
-			/// Custom Layout updates should be designed to respect any size that may be set by a parent, 
-			/// whether it implements UpdateSize() or not.
-			/// 
-			/// Updates in top-down order, after UpdateSize().
-			/// </summary>
+/// <summary>Layout operation.</summary>
 			protected virtual void Layout()
 			{ }
 
-			/// <summary>
-			/// Custom drawing hook. Useful for drawing custom billboards.
-			/// 
-			/// Updates in back-to-front order after Layout(), with elements on the bottom drawing first, 
-			/// and elements in front drawing last.
-			/// </summary>
+/// <summary>Draw operation.</summary>
 			protected virtual void Draw()
 			{ }
 
-			/// <summary>
-			/// Update hook for testing cursor bounding and depth tests. 
-			/// 
-			/// Updates in back-to-front order after Draw(). Elements on the bottom update first, and elements 
-			/// on top update last.
-			/// </summary>
+/// <summary>InputDepth operation.</summary>
 			protected virtual void InputDepth()
 			{ }
 
-			/// <summary>
-			/// Input polling hook. 
-			/// 
-			/// Updates in front-to-back order after InputDepth(), with elements on top updating first, and 
-			/// elements in the back updating last.
-			/// </summary>
+/// <summary>HandleInput operation.</summary>
 			protected virtual void HandleInput(Vector2 cursorPos)
 			{ }
 
-			/// <summary>
-			/// Registers a child node to the parent.
-			/// </summary>
+/// <summary>Registers and opens communication.</summary>
 			public virtual bool RegisterChild(HudNodeBase child)
 			{
 				if (child.Parent == this && !child.Registered)
@@ -412,7 +297,6 @@ namespace RichHudFramework
 
 					if ((Config[StateID] & Config[VisMaskID]) == Config[VisMaskID])
 					{
-						// Depending on where this is called, the frame number might be off by one
 						uint[] rootConfig = HudMain.Instance._root._config;
 						bool isActive = Math.Abs((int)Config[FrameNumberID] - (int)rootConfig[FrameNumberID]) < 2;
 
@@ -424,19 +308,19 @@ namespace RichHudFramework
 
 					return true;
 				}
+/// <summary>if operation.</summary>
 				else if (child.Parent == null)
 					return child.Register(this);
 				else
 					return false;
 			}
 
-			/// <summary>
-			/// Unregisters the specified node from the parent.
-			/// </summary>
+/// <summary>Removes the child.</summary>
 			public virtual bool RemoveChild(HudNodeBase child)
 			{
 				if (child.Parent == this)
 					return child.Unregister();
+/// <summary>if operation.</summary>
 				else if (child.Parent == null)
 				{
 					child._dataHandle[0].Item4 = null;
@@ -447,15 +331,13 @@ namespace RichHudFramework
 					return false;
 			}
 
-			/// <summary>
-			/// Internal debugging method
-			/// </summary>
-			/// <exclude/>
+/// <summary>Returns the orsetapimember.</summary>
 			protected virtual object GetOrSetApiMember(object data, int memberEnum)
 			{
 				switch ((HudElementAccessors)memberEnum)
 				{
 					case HudElementAccessors.GetType:
+/// <summary>Returns the type.</summary>
 						return GetType();
 					case HudElementAccessors.ZOffset:
 						return (sbyte)ZOffset;

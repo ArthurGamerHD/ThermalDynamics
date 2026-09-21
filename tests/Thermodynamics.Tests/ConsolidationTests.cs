@@ -5,27 +5,9 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **Consolidations decay, and this is the sweep that noticed, promoted to a check.**
-    ///
-    /// <para>
-    /// The cleanup effort's fourth pass found three of its finds were earlier passes' own
-    /// consolidations with a surviving or re-created copy, and its fifth found a tool that had
-    /// been unimportable for six days because a consolidation deleted a name a sibling still
-    /// used. The sweep that finds these was run by hand at the top of each pass; a sweep run by
-    /// hand is a sweep that is eventually not run (`P5`, `D5`). Each case here is one
-    /// consolidated definition's banned form: the pattern must appear in the file that owns the
-    /// definition — a scan that sees nothing is not looking (`E8`) — and nowhere else, with the
-    /// standing exclusions from cleanup-effort.md carried as exemptions, each with its reason.
-    /// </para>
-    ///
-    /// <para>
-    /// The python tools' half of this is `tools/corpus/test_tool_imports.py`; the vendored trees
-    /// are excluded because `R6` forbids editing them.
-    /// </para>
-    /// </summary>
     public class ConsolidationTests
     {
+/// <summary>SourceFiles operation.</summary>
         private static List<KeyValuePair<string, string>> SourceFiles()
         {
             List<KeyValuePair<string, string>> files = new List<KeyValuePair<string, string>>();
@@ -48,7 +30,6 @@ namespace Thermodynamics.Tests
             return files;
         }
 
-        /// <summary>One consolidated definition: its banned form, its owner, and who may keep a copy.</summary>
         private sealed class Consolidation
         {
             public string Pattern;
@@ -61,6 +42,7 @@ namespace Thermodynamics.Tests
         {
             new Consolidation
             {
+/// <summary>Clamp01 operation.</summary>
                 Pattern = "float Clamp01(",
                 Owner = "Data/Scripts/Thermodynamics/Core/Util/ThermalMath.cs",
                 Why = "ten private copies were consolidated in iteration 36",
@@ -71,12 +53,8 @@ namespace Thermodynamics.Tests
                 Owner = "tests/Thermodynamics.Harness/CsvLine.cs",
                 Exempt = new[]
                 {
-                    // Minimal quoting plus newline scrubbing is that artefact's own policy.
                     "tests/Thermodynamics.Sim/CorpusFetch.cs",
 
-                    // The shipped mod cannot reference the harness, so the telemetry writer is
-                    // necessarily its own; the pair is held together by the cross-parser round
-                    // trip in TelemetryFormatTests instead of by one definition.
                     "Data/Scripts/Thermodynamics/Telemetry/TelemetryFormat.cs",
                 },
                 Why = "six sites stated the CSV escape independently; iteration 48",
@@ -111,8 +89,6 @@ namespace Thermodynamics.Tests
                 Owner = "Data/Scripts/Thermodynamics/Core/Util/BoxGeometry.cs",
                 Exempt = new[]
                 {
-                    // The frozen oracle: this class IS the old code, kept verbatim (`D8`), and
-                    // modernising an oracle's spelling would delete the evidence it is.
                     "tests/Thermodynamics.Tests/SurfaceMapPackingTests.cs",
                 },
                 Why = "the per-face frame is BoxGeometry.Span; cleanup 4 and iteration 19",
@@ -126,12 +102,16 @@ namespace Thermodynamics.Tests
         };
 
         [Fact]
+/// <summary>NoConsolidatedDefinitionHasGrownASecondCopy operation.</summary>
         public void NoConsolidatedDefinitionHasGrownASecondCopy()
         {
+/// <summary>SourceFiles operation.</summary>
             List<KeyValuePair<string, string>> files = SourceFiles();
             Assert.True(files.Count > 100,
+/// <summary>tree operation.</summary>
                 "the scan found almost no source files, so it is not looking at the tree (E8)");
 
+/// <summary>List operation.</summary>
             List<string> problems = new List<string>();
 
             foreach (Consolidation entry in Consolidations)
@@ -164,6 +144,7 @@ namespace Thermodynamics.Tests
                 if (!ownerSeen)
                 {
                     problems.Add("the owner " + entry.Owner + " no longer carries '" + entry.Pattern
+/// <summary>nothing operation.</summary>
                         + "', so this case is checking against nothing (E8) — update or retire it");
                 }
             }

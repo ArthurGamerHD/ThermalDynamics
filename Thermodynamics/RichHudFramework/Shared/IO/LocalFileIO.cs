@@ -4,48 +4,33 @@ using System.IO;
 
 namespace RichHudFramework.IO
 {
-	/// <summary>
-	/// Handles basic file I/O operations in the mod's local storage. 
-	/// <para>Ensures thread safety by preventing concurrent operations on this specific instance.</para>
-	/// <para>Wrapper around <see cref="MyAPIGateway.Utilities"/> local storage file utilities.</para>
-	/// </summary>
 	public class LocalFileIO
 	{
-		/// <summary>
-		/// Returns true if the file exists in the local storage directory.
-		/// </summary>
 		public bool FileExists => MyAPIGateway.Utilities.FileExistsInLocalStorage(file, typeof(LocalFileIO));
 
-		/// <summary>
-		/// The immutable relative file path.
-		/// </summary>
 		public readonly string file;
 
 		private readonly object fileLock;
 
-		/// <summary>
-		/// Initializes a new file handler for the specified path in local storage.
-		/// </summary>
-		/// <param name="file">Relative path to the file.</param>
+/// <summary>LocalFileIO operation.</summary>
 		public LocalFileIO(string file)
 		{
 			this.file = file;
+/// <summary>object operation.</summary>
 			fileLock = new object();
 		}
 
-		/// <summary>
-		/// Creates a copy of the current file with a new name in local storage.
-		/// </summary>
-		/// <param name="newName">The name/path for the duplicate file.</param>
-		/// <returns>Returns a <see cref="KnownException"/> if the read or write operation fails.</returns>
+/// <summary>TryDuplicate operation.</summary>
 		public KnownException TryDuplicate(string newName)
 		{
 			string data;
+/// <summary>TryRead operation.</summary>
 			KnownException exception = TryRead(out data);
 			LocalFileIO newFile;
 
 			if (exception == null && data != null)
 			{
+/// <summary>LocalFileIO operation.</summary>
 				newFile = new LocalFileIO(newName);
 				exception = newFile.TryWrite(data);
 			}
@@ -53,35 +38,27 @@ namespace RichHudFramework.IO
 			return exception;
 		}
 
-		/// <summary>
-		/// Attempts to append a string to the existing local file.
-		/// <para><strong>Warning:</strong> This performs a full read-modify-write cycle 
-		/// (reads existing, concatenates, writes all).</para>
-		/// </summary>
-		/// <param name="data">The string to append.</param>
-		/// <returns>Returns a <see cref="KnownException"/> if the operation fails.</returns>
+/// <summary>TryAppend operation.</summary>
 		public KnownException TryAppend(string data)
 		{
 			string current;
+/// <summary>TryRead operation.</summary>
 			KnownException exception = TryRead(out current);
 
 			if (exception == null && current != null)
 			{
 				current += data;
+/// <summary>TryWrite operation.</summary>
 				exception = TryWrite(current);
 			}
 			else
+/// <summary>TryWrite operation.</summary>
 				exception = TryWrite(data);
 
 			return exception;
 		}
 
-		/// <summary>
-		/// Attempts to retrieve the file data as a byte array. 
-		/// <para><strong>Note:</strong> Expects the file to start with a 32-bit integer indicating the array length.</para>
-		/// </summary>
-		/// <param name="stream">The byte array read from the file.</param>
-		/// <returns>Returns a <see cref="KnownException"/> if an error occurs.</returns>
+/// <summary>TryRead operation.</summary>
 		public KnownException TryRead(out byte[] stream)
 		{
 			KnownException exception = null;
@@ -92,12 +69,12 @@ namespace RichHudFramework.IO
 				try
 				{
 					reader = MyAPIGateway.Utilities.ReadBinaryFileInLocalStorage(file, typeof(LocalFileIO));
-					// Reads length prefix first, then the data
 					stream = reader.ReadBytes(reader.ReadInt32());
 				}
 				catch (Exception e)
 				{
 					stream = null;
+/// <summary>KnownException operation.</summary>
 					exception = new KnownException($"IO Error. Unable to read from {file}.", e);
 				}
 				finally
@@ -109,11 +86,7 @@ namespace RichHudFramework.IO
 			return exception;
 		}
 
-		/// <summary>
-		/// Attempts to retrieve the file data as a string.
-		/// </summary>
-		/// <param name="data">The string content of the file.</param>
-		/// <returns>Returns a <see cref="KnownException"/> if an error occurs.</returns>
+/// <summary>TryRead operation.</summary>
 		public KnownException TryRead(out string data)
 		{
 			KnownException exception = null;
@@ -130,6 +103,7 @@ namespace RichHudFramework.IO
 				catch (Exception e)
 				{
 					data = null;
+/// <summary>KnownException operation.</summary>
 					exception = new KnownException($"IO Error. Unable to read from {file}.", e);
 				}
 				finally
@@ -141,12 +115,7 @@ namespace RichHudFramework.IO
 			return exception;
 		}
 
-		/// <summary>
-		/// Attempts to write a byte array to the file. 
-		/// <para><strong>Note:</strong> Prepends the size of the array (Int32) to the file header before writing data.</para>
-		/// </summary>
-		/// <param name="stream">The byte array to write.</param>
-		/// <returns>Returns a <see cref="KnownException"/> if the write fails.</returns>
+/// <summary>TryWrite operation.</summary>
 		public KnownException TryWrite(byte[] stream)
 		{
 			KnownException exception = null;
@@ -163,6 +132,7 @@ namespace RichHudFramework.IO
 				}
 				catch (Exception e)
 				{
+/// <summary>KnownException operation.</summary>
 					exception = new KnownException($"IO Error. Unable to write to {file}.", e);
 				}
 				finally
@@ -174,11 +144,7 @@ namespace RichHudFramework.IO
 			return exception;
 		}
 
-		/// <summary>
-		/// Attempts to overwrite the file with the provided string data.
-		/// </summary>
-		/// <param name="data">The text data to write.</param>
-		/// <returns>Returns a <see cref="KnownException"/> if the write fails.</returns>
+/// <summary>TryWrite operation.</summary>
 		public KnownException TryWrite(string data)
 		{
 			KnownException exception = null;
@@ -194,6 +160,7 @@ namespace RichHudFramework.IO
 				}
 				catch (Exception e)
 				{
+/// <summary>KnownException operation.</summary>
 					exception = new KnownException($"IO Error. Unable to write to {file}.", e);
 				}
 				finally

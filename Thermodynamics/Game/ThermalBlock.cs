@@ -14,43 +14,21 @@ using VRageMath;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// One placed block, bound to the simulation node that represents it.
-    ///
-    /// Everything the game reports about a block arrives through here, and arrives by event: power
-    /// output, thrust, door state and mass are pushed when they change rather than polled. This
-    /// keeps a grid's per-step cost proportional to the solver rather than to its component count.
-    /// </summary>
     public class ThermalBlock
     {
         public readonly ThermalGrid Grid;
         public readonly IMySlimBlock Block;
 
-        /// <summary>The simulation's view of this block: geometry, mass, live power figures.</summary>
         public readonly BlockInstance Instance;
 
-        /// <summary>The solver node. Null when the block was rejected by the solver.</summary>
         public ThermalNode Node;
 
-        /// <summary>
-        /// The data collection bucket for this block's definition, resolved once at construction
-        /// so the per-update path never does a dictionary lookup. Null when telemetry is off.
-        /// </summary>
         public BlockTypeTelemetry Stats;
 
-        /// <summary>
-        /// The air vent this block is, or null. Vents are the fallback source of pressurisation state
-        /// where the game's gas system cannot be read.
-        /// </summary>
         public IMyAirVent Vent;
 
-        /// <summary>
-        /// The electrical half of this block if it is a heat pump, or null. Holds the resource sink
-        /// and the terminal switch; the heat moved is the simulation's concern.
-        /// </summary>
         public ThermalHeatPumpBlock HeatPump;
 
-        /// <summary>The coolant pump's switch and speed, or null when this is not a pump.</summary>
         public ThermalCoolantPumpBlock CoolantPump;
 
         private MyResourceSourceComponent source;
@@ -69,15 +47,18 @@ namespace Thermodynamics
         private Action<bool> doorChanged;
         private Action<IMyMechanicalConnectionBlock> attachmentChanged;
 
+/// <summary>ThermalBlock operation.</summary>
         public ThermalBlock(ThermalGrid grid, IMySlimBlock block, BlockModel model)
         {
             Grid = grid;
             Block = block;
 
             MyBlockOrientation orientation = block.Orientation;
+/// <summary>BlockInstance operation.</summary>
             Instance = new BlockInstance(
                 model,
                 block.Min,
+/// <summary>BlockOrientation operation.</summary>
                 new BlockOrientation(orientation.Forward, orientation.Up));
 
             Instance.Mass = Math.Max(0f, block.Mass);
@@ -85,14 +66,9 @@ namespace Thermodynamics
             Stats = Telemetry.GetBlockType(block.BlockDefinition.Id);
         }
 
-        /// <summary>
-        /// Re-resolves the per-definition telemetry record. Called when collection is switched
-        /// on or off during a session; a no-op otherwise.
-        /// </summary>
+/// <summary>RefreshStats operation.</summary>
         public void RefreshStats()
         {
-            // Records outlive a toggle, so a block that has already registered with one must not
-            // register again, which would count its placement once per switch.
             if (Stats != null) return;
 
             Stats = Telemetry.GetBlockType(Block.BlockDefinition.Id);
@@ -109,9 +85,8 @@ namespace Thermodynamics
             get { return Block.BlockDefinition.Id.SubtypeName; }
         }
 
-        // ---- wiring ------------------------------------------------------------------------
 
-        /// <summary>Subscribes to everything that can change this block's thermal inputs.</summary>
+/// <summary>Attach operation.</summary>
         public void Attach()
         {
             IMyCubeBlock fat = Block.FatBlock;
@@ -145,8 +120,6 @@ namespace Thermodynamics
             Vent = fat as IMyAirVent;
             if (Vent != null) Grid.RegisterVent(this);
 
-            // A heat pump is the only block with a two-way exchange with the game: the simulation
-            // reports the draw it wants and the power system reports how much it supplied.
             CoolantPump = fat.GameLogic == null
                 ? null
                 : fat.GameLogic.GetAs<ThermalCoolantPumpBlock>();
@@ -165,8 +138,6 @@ namespace Thermodynamics
                 OnDoorStateChanged(door.IsFullyClosed);
             }
 
-            // A rotor or piston conducts into the grid on the far side of the joint, which is a
-            // separate simulation. Only these two block families raise the event.
             piston = fat as IMyPistonBase;
             motor = fat as IMyMotorBase;
             if (piston != null || motor != null)
@@ -181,7 +152,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Undoes <see cref="Attach"/>. Every subscription made there is dropped here.</summary>
+/// <summary>Detach operation.</summary>
         public void Detach()
         {
             IMyCubeBlock fat = Block.FatBlock;
@@ -210,9 +181,6 @@ namespace Thermodynamics
                 Vent = null;
             }
 
-            // Tested on the subtype rather than the field: a pump whose game logic could not be
-            // resolved is still registered, and leaving it in the list would keep the block alive
-            // after removal.
             if (ThermalHeatPumpShapes.IsHeatPump(Name))
             {
                 Grid.UnregisterHeatPump(this);
@@ -228,6 +196,7 @@ namespace Thermodynamics
             sink = null;
         }
 
+/// <summary>AttachSource operation.</summary>
         private void AttachSource(MyResourceSourceComponent component)
         {
             if (component == null) return;
@@ -236,11 +205,6 @@ namespace Thermodynamics
             outputChanged = OnPowerProduced;
             source.OutputChanged += outputChanged;
 
-            // Query electricity only when the component carries it. A hydrogen tank, an oxygen farm
-            // and an ice-fed generator all have a source component with no electric type, and the
-            // by-type accessors index a dictionary rather than probing it: a field run took a
-            // KeyNotFoundException out of MyResourceSourceComponent.GetTypeIndex for this, which
-            // aborted binding and left the block out of the simulation.
             if (Carries(source.ResourceTypes))
             {
                 Instance.PowerProducedWatts =
@@ -250,6 +214,7 @@ namespace Thermodynamics
             RefreshHeat();
         }
 
+/// <summary>AttachSink operation.</summary>
         private void AttachSink(MyResourceSinkComponent component)
         {
             if (component == null) return;
@@ -267,13 +232,7 @@ namespace Thermodynamics
             RefreshHeat();
         }
 
-        /// <summary>
-        /// Whether a resource component handles electricity.
-        ///
-        /// The subscription is kept either way: a sink can gain a type after construction via
-        /// <c>AddType</c>, and the change event filters on the resource id, so a component that
-        /// starts non-electric still reports correctly if it later becomes electric.
-        /// </summary>
+/// <summary>Carries operation.</summary>
         private static bool Carries(ListReader<MyDefinitionId> resources)
         {
             for (int i = 0; i < resources.Count; i++)
@@ -283,12 +242,14 @@ namespace Thermodynamics
             return false;
         }
 
+/// <summary>OnComponentAdded operation.</summary>
         private void OnComponentAdded(Type type, IMyEntityComponentBase component)
         {
             if (type == typeof(MyResourceSourceComponent)) AttachSource(component as MyResourceSourceComponent);
             if (type == typeof(MyResourceSinkComponent)) AttachSink(component as MyResourceSinkComponent);
         }
 
+/// <summary>OnComponentRemoved operation.</summary>
         private void OnComponentRemoved(Type type, IMyEntityComponentBase component)
         {
             if (type == typeof(MyResourceSourceComponent) && source != null && outputChanged != null)
@@ -308,8 +269,8 @@ namespace Thermodynamics
             }
         }
 
-        // ---- pushed state ------------------------------------------------------------------
 
+/// <summary>OnPowerProduced operation.</summary>
         private void OnPowerProduced(MyDefinitionId resource, float previous, MyResourceSourceComponent component)
         {
             try
@@ -325,6 +286,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>OnPowerConsumed operation.</summary>
         private void OnPowerConsumed(MyDefinitionId resource, float previous, MyResourceSinkComponent component)
         {
             try
@@ -340,6 +302,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>OnThrustChanged operation.</summary>
         private void OnThrustChanged(IMyThrust block, float previous, float current)
         {
             try
@@ -356,10 +319,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Handles a door changing state, which changes what the rooms behind it radiate to. The only
-        /// per-block event costing more than a few floats, and raised only by doors.
-        /// </summary>
+/// <summary>OnDoorStateChanged operation.</summary>
         private void OnDoorStateChanged(bool closed)
         {
             try
@@ -378,6 +338,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>OnAttachmentChanged operation.</summary>
         private void OnAttachmentChanged(IMyMechanicalConnectionBlock block)
         {
             try
@@ -390,12 +351,9 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// This block's place in its grid's mass-sweep rota, or -1 when it is not in one.
-        /// Maintained by <see cref="ThermalGrid"/>; nothing else should write it.
-        /// </summary>
         public int SweepSlot = -1;
 
+/// <summary>RefreshMass operation.</summary>
         public void RefreshMass()
         {
             float mass = Math.Max(0f, Block.Mass);
@@ -405,16 +363,13 @@ namespace Thermodynamics
             if (Node != null) Node.RefreshThermalMass();
         }
 
+/// <summary>RefreshHeat operation.</summary>
         private void RefreshHeat()
         {
             if (Node != null) Node.RefreshHeatGeneration();
         }
 
-        /// <summary>
-        /// Re-reads this block's thermal properties from the catalogue. The model holds them by
-        /// reference, so a rebuilt entry reaches the block only by asking again, and the node's cached
-        /// capacity and generation are derived from it.
-        /// </summary>
+/// <summary>RefreshProperties operation.</summary>
         public void RefreshProperties()
         {
             BlockModel model = ThermalBlockCatalog.Get(Block);

@@ -10,15 +10,8 @@ using VRageMath;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// The numeric readout beside the debug overlay: the overlay locates values by colouring geometry
-    /// and this reports their magnitudes, with a set of figures per view chosen to disambiguate the
-    /// picture. Swept from the node list a few times a second rather than per frame.
-    /// See configuration.md, The block overlay.
-    /// </summary>
     public static class ThermalDebugPanel
     {
-        /// <summary>Draw calls between sweeps. Fifteen is roughly a quarter second.</summary>
         private const int RefreshInterval = 15;
 
         private static LabelBox panel;
@@ -26,39 +19,43 @@ namespace Thermodynamics
         private static ThermalDebugView.Mode lastMode;
         private static long lastGrid;
         private static bool warned;
+/// <summary>StringBuilder operation.</summary>
         private static readonly StringBuilder Text = new StringBuilder();
 
-        /// <summary>Reused by the room view, so a large grid does not allocate a list per sweep.</summary>
+/// <summary>List operation.</summary>
         private static readonly List<int> RoomOrder = new List<int>();
 
+/// <summary>Builds the API method table.</summary>
         public static void Build()
         {
             if (panel != null) return;
 
+/// <summary>LabelBox operation.</summary>
             panel = new LabelBox(HudMain.HighDpiRoot)
             {
-                // Top left, clear of the crosshair readout and the cockpit summary.
                 ParentAlignment = ParentAlignments.Top | ParentAlignments.Left
                     | ParentAlignments.InnerV | ParentAlignments.InnerH,
+/// <summary>Vector2 operation.</summary>
                 Offset = new Vector2(20f, -120f),
                 BuilderMode = TextBuilderModes.Lined,
                 AutoResize = true,
+/// <summary>Vector2 operation.</summary>
                 TextPadding = new Vector2(20f, 16f),
+/// <summary>Color operation.</summary>
                 Color = new Color(20, 24, 28, 190),
+/// <summary>GlyphFormat operation.</summary>
                 Format = new GlyphFormat(new Color(220, 235, 242), TextAlignment.Left, 0.9f),
                 Visible = false,
             };
         }
 
+/// <summary>Reset operation.</summary>
         public static void Reset()
         {
             panel = null;
         }
 
-        /// <summary>
-        /// Called every draw. The panel is shown only while the overlay is up and a grid is in view,
-        /// so it never displays figures for a grid the player has looked away from.
-        /// </summary>
+/// <summary>Update operation.</summary>
         public static void Update()
         {
             if (panel == null)
@@ -77,8 +74,6 @@ namespace Thermodynamics
             panel.Visible = wanted;
             if (!wanted) return;
 
-            // Cycling a view or targeting another grid redraws immediately rather than at the next
-            // sweep, so the readout does not lag a keystroke by a quarter second.
             bool changed = ThermalDebugView.Current != lastMode
                 || thermals.Grid.EntityId != lastGrid
                 || Text.Length == 0;
@@ -91,15 +86,11 @@ namespace Thermodynamics
             sinceRefresh = 0;
 
             Compose(thermals);
+/// <summary>RichText operation.</summary>
             panel.Text = new RichText(Text.ToString());
         }
 
-        /// <summary>
-        /// Reports why there is no panel, once, the first time a view is enabled without one.
-        ///
-        /// Registration with Rich HUD Master reports no failure; the framework never calls back, so
-        /// the absence must be reported here.
-        /// </summary>
+/// <summary>WarnOnce operation.</summary>
         private static void WarnOnce()
         {
             if (warned) return;
@@ -111,6 +102,7 @@ namespace Thermodynamics
                 "Thermodynamics: the overlay readout needs the Rich HUD Master mod", 5000, "Red");
         }
 
+/// <summary>Compose operation.</summary>
         private static void Compose(ThermalGrid thermals)
         {
             Text.Clear();
@@ -128,14 +120,20 @@ namespace Thermodynamics
 
             switch (mode)
             {
+/// <summary>Temperature operation.</summary>
                 case ThermalDebugView.Mode.Temperature: Temperature(thermals); break;
+/// <summary>Solar operation.</summary>
                 case ThermalDebugView.Mode.SolarWatts: Solar(thermals, ref state); break;
+/// <summary>Exposed operation.</summary>
                 case ThermalDebugView.Mode.ExposedFaces: Exposed(thermals); break;
+/// <summary>Friction operation.</summary>
                 case ThermalDebugView.Mode.FrictionWatts: Friction(thermals, ref state); break;
+/// <summary>Rooms operation.</summary>
                 case ThermalDebugView.Mode.Rooms: Rooms(thermals); break;
             }
         }
 
+/// <summary>Temperature operation.</summary>
         private static void Temperature(ThermalGrid thermals)
         {
             float min = float.MaxValue, max = float.MinValue, total = 0f;
@@ -169,13 +167,13 @@ namespace Thermodynamics
                 Text.Append("         ").Append(hottest.Block.Name).Append('\n');
             }
 
-            // Per second, so the figure is comparable at any step rate.
             Text.Append("peak dT  ")
                 .Append((fastest * Settings.Instance.StepsPerSecond).ToString("n3")).Append(" K/s\n");
             Text.Append("critical ").Append(thermals.CriticalBlocks).Append('\n');
             Text.Append("loops    ").Append(thermals.Simulation.Solver.Loops.Count).Append('\n');
         }
 
+/// <summary>Solar operation.</summary>
         private static void Solar(ThermalGrid thermals, ref EnvironmentState state)
         {
             float total = 0f, peak = 0f;
@@ -204,8 +202,6 @@ namespace Thermodynamics
             Text.Append("lit      ").Append(lit).Append(" blocks\n");
             Text.Append('\n');
 
-            // A dark grid at noon is shadowed, has solar heating disabled, or is facing away. These
-            // three lines distinguish the cases.
             Text.Append("sunlight ").Append(state.SolarEnergy.ToString("n0")).Append(" W/m2")
                 .Append(state.IsSolarOccluded ? "  (occluded)" : "").Append('\n');
             Text.Append("mechanism ")
@@ -219,8 +215,6 @@ namespace Thermodynamics
             {
                 SunShadowMap shadow = thermals.Simulation.Solver.SunShadow;
 
-                // Reported while a pass is in flight: the figures on screen belong to the last
-                // completed pass until the new one lands.
                 Text.Append("  ").Append(shadow.ShadowedCount).Append(" cells shadowed");
                 if (shadow.IsRunning)
                 {
@@ -231,6 +225,7 @@ namespace Thermodynamics
             Text.Append('\n');
         }
 
+/// <summary>Exposed operation.</summary>
         private static void Exposed(ThermalGrid thermals)
         {
             int faces = 0, buried = 0, blocks = 0;
@@ -259,6 +254,7 @@ namespace Thermodynamics
                 .Append(thermals.Simulation.Rooms.PendingCells).Append(" cells queued\n");
         }
 
+/// <summary>Friction operation.</summary>
         private static void Friction(ThermalGrid thermals, ref EnvironmentState state)
         {
             float total = 0f, peak = 0f;
@@ -293,6 +289,7 @@ namespace Thermodynamics
                 .Append(Settings.Instance.EnableFriction ? "on" : "OFF").Append('\n');
         }
 
+/// <summary>Rooms operation.</summary>
         private static void Rooms(ThermalGrid thermals)
         {
             RoomMap map = thermals.Simulation.Rooms.Map;
@@ -313,8 +310,6 @@ namespace Thermodynamics
                 return;
             }
 
-            // Why every room reads empty when it does. Usually the world's own oxygen settings,
-            // which must be ruled out before the room figures mean anything.
             bool pressurised = MyAPIGateway.Session != null
                 && MyAPIGateway.Session.SessionSettings != null
                 && MyAPIGateway.Session.SessionSettings.EnableOxygen
@@ -325,8 +320,6 @@ namespace Thermodynamics
                 Text.Append("world pressurisation OFF — no room holds air\n");
             }
 
-            // Largest first, since the list is truncated and the largest compartments hold most of
-            // the grid's air.
             RoomOrder.Clear();
             for (int i = 0; i < air.Count; i++) RoomOrder.Add(i);
             RoomOrder.Sort((a, b) => air[b].CellCount.CompareTo(air[a].CellCount));
@@ -354,10 +347,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Watts at a readable magnitude, to two places rather than the cockpit panel's one — this
-        /// is a diagnostic and the second digit is often the whole point of reading it.
-        /// </summary>
+/// <summary>Watts operation.</summary>
         private static string Watts(float watts)
         {
             return Units.Watts(watts, 2);

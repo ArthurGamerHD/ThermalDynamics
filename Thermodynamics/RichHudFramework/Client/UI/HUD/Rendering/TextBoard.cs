@@ -34,16 +34,8 @@ namespace RichHudFramework
 				Action<BoundingBox2, BoundingBox2, MatrixD[]> // Draw 
 			>;
 
-            /// <summary>
-            /// Client-side interface to text renderer implementing <see cref="ITextBoard"/>
-            /// <para>This should not be drawn outside the UI tree to ensure correct timing.</para>
-            /// </summary>
-            /// <exclude/>
             public sealed class TextBoard : TextBuilder, ITextBoard
 			{
-				/// <summary>
-				/// Invoked whenever a change is made to the text. Invokes once every 500ms, at most.
-				/// </summary>
 				public event Action TextChanged
 				{
 					add
@@ -58,56 +50,41 @@ namespace RichHudFramework
 					}
 				}
 
-				/// <summary>
-				/// Scale of the text board. Applied after scaling specified in GlyphFormat.
-				/// </summary>
+/// <summary>Returns the scalefunc.</summary>
 				public float Scale { get { return GetScaleFunc(); } set { SetScaleAction(value); } }
 
-				/// <summary>
-				/// Size of the text box as rendered
-				/// </summary>
+/// <summary>Returns the sizefunc.</summary>
 				public Vector2 Size => GetSizeFunc();
 
-				/// <summary>
-				/// Full text size including any text outside the visible range. Updates immediately.
-				/// </summary>
+/// <summary>Returns the textsizefunc.</summary>
 				public Vector2 TextSize => GetTextSizeFunc();
 
-				/// <summary>
-				/// Used to change the position of the text within the text element. Clamped to maximize visible text.
-				/// AutoResize must be disabled for this to work.
-				/// </summary>
 				public Vector2 TextOffset
 				{
+/// <summary>return operation.</summary>
 					get { return (Vector2)GetOrSetMemberFunc(null, (int)TextBoardAccessors.TextOffset); }
+/// <summary>Returns the orsetmemberfunc.</summary>
 					set { GetOrSetMemberFunc(value, (int)TextBoardAccessors.TextOffset); }
 				}
 
-				/// <summary>
-				/// Full text size including any text outside the visible range.
-				/// </summary>
 				public Vector2I VisibleLineRange => (Vector2I)GetOrSetMemberFunc(null, (int)TextBoardAccessors.VisibleLineRange);
 
-				/// <summary>
-				/// Size of the text box when AutoResize is set to false. Does nothing otherwise.
-				/// </summary>
+/// <summary>Returns the fixedsizefunc.</summary>
 				public Vector2 FixedSize { get { return GetFixedSizeFunc(); } set { SetFixedSizeAction(value); } }
 
-				/// <summary>
-				/// If true, the text board will automatically resize to fit the text.
-				/// </summary>
 				public bool AutoResize
 				{
+/// <summary>return operation.</summary>
 					get { return (bool)GetOrSetMemberFunc(null, (int)TextBoardAccessors.AutoResize); }
+/// <summary>Returns the orsetmemberfunc.</summary>
 					set { GetOrSetMemberFunc(value, (int)TextBoardAccessors.AutoResize); }
 				}
 
-				/// <summary>
-				/// If true, the text will be vertically aligned to the center of the text board.
-				/// </summary>
 				public bool VertCenterText
 				{
+/// <summary>return operation.</summary>
 					get { return (bool)GetOrSetMemberFunc(null, (int)TextBoardAccessors.VertAlign); }
+/// <summary>Returns the orsetmemberfunc.</summary>
 					set { GetOrSetMemberFunc(value, (int)TextBoardAccessors.VertAlign); }
 				}
 
@@ -119,9 +96,11 @@ namespace RichHudFramework
 				private readonly Action<Vector2> SetFixedSizeAction;
 				private readonly Action<BoundingBox2, BoundingBox2, MatrixD[]> DrawAction;
 
+/// <summary>TextBoard operation.</summary>
 				public TextBoard() : this(HudMain.GetTextBoardData())
 				{ }
 
+/// <summary>TextBoard operation.</summary>
 				private TextBoard(TextBoardMembers members) : base(members.Item1)
 				{
 					Format = GlyphFormat.Black;
@@ -134,23 +113,15 @@ namespace RichHudFramework
 					DrawAction = members.Item6;
 				}
 
-				/// <summary>
-				/// Draws the text board in world space on the XY plane of the matrix, facing in the +Z
-				/// direction.
-				/// </summary>
+/// <summary>Draw operation.</summary>
 				public void Draw(BoundingBox2 box, BoundingBox2 mask, MatrixD[] matrix) =>
 					DrawAction(box, mask, matrix);
 
-				/// <summary>
-				/// Calculates and applies the minimum offset needed to ensure that the character at the specified index
-				/// is within the visible range, while maximizing visible text.
-				/// </summary>
+/// <summary>MoveToChar operation.</summary>
 				public void MoveToChar(Vector2I index) =>
 					GetOrSetMemberFunc(index, (int)TextBoardAccessors.MoveToChar);
 
-				/// <summary>
-				/// Returns the index of the character at the given offset.
-				/// </summary>
+/// <summary>Returns the charatoffset.</summary>
 				public Vector2I GetCharAtOffset(Vector2 offset) =>
 					(Vector2I)GetOrSetMemberFunc(offset, (int)TextBoardAccessors.GetCharAtOffset);
 			}

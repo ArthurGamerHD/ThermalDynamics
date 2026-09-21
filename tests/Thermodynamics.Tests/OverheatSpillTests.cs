@@ -5,37 +5,9 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **A block that leaves the world above its critical temperature leaves its heat behind.**
-    ///
-    /// <para>
-    /// Heat departing with a departing block is a deliberate limit, argued in
-    /// known-issues.md, Deliberate limits, and pinned by
-    /// `EnergyIsNotConservedWhenTheBlockPopulationChanges`. The argument for it is about a block a
-    /// **player takes away**: conserving that means a grinder that heats the ship around it and a
-    /// welder that chills it, a mechanism nobody would connect to a cause.
-    /// </para>
-    ///
-    /// <para>
-    /// **A node past critical is a different event.** It did not leave — it failed in place, and
-    /// the mod is what destroyed it. Letting its energy go makes overheating a *reward*: cook a
-    /// cheap block and the world is that much cooler, for free and repeatably. That is the exploit
-    /// backlog.md `B42` names and the half of it the coolant consumable
-    /// (`B43`, `B44`) does not price — the sacrificial block, the grind-and-reweld timer on a
-    /// glowing block, and the crudest version that needs no grinder at all, because the mod
-    /// destroys the block for you.
-    /// </para>
-    ///
-    /// <para>
-    /// **The rule is read off the temperature rather than off the cause**, because the cause is not
-    /// knowable where the decision is made: the game removes a block and the mod is told, with
-    /// nothing to say whether a grinder or a fire did it. One test answers all three variants and
-    /// leaves a cool block ground off exactly as it was.
-    /// </para>
-    /// </summary>
     public class OverheatSpillTests
     {
-        /// <summary>A 3x3x3 of light armour with one corner driven whereever the caller wants it.</summary>
+/// <summary>Cube operation.</summary>
         private static ThermalSimulation Cube()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -43,19 +15,13 @@ namespace Thermodynamics.Tests
             return builder.BuildSimulation(Fixture.ConductionOnly());
         }
 
+/// <summary>Critical operation.</summary>
         private static float Critical(ThermalNode node)
         {
             return node.Thermal.CriticalTemperature;
         }
 
-        /// <summary>
-        /// Two energies equal to a part in a million.
-        ///
-        /// **Relative rather than absolute, because a total over twenty-seven nodes is a sum of
-        /// floats** and the claim being made is about where the energy went, not about the last bit
-        /// of a megajoule. An absolute tolerance here would be a tolerance on the size of the test
-        /// grid rather than on the physics.
-        /// </summary>
+/// <summary>AssertJoules operation.</summary>
         private static void AssertJoules(float expected, float actual)
         {
             float scale = System.Math.Max(System.Math.Abs(expected), 1f);
@@ -63,18 +29,16 @@ namespace Thermodynamics.Tests
                 "expected " + expected + " J and got " + actual + " J");
         }
 
-        /// <summary>
-        /// **The exploit, measured before it is closed**: a block removed below critical takes its
-        /// energy out of the world, which is the limit and is deliberate.
-        /// </summary>
         [Fact]
+/// <summary>ACoolBlockStillTakesItsHeatWithIt operation.</summary>
         public void ACoolBlockStillTakesItsHeatWithIt()
         {
+/// <summary>Cube operation.</summary>
             ThermalSimulation simulation = Cube();
             ThermalNode leaving = simulation.Solver.GetNodeAt(Vector3I.Zero);
             ThermalNode neighbour = simulation.Solver.GetNodeAt(new Vector3I(1, 0, 0));
 
-            // Comfortably under the rating, which is what a block a player grinds off looks like.
+/// <summary>Critical operation.</summary>
             leaving.Temperature = Critical(leaving) * 0.5f;
             simulation.Solver.BuildLinksIfNeeded();
 
@@ -90,16 +54,15 @@ namespace Thermodynamics.Tests
                 simulation.Solver.GetNodeAt(new Vector3I(1, 0, 0)).Temperature, 4);
         }
 
-        /// <summary>
-        /// **A block that cooked keeps the world's energy in the world.** The total is unchanged to
-        /// the joule, which is the whole claim: the sacrificial-block heat sink is worth nothing.
-        /// </summary>
         [Fact]
+/// <summary>ABlockThatLeavesAboveCriticalHandsItsHeatToItsNeighbours operation.</summary>
         public void ABlockThatLeavesAboveCriticalHandsItsHeatToItsNeighbours()
         {
+/// <summary>Cube operation.</summary>
             ThermalSimulation simulation = Cube();
             ThermalNode leaving = simulation.Solver.GetNodeAt(Vector3I.Zero);
 
+/// <summary>Critical operation.</summary>
             leaving.Temperature = Critical(leaving) + 100f;
             simulation.Solver.BuildLinksIfNeeded();
 
@@ -111,23 +74,21 @@ namespace Thermodynamics.Tests
 
             AssertJoules(carried, simulation.Solver.SpilledEnergy);
 
-            // The energy stayed in the world rather than leaving with the block.
             AssertJoules(before, simulation.Solver.TotalEnergy);
         }
 
-        /// <summary>
-        /// **Every neighbour takes the same temperature rise**, which is the mixing answer — where
-        /// conduction would have carried them given time — rather than a guess at a rate.
-        /// </summary>
         [Fact]
+/// <summary>TheHeatIsSpreadByCapacitySoEveryNeighbourRisesTheSame operation.</summary>
         public void TheHeatIsSpreadByCapacitySoEveryNeighbourRisesTheSame()
         {
+/// <summary>Cube operation.</summary>
             ThermalSimulation simulation = Cube();
             ThermalNode leaving = simulation.Solver.GetNodeAt(Vector3I.Zero);
             simulation.Solver.BuildLinksIfNeeded();
 
             Vector3I[] touching =
             {
+/// <summary>Vector3I operation.</summary>
                 new Vector3I(1, 0, 0), new Vector3I(0, 1, 0), new Vector3I(0, 0, 1),
             };
 
@@ -137,6 +98,7 @@ namespace Thermodynamics.Tests
                 before[i] = simulation.Solver.GetNodeAt(touching[i]).Temperature;
             }
 
+/// <summary>Critical operation.</summary>
             leaving.Temperature = Critical(leaving) + 100f;
             float energy = leaving.Energy;
 
@@ -151,7 +113,6 @@ namespace Thermodynamics.Tests
                 Assert.Equal(first, rise, 3);
             }
 
-            // And the rise is the energy over the capacity that took it, not an invented number.
             float capacity = 0f;
             for (int i = 0; i < touching.Length; i++)
             {
@@ -161,12 +122,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(energy / capacity, first, 3);
         }
 
-        /// <summary>
-        /// **A block with nowhere to put it keeps today's behaviour.** A single unattached block
-        /// that cooks itself really does take its heat with it, and inventing a recipient would be
-        /// worse than the limit (`E8`).
-        /// </summary>
         [Fact]
+/// <summary>ALoneBlockWithNoNeighboursTakesItsHeatWithIt operation.</summary>
         public void ALoneBlockWithNoNeighboursTakesItsHeatWithIt()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -174,6 +131,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(Fixture.ConductionOnly());
 
             ThermalNode leaving = simulation.Solver.GetNodeAt(Vector3I.Zero);
+/// <summary>Critical operation.</summary>
             leaving.Temperature = Critical(leaving) + 100f;
             simulation.Solver.BuildLinksIfNeeded();
 
@@ -186,18 +144,14 @@ namespace Thermodynamics.Tests
             AssertJoules(before - carried, simulation.Solver.TotalEnergy);
         }
 
-        /// <summary>
-        /// **The exploit is worth nothing now, measured as a player would run it**: cook a corner
-        /// block, let the mod destroy it, weld a fresh one back, repeat. Before this change every
-        /// cycle removed a block's worth of energy from the hull for the price of welding time.
-        /// </summary>
         [Fact]
+/// <summary>CookAndRewealdIsNoLongerAHeatSink operation.</summary>
         public void CookAndRewealdIsNoLongerAHeatSink()
         {
+/// <summary>Cube operation.</summary>
             ThermalSimulation simulation = Cube();
             simulation.Solver.BuildLinksIfNeeded();
 
-            // Put the hull somewhere warm so there is something to pump away.
             foreach (ThermalNode node in simulation.Solver.Nodes) node.Temperature = 600f;
 
             float start = simulation.Solver.TotalEnergy;
@@ -206,48 +160,35 @@ namespace Thermodynamics.Tests
             {
                 ThermalNode victim = simulation.Solver.GetNodeAt(Vector3I.Zero);
 
-                // The pump: drive the sacrificial block past its rating out of the hull's own heat.
+/// <summary>Critical operation.</summary>
                 victim.Temperature = Critical(victim) + 200f;
                 float pumped = victim.Energy;
 
                 simulation.RemoveBlock(victim.Block);
                 AssertJoules(pumped, simulation.Solver.SpilledEnergy);
 
-                // And the reweld, which arrives at ambient as it always has.
                 simulation.AddBlock(new BlockInstance(
                     Catalog.LightArmor(), Vector3I.Zero, BlockOrientation.Identity));
                 simulation.Solver.BuildLinksIfNeeded();
             }
 
-            // Every joule the pump moved came back. What the hull gained is the five welded blocks
-            // arriving at ambient, which is the welding half of the limit and is not this row.
             float welded = 5f * simulation.Solver.GetNodeAt(Vector3I.Zero).Energy;
             Assert.True(simulation.Solver.TotalEnergy >= start - welded,
                 "the cycle removed energy from the hull, so it is still a heat sink");
         }
-        /// <summary>
-        /// **A block that dies while the link graph is dirty still leaves its heat behind.**
-        ///
-        /// <para>
-        /// This was a hole in the first draft and it was the silent kind. A node's links are an
-        /// intrusive chain of indices, so a stale chain does not read as *empty* — it reads as
-        /// somebody else's neighbours. Guarding on the flag and skipping the spill would have meant
-        /// a block that happened to fail while a rebuild was pending leaked its heat, with nothing
-        /// anywhere saying which ones had (`E4`). Building the graph first is bounded: a rebuild
-        /// clears the flag, so a cascade of failures pays for one.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ABlockThatDiesWithADirtyGraphStillSpills operation.</summary>
         public void ABlockThatDiesWithADirtyGraphStillSpills()
         {
+/// <summary>Cube operation.</summary>
             ThermalSimulation simulation = Cube();
             simulation.Solver.BuildLinksIfNeeded();
 
-            // Dirty the graph the way a layout change does: weld a block on and do not step.
             simulation.AddBlock(new BlockInstance(
                 Catalog.LightArmor(), new Vector3I(3, 0, 0), BlockOrientation.Identity));
 
             ThermalNode leaving = simulation.Solver.GetNodeAt(Vector3I.Zero);
+/// <summary>Critical operation.</summary>
             leaving.Temperature = Critical(leaving) + 100f;
 
             float before = simulation.Solver.TotalEnergy;

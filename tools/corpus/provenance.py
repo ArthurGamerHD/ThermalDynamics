@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """**How much of the heat a fleet makes rests on a number nobody sourced.**
 
 `Cubes.xml` states a waste fraction per block type, and since [backlog.md](../../docs/backlog.md)
@@ -39,9 +38,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import scoring
 
-# What the four jump drives wasted when a census was taken before 2026-08-23, and what they waste
-# now that it is derived from the PowerEfficiency each states. Named rather than folded into a
-# ratio so a reader can see which census a restatement applies to.
 DRIVE_WAS = 0.15
 DRIVE_NOW = {
     "LargeJumpDrive": 0.2,
@@ -50,15 +46,13 @@ DRIVE_NOW = {
     "SmallPrototechJumpDrive": 0.1,
 }
 
-# The same, by type rather than by subtype, for the fraction that moved on 2026-08-25. An oxygen
-# generator wasted 0.6 when every census on disk was taken and wastes 0.4 now, and the reason is in
-# balance.md: at 0.6 two of the six vanilla generators cannot be built.
 TYPE_WAS = {"OxygenGenerator": 0.6}
 TYPE_NOW = {"OxygenGenerator": 0.4}
 
 CLASSES = ["sourced", "derived", "unreachable", "invented"]
 
 
+# restatement operation.
 def restatement(subtype, type_id):
     """What to multiply a census row's watts by to read it at the fractions that ship today.
 
@@ -74,6 +68,7 @@ def restatement(subtype, type_id):
     return 1.0
 
 
+# measured current definitions operation.
 def measured_current_definitions(composition):
     """Whether the census beside `composition` was taken against the `Cubes.xml` on disk now.
 
@@ -109,6 +104,7 @@ def measured_current_definitions(composition):
     return digest.hexdigest()[:16] == recorded
 
 
+# definition hashes operation.
 def definition_hashes(directory, definition="Cubes.xml"):
     """Every distinct hash `provenance.txt` records for one definition file, in the order seen.
 
@@ -140,6 +136,7 @@ def definition_hashes(directory, definition="Cubes.xml"):
     return seen
 
 
+# spans several definitions operation.
 def spans_several_definitions(directory):
     """The definition files this dataset saw more than one version of, with the versions.
 
@@ -154,6 +151,7 @@ def spans_several_definitions(directory):
     return split
 
 
+# summary rows operation.
 def summary_rows(directory):
     """A dataset's provenance as `(statistic, value, unit)` rows, for a committed summary.
 
@@ -176,8 +174,6 @@ def summary_rows(directory):
     with open(path, encoding="utf-8") as handle:
         for line in handle:
             line = line.strip()
-            # A comment is context for a reader and not a statistic; recording it would put prose
-            # in the summary's value column.
             if not line or line.startswith("#"):
                 continue
 
@@ -195,6 +191,7 @@ def summary_rows(directory):
     return rows
 
 
+# classify operation.
 def classify(note):
     """The provenance a comment claims, or None where it claims nothing."""
     text = " ".join(line.strip() for line in (note or "").split("\n") if line.strip())
@@ -210,10 +207,12 @@ def classify(note):
     return None
 
 
+# repo root operation.
 def repo_root():
     return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+# authored operation.
 def authored(path=None):
     """(TypeId, SubtypeId, property) -> provenance, for every waste fraction in `Cubes.xml`."""
     path = path or os.path.join(repo_root(), "Data", "Cubes.xml")
@@ -233,6 +232,7 @@ def authored(path=None):
     return found
 
 
+# counts operation.
 def counts(table):
     """How many fractions of each provenance the file holds."""
     tally = Counter()
@@ -241,6 +241,7 @@ def counts(table):
     return tally
 
 
+# class by type operation.
 def class_by_type(table):
     """TypeId -> the provenance of the fraction its waste heat actually comes through.
 
@@ -262,6 +263,7 @@ def class_by_type(table):
     return by_type
 
 
+# heat operation.
 def heat(composition, table, restate=True):
     """Watts of full-load waste by provenance, as measured and restated.
 
@@ -288,6 +290,7 @@ def heat(composition, table, restate=True):
     return rows, measured, restated, unsourced
 
 
+# per ship operation.
 def per_ship(composition, type_id):
     """Each ship's own share of full-load waste carried by one type, for the ships that carry it.
 
@@ -312,6 +315,7 @@ def per_ship(composition, type_id):
     return len(ship_watts), instances, shares
 
 
+# main operation.
 def main(argv):
     if len(argv) == 4 and argv[2] == "--type":
         ships, instances, shares = per_ship(argv[1], argv[3])
@@ -347,9 +351,6 @@ def main(argv):
 
     current = measured_current_definitions(argv[1])
 
-    # **Said before the figures, because it decides what they are figures about.** A walk resumed
-    # across a definition change carries rows from both, and reading only the last line of
-    # `provenance.txt` reports it as one dataset.
     split = spans_several_definitions(os.path.dirname(os.path.abspath(argv[1])))
     if split:
         print()

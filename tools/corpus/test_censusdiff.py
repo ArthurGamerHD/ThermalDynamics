@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """`censusdiff.py` on censuses built here, so its arithmetic is checked rather than trusted.
 
 The thing worth checking is not the subtraction — it is the two ways this kind of script lies. A
@@ -27,6 +26,7 @@ COMPOSITION_FIELDS = ["ship", "workshop_id", "subtype", "type_id", "count",
                       "waste_full_w", "share_of_waste"]
 
 
+# ship operation.
 def ship(name, waste, area=100.0, blocks=10):
     row = {field: "0" for field in CENSUS_FIELDS}
     row["ship"] = name
@@ -37,6 +37,7 @@ def ship(name, waste, area=100.0, blocks=10):
     return row
 
 
+# write operation.
 def write(directory, ships, parts=()):
     os.makedirs(directory, exist_ok=True)
 
@@ -57,21 +58,26 @@ def write(directory, ships, parts=()):
             writer.writerow(row)
 
 
+# part operation.
 def part(name, type_id, watts):
     return {"ship": name, "workshop_id": name, "subtype": "", "type_id": type_id,
             "count": "1", "waste_full_w": str(watts), "share_of_waste": "0"}
 
 
 class CensusDiffReadsBothSides(unittest.TestCase):
+# setUp operation.
     def setUp(self):
         self.root = tempfile.mkdtemp(prefix="censusdiff-")
 
+# tearDown operation.
     def tearDown(self):
         shutil.rmtree(self.root, ignore_errors=True)
 
+# paths operation.
     def paths(self):
         return os.path.join(self.root, "before"), os.path.join(self.root, "after")
 
+# test a rise in waste is scored against its band operation.
     def test_a_rise_in_waste_is_scored_against_its_band(self):
         before, after = self.paths()
         write(before, [ship("a", 100), ship("b", 100)])
@@ -80,6 +86,7 @@ class CensusDiffReadsBothSides(unittest.TestCase):
         self.assertEqual(0, censusdiff.main([before, after, "--expect", "waste_full_w=8:10"]))
         self.assertEqual(1, censusdiff.main([before, after, "--expect", "waste_full_w=0:5"]))
 
+# test a prediction that fails makes the run fail operation.
     def test_a_prediction_that_fails_makes_the_run_fail(self):
         before, after = self.paths()
         write(before, [ship("a", 100)])
@@ -87,15 +94,16 @@ class CensusDiffReadsBothSides(unittest.TestCase):
 
         self.assertEqual(1, censusdiff.main([before, after, "--expect", "waste_full_w=8:10"]))
 
+# test the ship count is its own prediction operation.
     def test_the_ship_count_is_its_own_prediction(self):
         before, after = self.paths()
         write(before, [ship("a", 100), ship("b", 100)])
         write(after, [ship("a", 100)])
 
-        # The shared-ship comparison is spotless — a is identical — and the population halved.
         self.assertEqual(0, censusdiff.main([before, after, "--expect", "waste_full_w=-1:1"]))
         self.assertEqual(1, censusdiff.main([before, after, "--expect", "ships=0:0"]))
 
+# test a census with nothing in common is refused rather than reported operation.
     def test_a_census_with_nothing_in_common_is_refused_rather_than_reported(self):
         before, after = self.paths()
         write(before, [ship("a", 100)])
@@ -103,12 +111,14 @@ class CensusDiffReadsBothSides(unittest.TestCase):
 
         self.assertEqual(1, censusdiff.main([before, after]))
 
+# test a missing census is refused operation.
     def test_a_missing_census_is_refused(self):
         before, after = self.paths()
         write(before, [ship("a", 100)])
 
         self.assertEqual(2, censusdiff.main([before, after]))
 
+# test a type that appears for the first time is visible operation.
     def test_a_type_that_appears_for_the_first_time_is_visible(self):
         before, after = self.paths()
         write(before, [ship("a", 100)], [part("a", "OxygenGeneratorSmall", 100)])
@@ -123,6 +133,7 @@ class CensusDiffReadsBothSides(unittest.TestCase):
         self.assertEqual(1, ships_after["OxygenGenerator"])
         self.assertEqual({}, {k: v for k, v in ships_before.items() if k == "OxygenGenerator"})
 
+# test share refuses to divide by nothing operation.
     def test_share_refuses_to_divide_by_nothing(self):
         self.assertIsNone(censusdiff.share(0.0, 5.0))
         self.assertAlmostEqual(100.0, censusdiff.share(1.0, 2.0))

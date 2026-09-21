@@ -7,26 +7,15 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The promises <see cref="WindSolver"/> makes to everything that calls it.
-    ///
-    /// <para>Three callers now run this one function — the grids in game, the planet probe sweep, and
-    /// the offline model — which is what stops them drifting apart. The price of that is that the
-    /// function's contract is load-bearing for all three, and none of the tests around it were
-    /// checking the contract itself: they check what the model *says*, not what the call
-    /// guarantees.</para>
-    ///
-    /// <para>These check the guarantees. A unit direction, a decomposition that adds back up,
-    /// determinism, no allocation, and no way to make it produce a number that poisons a solver
-    /// downstream.</para>
-    /// </summary>
     public class WindSolverContractTests
     {
+/// <summary>Reasonable operation.</summary>
         private static WindSolver.Inputs Reasonable()
         {
             WindSolver.Inputs inputs = new WindSolver.Inputs();
             inputs.Ceiling = 74f;
             inputs.Up = Vector3.Normalize(new Vector3(1f, 0.4f, 0.2f));
+/// <summary>Vector3 operation.</summary>
             inputs.Axis = new Vector3(0f, 1f, 0f);
             inputs.WeatherIntensity = 0.3f;
             inputs.WeatherWind = 1f;
@@ -40,34 +29,16 @@ namespace Thermodynamics.Tests
             inputs.TerrainInfluence = 1f;
             inputs.TerrainRadius = 300f;
             inputs.SlopeStrength = 1f;
+/// <summary>Hillside operation.</summary>
             inputs.Terrain = Hillside(120f);
             return inputs;
         }
 
-        /// <summary>
-        /// **What switching the wind off has to mean, held where the switch's behaviour lives.**
-        ///
-        /// <para>
-        /// `EnableWind` lives on the game's `Settings` and is read in `ThermalGridEnvironment` and
-        /// `PlanetProbes`, which are game code a harness cannot construct — it is not on
-        /// `ThermalSettings`, for the reason `EnableTemperatureSync` is not: the wind *field* is
-        /// produced by the host, from a planet and a position the core is never handed. So what is
-        /// testable is the thing the gate relies on:
-        /// that a zero ceiling produces a still, directionless result with every modulation
-        /// neutral. That is why the switch sets the ceiling rather than adding a branch. If this
-        /// ever stopped being true, `EnableWind = false` would leave a wind blowing and nothing
-        /// else would say so (`C7`, and backlog.md `B31`).
-        /// </para>
-        ///
-        /// <para>
-        /// Every other input is left at a lively setting — a 74 m/s ceiling's worth of weather, a
-        /// hillside, full terrain and slope influence — so the result is the ceiling's doing and
-        /// not a still input somewhere else.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ANoughtCeilingIsAStillDirectionlessWindWithEveryModulationNeutral operation.</summary>
         public void ANoughtCeilingIsAStillDirectionlessWindWithEveryModulationNeutral()
         {
+/// <summary>Reasonable operation.</summary>
             WindSolver.Inputs inputs = Reasonable();
             inputs.Ceiling = 0f;
 
@@ -80,18 +51,17 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, result.Gradient);
             Assert.Equal(0f, result.ChannelDegrees);
 
-            // The multipliers read as *no change* rather than as nothing, so a reader of the
-            // telemetry sees a wind that is absent rather than one that is being shut down.
             Assert.Equal(1f, result.Profile);
             Assert.Equal(1f, result.Burial);
             Assert.Equal(1f, result.SpeedUp);
             Assert.Equal(1f, result.Shelter);
 
-            // And the same inputs with a ceiling do blow, or the case above proves nothing (`E8`).
+/// <summary>Reasonable operation.</summary>
             WindSolver.Inputs blowing = Reasonable();
             Assert.True(WindSolver.Solve(ref blowing).Speed > 0f);
         }
 
+/// <summary>Hillside operation.</summary>
         private static float[] Hillside(float rise)
         {
             float[] heights = new float[WindTerrain.SampleCount];
@@ -105,13 +75,12 @@ namespace Thermodynamics.Tests
             return heights;
         }
 
-        // ---- the guarantees --------------------------------------------------------------------
 
         [Fact]
+/// <summary>TheDirectionIsAlwaysAUnitVectorOrExactlyZero operation.</summary>
         public void TheDirectionIsAlwaysAUnitVectorOrExactlyZero()
         {
-            // Anything else multiplies into the speed a second time downstream. The solver returns a
-            // direction and a speed as separate things precisely so that cannot happen.
+/// <summary>Reasonable operation.</summary>
             WindSolver.Inputs inputs = Reasonable();
 
             for (float heating = 0f; heating <= 1f; heating += 0.1f)
@@ -131,12 +100,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheReportedFactorsMultiplyBackIntoTheReportedSpeed operation.</summary>
         public void TheReportedFactorsMultiplyBackIntoTheReportedSpeed()
         {
-            // The attribution claim the telemetry documentation makes: multiply the ceiling by the
-            // band share, the profile and the two terrain factors and the speed comes back. It holds
-            // exactly where no slope wind is blowing, which is the case worth being able to check by
-            // hand from a CSV row.
+/// <summary>Reasonable operation.</summary>
             WindSolver.Inputs inputs = Reasonable();
             inputs.SlopeStrength = 0f;
 
@@ -152,11 +119,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>WhereSlopeWindBlowsTheDecompositionIsTheOnlyThingThatChanges operation.</summary>
         public void WhereSlopeWindBlowsTheDecompositionIsTheOnlyThingThatChanges()
         {
-            // Slope wind is added as a velocity, so it deliberately breaks the pure product above —
-            // and the reported SlopeSpeed is what accounts for the difference. Stated as a test so
-            // nobody reading a CSV concludes the other columns are wrong.
+/// <summary>Reasonable operation.</summary>
             WindSolver.Inputs inputs = Reasonable();
             inputs.Heating = 0f;
             inputs.HeightAboveGround = 2f;
@@ -166,17 +132,15 @@ namespace Thermodynamics.Tests
 
             float product = inputs.Ceiling * r.BandShare * r.Profile * r.SpeedUp * r.Shelter;
 
-            // The total lies within a vector sum of the two, so it cannot be further from the
-            // ambient than the slope wind's own speed.
             Assert.True(Math.Abs(r.Speed - product) <= r.SlopeSpeed + 0.01f,
                 "speed " + r.Speed + " against ambient " + product + " and slope " + r.SlopeSpeed);
         }
 
         [Fact]
+/// <summary>TheSameInputsAlwaysGiveTheSameAnswer operation.</summary>
         public void TheSameInputsAlwaysGiveTheSameAnswer()
         {
-            // Nothing in the field is random and nothing carries state. A solver that drifted would
-            // make every measured comparison — sim against game, before against after — worthless.
+/// <summary>Reasonable operation.</summary>
             WindSolver.Inputs inputs = Reasonable();
 
             WindSolver.Result first = WindSolver.Solve(ref inputs);
@@ -193,11 +157,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SolvingAllocatesNothing operation.</summary>
         public void SolvingAllocatesNothing()
         {
-            // The class documentation says "no allocation", and it is called per grid per step in
-            // game and several million times in the offline sweep. A stray allocation here is
-            // garbage collector pressure on the simulation's hot path.
+/// <summary>Reasonable operation.</summary>
             WindSolver.Inputs inputs = Reasonable();
 
             for (int i = 0; i < 1000; i++) WindSolver.Solve(ref inputs);
@@ -210,11 +173,12 @@ namespace Thermodynamics.Tests
                 "10,000 solves allocated " + (after - before) + " bytes");
         }
 
-        // ---- inputs nobody should send, and everybody eventually does ----------------------------
 
         [Fact]
+/// <summary>ANullTerrainRingIsTreatedAsNoTerrainRatherThanCrashing operation.</summary>
         public void ANullTerrainRingIsTreatedAsNoTerrainRatherThanCrashing()
         {
+/// <summary>Reasonable operation.</summary>
             WindSolver.Inputs inputs = Reasonable();
             inputs.Terrain = null;
 
@@ -227,8 +191,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AShortTerrainRingIsRefusedRatherThanReadPastItsEnd operation.</summary>
         public void AShortTerrainRingIsRefusedRatherThanReadPastItsEnd()
         {
+/// <summary>Reasonable operation.</summary>
             WindSolver.Inputs inputs = Reasonable();
             inputs.Terrain = new float[WindTerrain.SampleCount - 1];
 
@@ -239,8 +205,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NoCeilingMeansNoWindAndEveryFactorLeftAtRest operation.</summary>
         public void NoCeilingMeansNoWindAndEveryFactorLeftAtRest()
         {
+/// <summary>Reasonable operation.</summary>
             WindSolver.Inputs inputs = Reasonable();
             inputs.Ceiling = 0f;
 
@@ -254,8 +222,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ANegativeCeilingIsTreatedAsNone operation.</summary>
         public void ANegativeCeilingIsTreatedAsNone()
         {
+/// <summary>Reasonable operation.</summary>
             WindSolver.Inputs inputs = Reasonable();
             inputs.Ceiling = -50f;
 
@@ -263,26 +233,29 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AZeroLengthUpOrAxisProducesNoWindRatherThanANaN operation.</summary>
         public void AZeroLengthUpOrAxisProducesNoWindRatherThanANaN()
         {
-            // Both come from a planet's transform, and both are zero for exactly one frame when a
-            // planet is being set up.
+/// <summary>Reasonable operation.</summary>
             WindSolver.Inputs inputs = Reasonable();
             inputs.Up = Vector3.Zero;
             Assert.False(float.IsNaN(WindSolver.Solve(ref inputs).Speed));
 
+/// <summary>Reasonable operation.</summary>
             inputs = Reasonable();
             inputs.Axis = Vector3.Zero;
             Assert.False(float.IsNaN(WindSolver.Solve(ref inputs).Speed));
         }
 
         [Fact]
+/// <summary>UpParallelToTheAxisIsAPoleAndHasNoWindDirection operation.</summary>
         public void UpParallelToTheAxisIsAPoleAndHasNoWindDirection()
         {
-            // The circulation has no east at a pole, and the field says so rather than normalising a
-            // rounding error into a direction.
+/// <summary>Reasonable operation.</summary>
             WindSolver.Inputs inputs = Reasonable();
+/// <summary>Vector3 operation.</summary>
             inputs.Up = new Vector3(0f, 1f, 0f);
+/// <summary>Vector3 operation.</summary>
             inputs.Axis = new Vector3(0f, 1f, 0f);
 
             WindSolver.Result r = WindSolver.Solve(ref inputs);
@@ -292,11 +265,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NonsenseNumbersDoNotEscapeAsNonsenseWind operation.</summary>
         public void NonsenseNumbersDoNotEscapeAsNonsenseWind()
         {
-            // A sweep of values no caller should send: negatives, zeroes, absurdly large figures and
-            // out-of-range fractions, in every combination. Nothing may come back NaN, infinite or
-            // negative, because a NaN here becomes a NaN temperature two frames later.
             float[] ceilings = { 0f, 0.001f, 74f, 1e6f };
             float[] heights = { -100f, 0f, 2f, 1e7f };
             float[] heatings = { -1f, 0f, 0.5f, 1f, 5f };
@@ -315,6 +286,7 @@ namespace Thermodynamics.Tests
                                 foreach (float radius in radii)
                                     foreach (float influence in influences)
                                     {
+/// <summary>Reasonable operation.</summary>
                                         WindSolver.Inputs inputs = Reasonable();
                                         inputs.Ceiling = ceiling;
                                         inputs.HeightAboveGround = height;
@@ -342,14 +314,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SlopeWindNeverCarriesTheWindPastThePlanetsOwnFigure operation.</summary>
         public void SlopeWindNeverCarriesTheWindPastThePlanetsOwnFigure()
         {
-            // Slope wind is the one term added as a velocity rather than multiplied in, so it is the
-            // one that could push a calm world's wind above the ceiling. It is bounded — and bounded
-            // against whatever the wind was already doing, so where the band and profile have
-            // already exceeded the ceiling (the storm case) this neither adds to it nor hides it.
+/// <summary>Reasonable operation.</summary>
             WindSolver.Inputs inputs = Reasonable();
             inputs.WeatherIntensity = 0f;
+/// <summary>Hillside operation.</summary>
             inputs.Terrain = Hillside(400f);
 
             for (float ceiling = 0.5f; ceiling < 80f; ceiling *= 1.7f)
@@ -369,13 +340,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        // ---- the animation export, which the atlas is drawn from ---------------------------------
 
         [Fact]
+/// <summary>TheAnimationExportIsSelfConsistentAndFreeOfNonsense operation.</summary>
         public void TheAnimationExportIsSelfConsistentAndFreeOfNonsense()
         {
-            // The published atlas is drawn entirely from this. A wrong array length there shows up as
-            // arrows in the wrong place rather than as an error, which is the worst way to be wrong.
             string json = WindAnimation.Json();
 
             Assert.Contains("\"planets\"", json);
@@ -388,7 +357,7 @@ namespace Thermodynamics.Tests
                 * WindAnimation.Latitudes.Length
                 * WindAnimation.Longitudes;
 
-            // One "speed" array per world, each of exactly that length.
+/// <summary>ArrayLengths operation.</summary>
             List<int> lengths = ArrayLengths(json, "\"speed\":");
             Assert.Equal(WindLab.Planet.VanillaNames.Length, lengths.Count);
 
@@ -397,6 +366,7 @@ namespace Thermodynamics.Tests
                 Assert.Equal(expected, lengths[i]);
             }
 
+/// <summary>ArrayLengths operation.</summary>
             List<int> bearings = ArrayLengths(json, "\"bearing\":");
             for (int i = 0; i < bearings.Count; i++) Assert.Equal(expected, bearings[i]);
 
@@ -404,16 +374,18 @@ namespace Thermodynamics.Tests
                 * WindAnimation.Latitudes.Length
                 * WindAnimation.Longitudes;
 
+/// <summary>ArrayLengths operation.</summary>
             List<int> heating = ArrayLengths(json, "\"heating\":");
             for (int i = 0; i < heating.Count; i++) Assert.Equal(heatingExpected, heating[i]);
         }
 
         [Fact]
+/// <summary>TheAnimationExportCoversAWholeDayAndBothPolesOfHeating operation.</summary>
         public void TheAnimationExportCoversAWholeDayAndBothPolesOfHeating()
         {
-            // If the exported day never gets dark, the atlas cannot show the thing it exists to show.
             string json = WindAnimation.Json();
 
+/// <summary>Offsets operation.</summary>
             List<int> starts = Offsets(json, "\"heating\":");
             Assert.NotEmpty(starts);
 
@@ -428,8 +400,10 @@ namespace Thermodynamics.Tests
             Assert.True(high > 0.8f, "the exported day has no afternoon in it: " + high);
         }
 
+/// <summary>Offsets operation.</summary>
         private static List<int> Offsets(string json, string key)
         {
+/// <summary>List operation.</summary>
             List<int> found = new List<int>();
             int at = 0;
             while (true)
@@ -442,8 +416,10 @@ namespace Thermodynamics.Tests
             return found;
         }
 
+/// <summary>ArrayLengths operation.</summary>
         private static List<int> ArrayLengths(string json, string key)
         {
+/// <summary>List operation.</summary>
             List<int> lengths = new List<int>();
             foreach (int start in Offsets(json, key))
             {
@@ -456,6 +432,7 @@ namespace Thermodynamics.Tests
             return lengths;
         }
 
+/// <summary>Values operation.</summary>
         private static IEnumerable<float> Values(string json, int start)
         {
             int open = json.IndexOf('[', start);

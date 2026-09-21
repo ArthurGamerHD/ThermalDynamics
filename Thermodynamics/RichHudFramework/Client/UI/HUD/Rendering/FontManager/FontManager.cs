@@ -43,29 +43,15 @@ namespace RichHudFramework
 				ApiMemberAccessor
 			>;
 
-			/// <summary>
-			/// Client-side API for the font management system. Allows mods to query registered 
-			/// fonts and register custom fonts at runtime.
-			/// <para>
-			/// Most frequently used by <see cref="GlyphFormat"/> internally when setting font or style.
-			/// </para>
-			/// </summary>
 			public sealed partial class FontManager : RichHudClient.ApiModule
 			{
-				/// <summary>
-				/// Index representing the default Space Engineers font with regular styling.
-				/// Equivalent to <c>(0, 0)</c>.
-				/// </summary>
 				public static Vector2I Default => Vector2I.Zero;
 
-				/// <summary>
-				/// Read-only list of all fonts currently registered with RHM.
-				/// Includes both built-in fonts and any fonts added by mods.
-				/// </summary>
 				public static IReadOnlyList<IFontMin> Fonts => Instance.fonts;
 
 				private static FontManager Instance
 				{
+/// <summary>Init operation.</summary>
 					get { Init(); return instance; }
 					set { instance = value; }
 				}
@@ -75,44 +61,39 @@ namespace RichHudFramework
 				private readonly Func<FontDefinition, FontMembers?> TryAddFontFunc;
 				private readonly Func<string, FontMembers?> GetFontFunc;
 
+/// <summary>FontManager operation.</summary>
 				private FontManager() : base(ApiModuleTypes.FontManager, false, true)
 				{
 					var members = (FontManagerMembers)GetApiData();
 
-					// members.Item1 gives access to the font list (getter by index + count)
+/// <summary>FontData operation.</summary>
 					Func<int, IFontMin> fontGetter = x => new FontData(members.Item1.Item1(x));
+/// <summary>ReadOnlyApiCollection operation.</summary>
 					fonts = new ReadOnlyApiCollection<IFontMin>(fontGetter, members.Item1.Item2);
 
 					TryAddFontFunc = members.Item2;
 					GetFontFunc = members.Item3;
 				}
 
+/// <summary>Init operation.</summary>
 				private static void Init()
 				{
 					if (instance == null)
+/// <summary>FontManager operation.</summary>
 						instance = new FontManager();
 				}
 
-				/// <exclude/>
+/// <summary>Close operation.</summary>
 				public override void Close()
 				{
 					instance = null;
 				}
 
-				/// <summary>
-				/// Attempts to register a new custom font with RHM.
-				/// </summary>
-				/// <param name="fontData">Complete font definition including name, base size, and all style data.</param>
-				/// <returns><c>true</c> if the font was successfully registered</returns>
+/// <summary>TryAddFont operation.</summary>
 				public static bool TryAddFont(FontDefinition fontData) =>
 					Instance.TryAddFontFunc(fontData) != null;
 
-				/// <summary>
-				/// Attempts to register a new custom font and returns the registered font interface if successful.
-				/// </summary>
-				/// <param name="fontData">Complete font definition.</param>
-				/// <param name="font">The newly registered <see cref="IFontMin"/> instance, or <c>null</c> on failure.</param>
-				/// <returns><c>true</c> if registration succeeded</returns>
+/// <summary>TryAddFont operation.</summary>
 				public static bool TryAddFont(FontDefinition fontData, out IFontMin font)
 				{
 					FontMembers? members = Instance.TryAddFontFunc(fontData);
@@ -129,11 +110,7 @@ namespace RichHudFramework
 					}
 				}
 
-				/// <summary>
-				/// Retrieves a registered font by its exact name (case insensitive).
-				/// </summary>
-				/// <param name="name">The unique name the font was registered with.</param>
-				/// <returns>The <see cref="IFontMin"/> interface for the font, or <c>null</c> if not found.</returns>
+/// <summary>Returns the font.</summary>
 				public static IFontMin GetFont(string name)
 				{
 					if (name == null)
@@ -147,24 +124,14 @@ namespace RichHudFramework
 						return null;
 				}
 
-				/// <summary>
-				/// Retrieves a registered font by its index in the global font list.
-				/// </summary>
-				/// <exception cref="IndexOutOfRangeException">Thrown if the index is invalid.</exception>
+/// <summary>Returns the font.</summary>
 				public static IFontMin GetFont(int index) =>
 					Instance.fonts[index];
 
-				/// <summary>
-				/// Returns a <see cref="Vector2I"/> that uniquely identifies a specific style of a font.
-				/// </summary>
-				/// <param name="name">Name of the font.</param>
-				/// <param name="style">Desired style (Regular, Bold, Italic, etc.). Defaults to <see cref="FontStyles.Regular"/>.</param>
-				/// <returns>
-				/// A <c>Vector2I(x, y)</c> where <c>x</c> is the font index and <c>y</c> is the style index.
-				/// Returns <c>(0, 0)</c> (default font, regular) if the font or style is not found.
-				/// </returns>
+/// <summary>Returns the styleindex.</summary>
 				public static Vector2I GetStyleIndex(string name, FontStyles style = FontStyles.Regular)
 				{
+/// <summary>Returns the font.</summary>
 					IFontMin font = GetFont(name);
 					return new Vector2I(font?.Index ?? 0, (int)style);
 				}

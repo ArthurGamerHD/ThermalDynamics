@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """What one dial does to the standing panel, against what the shipped value does.
 
 `KnobSweep` runs every dial in `KnobLab` over the panel at several levels and writes one row per
@@ -29,6 +28,7 @@ import provenance as provenance_lib
 import scoring
 
 
+# load operation.
 def load(directory):
     path = os.path.join(directory, "knobs.csv")
     if not os.path.exists(path):
@@ -38,6 +38,7 @@ def load(directory):
         return list(csv.DictReader(handle))
 
 
+# pairs operation.
 def pairs(rows, knob):
     """`(level, [(shipped peak, level peak, ship)])` for one dial, keyed by ship and scenario.
 
@@ -86,6 +87,7 @@ def pairs(rows, knob):
     return shipped, out, orphans
 
 
+# main operation.
 def main():
     args = scoring.positionals(("--knob", "--csv"))
 
@@ -116,8 +118,6 @@ def main():
             deltas = [abs(peak - base) for base, peak, _ in entries]
             reached = [d for d in deltas if d > 1e-4]
 
-            # **Read against the reached cells.** A dial with an `OnlyType` moves nothing on a hull
-            # that carries none of that type, and those nulls would drown the effect in its reach.
             band = reached if reached else deltas
             p = scoring.percentiles(band)
             print("  %-10s %8s %8s %12.4f %12.4f %12.4f"

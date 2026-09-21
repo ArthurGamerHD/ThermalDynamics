@@ -7,25 +7,8 @@ using Thermodynamics.Harness;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Reads `Data/Cubes.xml` as *values with their provenance comments*, which is what the
-    /// authored-figure checks judge.
-    ///
-    /// <para>
-    /// **The comment is data here rather than prose.** A figure's source is written immediately
-    /// above it, so the reader has to keep the two together; a comment separated from its value by
-    /// anything but whitespace belongs to something else and is not returned.
-    /// </para>
-    ///
-    /// <para>
-    /// One reader, because <see cref="AuthoredMaterialTests"/> and <see cref="AuthoredWasteTests"/>
-    /// ask the same question of the same file and two parsers of one format drift silently in both
-    /// directions (`D3`).
-    /// </para>
-    /// </summary>
     public static class AuthoredValues
     {
-        /// <summary>One authored number, with the comment that says where it came from.</summary>
         public class Entry
         {
             public string TypeId;
@@ -33,9 +16,9 @@ namespace Thermodynamics.Tests
             public string Property;
             public float Value;
 
-            /// <summary>The comment sitting immediately above it, or empty.</summary>
             public string Note;
 
+/// <summary>ToString operation.</summary>
             public override string ToString()
             {
                 return TypeId + "/" + SubtypeId + " " + Property + " = "
@@ -43,9 +26,10 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>Every authored value of the named properties, in file order.</summary>
+/// <summary>Read operation.</summary>
         public static List<Entry> Read(params string[] properties)
         {
+/// <summary>List operation.</summary>
             List<Entry> found = new List<Entry>();
 
             string path = Path.Combine(ShippedBlocks.DataRoot(), "Cubes.xml");
@@ -56,7 +40,9 @@ namespace Thermodynamics.Tests
                 XElement id = definition.Element("Id");
                 if (id == null) continue;
 
+/// <summary>Text operation.</summary>
                 string type = Text(id.Element("TypeId"));
+/// <summary>Text operation.</summary>
                 string subtype = Text(id.Element("SubtypeId"));
 
                 foreach (XElement group in definition.Descendants("Group"))
@@ -75,11 +61,13 @@ namespace Thermodynamics.Tests
                             continue;
                         }
 
+/// <summary>Entry operation.</summary>
                         Entry entry = new Entry();
                         entry.TypeId = type;
                         entry.SubtypeId = subtype;
                         entry.Property = property;
                         entry.Value = value;
+/// <summary>NoteAbove operation.</summary>
                         entry.Note = NoteAbove(element);
                         found.Add(entry);
                     }
@@ -89,7 +77,7 @@ namespace Thermodynamics.Tests
             return found;
         }
 
-        /// <summary>The text of the comment immediately above an element, or empty.</summary>
+/// <summary>NoteAbove operation.</summary>
         public static string NoteAbove(XElement element)
         {
             XNode node = element.PreviousNode;
@@ -98,8 +86,6 @@ namespace Thermodynamics.Tests
                 XComment comment = node as XComment;
                 if (comment != null) return Flatten(comment.Value);
 
-                // Whitespace between the two is formatting; anything else means the comment above
-                // belongs to something other than this element.
                 XText text = node as XText;
                 if (text == null || !string.IsNullOrWhiteSpace(text.Value)) return "";
 
@@ -109,7 +95,7 @@ namespace Thermodynamics.Tests
             return "";
         }
 
-        /// <summary>A wrapped comment as one line, so a claim can be matched across a line break.</summary>
+/// <summary>Flatten operation.</summary>
         private static string Flatten(string value)
         {
             if (value == null) return "";
@@ -126,15 +112,15 @@ namespace Thermodynamics.Tests
             return joined;
         }
 
+/// <summary>Text operation.</summary>
         private static string Text(XElement element)
         {
             return element == null ? "" : (element.Value ?? "").Trim();
         }
 
+/// <summary>RepoRoot operation.</summary>
         public static string RepoRoot()
         {
-            // The build output no longer sits inside the repository, so walking up from the
-            // assembly does not find it. See Directory.Build.props.
             return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
     }

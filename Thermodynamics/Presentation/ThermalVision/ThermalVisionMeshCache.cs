@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 namespace Thermodynamics.Presentation
 {
-    /// <summary>Bounded mesh cache that evicts only the least recently requested models.</summary>
     public sealed class ThermalVisionMeshCache<TKey>
     {
         private sealed class Entry
@@ -14,11 +13,13 @@ namespace Thermodynamics.Presentation
         }
         private readonly int modelLimit, triangleLimit;
         private readonly Dictionary<TKey, LinkedListNode<Entry>> entries = new Dictionary<TKey, LinkedListNode<Entry>>();
+/// <summary>LinkedList operation.</summary>
         private readonly LinkedList<Entry> order = new LinkedList<Entry>();
         public int Count { get { return entries.Count; } }
         public int Triangles { get; private set; }
         public long Evictions { get; private set; }
 
+/// <summary>ThermalVisionMeshCache operation.</summary>
         public ThermalVisionMeshCache(int modelLimit, int triangleLimit)
         {
             if (modelLimit < 1 || triangleLimit < 1) throw new ArgumentException("Positive cache limits required");
@@ -26,6 +27,7 @@ namespace Thermodynamics.Presentation
             this.triangleLimit = triangleLimit;
         }
 
+/// <summary>TryGetValue operation.</summary>
         public bool TryGetValue(TKey key, out ThermalVisionMesh mesh, out bool partial)
         {
             LinkedListNode<Entry> node;
@@ -37,6 +39,7 @@ namespace Thermodynamics.Presentation
             return true;
         }
 
+/// <summary>Adds a .</summary>
         public void Add(TKey key, ThermalVisionMesh mesh, bool partial)
         {
             if (mesh == null || mesh.Triangles.Length > triangleLimit)
@@ -55,6 +58,7 @@ namespace Thermodynamics.Presentation
             Triangles += mesh.Triangles.Length;
         }
 
+/// <summary>Clear operation.</summary>
         public void Clear()
         {
             entries.Clear(); order.Clear(); Triangles = 0; Evictions = 0;

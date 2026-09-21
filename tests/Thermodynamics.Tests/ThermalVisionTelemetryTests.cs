@@ -4,12 +4,13 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>Probe report aggregation, bounded retention, missing samples and repeatable snapshots.</summary>
     public class ThermalVisionTelemetryTests
     {
         [Fact]
+/// <summary>ColdWarmMissingAndPartialResultsRemainDistinct operation.</summary>
         public void ColdWarmMissingAndPartialResultsRemainDistinct()
         {
+/// <summary>ThermalVisionTelemetry operation.</summary>
             var stats = new ThermalVisionTelemetry();
             stats.Frame("Cividis | reactor | submitted", 500, 10, 20, false, true, 4, 9, 1);
             stats.Frame("Cividis | reactor | submitted", 600, 12, 22, false, false, 1);
@@ -18,6 +19,7 @@ namespace Thermodynamics.Tests
             stats.Frame("no target", float.NaN, 0, 0, false, false, .1f);
             stats.Suppress();
             stats.Failure();
+/// <summary>StringBuilder operation.</summary>
             var sb = new StringBuilder();
             stats.Write(sb);
             string report = sb.ToString();
@@ -33,13 +35,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>OverflowIsCountedAndNewestEventsSurvive operation.</summary>
         public void OverflowIsCountedAndNewestEventsSurvive()
         {
+/// <summary>ThermalVisionTelemetry operation.</summary>
             var stats = new ThermalVisionTelemetry();
             for (int i = 0; i < ThermalVisionTelemetry.RowLimit + 3; i++)
                 stats.Frame("block-" + i, 300, 1, 2, false, false, 1);
             for (int i = 0; i < ThermalVisionTelemetry.EventLimit + 2; i++)
                 stats.Event(i, "event-" + i + "END");
+/// <summary>StringBuilder operation.</summary>
             var sb = new StringBuilder();
             stats.Write(sb);
             Assert.Equal(3, stats.RowsOverflowed);
@@ -50,12 +55,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TargetChurnCannotEvictNotesAndImportantHistoryIsBounded operation.</summary>
         public void TargetChurnCannotEvictNotesAndImportantHistoryIsBounded()
         {
+/// <summary>ThermalVisionTelemetry operation.</summary>
             var stats = new ThermalVisionTelemetry();
             stats.Event(0, "tester note: slope flickers", true);
             stats.Event(1, "automatic off: ineligible viewpoint", true);
             for (int i = 0; i < 500; i++) stats.Event(i, "target changed");
+/// <summary>StringBuilder operation.</summary>
             var sb = new StringBuilder();
             stats.Write(sb);
             Assert.Contains("tester note: slope flickers", sb.ToString());
@@ -66,11 +74,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SceneReportDistinguishesCandidatesFromSubmissionsAndLimits operation.</summary>
         public void SceneReportDistinguishesCandidatesFromSubmissionsAndLimits()
         {
+/// <summary>ThermalVisionTelemetry operation.</summary>
             var stats = new ThermalVisionTelemetry();
             stats.SceneFrame(400, 100, 20, 15, 5, true, 200, 700, true, 1.1f, 2.2f);
             stats.SceneFrame(0, 100, 100, 90, 10, false, 200, 700, false, .01f, 2.1f);
+/// <summary>StringBuilder operation.</summary>
             var sb = new StringBuilder();
             stats.Write(sb);
             Assert.Contains("Scene frames=2 discovery/draw-limit frames=1", sb.ToString());
@@ -83,14 +94,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SceneLimitsCanOverlapWithoutHidingWhichBudgetWasReached operation.</summary>
         public void SceneLimitsCanOverlapWithoutHidingWhichBudgetWasReached()
         {
+/// <summary>ThermalVisionTelemetry operation.</summary>
             var stats = new ThermalVisionTelemetry();
             stats.SceneFrame(200, 150, 120, 110, 10, true, 200, 700);
             stats.SceneBudget(ThermalVisionSceneLimit.Discovery | ThermalVisionSceneLimit.Time
                 | ThermalVisionSceneLimit.ArmourQuota, 100, 10);
             stats.SceneFrame(0, 150, 120, 110, 10, true, 200, 700);
             stats.SceneBudget(ThermalVisionSceneLimit.ModelBuild | ThermalVisionSceneLimit.Triangles, 90, 20);
+/// <summary>StringBuilder operation.</summary>
             var sb = new StringBuilder();
             stats.Write(sb);
             Assert.Contains("discovery=1 blocks=0 triangles=1 time=1 model-build=1 armour-quota=1", sb.ToString());
@@ -99,14 +113,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ProgressiveBuildReportIncludesPendingAndCompletionFrames operation.</summary>
         public void ProgressiveBuildReportIncludesPendingAndCompletionFrames()
         {
+/// <summary>ThermalVisionTelemetry operation.</summary>
             var stats = new ThermalVisionTelemetry();
             stats.SceneFrame(100, 80, 60, 50, 10, true, 200, 700);
             stats.SceneBuild(8192, true, .9f);
             stats.SceneBuild(8192, true, .8f);
             stats.SceneBuild(512, false, .1f);
             stats.SceneCulling(972, 51840);
+/// <summary>StringBuilder operation.</summary>
             var sb = new StringBuilder();
             stats.Write(sb);
             Assert.Contains("Progressive build pending frames=2", sb.ToString());
@@ -116,11 +133,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NotesCannotInjectReportLinesAndSnapshotsDoNotDrainHistory operation.</summary>
         public void NotesCannotInjectReportLinesAndSnapshotsDoNotDrainHistory()
         {
+/// <summary>ThermalVisionTelemetry operation.</summary>
             var stats = new ThermalVisionTelemetry();
             stats.Event(2, "door\r\nlooks good" + new string('x', 1000));
+/// <summary>StringBuilder operation.</summary>
             var first = new StringBuilder();
+/// <summary>StringBuilder operation.</summary>
             var second = new StringBuilder();
             stats.Write(first);
             stats.Write(second);

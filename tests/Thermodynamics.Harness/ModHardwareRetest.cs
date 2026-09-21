@@ -5,93 +5,40 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// **What the conversion did to the mod's own cooling hardware**, which the corpus cannot
-    /// answer.
-    ///
-    /// <para>
-    /// <see cref="ConductanceRetest"/> runs the retest set of real workshop hulls, and the corpus
-    /// filters admit vanilla ships only — so its arm for the mod's blocks reaches zero of them and
-    /// says so. The two largest single moves the conversion made are therefore invisible there:
-    /// coolant pipes went 200 → 960 W/(m·K) effective (4.8×, copper) and radiators 200 → 568.8
-    /// (2.84×, aluminium). This prices both on a rig.
-    /// </para>
-    ///
-    /// <para>
-    /// **One block moves per rig, and everything else stays shipped.** The composite is already
-    /// measured on the corpus; what is wanted here is attribution, and a rig that moved the reactor
-    /// as well could not say whether the radiator earned anything. So each rig restores the
-    /// pre-conversion conductance of exactly the family it is about.
-    /// </para>
-    ///
-    /// <para>
-    /// **The rigs are built from <see cref="Catalog"/> and the delta is what is read.** Catalog is a
-    /// stand-in and known to drift from the shipped definitions (backlog `C4`), but both arms of
-    /// each comparison are built from the same stand-in, so the drift is common to them and cancels
-    /// in the difference. What must not drift is the one figure under test, and
-    /// <c>ModHardwareRetestTests</c> holds Catalog's pipe and radiator conductances against the
-    /// shipped ones so this cannot quietly become a measurement of something else.
-    /// See balance.md, What the real-unit conversion moved.
-    /// </para>
-    /// </summary>
     public static class ModHardwareRetest
     {
-        /// <summary>Simulated seconds each rig is run for. Long enough for a stack to saturate.</summary>
         private const float Seconds = 14400f;
 
-        /// <summary>
-        /// Watts of *heat* the source puts into the rig.
-        ///
-        /// Stated as heat rather than as a reactor's output, because the rig is about what the
-        /// cooling hardware does with a load and not about what a reactor wastes — and while it was
-        /// stated as output it was quietly a quarter of it, on a catalogue reactor that wasted
-        /// twenty-five times what the shipped one does (backlog.md `C4`).
-        /// 75 kW is what the old 300 kW at that fraction actually delivered, so the rigs carry the
-        /// same load they always did.
-        /// </summary>
         public const float SourceWatts = 75000f;
 
-        /// <summary>One rig in one world.</summary>
         public class Row
         {
             public string Rig;
 
-            /// <summary>How much cooling is bolted on: radiators, or pipes in the ring.</summary>
             public int Count;
 
-            /// <summary>The world: "shipped", or "pre-units" for the family under test.</summary>
             public string World;
 
-            /// <summary>Conductance the family under test carried, W/(m·K) effective.</summary>
             public float Conductance;
 
-            /// <summary>Where the heat source settled. Lower is better cooling.</summary>
             public float SourceKelvin;
 
-            /// <summary>The hottest block anywhere in the rig.</summary>
             public float PeakKelvin;
 
-            /// <summary>The far end of the cooling, which says whether the heat arrived.</summary>
             public float FarKelvin;
         }
 
-        /// <summary>
-        /// A source with <paramref name="count"/> radiators stacked on it, in shadow, run to
-        /// equilibrium — the same column shape <see cref="CoolingLadder"/> uses, and for the same
-        /// reason: holding the mounting fixed is what makes two rungs comparable.
-        /// </summary>
+/// <summary>RadiatorStack operation.</summary>
         public static Row RadiatorStack(int count, bool preConversion)
         {
+/// <summary>RadiatorStack operation.</summary>
             return RadiatorStack(count, preConversion, SourceWatts);
         }
 
-        /// <summary>
-        /// The same rig at a stated load, so a test can run the control: in shadow with nothing
-        /// making heat the whole stack falls to the sky, which is what makes "the source settled
-        /// at 272 K" a statement about the load rather than about where it started (`E8`).
-        /// </summary>
+/// <summary>RadiatorStack operation.</summary>
         public static Row RadiatorStack(int count, bool preConversion, float watts)
         {
+/// <summary>Cooler operation.</summary>
             BlockModel radiator = Cooler(Catalog.Radiator, preConversion);
 
             GridBuilder builder = GridBuilder.Large();
@@ -116,17 +63,7 @@ namespace Thermodynamics.Harness
                 simulation, source, top);
         }
 
-        /// <summary>
-        /// A source bolted to a running coolant ring, in shadow, run to equilibrium.
-        ///
-        /// <para>
-        /// The ring is what a player builds to move heat somewhere it can leave, and the pipe's
-        /// material conductance is only one of the two paths through it: the fluid couples to the
-        /// pipe through <c>LoopThermalProperties.Conductivity</c>, which the conversion never
-        /// touched, while the pipe conducts to whatever is bolted to it through its own material.
-        /// Which of the two the 4.8× actually reaches is the question.
-        /// </para>
-        /// </summary>
+/// <summary>CoolantRing operation.</summary>
         public static Row CoolantRing(int width, int depth, bool preConversion)
         {
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, width, depth);
@@ -158,21 +95,20 @@ namespace Thermodynamics.Harness
                 if (nodes[i].Block.Position == cells[cells.Count / 2]) far = nodes[i].Block;
             }
 
+/// <summary>Read operation.</summary>
             Row row = Read("coolant-ring", cells.Count, preConversion, conductance,
                 simulation, source, far);
             return row;
         }
 
-        /// <summary>Radiator counts to try, and ring sizes. Doubling, because the interesting
-        /// part is whether the gap grows with the stack or stays where one block puts it.</summary>
         private static readonly int[] Stacks = { 1, 2, 4, 8, 16, 32 };
 
-        /// <summary>Ring side lengths, square. A bigger ring is a longer path for the fluid.</summary>
         private static readonly int[] Rings = { 4, 6, 8 };
 
-        /// <summary>Every rig in both worlds, as a table.</summary>
+/// <summary>Measure operation.</summary>
         public static List<Row> Measure()
         {
+/// <summary>List operation.</summary>
             List<Row> rows = new List<Row>();
 
             for (int i = 0; i < Stacks.Length; i++)
@@ -191,16 +127,7 @@ namespace Thermodynamics.Harness
         }
 
 
-        /// <summary>
-        /// What the conversion did to a spread of vanilla blocks, measured rather than argued.
-        ///
-        /// <para>
-        /// It belongs beside the rigs because it is the same question one step out: the rigs price
-        /// the two families <c>Cubes.xml</c> authors, and this is what the same change did to the
-        /// blocks whose conductance is *derived* from what they are built out of — which is most of
-        /// the game, and which no table anywhere stated until the retest went looking.
-        /// </para>
-        /// </summary>
+/// <summary>Table operation.</summary>
         public static string Table()
         {
             System.Text.StringBuilder text = new System.Text.StringBuilder();
@@ -228,6 +155,7 @@ namespace Thermodynamics.Harness
                 text.AppendLine("named here and not in the installed game: "
                     + string.Join(", ", missing.ToArray()));
             }
+/// <summary>if operation.</summary>
             else if (moves.Count == 0)
             {
                 text.AppendLine("  (no game installed, so nothing could be derived)");
@@ -237,9 +165,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-        /// <summary>The table, with the shipped and pre-conversion rows paired so the delta reads.</summary>
+/// <summary>Report operation.</summary>
         public static string Report()
         {
+/// <summary>Measure operation.</summary>
             List<Row> rows = Measure();
             System.Text.StringBuilder text = new System.Text.StringBuilder();
 
@@ -276,22 +205,14 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-        // ---- the two worlds ---------------------------------------------------------------------
 
-        /// <summary>
-        /// Builds one cooler model with the pre-conversion conductance installed, and takes the
-        /// override straight back down.
-        ///
-        /// The override is a process-wide static on <see cref="Catalog"/>, so it is held for exactly
-        /// as long as the one model is being made. Leaving it up would move the reactor as well and
-        /// the rig would stop attributing anything.
-        /// </summary>
+/// <summary>Cooler operation.</summary>
         private static BlockModel Cooler(Func<BlockModel> make, bool preConversion)
         {
             using (Pre(preConversion)) return make();
         }
 
-        /// <summary>The pre-conversion conductance, installed for the length of a using block.</summary>
+/// <summary>Pre operation.</summary>
         private static IDisposable Pre(bool preConversion)
         {
             if (!preConversion) return new Restore(null);
@@ -308,27 +229,24 @@ namespace Thermodynamics.Harness
             return new Restore(previous);
         }
 
-        /// <summary>
-        /// Puts the override back the way it was found. Also used for the shipped world, where it
-        /// restores the null it was handed — a rig that skipped the restore in one branch and not
-        /// the other would leave the two worlds built differently for a reason that has nothing to
-        /// do with conductance.
-        /// </summary>
         private class Restore : IDisposable
         {
             private readonly Func<BlockThermalProperties, BlockThermalProperties> previous;
 
+/// <summary>Restore operation.</summary>
             public Restore(Func<BlockThermalProperties, BlockThermalProperties> previous)
             {
                 this.previous = previous;
             }
 
+/// <summary>Dispose operation.</summary>
             public void Dispose()
             {
                 Catalog.MaterialOverride = previous;
             }
         }
 
+/// <summary>Read operation.</summary>
         private static Row Read(string rig, int count, bool preConversion, float conductance,
             ThermalSimulation simulation, BlockInstance source, BlockInstance far)
         {

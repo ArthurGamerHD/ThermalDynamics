@@ -3,21 +3,9 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// Walks a ray through a grid's cells and reports whether it hits anything solid: Amanatides and
-    /// Woo, so it visits every cell the ray passes through and no others and cannot slip diagonally
-    /// between two blocks touching along an edge. The origin is a point rather than a cell, so one
-    /// implementation serves a grid shadowing itself and a grid shadowing another.
-    /// </summary>
     public static class VoxelWalk
     {
-        /// <summary>
-        /// True when the ray from <paramref name="origin"/> along <paramref name="direction"/>
-        /// crosses an occupied cell of <paramref name="grid"/>, both in that grid's cell space.
-        ///
-        /// Bounded by the grid's own box: a ray that never reaches it, or has left it, can hit
-        /// nothing and stops rather than stepping indefinitely.
-        /// </summary>
+/// <summary>Blocked operation.</summary>
         public static bool Blocked(GridModel grid, Vector3D origin, Vector3D direction, double startOffset = 0d)
         {
             if (grid == null) return false;
@@ -32,8 +20,6 @@ namespace Thermodynamics.Core
             if (!BoxRange(origin, direction, min, max, out enter, out exit)) return false;
             if (exit <= startOffset) return false;
 
-            // Start at the box rather than the origin when the origin is outside it: the ray may
-            // have kilometres to cross before the first cell it could hit.
             double travelled = Math.Max(enter, startOffset);
             Vector3D point = origin + (direction * travelled);
 
@@ -43,20 +29,25 @@ namespace Thermodynamics.Core
 
             if (Inside(x, y, z, min, max) && grid.IsOccupied(new Vector3I(x, y, z))) return true;
 
+/// <summary>Sign operation.</summary>
             int stepX = Sign(direction.X), stepY = Sign(direction.Y), stepZ = Sign(direction.Z);
 
+/// <summary>FirstBoundary operation.</summary>
             double tMaxX = FirstBoundary(point.X, x, direction.X);
+/// <summary>FirstBoundary operation.</summary>
             double tMaxY = FirstBoundary(point.Y, y, direction.Y);
+/// <summary>FirstBoundary operation.</summary>
             double tMaxZ = FirstBoundary(point.Z, z, direction.Z);
 
+/// <summary>Delta operation.</summary>
             double tDeltaX = Delta(direction.X);
+/// <summary>Delta operation.</summary>
             double tDeltaY = Delta(direction.Y);
+/// <summary>Delta operation.</summary>
             double tDeltaZ = Delta(direction.Z);
 
             double span = exit - travelled;
 
-            // Bounded twice: by the distance the ray stays inside the box, which is the real limit,
-            // and by a step count that stops a degenerate direction from looping.
             int limit = (2 * ((max.X - min.X) + (max.Y - min.Y) + (max.Z - min.Z))) + 8;
 
             for (int i = 0; i < limit; i++)
@@ -69,6 +60,7 @@ namespace Thermodynamics.Core
                     x += stepX;
                     tMaxX += tDeltaX;
                 }
+/// <summary>if operation.</summary>
                 else if (tMaxY <= tMaxZ)
                 {
                     t = tMaxY;
@@ -89,10 +81,7 @@ namespace Thermodynamics.Core
             return false;
         }
 
-        /// <summary>
-        /// Where the ray enters and leaves the grid's box, as distances along the ray. False when the
-        /// ray misses the box or has already passed it.
-        /// </summary>
+/// <summary>BoxRange operation.</summary>
         private static bool BoxRange(
             Vector3D origin, Vector3D direction, Vector3I min, Vector3I max,
             out double enter, out double exit)
@@ -102,11 +91,11 @@ namespace Thermodynamics.Core
 
             for (int axis = 0; axis < 3; axis++)
             {
+/// <summary>Component operation.</summary>
                 double o = Component(origin, axis);
+/// <summary>Component operation.</summary>
                 double d = Component(direction, axis);
 
-                // The box is the block bounds grown by half a cell, since cells are cubes centred
-                // on integers.
                 double low = BoxGeometry.Component(min, axis) - 0.5d;
                 double high = BoxGeometry.Component(max, axis) + 0.5d;
 
@@ -133,6 +122,7 @@ namespace Thermodynamics.Core
             return exit >= enter && exit > 0d;
         }
 
+/// <summary>Inside operation.</summary>
         private static bool Inside(int x, int y, int z, Vector3I min, Vector3I max)
         {
             return x >= min.X && x <= max.X
@@ -140,7 +130,7 @@ namespace Thermodynamics.Core
                 && z >= min.Z && z <= max.Z;
         }
 
-        /// <summary>Distance to the boundary of the cell the ray is standing in.</summary>
+/// <summary>FirstBoundary operation.</summary>
         private static double FirstBoundary(double position, int cell, double direction)
         {
             double magnitude = Math.Abs(direction);
@@ -153,17 +143,20 @@ namespace Thermodynamics.Core
             return remaining / magnitude;
         }
 
+/// <summary>Delta operation.</summary>
         private static double Delta(double direction)
         {
             double magnitude = Math.Abs(direction);
             return magnitude < 1e-9 ? double.MaxValue : 1d / magnitude;
         }
 
+/// <summary>Component operation.</summary>
         private static double Component(Vector3D vector, int axis)
         {
             return axis == 0 ? vector.X : axis == 1 ? vector.Y : vector.Z;
         }
 
+/// <summary>Sign operation.</summary>
         private static int Sign(double value)
         {
             if (value > 0d) return 1;

@@ -10,16 +10,8 @@ namespace RichHudFramework.UI
 	using CollectionData = MyTuple<Func<int, ApiMemberAccessor>, Func<int>>;
 	using RichStringMembers = MyTuple<StringBuilder, GlyphFormatMembers>;
 
-	/// <summary>
-	/// Manages the underlying data model for ListBox and Dropdown controls.
-	/// <para>This class handles the list entries and selection state, communicating with the master module via API.</para>
-	/// </summary>
-	/// <exclude/>
 	public class ListBoxData<T> : ReadOnlyApiCollection<EntryData<T>>
 	{
-		/// <summary>
-		/// The currently selected entry. Returns null if the list is empty or no selection is made.
-		/// </summary>
 		public EntryData<T> Selection
 		{
 			get
@@ -29,9 +21,6 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// The index of the current selection. Returns -1 if empty or no selection.
-		/// </summary>
 		public int SelectionIndex
 		{
 			get
@@ -42,14 +31,17 @@ namespace RichHudFramework.UI
 
 		private readonly ApiMemberAccessor GetOrSetMemberFunc;
 
+/// <summary>ListBoxData operation.</summary>
 		public ListBoxData(ApiMemberAccessor GetOrSetMemberFunc) : base(GetListData(GetOrSetMemberFunc))
 		{
 			this.GetOrSetMemberFunc = GetOrSetMemberFunc;
 		}
 
+/// <summary>Returns the listdata.</summary>
 		private static MyTuple<Func<int, EntryData<T>>, Func<int>> GetListData(ApiMemberAccessor GetOrSetMemberFunc)
 		{
 			var listData = (CollectionData)GetOrSetMemberFunc(null, (int)ListBoxAccessors.ListMembers);
+/// <summary>EntryData operation.</summary>
 			Func<int, EntryData<T>> GetEntryFunc = x => new EntryData<T>(listData.Item1(x));
 
 			return new MyTuple<Func<int, EntryData<T>>, Func<int>>()
@@ -59,9 +51,7 @@ namespace RichHudFramework.UI
 			};
 		}
 
-		/// <summary>
-		/// Adds a new member to the list box with the given display text and associated data object.
-		/// </summary>
+/// <summary>Adds a .</summary>
 		public void Add(RichText text, T assocObject)
 		{
 			var data = new MyTuple<List<RichStringMembers>, object>()
@@ -73,9 +63,7 @@ namespace RichHudFramework.UI
 			GetOrSetMemberFunc(data, (int)ListBoxAccessors.Add);
 		}
 
-		/// <summary>
-		/// Inserts a new entry at the specified index.
-		/// </summary>
+/// <summary>Insert operation.</summary>
 		public void Insert(int index, RichText text, T assocObject)
 		{
 			var data = new MyTuple<int, List<RichStringMembers>, object>()
@@ -88,83 +76,63 @@ namespace RichHudFramework.UI
 			GetOrSetMemberFunc(data, (int)ListBoxAccessors.Insert);
 		}
 
-		/// <summary>
-		/// Removes the specified entry from the list.
-		/// </summary>
+/// <summary>Removes the .</summary>
 		public bool Remove(EntryData<T> entry) =>
 			(bool)GetOrSetMemberFunc(entry.ID, (int)ListBoxAccessors.Remove);
 
-		/// <summary>
-		/// Removes the entry at the specified index.
-		/// </summary>
+/// <summary>Removes the at.</summary>
 		public void RemoveAt(int index) =>
 			GetOrSetMemberFunc(index, (int)ListBoxAccessors.RemoveAt);
 
-		/// <summary>
-		/// Clears all entries from the list.
-		/// </summary>
+/// <summary>Clear operation.</summary>
 		public void Clear() =>
 			GetOrSetMemberFunc(null, (int)ListBoxAccessors.ClearEntries);
 
-		/// <summary>
-		/// Sets the selection to the specified entry object.
-		/// </summary>
+/// <summary>Sets the selection.</summary>
 		public void SetSelection(EntryData<T> entry) =>
 			GetOrSetMemberFunc(entry.ID, (int)ListBoxAccessors.Selection);
 
-		/// <summary>
-		/// Sets the selection to the first entry associated with the given data object.
-		/// </summary>
+/// <summary>Sets the selection.</summary>
 		public void SetSelection(T assocMember) =>
 			GetOrSetMemberFunc(assocMember, (int)ListBoxAccessors.SetSelectionAtData);
 
-		/// <summary>
-		/// Sets the selection to the entry at the specified index.
-		/// </summary>
+/// <summary>Sets the selection.</summary>
 		public void SetSelection(int index) =>
 			GetOrSetMemberFunc(index, (int)ListBoxAccessors.SelectionIndex);
 	}
 
-	/// <summary>
-	/// Represents a single entry in a ListBox or Dropdown.
-	/// </summary>
 	public class EntryData<T>
 	{
-		/// <summary>
-		/// The display name/text of the entry in the UI.
-		/// </summary>
 		public RichText Text
 		{
+/// <summary>RichText operation.</summary>
 			get { return new RichText(GetOrSetMemberFunc(null, (int)ListBoxEntryAccessors.Name) as List<RichStringMembers>); }
+/// <summary>Returns the orsetmemberfunc.</summary>
 			set { GetOrSetMemberFunc(value.apiData, (int)ListBoxEntryAccessors.Name); }
 		}
 
-		/// <summary>
-		/// Indicates whether or not the element is visible in the list.
-		/// </summary>
 		public bool Enabled
 		{
+/// <summary>return operation.</summary>
 			get { return (bool)GetOrSetMemberFunc(null, (int)ListBoxEntryAccessors.Enabled); }
+/// <summary>Returns the orsetmemberfunc.</summary>
 			set { GetOrSetMemberFunc(value, (int)ListBoxEntryAccessors.Enabled); }
 		}
 
-		/// <summary>
-		/// The generic data object associated with this entry.
-		/// </summary>
 		public T AssocObject
 		{
+/// <summary>return operation.</summary>
 			get { return (T)GetOrSetMemberFunc(null, (int)ListBoxEntryAccessors.AssocObject); }
+/// <summary>Returns the orsetmemberfunc.</summary>
 			set { GetOrSetMemberFunc(value, (int)ListBoxEntryAccessors.AssocObject); }
 		}
 
-		/// <summary>
-		/// Unique identifier.
-		/// </summary>
-		/// <exclude/>
+/// <summary>Returns the orsetmemberfunc.</summary>
 		public object ID => GetOrSetMemberFunc(null, (int)ListBoxEntryAccessors.ID);
 
 		private readonly ApiMemberAccessor GetOrSetMemberFunc;
 
+/// <summary>EntryData operation.</summary>
 		public EntryData(ApiMemberAccessor GetOrSetMemberFunc)
 		{
 			this.GetOrSetMemberFunc = GetOrSetMemberFunc;

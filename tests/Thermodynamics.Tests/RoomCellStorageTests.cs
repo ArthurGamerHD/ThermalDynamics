@@ -6,30 +6,9 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Every room's cells live in one array, and the things that makes safe.
-    ///
-    /// <para>
-    /// The map used to hold each room as a `HashSet&lt;Vector3I&gt;` and pay about seventeen bytes
-    /// a cell over a list for it. Nothing searched a room — the map answers "which room is this
-    /// cell in" from a sorted index that answers for every room at once — so the set was buying
-    /// deduplication and a lookup, and neither was wanted. On a 500,000-block hull that was 39 MB.
-    /// Then the per-room lists became ranges into one store, so a rebuild sized from the pass
-    /// before it copies nothing (performance.md, Pass 4, Iteration 2).
-    /// </para>
-    ///
-    /// <para>
-    /// Neither a list nor an array carries a duplicate check, so the property the set was silently
-    /// providing has to be asserted instead: the flood offers each cell exactly once, because every
-    /// `AddToRoom` is behind a visited bitset that is tested and set in the same breath. These pin
-    /// that, the agreement between a room's own cells and the index that finds them, and the two
-    /// properties one store depends on — that a room's range is contiguous and that a completed
-    /// pass carries no slack — on hulls with real compartments rather than on a shape built to
-    /// have one.
-    /// </para>
-    /// </summary>
     public class RoomCellStorageTests
     {
+/// <summary>CompartmentedHull operation.</summary>
         private static ThermalSimulation CompartmentedHull(int blocks)
         {
             ThermalSettings settings = Hulls.Uncapped();
@@ -42,10 +21,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NoRoomCarriesACellTwice operation.</summary>
         public void NoRoomCarriesACellTwice()
         {
+/// <summary>CompartmentedHull operation.</summary>
             RoomMap map = CompartmentedHull(4000).Rooms.Map;
 
+/// <summary>HashSet operation.</summary>
             HashSet<Vector3I> seen = new HashSet<Vector3I>(Vector3I.Comparer);
 
             for (int r = 0; r < map.RoomCount; r++)
@@ -62,14 +44,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(map.RoomCellCount, seen.Count);
         }
 
-        /// <summary>
-        /// Every cell a room holds resolves back to that room through the index, and the index
-        /// names no cell the rooms do not hold. The two halves are written by different code paths
-        /// and are the only reason a room's cells never have to be searched.
-        /// </summary>
         [Fact]
+/// <summary>TheIndexAndTheRoomsDescribeTheSameCells operation.</summary>
         public void TheIndexAndTheRoomsDescribeTheSameCells()
         {
+/// <summary>CompartmentedHull operation.</summary>
             RoomMap map = CompartmentedHull(4000).Rooms.Map;
 
             int listed = 0;
@@ -91,31 +70,22 @@ namespace Thermodynamics.Tests
             Assert.Equal(map.RoomCellCount, listed);
         }
 
-        /// <summary>
-        /// A completed pass carries no spare capacity, which is the other half of the saving: the
-        /// store doubles as it grows, so an untrimmed one holds up to as much empty capacity as it
-        /// does cells, for as long as the grid exists.
-        /// </summary>
         [Fact]
+/// <summary>ACompletedPassLeavesNoSpareCapacityInTheCellStore operation.</summary>
         public void ACompletedPassLeavesNoSpareCapacityInTheCellStore()
         {
+/// <summary>CompartmentedHull operation.</summary>
             RoomMap map = CompartmentedHull(4000).Rooms.Map;
 
             Assert.True(map.RoomCellCount > 0, "the hull mapped no room cells, so nothing was checked");
             Assert.Equal(map.RoomCellCount, map.RoomCellCapacity);
         }
 
-        /// <summary>
-        /// A room owns a contiguous range of the store, and the ranges tile it end to end with no
-        /// gap and no overlap. This is what the whole structure rests on: a room is a start and a
-        /// length, so a room whose cells were not contiguous would silently read its neighbour's.
-        ///
-        /// Checked against something that is not the ranges — the index, which is built by a
-        /// different walk and answers per cell (`E7`).
-        /// </summary>
         [Fact]
+/// <summary>TheRoomsTileTheCellStoreWithoutGapOrOverlap operation.</summary>
         public void TheRoomsTileTheCellStoreWithoutGapOrOverlap()
         {
+/// <summary>CompartmentedHull operation.</summary>
             RoomMap map = CompartmentedHull(4000).Rooms.Map;
 
             int expected = 0;
@@ -132,26 +102,18 @@ namespace Thermodynamics.Tests
                 expected += cells.Count;
             }
 
-            // Every cell of the store belongs to exactly one room's range, so the ranges summed are
-            // the store, and the index agrees cell for cell with all of them.
             Assert.Equal(map.RoomCellCount, expected);
         }
 
-        /// <summary>
-        /// The hint is what removes the copies: a fill that is told its size in advance allocates
-        /// one store and neither grows into it nor trims it back, where the same fill untold
-        /// allocates the doubling chain and then a trim copy on top.
-        ///
-        /// Built by hand rather than through a hull, so the two legs differ in **one** thing. Both
-        /// freeze, both sort, both fill the same bitset, and the difference between what they
-        /// allocate is therefore the store handling and nothing else (`P6`).
-        /// </summary>
         [Fact]
+/// <summary>AHintedFillNeitherGrowsNorTrimsItsCellStore operation.</summary>
         public void AHintedFillNeitherGrowsNorTrimsItsCellStore()
         {
             const int Cells = 3000;
 
+/// <summary>FillAndPublish operation.</summary>
             long untold = FillAndPublish(0, Cells);
+/// <summary>FillAndPublish operation.</summary>
             long told = FillAndPublish(Cells, Cells);
 
             long oneStore = Cells * 12L;
@@ -161,12 +123,10 @@ namespace Thermodynamics.Tests
                 + oneStore.ToString("n0") + "; the hint is reaching nothing");
         }
 
-        /// <summary>
-        /// Fills one room with <paramref name="cells"/> cells and publishes, returning what that
-        /// allocated on this thread. A hint of zero is not given at all.
-        /// </summary>
+/// <summary>FillAndPublish operation.</summary>
         private static long FillAndPublish(int hint, int cells)
         {
+/// <summary>RoomMap operation.</summary>
             RoomMap map = new RoomMap();
             map.SetSearchBounds(new Vector3I(0, 0, 0), new Vector3I(20, 20, 20));
             if (hint > 0) map.HintRoomCells(hint);
@@ -195,26 +155,11 @@ namespace Thermodynamics.Tests
             return allocated;
         }
 
-        /// <summary>
-        /// And the mapper gives it: a rebuild's whole allocation is bounded by what a hinted pass
-        /// can possibly spend, which an unhinted one cannot meet.
-        ///
-        /// **Why an absolute bound and not a saving against the first pass.** The obvious check —
-        /// that the second pass allocates two stores less than the first — passes with the hint
-        /// deleted, because the first pass also sizes the mapper's one-time buffers and those alone
-        /// exceed two stores. It judged nothing, which is how it was found (`E8`). Measured on this
-        /// hull instead: hinted, a rebuild allocates **23.6 bytes a cell**; with the hint removed,
-        /// **45.1**. What a hinted pass must pay for is the cell store at twelve bytes a cell, the
-        /// room-by-rank array at four, and the sets over the box; an unhinted one adds a whole
-        /// store of doubling and trim copies on top of that. The bar sits between the two.
-        ///
-        /// **Recalibrate this when the pass's structure changes.** It was 56 when the map published
-        /// sorted key and room arrays and sorted them with scratch; those are gone
-        /// (performance.md, Pass 4, Iteration 3) and 56 no longer separated the two cases.
-        /// </summary>
         [Fact]
+/// <summary>TheMapperSizesARebuildFromThePassBeforeIt operation.</summary>
         public void TheMapperSizesARebuildFromThePassBeforeIt()
         {
+/// <summary>Unmapped operation.</summary>
             ThermalSimulation simulation = Unmapped(4000);
 
             long before = GC.GetAllocatedBytesForCurrentThread();
@@ -237,16 +182,18 @@ namespace Thermodynamics.Tests
                 "the rebuild allocated " + second.ToString("n0") + " bytes for "
                 + cells.ToString("n0") + " room cells — " + (second / (double)cells).ToString("n1")
                 + " a cell, against a bar of 34 — so it grew into its store and trimmed it back"
+/// <summary>it operation.</summary>
                 + " rather than being sized from the pass before it (the first pass, buffers and"
                 + " all, allocated " + first.ToString("n0") + ")");
         }
 
-        /// <summary>A census hull with its surfaces built and no room pass run yet.</summary>
+/// <summary>Unmapped operation.</summary>
         private static ThermalSimulation Unmapped(int blocks)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", blocks));
 
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings().Derive(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -257,20 +204,18 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>RunPass operation.</summary>
         private static void RunPass(ThermalSimulation simulation)
         {
             simulation.Rooms.RequestRestart(simulation.Grid);
             Assert.True(simulation.Rooms.RunToCompletion(), "the room pass did not finish");
         }
 
-        /// <summary>
-        /// Only the room the flood is filling can be added to. A room is a range, so a cell filed
-        /// under an earlier room would land at the end of the store and be read as the current
-        /// room's — a corruption with no symptom until a room reports a cell it does not contain.
-        /// </summary>
         [Fact]
+/// <summary>AClosedRoomCannotBeAddedTo operation.</summary>
         public void AClosedRoomCannotBeAddedTo()
         {
+/// <summary>RoomMap operation.</summary>
             RoomMap map = new RoomMap();
             map.SetSearchBounds(new Vector3I(0, 0, 0), new Vector3I(8, 8, 8));
 
@@ -285,13 +230,11 @@ namespace Thermodynamics.Tests
             });
         }
 
-        /// <summary>
-        /// The counts the memory benchmark attributes the room map's size to add up to the volume
-        /// the pass walked. A row that reported half the cells would read as half the cost.
-        /// </summary>
         [Fact]
+/// <summary>SolidRoomAndExternalCellsAccountForTheWholeSearchVolume operation.</summary>
         public void SolidRoomAndExternalCellsAccountForTheWholeSearchVolume()
         {
+/// <summary>CompartmentedHull operation.</summary>
             ThermalSimulation simulation = CompartmentedHull(4000);
             RoomMap map = simulation.Rooms.Map;
 

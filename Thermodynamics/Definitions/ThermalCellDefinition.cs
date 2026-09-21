@@ -25,61 +25,34 @@ namespace Thermodynamics
         private static readonly MyStringId CriticalTemperatureScalerId = MyStringId.GetOrCompute("OverheatDamagePerKelvin");
         private static readonly MyStringId HeatSourceWattsId = MyStringId.GetOrCompute("HeatSourceWatts");
 
-        /// <summary>
-        /// Names these properties used to carry, still read when the current name is absent: Definition
-        /// Extensions matches on the string, so dropping one silently reverts every third-party
-        /// definition to the defaults. See definitions.md, Retired property names.
-        /// </summary>
         private static readonly MyStringId LegacyIgnoreId = MyStringId.GetOrCompute("IgnoreThermals");
         private static readonly MyStringId LegacyExposedSurfaceId = MyStringId.GetOrCompute("SurfaceAreaScaler");
         private static readonly MyStringId LegacyOverheatDamageId = MyStringId.GetOrCompute("CriticalTemperatureScaler");
 
+/// <summary>MyDefinitionId operation.</summary>
         private static readonly MyDefinitionId DefaultCubeBlockDefinitionId = new MyDefinitionId(typeof(MyObjectBuilder_EnvironmentDefinition), Settings.DefaultSubtypeId);
 
-        /// <summary>Exclude the block type from the simulation entirely.</summary>
         [ProtoMember(1)]
         public bool ExcludeFromSimulation;
 
-        /// <summary>
-        /// Thermal conductivity in real W/(m K) — the number a materials table gives.
-        ///
-        /// Mild steel 50, stainless 15, aluminium 237, copper 400. The game's pace is set once, in
-        /// <see cref="Thermodynamics.Core.ThermalConstants.ConductionScale"/>, so this stays a description of what the
-        /// block is made of.
-        /// </summary>
         [ProtoMember(5)]
         public float Conductivity;
 
-        /// <summary>
-        /// Specific heat capacity, J/(kg K). Reference values:
-        /// https://en.wikipedia.org/wiki/Table_of_specific_heat_capacities
-        /// </summary>
         [ProtoMember(10)]
         public float SpecificHeat;
 
-        /// <summary>
-        /// Grey-body emissivity, 0..1: what leaves the block as thermal radiation. Reference values:
-        /// https://www.engineeringtoolbox.com/emissivity-coefficients-d_447.html
-        /// </summary>
         [ProtoMember(15)]
         public float Emissivity;
 
-        /// <summary>
-        /// Solar absorptivity, 0..1: what the surface takes in from the sun and from point sources.
-        /// Undeclared, it follows the emissivity, which is what every block did before this property
-        /// existed. See definitions.md, Emissivity and absorptivity are two numbers.
-        /// </summary>
         [ProtoMember(16)]
         public float SolarAbsorptivity;
 
         [ProtoMember(17)]
         public float ExposedSurfaceMultiplier;
 
-        /// <summary>Fraction of produced power converted to heat, 0..1.</summary>
         [ProtoMember(20)]
         public float ProducerWasteEnergy;
 
-        /// <summary>Fraction of consumed power converted to heat, 0..1.</summary>
         [ProtoMember(30)]
         public float ConsumerWasteEnergy;
 
@@ -89,19 +62,9 @@ namespace Thermodynamics
         [ProtoMember(45)]
         public float OverheatDamagePerKelvin;
 
-        /// <summary>
-        /// Watts a block makes because of what it is rather than because of power crossing it, W —
-        /// decay heat, a forge, a wreck still burning. The one property where omission is the right
-        /// default. See definitions.md, Every property but one must be declared.
-        /// </summary>
         [ProtoMember(50)]
         public float HeatSourceWatts;
 
-        /// <summary>
-        /// Which properties an actual definition declared, one bit per property. An undeclared one
-        /// arrives as zero, so this is what lets <c>ThermalBlockCatalog</c> fill the rest from the
-        /// derivation rather than from zeros. See definitions.md, Lookup and fallback.
-        /// </summary>
         public DeclaredProperties Declared;
 
         [Flags]
@@ -112,8 +75,6 @@ namespace Thermodynamics
             SpecificHeat = 2,
             Emissivity = 4,
 
-            // Beside the emissivity it follows, and at the next free bit rather than the next
-            // number: the values are a wire format and moving one would re-read every other flag.
             SolarAbsorptivity = 1024,
             ExposedSurfaceMultiplier = 8,
             ProducerWasteEnergy = 16,
@@ -124,34 +85,28 @@ namespace Thermodynamics
             HeatSourceWatts = 512,
         }
 
+/// <summary>WasDeclared operation.</summary>
         public bool WasDeclared(DeclaredProperties property)
         {
             return (Declared & property) != 0;
         }
 
-        /// <summary>Which of the three entries the lookup ended up reading.</summary>
         public enum Resolution
         {
-            /// <summary>The block's own subtype entry. The most specific thing an author can write.</summary>
             Subtype,
 
-            /// <summary>The <c>DefaultThermodynamics</c> entry for the block's type.</summary>
             Type,
 
-            /// <summary>
-            /// The environment-wide default: nothing here knows anything about this block. Taken as
-            /// *no* answer rather than as an answer, since a block's own build cost describes it
-            /// better than a global constant can.
-            /// </summary>
             Fallback,
         }
 
-        /// <summary>Which entry supplied <see cref="Declared"/>.</summary>
         public Resolution ResolvedAt;
 
 
+/// <summary>Returns the definition.</summary>
         public static ThermalCellDefinition GetDefinition(MyDefinitionId defId)
         {
+/// <summary>ThermalCellDefinition operation.</summary>
             ThermalCellDefinition def = new ThermalCellDefinition();
             DefinitionExtensionsAPI lookup = Session.Definitions;
 
@@ -160,6 +115,7 @@ namespace Thermodynamics
 
             if (!lookup.DefinitionIdExists(defId) || !lookup.TryGetBool(defId, GroupId, IgnoreId, out isTrue))
             {
+/// <summary>MyDefinitionId operation.</summary>
                 defId = new MyDefinitionId(defId.TypeId, Settings.DefaultSubtypeId);
                 def.ResolvedAt = Resolution.Type;
 

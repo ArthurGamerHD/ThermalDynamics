@@ -4,33 +4,20 @@ using Thermodynamics.Harness;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The comparison every A/B suite in this project makes: run the same grid two ways and
-    /// require the results to agree <b>bit for bit</b>, not to be close.
-    ///
-    /// <para>
-    /// The reason it is here rather than copied into each suite is the guard below. Two grids of
-    /// zeros agree perfectly and prove nothing, and so do two grids that never left their starting
-    /// temperature. Three of the five suites that made this comparison had no such check, so a
-    /// fixture that quietly stopped seeding or stopped driving its producers would have turned
-    /// them green rather than red. The assertion now refuses to pass on a state where nothing
-    /// varies.
-    /// </para>
-    /// </summary>
     public static class SolverAb
     {
-        /// <summary>Every node's temperature: the harness's snapshot, kept under the A/B name.</summary>
+/// <summary>Temperatures operation.</summary>
         public static float[] Temperatures(ThermalSimulation simulation)
         {
             return GridState.Temperatures(simulation);
         }
 
-        /// <summary>The six per-mechanism watt figures a node publishes, in a flat row per node.</summary>
         public static readonly string[] Mechanisms =
         {
             "radiation", "convection", "solar", "friction", "heat source", "conduction",
         };
 
+/// <summary>Diagnostics operation.</summary>
         public static float[] Diagnostics(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -51,10 +38,7 @@ namespace Thermodynamics.Tests
             return values;
         }
 
-        /// <summary>
-        /// Fails when every element of a captured state is the same number, which is what a grid
-        /// that was never seeded, never driven or never stepped looks like.
-        /// </summary>
+/// <summary>AssertVaried operation.</summary>
         public static void AssertVaried(float[] state, string what)
         {
             Assert.True(state.Length > 0, what + ": nothing was captured");
@@ -68,10 +52,7 @@ namespace Thermodynamics.Tests
                 + state[0].ToString("r") + ", so an identical result proves nothing");
         }
 
-        /// <summary>
-        /// Bit-identity, with the label of each side named so a failure says which way round it
-        /// is. <paramref name="perElement"/> names what an index is — "block", or "block 3 solar".
-        /// </summary>
+/// <summary>AssertIdentical operation.</summary>
         public static void AssertIdentical(float[] expected, float[] actual,
             string what, string expectedIs, string actualIs, IList<string> perElement = null)
         {

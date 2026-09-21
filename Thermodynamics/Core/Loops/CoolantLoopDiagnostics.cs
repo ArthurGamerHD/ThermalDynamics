@@ -3,45 +3,29 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>Why a run of coolant pipe did not become a loop.</summary>
     public enum CoolantFault
     {
-        /// <summary>The block is part of a working loop.</summary>
         None = 0,
 
-        /// <summary>A port faces a cell with nothing in it. The run has a free end.</summary>
         OpenEnd = 1,
 
-        /// <summary>A port faces a block that carries no coolant plumbing at all.</summary>
         BlockedByNonCoolant = 2,
 
-        /// <summary>
-        /// The next block along has plumbing but no port facing back. Two pipes touching at the
-        /// wrong rotation look connected and are not, which is the hardest fault to see by eye.
-        /// </summary>
         PortsDoNotMeet = 3,
 
-        /// <summary>
-        /// The walk arrived at a block it had already left. A tee or a crossing, rather than a ring.
-        /// </summary>
         BranchOrCrossing = 4,
 
-        /// <summary>The run returned to its start through the port it left by, which is not a ring.</summary>
         DoubledBack = 5,
 
-        // There is deliberately no "no pump" fault. A closed ring with no pump is a perfectly good
-        // loop that circulates nothing: it holds coolant, exchanges with what it touches, and carries
-        // heat nowhere. That is a state the loop reports through its flow rate, not a reason it failed
-        // to exist — and making it a fault is what used to delete the ring and the heat in it.
     }
 
-    /// <summary>One example of a fault, for a readout to name a cell the player can walk to.</summary>
     public struct CoolantFaultExample
     {
         public Vector3I Cell;
         public string Subtype;
         public CoolantFault Fault;
 
+/// <summary>CoolantFaultExample operation.</summary>
         public CoolantFaultExample(Vector3I cell, string subtype, CoolantFault fault)
         {
             Cell = cell;
@@ -50,56 +34,48 @@ namespace Thermodynamics.Core
         }
     }
 
-    /// <summary>
-    /// Why the plumbing on a grid did or did not form loops.
-    ///
-    /// Built only when a caller asks for it. "I built a ring and nothing happened" is the question
-    /// this answers, and it cannot be answered from the loop list, because the whole symptom is
-    /// that the loop is not in it. A field dump showed six copies of one ship where four had a loop
-    /// and two did not, with no way to tell what differed.
-    /// </summary>
     public class CoolantLoopDiagnostics
     {
-        /// <summary>Most examples kept per fault, so a grid of broken plumbing cannot flood a readout.</summary>
         public const int DefaultExampleLimit = 4;
 
         public readonly int[] Counts = new int[6];
 
+/// <summary>List operation.</summary>
         public readonly List<CoolantFaultExample> Examples = new List<CoolantFaultExample>();
 
-        /// <summary>Coolant blocks claimed by a working loop.</summary>
         public int PipesInLoops;
 
-        /// <summary>Coolant blocks that are part of no loop.</summary>
         public int PipesAdrift;
 
-        /// <summary>Loops that formed.</summary>
         public int Loops;
 
         private readonly int exampleLimit;
 
+/// <summary>CoolantLoopDiagnostics operation.</summary>
         public CoolantLoopDiagnostics()
             : this(DefaultExampleLimit)
         {
         }
 
+/// <summary>CoolantLoopDiagnostics operation.</summary>
         public CoolantLoopDiagnostics(int exampleLimit)
         {
             this.exampleLimit = exampleLimit > 0 ? exampleLimit : DefaultExampleLimit;
         }
 
+/// <summary>CountOf operation.</summary>
         public int CountOf(CoolantFault fault)
         {
             int index = (int)fault;
             return index >= 0 && index < Counts.Length ? Counts[index] : 0;
         }
 
-        /// <summary>True when there is plumbing on the grid that is doing nothing.</summary>
         public bool HasFaults
         {
             get { return PipesAdrift > 0; }
         }
 
+/// <summary>Record operation.</summary>
         internal void Record(BlockInstance block, CoolantFault fault)
         {
             int index = (int)fault;
@@ -118,7 +94,7 @@ namespace Thermodynamics.Core
                 block.Min, block.Model == null ? "?" : block.Model.Name, fault));
         }
 
-        /// <summary>A short human-readable reason, for a terminal or a report line.</summary>
+/// <summary>Describe operation.</summary>
         public static string Describe(CoolantFault fault)
         {
             switch (fault)

@@ -7,35 +7,16 @@ using Xunit.Abstractions;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// That the scenario catalogue *is* the blocks it stands in for, and stays that way.
-    ///
-    /// <para>
-    /// `Catalog` used to open by saying its masses were approximations and its thermal properties
-    /// "mirror Data/Cubes.xml". Nothing had compared them: four of the six stand-ins were out by
-    /// more than five per cent, the large thruster by **4.32x**, the battery by 3.70x because it
-    /// carried the *small-grid* battery's mass under a large-grid name, and `ReactorThermal` said a
-    /// quarter of a reactor's output becomes heat where the shipped definition says a hundredth.
-    /// Every scenario in this repository is built out of these, so every scenario temperature was
-    /// quoted off them. backlog.md `C4`.
-    /// </para>
-    ///
-    /// <para>
-    /// **The stand-ins are now derived from `Vanilla` and the shipped derivation rather than typed**,
-    /// so the disagreement is structurally gone rather than corrected once. These hold it that way:
-    /// a hand-typed mass reappearing is what this fails on.
-    /// </para>
-    /// </summary>
     public class CatalogDriftTests
     {
         private readonly ITestOutputHelper output;
 
+/// <summary>CatalogDriftTests operation.</summary>
         public CatalogDriftTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-        /// <summary>What the catalogue stands in for, by name.</summary>
         private class Stand
         {
             public string Catalogue;
@@ -43,32 +24,37 @@ namespace Thermodynamics.Tests
             public string Vanilla;
         }
 
+/// <summary>Stands operation.</summary>
         private static List<Stand> Stands()
         {
             return new List<Stand>
             {
+/// <summary>Mass operation.</summary>
                 new Stand { Catalogue = "LightArmorBlock", CatalogueMass = Mass(Catalog.LightArmor()), Vanilla = "LargeBlockArmorBlock" },
+/// <summary>Mass operation.</summary>
                 new Stand { Catalogue = "HeavyArmorBlock", CatalogueMass = Mass(Catalog.HeavyArmor()), Vanilla = "LargeHeavyBlockArmorBlock" },
+/// <summary>Mass operation.</summary>
                 new Stand { Catalogue = "SmallReactor", CatalogueMass = Mass(Catalog.Reactor()), Vanilla = "LargeBlockSmallGenerator" },
+/// <summary>Mass operation.</summary>
                 new Stand { Catalogue = "LargeReactor", CatalogueMass = Mass(Catalog.LargeReactor()), Vanilla = "LargeBlockLargeGenerator" },
+/// <summary>Mass operation.</summary>
                 new Stand { Catalogue = "Battery", CatalogueMass = Mass(Catalog.Battery()), Vanilla = "LargeBlockBatteryBlock" },
+/// <summary>Mass operation.</summary>
                 new Stand { Catalogue = "LargeThruster", CatalogueMass = Mass(Catalog.Thruster()), Vanilla = "LargeBlockLargeThrust" },
             };
         }
 
+/// <summary>Mass operation.</summary>
         private static float Mass(BlockModel model)
         {
             return model.Mass;
         }
 
-        /// <summary>
-        /// **Every stand-in weighs what the block it stands in for weighs.** Thermal mass is what
-        /// sets how fast a scenario block heats, so a mass that is out by a factor of four is a
-        /// scenario temperature that is out by a factor of four.
-        /// </summary>
         [Fact]
+/// <summary>EveryStandInWeighsWhatItStandsInFor operation.</summary>
         public void EveryStandInWeighsWhatItStandsInFor()
         {
+/// <summary>List operation.</summary>
             List<string> drifted = new List<string>();
             float worst = 1f;
 
@@ -98,20 +84,12 @@ namespace Thermodynamics.Tests
                 "the worst stand-in is " + worst.ToString("n4") + "x its block, which is not derived");
         }
 
-        /// <summary>
-        /// **The reactor's waste fraction was the drift that reached furthest**, and it is the one
-        /// worth naming: the catalogue said a quarter of a reactor's output becomes heat where the
-        /// shipped definition says a hundredth, so every scenario quoting a reactor temperature
-        /// quoted one twenty-five times over-driven. A scenario reactor now wastes what a player's
-        /// reactor wastes.
-        /// </summary>
         [Fact]
+/// <summary>AScenarioReactorWastesWhatAShippedOneWastes operation.</summary>
         public void AScenarioReactorWastesWhatAShippedOneWastes()
         {
             BlockThermalProperties catalogue = Catalog.Reactor().Thermal;
 
-            // The shipped reactor figure is the type entry rather than a subtype's, so it is read
-            // from the derivation the game applies to any reactor.
             BlockThermalProperties real =
                 ShippedBlocks.DeriveWithFunction(new List<BlockComponent>(), "Reactor");
 
@@ -123,12 +101,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(0.01f, catalogue.ProducerWasteEnergy, 4);
         }
 
-        /// <summary>
-        /// And the one that is *not* drifted, so the two above are a measurement rather than a
-        /// property of how the comparison is made: armour matches exactly, because nothing has ever
-        /// had a reason to move it.
-        /// </summary>
         [Fact]
+/// <summary>ArmourMatchesExactly operation.</summary>
         public void ArmourMatchesExactly()
         {
             Assert.Equal(Vanilla.Find("LargeBlockArmorBlock").Mass, Mass(Catalog.LightArmor()), 1);

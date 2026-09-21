@@ -2,36 +2,18 @@ using System.Collections.Generic;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// What a server still owes every client about every grid, and the pruning that keeps it from
-    /// being a leak.
-    ///
-    /// <para>
-    /// **This is bookkeeping, and it is here rather than in the game adapter because bookkeeping is
-    /// where the silent failures are.** A schedule that is never dropped costs one entry per grid
-    /// that has ever existed per player who has ever joined — a leak that only appears on the
-    /// servers this mod most wants to run on, and never in a test session with one player. A
-    /// schedule dropped too eagerly is a client re-sent a hull it already has. Neither announces
-    /// itself, and both are decidable without a session.
-    /// </para>
-    ///
-    /// <para>
-    /// The game adapter keeps only what needs the engine: who is connected, where they are, and
-    /// putting bytes on the wire.
-    /// </para>
-    /// </summary>
     public class HotTailServerState
     {
         private readonly Dictionary<ulong, Dictionary<long, HotTailSchedule>> owed =
             new Dictionary<ulong, Dictionary<long, HotTailSchedule>>();
 
+/// <summary>List operation.</summary>
         private readonly List<ulong> departed = new List<ulong>();
+/// <summary>List operation.</summary>
         private readonly List<long> stale = new List<long>();
 
-        /// <summary>Seconds between band updates, applied to every schedule as it is used.</summary>
         public float IntervalSeconds = HotTailSchedule.DefaultIntervalSeconds;
 
-        /// <summary>How many client-and-grid pairs are being tracked.</summary>
         public int Tracked
         {
             get
@@ -45,17 +27,12 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>How many clients are being tracked.</summary>
         public int Clients
         {
             get { return owed.Count; }
         }
 
-        /// <summary>
-        /// Moves every schedule's clock forward. Called once a pass rather than once per grid, so a
-        /// grid the pass skipped — one out of range, or one still building — keeps its place in the
-        /// interval instead of restarting it.
-        /// </summary>
+/// <summary>Advance operation.</summary>
         public void Advance(float seconds)
         {
             foreach (KeyValuePair<ulong, Dictionary<long, HotTailSchedule>> entry in owed)
@@ -67,26 +44,19 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>
-        /// What this client is owed about this grid now, consuming it. Creates the schedule on
-        /// first sight, which is what makes a client's first pass over a grid a band update rather
-        /// than nothing: the whole hull still waits for the client to ask for it.
-        /// </summary>
+/// <summary>Next operation.</summary>
         public HotTailSend Next(ulong client, long gridId)
         {
             return ScheduleFor(client, gridId).Next();
         }
 
-        /// <summary>
-        /// Records a client's request for a grid's whole hull.
-        /// </summary>
-        /// <returns>False when the request is dropped for being a repeat inside the cooldown.</returns>
+/// <summary>Request operation.</summary>
         public bool Request(ulong client, long gridId)
         {
             return ScheduleFor(client, gridId).RequestSnapshot();
         }
 
-        /// <summary>Whether this client has an unserved request for this grid.</summary>
+/// <summary>Wants operation.</summary>
         public bool Wants(ulong client, long gridId)
         {
             Dictionary<long, HotTailSchedule> grids;
@@ -96,14 +66,7 @@ namespace Thermodynamics.Core
             return grids.TryGetValue(gridId, out schedule) && schedule.SnapshotWanted;
         }
 
-        /// <summary>
-        /// Drops what is owed to clients that are gone and about grids that are gone.
-        ///
-        /// Both sets are what the caller can see right now: a client not in
-        /// <paramref name="clients"/> has left, and a grid not in <paramref name="grids"/> has been
-        /// destroyed, split or merged away. A grid that comes back comes back with a new schedule,
-        /// which is correct — the client will have rebuilt it and asked again.
-        /// </summary>
+/// <summary>Forget operation.</summary>
         public void Forget(ICollection<ulong> clients, ICollection<long> grids)
         {
             departed.Clear();
@@ -133,12 +96,13 @@ namespace Thermodynamics.Core
             stale.Clear();
         }
 
-        /// <summary>Forgets everything, for a session ending.</summary>
+/// <summary>Clear operation.</summary>
         public void Clear()
         {
             owed.Clear();
         }
 
+/// <summary>ScheduleFor operation.</summary>
         private HotTailSchedule ScheduleFor(ulong client, long gridId)
         {
             Dictionary<long, HotTailSchedule> grids;
@@ -151,36 +115,27 @@ namespace Thermodynamics.Core
             HotTailSchedule schedule;
             if (!grids.TryGetValue(gridId, out schedule))
             {
+/// <summary>HotTailSchedule operation.</summary>
                 schedule = new HotTailSchedule();
                 grids[gridId] = schedule;
             }
 
-            // Read from the settings every time rather than at construction, because a world's
-            // interval can be changed mid-session and a schedule built an hour ago would keep the
-            // old one for the rest of the session.
             schedule.IntervalSeconds = IntervalSeconds;
             return schedule;
         }
     }
 
-    /// <summary>
-    /// Which grids this client has asked the server to state, and which are still unanswered.
-    ///
-    /// The mirror of <see cref="HotTailServerState"/>, and here for the same reason: the backoff
-    /// and the pruning are decidable without a session, and neither fails loudly.
-    /// </summary>
     public class HotTailClientState
     {
         private readonly Dictionary<long, HotTailRequest> asked = new Dictionary<long, HotTailRequest>();
+/// <summary>List operation.</summary>
         private readonly List<long> stale = new List<long>();
 
-        /// <summary>How many grids are being tracked.</summary>
         public int Tracked
         {
             get { return asked.Count; }
         }
 
-        /// <summary>Grids this client is still waiting to be told about.</summary>
         public int Waiting
         {
             get
@@ -194,6 +149,7 @@ namespace Thermodynamics.Core
             }
         }
 
+/// <summary>Advance operation.</summary>
         public void Advance(float seconds)
         {
             foreach (KeyValuePair<long, HotTailRequest> entry in asked)
@@ -202,32 +158,27 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>Whether to ask the server about this grid now, consuming the decision.</summary>
+/// <summary>ShouldAsk operation.</summary>
         public bool ShouldAsk(long gridId)
         {
             return RequestFor(gridId).ShouldAsk();
         }
 
-        /// <summary>Records that the server has stated this grid's whole hull.</summary>
+/// <summary>Answered operation.</summary>
         public void Answered(long gridId)
         {
             HotTailRequest request;
             if (asked.TryGetValue(gridId, out request)) request.Answer();
         }
 
-        /// <summary>Whether this grid's hull has been stated at least once.</summary>
+/// <summary>HasHull operation.</summary>
         public bool HasHull(long gridId)
         {
             HotTailRequest request;
             return asked.TryGetValue(gridId, out request) && request.Answered;
         }
 
-        /// <summary>
-        /// Drops grids this machine no longer has.
-        ///
-        /// A grid that streams out and back in is asked about again, which is right: the client
-        /// rebuilt it from whatever the engine had, and that is the stale state this exists for.
-        /// </summary>
+/// <summary>Forget operation.</summary>
         public void Forget(ICollection<long> grids)
         {
             stale.Clear();
@@ -241,17 +192,19 @@ namespace Thermodynamics.Core
             stale.Clear();
         }
 
-        /// <summary>Forgets everything, for a session ending.</summary>
+/// <summary>Clear operation.</summary>
         public void Clear()
         {
             asked.Clear();
         }
 
+/// <summary>RequestFor operation.</summary>
         private HotTailRequest RequestFor(long gridId)
         {
             HotTailRequest request;
             if (!asked.TryGetValue(gridId, out request))
             {
+/// <summary>HotTailRequest operation.</summary>
                 request = new HotTailRequest();
                 asked[gridId] = request;
             }

@@ -4,33 +4,15 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// What a hot room does to a player.
-    ///
-    /// <para>
-    /// The one place heat stopped being consequential: every block on a burning ship could be past
-    /// its limit while the person standing between them was untouched. Backlog `B10`.
-    /// </para>
-    ///
-    /// <para>
-    /// The model is a suit as a refrigerator rather than as a threshold, so what these check is
-    /// that the *consequences* follow from the machine: where it holds, where it gives up, how long
-    /// a player has once it does, and that an open helmet costs them most of that margin. The
-    /// numbers are derived from the settings rather than transcribed, so a world that moves a dial
-    /// moves the assertion with it.
-    /// </para>
-    /// </summary>
     public class SuitThermalTests
     {
+/// <summary>Shipped operation.</summary>
         private static ThermalSettings Shipped()
         {
             return new ThermalSettings().Derive();
         }
 
-        /// <summary>
-        /// A minute in a room at a given temperature, and what the occupant has taken by the end.
-        /// One-second steps, which is the cadence the session runs the pass on.
-        /// </summary>
+/// <summary>DamageOverSeconds operation.</summary>
         private static float DamageOverSeconds(ThermalSettings settings, float roomKelvin,
             bool helmetOpen, int seconds, out float interior, out int firstHurtAt)
         {
@@ -51,14 +33,11 @@ namespace Thermodynamics.Tests
             return damage;
         }
 
-        /// <summary>
-        /// The shipped suit holds its occupant in an ordinary warm compartment indefinitely, and
-        /// the temperature it stops holding at is the one the settings imply rather than one
-        /// somebody typed.
-        /// </summary>
         [Fact]
+/// <summary>TheSuitHoldsUpToTheTemperatureItsRatingImplies operation.</summary>
         public void TheSuitHoldsUpToTheTemperatureItsRatingImplies()
         {
+/// <summary>Shipped operation.</summary>
             ThermalSettings settings = Shipped();
             float survivable = SuitThermal.SurvivableKelvin(settings);
 
@@ -68,7 +47,6 @@ namespace Thermodynamics.Tests
             float interior;
             int hurt;
 
-            // Ten degrees under it, for an hour of one-second steps: nothing.
             Assert.Equal(0f, DamageOverSeconds(settings, survivable - 10f, false, 3600,
                 out interior, out hurt), 4);
             Assert.True(Math.Abs(interior - SuitThermal.ComfortKelvin) < 1f,
@@ -76,14 +54,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(-1, hurt);
         }
 
-        /// <summary>
-        /// Past it the suit is overwhelmed, and **the warning comes before the damage**: the
-        /// interior has the whole gap between comfort and the limit to cross first, which is the
-        /// seconds a player has to get out. That gap is the point of the heat capacity.
-        /// </summary>
         [Fact]
+/// <summary>BeingOverwhelmedComesBeforeBeingHurt operation.</summary>
         public void BeingOverwhelmedComesBeforeBeingHurt()
         {
+/// <summary>Shipped operation.</summary>
             ThermalSettings settings = Shipped();
             float room = SuitThermal.SurvivableKelvin(settings) + 100f;
 
@@ -101,14 +76,11 @@ namespace Thermodynamics.Tests
             Assert.True(hurt < 60, "and not a minute of them, got " + hurt);
         }
 
-        /// <summary>
-        /// The hotter the room the less time there is, monotonically. A player learns a rule from
-        /// this — get out faster when it is worse — and a model that did not hold it would teach
-        /// them nothing.
-        /// </summary>
         [Fact]
+/// <summary>AHotterRoomLeavesLessTime operation.</summary>
         public void AHotterRoomLeavesLessTime()
         {
+/// <summary>Shipped operation.</summary>
             ThermalSettings settings = Shipped();
             float survivable = SuitThermal.SurvivableKelvin(settings);
 
@@ -126,13 +98,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// An open helmet is unsafe at temperatures a closed one survives, and it is one number
-        /// that does it — the breathing path — rather than a second threshold.
-        /// </summary>
         [Fact]
+/// <summary>AnOpenHelmetIsUnsafeWhereAClosedOneIsNot operation.</summary>
         public void AnOpenHelmetIsUnsafeWhereAClosedOneIsNot()
         {
+/// <summary>Shipped operation.</summary>
             ThermalSettings settings = Shipped();
 
             float closed = SuitThermal.SurvivableKelvin(settings, false);
@@ -142,7 +112,6 @@ namespace Thermodynamics.Tests
             Assert.Equal(closed - SuitThermal.ComfortKelvin,
                 (open - SuitThermal.ComfortKelvin) * SuitThermal.OpenHelmetConductanceFactor, 1);
 
-            // A room between the two: safe closed, and not safe open.
             float room = (open + closed) * 0.5f;
             float interior;
             int hurt;
@@ -152,13 +121,11 @@ namespace Thermodynamics.Tests
                 "an open helmet at " + room.ToString("n0") + " K should hurt");
         }
 
-        /// <summary>
-        /// A flat suit does not regulate. It is the one thing the game lets this mod see about the
-        /// suit's power, and it is what makes a hot room a reason to keep the batteries up.
-        /// </summary>
         [Fact]
+/// <summary>AFlatSuitDoesNotRegulate operation.</summary>
         public void AFlatSuitDoesNotRegulate()
         {
+/// <summary>Shipped operation.</summary>
             ThermalSettings settings = Shipped();
             float room = SuitThermal.SurvivableKelvin(settings) - 100f;
 
@@ -173,13 +140,11 @@ namespace Thermodynamics.Tests
                 "a flat suit must let its occupant heat up");
         }
 
-        /// <summary>
-        /// The suit works in both directions. A cold environment is the other half of what a suit
-        /// is for, and a model that only cooled would hold nobody anywhere cold.
-        /// </summary>
         [Fact]
+/// <summary>TheSuitHeatsAsWellAsCools operation.</summary>
         public void TheSuitHeatsAsWellAsCools()
         {
+/// <summary>Shipped operation.</summary>
             ThermalSettings settings = Shipped();
 
             SuitStepResult result = SuitThermal.Step(settings, SuitThermal.ComfortKelvin,
@@ -191,39 +156,16 @@ namespace Thermodynamics.Tests
             Assert.True(Math.Abs(result.InteriorKelvin - SuitThermal.ComfortKelvin) < 1f);
         }
 
-        /// <summary>
-        /// **Why there is a `SuitCriticalTemperature` and no floor beside it** (`C18`, decided
-        /// 2026-08-24). The suit regulates both ways and reports the watts it puts back in, so the
-        /// cold side is simulated and only the *consequence* is missing — which reads as an
-        /// oversight until the two thresholds are put side by side.
-        ///
-        /// <para>
-        /// They are not symmetric, and this measures where each lands. The suit holds its occupant
-        /// while the leak fits inside one rating, so the window is `comfort ± rating / conductance`
-        /// — and with an open helmet the conductance is ten times higher, which pulls **both** ends
-        /// in tenfold. The hot end lands at 330 K, a temperature a player only meets when something
-        /// has gone wrong. The cold end lands at **290 K, which is 17 °C**: an ordinary compartment.
-        /// </para>
-        ///
-        /// <para>
-        /// So a floor at hypothermia would fire in any room below about 15 °C, on the mod's
-        /// accelerated clock, in ordinary play — where the ceiling never fires until a ship is
-        /// already burning. A rule that is symmetric in form is nothing like symmetric in effect,
-        /// and that is the whole of the decision. `C16` reinforces it: the cooler is free and
-        /// cannot fail, so a player can never be cold *because their suit ran out*, which is the
-        /// situation freezing to death would be for — and a suit with no energy is a problem the
-        /// game already answers. Revisit if a setter for suit charge ever appears.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheColdEndOfTheSuitsWindowIsAnOrdinaryRoomAndTheHotEndIsNot operation.</summary>
         public void TheColdEndOfTheSuitsWindowIsAnOrdinaryRoomAndTheHotEndIsNot()
         {
+/// <summary>Shipped operation.</summary>
             ThermalSettings settings = Shipped();
 
             float sealed_ = settings.SuitCoolingWatts / settings.SuitConductance;
             float open = sealed_ / SuitThermal.OpenHelmetConductanceFactor;
 
-            // The hot end is the one the model computes for itself, and the cold end is its mirror.
             Assert.Equal(SuitThermal.ComfortKelvin + sealed_,
                 SuitThermal.SurvivableKelvin(settings), 2);
             Assert.Equal(SuitThermal.ComfortKelvin + open,
@@ -231,30 +173,24 @@ namespace Thermodynamics.Tests
 
             float coldOpen = SuitThermal.ComfortKelvin - open;
 
-            // 290.15 K is 17 °C. A ship compartment sits here.
             Assert.InRange(coldOpen, 283.15f, 296.15f);
 
-            // And the hot end with the helmet open is 330 K, 57 °C, which one does not.
             Assert.True(SuitThermal.SurvivableKelvin(settings, true) > 323.15f);
 
-            // The asymmetry itself, which is the reason for the decision: the cold end sits inside
-            // a habitable range and the hot end sits well outside it.
             Assert.True(coldOpen < SuitThermal.ComfortKelvin);
             Assert.True(coldOpen > 273.15f,
                 "the cold end has moved below freezing, so it is no longer an ordinary room and"
                 + " `C18`'s reason for having no floor no longer holds");
         }
 
-        /// <summary>
-        /// Off is off (`C7`): with the switch down the pass is not run at all, and the model itself
-        /// still answers rather than throwing, because the settings it is handed can be anything.
-        /// </summary>
         [Fact]
+/// <summary>TheModelSurvivesBeingHandedNothing operation.</summary>
         public void TheModelSurvivesBeingHandedNothing()
         {
             Assert.Equal(0f, SuitThermal.Step(null, 300f, 900f, false, true, 1f).Damage, 5);
             Assert.Equal(300f, SuitThermal.Step(Shipped(), 300f, 900f, false, true, 0f).InteriorKelvin, 5);
 
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings zeroed = new ThermalSettings();
             zeroed.SuitHeatCapacity = 0f;
             zeroed.SuitConductance = 0f;
@@ -265,13 +201,11 @@ namespace Thermodynamics.Tests
             Assert.False(float.IsInfinity(result.InteriorKelvin));
         }
 
-        /// <summary>
-        /// Off means off wherever the model is reached from. The session pass returns before it
-        /// looks up a player, which is what makes it free; this is the other half (`C7`).
-        /// </summary>
         [Fact]
+/// <summary>TheSwitchIsHonouredByTheModelItself operation.</summary>
         public void TheSwitchIsHonouredByTheModelItself()
         {
+/// <summary>Shipped operation.</summary>
             ThermalSettings settings = Shipped();
             settings.EnableSuitDamage = false;
 
@@ -283,13 +217,11 @@ namespace Thermodynamics.Tests
             Assert.False(result.Overwhelmed);
         }
 
-        /// <summary>
-        /// A critical temperature at or below the temperature the suit aims at would damage a
-        /// player the suit is holding perfectly, which is a world nobody meant to configure.
-        /// </summary>
         [Fact]
+/// <summary>ASuitLimitBelowComfortIsReportedAsAProblem operation.</summary>
         public void ASuitLimitBelowComfortIsReportedAsAProblem()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.SuitCriticalTemperature = SuitThermal.ComfortKelvin - 5f;
             settings.Derive();

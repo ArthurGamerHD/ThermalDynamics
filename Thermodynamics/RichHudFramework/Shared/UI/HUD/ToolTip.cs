@@ -13,38 +13,24 @@ namespace RichHudFramework
             Color? // BgColor
         >;
 
-		/// <summary>
-		/// Class used to define tooltips attached to the RHF cursor. 
-		/// <para>
-		/// Set via the <see cref="IMouseInput.ToolTip"/> property of the given UI element, or registered to 
-		/// <see cref="ICursor.RegisterToolTip(ToolTip)"/> manually in HandleInput() every input tick. 
-		/// </para>
-		/// <para>The first tooltip registered takes precedence.</para>
-		/// </summary>
 		public class ToolTip
         {
             public static readonly GlyphFormat DefaultText = GlyphFormat.Blueish.WithSize(.75f);
             public static readonly Color 
+/// <summary>Color operation.</summary>
                 DefaultBG = new Color(73, 86, 95),
+/// <summary>Color operation.</summary>
                 OrangeWarningBG = new Color(180, 110, 0),
+/// <summary>Color operation.</summary>
                 RedWarningBG = new Color(126, 39, 44);
 
-            /// <summary>
-            /// Text to be assigned to the tooltip. Multiline tooltips are allowed, but
-            /// are not wrapped.
-            /// </summary>
             public RichText text;
 
-            /// <summary>
-            /// Color of the text background
-            /// </summary>
             public Color? bgColor;
 
-            /// <summary>
-            /// Callback delegate used by the API to retrieve tooltip information
-            /// </summary>
             public readonly Func<ToolTipMembers> GetToolTipFunc;
 
+/// <summary>ToolTip operation.</summary>
             public ToolTip()
             {
                 bgColor = DefaultBG;
@@ -56,26 +42,21 @@ namespace RichHudFramework
                 };
             }
 
-            /// <summary>
-            /// Creates a ToolTip wrapper for the delegate. Used internally by ICursor implementation.
-            /// </summary>
-            /// <exclude/>
+/// <summary>ToolTip operation.</summary>
             public ToolTip(Func<ToolTipMembers> GetToolTipFunc)
             {
                 bgColor = DefaultBG;
                 this.GetToolTipFunc = GetToolTipFunc;
             }
 
-            /// <summary>
-            /// Implicitly converts <see cref="RichText"/> to <see cref="ToolTip"/>
-            /// </summary>
+/// <summary>ToolTip operation.</summary>
             public static implicit operator ToolTip(RichText text) =>
+/// <summary>ToolTip operation.</summary>
                 new ToolTip() { text = text };
 
-            /// <summary>
-            /// Implicitly converts <see cref="string"/> to <see cref="ToolTip"/>
-            /// </summary>
+/// <summary>ToolTip operation.</summary>
             public static implicit operator ToolTip(string text) =>
+/// <summary>ToolTip operation.</summary>
                 new ToolTip() { text = new RichText(text, DefaultText) };
         }
     }

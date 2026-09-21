@@ -4,17 +4,20 @@ import numpy as np
 from continuous_surface import Field, fixture, mesh, faces, render
 
 
+# block operation.
 def block(x=0, kelvin=400):
     return {'min':[x,0,0], 'max':[x+1,1,1], 'kelvin':kelvin}
 
 
 class ContinuousSurfaceTests(unittest.TestCase):
     """Guard thermal extrema, grid isolation, interpolation and depth ownership."""
+# test constant and independent grid fields operation.
     def test_constant_and_independent_grid_fields(self):
         points=np.array([[0,0,0],[100,0,0]])
         np.testing.assert_allclose(Field([block()]).sample(points,2),400)
         np.testing.assert_allclose(Field([block(kelvin=900)]).sample(points,2),900)
 
+# test hotspot and cooled patch stay at source operation.
     def test_hotspot_and_cooled_patch_stay_at_source(self):
         points=np.array([[12,8,0],[15,8,0],[0,0,0]])
         hot=Field(fixture(False)['nodes']).sample(points,.45)
@@ -24,6 +27,7 @@ class ContinuousSurfaceTests(unittest.TestCase):
         self.assertLess(cooled[0],hot[0]-300)
         self.assertGreater(cooled[1],cooled[2]+200)
 
+# test shared face removed and budget overrun reported operation.
     def test_shared_face_removed_and_budget_overrun_reported(self):
         self.assertEqual(len(faces([block(),block(1)])),5)
         triangles,stats=mesh([block(),block(1,900)],.6,budget=10)
@@ -33,8 +37,8 @@ class ContinuousSurfaceTests(unittest.TestCase):
         self.assertTrue(stats['overBudget'])
         self.assertEqual(stats['baseTriangles'],10)
 
+# test scalar interpolation and depth order operation.
     def test_scalar_interpolation_and_depth_order(self):
-        # Translate along the camera axis: same projected triangle, different depth.
         xyz=np.array([[0.,0.,0.],[1.,0.,0.],[0.,1.,0.]])
         near=(xyz+np.array([1.,.7,1.2]),np.array([300.,600.,900.]),600.)
         far=(xyz,np.array([100.,100.,100.]),100.)

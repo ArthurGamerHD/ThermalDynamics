@@ -13,12 +13,6 @@ using VRage.Utils;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// The electrical half of a heat pump: it gives the block a resource sink, reports the demand the
-    /// solver derived to it, and reads back what the grid supplied. The sink is created in
-    /// <see cref="Init"/> rather than declared, because an upgrade module has no definition field for
-    /// one. See known-issues.md, Open defects.
-    /// </summary>
     [MyEntityComponentDescriptor(typeof(MyObjectBuilder_UpgradeModule), false,
         "Gauge_LG_HeatPump", "Gauge_SG_HeatPump")]
     public class ThermalHeatPumpBlock : MyGameLogicComponent
@@ -29,35 +23,21 @@ namespace Thermodynamics
         private IMyFunctionalBlock functional;
         private MyResourceSinkComponent sink;
 
-        /// <summary>
-        /// How much of its rating the pump is allowed to draw, 0..1, replicated both ways. Carried here
-        /// because the game has no model for a custom slider's value.
-        /// </summary>
         private NetSync<float> powerSetting;
 
-        /// <summary>
-        /// What the pump requested on its last step, MW, which is the unit the resource system uses.
-        /// Read by the sink through a callback, so it must be a field that callback can capture.
-        /// </summary>
         private float demandMegawatts;
 
-        /// <summary>Watts the pump wants. Set by <see cref="ThermalGrid"/> after each step.</summary>
+/// <summary>Sets the demandwatts.</summary>
         public void SetDemandWatts(float watts)
         {
             float megawatts = watts > 0f ? watts * ThermalConstants.WattsToMegawatts : 0f;
 
-            // Update the resource system only when the figure changed. A pump holding steady is the
-            // common case, and re-registering its draw every step is wasted work.
             if (Math.Abs(megawatts - demandMegawatts) < 0.000001f) return;
 
             demandMegawatts = megawatts;
             if (sink != null) sink.Update();
         }
 
-        /// <summary>
-        /// Whether the block is switched on and working. A pump that is off, damaged past
-        /// functional or unpowered moves nothing.
-        /// </summary>
         public bool IsRunning
         {
             get
@@ -68,10 +48,6 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Fraction of the requested electricity the grid supplied, 0..1. An under-supplied pump runs
-        /// proportionally slower rather than stopping.
-        /// </summary>
         public float PowerAvailable
         {
             get
@@ -88,19 +64,19 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Throttle setting, 0..1. Defaults to full rating.</summary>
         public float PowerSetting
         {
             get { return powerSetting == null ? 1f : ThermalMath.Clamp01(powerSetting.Value); }
         }
 
-        /// <summary>Sets the throttle and replicates it. Called by the terminal slider.</summary>
+/// <summary>Sets the powersetting.</summary>
         public void SetPowerSetting(float value)
         {
             if (powerSetting == null) return;
             powerSetting.Value = ThermalMath.Clamp01(value);
         }
 
+/// <summary>Init operation.</summary>
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
             base.Init(objectBuilder);
@@ -116,8 +92,7 @@ namespace Thermodynamics
                     NetworkAPI.Init(Session.ModID, Settings.Name);
                 }
 
-                // One property, so its index on this entity is zero on every side. Anything added
-                // here later must go after it.
+/// <summary>NetSync operation.</summary>
                 powerSetting = new NetSync<float>(this, TransferType.Both, 1f);
 
                 AttachSink();
@@ -128,34 +103,33 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>AttachSink operation.</summary>
         private void AttachSink()
         {
-            // A block that already carries a sink keeps it: a second sink for the same resource
-            // would bill the block twice.
             if (Entity.Components.Contains(typeof(MyResourceSinkComponent))) return;
 
             MyResourceSinkInfo info = new MyResourceSinkInfo
             {
                 ResourceTypeId = MyResourceDistributorComponent.ElectricityId,
+/// <summary>MaxDrawMegawatts operation.</summary>
                 MaxRequiredInput = MaxDrawMegawatts(),
                 RequiredInputFunc = RequiredInput,
             };
 
+/// <summary>MyResourceSinkComponent operation.</summary>
             sink = new MyResourceSinkComponent();
             sink.Init(SinkGroup, info);
 
             Entity.Components.Add<MyResourceSinkComponent>(sink);
         }
 
-        /// <summary>
-        /// The block's rated draw, in the resource system's units. The sink needs a ceiling at
-        /// construction, and it must be the hardware's rating rather than the current request.
-        /// </summary>
+/// <summary>MaxDrawMegawatts operation.</summary>
         private float MaxDrawMegawatts()
         {
             return ThermalHeatPumpShapes.MaxPowerWatts(BlockSubtype()) * ThermalConstants.WattsToMegawatts;
         }
 
+/// <summary>BlockSubtype operation.</summary>
         private string BlockSubtype()
         {
             return block == null || block.BlockDefinition.SubtypeName == null
@@ -163,6 +137,7 @@ namespace Thermodynamics
                 : block.BlockDefinition.SubtypeName;
         }
 
+/// <summary>RequiredInput operation.</summary>
         private float RequiredInput()
         {
             return IsRunning ? demandMegawatts : 0f;

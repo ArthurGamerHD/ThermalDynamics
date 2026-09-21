@@ -7,7 +7,6 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>One row of the scale ladder: what a grid of this size costs, stage by stage.</summary>
     public class ScaleRow
     {
         public string Shape;
@@ -17,39 +16,23 @@ namespace Thermodynamics.Harness
         public long BoundingVolume;
         public int ExposedBlocks;
 
-        /// <summary>Adding every block and building every derived structure, once.</summary>
         public double BuildMs;
 
-        /// <summary>The conduction graph alone, rebuilt from scratch.</summary>
         public double TopologyMs;
 
-        /// <summary>One complete room mapping pass, run to completion in one call.</summary>
         public double RoomMapMs;
 
-        /// <summary>One pass over every node recomputing its exposed faces.</summary>
         public double ExposureMs;
 
-        /// <summary>
-        /// One solver step of the full configured length, with as many substeps as the grid's
-        /// stiffness asks for and no work budget applied.
-        ///
-        /// This is the cost of a full step of simulated time, which is the right figure for
-        /// comparing sizes — but on a grid large enough for <c>MaxElementVisitsPerStep</c> to bite it
-        /// is <em>not</em> what a tick pays, because the step is shortened to fit. See
-        /// <see cref="BoundedStepMs"/>, and the hitch benchmark for the distribution.
-        /// </summary>
         public double SolverStepMs;
 
-        /// <summary>What a step costs once the work budget has shortened it — what a tick pays.</summary>
         public double BoundedStepMs;
 
-        /// <summary>Substeps the budget allows at this size.</summary>
         public int SubstepBudget;
 
         public int Substeps;
         public double ResidentMb;
 
-        /// <summary>Solver cost normalised so grids of different sizes are comparable.</summary>
         public double NsPerLinkVisit
         {
             get
@@ -61,26 +44,12 @@ namespace Thermodynamics.Harness
 
         public double MsPerSimulatedSecond;
 
-        /// <summary>
-        /// The worst single tick after one block is placed — the frame the player sees stutter.
-        ///
-        /// Placing a block does not cost the block. It marks the topology dirty, and the next
-        /// tick rebuilds the conduction graph, the coolant loops and the heat pumps, and restarts
-        /// the room map. That whole set lands inside one call to <c>Update</c>, which is why this
-        /// is measured as a worst tick and not as a total.
-        /// </summary>
         public double SpikeAfterOneBlockMs;
 
-        /// <summary>
-        /// Ticks the room map takes to converge after that placement, and what they cost in
-        /// total. The mapper is budgeted per tick, so this tail is smooth by construction — but
-        /// it is also how long the grid runs on a stale exposure map.
-        /// </summary>
         public int SettleTicks;
         public double SettleTotalMs;
     }
 
-    /// <summary>A frame-pacing benchmark: what the ticks of a session actually cost.</summary>
     public class HitchResult
     {
         public string Name;
@@ -90,14 +59,6 @@ namespace Thermodynamics.Harness
         public FrameTrace Trace;
         public string Notes = "";
 
-        /// <summary>
-        /// The worst call to each stage over the run, and the tick it landed on.
-        ///
-        /// A distribution says how bad the tail is; this says what is in it. Without it a p99 of
-        /// four times the median is a fact with no next step — the tail could be the solver
-        /// doing its job on a grid that large, or a stage that is still unbudgeted, and those
-        /// want opposite responses.
-        /// </summary>
         public double TopologyMs;
         public double RoomMappingMs;
         public double ExposureMs;
@@ -107,18 +68,19 @@ namespace Thermodynamics.Harness
         public int ExposureTick = -1;
         public int SolverTick = -1;
 
-        /// <summary>Collections during the measured run, and bytes allocated by it.</summary>
         public int Gen0;
         public int Gen1;
         public int Gen2;
         public double AllocatedMb;
 
+/// <summary>DescribeGc operation.</summary>
         public string DescribeGc()
         {
             return "GC during the run: " + Gen0 + "/" + Gen1 + "/" + Gen2
                 + " collections, " + AllocatedMb.ToString("n0") + " MB allocated.";
         }
 
+/// <summary>DescribeStages operation.</summary>
         public string DescribeStages()
         {
             return "worst call per stage: topology " + TopologyMs.ToString("n1")
@@ -129,45 +91,22 @@ namespace Thermodynamics.Harness
         }
     }
 
-    /// <summary>
-    /// Synthetic load benchmarks: what the simulation costs rather than what it does, at sizes nobody
-    /// would sit through in a session. **Steady cost and spike cost are different figures with
-    /// different failure modes** and the distinction is what every measurement here rests on.
-    /// See load-and-hitching.md, The distinction the whole exercise rests on.
-    /// </summary>
     public static class LoadBenchmarks
     {
-        /// <summary>
-        /// Real seconds in one rendered frame. The host now updates every grid every frame, each
-        /// doing its share of the step it is part way through, so this is the interval the
-        /// frame-paced benchmarks measure.
-        /// </summary>
         public const float FrameSeconds = 1f / 60f;
 
-        /// <summary>
-        /// A coarser interval, used only to settle a grid quickly before measuring it. Advancing a
-        /// fixture at a sixtieth of a second would take ten times as many calls to reach the same
-        /// state and measure nothing extra.
-        /// </summary>
         public const float TickSeconds = 10f / 60f;
 
-        /// <summary>The default ladder. Every rung is roughly four times the one below it.</summary>
         public static readonly int[] DefaultSizes = { 8000, 32000, 125000, 500000, 1000000 };
 
         public static readonly string[] Names =
             { "scale", "hitch", "weld", "load", "spike", "firststep", "pace", "reach", "memory", "floor" };
 
-        // ---- the ladder --------------------------------------------------------------------
 
-        /// <summary>
-        /// Builds one grid per size and measures every stage of an update on it.
-        ///
-        /// Each stage is measured on its own rather than inferred from a total, because they
-        /// behave completely differently as the grid grows: two of them run only when the layout
-        /// changes and are the spikes, and two run every step and are the steady cost.
-        /// </summary>
+/// <summary>Scale operation.</summary>
         public static List<ScaleRow> Scale(string shape, IList<int> sizes, Action<string> log = null)
         {
+/// <summary>List operation.</summary>
             List<ScaleRow> rows = new List<ScaleRow>();
 
             for (int i = 0; i < sizes.Count; i++)
@@ -179,34 +118,23 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
+/// <summary>MeasureScale operation.</summary>
         private static ScaleRow MeasureScale(string shape, int targetCells)
         {
             HashSet<Vector3I> cells = LoadShapes.Build(shape, targetCells);
 
-            // Built from the measured block census, because substep count is set by the
-            // *stiffest* node on the grid and therefore by its lightest block. This ladder used
-            // to build armour with a grating in eight, which was a step in the right direction
-            // from one block type and still had a lightest block twelve times heavier than a
-            // real ship's — so it asked for three substeps where a field ship asks for sixteen
-            // to thirty-two, and every millisecond below was measured on a hull an order of
-            // magnitude softer than the ones it described. See <see cref="Census"/>.
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(cells);
 
+/// <summary>MeasureBuilt operation.</summary>
             return MeasureBuilt(builder, shape, targetCells);
         }
 
-        /// <summary>
-        /// The ladder's whole measurement, on a hull somebody else built.
-        ///
-        /// **Split out for `FrankenHull`**, which welds real workshop ships into one grid: the
-        /// point of that rig is the block *mixture*, which no shape argument can describe, and
-        /// every column below is worth exactly as much on a hull that came from blueprints as on
-        /// one dealt from the census. See backlog.md `G5`.
-        /// </summary>
+/// <summary>MeasureBuilt operation.</summary>
         public static ScaleRow MeasureBuilt(GridBuilder builder, string shape = "franken",
             int targetCells = 0)
         {
+/// <summary>ScaleRow operation.</summary>
             ScaleRow row = new ScaleRow();
             row.Shape = shape;
             row.TargetBlocks = targetCells > 0 ? targetCells : builder.Placed.Count;
@@ -215,6 +143,7 @@ namespace Thermodynamics.Harness
 
             Stopwatch build = Stopwatch.StartNew();
 
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -238,7 +167,6 @@ namespace Thermodynamics.Harness
                 if (simulation.Solver.Nodes[i].TotalExposedFaces > 0) row.ExposedBlocks++;
             }
 
-            // ---- the one-shot stages, each on its own ----
 
             Stopwatch watch = Stopwatch.StartNew();
             simulation.Solver.RebuildLinks();
@@ -247,10 +175,6 @@ namespace Thermodynamics.Harness
 
             watch.Restart();
             simulation.Rooms.RequestRestart(simulation.Grid);
-            // A row measured on a hull whose map never finished is not comparable with the rows
-            // above it: every block reads exposed, nothing holds air, and the environment pass runs
-            // its expensive branch everywhere. The ladder used to report exactly that at the top
-            // rung without saying so.
             if (!simulation.Rooms.RunToCompletion())
             {
                 throw new InvalidOperationException(
@@ -265,7 +189,6 @@ namespace Thermodynamics.Harness
             watch.Stop();
             row.ExposureMs = watch.Elapsed.TotalMilliseconds;
 
-            // ---- the steady stage ----
 
             SeedSpread(simulation);
 
@@ -285,9 +208,6 @@ namespace Thermodynamics.Harness
             row.Substeps = simulation.Solver.LastSubsteps;
             row.MsPerSimulatedSecond = row.SolverStepMs * simulation.Settings.StepsPerSecond;
 
-            // And again through the step length the work budget actually allows, which on a large
-            // grid is a fraction of the full one. Same total work per simulated second; the point
-            // is that it arrives in even pieces instead of in lurches.
             row.SubstepBudget = simulation.SubstepBudget;
 
             float affordable = simulation.AffordableStepSeconds(step);
@@ -299,14 +219,11 @@ namespace Thermodynamics.Harness
 
             row.BoundedStepMs = watch.Elapsed.TotalMilliseconds / measured;
 
-            // ---- what one block placed costs ----
-            //
-            // Not the block: the rebuild it triggers. Placing one block marks the topology dirty,
-            // and the next update rebuilds the conduction graph, the coolant loops, the heat
-            // pumps and the room map for the whole grid.
 
+/// <summary>Vector3I operation.</summary>
             Vector3I spare = simulation.Grid.Max + new Vector3I(0, 0, 1);
             simulation.AddBlock(
+/// <summary>BlockInstance operation.</summary>
                 new BlockInstance(Catalog.HeavyArmor(), spare, BlockOrientation.Identity), 293.15f);
 
             double worst = 0d;
@@ -333,21 +250,18 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-        // ---- frame pacing ------------------------------------------------------------------
 
-        /// <summary>
-        /// Whether the benchmarks turn on the solver's per-mechanism watt figures, which nothing in the
-        /// simulation reads. Taking a telemetry dump turns them on, so every field measurement includes
-        /// the cost of being measured. See benchmarks.md, What being measured costs.
-        /// </summary>
         public static bool CollectDiagnostics;
 
+/// <summary>Hitch operation.</summary>
         public static HitchResult Hitch(string shape, int targetCells, int ticks = 400)
         {
+/// <summary>HitchResult operation.</summary>
             HitchResult result = new HitchResult();
             result.Name = "hitch " + shape + " " + targetCells.ToString("n0");
 
             Stopwatch build = Stopwatch.StartNew();
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = BuildSettled(shape, targetCells);
             build.Stop();
 
@@ -364,29 +278,32 @@ namespace Thermodynamics.Harness
             int gen2 = GC.CollectionCount(2);
             long allocated = GC.GetTotalAllocatedBytes(false);
 
+/// <summary>FrameTrace operation.</summary>
             FrameTrace trace = new FrameTrace(result.Name);
             EnvironmentSample sample = Worlds.Space(new Vector3(0f, 1f, 0f));
 
             BlockModel armour = Catalog.HeavyArmor();
+/// <summary>Vector3I operation.</summary>
             Vector3I weldAt = simulation.Grid.Max + new Vector3I(0, 0, 2);
             const float frame = FrameSeconds;
 
+/// <summary>Stopwatch operation.</summary>
             Stopwatch watch = new Stopwatch();
 
             for (int tick = 0; tick < ticks; tick++)
             {
+/// <summary>StageTimings operation.</summary>
                 StageTimings timings = new StageTimings();
                 simulation.Profiler = timings;
 
                 string what = "steady";
 
-                // One block welded a quarter of the way in, and one ground off half way. Both
-                // are single events in a session and both invalidate everything.
                 if (tick == ticks / 4)
                 {
                     simulation.AddBlock(new BlockInstance(armour, weldAt, BlockOrientation.Identity), 293.15f);
                     what = "one block placed";
                 }
+/// <summary>if operation.</summary>
                 else if (tick == ticks / 2)
                 {
                     BlockInstance placed = simulation.Grid.GetAtCell(weldAt);
@@ -413,19 +330,15 @@ namespace Thermodynamics.Harness
             return result;
         }
 
-        /// <summary>
-        /// Sustained construction: a block placed on every tick, which is what a welder does.
-        ///
-        /// Every one of them dirties the topology, so this is the worst realistic case for the
-        /// rebuild path — and unlike the single placement in <see cref="Hitch"/>, it never gets
-        /// a quiet tick to recover in.
-        /// </summary>
+/// <summary>Weld operation.</summary>
         public static HitchResult Weld(string shape, int targetCells, int ticks = 120)
         {
+/// <summary>HitchResult operation.</summary>
             HitchResult result = new HitchResult();
             result.Name = "weld " + shape + " " + targetCells.ToString("n0");
 
             Stopwatch build = Stopwatch.StartNew();
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = BuildSettled(shape, targetCells);
             build.Stop();
 
@@ -440,20 +353,23 @@ namespace Thermodynamics.Harness
             int gen2 = GC.CollectionCount(2);
             long allocated = GC.GetTotalAllocatedBytes(false);
 
+/// <summary>FrameTrace operation.</summary>
             FrameTrace trace = new FrameTrace(result.Name);
             EnvironmentSample sample = Worlds.Shadow();
             BlockModel armour = Catalog.HeavyArmor();
 
-            // A run of new cells laid alongside the hull, so every placement is a real topology
-            // change with a real neighbour rather than an isolated node in empty space.
+/// <summary>Vector3I operation.</summary>
             Vector3I start = simulation.Grid.Min - new Vector3I(2, 0, 0);
+/// <summary>Stopwatch operation.</summary>
             Stopwatch watch = new Stopwatch();
 
             for (int tick = 0; tick < ticks; tick++)
             {
+/// <summary>StageTimings operation.</summary>
                 StageTimings timings = new StageTimings();
                 simulation.Profiler = timings;
 
+/// <summary>Vector3I operation.</summary>
                 Vector3I at = start + new Vector3I(0, 0, tick);
                 simulation.AddBlock(new BlockInstance(armour, at, BlockOrientation.Identity), 293.15f);
 
@@ -472,16 +388,14 @@ namespace Thermodynamics.Harness
             return result;
         }
 
-        /// <summary>
-        /// World load: what building the simulation for a grid this size costs before the first
-        /// tick. A player sees this as the loading screen, or as the freeze when a large
-        /// blueprint is pasted.
-        /// </summary>
+/// <summary>Load operation.</summary>
         public static HitchResult Load(string shape, int targetCells)
         {
+/// <summary>HitchResult operation.</summary>
             HitchResult result = new HitchResult();
             result.Name = "load " + shape + " " + targetCells.ToString("n0");
 
+/// <summary>FrameTrace operation.</summary>
             FrameTrace trace = new FrameTrace(result.Name);
             HashSet<Vector3I> cells = LoadShapes.Build(shape, targetCells);
 
@@ -491,6 +405,7 @@ namespace Thermodynamics.Harness
             BlockModel armour = Catalog.HeavyArmor();
             foreach (Vector3I cell in cells) builder.Place(armour, cell);
 
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -513,7 +428,6 @@ namespace Thermodynamics.Harness
             return result;
         }
 
-        /// <summary>What a setting bundle did to a grid that is also radiating to space.</summary>
         public class StabilityRow
         {
             public string Label;
@@ -528,33 +442,22 @@ namespace Thermodynamics.Harness
             public bool WentBad;
         }
 
-        /// <summary>
-        /// Runs a grid with the environment switched on and reports whether it stayed physical.
-        ///
-        /// This is the check that decides how far an arcade profile can be pushed. The overshoot
-        /// clamp caps conduction at the energy that equalises a pair, so conduction is safe at any
-        /// step length — but <b>radiation and convection are not clamped</b>. Their stiffness is in
-        /// the substep estimate, so ordinarily the solver simply takes more substeps; cap the
-        /// substeps and that protection is gone, and a block can be asked to shed more heat in one
-        /// step than it holds.
-        ///
-        /// So "turn the transfer up and the substeps down" has a limit, and it is set by the
-        /// environment rather than by conduction. Finding it is the difference between a profile
-        /// and a guess.
-        /// </summary>
+/// <summary>Stability operation.</summary>
         public static StabilityRow Stability(string label, int frequency, float heatTimeScale,
             int maxSubsteps, float realSeconds)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.Frequency = frequency;
             settings.HeatTimeScale = heatTimeScale;
             settings.MaxSubsteps = maxSubsteps;
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
+/// <summary>Stability operation.</summary>
             return Stability(label, settings, realSeconds);
         }
 
-        /// <summary>The same run, driven by a settings bundle a profile has filled in.</summary>
+/// <summary>Stability operation.</summary>
         public static StabilityRow Stability(string label, ThermalSettings settings, float realSeconds)
         {
             float heatTimeScale = settings.HeatTimeScale;
@@ -566,11 +469,11 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
             while (simulation.HasPendingWork) simulation.Update(FrameSeconds, Worlds.Shadow());
 
-            // A hot spot and a cold hull, radiating into space: the ordinary case.
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             for (int i = 0; i < nodes.Count; i++) nodes[i].Temperature = 293.15f;
             nodes[nodes.Count / 2].Temperature = 1200f;
 
+/// <summary>StabilityRow operation.</summary>
             StabilityRow row = new StabilityRow();
             row.Label = label;
             row.HeatTimeScale = heatTimeScale;
@@ -613,8 +516,10 @@ namespace Thermodynamics.Harness
             return row;
         }
 
+/// <summary>StabilityTable operation.</summary>
         public static string StabilityTable(IList<StabilityRow> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append("case".PadRight(18)).Append("heatScale".PadLeft(11))
               .Append("maxSub".PadLeft(8)).Append("min K".PadLeft(10))
@@ -637,7 +542,6 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        /// <summary>How far and how fast heat travelled, and what that cost.</summary>
         public class ReachRow
         {
             public string Label;
@@ -646,13 +550,10 @@ namespace Thermodynamics.Harness
             public float HeatTimeScale;
             public int MaxSubsteps;
 
-            /// <summary>Blocks the front of the heat had crossed when the run ended.</summary>
             public int BlocksReached;
 
-            /// <summary>Real seconds the run covered.</summary>
             public float RealSeconds;
 
-            /// <summary>Blocks per real second — the number a player feels as responsiveness.</summary>
             public double BlocksPerRealSecond
             {
                 get { return RealSeconds <= 0f ? 0d : BlocksReached / (double)RealSeconds; }
@@ -661,35 +562,29 @@ namespace Thermodynamics.Harness
             public long Substeps;
             public double SubstepsPerRealSecond;
 
-            /// <summary>Element visits per real second: the cost, machine-independently.</summary>
             public double WorkPerRealSecond;
 
             public double MillisecondsPerRealSecond;
 
-            /// <summary>Steps that wanted more substeps than they were allowed.</summary>
             public long ClampedSteps;
             public long Steps;
         }
 
-        /// <summary>
-        /// How fast heat crosses a grid, and what that speed costs: blocks crossed along a held-hot run
-        /// after a fixed number of real seconds, which is what a player means by responsiveness and is
-        /// comparable across any settings. **One substep can move heat at most one block**, so
-        /// responsiveness and cost are one dial seen from two sides.
-        /// See profiles.md, Designing your own.
-        /// </summary>
+/// <summary>Reach operation.</summary>
         public static ReachRow Reach(string label, int frequency, float speed, float heatTimeScale,
             int maxSubsteps, float realSeconds, int length)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.Frequency = frequency;
             settings.SimulationSpeed = speed;
             settings.HeatTimeScale = heatTimeScale;
             settings.MaxSubsteps = maxSubsteps;
+/// <summary>Reach operation.</summary>
             return Reach(label, settings, realSeconds, length);
         }
 
-        /// <summary>The same measurement, driven by a settings bundle a profile has filled in.</summary>
+/// <summary>Reach operation.</summary>
         public static ReachRow Reach(string label, ThermalSettings settings, float realSeconds, int length)
         {
             int frequency = settings.Frequency;
@@ -697,8 +592,6 @@ namespace Thermodynamics.Harness
             float heatTimeScale = settings.HeatTimeScale;
             int maxSubsteps = settings.MaxSubsteps;
 
-            // Conduction alone: radiation and convection would bleed the front away and measure
-            // the environment rather than how fast heat travels through metal.
             settings.EnableEnvironment = false;
             settings.EnableRadiation = false;
             settings.EnableConvection = false;
@@ -725,6 +618,7 @@ namespace Thermodynamics.Harness
                 run[i].Temperature = 300f;
             }
 
+/// <summary>ReachRow operation.</summary>
             ReachRow row = new ReachRow();
             row.Label = label;
             row.Frequency = frequency;
@@ -742,8 +636,6 @@ namespace Thermodynamics.Harness
 
             for (int f = 0; f < frames; f++)
             {
-                // The source end is held, so the front is fed rather than the whole run drifting
-                // to one average.
                 run[0].Temperature = 1000f;
                 simulation.Update(FrameSeconds, sample);
                 if (simulation.Solver.LastStepWasClamped && simulation.Work.SolverSteps > row.Steps)
@@ -755,7 +647,6 @@ namespace Thermodynamics.Harness
 
             watch.Stop();
 
-            // The front is the furthest block that has taken a tenth of the way to the source.
             for (int i = length - 1; i >= 0; i--)
             {
                 if (run[i].Temperature < 370f) continue;
@@ -772,8 +663,10 @@ namespace Thermodynamics.Harness
             return row;
         }
 
+/// <summary>ReachTable operation.</summary>
         public static string ReachTable(IList<ReachRow> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.Append("profile".PadRight(14)).Append("freq".PadLeft(6))
@@ -802,7 +695,6 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        /// <summary>One setting pairing, and what it cost and achieved over the same real time.</summary>
         public class PaceRow
         {
             public float Speed;
@@ -814,24 +706,17 @@ namespace Thermodynamics.Harness
             public long WorkUnits;
             public double Milliseconds;
 
-            /// <summary>Simulated seconds advanced per real second.</summary>
             public double SimulatedPerReal;
 
-            /// <summary>How far the tracked block moved over the run, in kelvin.</summary>
             public float TemperatureChange;
         }
 
-        /// <summary>
-        /// Whether halving <c>SimulationSpeed</c> and doubling <c>HeatTimeScale</c> buys anything. The
-        /// arithmetic says the two cancel while a grid is substep-limited and that the trade is real
-        /// when it is not, so this runs the pairings and reports both the cost and what the heat did.
-        /// See configuration.md, Trading simulation speed for heat transfer.
-        /// </summary>
+/// <summary>Pace operation.</summary>
         public static List<PaceRow> Pace(string shape, int targetCells, float realSeconds)
         {
+/// <summary>List operation.</summary>
             List<PaceRow> rows = new List<PaceRow>();
 
-            // Constant product: the same thermal pace against the wall clock, if the theory holds.
             float[] speeds = { 1f, 0.5f, 0.25f };
             float[] scales = { 225f, 450f, 900f };
 
@@ -840,21 +725,23 @@ namespace Thermodynamics.Harness
                 rows.Add(MeasurePace(shape, targetCells, realSeconds, speeds[i], scales[i], 4));
             }
 
-            // And one that changes only Frequency, to show it cancelling out.
             rows.Add(MeasurePace(shape, targetCells, realSeconds, 1f, 225f, 1));
             rows.Add(MeasurePace(shape, targetCells, realSeconds, 1f, 225f, 16));
 
             return rows;
         }
 
+/// <summary>MeasurePace operation.</summary>
         private static PaceRow MeasurePace(string shape, int targetCells, float realSeconds,
             float speed, float heatTimeScale, int frequency)
         {
+/// <summary>PaceRow operation.</summary>
             PaceRow row = new PaceRow();
             row.Speed = speed;
             row.HeatTimeScale = heatTimeScale;
             row.Frequency = frequency;
 
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = BuildSettled(shape, targetCells);
             while (simulation.HasPendingWork) simulation.Update(TickSeconds, Worlds.Shadow());
 
@@ -863,13 +750,11 @@ namespace Thermodynamics.Harness
             settings.HeatTimeScale = heatTimeScale;
             settings.Frequency = frequency;
 
-            // The budget would bound the substep count and hide the very effect being measured.
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
             SeedSpread(simulation);
 
-            // One block watched all the way through, so "did the heat keep pace" is a number.
             ThermalNode tracked = simulation.Solver.Nodes[simulation.Solver.Nodes.Count / 2];
             float before = tracked.Temperature;
 
@@ -897,8 +782,10 @@ namespace Thermodynamics.Harness
             return row;
         }
 
+/// <summary>PaceTable operation.</summary>
         public static string PaceTable(IList<PaceRow> rows, float realSeconds)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.Append("speed".PadLeft(7)).Append("heatScale".PadLeft(11))
@@ -925,7 +812,6 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        /// <summary>What one stage of building a grid cost in memory.</summary>
         public class MemoryRow
         {
             public string Stage;
@@ -936,81 +822,64 @@ namespace Thermodynamics.Harness
             public double BytesPerBlock;
         }
 
-        /// <summary>
-        /// Where a grid's memory goes, attributed to the structure that took it.
-        ///
-        /// Measured by building the grid in stages and reading the managed heap between them,
-        /// rather than by adding up what the type layouts ought to cost. The two disagree: a
-        /// dictionary keyed on a twelve-byte vector spends about forty bytes an entry once its
-        /// buckets, hash codes and load factor are counted, and a hash set over a bounding volume
-        /// spends that for every cell of empty space inside a ship's envelope.
-        ///
-        /// Collected before each reading so what is reported is what is retained rather than what
-        /// happened to be uncollected.
-        /// </summary>
+/// <summary>Memory operation.</summary>
         public static List<MemoryRow> Memory(string shape, int targetCells)
         {
+/// <summary>List operation.</summary>
             List<MemoryRow> rows = new List<MemoryRow>();
 
             HashSet<Vector3I> cells = LoadShapes.Build(shape, targetCells);
             BlockModel[] tiers = Census.Models();
 
+/// <summary>Sets the tled.</summary>
             long baseline = Settled();
 
-            // 1. the block instances themselves
             GridBuilder builder = GridBuilder.Large();
+/// <summary>List operation.</summary>
             List<BlockInstance> instances = new List<BlockInstance>();
             int index = 0;
             foreach (Vector3I cell in cells)
             {
+/// <summary>BlockInstance operation.</summary>
                 BlockInstance block = new BlockInstance(
                     tiers[Census.TierAt(index++)], cell, BlockOrientation.Identity);
                 instances.Add(block);
             }
 
+/// <summary>Sets the tled.</summary>
             long afterInstances = Settled();
             int blocks = instances.Count;
             rows.Add(Row("BlockInstance", afterInstances - baseline, blocks, blocks,
                 "one object per block, plus its cell and surface arrays"));
 
-            // 2. the grid's own indexes
             GridModel grid = builder.Grid;
             for (int i = 0; i < instances.Count; i++) grid.Add(instances[i]);
 
+/// <summary>Sets the tled.</summary>
             long afterGrid = Settled();
             rows.Add(Row("GridModel indexes", afterGrid - afterInstances, blocks, blocks,
                 "by cell, by slot, and the flat list"));
 
-            // 3. surfaces
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
             simulation.Surfaces.Rebuild(grid);
 
+/// <summary>Sets the tled.</summary>
             long afterSurfaces = Settled();
             rows.Add(Row("SurfaceMap", afterSurfaces - afterGrid, simulation.Surfaces.CellCount, blocks,
                 "one packed entry per occupied cell, holding both surface layers"));
 
-            // 4. solver nodes and the conduction graph
             for (int i = 0; i < instances.Count; i++)
             {
                 simulation.Solver.AddBlock(instances[i], 293.15f);
             }
             simulation.Solver.RebuildLinks();
 
+/// <summary>Sets the tled.</summary>
             long afterSolver = Settled();
             rows.Add(Row("Solver", afterSolver - afterSurfaces, simulation.Solver.LinkCount, blocks,
                 "nodes, mirrored arrays, links and their chains"));
 
-            // 5. the room map, which floods the whole bounding volume.
-            //
-            // Two figures, because they differ by an order of magnitude and only one of them is
-            // usually quoted. What the finished map retains is modest. The peak below is taken with
-            // `GC.GetTotalMemory(false)`, which is deliberate and is **not** a figure for live
-            // structures: it counts what the pass has allocated and not yet had collected, so it is
-            // the high-water mark the process has to have room for rather than the mapper's
-            // footprint. The live part is a visited bit and a sealing byte per cell of the box —
-            // 1.7 MB on a 1,499,616-cell box against the 18.4 the row reads — and the difference is
-            // the pass's own garbage, most of it the `RoomMap` it builds and the one it supersedes.
-            // See performance.md, Pass 10, Iteration 3.
             Vector3I extents = (grid.Max - grid.Min) + Vector3I.One;
             long volume = (long)extents.X * extents.Y * extents.Z;
 
@@ -1024,16 +893,14 @@ namespace Thermodynamics.Harness
                 if (now > peak) peak = now;
             }
 
+/// <summary>Sets the tled.</summary>
             long afterRooms = Settled();
 
-            // Which part of the volume the map is holding, because the answer decides whether this
-            // row scales with the ship or with the box around it. External cells are a count; solid
-            // and room cells are stored, so a hull whose interior maps as rooms costs far more here
-            // than one whose interior maps as open air, at the same block count.
             RoomMap map = simulation.Rooms.Map;
             rows.Add(Row("RoomMap retained", afterRooms - afterSolver, volume, blocks,
                 "stored: " + map.SolidCellCount.ToString("n0") + " solid + "
                 + map.RoomCellCount.ToString("n0") + " cells in " + map.RoomCount.ToString("n0")
+/// <summary>rooms operation.</summary>
                 + " rooms (" + (map.RoomCellCapacity - map.RoomCellCount).ToString("n0")
                 + " cells of slack); counted, not stored: "
                 + map.ExternalCellCount.ToString("n0") + " external"));
@@ -1044,10 +911,6 @@ namespace Thermodynamics.Harness
             rows.Add(Row("TOTAL peak", peak - baseline, blocks, blocks,
                 "what the process actually has to hold"));
 
-            // Without this the readings above are nonsense, and quietly so. Nothing uses these
-            // after the last stage, so the collection inside the final measurement is entitled to
-            // reclaim the entire grid — which reported the retained total as zero and the room map
-            // as having freed 142 MB it never held.
             GC.KeepAlive(simulation);
             GC.KeepAlive(instances);
             GC.KeepAlive(grid);
@@ -1056,8 +919,10 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
+/// <summary>Row operation.</summary>
         private static MemoryRow Row(string stage, long bytes, long entries, int blocks, string note)
         {
+/// <summary>MemoryRow operation.</summary>
             MemoryRow row = new MemoryRow();
             row.Stage = stage;
             row.Megabytes = bytes / (1024d * 1024d);
@@ -1067,6 +932,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
+/// <summary>Sets the tled.</summary>
         private static long Settled()
         {
             GC.Collect();
@@ -1075,8 +941,10 @@ namespace Thermodynamics.Harness
             return GC.GetTotalMemory(true);
         }
 
+/// <summary>MemoryTable operation.</summary>
         public static string MemoryTable(IList<MemoryRow> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append("stage".PadRight(24)).Append("MB".PadLeft(10))
               .Append("B/block".PadLeft(10)).Append("entries".PadLeft(14))
@@ -1094,60 +962,34 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        // ---- attribution --------------------------------------------------------------------
 
-        /// <summary>
-        /// What the ticks after a single block placement cost, per stage.
-        ///
-        /// Per stage worst rather than one worst tick, because the stages do not land together:
-        /// the conduction rebuild goes on the tick after the placement, the room map converges
-        /// hundreds of ticks later, and the exposure pass rides on the tick that publishes it.
-        /// Reporting only the worst tick therefore hides two of the three stalls behind whichever
-        /// one happened to be largest.
-        /// </summary>
         public class SpikeReport
         {
             public int Blocks;
             public int Links;
 
-            /// <summary>Worst single tick over the whole settle, and its stage split.</summary>
             public double WorstTickMs;
 
-            /// <summary>The worst single call to each stage, anywhere in the settle.</summary>
             public double TopologyMs;
             public double RoomMappingMs;
             public double ExposureMs;
             public double SolverMs;
 
-            /// <summary>
-            /// Which tick each stage's worst call landed on. A stage whose worst call is on the
-            /// first tick is doing setup work; one whose worst is on the last is doing teardown;
-            /// one whose worst is in the middle is doing its actual job badly. Three different
-            /// problems that a single millisecond figure cannot tell apart.
-            /// </summary>
             public int TopologyTick = -1;
             public int RoomMappingTick = -1;
             public int ExposureTick = -1;
             public int SolverTick = -1;
 
             public int Ticks;
+/// <summary>SimulationWork operation.</summary>
             public SimulationWork Work = new SimulationWork();
 
-            /// <summary>
-            /// Collections and bytes allocated over the settle.
-            ///
-            /// Worth reporting next to the stage timings because a stall is not always the code
-            /// the stopwatch was wrapped around. A pass that replaces a map of the whole bounding
-            /// volume makes the old one garbage all at once, and the collection that follows is
-            /// charged to whichever stage happened to be running — so a room stage with a large
-            /// worst call and a gen-2 collection against it is a memory problem wearing a
-            /// mapping problem's clothes.
-            /// </summary>
             public int Gen0;
             public int Gen1;
             public int Gen2;
             public double AllocatedMb;
 
+/// <summary>Describe operation.</summary>
             public string Describe()
             {
                 return "worst tick " + WorstTickMs.ToString("n1") + " ms over " + Ticks
@@ -1170,15 +1012,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// Places one block on a settled grid and reports what the ticks after it spent, stage
-        /// by stage and count by count.
-        ///
-        /// The ladder says the spike is large; this says which stage it is, which is the
-        /// difference between a number to worry about and a line to change.
-        /// </summary>
+/// <summary>Spike operation.</summary>
         public static SpikeReport Spike(string shape, int targetCells)
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = BuildSettled(shape, targetCells);
             while (simulation.HasPendingWork)
             {
@@ -1190,16 +1027,14 @@ namespace Thermodynamics.Harness
             StageTimings timings = null;
             simulation.Work.Reset();
 
+/// <summary>SpikeReport operation.</summary>
             SpikeReport report = new SpikeReport();
 
-            // Read before the placement, and through LinkCount rather than Links. The Links
-            // getter rebuilds a stale graph, so a benchmark that reads it after placing a block
-            // measures its own instrumentation: the first run of this reported two topology
-            // rebuilds for one placement, and one of them was this line.
             report.Blocks = simulation.Solver.Nodes.Count;
             report.Links = simulation.Solver.LinkCount;
 
             BlockModel armour = Catalog.HeavyArmor();
+/// <summary>Vector3I operation.</summary>
             Vector3I at = simulation.Grid.Max + new Vector3I(0, 0, 2);
             simulation.AddBlock(new BlockInstance(armour, at, BlockOrientation.Identity), 293.15f);
 
@@ -1208,12 +1043,12 @@ namespace Thermodynamics.Harness
             int gen2 = GC.CollectionCount(2);
             long allocated = GC.GetTotalAllocatedBytes(false);
 
+/// <summary>Stopwatch operation.</summary>
             Stopwatch watch = new Stopwatch();
 
             do
             {
-                // A fresh set of timings per tick, so a stage's worst call can be attributed to
-                // the tick it happened on rather than only to the stage.
+/// <summary>StageTimings operation.</summary>
                 timings = new StageTimings();
                 simulation.Profiler = timings;
 
@@ -1243,6 +1078,7 @@ namespace Thermodynamics.Harness
             return report;
         }
 
+/// <summary>RecordGc operation.</summary>
         private static void RecordGc(HitchResult result, int gen0, int gen1, int gen2, long allocated)
         {
             result.Gen0 = GC.CollectionCount(0) - gen0;
@@ -1251,7 +1087,7 @@ namespace Thermodynamics.Harness
             result.AllocatedMb = (GC.GetTotalAllocatedBytes(false) - allocated) / (1024d * 1024d);
         }
 
-        /// <summary>Folds one tick's stage timings into a run's per-stage worst calls.</summary>
+/// <summary>RecordStages operation.</summary>
         private static void RecordStages(HitchResult result, StageTimings timings, int tick)
         {
             double topology = timings.WorstMs(SimulationPhase.Topology);
@@ -1267,6 +1103,7 @@ namespace Thermodynamics.Harness
             if (solver > result.SolverMs) { result.SolverMs = solver; result.SolverTick = tick; }
         }
 
+/// <summary>Record operation.</summary>
         private static void Record(SpikeReport report, StageTimings timings, SimulationPhase phase, int tick)
         {
             double ms = timings.WorstMs(phase);
@@ -1288,21 +1125,8 @@ namespace Thermodynamics.Harness
             }
         }
 
-        // ---- shared -------------------------------------------------------------------------
 
-        /// <summary>
-        /// Clears the harness's own construction garbage before a measured run.
-        ///
-        /// Building a grid of half a million blocks leaves hundreds of megabytes of dead
-        /// intermediate state — the shape's cell set, the builder's list, the flood fill's
-        /// working map. Collecting it at some arbitrary point during the measured ticks charges
-        /// a two-hundred-millisecond gen-2 collection to whichever tick was running, and it reads
-        /// exactly like a simulation stall. The first run of the hitch benchmark reported one at
-        /// tick 1 and it was this.
-        ///
-        /// Collections the simulation itself causes are still counted and reported, which is the
-        /// distinction worth keeping: the harness's garbage is noise, and the mod's is a finding.
-        /// </summary>
+/// <summary>Sets the tlememory.</summary>
         private static void SettleMemory()
         {
             GC.Collect();
@@ -1310,18 +1134,9 @@ namespace Thermodynamics.Harness
             GC.Collect();
         }
 
-        /// <summary>
-        /// Set false to build hulls the way the benchmarks used to — heavy armour with a grating
-        /// in eight — instead of from the measured block census.
-        ///
-        /// Kept only so an old figure can be reproduced. The legacy mix is not a ship: its
-        /// lightest block is twelve times heavier than a real ship's, so it asks for 2.25 substeps
-        /// where a real hull asks for twenty to thirty, and it makes the solver look an order of
-        /// magnitude cheaper than it is. See <see cref="Census"/>.
-        /// </summary>
         public static bool UseCensus = true;
 
-        /// <summary>Builds a grid and takes it all the way to a mapped, settled state.</summary>
+/// <summary>Builds the API method table.</summary>
         public static ThermalSimulation BuildSettled(string shape, int targetCells)
         {
             HashSet<Vector3I> cells = LoadShapes.Build(shape, targetCells);
@@ -1342,6 +1157,7 @@ namespace Thermodynamics.Harness
                 }
             }
 
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -1353,14 +1169,7 @@ namespace Thermodynamics.Harness
             return simulation;
         }
 
-        /// <summary>
-        /// Spreads temperatures across 250-750 K, deterministically.
-        ///
-        /// The conduction loop skips a link whose ends agree, so a grid left at one temperature
-        /// measures the cost of not conducting. The generator is written out rather than taken
-        /// from <c>Random</c> so the sequence is the same on any runtime — the same reason the
-        /// scenario library does it this way.
-        /// </summary>
+/// <summary>SeedSpread operation.</summary>
         public static void SeedSpread(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -1376,9 +1185,7 @@ namespace Thermodynamics.Harness
         }
 
 
-        // ---- the substep floor -------------------------------------------------------------
 
-        /// <summary>One row of the substep floor sweep: what a cap buys, and what it costs.</summary>
         public class FloorRow
         {
             public int Cap;
@@ -1388,56 +1195,31 @@ namespace Thermodynamics.Harness
             public int Floored;
             public float MaxError;
             public double RmsError;
-            /// <summary>
-            /// Hottest block at the end of the run, and how far that is from the uncapped run's.
-            ///
-            /// The figure that decides overheat damage, and the one a diffusion test cannot
-            /// answer: a spread of temperatures left to even out says what the cap does to a
-            /// transient, while a ship held at equilibrium by its own thrusters says what it does
-            /// to the number a player is actually looking at.
-            /// </summary>
             public float PeakTemperature;
             public float PeakError;
 
-            /// <summary>
-            /// Simulated seconds in one solver step, which every other figure in the row is
-            /// relative to.
-            ///
-            /// A step of `dt` needs `dt * r_max / safety` substeps, so the demand — and with it
-            /// which blocks a given cap reaches, and what that cap is worth — is proportional to
-            /// this. A table without it cannot be read, and one read against the wrong value is
-            /// wrong by exactly the ratio: the figures in stiffness.md were taken at a quarter
-            /// second and quoted against a shipped default of an eighth, which doubled every
-            /// speed-up on the page.
-            /// </summary>
             public float StepSeconds;
 
-            /// <summary>Airspeed the row was measured at, m/s. Zero is vacuum.</summary>
             public float AirSpeed;
         }
 
-        /// <summary>
-        /// What <c>MaxSubstepsPerBlock</c> buys and what it costs, swept across caps. Built from the
-        /// block <see cref="Census"/>, whose *shape* is what decides how many blocks a cap reaches, and
-        /// measured against the uncapped run rather than an analytic answer, because the question is
-        /// how far the approximation moves it and on which blocks.
-        /// See stiffness.md, A per-block substep cap.
-        /// </summary>
+/// <summary>SubstepFloor operation.</summary>
         public static List<FloorRow> SubstepFloor(string shape, int size, int steps,
             IList<int> caps, Action<string> log = null, bool driven = false, int frequency = 0,
             float airSpeed = 0f)
         {
+/// <summary>List operation.</summary>
             List<FloorRow> rows = new List<FloorRow>();
             float[] reference = null;
             float referencePeak = 0f;
 
-            // The first row measured would otherwise be measuring the JIT.
             RunFloor(shape, Math.Min(size, 2000), 2, 0, null, driven, frequency, airSpeed);
 
             for (int i = 0; i < caps.Count; i++)
             {
                 if (log != null) log("cap " + caps[i]);
 
+/// <summary>RunFloor operation.</summary>
                 FloorRow row = RunFloor(shape, size, steps, caps[i], reference, driven, frequency,
                     airSpeed);
                 if (reference == null)
@@ -1453,9 +1235,9 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        /// <summary>The temperatures the last <see cref="RunFloor"/> ended on.</summary>
         private static float[] lastTemperatures;
 
+/// <summary>RunFloor operation.</summary>
         private static FloorRow RunFloor(string shape, int size, int steps, int cap,
             float[] reference, bool driven, int frequency, float airSpeed)
         {
@@ -1464,20 +1246,17 @@ namespace Thermodynamics.Harness
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(cells);
 
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubstepsPerBlock = cap;
 
-            // Zero means the shipped default, which is what a table meant to inform a default
-            // should be read at. Anything else is here so a table taken at another step length
-            // can be reproduced rather than argued about.
             if (frequency > 0) settings.Frequency = frequency;
 
-            // Both of the bounds that would otherwise hide what the floor does: one refuses the
-            // substeps the estimate asks for, the other shortens the step rather than pay.
             settings.MaxSubsteps = 4096;
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(settings, builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -1490,9 +1269,6 @@ namespace Thermodynamics.Harness
 
             if (driven)
             {
-                // The measured share of heat producers, at the measured wattage, left to reach
-                // the equilibrium they hold the hull at. Nothing is seeded: the gradient this
-                // measures is the one the ship makes for itself.
                 Census.DriveCensus(simulation);
             }
             else
@@ -1501,22 +1277,16 @@ namespace Thermodynamics.Harness
             }
 
 
-            // **Air is where a per-block floor has most to reach**, because convection is what
-            // makes a light block stiff — the vacuum column is the one the floor was designed
-            // against and the one that understates it. See backlog.md, `C3` and `C19`.
             EnvironmentSample sample = airSpeed > 0f
                 ? Worlds.Flight(1f, airSpeed)
                 : Worlds.Space(new Vector3(0f, 1f, 0f));
 
+/// <summary>FloorRow operation.</summary>
             FloorRow row = new FloorRow();
             row.Cap = cap;
             row.AirSpeed = airSpeed;
             row.StepSeconds = settings.StepSeconds;
             row.Nodes = count;
-            // Both read after a step rather than before one, and both for the same reason: the
-            // stability estimate and the floor read the environment, so a demand taken before the
-            // grid has met its air is a vacuum figure wearing an atmospheric label — which is what
-            // this table said the first time it was run in air.
             simulation.StepExact(1, sample);
 
             row.RequiredSubsteps = simulation.Solver.LastRequiredSubsteps;
@@ -1552,8 +1322,10 @@ namespace Thermodynamics.Harness
             return row;
         }
 
+/// <summary>FloorTable operation.</summary>
         public static string FloorTable(IList<FloorRow> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.Append("cap".PadLeft(6))
@@ -1568,7 +1340,6 @@ namespace Thermodynamics.Harness
               .Append("rmsErr K".PadLeft(11))
               .Append('\n');
 
-            // Stated rather than assumed: every figure below is proportional to it.
             if (rows.Count > 0)
             {
                 sb.Append("  step ")
@@ -1604,128 +1375,68 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        // ---- the substep ceiling -----------------------------------------------------------
 
-        /// <summary>
-        /// One row of the substep ceiling sweep: what refusing a demand does to the answer.
-        ///
-        /// The floor sweep above is the other half of the same question. `MaxSubstepsPerBlock`
-        /// declines to resolve a *block* and says so by raising its capacity; `MaxSubsteps`
-        /// declines to resolve the *step* and says nothing at all — it hands back the ceiling and
-        /// integrates a demand it refused. See stiffness.md, What refusing the demand costs.
-        /// </summary>
         public class CeilingRow
         {
-            /// <summary>The <c>MaxSubsteps</c> this row ran at.</summary>
             public int Ceiling;
 
-            /// <summary>What the stiffest element asked for at the start of the run.</summary>
             public float RequiredSubsteps;
 
-            /// <summary>Substeps actually granted, averaged over the run.</summary>
             public double MeanGranted;
 
-            /// <summary>
-            /// How far the ceiling is over-subscribed: what was demanded over what it granted.
-            ///
-            /// **The ratio is the quantity, not the count.** A demand of 73 refused to 64 and a
-            /// demand of 36 refused to 32 are the same approximation asked of the integrator, which
-            /// is what lets a rig answer for a population it is not a member of.
-            /// </summary>
             public float Oversubscription;
 
-            /// <summary>Whether the ceiling refused what the estimate asked for.</summary>
             public bool Bound;
 
             public double Milliseconds;
             public int Nodes;
 
-            /// <summary>Worst and root-mean-square departure from the run that was granted its demand.</summary>
             public float MaxError;
             public double RmsError;
 
-            /// <summary>
-            /// Hottest block at the end of the run, and how far that is from the granted run's.
-            ///
-            /// The figure overheat damage is taken off, so it is the one that says whether a
-            /// refused demand changes what happens to a player's ship rather than only what the
-            /// numbers look like.
-            /// </summary>
             public float PeakTemperature;
             public float PeakError;
 
-            /// <summary>Simulated seconds in one solver step; every substep figure is proportional to it.</summary>
             public float StepSeconds;
 
-            /// <summary>Airspeed the run was made at, m/s, and the air density it met.</summary>
             public float Speed;
             public float AirDensity;
 
-            /// <summary>Which hull this row was measured on. See <see cref="CeilingFixtures"/>.</summary>
             public string Fixture;
 
-            /// <summary>What the fixture built, so a row cannot report a plumbed hull with no ring.</summary>
             public int CoolantLoops;
             public int RoomsWithAir;
 
-            /// <summary>Hottest coolant parcel or room air at the end of the run, K.</summary>
             public float PeakCoupledTemperature;
         }
 
-        /// <summary>
-        /// The hulls the ceiling sweep can be asked for, one per element that carries heat.
-        ///
-        /// The ladder was measured on blocks alone for as long as it existed, and blocks are the
-        /// one element whose exchanges are all pairwise. A coolant parcel and a room's air are
-        /// each one mass carrying every link on it, which is the shape a pairwise bound cannot
-        /// hold on its own. See stiffness.md, What refusing the demand costs.
-        /// </summary>
         public static class CeilingFixtures
         {
             public const string Census = "census";
             public const string Plumbed = "plumbed";
             public const string Pressurised = "pressurised";
 
-            /// <summary>Reactors cooled by rings: the hull where the plumbing sets the demand.</summary>
             public const string Rings = "rings";
         }
 
-        /// <summary>
-        /// What <c>MaxSubsteps</c> refusing a demand costs, swept across ceilings, in the
-        /// environment where the demand is actually large.
-        ///
-        /// <para>
-        /// **Air is the case, not vacuum.** The same hull demands a few substeps in vacuum and
-        /// tens of them at flying speed in thick atmosphere, so a ceiling sweep taken in vacuum
-        /// measures a bound that never binds. The default here is thick air at 200 m/s, which is
-        /// the `reentry` scenario's airflow and the environment
-        /// balance.md scores `G6` in.
-        /// </para>
-        ///
-        /// <para>
-        /// Error is against the run granted everything it asked for, in the same way the floor
-        /// sweep is, because the question is how far the approximation moves the answer rather
-        /// than whether either run is right in some absolute sense (`E7`).
-        /// </para>
-        /// </summary>
+/// <summary>SubstepCeiling operation.</summary>
         public static List<CeilingRow> SubstepCeiling(string shape, int size, int steps,
             IList<int> ceilings, Action<string> log = null, bool driven = false, int frequency = 0,
             float speed = 200f, float airDensity = 1f, string fixture = CeilingFixtures.Census,
             float flow = 0f)
         {
+/// <summary>List operation.</summary>
             List<CeilingRow> rows = new List<CeilingRow>();
             float[] reference = null;
             float referencePeak = 0f;
 
-            // The first row measured would otherwise be measuring the JIT.
+/// <summary>RunCeiling operation.</summary>
             CeilingRow probe = RunCeiling(shape, Math.Min(size, 2000), 2, Hulls.Unbounded, null,
                 driven, frequency, speed, airDensity, fixture, flow);
 
-            // No ceilings given means the ladder of over-subscriptions rather than a ladder of
-            // counts, resolved against what this hull in this air actually demands. A ceiling of 64
-            // means nothing on a hull that asks for six.
             if (ceilings == null || ceilings.Count == 0)
             {
+/// <summary>CeilingLadder operation.</summary>
                 ceilings = CeilingLadder(probe.RequiredSubsteps);
             }
 
@@ -1733,6 +1444,7 @@ namespace Thermodynamics.Harness
             {
                 if (log != null) log("ceiling " + ceilings[i]);
 
+/// <summary>RunCeiling operation.</summary>
                 CeilingRow row = RunCeiling(shape, size, steps, ceilings[i], reference, driven,
                     frequency, speed, airDensity, fixture, flow);
                 if (reference == null)
@@ -1748,18 +1460,12 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        /// <summary>
-        /// The over-subscriptions the sweep asks about: what fraction of its demand a step is
-        /// granted. **1.15 is the shipped configuration's own breach** — the 49-ship panel's p99
-        /// demand of 73.4 against the 64 `MaxSubsteps` grants — and the rest of the ladder is there
-        /// so a reader can see where the approximation stops being free.
-        /// See balance.md, Air is where the substep budget goes.
-        /// </summary>
         public static readonly float[] Oversubscriptions = { 1.15f, 1.5f, 2f, 3f, 4.5f, 9f };
 
-        /// <summary>Ceilings that put a demand at each rung of <see cref="Oversubscriptions"/>.</summary>
+/// <summary>CeilingLadder operation.</summary>
         public static List<int> CeilingLadder(float demand)
         {
+/// <summary>List operation.</summary>
             List<int> ceilings = new List<int>();
             ceilings.Add(Hulls.Unbounded);
 
@@ -1773,22 +1479,19 @@ namespace Thermodynamics.Harness
             return ceilings;
         }
 
+/// <summary>RunCeiling operation.</summary>
         private static CeilingRow RunCeiling(string shape, int size, int steps, int ceiling,
             float[] reference, bool driven, int frequency, float speed, float airDensity,
             string fixture, float flow)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             if (frequency > 0) settings.Frequency = frequency;
 
-            // The ceiling is the subject. The visit budget is not: it shortens a step rather than
-            // coarsening it, which is a different approximation and would be mixed into the error.
             settings.MaxSubsteps = ceiling;
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
-            // The fixture decides which element carries the heat. The two lumped masses are built
-            // by WorstCases, which counts what it managed to build — a plumbed hull with no ring
-            // is the failure this sweep would otherwise report as a result.
             ThermalSimulation simulation;
             WorstCases.Built built = null;
 
@@ -1797,14 +1500,14 @@ namespace Thermodynamics.Harness
                 built = WorstCases.Plumbed(shape, size, 8, settings);
                 simulation = built.Simulation;
             }
+/// <summary>if operation.</summary>
             else if (fixture == CeilingFixtures.Rings)
             {
-                // Sized in rings rather than in blocks: ten cells each, and the point of the
-                // fixture is what one ring does rather than how many there are.
                 built = WorstCases.HeatedRings(Math.Max(1, size / 10), Census.ProducerWatts, settings,
                     flow);
                 simulation = built.Simulation;
             }
+/// <summary>if operation.</summary>
             else if (fixture == CeilingFixtures.Pressurised)
             {
                 built = WorstCases.Pressurised(shape, size, settings);
@@ -1815,6 +1518,7 @@ namespace Thermodynamics.Harness
                 GridBuilder builder = GridBuilder.Large();
                 builder.PlaceCensus(LoadShapes.Build(shape, size));
 
+/// <summary>ThermalSimulation operation.</summary>
                 simulation = new ThermalSimulation(settings, builder.Grid);
                 for (int i = 0; i < builder.Placed.Count; i++)
                 {
@@ -1837,6 +1541,7 @@ namespace Thermodynamics.Harness
 
             EnvironmentSample sample = Worlds.Flight(airDensity, speed);
 
+/// <summary>CeilingRow operation.</summary>
             CeilingRow row = new CeilingRow();
             row.Ceiling = ceiling;
             row.StepSeconds = settings.StepSeconds;
@@ -1847,9 +1552,6 @@ namespace Thermodynamics.Harness
             row.CoolantLoops = built != null ? built.CoolantLoops : 0;
             row.RoomsWithAir = built != null ? built.RoomsWithAir : 0;
 
-            // Taken against the environment the run is made in: the estimate reads the convection
-            // coefficient, so a demand sampled in vacuum is the wrong number by the whole reason
-            // this sweep exists.
             simulation.StepExact(1, sample);
             row.RequiredSubsteps = simulation.Solver.LastRequiredSubsteps;
 
@@ -1875,10 +1577,6 @@ namespace Thermodynamics.Harness
             }
             lastTemperatures = result;
 
-            // The lumped masses read apart from the blocks. A ring that has run away shows in a
-            // block peak only through the links it is already overshooting on, and whether a
-            // refused demand approximates or diverges on the path that carries the heat is the
-            // whole question this sweep exists to ask.
             IList<CoolantLoop> loops = simulation.Solver.Loops;
             for (int l = 0; l < loops.Count; l++)
             {
@@ -1912,8 +1610,10 @@ namespace Thermodynamics.Harness
             return row;
         }
 
+/// <summary>CeilingTable operation.</summary>
         public static string CeilingTable(IList<CeilingRow> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.Append("ceiling".PadLeft(9))
@@ -1972,10 +1672,11 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        // ---- reporting ----------------------------------------------------------------------
 
+/// <summary>Table operation.</summary>
         public static string Table(IList<ScaleRow> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.Append("shape".PadRight(8))
@@ -2025,14 +1726,17 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>Percent operation.</summary>
         private static string Percent(int part, int whole)
         {
             if (whole == 0) return "-";
             return (100d * part / whole).ToString("n0") + "%";
         }
 
+/// <summary>Csv operation.</summary>
         public static string Csv(IList<ScaleRow> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append("shape,blocks,links,boundingVolume,exposed,buildMs,topologyMs,roomMapMs,")
               .Append("exposureMs,solverStepMs,substeps,boundedStepMs,substepBudget,")

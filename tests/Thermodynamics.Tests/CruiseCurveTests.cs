@@ -3,23 +3,19 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The mass-to-cruise-speed curve absorbed from RelativeTopSpeed (`K10`), pinned at the points
-    /// the original's own configuration authors — so a world moving from that mod to this one flies
-    /// the same, and so the reversed-looking clamp inside it cannot be "tidied" without failing.
-    /// </summary>
     public class CruiseCurveTests
     {
-        // The shipped large-grid curve: 60 m/s at 200 t, 80 at 5,000 t, 110 at 8,000 t.
         private const float MinMass = 200000f, MidMass = 5000000f, MaxMass = 8000000f;
         private const float Light = 60f, Mid = 80f, Heavy = 110f;
 
+/// <summary>Speed operation.</summary>
         private static float Speed(float mass)
         {
             return CruiseCurve.Speed(mass, MinMass, MidMass, MaxMass, Light, Mid, Heavy);
         }
 
         [Fact]
+/// <summary>TheEndsAreFlatAtTheAuthoredSpeeds operation.</summary>
         public void TheEndsAreFlatAtTheAuthoredSpeeds()
         {
             Assert.Equal(Light, Speed(0f));
@@ -29,6 +25,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheCurveMeetsItsOwnMassPoints operation.</summary>
         public void TheCurveMeetsItsOwnMassPoints()
         {
             Assert.Equal(Light, Speed(MinMass), 3);
@@ -36,33 +33,31 @@ namespace Thermodynamics.Tests
             Assert.Equal(Heavy, Speed(MaxMass), 3);
         }
 
-        /// <summary>
-        /// **Every reading stays between the two authored ends.** This is what the original's
-        /// "dont flip the signs THEY ARE CORRECT" clamp is for: a Hermite spline through three
-        /// points overshoots, and the clamp is what keeps a ship's cruise speed inside the range its
-        /// world authored rather than above it.
-        /// </summary>
         [Fact]
+/// <summary>NothingLeavesTheAuthoredRange operation.</summary>
         public void NothingLeavesTheAuthoredRange()
         {
             for (int i = 0; i <= 200; i++)
             {
                 float mass = MinMass + (MaxMass - MinMass) * (i / 200f);
+/// <summary>Speed operation.</summary>
                 float speed = Speed(mass);
 
                 Assert.InRange(speed, Light, Heavy);
             }
         }
 
-        /// <summary>A heavier ship is never faster than a lighter one, which is the whole point.</summary>
         [Fact]
+/// <summary>SpeedRisesWithMassAcrossTheWholeCurve operation.</summary>
         public void SpeedRisesWithMassAcrossTheWholeCurve()
         {
+/// <summary>Speed operation.</summary>
             float previous = Speed(MinMass);
 
             for (int i = 1; i <= 200; i++)
             {
                 float mass = MinMass + (MaxMass - MinMass) * (i / 200f);
+/// <summary>Speed operation.</summary>
                 float speed = Speed(mass);
 
                 Assert.True(speed >= previous - 1e-3f,
@@ -73,8 +68,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>The spline itself, at the two ends of its domain.</summary>
         [Fact]
+/// <summary>TheInterpolatorHitsBothOfItsPoints operation.</summary>
         public void TheInterpolatorHitsBothOfItsPoints()
         {
             Assert.Equal(2d, CruiseCurve.Interpolate(0d, 2d, 5d, 9d, 1d), 9);

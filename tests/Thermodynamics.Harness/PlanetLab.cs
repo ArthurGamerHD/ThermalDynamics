@@ -6,66 +6,28 @@ using Thermodynamics.Core;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// The eight worlds Space Engineers ships, their thermal properties, and the file that carries
-    /// them.
-    ///
-    /// <para>Every figure in <see cref="Vanilla"/> is read out of the game's own
-    /// <c>PlanetGeneratorDefinitions.sbc</c> — nothing here is remembered or estimated. What the
-    /// derivation then does with them is in <see cref="PlanetThermalDerivation"/>, and
-    /// <see cref="Xml"/> writes the result out as the mod's <c>Planets.xml</c>, so the shipped file
-    /// is generated rather than typed and can be regenerated when a definition changes.</para>
-    ///
-    /// <para><b>The one thing worth knowing before reading the table:</b> Space Engineers has no
-    /// orbital distance. One sun, and every planet gets the same light from it, so a world cannot be
-    /// cold because it is far away. <c>DefaultSurfaceTemperature</c> — a five-level enum — is the
-    /// entire statement the game makes about how hot a planet is, and four of the eight worlds do
-    /// not even author it and take the <c>Cozy</c> default.</para>
-    /// </summary>
     public static class PlanetLab
     {
-        /// <summary>A world as its definition describes it, plus what that definition leaves out.</summary>
         public class World
         {
             public string Subtype;
 
-            /// <summary>What the definition authors, or null where it takes the engine default.</summary>
             public string AuthoredTemperatureLevel;
 
             public PlanetThermalDerivation.Engine Engine;
 
-            /// <summary>The real body the name evokes, and its measured mean surface temperature.</summary>
             public string RealAnalogue;
             public float RealMeanKelvin;
 
-            /// <summary>
-            /// Day-night swing the real body has, K, where that is known and worth using. NaN to let
-            /// the derivation decide.
-            /// </summary>
             public float RealSwingKelvin = float.NaN;
 
-            /// <summary>Why this entry departs from the pure derivation, or null where it does not.</summary>
             public string OverrideReason;
 
-            /// <summary>What the derivation alone makes of the definition.</summary>
             public PlanetThermalProperties Derived
             {
                 get { return PlanetThermalDerivation.Derive(Engine); }
             }
 
-            /// <summary>
-            /// What actually ships.
-            ///
-            /// <para>The same derivation, except where the game is <b>silent</b> and the world is
-            /// named after a real place. Four of the eight do not author
-            /// <c>DefaultSurfaceTemperature</c> at all, and an unauthored field is an omission rather
-            /// than a statement — reading <c>Cozy</c> out of it as intent would put Titan at 288 K
-            /// and have players landing on an ice moon in shirtsleeves.</para>
-            ///
-            /// <para>Where the game <b>does</b> author a level it is followed, whatever the real body
-            /// does. SE's Triton is breathable with full-density air and nothing like the real one;
-            /// the definition says <c>ExtremeFreeze</c> and that is the game's call to make.</para>
-            /// </summary>
             public PlanetThermalProperties Shipped
             {
                 get
@@ -88,17 +50,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// Every shipped world.
-        ///
-        /// Read from the definition file, with the object builder's defaults filled in where a field
-        /// is not authored: <c>Density 1</c>, <c>OxygenDensity 1</c>, <c>LimitAltitude 2</c>,
-        /// <c>SolarRadiationProtectionFactor 1</c> and <c>DefaultSurfaceTemperature Cozy</c>. Four
-        /// of the eight take that last default, which is worth noticing: the game does not say the
-        /// Moon or Titan are cold.
-        /// </summary>
+/// <summary>Vanilla operation.</summary>
         public static List<World> Vanilla()
         {
+/// <summary>List operation.</summary>
             List<World> worlds = new List<World>();
 
             worlds.Add(new World
@@ -263,27 +218,16 @@ namespace Thermodynamics.Harness
             return worlds;
         }
 
-        // ---- the file --------------------------------------------------------------------------
 
-        /// <summary>
-        /// The whole of <c>Data/Planets.xml</c>: the default entry the mod falls back to, and one
-        /// entry per shipped world.
-        ///
-        /// Generated rather than typed, so that when a definition changes the answer changes with
-        /// it, and so the reasoning behind each figure lives in code beside a test rather than in a
-        /// comment nobody can check.
-        /// </summary>
+/// <summary>Xml operation.</summary>
         public static string Xml()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.Append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
             sb.Append("<!--\n");
             sb.Append("  GENERATED FILE — do not edit by hand.\n\n");
-            // No double hyphen anywhere in this comment: a "--" inside an XML comment is illegal
-            // XML, and Definition Extensions reads this file with a strict serialiser. The shipped
-            // file carried the regen command verbatim, so every planet entry in it was silently
-            // unread by every world that ever loaded it. The command lives in the README instead.
             sb.Append("  Regenerate with the sim's planets command; see tests/README.md.\n\n");
             sb.Append("  Every figure below is derived from the world's own generator definition by\n");
             sb.Append("  Thermodynamics.Core.PlanetThermalDerivation. What each derivation is and why is\n");
@@ -293,12 +237,11 @@ namespace Thermodynamics.Harness
             sb.Append("<Definitions xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">\n");
             sb.Append("\t<CubeBlocks>\n");
 
-            // The fallback entry keeps the shipped earthlike defaults exactly as they were, so a
-            // world with an unrecognised planet is unchanged by this file existing.
             Entry(sb, "DefaultThermodynamics", new PlanetThermalProperties(),
                 "The fallback for any planet without an entry of its own. Earthlike, and unchanged\n"
                 + "\t\t\tfrom what this mod shipped before the per-planet entries existed.");
 
+/// <summary>Vanilla operation.</summary>
             List<World> worlds = Vanilla();
             for (int i = 0; i < worlds.Count; i++)
             {
@@ -330,6 +273,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>Entry operation.</summary>
         private static void Entry(
             StringBuilder sb, string subtype, PlanetThermalProperties p, string note)
         {
@@ -379,6 +323,7 @@ namespace Thermodynamics.Harness
             sb.Append("\t\t</Definition>\n");
         }
 
+/// <summary>Value operation.</summary>
         private static void Value(StringBuilder sb, string name, float value, string note)
         {
             sb.Append("\n\t\t\t\t\t<!--").Append(note).Append("-->\n");
@@ -386,11 +331,13 @@ namespace Thermodynamics.Harness
               .Append(value.ToString("0.####", CultureInfo.InvariantCulture)).Append("\" />\n");
         }
 
-        // ---- the report ------------------------------------------------------------------------
 
+/// <summary>Report operation.</summary>
         public static string Report()
         {
+/// <summary>Vanilla operation.</summary>
             List<World> worlds = Vanilla();
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.Append("Planet thermals, derived from each world's own generator definition\n\n");

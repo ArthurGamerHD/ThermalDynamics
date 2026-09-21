@@ -7,18 +7,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// How the coolant is carried round the ring.
-    ///
-    /// The fluid does not move: the ring's origin does. Parcels sit in a fixed array and each pipe
-    /// reads the parcel currently passing through it. Because a pipe's index is a whole number, the
-    /// rounded offset collapses to one integer shift shared by every pipe — which is what makes it a
-    /// bijection at any speed, exact, and free of the stability limit a blended scheme has.
-    /// </summary>
     public class CoolantFlowTests
     {
+/// <summary>Isolated operation.</summary>
         private static ThermalSettings Isolated(float segmentsPerSecond = 4f)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -29,6 +23,7 @@ namespace Thermodynamics.Tests
             return settings.Derive();
         }
 
+/// <summary>Ring operation.</summary>
         private static ThermalSimulation Ring(int width, int depth, float segmentsPerSecond,
             out CoolantLoop loop)
         {
@@ -45,33 +40,21 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-        /// <summary>
-        /// Each grid size has its own flow dial, and equal dials mean equal speed.
-        ///
-        /// The dial used to be parcels per second, and a parcel is one pipe block — so one number
-        /// drove a large-grid ring at 10 m/s and a small-grid ring at 2 m/s. Nothing said so, and
-        /// the terminal reported both honestly, which made small-grid pumps look simply worse.
-        ///
-        /// Stating it in metres per second removed the accident; splitting it in two puts the
-        /// choice back, deliberately. Shipped equal, so the grids behave alike until someone
-        /// decides they should not.
-        /// </summary>
         [Fact]
+/// <summary>EachGridSizeHasItsOwnFlowRate operation.</summary>
         public void EachGridSizeHasItsOwnFlowRate()
         {
+/// <summary>RingOfSize operation.</summary>
             CoolantLoop large = RingOfSize(Catalog.LargeGridSize);
+/// <summary>RingOfSize operation.</summary>
             CoolantLoop small = RingOfSize(Catalog.SmallGridSize);
 
-            // Shipped equal: the same speed on both, and the sign is only which way round the ring
-            // the pump drives it.
             Assert.Equal(10f, Math.Abs(large.FlowMetresPerSecond), 3);
             Assert.Equal(10f, Math.Abs(small.FlowMetresPerSecond), 3);
 
-            // Same speed, shorter parcels: five times the rotation rate on the small grid.
             Assert.Equal(4f, Math.Abs(large.FlowSegmentsPerSecond), 3);
             Assert.Equal(20f, Math.Abs(small.FlowSegmentsPerSecond), 3);
 
-            // And they are genuinely independent: moving one leaves the other where it was.
             small.Properties.SmallGridFlowRate = 2f;
             large.Properties.SmallGridFlowRate = 2f;
             small.RefreshFlow();
@@ -81,8 +64,10 @@ namespace Thermodynamics.Tests
             Assert.Equal(10f, Math.Abs(large.FlowMetresPerSecond), 3);
         }
 
+/// <summary>RingOfSize operation.</summary>
         private static CoolantLoop RingOfSize(float gridSize)
         {
+/// <summary>GridBuilder operation.</summary>
             GridBuilder builder = new GridBuilder(gridSize);
             PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 4, 4));
 
@@ -92,20 +77,17 @@ namespace Thermodynamics.Tests
             return loop;
         }
 
-        /// <summary>
-        /// Every pipe reads a different parcel, at every rotation. Two pipes sharing one parcel would
-        /// double-couple it and starve another; a skipped parcel would hold heat nothing could reach.
-        /// </summary>
         [Fact]
+/// <summary>TheParcelMappingIsABijectionAtEveryRotation operation.</summary>
         public void TheParcelMappingIsABijectionAtEveryRotation()
         {
             CoolantLoop loop;
+/// <summary>Ring operation.</summary>
             ThermalSimulation simulation = Ring(5, 5, 4f, out loop);
 
             int count = loop.PipeCount;
             Assert.Equal(16, count);
 
-            // Step far enough to pass through every rotation several times over.
             for (int step = 0; step < 200; step++)
             {
                 simulation.StepExact(1, Worlds.Shadow());
@@ -123,17 +105,14 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Carrying the fluid neither creates nor destroys heat, because it only changes which parcel
-        /// is where. Asserted with the exchange switched off, so rotation is the only thing acting.
-        /// </summary>
         [Fact]
+/// <summary>RotationAloneMovesHeatWithoutChangingIt operation.</summary>
         public void RotationAloneMovesHeatWithoutChangingIt()
         {
             CoolantLoop loop;
+/// <summary>Ring operation.</summary>
             ThermalSimulation simulation = Ring(5, 5, 4f, out loop);
 
-            // An uneven ring, so a scheme that averaged would show up immediately.
             for (int i = 0; i < loop.PipeCount; i++)
             {
                 loop.SetSegmentTemperature(i, 250f + (i * 40f));
@@ -145,17 +124,13 @@ namespace Thermodynamics.Tests
 
             for (int i = 0; i < 500; i++) loop.Advect(1f / 24f);
 
-            // Exactly, not approximately: nothing was arithmetic on a temperature.
             Assert.Equal(before, loop.Energy, 3);
             Assert.Equal(hottestBefore, loop.HottestSegment, 3);
             Assert.Equal(coldestBefore, loop.ColdestSegment, 3);
         }
 
-        /// <summary>
-        /// A hot parcel arrives at the far side of the ring still hot. Plug flow: the profile travels
-        /// rather than smearing, and only exchange with the pipes smooths it.
-        /// </summary>
         [Fact]
+/// <summary>AHotParcelTravelsRoundTheRingIntact operation.</summary>
         public void AHotParcelTravelsRoundTheRingIntact()
         {
             CoolantLoop loop;
@@ -168,17 +143,19 @@ namespace Thermodynamics.Tests
             float peak = loop.HottestSegment;
             Assert.True(peak > 400f, "the pulse should start hot: " + peak);
 
-            // Which pipe holds the pulse, before and after carrying it a quarter of the way round.
+/// <summary>PipeHoldingThePulse operation.</summary>
             int startPipe = PipeHoldingThePulse(loop);
 
             for (int i = 0; i < count / 4; i++) loop.Advect(1f / 4f);
 
+/// <summary>PipeHoldingThePulse operation.</summary>
             int nowPipe = PipeHoldingThePulse(loop);
 
             Assert.NotEqual(startPipe, nowPipe);
             Assert.Equal(peak, loop.HottestSegment, 3);
         }
 
+/// <summary>PipeHoldingThePulse operation.</summary>
         private static int PipeHoldingThePulse(CoolantLoop loop)
         {
             int worst = 0;
@@ -192,21 +169,18 @@ namespace Thermodynamics.Tests
             return worst;
         }
 
-        /// <summary>
-        /// Flow speed costs the solver nothing, so it can be set for how the game should feel.
-        ///
-        /// A blended scheme is stable only below one parcel per substep, which made the flow rate a
-        /// compromise with the integrator: this is the property that removed that.
-        /// </summary>
         [Theory]
         [InlineData(1f)]
         [InlineData(4f)]
         [InlineData(50f)]
         [InlineData(5000f)]
+/// <summary>FlowSpeedDoesNotCostSubsteps operation.</summary>
         public void FlowSpeedDoesNotCostSubsteps(float segmentsPerSecond)
         {
             CoolantLoop slow, fast;
+/// <summary>Ring operation.</summary>
             ThermalSimulation a = Ring(5, 5, 1f, out slow);
+/// <summary>Ring operation.</summary>
             ThermalSimulation b = Ring(5, 5, segmentsPerSecond, out fast);
 
             a.StepExact(20, Worlds.Shadow());
@@ -214,16 +188,12 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(a.Solver.LastRequiredSubsteps, b.Solver.LastRequiredSubsteps, 3);
 
-            // And it stays finite however absurd the rate.
             Assert.False(float.IsNaN(fast.Temperature));
             Assert.False(float.IsInfinity(fast.Temperature));
         }
 
-        /// <summary>
-        /// A ring whose pumps are all stopped carries nothing, however hot one end of it gets. This is
-        /// the behaviour the whole model exists for.
-        /// </summary>
         [Fact]
+/// <summary>AStoppedPumpLeavesTheFarSideOfTheRingCold operation.</summary>
         public void AStoppedPumpLeavesTheFarSideOfTheRingCold()
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -237,23 +207,16 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
             CoolantLoop loop = simulation.Solver.Loops[0];
 
-            // Stop every pump in the ring.
             for (int i = 0; i < loop.Pumps.Count; i++) loop.Pumps[i].Enabled = false;
             loop.RefreshFlow();
             Assert.Equal(0f, loop.FlowSegmentsPerSecond);
 
             simulation.StepExact(LabClock.Steps(2000), Worlds.Shadow());
 
-            // **37.2 K at the pace `C24` ships, where it asked for fifty.** A stopped ring is not
-            // an isolated one: the pipes are bolted to each other and conduct round the ring
-            // whatever the fluid is doing, and at four times the conduction pace that path carries
-            // four times as much. What the model exists to show is that the fluid does not move —
-            // which is the difference between this figure and the one below, not its size.
             float spread = loop.HottestSegment - loop.ColdestSegment;
             Assert.True(spread > 25f,
                 "with nothing circulating the ring should be unevenly hot, spread was " + spread + " K");
 
-            // Now run the pumps and the ring evens out.
             for (int i = 0; i < loop.Pumps.Count; i++) loop.Pumps[i].Enabled = true;
             loop.RefreshFlow();
             simulation.StepExact(LabClock.Steps(2000), Worlds.Shadow());
@@ -263,20 +226,13 @@ namespace Thermodynamics.Tests
                 "circulating should even the ring out: " + spread + " K then " + mixed + " K");
         }
     
-        /// <summary>
-        /// A pump between off and full drives the ring proportionally, which is what the terminal
-        /// slider sets. Flow goes as the square root of combined pumping, so half speed is about
-        /// seven tenths of the flow rather than half of it.
-        /// </summary>
         [Fact]
+/// <summary>HalfSpeedIsAboutSeventyPercentOfTheFlow operation.</summary>
         public void HalfSpeedIsAboutSeventyPercentOfTheFlow()
         {
             CoolantLoop loop;
             Ring(6, 5, 4f, out loop);
 
-            // Magnitudes throughout: the sign of the flow is the direction the ring is driven,
-            // and this ring's pump happens to face the other way round it. A ring driven backwards
-            // cools exactly as well.
             float full = Math.Abs(loop.FlowSegmentsPerSecond);
             Assert.True(full > 0f);
 
@@ -287,21 +243,13 @@ namespace Thermodynamics.Tests
             Assert.True(half < full);
             Assert.Equal(full * (float)Math.Sqrt(0.5), half, 3);
 
-            // And all the way down stops the ring, the same as switching it off.
             for (int i = 0; i < loop.Pumps.Count; i++) loop.Pumps[i].Speed = 0f;
             loop.RefreshFlow();
             Assert.Equal(0f, loop.FlowSegmentsPerSecond);
         }
 
-        /// <summary>
-        /// The flow rate is cached, not derived on read, so a host that changes a pump's setting
-        /// has to say so.
-        ///
-        /// This is a characterisation rather than a preference — the cache is what keeps a square
-        /// root off the step path — but it is the trap behind the switch that never worked: a
-        /// setting written into the model and never refreshed moves a number nothing reads.
-        /// </summary>
         [Fact]
+/// <summary>AChangedPumpSettingReachesTheFluidOnlyAfterARefresh operation.</summary>
         public void AChangedPumpSettingReachesTheFluidOnlyAfterARefresh()
         {
             CoolantLoop loop;
@@ -317,17 +265,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, loop.FlowSegmentsPerSecond);
         }
 
-        /// <summary>
-        /// The well-mixed model is one parcel holding the whole ring's coolant, so it costs one
-        /// accumulator and one integration however long the ring is.
-        ///
-        /// Worth pinning because the first version of the toggle reproduced the old *behaviour* while
-        /// keeping the new *cost*: it carried a parcel per pipe and levelled them afterwards, so a
-        /// setting whose only reason to exist is to be cheaper was not.
-        /// </summary>
         [Fact]
+/// <summary>TheWellMixedRingIsOneParcelHoldingEverything operation.</summary>
         public void TheWellMixedRingIsOneParcelHoldingEverything()
         {
+/// <summary>Isolated operation.</summary>
             ThermalSettings settings = Isolated();
             settings.WellMixedCoolant = true;
 
@@ -340,10 +282,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(16, mixed.PipeCount);
             Assert.Equal(1, mixed.ParcelCount);
 
-            // The one parcel holds what sixteen would have held between them.
             Assert.Equal(mixed.ThermalMass, mixed.SegmentThermalMass, 3);
 
-            // Every pipe reads it, so there is no spread to have.
             for (int i = 0; i < mixed.PipeCount; i++)
             {
                 Assert.Equal(0, mixed.ParcelOf(i));
@@ -351,13 +291,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(mixed.HottestSegment, mixed.ColdestSegment, 3);
         }
 
-        /// <summary>
-        /// Both models hold the same coolant, so a ring at one temperature has the same heat either
-        /// way. The models differ in where that heat can go, not in how much there is.
-        /// </summary>
         [Fact]
+/// <summary>BothModelsHoldTheSameHeatAtTheSameTemperature operation.</summary>
         public void BothModelsHoldTheSameHeatAtTheSameTemperature()
         {
+/// <summary>Isolated operation.</summary>
             ThermalSettings mixedSettings = Isolated();
             mixedSettings.WellMixedCoolant = true;
 
@@ -373,29 +311,18 @@ namespace Thermodynamics.Tests
             Assert.Equal(segmented.Energy, mixed.Energy, 1);
         }
     
-        // ---- flow faster than the step can resolve -----------------------------------------
-        //
-        // A rotation advancing by a constant k parcels per substep means pipe i only ever reads
-        // parcels in the subgroup k generates modulo N. Whenever gcd(k, N) > 1 the ring splits into
-        // that many disjoint sets and heat cannot cross between them. Measured on an eight parcel
-        // ring at a one second step, a pipe saw four of eight parcels at two per substep, two at
-        // four, and one at eight — the ring frozen at maximum pump speed with every figure about it
-        // looking healthy. These pin the behaviour that replaced it.
 
-        /// <summary>
-        /// A ring that is short of parcels for its flow rate must not transport *less* than a slower
-        /// one. Before mixing was added the spread across a heated ring went 49.5 K at one parcel per
-        /// substep, then 89, 202 and 583 K as the flow rose — faster circulation making the ring less
-        /// even, which is the exact inversion of what a pump does.
-        /// </summary>
         [Theory]
         [InlineData(2f)]
         [InlineData(4f)]
         [InlineData(8f)]
         [InlineData(64f)]
+/// <summary>FasterFlowNeverEvensTheRingOutLessThanSlowFlow operation.</summary>
         public void FasterFlowNeverEvensTheRingOutLessThanSlowFlow(float fastRate)
         {
+/// <summary>SpreadAcrossAHeatedRing operation.</summary>
             float slow = SpreadAcrossAHeatedRing(1f);
+/// <summary>SpreadAcrossAHeatedRing operation.</summary>
             float fast = SpreadAcrossAHeatedRing(fastRate);
 
             Assert.True(fast <= slow,
@@ -403,46 +330,34 @@ namespace Thermodynamics.Tests
                 + " K against " + slow + " K at one; faster flow is transporting less");
         }
 
-        /// <summary>
-        /// As the flow outruns the step the ring converges on well mixed, which is what a ring
-        /// circulating far faster than it is observed physically is.
-        /// </summary>
         [Fact]
+/// <summary>VeryFastFlowConvergesOnAWellMixedRing operation.</summary>
         public void VeryFastFlowConvergesOnAWellMixedRing()
         {
+/// <summary>SpreadAcrossAHeatedRing operation.</summary>
             float spread = SpreadAcrossAHeatedRing(64f);
 
             Assert.True(spread < 5f,
                 "a ring lapping 64 times a second should be near uniform, spread was " + spread + " K");
         }
 
-        /// <summary>The mixing that replaces carrying is reported, so the regime is visible.</summary>
         [Fact]
+/// <summary>MixingReportsWhenFlowOutrunsTheStep operation.</summary>
         public void MixingReportsWhenFlowOutrunsTheStep()
         {
             CoolantLoop loop;
             Ring(3, 3, 4f, out loop);
 
-            // Below a parcel per substep nothing is mixed: this is plug flow.
             Assert.Equal(0f, loop.MixingFraction(0.25f));
 
-            // At two parcels per substep, half of the transport is mixing.
             Assert.Equal(0.5f, loop.MixingFraction(0.5f), 3);
 
-            // And it approaches one rather than exceeding it.
             Assert.True(loop.MixingFraction(100f) < 1f);
             Assert.True(loop.MixingFraction(100f) > 0.99f);
         }
 
-        /// <summary>
-        /// Mixing conserves heat, because the parcels have equal capacity: moving each of them the same
-        /// fraction of the way to their own mean cannot change the sum.
-        ///
-        /// Asserted as a ratio rather than as an absolute figure. It is exact in exact arithmetic; in
-        /// single precision, 200 rounds of it on a ring holding 7.9 MJ leave half a joule behind, which
-        /// is the last representable bit at that magnitude rather than a leak.
-        /// </summary>
         [Fact]
+/// <summary>MixingConservesHeat operation.</summary>
         public void MixingConservesHeat()
         {
             CoolantLoop loop;
@@ -459,42 +374,21 @@ namespace Thermodynamics.Tests
             Assert.Equal(1f, loop.Energy / before, 5);
         }
 
-        /// <summary>
-        /// **A fixed defect, guarded.** The loop path used to have a stiffness ceiling.
-        ///
-        /// <c>SpreadAcrossAHeatedRing</c> deliberately runs one substep across a whole second and
-        /// relies on the overshoot clamps to keep that bounded. They do — up to a point. Raising the
-        /// pipe's conductivity walks the ring off a cliff:
-        ///
-        /// <code>
-        ///   effective W/(m K)   360    480    600    960
-        ///   flow tests failing    0      3      5      5
-        /// </code>
-        ///
-        /// The cause was the loop's clamp, not the material. It bounded each link against the
-        /// parcel's whole heat capacity — correct for a pair, and wrong for a parcel carrying more
-        /// than one link, which gets twice the energy equalising it takes and overshoots further
-        /// every substep. A pipe with a sink face has exactly that shape; a well-mixed ring puts
-        /// every link in the ring on one parcel.
-        ///
-        /// With the ring's own limit applied the same case settles at under a kelvin, and the
-        /// shipped pipes are copper again. This test now guards that rather than recording it.
-        /// </summary>
         [Theory]
         [InlineData(400f, 5f)]      // copper, what ships
         [InlineData(1600f, 100f)]   // four times copper: degraded but bounded, not 291,360 K
+/// <summary>TheLoopPathSurvivesAVeryConductivePipe operation.</summary>
         public void TheLoopPathSurvivesAVeryConductivePipe(float conductivity, float tolerance)
         {
             try
             {
-                // Only the coolant, identified by its own specific heat, so the reactor beside it
-                // stays exactly as it was and the stiffness change has one source.
                 Catalog.MaterialOverride = properties =>
                 {
                     if (Math.Abs(properties.SpecificHeat - 385f) < 0.5f) properties.Conductivity = conductivity;
                     return properties;
                 };
 
+/// <summary>SpreadAcrossAHeatedRing operation.</summary>
                 float spread = SpreadAcrossAHeatedRing(64f);
 
                 Assert.True(spread < tolerance,
@@ -507,43 +401,13 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// **On a hull carrying nothing stiffer the ring sets the substep demand, and refusing it
-        /// approximates rather than diverges.**
-        ///
-        /// <para>
-        /// It did diverge, and that was backlog.md `A10`. Conduction and
-        /// the environment each have an overshoot clamp — `ClampConductionOvershoot` and
-        /// `ClampEnvironmentOvershoot`, both on by default — which is what makes the shipped breach
-        /// `C19` measured worth 0.028 K instead of a number. The coolant path had the pairwise half
-        /// of that clamp and the ring's own limit, and neither can see the *block* on the other end
-        /// of a sink face: a pipe bolted to a reactor takes the energy that equalises it from the
-        /// parcel and the energy that equalises it from every neighbour it is bolted to, in the
-        /// same substep. Two bounds that each hold on their own, and a node past both of them.
-        /// </para>
-        ///
-        /// <para>
-        /// The fix is the per-node relaxation the conduction pass already used, applied to the
-        /// coupled paths as well, which makes every node's substep a convex combination of the
-        /// temperatures pulling on it — so a node cannot be driven past the hottest of them
-        /// whatever the substep length is. It costs nothing while the demand is granted, which is
-        /// what `TheClampIsInertWhileTheDemandIsGranted` pins.
-        /// </para>
-        ///
-        /// <para>
-        /// Measured at the shipped `Frequency` and clock: the same reactor and blocks with no ring
-        /// demand **one** substep and are unmoved by any cap; with a nine-pipe ring they demand
-        /// **nine**, so on a hull carrying nothing stiffer the loop is what sets the demand. On a
-        /// census hull it is not — light fittings set 23 either way, which `tests/README.md`
-        /// measures — so this is a claim about a hull with a loop and little else. The ladder is in
-        /// stiffness.md, What refusing the demand costs, and
-        /// `bench ceiling --fixture rings` is what draws it.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>RefusingTheRingsDemandApproximatesRatherThanDiverging operation.</summary>
         public void RefusingTheRingsDemandApproximatesRatherThanDiverging()
         {
+/// <summary>DemandOfTheHullWithoutItsRing operation.</summary>
             float bare = DemandOfTheHullWithoutItsRing();
+/// <summary>DemandOfTheHeatedRing operation.</summary>
             float withRing = DemandOfTheHeatedRing(4096);
 
             Assert.Equal(1f, bare, 0);
@@ -551,63 +415,42 @@ namespace Thermodynamics.Tests
                 "the ring demanded only " + withRing + " substeps, so it is not what sets the"
                 + " demand on this grid and the rest of this measures nothing");
 
-            // **The rungs are fractions of the demand, not substep counts.** The over-subscription
-            // is the quantity — stiffness.md says so and `SubstepCeilingTests` asserts it — and the
-            // demand itself moves with the pace: this ring asked for nine substeps at the pace the
-            // conversion calibrated to and asks for about thirty-six at the one `C24` ships, so a
-            // ceiling of two is 4.5x over-subscribed on one and eighteen times on the other.
+/// <summary>Ceiling operation.</summary>
             int halfWay = Ceiling(withRing, 4.5f);
+/// <summary>Ceiling operation.</summary>
             int hard = Ceiling(withRing, 9f);
 
+/// <summary>SpreadAcrossAHeatedRing operation.</summary>
             float granted = SpreadAcrossAHeatedRing(1f, 4096);
+/// <summary>SpreadAcrossAHeatedRing operation.</summary>
             float halved = SpreadAcrossAHeatedRing(1f, halfWay);
+/// <summary>SpreadAcrossAHeatedRing operation.</summary>
             float refused = SpreadAcrossAHeatedRing(1f, hard);
 
-            // **Orderly at about 4.5x over-subscribed: nearly twice the spread, not a different kind
-            // of number.** The bound was a third more, measured when the ring's fluid coupling was
-            // 160 W/(m²·K). `C42` made the pumped coefficient 1,000, and a stiffer element refused
-            // the same fraction of its demand degrades further - which is physics rather than a
-            // regression: the substep it wanted was shorter, so the one it got is further from it.
-            // Measured 2026-08-26 at 10.6 K against 5.96 K granted in full, so 1.78x; the bound is
-            // 2x and says why, rather than being widened until it passed (`E11`). What it is still
-            // pinning is the *kind* of number - the divergence bound below is untouched and holds.
             Assert.True(halved < granted * 2f,
                 "granting " + halfWay + " substeps of " + withRing + " left the ring at "
                 + halved + " K against "
                 + granted + " K granted in full, which is not the approximation this pins");
 
-            // And past it, still an approximation. This is the assertion A10 was open on: it read
-            // `refused > 1e6f` and it was measuring 1.7e11 K.
             Assert.True(refused < granted * 4f,
                 "granting " + hard + " substeps of " + withRing + " left the ring at "
                 + refused + " K against "
                 + granted + " K granted in full; the coolant path has lost its bound and A10 is"
                 + " open again");
 
-            // Refusing more of the demand must cost more, not less. A bound that holds at nine
-            // times over-subscribed and not at four is a cliff somebody has to find by falling off
-            // it.
             Assert.True(refused >= halved * 0.99f,
                 hard + " substeps left the ring at " + refused + " K and " + halfWay + " left it at "
                 + halved + " K, so the error is not monotone in what was refused");
         }
 
-        /// <summary>
-        /// **The clamp changes nothing while the step is granted the substeps it asked for**, which
-        /// is every step on every grid this mod ships to except the ones over `MaxSubsteps`.
-        ///
-        /// The per-node relaxation is a factor of `mass / (h * conductance)` held at one, and the
-        /// substep estimate is that same ratio with the safety factor in it — so a granted step is
-        /// a step where every factor is one by construction. Asserted rather than reasoned, because
-        /// the reasoning is what a rounding difference in either formula would falsify: a ring
-        /// stepped at its demand reads the same temperature to seven figures whichever way the
-        /// clamp is set.
-        /// </summary>
         [Fact]
+/// <summary>TheClampIsInertWhileTheDemandIsGranted operation.</summary>
         public void TheClampIsInertWhileTheDemandIsGranted()
         {
+/// <summary>SpreadAcrossAHeatedRing operation.</summary>
             float clamped = SpreadAcrossAHeatedRing(1f, 4096);
 
+/// <summary>HeatedRing operation.</summary>
             ThermalSimulation unclamped = HeatedRing(1f, 4096);
             unclamped.Settings.ClampConductionOvershoot = false;
             unclamped.StepExact(300, Worlds.Shadow());
@@ -618,23 +461,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(bare, clamped, 5);
         }
 
-        /// <summary>
-        /// **A node cannot be driven past the hottest thing pulling on it**, however short of
-        /// substeps the step is.
-        ///
-        /// This is the property the per-node relaxation buys and the reason it is the right shape
-        /// of fix rather than a larger constant somewhere: with every exchange at a node scaled so
-        /// their sum cannot exceed the energy that equalises it, the substep is a convex
-        /// combination of the temperatures around that node, and a convex combination of numbers
-        /// bounded by the hottest of them. The ring is what makes the test hard — a parcel is one
-        /// mass carrying a link to every pipe on it, and a pipe with a sink face is a node carrying
-        /// a link to the parcel and to everything it is bolted to.
-        /// </summary>
         [Fact]
+/// <summary>NoNodeIsDrivenPastTheHottestThingPullingOnIt operation.</summary>
         public void NoNodeIsDrivenPastTheHottestThingPullingOnIt()
         {
-            // One substep of the nine the ring asks for, and the reactor left running the whole
-            // time: the case that used to reach 1.7e11 K.
+/// <summary>HeatedRing operation.</summary>
             ThermalSimulation simulation = HeatedRing(64f, 1);
 
             float hottest = 0f;
@@ -650,8 +481,6 @@ namespace Thermodynamics.Tests
                 }
             }
 
-            // The reactor is the only source, and what bounds the grid is where the reactor
-            // settles rather than any figure chosen here. Nothing may run away from it.
             float reactor = 0f;
             for (int i = 0; i < nodes.Count; i++)
             {
@@ -664,29 +493,26 @@ namespace Thermodynamics.Tests
                 + " K, so something was driven past the only thing making heat");
         }
 
-        /// <summary>The ceiling that puts a demand at a stated over-subscription, at least one.</summary>
+/// <summary>Ceiling operation.</summary>
         private static int Ceiling(float demand, float oversubscription)
         {
             int ceiling = (int)Math.Round(demand / oversubscription);
             return ceiling < 1 ? 1 : ceiling;
         }
 
-        /// <summary>The substeps the heated ring asks for, at a chosen ceiling.</summary>
+/// <summary>DemandOfTheHeatedRing operation.</summary>
         private static float DemandOfTheHeatedRing(int maxSubsteps)
         {
+/// <summary>HeatedRing operation.</summary>
             ThermalSimulation simulation = HeatedRing(1f, maxSubsteps);
             simulation.StepExact(300, Worlds.Shadow());
             return simulation.Solver.LastSubsteps;
         }
 
-        /// <summary>
-        /// The same reactor and the same nine blocks, as plain armour rather than as a ring.
-        ///
-        /// The control the measurement above needs: without it, *nine substeps* is a number about
-        /// this grid rather than about its plumbing.
-        /// </summary>
+/// <summary>DemandOfTheHullWithoutItsRing operation.</summary>
         private static float DemandOfTheHullWithoutItsRing()
         {
+/// <summary>HeatedRingSettings operation.</summary>
             ThermalSettings settings = HeatedRingSettings(4096);
 
             GridBuilder builder = GridBuilder.Large();
@@ -699,8 +525,10 @@ namespace Thermodynamics.Tests
             return simulation.Solver.LastSubsteps;
         }
 
+/// <summary>HeatedRingSettings operation.</summary>
         private static ThermalSettings HeatedRingSettings(int maxSubsteps)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableDamage = false;
@@ -711,6 +539,7 @@ namespace Thermodynamics.Tests
             return settings;
         }
 
+/// <summary>HeatedRing operation.</summary>
         private static ThermalSimulation HeatedRing(float segmentsPerSecond, int maxSubsteps)
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -731,9 +560,10 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-        /// <summary>The heated ring's spread at a chosen substep ceiling.</summary>
+/// <summary>SpreadAcrossAHeatedRing operation.</summary>
         private static float SpreadAcrossAHeatedRing(float segmentsPerSecond, int maxSubsteps)
         {
+/// <summary>HeatedRing operation.</summary>
             ThermalSimulation simulation = HeatedRing(segmentsPerSecond, maxSubsteps);
             simulation.StepExact(300, Worlds.Shadow());
 
@@ -741,8 +571,10 @@ namespace Thermodynamics.Tests
             return loop.HottestSegment - loop.ColdestSegment;
         }
 
+/// <summary>SpreadAcrossAHeatedRing operation.</summary>
         private static float SpreadAcrossAHeatedRing(float segmentsPerSecond)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.Frequency = 1;                  // a one second step
             settings.EnableEnvironment = false;
@@ -770,20 +602,12 @@ namespace Thermodynamics.Tests
             return loop.HottestSegment - loop.ColdestSegment;
         }
     
-        // ---- what the pumps cost ------------------------------------------------------------
 
-        /// <summary>
-        /// A pump's draw is linear in its speed, and that is what stops pump count being a discount.
-        ///
-        /// The affinity law — power with the cube of speed, which is what a real centrifugal pump does
-        /// — was tried first and is an exploit here rather than a trade. Flow goes as the square root
-        /// of combined pumping, so a given flow from N pumps needs each at speed K/N, and cubed power
-        /// makes the bill fall as 1/N squared: ten pumps idling cost a hundredth of one pump working,
-        /// and the best build is always "more pumps, all barely on".
-        /// </summary>
         [Fact]
+/// <summary>PumpPowerIsLinearInSpeed operation.</summary>
         public void PumpPowerIsLinearInSpeed()
         {
+/// <summary>CoolantPump operation.</summary>
             CoolantPump pump = new CoolantPump();
             pump.MaxPowerWatts = 20000f;
 
@@ -796,33 +620,27 @@ namespace Thermodynamics.Tests
             pump.Speed = 0.25f;
             Assert.Equal(5000f, pump.DemandWatts, 2);
 
-            // Off is off, whatever the slider says.
             pump.Enabled = false;
             Assert.Equal(0f, pump.DemandWatts);
         }
 
-        /// <summary>
-        /// The property linear power buys: the bill for a given flow is the same however many pumps
-        /// deliver it. A second pump is redundancy and headroom, not a cheaper way to move the fluid.
-        /// </summary>
         [Theory]
         [InlineData(1)]
         [InlineData(2)]
         [InlineData(4)]
         [InlineData(9)]
+/// <summary>TheBillForAGivenFlowDoesNotDependOnHowManyPumpsDeliverIt operation.</summary>
         public void TheBillForAGivenFlowDoesNotDependOnHowManyPumpsDeliverIt(int pumpCount)
         {
             CoolantLoop loop;
             Ring(9, 9, 4f, out loop);
 
-            // Reuse the ring's own pump entry as a template, then stand in the pumps by hand: what is
-            // being checked is the arithmetic relating flow to the bill, not the ring's plumbing.
             loop.Pumps.Clear();
 
-            // Each pump at the speed that lands the same total demand, so the same flow.
             const float totalDemand = 1f;
             for (int i = 0; i < pumpCount; i++)
             {
+/// <summary>CoolantPump operation.</summary>
                 CoolantPump pump = new CoolantPump();
                 pump.MaxPowerWatts = 20000f;
                 pump.Speed = totalDemand / pumpCount;
@@ -834,20 +652,14 @@ namespace Thermodynamics.Tests
             float bill = 0f;
             for (int i = 0; i < loop.Pumps.Count; i++) bill += loop.Pumps[i].DemandWatts;
 
-            // Same flow...
             Assert.Equal(loop.Properties.FlowRateFor(loop.ParcelLengthMetres) / loop.ParcelLengthMetres,
                 loop.FlowSegmentsPerSecond, 3);
 
-            // ...for the same money, whatever the pump count.
             Assert.Equal(20000f, bill, 1);
         }
 
-        /// <summary>
-        /// Flow rises with the square root of combined pumping: four pumps carry twice one pump's
-        /// flow, not four times. Real parallel-pump behaviour against a fixed circuit, and honest
-        /// diminishing returns on redundancy.
-        /// </summary>
         [Fact]
+/// <summary>FlowRisesWithTheSquareRootOfCombinedPumping operation.</summary>
         public void FlowRisesWithTheSquareRootOfCombinedPumping()
         {
             CoolantLoop loop;
@@ -856,6 +668,7 @@ namespace Thermodynamics.Tests
             loop.Pumps.Clear();
             for (int i = 0; i < 4; i++)
             {
+/// <summary>CoolantPump operation.</summary>
                 CoolantPump pump = new CoolantPump();
                 pump.MaxPowerWatts = 20000f;
                 loop.Pumps.Add(pump);
@@ -865,53 +678,39 @@ namespace Thermodynamics.Tests
             }
         }
     
-        // ---- which way round the ring turns -------------------------------------------------
 
-        /// <summary>
-        /// A pump fitted the other way round drives the loop backwards rather than not working, and a
-        /// loop driven backwards works exactly as well. A build mistake becomes a build choice.
-        /// </summary>
         [Fact]
+/// <summary>APumpFittedBackwardsDrivesTheRingInReverse operation.</summary>
         public void APumpFittedBackwardsDrivesTheRingInReverse()
         {
+/// <summary>RingWithPump operation.</summary>
             CoolantLoop forward = RingWithPump(false);
+/// <summary>RingWithPump operation.</summary>
             CoolantLoop reverse = RingWithPump(true);
 
             Assert.Single(forward.Pumps);
             Assert.Single(reverse.Pumps);
 
-            // Which sign counts as "forward" is not fixed: a ring is traced from an arbitrary block
-            // in whichever direction its first port leads, so direction is only ever meaningful
-            // relative to the ring's own order. What must hold is that turning the pump round flips
-            // it, and that the ring then turns the other way at the same speed.
             Assert.Equal(-forward.Pumps[0].Direction, reverse.Pumps[0].Direction);
             Assert.Equal(forward.FlowSegmentsPerSecond, -reverse.FlowSegmentsPerSecond, 3);
             Assert.NotEqual(0f, reverse.FlowSegmentsPerSecond);
         }
 
-        /// <summary>
-        /// A ring driven backwards carries heat as well as one driven forwards.
-        ///
-        /// Close rather than identical: the sink does not sit symmetrically between the pump and
-        /// itself, so reversing the flow changes how far the heated coolant travels before it comes
-        /// back round. A couple of percent is that asymmetry; anything larger would mean one
-        /// direction transports worse than the other, which is the thing being ruled out.
-        /// </summary>
         [Fact]
+/// <summary>AReversedRingCarriesHeatJustAsWell operation.</summary>
         public void AReversedRingCarriesHeatJustAsWell()
         {
+/// <summary>SpreadAfterHeatingOneSink operation.</summary>
             float forward = SpreadAfterHeatingOneSink(false);
+/// <summary>SpreadAfterHeatingOneSink operation.</summary>
             float reverse = SpreadAfterHeatingOneSink(true);
 
             Assert.True(forward > 0f && reverse > 0f, "both directions should be transporting");
             Assert.Equal(1f, reverse / forward, 1);
         }
 
-        /// <summary>
-        /// Two pumps facing each other cancel. The ring holds its coolant, both pumps draw their
-        /// power, and nothing circulates — which is worth knowing before building it.
-        /// </summary>
         [Fact]
+/// <summary>OpposedPumpsCancelAndTheRingStops operation.</summary>
         public void OpposedPumpsCancelAndTheRingStops()
         {
             CoolantLoop loop;
@@ -919,6 +718,7 @@ namespace Thermodynamics.Tests
 
             loop.Pumps.Clear();
 
+/// <summary>CoolantPump operation.</summary>
             CoolantPump forward = new CoolantPump();
             forward.MaxPowerWatts = 20000f;
             forward.Direction = 1;
@@ -927,6 +727,7 @@ namespace Thermodynamics.Tests
             loop.RefreshFlow();
             Assert.True(loop.FlowSegmentsPerSecond > 0f);
 
+/// <summary>CoolantPump operation.</summary>
             CoolantPump against = new CoolantPump();
             against.MaxPowerWatts = 20000f;
             against.Direction = -1;
@@ -936,16 +737,12 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, loop.FlowSegmentsPerSecond, 4);
             Assert.Equal(0f, loop.PumpDemand, 4);
 
-            // And they are both still drawing, which is the part worth warning about.
             Assert.Equal(20000f, forward.DemandWatts, 2);
             Assert.Equal(20000f, against.DemandWatts, 2);
         }
 
-        /// <summary>
-        /// Three pumps one way against one the other leave net flow for two, not four — the square
-        /// root is taken of what survives the subtraction.
-        /// </summary>
         [Fact]
+/// <summary>OpposedPumpsSubtractBeforeTheSquareRoot operation.</summary>
         public void OpposedPumpsSubtractBeforeTheSquareRoot()
         {
             CoolantLoop loop;
@@ -954,6 +751,7 @@ namespace Thermodynamics.Tests
             loop.Pumps.Clear();
             for (int i = 0; i < 4; i++)
             {
+/// <summary>CoolantPump operation.</summary>
                 CoolantPump pump = new CoolantPump();
                 pump.MaxPowerWatts = 20000f;
                 pump.Direction = i < 3 ? 1 : -1;
@@ -962,19 +760,19 @@ namespace Thermodynamics.Tests
 
             loop.RefreshFlow();
 
-            // Net demand of two, so flow of sqrt(2) times the base rate.
             Assert.Equal(2f, loop.PumpDemand, 3);
             Assert.Equal(10f * (float)Math.Sqrt(2f), loop.FlowSegmentsPerSecond, 3);
         }
 
-        /// <summary>Reversed flow carries its fractional debt with the right sign, and conserves heat.</summary>
         [Fact]
+/// <summary>ReverseRotationIsExactToo operation.</summary>
         public void ReverseRotationIsExactToo()
         {
             CoolantLoop loop;
             Ring(5, 5, 4f, out loop);
 
             loop.Pumps.Clear();
+/// <summary>CoolantPump operation.</summary>
             CoolantPump against = new CoolantPump();
             against.MaxPowerWatts = 20000f;
             against.Direction = -1;
@@ -989,13 +787,13 @@ namespace Thermodynamics.Tests
             float before = loop.Energy;
             float hottest = loop.HottestSegment;
 
-            // A whole number of laps: the ring must come back to exactly where it started.
             for (int i = 0; i < 4 * loop.PipeCount; i++) loop.Advect(1f / 4f);
 
             Assert.Equal(1f, loop.Energy / before, 5);
             Assert.Equal(hottest, loop.HottestSegment, 2);
         }
 
+/// <summary>RingWithPump operation.</summary>
         private static CoolantLoop RingWithPump(bool reversed)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -1004,6 +802,7 @@ namespace Thermodynamics.Tests
             return builder.BuildSimulation(Isolated(), 300f).Solver.Loops[0];
         }
 
+/// <summary>SpreadAfterHeatingOneSink operation.</summary>
         private static float SpreadAfterHeatingOneSink(bool reversed)
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -1022,47 +821,29 @@ namespace Thermodynamics.Tests
         }
     
     
-        /// <summary>
-        /// Flow is reported in metres per second, because parcels per second is the solver's unit and
-        /// nobody has any intuition for it. One parcel is one pipe block, so the conversion is the
-        /// grid's cell size.
-        /// </summary>
         [Fact]
+/// <summary>FlowIsReportedInMetresPerSecond operation.</summary>
         public void FlowIsReportedInMetresPerSecond()
         {
             CoolantLoop loop;
             Ring(5, 5, 4f, out loop);
 
-            // A large grid cell is 2.5 m, so four parcels a second is ten metres a second. Which sign
-            // that carries depends on how the ring happened to be traced, so it is the magnitude that
-            // is fixed and the negation that is asserted.
             Assert.Equal(2.5f, loop.ParcelLengthMetres, 3);
             Assert.Equal(loop.FlowSegmentsPerSecond * 2.5f, loop.FlowMetresPerSecond, 3);
             Assert.Equal(10f, Math.Abs(loop.FlowMetresPerSecond), 2);
 
-            // The sign is the direction, and it survives the conversion.
             float before = loop.FlowMetresPerSecond;
             loop.Pumps[0].Direction = -loop.Pumps[0].Direction;
             loop.RefreshFlow();
             Assert.Equal(-before, loop.FlowMetresPerSecond, 2);
 
-            // A stopped ring is zero either way round.
             loop.Pumps[0].Enabled = false;
             loop.RefreshFlow();
             Assert.Equal(0f, loop.FlowMetresPerSecond, 4);
         }
 
-        /// <summary>
-        /// The flow rate is a dial rather than a constant, and this is the arithmetic the menu's
-        /// version of it rests on: the definition is metres per second and the solver carries
-        /// parcels one pipe block long, so the same number means the same speed on either grid
-        /// size and doubling it doubles the parcels.
-        ///
-        /// Worth pinning now that the value is editable from the settings menu rather than only
-        /// from a file nobody could reach in game — a change here is a change a player can make
-        /// mid-session.
-        /// </summary>
         [Fact]
+/// <summary>TheFlowRateDialIsMetresPerSecondWhicheverGridItIsOn operation.</summary>
         public void TheFlowRateDialIsMetresPerSecondWhicheverGridItIsOn()
         {
             CoolantLoop loop;
@@ -1077,8 +858,6 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(baseline * 2f, Math.Abs(loop.FlowSegmentsPerSecond), 3);
 
-            // And zero stops the ring, which is what a player setting it to zero should get rather
-            // than an exception or a ring that keeps circulating.
             loop.Properties.LargeGridFlowRate = 0f;
             loop.Properties.SmallGridFlowRate = 0f;
             loop.RefreshFlow();

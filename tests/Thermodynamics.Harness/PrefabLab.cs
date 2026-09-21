@@ -5,30 +5,10 @@ using Thermodynamics.Core;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// `G7`: does a ship the game spawns survive arriving?
-    ///
-    /// <para>
-    /// The stated compatibility floor, and until now the only goal this mod holds itself to that
-    /// had never been measured. The corpus is ships players chose to upload; these are the 705 the
-    /// game puts in front of a player whether they want them or not — cargo ships, drones,
-    /// encounters, unknown signals, respawn pods — and a mod that destroys them as they arrive is
-    /// broken however good its physics is.
-    /// </para>
-    ///
-    /// <para>
-    /// **The criterion was written down before this ran** and is in
-    /// balance-lab.md: idle, in the environment the prefab's own
-    /// category spawns into, for five simulated minutes, losing no block. Every term of it is a
-    /// decision argued there rather than a convenience taken here (`E11`).
-    /// </para>
-    /// </summary>
     public static class PrefabLab
     {
-        /// <summary>Simulated seconds a prefab is watched for. See `G7`.</summary>
         public const float WatchSeconds = 300f;
 
-        /// <summary>What one prefab did.</summary>
         public class Outcome
         {
             public string Prefab;
@@ -38,22 +18,17 @@ namespace Thermodynamics.Harness
             public int Blocks;
             public int Grids;
 
-            /// <summary>Blocks the game could not identify, which are not simulated.</summary>
             public int UnknownBlocks;
 
             public float PeakKelvin;
             public float MeanKelvin;
 
-            /// <summary>Blocks past their own rating at the end. Not the same as blocks lost.</summary>
             public int OverCritical;
 
-            /// <summary>Simulated seconds to the first crossing, or -1.</summary>
             public float SecondsToCritical = -1f;
 
-            /// <summary>Simulated seconds to the first block destroyed, or -1. **This is `G7`.**</summary>
             public float SecondsToFirstLoss = -1f;
 
-            /// <summary>Why this prefab was not measured, or null.</summary>
             public string Skipped;
 
             public bool Lost
@@ -62,23 +37,14 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// Where a prefab of this category is put. Planetary encounters stand on a planet; nothing
-        /// else the game spawns does, so everything else is measured in sunlit vacuum.
-        /// </summary>
+/// <summary>Environment operation.</summary>
         public static Func<float, EnvironmentSample> Environment(string category)
         {
             if (category == "PlanetaryEncounters") return t => Worlds.PlanetSurface(1f, 0.5f);
             return t => Worlds.Space(new VRageMath.Vector3(0.3f, 0.9f, 0.2f));
         }
 
-        /// <summary>
-        /// Runs one prefab file. Never throws; a file that cannot be read says so.
-        ///
-        /// <paramref name="load"/> is `Idle` for `G7`, which is about arrival. The other states are
-        /// the control: a criterion that can only ever pass has not been tested, and running the
-        /// same prefabs under load is how this one is shown to be able to fail (`E8`).
-        /// </summary>
+/// <summary>Measure operation.</summary>
         public static Outcome Measure(string path, ThermalSettings settings = null,
             ShipLoad.State load = null)
         {
@@ -113,7 +79,9 @@ namespace Thermodynamics.Harness
 
             ShipLoad.Apply(assembly, load ?? ShipLoad.State.Idle);
 
+/// <summary>AssemblyRunner operation.</summary>
             AssemblyRunner runner = new AssemblyRunner(assembly);
+/// <summary>Environment operation.</summary>
             runner.Environment = Environment(outcome.Category);
             runner.Integrity = GameBlocks.IntegrityOf;
             runner.Run(WatchSeconds);
@@ -129,7 +97,7 @@ namespace Thermodynamics.Harness
             return outcome;
         }
 
-        /// <summary>Every prefab the game ships, measured. Parallel across files.</summary>
+/// <summary>Run operation.</summary>
         public static List<Outcome> Run(ThermalSettings settings = null, int limit = 0,
             ShipLoad.State load = null)
         {
@@ -140,9 +108,10 @@ namespace Thermodynamics.Harness
             return LabRun.Map(files, path => Measure(path, world, load), LabMode.Parallel);
         }
 
-        /// <summary>The verdict, and the shape of what was measured.</summary>
+/// <summary>Report operation.</summary>
         public static string Report(IList<Outcome> outcomes)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
 
             int measured = 0, skipped = 0, lost = 0, crossed = 0;
@@ -200,6 +169,7 @@ namespace Thermodynamics.Harness
 
                 text.AppendLine();
                 text.AppendLine("  worst, by how soon it lost one");
+/// <summary>List operation.</summary>
                 List<Outcome> failures = new List<Outcome>();
                 for (int i = 0; i < outcomes.Count; i++)
                 {
@@ -222,9 +192,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-        /// <summary>One row per prefab.</summary>
+/// <summary>Csv operation.</summary>
         public static string Csv(IList<Outcome> outcomes)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder csv = new StringBuilder();
             csv.AppendLine("prefab,category,blocks,grids,unknown_blocks,peak_k,mean_k,"
                 + "over_critical,seconds_to_critical,seconds_to_first_loss,skipped");

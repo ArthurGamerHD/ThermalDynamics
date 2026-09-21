@@ -7,29 +7,8 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// What one grid costs before any of its blocks do.
-    ///
-    /// <para>
-    /// A step has a fixed part — the environment solve, the node mirror, the stability estimate,
-    /// the stage machine, the loop and pump prologues — and a part proportional to the grid. The
-    /// fleet rows in the performance report found the two in balance at eight hundred blocks a
-    /// grid, and concluded that grid count does not matter. A real world is not made of
-    /// eight-hundred-block grids: the 2026-08-20 field dump holds 97 grids of five cells or fewer
-    /// and 198 of five hundred or fewer, and they cost 10 % of the mod's time for 5 % of its
-    /// blocks.
-    /// </para>
-    ///
-    /// <para>
-    /// This sweeps grid size down to one block at a fixed fleet size, so the fixed part is read
-    /// where it dominates rather than where it is already amortised. The environment is a planet
-    /// surface, because a vacuum sample skips most of what the environment solve does and every
-    /// grid in that dump was in air.
-    /// </para>
-    /// </summary>
     public static class SmallGridLab
     {
-        /// <summary>Blocks per grid, spanning the sizes a real world is mostly made of.</summary>
         public static readonly int[] DefaultSizes = { 1, 3, 8, 32, 128, 512, 2048 };
 
         public class Row
@@ -38,32 +17,14 @@ namespace Thermodynamics.Harness
             public int BlocksPerGrid;
             public int Blocks;
 
-            /// <summary>Milliseconds one step of the whole fleet takes, run whole.</summary>
             public double FleetStepMs;
 
-            /// <summary>
-            /// Milliseconds the same simulated second costs when the host paces it: every grid
-            /// visited every frame, each frame doing its share of a step.
-            /// </summary>
             public double PacedStepMs;
 
-            /// <summary>Calls into the resumable stage machine per step, per grid.</summary>
             public double AdvancesPerStep;
 
-            /// <summary>
-            /// Milliseconds a step's worth of frames spends entering <c>Update</c> without
-            /// reaching the solver at all: the settings check, the three dirty branches and the
-            /// profiler scopes, paid once a frame per grid whether or not the frame does any
-            /// solver work.
-            ///
-            /// Measured by driving the same fleet on a zero-length frame, which returns from
-            /// <c>AdvanceSolver</c>'s first line. It is the floor under the pacing overhead — the
-            /// part no change to a step can reach, and the part only visiting fewer grids per
-            /// frame can.
-            /// </summary>
             public double VisitMs;
 
-            /// <summary>What share of the pacing overhead the visit floor accounts for.</summary>
             public double VisitShare
             {
                 get
@@ -90,16 +51,16 @@ namespace Thermodynamics.Harness
 
             public double Substeps;
 
-            /// <summary>Substeps the paced phase was granted, for comparison with the whole one.</summary>
             public double PacedSubsteps;
 
-            /// <summary>Steps each grid completed in the paced phase, against the steps asked for.</summary>
             public double PacedSteps;
             public int RequestedSteps;
         }
 
+/// <summary>Run operation.</summary>
         public static List<Row> Run(int grids, IList<int> sizes, int steps, Action<string> log)
         {
+/// <summary>List operation.</summary>
             List<Row> rows = new List<Row>();
 
             for (int i = 0; i < sizes.Count; i++)
@@ -111,15 +72,19 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
+/// <summary>Measure operation.</summary>
         private static Row Measure(int grids, int blocksPerGrid, int steps)
         {
+/// <summary>Row operation.</summary>
             Row row = new Row();
             row.Grids = grids;
             row.BlocksPerGrid = blocksPerGrid;
 
+/// <summary>List operation.</summary>
             List<ThermalSimulation> fleet = new List<ThermalSimulation>(grids);
             for (int i = 0; i < grids; i++)
             {
+/// <summary>Builds the method table.</summary>
                 ThermalSimulation simulation = Build(blocksPerGrid);
                 fleet.Add(simulation);
                 row.Blocks += simulation.Solver.Nodes.Count;
@@ -137,19 +102,11 @@ namespace Thermodynamics.Harness
             double best = double.MaxValue;
             double pacedBest = double.MaxValue;
             double visitBest = double.MaxValue;
+/// <summary>Stopwatch operation.</summary>
             Stopwatch watch = new Stopwatch();
 
-            // The two phases alternate rather than running one after the other. They are the same
-            // grids in the same state, and whichever went second inherited whatever the first left
-            // behind — a settled temperature spread, a completed room map — and read cheaper for
-            // it. Run in blocks, the paced phase measured five times faster than the whole phase
-            // it is a superset of.
             for (int repeat = 0; repeat < 4; repeat++)
             {
-                // Order alternates. Whichever phase runs second inherits a grid the first left
-                // settled, and conduction skips a link whose ends agree — so a fixed order gives
-                // the second phase a cheaper problem and the best-of would keep the bias rather
-                // than remove it.
                 bool wholeFirst = (repeat % 2) == 0;
 
                 if (wholeFirst) TimeWhole(fleet, sample, steps, watch, row, ref best);
@@ -166,6 +123,7 @@ namespace Thermodynamics.Harness
         }
 
 
+/// <summary>TimeWhole operation.</summary>
         private static void TimeWhole(List<ThermalSimulation> fleet, EnvironmentSample sample,
             int steps, Stopwatch watch, Row row, ref double best)
         {
@@ -185,6 +143,7 @@ namespace Thermodynamics.Harness
             row.Substeps = fleet[0].Solver.LastSubsteps;
         }
 
+/// <summary>TimePaced operation.</summary>
         private static void TimePaced(List<ThermalSimulation> fleet, EnvironmentSample sample,
             float frame, int frames, int steps, Stopwatch watch, Row row, ref double best)
         {
@@ -206,9 +165,6 @@ namespace Thermodynamics.Harness
                 completed += fleet[i].Work.SolverSteps;
             }
 
-            // Normalised by the steps that actually completed rather than by the steps asked for:
-            // a whole number of frames per step is not always available, and a row that rounded
-            // would read the difference as a cost.
             double perGridSteps = completed <= 0 ? steps : completed / (double)fleet.Count;
             double paced = watch.Elapsed.TotalMilliseconds / perGridSteps;
             if (paced >= best) return;
@@ -220,10 +176,7 @@ namespace Thermodynamics.Harness
             row.AdvancesPerStep = completed <= 0 ? 0d : advances / (double)completed;
         }
 
-        /// <summary>
-        /// The same frame count with a zero-length frame, so every visit stops before the solver.
-        /// Nothing is stepped, so nothing needs seeding and the fleet is left as it was found.
-        /// </summary>
+/// <summary>TimeVisits operation.</summary>
         private static void TimeVisits(List<ThermalSimulation> fleet, EnvironmentSample sample,
             int frames, int steps, Stopwatch watch, ref double best)
         {
@@ -238,22 +191,13 @@ namespace Thermodynamics.Harness
             if (visits < best) best = visits;
         }
 
-        /// <summary>
-        /// Spreads every grid's temperatures across 250-750 K before a timed run.
-        ///
-        /// Conduction skips a link whose ends already agree, so a run that inherits the previous
-        /// run's settled grid measures a cheaper problem. Unseeded, the paced column read five
-        /// times faster than the whole column it is a superset of, purely because it ran second.
-        /// </summary>
+/// <summary>Seed operation.</summary>
         private static void Seed(List<ThermalSimulation> fleet)
         {
             for (int i = 0; i < fleet.Count; i++) LoadBenchmarks.SeedSpread(fleet[i]);
         }
 
-        /// <summary>
-        /// A compact hull of exactly this many cells, from the block census so the stiffness
-        /// spread is a ship's rather than one material's.
-        /// </summary>
+/// <summary>Builds the API method table.</summary>
         private static ThermalSimulation Build(int blocks)
         {
             if (blocks < 1) blocks = 1;
@@ -261,6 +205,7 @@ namespace Thermodynamics.Harness
             int side = 1;
             while (side * side * side < blocks) side++;
 
+/// <summary>List operation.</summary>
             List<Vector3I> cells = new List<Vector3I>(blocks);
             for (int x = 0; x < side && cells.Count < blocks; x++)
             {
@@ -279,9 +224,6 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings());
             simulation.RebuildAll();
 
-            // Taken all the way to a mapped hull. Only the paced path runs the room mapper, so a
-            // fleet handed over with the map still pending would have one phase integrating an
-            // unmapped grid and the other a mapped one.
             while (simulation.HasPendingWork)
             {
                 simulation.Update(1f / 60f, Worlds.PlanetSurface(1f, 0.5f));
@@ -290,8 +232,10 @@ namespace Thermodynamics.Harness
             return simulation;
         }
 
+/// <summary>Table operation.</summary>
         public static string Table(IList<Row> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("  grids  blocks/grid    blocks  subs w/p    whole ms"
                 + "    paced ms   pacing   advances   steps p/w   us/grid/step"
@@ -318,8 +262,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>Csv operation.</summary>
         public static string Csv(IList<Row> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("grids,blocks_per_grid,blocks,substeps,fleet_step_ms,paced_step_ms,"
                 + "pacing_overhead,advances_per_step,us_per_grid_step,ns_per_block_step,"

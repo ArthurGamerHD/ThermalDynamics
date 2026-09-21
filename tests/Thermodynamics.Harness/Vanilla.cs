@@ -5,38 +5,8 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Space Engineers' own numbers, transcribed so this repository can balance against them
-    /// without a game install.
-    ///
-    /// The mod's blocks are only meaningful next to the blocks a player already has. "Is the
-    /// radiator worth its mass?" has no answer in isolation; it has a clear one against the light
-    /// armour block it displaces. Everything here exists so those comparisons are made against the
-    /// real figures rather than against remembered ones.
-    ///
-    /// **These are transcribed, not derived at runtime.** The game is not installed on every
-    /// machine that runs this suite, so the numbers are checked in and
-    /// <c>BalanceTests.TheVanillaReferenceStillMatchesTheInstalledGame</c> re-derives them from
-    /// <c>Content/Data</c> when a copy *is* present and fails if they have drifted. That is the
-    /// same arrangement <see cref="Census"/> uses for its field observations, and for the same
-    /// reason: a transcription nobody checks becomes fiction.
-    ///
-    /// To refresh after a game update, run that test and copy the values it reports.
-    ///
-    /// Transcribed from Space Engineers 1, Content/Data/CubeBlocks/*.sbc and Components.sbc,
-    /// on 2026-08-19.
-    /// </summary>
     public static class Vanilla
     {
-        /// <summary>
-        /// Component masses in kilograms, from <c>Content/Data/Components.sbc</c>.
-        ///
-        /// A block's mass is the sum of its build components, which is why these matter: the
-        /// simulation's heat capacity is <c>mass x specific heat</c>, so getting a mass wrong
-        /// scales every temperature that block ever reaches. The mod's own definitions are costed
-        /// in these same components, so <see cref="ShippedBlocks"/> uses this table to derive the
-        /// real mass of a radiator rather than carrying a hand-written guess.
-        /// </summary>
         public static readonly Dictionary<string, float> ComponentMasses = new Dictionary<string, float>
         {
             { "SteelPlate", 20f },
@@ -63,11 +33,6 @@ namespace Thermodynamics.Harness
             { "Canvas", 15f },
             { "ZoneChip", 0.25f },
 
-            // The prototech family, priced because an oxygen generator is built from four of them
-            // and MassOf skips a component it cannot price — so a half-transcribed family does not
-            // fail, it makes a block lighter than it is and every temperature derived from it
-            // wrong in the safe-looking direction. All seven are here rather than the four in use,
-            // for the same reason.
             { "PrototechFrame", 100f },
             { "PrototechPanel", 30f },
             { "PrototechCapacitor", 20f },
@@ -77,7 +42,7 @@ namespace Thermodynamics.Harness
             { "PrototechCoolingUnit", 250f },
         };
 
-        /// <summary>Total mass in kilograms of a component list, or 0 for an unknown component.</summary>
+/// <summary>MassOf operation.</summary>
         public static float MassOf(IEnumerable<KeyValuePair<string, int>> components)
         {
             float total = 0f;
@@ -89,7 +54,6 @@ namespace Thermodynamics.Harness
             return total;
         }
 
-        /// <summary>One vanilla block, reduced to the fields a balance comparison needs.</summary>
         public class Block
         {
             public string Subtype;
@@ -97,49 +61,25 @@ namespace Thermodynamics.Harness
             public bool Large;
             public Vector3I Size;
 
-            /// <summary>Kilograms, summed from the build components.</summary>
             public float Mass;
 
             public int Pcu;
             public float BuildSeconds;
 
-            /// <summary>Rated electrical output, megawatts. Reactors and batteries.</summary>
             public float PowerOutputMegawatts;
 
-            /// <summary>
-            /// Rated electrical draw, megawatts: `OperationalPowerConsumption` or its equivalents.
-            /// Thrusters and the oxygen generators.
-            /// </summary>
             public float PowerDrawMegawatts;
 
-            /// <summary>
-            /// Draw when the block is switched on and doing nothing, megawatts, from
-            /// `StandbyPowerConsumption`. Zero for a definition that does not state one.
-            ///
-            /// It is here because it is the only *low* draw the game itself states. A rig that
-            /// wants a lightly-loaded consumer would otherwise have to invent a duty cycle, and an
-            /// invented duty cycle inside a rig deciding an invented fraction is two opinions
-            /// multiplied together.
-            /// </summary>
             public float StandbyDrawMegawatts;
 
-            /// <summary>
-            /// Build cost, as component name and count. Transcribed with the rest of this table,
-            /// and checked against the install by
-            /// <c>TheVanillaReferenceStillMatchesTheInstalledGame</c>.
-            ///
-            /// It is here because these blocks' thermal properties are *derived* from it — see
-            /// <see cref="BlockThermalDerivation"/> — and the derivation has to produce the same
-            /// answer on a machine with no game on it as on one with the game installed.
-            /// </summary>
             public string[] ComponentNames = new string[0];
             public int[] ComponentCounts = new int[0];
 
-            /// <summary>The build cost priced with <see cref="ComponentMasses"/>.</summary>
             public List<BlockComponent> Components
             {
                 get
                 {
+/// <summary>List operation.</summary>
                     List<BlockComponent> components = new List<BlockComponent>();
 
                     for (int i = 0; i < ComponentNames.Length && i < ComponentCounts.Length; i++)
@@ -154,7 +94,6 @@ namespace Thermodynamics.Harness
                 }
             }
 
-            /// <summary>What this block is thermally, derived from its build cost and its type.</summary>
             public BlockThermalProperties Thermal
             {
                 get { return ShippedBlocks.DeriveWithFunction(Components, TypeId); }
@@ -165,22 +104,22 @@ namespace Thermodynamics.Harness
                 get { return Size.X * Size.Y * Size.Z; }
             }
 
-            /// <summary>Grid cell edge in metres — 2.5 for large, 0.5 for small.</summary>
             public float GridSize
             {
                 get { return Large ? Catalog.LargeGridSize : Catalog.SmallGridSize; }
             }
         }
 
+/// <summary>Row operation.</summary>
         private static Block Row(string subtype, string typeId, bool large, int x, int y, int z,
             float mass, int pcu, float buildSeconds, float outputMw, float drawMw,
             string components = "", float standbyMw = 0f)
         {
+/// <summary>List operation.</summary>
             List<string> names = new List<string>();
+/// <summary>List operation.</summary>
             List<int> counts = new List<int>();
 
-            // "SteelPlate:20 MetalGrid:5" — the same order and totals the definition lists, with
-            // repeated components summed, since only the total matters to a mass blend.
             foreach (string part in components.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 string[] halves = part.Split(':');
@@ -199,6 +138,7 @@ namespace Thermodynamics.Harness
                 Subtype = subtype,
                 TypeId = typeId,
                 Large = large,
+/// <summary>Vector3I operation.</summary>
                 Size = new Vector3I(x, y, z),
                 Mass = mass,
                 Pcu = pcu,
@@ -211,26 +151,6 @@ namespace Thermodynamics.Harness
             };
         }
 
-        /// <summary>
-        /// The comparison set: the two structural blocks a player builds hulls out of, the three
-        /// families that put heat into a ship, and the one family whose waste fraction is still
-        /// being decided.
-        ///
-        /// <para>
-        /// **The oxygen generators are here to be measured rather than to be compared against.**
-        /// The other rows answer *is a radiator worth its mass* — a question about the mod's own
-        /// blocks against the vanilla ones they displace. These answer the last of `Cubes.xml`'s
-        /// unsourced waste fractions, which needs the family's whole spread because one has to hold for
-        /// 0.1 MW into eighteen small-grid cells and 1 MW into six large-grid ones.
-        /// </para>
-        ///
-        /// <para>
-        /// **The vanilla large generator's subtype is the empty string**, which is not a
-        /// transcription error: thirteen of the game's definitions carry no `SubtypeId` and this is
-        /// one of them. It is why the two drift tests match on type *and* subtype — matching on
-        /// subtype alone resolved it to a door.
-        /// </para>
-        /// </summary>
         public static readonly Block[] Reference = new Block[]
         {
             Row("LargeBlockArmorBlock", "CubeBlock", true, 1, 1, 1, 500f, 1, 8f, 0f, 0f,
@@ -276,7 +196,7 @@ namespace Thermodynamics.Harness
                 "SteelPlate:6 Construction:8 LargeTube:2 Motor:1 Computer:3 BulletproofGlass:3", 0.001f),
         };
 
-        /// <summary>The reference block with this subtype, or null.</summary>
+/// <summary>Find operation.</summary>
         public static Block Find(string subtype)
         {
             foreach (Block block in Reference)

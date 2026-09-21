@@ -5,34 +5,16 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **The one-cell fast path against the walk it replaces, bit for bit.**
-    ///
-    /// <para>
-    /// A one-cell block's neighbourhood is the same 26 offsets wherever it sits — its centre is its
-    /// own cell — so their unit vectors are constants that the general walk arrives at by 26 square
-    /// roots and 26 divisions per block. The fast path reads them from a table instead. A census
-    /// hull is mostly one-cell blocks, so this is most of the pass.
-    /// </para>
-    ///
-    /// <para>
-    /// **Equal is asserted exactly rather than to a tolerance**, because the claim is that the two
-    /// do the same arithmetic in the same order and not that they agree closely. Float addition is
-    /// not associative, so a table walked in a different order from the loop would be a different
-    /// answer — and one close enough to pass a tolerance is exactly the failure that would survive
-    /// into the corpus figures.
-    /// </para>
-    /// </summary>
     public class ShapeNormalOneCellTests
     {
+/// <summary>Hull operation.</summary>
         private static ThermalSimulation Hull()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableShapeDrag = true;
             settings.Derive();
 
-            // Stepped on two axes and hollowed, so the sample carries flats, edges, corners,
-            // staircases and blocks with nothing beside them at all.
             GridBuilder builder = GridBuilder.Large();
             for (int y = 0; y < 6; y++)
             {
@@ -54,8 +36,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheOneCellPathAgreesWithTheWalkExactly operation.</summary>
         public void TheOneCellPathAgreesWithTheWalkExactly()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation hull = Hull();
             CellBitset occupancy = hull.Grid.Occupancy();
 
@@ -79,20 +63,15 @@ namespace Thermodynamics.Tests
                 if (fast != Vector3.Zero) moved++;
             }
 
-            // **A test that compared nothing would pass.** The hull has to contain one-cell blocks,
-            // and enough of them must reconstruct to something for the agreement to mean anything.
             Assert.True(oneCell > 100, "only " + oneCell + " one-cell blocks, so this compared little");
             Assert.True(moved > 50, "only " + moved + " of them produced a normal at all");
         }
 
-        /// <summary>
-        /// **The isolated block is the case the two paths could most easily disagree on**: nothing
-        /// around it, so the sum cancels to zero and both must return zero rather than a direction
-        /// made of rounding.
-        /// </summary>
         [Fact]
+/// <summary>ABlockWithNoNeighboursReadsZeroBothWays operation.</summary>
         public void ABlockWithNoNeighboursReadsZeroBothWays()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation hull = Hull();
             CellBitset occupancy = hull.Grid.Occupancy();
 
@@ -102,10 +81,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(Vector3.Zero, ShapeNormal.Walking(occupancy, alone, 1));
         }
 
-        /// <summary>A multi-cell block has no fast path and must take the walk unchanged.</summary>
         [Fact]
+/// <summary>AMultiCellBlockStillTakesTheWalk operation.</summary>
         public void AMultiCellBlockStillTakesTheWalk()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation hull = Hull();
             CellBitset occupancy = hull.Grid.Occupancy();
 

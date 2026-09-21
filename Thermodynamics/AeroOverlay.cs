@@ -11,57 +11,28 @@ using static VRageRender.MyBillboard;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// The aerodynamics debug view: the centre of mass the force is applied at, the drag, lift and
-    /// relative-wind vectors on the ship being flown or looked at, and — when no force is being
-    /// applied — the reason, named.
-    ///
-    /// <para>
-    /// **The reason line is the point.** The force chain has six gates in series (`EnableDrag`,
-    /// the server, friction being live, the shape term, `EnableLift`, the coefficients), three of
-    /// which ship off, and a player who turns on the one called *Lift* sees nothing and cannot
-    /// tell which of the other five ate it. This view computes the same vectors the server
-    /// applies, from the same published sums (<see cref="ThermalSimulation.FrictionWatts"/>,
-    /// <see cref="ThermalSolver.LastPressureWatts"/>, <see cref="ThermalGrid.LastState"/>), and
-    /// prints what is missing when a vector is zero.
-    /// </para>
-    ///
-    /// <para>
-    /// Summed over the physical group and drawn at the group's mass-weighted centre, because that
-    /// is exactly what <see cref="ThermalGridDrag"/> applies — one force at one point, and
-    /// therefore never a torque. Client only, behind
-    /// <see cref="Settings.DebugAeroOverlay"/>; reads state the simulation already publishes and
-    /// writes nothing.
-    /// </para>
-    /// </summary>
     public static class AeroOverlay
     {
-        /// <summary>
-        /// The x-ray band: geometry scaled about the eye to just in front of the near plane, the
-        /// same trick <see cref="ThermalDebugView"/> uses, so the centre of mass reads through the
-        /// hull it sits inside.
-        /// </summary>
         private const double BandScale = 0.02d;
 
-        /// <summary>How far the crosshair looks for a grid when nothing is being flown, m.</summary>
         private const double PickRange = 300d;
 
         private static readonly MyStringId LineMaterial = MyStringId.GetOrCompute("Square");
 
-        /// <summary>Scratch for the group's grids, so a frame allocates nothing.</summary>
+/// <summary>List operation.</summary>
         private static readonly List<IMyCubeGrid> GroupGrids = new List<IMyCubeGrid>();
 
+/// <summary>Draw operation.</summary>
         public static void Draw()
         {
             if (MyAPIGateway.Utilities == null || MyAPIGateway.Utilities.IsDedicated) return;
             if (Settings.Instance == null || !Settings.Instance.DebugAeroOverlay) return;
             if (MyAPIGateway.Session == null || MyAPIGateway.Session.Camera == null) return;
 
+/// <summary>Target operation.</summary>
             ThermalGrid thermals = Target();
             if (thermals == null || thermals.Grid == null || thermals.Simulation == null) return;
 
-            // The arrows show the force the server applies (same as ThermalGridDrag summation),
-            // including the anchored-group veto which zeroes them.
             Vector3D centre;
             float mass;
             Vector3 drag;
@@ -78,6 +49,7 @@ namespace Thermodynamics
             DrawArrows(ref centre, ref eye, radius, ref drag, ref lift, ref worldWind);
 
             Vector3D pressureCentre;
+/// <summary>CentreOfPressure operation.</summary>
             bool hasPressureCentre = CentreOfPressure(out pressureCentre);
             if (hasPressureCentre) DrawCentreOfPressure(ref pressureCentre, ref centre, ref eye, thermals.Grid);
 
@@ -85,18 +57,7 @@ namespace Thermodynamics
                 hasPressureCentre ? Vector3D.Distance(pressureCentre, centre) : -1d, anchored);
         }
 
-        /// <summary>
-        /// The friction-watts-weighted centre of the group's windward surface, in world space —
-        /// the centre of lift the intent page promises beside the centre of mass. The offset
-        /// between the two is the torque arm the applied-at-centre-of-mass simplification drops,
-        /// which is why a lift test that watches the nose never sees anything.
-        ///
-        /// <para>
-        /// Weighted by per-node friction watts, which exist only under diagnostics — this view
-        /// arms them through `RefreshDiagnosticsFlag`, so the marker appears one step after the
-        /// view is switched on. False while nothing windward has watts.
-        /// </para>
-        /// </summary>
+/// <summary>CentreOfPressure operation.</summary>
         private static bool CentreOfPressure(out Vector3D centre)
         {
             centre = Vector3D.Zero;
@@ -121,8 +82,6 @@ namespace Thermodynamics
                     float watts = node.LastFrictionWatts;
                     if (watts <= 0f) continue;
 
-                    // Cell (0,0,0)'s centre is the grid's local origin, so a block's geometric
-                    // centre is its cell-space midpoint less half a cell, in metres.
                     Vector3 centreCells =
                         ((Vector3)node.Block.Min + (Vector3)node.Block.MaxExclusive) * 0.5f;
                     Vector3D local = (Vector3D)((centreCells - new Vector3(0.5f)) * gridSize);
@@ -137,14 +96,12 @@ namespace Thermodynamics
             return true;
         }
 
-        /// <summary>
-        /// The centre of pressure as an orange cross, with a line back to the centre of mass —
-        /// the offset drawn as the thing it is, an arm.
-        /// </summary>
+/// <summary>DrawCentreOfPressure operation.</summary>
         private static void DrawCentreOfPressure(ref Vector3D pressure, ref Vector3D mass,
             ref Vector3D eye, IMyCubeGrid grid)
         {
             const double armMetres = 1.5d;
+/// <summary>Color operation.</summary>
             Vector4 orange = new Color(255, 160, 40).ToVector4();
 
             MatrixD world = grid.WorldMatrix;
@@ -158,7 +115,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>The grid being flown, or the one under the crosshair within <see cref="PickRange"/>.</summary>
+/// <summary>Target operation.</summary>
         private static ThermalGrid Target()
         {
             IMyCubeBlock seat = MyAPIGateway.Session.ControlledObject as IMyCubeBlock;
@@ -179,11 +136,7 @@ namespace Thermodynamics
             return grid.GameLogic.GetAs<ThermalGrid>();
         }
 
-        /// <summary>
-        /// The group's mass-weighted centre and its summed drag and lift, mirroring
-        /// <c>ThermalGridDrag.ApplyToGroupOf</c> without applying anything. The wind out-param is
-        /// the leader's relative wind in world space, which is what the arrows are drawn against.
-        /// </summary>
+/// <summary>SumGroup operation.</summary>
         private static void SumGroup(ThermalGrid leader, out Vector3D centre, out float mass,
             out Vector3 drag, out Vector3 lift, out Vector3 worldWind, out bool anchored)
         {
@@ -193,7 +146,6 @@ namespace Thermodynamics
             if (group != null) group.GetGrids(GroupGrids);
             if (GroupGrids.Count == 0) GroupGrids.Add(leader.Grid);
 
-            // The leader's own relative wind, which is what the arrows are drawn against.
             EnvironmentState state = leader.LastState;
             worldWind = Vector3.TransformNormal(
                 state.WindDirectionLocal * state.WindSpeed, leader.Grid.WorldMatrix);
@@ -201,8 +153,6 @@ namespace Thermodynamics
             AeroGroupForces.Sum(GroupGrids, out centre, out mass, out drag, out lift);
             if (mass > 0f) centre /= mass;
 
-            // The drag pass does nothing for anchored groups; arrows show the server-applied force
-            // (second opinion vetoed), so anchored groups show only centre of mass and wind.
             anchored = AeroGroupForces.Anchored(GroupGrids);
             if (anchored)
             {
@@ -211,11 +161,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// A cross of three lines along the grid's own axes at the group's centre of mass, on the
-        /// x-ray band so it reads inside the hull. Grid axes rather than world axes, so the marker
-        /// rolls with the ship and reads as a point *of the ship*.
-        /// </summary>
+/// <summary>DrawCentreOfMass operation.</summary>
         private static void DrawCentreOfMass(ref Vector3D centre, ref Vector3D eye, IMyCubeGrid grid)
         {
             const double armMetres = 2.5d;
@@ -227,12 +173,7 @@ namespace Thermodynamics
             XRayLine(centre - (world.Forward * armMetres), centre + (world.Forward * armMetres), ref eye, ref colour, 0.08d);
         }
 
-        /// <summary>
-        /// The three vectors from the centre of mass: relative wind in blue at a fixed length,
-        /// drag in red and lift in green scaled together so the larger force spans the hull's
-        /// radius — the two force arrows are comparable with each other by eye, and the printed
-        /// newtons carry the absolute scale.
-        /// </summary>
+/// <summary>DrawArrows operation.</summary>
         private static void DrawArrows(ref Vector3D centre, ref Vector3D eye, double radius,
             ref Vector3 drag, ref Vector3 lift, ref Vector3 worldWind)
         {
@@ -240,6 +181,7 @@ namespace Thermodynamics
 
             if (worldWind.LengthSquared() > 1e-4f)
             {
+/// <summary>Color operation.</summary>
                 Vector4 blue = new Color(90, 160, 255).ToVector4();
                 Arrow(ref centre, Vector3D.Normalize((Vector3D)worldWind), reach * 0.6d, ref eye, ref blue);
             }
@@ -249,6 +191,7 @@ namespace Thermodynamics
 
             if (drag.LengthSquared() > 0f)
             {
+/// <summary>Color operation.</summary>
                 Vector4 red = new Color(240, 80, 60).ToVector4();
                 Arrow(ref centre, Vector3D.Normalize((Vector3D)drag),
                     reach * (drag.Length() / largest), ref eye, ref red);
@@ -256,13 +199,14 @@ namespace Thermodynamics
 
             if (lift.LengthSquared() > 0f)
             {
+/// <summary>Color operation.</summary>
                 Vector4 green = new Color(90, 230, 110).ToVector4();
                 Arrow(ref centre, Vector3D.Normalize((Vector3D)lift),
                     reach * (lift.Length() / largest), ref eye, ref green);
             }
         }
 
-        /// <summary>One arrow from a point, on the x-ray band: a shaft and two head strokes swept toward the eye's plane.</summary>
+/// <summary>Arrow operation.</summary>
         private static void Arrow(ref Vector3D from, Vector3D direction, double length,
             ref Vector3D eye, ref Vector4 colour)
         {
@@ -282,7 +226,7 @@ namespace Thermodynamics
             XRayLine(tip, back - (sweep * head * 0.5d), ref eye, ref colour, 0.12d);
         }
 
-        /// <summary>A world-space line scaled about the eye onto the band, so nothing occludes it.</summary>
+/// <summary>XRayLine operation.</summary>
         private static void XRayLine(Vector3D from, Vector3D to, ref Vector3D eye,
             ref Vector4 colour, double thickness)
         {
@@ -298,10 +242,7 @@ namespace Thermodynamics
                 (float)(thickness * BandScale), BlendTypeEnum.PostPP);
         }
 
-        /// <summary>
-        /// The numbers, and the gates. One-frame notifications, reissued while the view is on, the
-        /// way the crosshair readout works.
-        /// </summary>
+/// <summary>Report operation.</summary>
         private static void Report(ThermalGrid thermals, ref Vector3 drag, ref Vector3 lift,
             ref Vector3 worldWind, float mass, double pressureArm, bool anchored)
         {
@@ -319,6 +260,7 @@ namespace Thermodynamics
                     ? "  CoP offset: " + pressureArm.ToString("n1") + " m (no torque is applied from it)"
                     : ""), 1, "White");
 
+/// <summary>Gates operation.</summary>
             string blocked = Gates(thermals, ref worldWind, anchored);
             if (blocked.Length > 0)
             {
@@ -328,19 +270,7 @@ namespace Thermodynamics
             ReportCrossover(ref worldWind, friction);
         }
 
-        /// <summary>
-        /// What the air is doing to the hull's temperature on net, and the speed where that flips.
-        ///
-        /// <para>
-        /// **The crossover is emergent and belongs in a readout, not in a setting.** Friction adds
-        /// `∝ v³`; convection removes `h·A·(T−T_ambient)` growing with `√v` — so where the two
-        /// balance depends on how hot the hull already is, and no constant a world could author
-        /// names it. This solves it for the hull as it stands: both terms are read off the current
-        /// state (`k = friction/v³`; the convection sum from the per-node diagnostics this view
-        /// arms), the √v growth is applied to the cooling side, and the flip speed is found by
-        /// bisection. A hull at ambient has nothing to cool and reads "heats at any speed".
-        /// </para>
-        /// </summary>
+/// <summary>ReportCrossover operation.</summary>
         private static void ReportCrossover(ref Vector3 worldWind, float friction)
         {
             float speed = worldWind.Length();
@@ -349,8 +279,6 @@ namespace Thermodynamics
                 return; // Nothing to extrapolate from while the air is still.
             }
 
-            // Convective watts removed by wind (summed over nodes; negative while shedding). Friction re-summed over same group.
-            // Balance covers same hull; solar/radiation excluded. Question: what does airspeed do?
             double removing = 0d;
             double adding = 0d;
             for (int g = 0; g < GroupGrids.Count; g++)
@@ -374,6 +302,7 @@ namespace Thermodynamics
 
             if (removing > 0d)
             {
+/// <summary>CrossoverSpeed operation.</summary>
                 double crossover = CrossoverSpeed(friction, speed, (float)removing);
                 line += crossover > 0d
                     ? "; flips at ~" + crossover.ToString("n0") + " m/s at this hull temperature"
@@ -387,17 +316,11 @@ namespace Thermodynamics
             MyAPIGateway.Utilities.ShowNotification(line, 1, "White");
         }
 
-        /// <summary>
-        /// The airspeed where `k·v³` heating meets `c·(1+s·√v)` cooling, both fitted to the
-        /// current reading, or 0 when heating already exceeds cooling at every lower speed.
-        /// Bisection over 0..2000 m/s; the answer is a debug figure, not a solver input.
-        /// </summary>
+/// <summary>CrossoverSpeed operation.</summary>
         private static double CrossoverSpeed(float friction, float speed, float removing)
         {
             double k = friction / ((double)speed * speed * speed);
 
-            // The √v bonus convection carries, undone from the current reading so the base rate
-            // can be re-grown at any candidate speed.
             double s = EnvironmentSolver.WindConvectionScale;
             double baseRate = removing / (1d + (s * Math.Sqrt(speed)));
 
@@ -417,10 +340,7 @@ namespace Thermodynamics
             return (low + high) * 0.5d;
         }
 
-        /// <summary>
-        /// Every gate between the model and the ship's motion that is currently shut, in the order
-        /// the chain tests them. Empty when force is flowing.
-        /// </summary>
+/// <summary>Gates operation.</summary>
         private static string Gates(ThermalGrid thermals, ref Vector3 worldWind, bool anchored)
         {
             Settings settings = Settings.Instance;
@@ -436,6 +356,7 @@ namespace Thermodynamics
             {
                 blocked += "no relative airspeed; ";
             }
+/// <summary>if operation.</summary>
             else if (settings.FrictionAtSpeedsAbove > 0f && speed <= settings.FrictionAtSpeedsAbove)
             {
                 blocked += "airspeed " + speed.ToString("n0") + " <= FrictionAtSpeedsAbove floor "
@@ -451,6 +372,7 @@ namespace Thermodynamics
 
             if (MyAPIGateway.Session != null && !MyAPIGateway.Session.IsServer)
             {
+/// <summary>server operation.</summary>
                 blocked += "client of a server (forces apply server-side); ";
             }
 

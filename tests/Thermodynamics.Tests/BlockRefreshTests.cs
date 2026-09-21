@@ -6,31 +6,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// <see cref="ThermalSimulation.RefreshBlock"/> is the path for a block whose geometry or
-    /// mounting changed under an existing node — the block is not placed and not removed, so
-    /// neither of the two incremental paths applies to it.
-    ///
-    /// It used to do neither: it refreshed the surface bits, dirtied the topology and left every
-    /// conduction link touching the block carrying a conductance derived from mounting the block
-    /// no longer had. Contact area is the product of both ends' mount fractions, so those links
-    /// were wrong rather than merely stale, and nothing recomputed them. Meanwhile it charged a
-    /// full room remap for the privilege.
-    ///
-    /// These pin both halves: the graph it leaves behind is the graph a full rebuild would build,
-    /// and the flood fill runs again only when what the block seals actually changed.
-    /// </summary>
     public class BlockRefreshTests
     {
-        /// <summary>
-        /// The conduction graph as a comparable value: every link as an unordered endpoint pair
-        /// with its conductance, plus the per-node totals the substep estimate divides by.
-        ///
-        /// Node *indices* are deliberately not compared — a rebuild is free to order nodes
-        /// differently — so endpoints are named by their block position instead.
-        /// </summary>
+/// <summary>Graph operation.</summary>
         private static List<string> Graph(ThermalSolver solver)
         {
+/// <summary>List operation.</summary>
             List<string> rows = new List<string>();
 
             foreach (ThermalLink link in solver.Links)
@@ -48,8 +29,10 @@ namespace Thermodynamics.Tests
             return rows;
         }
 
+/// <summary>Degrees operation.</summary>
         private static List<string> Degrees(ThermalSolver solver)
         {
+/// <summary>List operation.</summary>
             List<string> rows = new List<string>();
             for (int i = 0; i < solver.Nodes.Count; i++)
             {
@@ -60,10 +43,9 @@ namespace Thermodynamics.Tests
             return rows;
         }
 
+/// <summary>Ship operation.</summary>
         private static ThermalSimulation Ship()
         {
-            // Mixed sizes and a multi-cell block, so contact areas differ per joint and a link
-            // rebuilt with the wrong geometry cannot pass by coincidence.
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), new Vector3I(-2, -1, -1), new Vector3I(3, 2, 2));
             builder.Place(Catalog.Reactor(), new Vector3I(0, 2, 0));
@@ -76,31 +58,30 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RefreshingABlockLeavesTheGraphAFullRebuildWouldHaveBuilt operation.</summary>
         public void RefreshingABlockLeavesTheGraphAFullRebuildWouldHaveBuilt()
         {
+/// <summary>Ship operation.</summary>
             ThermalSimulation simulation = Ship();
             ThermalSolver solver = simulation.Solver;
 
+/// <summary>Graph operation.</summary>
             List<string> before = Graph(solver);
+/// <summary>Degrees operation.</summary>
             List<string> degreesBefore = Degrees(solver);
 
             BlockInstance block = simulation.Grid.GetAtCell(Vector3I.Zero);
             simulation.RefreshBlock(block);
             solver.BuildLinksIfNeeded();
 
-            // Nothing about the block actually changed, so the incrementally repaired graph must
-            // be indistinguishable from the one it started with. A link dropped and not rebuilt,
-            // a duplicate, a conductance computed from the wrong pair or a corrupted chain all
-            // show up here.
             Assert.Equal(before, Graph(solver));
             Assert.Equal(degreesBefore, Degrees(solver));
 
-            // And against an independently rebuilt graph, in case both paths are wrong together.
             solver.RebuildLinks();
             Assert.Equal(before, Graph(solver));
         }
 
-        /// <summary>A 1x1x1 block bolted only on its own up and down faces.</summary>
+/// <summary>BoltedTopAndBottom operation.</summary>
         private static BlockModel BoltedTopAndBottom()
         {
             BlockModel model = BlockModel.Solid(
@@ -113,15 +94,8 @@ namespace Thermodynamics.Tests
             return model;
         }
 
-        /// <summary>
-        /// The case the whole repair exists for, and the one a no-op refresh cannot prove.
-        ///
-        /// Conductance is the product of both ends' mount fractions, so turning a block whose
-        /// mounts are on two faces only makes a joint appear where there was none. Before this
-        /// was fixed the links kept the conductance of the geometry the block used to have, for
-        /// the rest of the session.
-        /// </summary>
         [Fact]
+/// <summary>ReorientingABlockRebuildsTheJointsItsMountsDecide operation.</summary>
         public void ReorientingABlockRebuildsTheJointsItsMountsDecide()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -133,12 +107,10 @@ namespace Thermodynamics.Tests
             simulation.RebuildAll();
             ThermalSolver solver = simulation.Solver;
 
-            // Bolted up and down, with nothing above or below: no joint to the armour beside it.
             Assert.Equal(0, solver.GetNode(bracket).LinkCount);
             Assert.Empty(Graph(solver));
 
-            // Turn it so its mounted faces point along X instead, which puts one of them flat
-            // against the armour.
+/// <summary>BlockOrientation operation.</summary>
             bracket.Orientation = new BlockOrientation(
                 Base6Directions.Direction.Forward, Base6Directions.Direction.Right);
 
@@ -146,20 +118,21 @@ namespace Thermodynamics.Tests
             solver.BuildLinksIfNeeded();
 
             Assert.Equal(1, solver.GetNode(bracket).LinkCount);
+/// <summary>Graph operation.</summary>
             List<string> repaired = Graph(solver);
             Assert.Single(repaired);
 
-            // The joint it built is the joint a full rebuild builds, conductance included.
             solver.RebuildLinks();
             Assert.Equal(repaired, Graph(solver));
         }
 
-        /// <summary>The same change in reverse: a joint that should stop existing.</summary>
         [Fact]
+/// <summary>ReorientingABlockAwayFromItsNeighbourDropsTheJoint operation.</summary>
         public void ReorientingABlockAwayFromItsNeighbourDropsTheJoint()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(BoltedTopAndBottom(), Vector3I.Zero,
+/// <summary>BlockOrientation operation.</summary>
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Right));
             BlockInstance bracket = builder.Last;
             builder.Place(Catalog.LightArmor(), new Vector3I(1, 0, 0));
@@ -182,15 +155,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RefreshingEveryBlockInTurnLeavesTheGraphIntact operation.</summary>
         public void RefreshingEveryBlockInTurnLeavesTheGraphIntact()
         {
+/// <summary>Ship operation.</summary>
             ThermalSimulation simulation = Ship();
             ThermalSolver solver = simulation.Solver;
 
+/// <summary>Graph operation.</summary>
             List<string> before = Graph(solver);
 
-            // Each refresh drops links that the previous one rebuilt, which is where an ordering
-            // mistake in the chain repair would accumulate.
             IList<BlockInstance> blocks = simulation.Grid.Blocks;
             for (int i = 0; i < blocks.Count; i++)
             {
@@ -202,8 +176,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RefreshingABlockCostsItsOwnDegreeRatherThanTheGrid operation.</summary>
         public void RefreshingABlockCostsItsOwnDegreeRatherThanTheGrid()
         {
+/// <summary>Ship operation.</summary>
             ThermalSimulation simulation = Ship();
             ThermalSolver solver = simulation.Solver;
 
@@ -217,15 +193,16 @@ namespace Thermodynamics.Tests
             simulation.RefreshBlock(block);
             solver.BuildLinksIfNeeded();
 
-            // The whole point of the repair: one block's links, not the grid's.
             Assert.Equal(degree, solver.Work.LinksRemoved);
             Assert.Equal(1, solver.Work.TopologyNodeVisits);
             Assert.True(solver.Nodes.Count > 10);
         }
 
         [Fact]
+/// <summary>AMountingChangeDoesNotAskForARemap operation.</summary>
         public void AMountingChangeDoesNotAskForARemap()
         {
+/// <summary>Ship operation.</summary>
             ThermalSimulation simulation = Ship();
             long passesBefore = simulation.Rooms.Work.RoomPassesBegun;
 
@@ -233,13 +210,11 @@ namespace Thermodynamics.Tests
             simulation.RefreshBlock(block);
             simulation.Update(1f / 60f, EnvironmentSample.Vacuum(Vector3.Up));
 
-            // The block seals exactly what it sealed before, so the rooms cannot have moved. The
-            // flood fill walks the grid's bounding volume; skipping it is most of what this fix
-            // is worth.
             Assert.Equal(passesBefore, simulation.Rooms.Work.RoomPassesBegun);
         }
 
         [Fact]
+/// <summary>ADoorOpeningIsResolvedThroughItsPortalRatherThanARemap operation.</summary>
         public void ADoorOpeningIsResolvedThroughItsPortalRatherThanARemap()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -261,17 +236,13 @@ namespace Thermodynamics.Tests
             simulation.RefreshBlock(door);
             simulation.Update(1f / 60f, EnvironmentSample.Vacuum(Vector3.Up));
 
-            // A door changes only the live layer: the compartment either side of it is the same
-            // compartment open or shut, and the mapper already holds it as a portal. So this
-            // resolves through the portals, exactly as RefreshBlockSealing does, and the flood
-            // fill is not asked to run.
             Assert.Equal(passesBefore, simulation.Rooms.Work.RoomPassesBegun);
 
-            // And the room really did open: the shell no longer holds air against vacuum.
             Assert.True(simulation.Rooms.Map.RoomCount >= 0);
         }
 
         [Fact]
+/// <summary>ADoorTheMapperHasNeverSeenAsksForARemap operation.</summary>
         public void ADoorTheMapperHasNeverSeenAsksForARemap()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -282,10 +253,9 @@ namespace Thermodynamics.Tests
 
             long passesBefore = simulation.Rooms.Work.RoomPassesBegun;
 
-            // Placed after the last completed pass, so it has no portal and the map cannot
-            // resolve what it seals. The shortcut is not available and the fill has to run.
             BlockInstance wall = simulation.Grid.GetAtCell(new Vector3I(0, 0, -1));
             simulation.RemoveBlock(wall);
+/// <summary>BlockInstance operation.</summary>
             BlockInstance door = new BlockInstance(
                 Catalog.AirtightDoor(), new Vector3I(0, 0, -1), BlockOrientation.Identity);
             door.IsSealedByDoorState = true;
@@ -299,8 +269,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RefreshingABlockRecountsItsOwnExposedFaces operation.</summary>
         public void RefreshingABlockRecountsItsOwnExposedFaces()
         {
+/// <summary>Ship operation.</summary>
             ThermalSimulation simulation = Ship();
 
             BlockInstance block = simulation.Grid.GetAtCell(new Vector3I(3, 0, 0));
@@ -317,8 +289,6 @@ namespace Thermodynamics.Tests
 
             simulation.RefreshBlock(block);
 
-            // Its own faces are recounted whether or not any room around it moved — the surface
-            // map has just been rebuilt underneath it.
             for (int f = 0; f < Face.Count; f++)
             {
                 Assert.Equal(expected[f], node.GetExposedFaces(f));
@@ -327,8 +297,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RefreshingABlockKeepsItsTemperature operation.</summary>
         public void RefreshingABlockKeepsItsTemperature()
         {
+/// <summary>Ship operation.</summary>
             ThermalSimulation simulation = Ship();
 
             BlockInstance block = simulation.Grid.GetAtCell(Vector3I.Zero);
@@ -338,18 +310,20 @@ namespace Thermodynamics.Tests
             simulation.RefreshBlock(block);
             simulation.Solver.BuildLinksIfNeeded();
 
-            // The node survives; only its links are rebuilt. A refresh that went through
-            // remove-then-add would have lost the heat instead.
             Assert.Same(node, simulation.Solver.GetNode(block));
             Assert.Equal(777f, node.Temperature);
         }
 
         [Fact]
+/// <summary>RefreshingAnUnknownBlockDoesNothing operation.</summary>
         public void RefreshingAnUnknownBlockDoesNothing()
         {
+/// <summary>Ship operation.</summary>
             ThermalSimulation simulation = Ship();
+/// <summary>Graph operation.</summary>
             List<string> before = Graph(simulation.Solver);
 
+/// <summary>BlockInstance operation.</summary>
             BlockInstance stranger = new BlockInstance(
                 Catalog.LightArmor(), new Vector3I(40, 40, 40), BlockOrientation.Identity);
 

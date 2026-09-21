@@ -5,24 +5,18 @@ using VRage.Game.ModAPI;
 
 namespace RichHudFramework.Internal
 {
-	/// <summary>
-	/// Shared session component for managing module lifetimes
-	/// </summary>
-	/// <exclude/>
 	[MySessionComponentDescriptor(MyUpdateOrder.NoUpdate)]
 	public sealed class RichHudCore : ModBase
 	{
 		public static RichHudCore Instance { get; private set; }
 
-		/// <summary>
-		/// Chat input event regestered later that the rest
-		/// </summary>
 		public static event MessageEnteredDel LateMessageEntered;
 
 		public static event MessageEnteredSenderDel MessageEnteredSender;
 
 		private bool isMsgHandlerRegistered;
 
+/// <summary>RichHudCore operation.</summary>
 		public RichHudCore() : base(false, true)
 		{
 			if (Instance == null)
@@ -33,19 +27,16 @@ namespace RichHudFramework.Internal
 			isMsgHandlerRegistered = false;
 		}
 
+/// <summary>MessageHandler operation.</summary>
 		private void MessageHandler(ulong sender, string message, ref bool sendToOthers)
 		{
 			LateMessageEntered?.Invoke(message, ref sendToOthers);
 			MessageEnteredSender?.Invoke(sender, message, ref sendToOthers);
 		}
 
+/// <summary>Draw operation.</summary>
 		public override void Draw()
 		{
-			// It seems there's some kind of bug in the game's session component system that prevents the Before/Sim/After
-			// update methods from being called on more than one component with the same fully qualified name, update order
-			// and priority, but for some reason, Draw and HandleInput still work.
-			//
-			// It would be really nice if I didn't have to work around this issue like this, but here we are.         
 			BeforeUpdate();
 			base.Draw();
 
@@ -56,6 +47,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
+/// <summary>Close operation.</summary>
 		public override void Close()
 		{
 			base.Close();
@@ -67,6 +59,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
+/// <summary>UnloadData operation.</summary>
 		protected override void UnloadData()
 		{
 			LateMessageEntered = null;
@@ -76,12 +69,14 @@ namespace RichHudFramework.Internal
 
 	public abstract class RichHudComponentBase : ModBase.ModuleBase
 	{
+/// <summary>RichHudComponentBase operation.</summary>
 		public RichHudComponentBase(bool runOnServer, bool runOnClient) : base(runOnServer, runOnClient, RichHudCore.Instance)
 		{ }
 	}
 
 	public abstract class RichHudParallelComponentBase : ModBase.ParallelModuleBase
 	{
+/// <summary>RichHudParallelComponentBase operation.</summary>
 		public RichHudParallelComponentBase(bool runOnServer, bool runOnClient) : base(runOnServer, runOnClient, RichHudCore.Instance)
 		{ }
 	}

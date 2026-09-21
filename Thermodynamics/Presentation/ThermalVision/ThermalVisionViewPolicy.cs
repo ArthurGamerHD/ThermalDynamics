@@ -2,17 +2,17 @@ using System;
 
 namespace Thermodynamics.Presentation
 {
-    /// <summary>Camera-derived thermal reach; visibility itself uses the game's full bounding frustum.</summary>
     public static class ThermalVisionViewPolicy
     {
-        /// <summary>The selected full-screen mode persists independently of measurement acquisition.</summary>
+/// <summary>DrawContext operation.</summary>
         public static bool DrawContext(bool fleetMode, bool hasField)
         { return fleetMode || hasField; }
 
-        /// <summary>Chat and cursor do not suppress passive rendering; input handling is gated separately.</summary>
+/// <summary>SuppressForUi operation.</summary>
         public static bool SuppressForUi(bool guiAvailable, bool gameChat, bool frameworkChat, bool cursor)
         { return !guiAvailable; }
 
+/// <summary>FarDistance operation.</summary>
         public static double FarDistance(double cameraFar, double sessionFar, double near)
         {
             if (Valid(cameraFar, near)) return cameraFar;
@@ -20,14 +20,13 @@ namespace Thermodynamics.Presentation
             return Math.Max(15000, near + 1);
         }
 
+/// <summary>BackdropDistance operation.</summary>
         public static double BackdropDistance(double far)
         {
-            // Keep the sky-clearing quad just inside the far clipping plane.
             return far * .999999;
         }
 
-        /// <summary>Spatial preparation detail from apparent diameter, not a billboard quota.
-        /// Hysteresis holds the existing level until a substantial screen-size change.</summary>
+/// <summary>DetailBudget operation.</summary>
         public static int DetailBudget(double diameterPixels, int previous, bool interior)
         {
             if(interior || double.IsNaN(diameterPixels)) return 512;
@@ -40,6 +39,7 @@ namespace Thermodynamics.Presentation
             return budget;
         }
 
+/// <summary>Valid operation.</summary>
         private static bool Valid(double value, double near)
         { return !double.IsNaN(value) && !double.IsInfinity(value) && value > near + 1; }
     }

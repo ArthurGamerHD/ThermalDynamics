@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """The verdict function docs/balance-lab.md says does not exist.
 
 Stage 0 of the balance process writes six criteria down before the data is collected, "so a run
@@ -47,25 +46,24 @@ DATA = ARGS[0] if ARGS else "out/corpus-2026-08-21"
 CSV_OUT = scoring.flag("--csv", "summary.csv") if "--csv" in sys.argv else None
 BASELINE = scoring.flag("--baseline")
 
-# Every figure worth quoting, in the order it was produced.
 FIGURES = []
 
 
+# record operation.
 def record(statistic, value, unit=""):
     """Keeps a figure so it can be written out, and returns it so a caller can print it too."""
     FIGURES.append((statistic, value, unit))
     return value
 
-# Steel gives up around here; a block over its critical temperature is taking damage.
 WARM_KELVIN = 400.0
 
 
 
 
-# The key that identifies a ship — scoring.ROW_KEY, which owns the argument for both halves.
 KEY = scoring.ROW_KEY
 
 
+# load operation.
 def load(name, *extra_key):
     """One row per ship, or per ship and scenario — duplicates dropped, and counted.
 
@@ -121,12 +119,11 @@ def load(name, *extra_key):
     return unique
 
 
+# pct operation.
 def pct(part, whole):
     return 0.0 if not whole else 100.0 * part / whole
 
 
-# One definition, in scoring.py, shared with air.py. See scoring.percentile for why there was more
-# than one and which survived.
 percentiles = scoring.percentiles
 
 
@@ -137,20 +134,11 @@ by_scenario = {}
 for row in outcomes:
     by_scenario.setdefault(row["scenario"], []).append(row)
 
-# **The ship count comes from the outcomes, not from ships.csv.** A walk that records outcomes and
-# not ships is a legitimate shape — `CorpusAirWalk` deliberately writes no ships.csv, because a
-# hull's structure belongs to the hull rather than to the world it is run in — and reading the
-# count off the file that happens to be absent reports a population of nought. It is also the
-# figure that says a dataset is *partial*: a walk killed at hour one has every column a finished
-# one has, over the ships it reached, and the corpus is sorted largest-first, so a partial read is
-# not a small population but the wrong end of one (`P13`, and the standing warning that partial
-# corpus results mislead badly).
 walked = len(set((r.get("ship"), r.get("workshop_id")) for r in outcomes))
 
 print(f"corpus dataset: {len(outcomes):,} outcome rows over {walked:,} ships, "
       f"{len(ships):,} ship rows")
 
-# ---- whole, or partial and said so (`E4`) -------------------------------------------------------
 population = scoring.corpus_population(scoring.flag("--population"))
 share = scoring.walked_share(walked, population)
 
@@ -159,11 +147,6 @@ if population is None:
           " so whether this dataset is whole cannot be established here")
     record("dataset population", "", "blueprints")
 elif scoring.is_core_walk(set(r.get("workshop_id") for r in outcomes)):
-    # **A core walk is not a partial one and must not be read as either** (`P1`). It is a
-    # stratified sample: every ship under 2,000 blocks and one in twenty of the giants, and a
-    # giant in it stands for twenty. Counted once each, as everything below would count them, its
-    # figures describe a population that is mostly small ships -- which is not the corpus and is
-    # not anything. So this stops rather than printing figures shaped like population figures.
     print(f"  *** CORE CORPUS: {walked:,} ships drawn by tools/corpus/core.py ***")
     print("      This is a weighted sample, and verdict.py has no weights. Read it with")
     print("          python3 tools/corpus/core.py --score " + DATA)
@@ -184,10 +167,6 @@ record("dataset ships", walked)
 record("dataset ships.csv rows", len(ships))
 record("dataset scenarios", len(set(r.get("scenario") for r in outcomes)))
 
-# **What build the dataset was collected on**, printed and recorded so a figure quoted from a
-# summary carries the world it was measured in. Datasets collected before 2026-08-25 have no such
-# file, and *absent* is said rather than assumed: the 2026-08-24 air walk turned out to have been
-# collected one minute after a definition change, and nothing in its output said so.
 provenance = os.path.join(DATA, "provenance.txt")
 if os.path.exists(provenance):
     with open(provenance, encoding="utf-8") as handle:
@@ -196,20 +175,9 @@ if os.path.exists(provenance):
             if line:
                 print(f"  {line}")
 
-    # **A resumed walk appends a block per slice, so a key can appear several times — and recording
-    # each in turn leaves the summary claiming the last.** That is the committed artefact every
-    # quoted figure is checked against, so it has to carry the split rather than the last value:
-    # the 2026-08-25 survey ran in six slices across two `Cubes.xml` and two `Loops.xml`, and this
-    # file would have said it was measured against one of each. The rows come from
-    # `provenance.summary_rows`, which `cap.py` writes the same ones from (`P5`).
     for statistic, value, unit in provenance_lib.summary_rows(DATA):
         record(statistic, value, unit)
 
-    # **Which definition files this dataset spans is asked of `provenance.py` rather than worked
-    # out again here.** The two readers of this format had already drifted once — that module read
-    # only the last `Cubes.xml` line and reported a split dataset as one — and a second
-    # implementation of the same question is how that happens (`D3`). The block above still counts
-    # every key, because the summary has to carry the commits and walk times as well.
     split = sorted(provenance_lib.spans_several_definitions(DATA))
     if split:
         print()
@@ -222,19 +190,10 @@ else:
     print("  provenance: not recorded — this dataset predates 2026-08-25")
     record("provenance", "absent")
 
-# **The population figures the documentation quotes.** Sealed blocks are here because a page said
-# twenty-four of them on one ship where the dataset says 1,184 across 331 (`F14`); the share it
-# also quoted was right, which is how it survived.
 _blocks = [scoring.number(r, "blocks") for r in ships]
 _blocks = sorted(b for b in _blocks if b is not None)
 if _blocks:
     record("population blocks", int(sum(_blocks)))
-    # scoring.percentile, not the index form: the index form is what that function's own
-    # docstring banned, and one copy of it survived here — in the rows the documentation
-    # quotes — until 2026-09-04. On this population the two agree to a fraction of a per
-    # cent, so a re-run moves these rows slightly against a committed summary, for this
-    # stated reason and not because the population moved (E11: the definition changes in
-    # a commit that carries no dataset).
     record("population blocks p50", int(scoring.percentile(_blocks, 0.5)))
     record("population blocks p99", int(scoring.percentile(_blocks, 0.99)))
 
@@ -264,6 +223,7 @@ print("CRITERIA")
 print("=" * 78)
 
 
+# verdict operation.
 def verdict(tag, claim, ok, detail, fails_when):
     record(tag + " verdict", "holds" if ok is True else ("fails" if ok is False else "unanswered"))
     mark = "HOLDS" if ok is True else ("FAILS" if ok is False else "  ?  ")
@@ -272,7 +232,6 @@ def verdict(tag, claim, ok, detail, fails_when):
     print(f"        measured:   {detail}")
 
 
-# ---- G1: idle is safe -------------------------------------------------------------------
 idle = by_scenario.get("idle", []) + by_scenario.get("vacuum-shadow", [])
 if idle:
     critical = sum(1 for r in idle if scoring.number(r, "over_critical") and scoring.number(r, "over_critical") > 0)
@@ -288,7 +247,6 @@ else:
             "neither idle nor vacuum-shadow is in this dataset",
             "more than ~1 % of the corpus goes critical at idle")
 
-# ---- G2: load bites ---------------------------------------------------------------------
 loaded = by_scenario.get("full-electrical", [])
 if loaded:
     warm = sum(1 for r in loaded
@@ -307,7 +265,6 @@ else:
             "of idle environments cannot answer it",
             "fewer than ~20 % ever get warm")
 
-# ---- G5: no death spiral ----------------------------------------------------------------
 recovery = by_scenario.get("recovery", [])
 if recovery:
     returned = sum(1 for r in recovery
@@ -323,7 +280,6 @@ else:
             "the recovery scenario is not in this dataset — no walk runs it over the corpus",
             "recovery time unbounded, or damage continues after the load stops")
 
-# ---- G6: affordable across the population ------------------------------------------------
 demand = [scoring.number(r, "substeps_demanded") for r in outcomes]
 demand = [d for d in demand if d is not None]
 if demand:
@@ -331,17 +287,10 @@ if demand:
     granted = [scoring.number(r, "substeps_granted") for r in outcomes]
     granted = [g for g in granted if g is not None]
 
-    # The shipped `MaxSubsteps`, not the largest count this dataset happened to be granted. See
-    # scoring.SHIPPED_SUBSTEP_CAP for why the second is not a cap at all.
     cap = scoring.SHIPPED_SUBSTEP_CAP
     highest = max(granted) if granted else 0
-    # The cost half of the same criterion, in the solver's own unit rather than in milliseconds:
-    # a step's element visits against what `MaxElementVisitsPerStep` grants one. See
-    # balance-lab.md, G6's cost half, which was written down before this was scored (`E11`).
     work = []
     for row in outcomes:
-        # Demanded rather than granted: the allowance decides by comparing the demand against what
-        # it can afford, so a granted count is the answer rather than the question.
         substeps = scoring.number(row, "substeps_demanded")
         if substeps is None:
             substeps = scoring.number(row, "substeps_granted")
@@ -369,10 +318,6 @@ if demand:
 
     demand_ok = p["p99"] <= cap
 
-    # **A half that was not measured is not a half that failed** (`P2`, `E8`). A dataset with no
-    # `substep_cost` column can score the demand and nothing else, and a criterion with one half
-    # unmeasured has no verdict — reporting it as a failure would read as evidence against the
-    # configuration when it is evidence about the walk.
     outcome = (demand_ok and cost_ok) if cost_p else None
 
     verdict("G6", "Affordable across the population.", outcome,
@@ -392,15 +337,7 @@ if demand:
               + (f"; {over:,} of {len(work):,} runs are past it — those grids run slower than "
                  f"real time" if over else "; every run fits"))
 
-    # **And the same two statistics per scenario, because both are properties of the world.**
-    # The criterion is one figure over the dataset and stays that way (`E11`); this is the
-    # breakdown that says which environment produced it. A dataset of one scenario prints one row
-    # and repeats the verdict above, which is honest rather than redundant: it is what says the
-    # figure is that world's and not a population's.
     if len(by_scenario) > 1:
-        # **The demand columns survive a dataset with no cost column.** One half of the criterion
-        # being unmeasured is not a reason to withhold the other; an em dash in the work columns
-        # says which one it is (`P2`).
         print(f"\n        {'scenario':18}{'runs':>8}{'demand p50':>12}{'demand p99':>12}"
               f"{'work p50':>12}{'work p99':>12}{'over':>7}")
         for name in sorted(by_scenario):
@@ -418,8 +355,6 @@ if demand:
                 continue
             d = percentiles(demands)
 
-            # Per scenario rather than pooled, because `Census.Corpus` states the corpus in
-            # vacuum and in air separately and a pooled figure answers neither.
             record(f"G6 {name} demand p10", round(d["p10"], 3), "substeps")
             record(f"G6 {name} demand p50", round(d["p50"], 3), "substeps")
             record(f"G6 {name} demand p90", round(d["p90"], 3), "substeps")
@@ -438,15 +373,10 @@ if demand:
             print(f"        {name:18}{len(rows):>8,}{d['p50']:>12.1f}{d['p99']:>12.1f}"
                   f"{w['p50']:>12,.0f}{w['p99']:>12,.0f}{past:>7,}")
     if not cost_p:
-        # **Not a zero, and not the old formula.** Every walk taken before 2026-08-24 carries
-        # `blocks` and `joints` but no `substep_cost`, and `joints` is the count of mechanical
-        # joints between grids rather than of thermal links — so scoring those datasets at all
-        # would reproduce the node-half-only figure this column exists to replace (`E8`, `P2`).
         print("        step work:  not derivable from this dataset — it needs the `substep_cost` "
               "column, which walks before 2026-08-24 do not carry. What stood here was scored "
               "with `joints` for the link count and is the node half alone; re-walk to score it.")
 
-# ---- G3 / G4: not answerable from this dataset -------------------------------------------
 verdict("G3", "Cooling works.", None,
         "needs a cooled comparison — no corpus ship carries a radiator or a loop, because the "
         "corpus filter rejects any ship with a non-vanilla block. Needs the retrofit pass.",
@@ -457,12 +387,12 @@ verdict("G4", "Design decides, not size.", None,
         "exposure or installed power yet. Needs the screening pass.",
         "rank correlation with block count exceeds that with exposure")
 
-# ---- exceptional ships --------------------------------------------------------------------
 print("\n" + "=" * 78)
 print("EXCEPTIONAL SHIPS — candidates for a standing panel")
 print("=" * 78)
 
 
+# extremes operation.
 def extremes(scenario, key, label, count=5, reverse=True):
     rows = [r for r in by_scenario.get(scenario, []) if scoring.number(r, key) is not None]
     if not rows:
@@ -479,7 +409,6 @@ extremes("full-electrical", "hotspot_k", "worst hot spot (peak minus mean)")
 extremes("idle", "peak_k", "hottest at idle — these should not exist")
 extremes("full-electrical", "substeps_demanded", "most expensive to solve")
 
-# ---- censoring: what the peak statistics above cannot mean --------------------------------
 print("\n" + "=" * 78)
 print("CENSORING — the harness never destroys a block")
 print("=" * 78)
@@ -498,12 +427,6 @@ print(f"  rows past 10,000 K — plainly unphysical: {len(far):>6,}  {pct(len(fa
 print(f"  ships with at least one runaway scenario: {len(runaway_ships):,} of "
       f"{len(set(r['ship'] for r in outcomes)):,}")
 
-# ---- how fast damage arrives -------------------------------------------------------------
-# **The crossing and the loss are two events, and this section used to print one under the other's
-# name.** The solver damages an overheating block by (T - critical) x OverheatDamagePerKelvin per
-# simulated second, so at the crossing the damage rate is exactly zero. The crossing is when a
-# warning could fire; the loss is when the player is out a block. Both are decided before the run
-# ends, so censoring reaches neither.
 print("\n" + "=" * 78)
 print("TIME TO CRITICAL — when a warning could fire, not when anything is lost")
 print("=" * 78)
@@ -524,9 +447,6 @@ for name in sorted(by_scenario):
           f"{q['p50']:>8.0f}s{hit[min(len(hit)-1, (9*len(hit))//10)]:>7.0f}s")
 
 print("\n  recovery inherits its crossings from the burn it starts in — that column is not new damage;")
-# Computed rather than quoted. This line carried "7,899 of 8,142", which were the figures of the
-# 2026-08-21 run written in by hand — in a script whose whole purpose is that a run's numbers come
-# from the run and not from what anybody remembers them to be.
 if recovery:
     print(f"  whether those ships come back is G5 above, and {returned:,} of {len(recovery):,} do.")
 else:
@@ -547,8 +467,6 @@ else:
         if not lost:
             print(f"  {name:18}{'none':>16}")
             continue
-        # Paired per ship before the difference is taken (`E6`): the gap between two percentiles of
-        # two populations is not a percentile of the gap.
         gaps = sorted(scoring.number(r, "seconds_to_first_loss") - scoring.number(r, "seconds_to_critical")
                       for r in rows_
                       if (scoring.number(r, "seconds_to_first_loss") or -1) >= 0
@@ -559,7 +477,6 @@ else:
               f"{q['p50']:>8.0f}s{lost[min(len(lost)-1, (9*len(lost))//10)]:>7.0f}s{gap}")
     print("\n  The last column is the median ship's own crossing-to-loss gap, paired before it is")
     print("  differenced — it is the span a warning has to be useful in.")
-# ---- which blocks drive the tail ----------------------------------------------------------
 print("\n" + "=" * 78)
 print("WHICH BLOCKS RUN AWAY — the tunable surface")
 print("=" * 78)
@@ -581,7 +498,6 @@ print("  under-massed, or too weakly coupled to its neighbours — a dozen defin
 
 
 
-# ---- the summary --------------------------------------------------------------------------
 
 if CSV_OUT:
     scoring.write_summary(CSV_OUT, FIGURES)

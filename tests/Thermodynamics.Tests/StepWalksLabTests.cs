@@ -2,18 +2,10 @@ using Thermodynamics.Harness;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The step-walks lab prices pass fusion and the per-step mirror on redesign.md's third
-    /// sweep. Its load-bearing half is its own agreement check — the two schedules must land on
-    /// the same bits for every temperature, every watts entry and the accumulator before either
-    /// is timed, and it throws if they do not — so what is pinned here is the precondition that
-    /// makes that check mean something: the fixture holds both buried and exposed nodes, both
-    /// schedules get a clock, and the mirror is measured against a step taken on the same grid
-    /// in the same window (`E8`).
-    /// </summary>
     public class StepWalksLabTests
     {
         [Fact]
+/// <summary>BothSchedulesAgreeGetTimedAndTheMirrorIsMeasuredAgainstAStep operation.</summary>
         public void BothSchedulesAgreeGetTimedAndTheMirrorIsMeasuredAgainstAStep()
         {
             StepWalksLab.Result result = StepWalksLab.Run("ship", 4000, 3);
@@ -27,11 +19,10 @@ namespace Thermodynamics.Tests
 
             Assert.True(result.MirrorMs > 0, "the mirror was never timed");
             Assert.True(result.SettledStepMs > result.MirrorMs,
+/// <summary>step operation.</summary>
                 "a settled step (" + result.SettledStepMs + " ms) reads cheaper than the mirror it contains ("
                 + result.MirrorMs + " ms), so one of the two clocks is wrong");
 
-            // Reaching here means the exactness check inside Run passed: the fused schedule and
-            // the separate one landed on identical bits, which is the lab's own `D8` half.
         }
     }
 }

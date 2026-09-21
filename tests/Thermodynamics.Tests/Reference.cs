@@ -5,16 +5,13 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Sun visibility worked out the slow, obvious way: intersect the ray with every cell's cube.
-    /// Analytic rather than sampled, because a sampled walk rounds at cell boundaries and cannot
-    /// tell a ray passing through a cube from one grazing its corner.
-    /// </summary>
     public static class Reference
     {
+/// <summary>Lit operation.</summary>
         public static bool Lit(GridModel grid, Vector3I from, Vector3 sun)
         {
             sun = Vector3.Normalize(sun);
+/// <summary>Vector3 operation.</summary>
             Vector3 origin = new Vector3(from.X, from.Y, from.Z);
 
             IList<BlockInstance> blocks = grid.Blocks;
@@ -31,7 +28,7 @@ namespace Thermodynamics.Tests
             return true;
         }
 
-        /// <summary>Slab test: does the ray pass through this cell's cube with length to spare?</summary>
+/// <summary>Penetrates operation.</summary>
         private static bool Penetrates(Vector3 origin, Vector3 direction, Vector3I cell)
         {
             const float Epsilon = 1e-3f;

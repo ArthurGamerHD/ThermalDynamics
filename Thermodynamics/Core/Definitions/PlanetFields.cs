@@ -1,6 +1,5 @@
 namespace Thermodynamics.Core
 {
-    /// <summary>One value of a planet's climate, as a definition may or may not supply it.</summary>
     [System.Flags]
     public enum PlanetField
     {
@@ -25,18 +24,9 @@ namespace Thermodynamics.Core
             | UndergroundConvectionCoefficient | AmbientLagShareOfDay,
     }
 
-    /// <summary>
-    /// Merging what a planet's definition said into what the model already believed: **only the fields
-    /// a read actually supplied**, since a definition that did not load would otherwise write zeros
-    /// over the defaults and make an earthlike world a vacuum. Pure, so what a partial definition does
-    /// is a test rather than a session. See environment.md, When the file does not reach the mod.
-    /// </summary>
     public static class PlanetProperties
     {
-        /// <summary>
-        /// <paramref name="baseline"/> with each field <paramref name="supplied"/> names taken from
-        /// <paramref name="read"/>. Neither argument is modified.
-        /// </summary>
+/// <summary>Merge operation.</summary>
         public static PlanetThermalProperties Merge(
             PlanetThermalProperties baseline, PlanetThermalProperties read, PlanetField supplied)
         {
@@ -87,10 +77,7 @@ namespace Thermodynamics.Core
             return merged.Clamp();
         }
 
-        /// <summary>
-        /// True where a climate cannot be simulated as one: no day, no night and no rock. What a
-        /// definition read before its lookup was up used to produce, and what nothing should.
-        /// </summary>
+/// <summary>IsVacuum operation.</summary>
         public static bool IsVacuum(PlanetThermalProperties properties)
         {
             return properties == null

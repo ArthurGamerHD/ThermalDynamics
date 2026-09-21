@@ -2,46 +2,36 @@ using System.Text;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// What the block overlay costs the client, per frame it drew. It simulates nothing, so without
-    /// this an overlay-induced stutter reads in the frame histogram as a simulation cost. Free of any
-    /// Space Engineers type, so what it records is testable outside the game.
-    /// </summary>
     public class OverlayTelemetry
     {
-        /// <summary>Frames on which the overlay drew something.</summary>
         public long Frames;
 
-        /// <summary>Blocks or cells the view walked.</summary>
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat Considered = new RunningStat();
 
-        /// <summary>Of those, the ones drawn.</summary>
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat Drawn = new RunningStat();
 
-        /// <summary>Dropped as outside the camera's cone.</summary>
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat OffScreen = new RunningStat();
 
-        /// <summary>Dropped by the draw budget.</summary>
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat OverBudget = new RunningStat();
 
-        /// <summary>The budget's fitted radius, metres. Absent while it is unbounded.</summary>
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat Radius = new RunningStat();
 
-        /// <summary>
-        /// Billboards handed to the renderer: six quads and twelve lines per solid box, twelve for
-        /// an outline, one per drawn surface. The figure the frame cost tracks against.
-        /// </summary>
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat Billboards = new RunningStat();
 
-        /// <summary>Wall clock inside the overlay's own draw.</summary>
+/// <summary>TimingStat operation.</summary>
         public readonly TimingStat Draw = new TimingStat("overlay draw");
 
-        /// <summary>Frames on which the budget held part of a grid back.</summary>
         public long LimitedFrames;
 
-        /// <summary>The view last drawn, so a cost can be attributed to a mode.</summary>
         public string Mode = "";
 
+/// <summary>Frame operation.</summary>
         public void Frame(
             string mode, int considered, int drawn, int offScreen, int overBudget,
             long billboards, double radius, double milliseconds)
@@ -64,6 +54,7 @@ namespace Thermodynamics
         }
 
 
+/// <summary>Write operation.</summary>
         public void Write(StringBuilder sb)
         {
             sb.Append("  frames drawn                  ").Append(Frames.ToString("n0")).Append('\n');

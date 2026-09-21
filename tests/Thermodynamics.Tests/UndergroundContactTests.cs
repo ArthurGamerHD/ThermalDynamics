@@ -5,25 +5,9 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// What a buried grid is actually against.
-    ///
-    /// <para>
-    /// It used to be air. A grid under the surface took the planet's ambient from the rock — which
-    /// is right — and exchanged with it at the planet's *convection* coefficient, which is the
-    /// figure for moving air. Rock contact was not modelled, so 50 W/(m² K) was the nearest
-    /// available answer. backlog.md `A16`.
-    /// </para>
-    ///
-    /// <para>
-    /// **It was wrong by a factor of twenty-five and in the flattering direction**: digging in was
-    /// the best cooling in the game. For a body of size D buried far from a surface the conduction
-    /// shape factor gives `h = 2k/D`, and rock at 2.5 W/(m K) over a 2.5 m block is 2 W/(m² K), not
-    /// 50.
-    /// </para>
-    /// </summary>
     public class UndergroundContactTests
     {
+/// <summary>At operation.</summary>
         private static EnvironmentState At(float depth, float windSpeed = 0f)
         {
             EnvironmentSample sample = Worlds.PlanetSurface(1f, 0.5f, windSpeed);
@@ -31,16 +15,17 @@ namespace Thermodynamics.Tests
             sample.IsUnderground = depth > 0f;
 
             return EnvironmentSolver.Solve(
+/// <summary>ThermalSettings operation.</summary>
                 new ThermalSettings().Derive(), PlanetThermalProperties.Default(), sample);
         }
 
-        /// <summary>
-        /// The headline: rock is a far worse heat sink than air, and the model now says so.
-        /// </summary>
         [Fact]
+/// <summary>RockShedsFarLessThanAir operation.</summary>
         public void RockShedsFarLessThanAir()
         {
+/// <summary>At operation.</summary>
             float air = At(0f).ConvectionCoefficient;
+/// <summary>At operation.</summary>
             float rock = At(50f).ConvectionCoefficient;
 
             Assert.True(air > 0f, "the surface case has to be exchanging with something");
@@ -52,14 +37,13 @@ namespace Thermodynamics.Tests
             Assert.Equal(planet.UndergroundConvectionCoefficient, rock, 2);
         }
 
-        /// <summary>
-        /// It crosses over rather than stepping. A ship breaking the surface must not have its
-        /// cooling change by a factor of twenty-five between one metre and the next.
-        /// </summary>
         [Fact]
+/// <summary>TheCrossoverIsAGradientRatherThanAStep operation.</summary>
         public void TheCrossoverIsAGradientRatherThanAStep()
         {
+/// <summary>At operation.</summary>
             float surface = At(0f).ConvectionCoefficient;
+/// <summary>At operation.</summary>
             float deep = At(ThermalConstants.UndergroundContactDepth * 4f).ConvectionCoefficient;
             float range = surface - deep;
 
@@ -71,14 +55,12 @@ namespace Thermodynamics.Tests
             for (float depth = 0.5f; depth <= ThermalConstants.UndergroundContactDepth * 2f;
                  depth += 0.5f)
             {
+/// <summary>At operation.</summary>
                 float current = At(depth).ConvectionCoefficient;
 
                 Assert.True(current <= previous + 1e-3f,
                     "going deeper must not improve cooling: " + current + " at " + depth + " m");
 
-                // Against the whole range rather than against where it happens to be: the ramp is
-                // linear, so its steps are equal in watts and grow without bound as a share of a
-                // value that is on its way to two.
                 float step = Math.Abs(previous - current);
                 Assert.True(step < range * 0.2f,
                     "the coefficient stepped by " + step.ToString("n1") + " W/(m^2 K) at "
@@ -93,39 +75,35 @@ namespace Thermodynamics.Tests
                 previous, 2);
         }
 
-        /// <summary>
-        /// **No wind in rock.** The surface coefficient is multiplied by a wind bonus and by the
-        /// weather; neither reaches a buried grid, and a model that let them would have a gale
-        /// cooling a ship under fifty metres of stone.
-        /// </summary>
         [Fact]
+/// <summary>NeitherWindNorWeatherReachesABuriedGrid operation.</summary>
         public void NeitherWindNorWeatherReachesABuriedGrid()
         {
+/// <summary>At operation.</summary>
             float still = At(50f).ConvectionCoefficient;
+/// <summary>At operation.</summary>
             float gale = At(50f, 60f).ConvectionCoefficient;
 
             Assert.Equal(still, gale, 3);
 
-            // And at the surface it plainly does, or the comparison above says nothing.
             Assert.True(At(0f, 60f).ConvectionCoefficient > At(0f).ConvectionCoefficient,
                 "wind should raise the surface coefficient, or this test is blind");
         }
 
-        /// <summary>
-        /// The consequence, on a grid rather than on a coefficient: the same hull making the same
-        /// heat runs hotter buried than it does in the open. It is the finding `A16` was about,
-        /// and it inverts what the model used to say.
-        /// </summary>
         [Fact]
+/// <summary>TheSameHullRunsHotterBuriedThanInTheOpen operation.</summary>
         public void TheSameHullRunsHotterBuriedThanInTheOpen()
         {
             Assert.True(Settled(50f) > Settled(0f) + 5f,
                 "a buried hull should run hotter than one in the open: "
+/// <summary>Sets the tled.</summary>
                 + Settled(50f).ToString("n1") + " K against " + Settled(0f).ToString("n1") + " K");
         }
 
+/// <summary>Sets the tled.</summary>
         private static float Settled(float depth)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableDamage = false;
             settings.EnableSolarHeat = false;

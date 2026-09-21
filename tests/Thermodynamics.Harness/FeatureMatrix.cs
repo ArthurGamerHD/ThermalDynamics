@@ -7,29 +7,8 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// The same rig under many combinations of mechanism switches.
-    ///
-    /// Every switch is tested on its own elsewhere — <c>FeatureToggleTests</c> checks that turning
-    /// one off removes exactly that stage's contribution. What nothing checked is *combinations*:
-    /// the paths interact through shared node temperatures and a shared substep budget, and a pair
-    /// that is fine apart can be broken together. Room air and coolant loops both couple a light
-    /// mass to many surfaces; conduction off with radiation on leaves blocks that can only talk to
-    /// the sky; the well-mixed ring is a different integrator, not just a cheaper one.
-    ///
-    /// The sweep runs three families, which is enough to find an interaction without the
-    /// combinatorial explosion of all 2^N:
-    ///
-    /// * **all on** — the reference.
-    /// * **one off** — N runs. Catches a mechanism that was propping another one up.
-    /// * **one on** — N runs. Catches a mechanism that cannot stand alone.
-    ///
-    /// A row is a finding when it diverges, fails, or produces a temperature that no combination of
-    /// fewer mechanisms should be able to reach.
-    /// </summary>
     public static class FeatureMatrix
     {
-        /// <summary>One switch, by name, with the setter that moves it.</summary>
         private class Toggle
         {
             public string Name;
@@ -64,25 +43,14 @@ namespace Thermodynamics.Harness
             public string Error;
             public float SubstepsMean;
 
-            /// <summary>
-            /// True when this combination has something adding energy and nothing able to remove
-            /// it — a source with every sink switched off. Such a run rises without bound, and that
-            /// is the correct answer rather than a defect: reporting it as breakage would bury the
-            /// combinations that really are broken under ones that are behaving.
-            /// </summary>
             public bool RunawayExpected;
         }
 
-        /// <summary>
-        /// A grid carrying one of everything, so every switch has something to act on: a driven
-        /// source, a pumped ring with a sink onto it, a radiator, a heat pump and a sealed room.
-        /// A matrix run on a rig that has no coolant learns nothing by switching coolant off.
-        /// </summary>
+/// <summary>Rig operation.</summary>
         private static ScenarioRunner Rig(ThermalSettings settings)
         {
             GridBuilder builder = GridBuilder.Large();
 
-            // A sealed box, so room air has a compartment.
             builder.Shell(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 3, 4));
 
             BlockInstance floor = builder.Grid.GetAtCell(new Vector3I(1, 0, 1));
@@ -95,7 +63,6 @@ namespace Thermodynamics.Harness
             BlockInstance source = builder.Last;
             source.PowerConsumedWatts = 2000000f;
 
-            // A ring above the box with a sink face down onto its roof.
             List<Vector3I> ring = PipeFitter.RectangleXZ(new Vector3I(0, 3, 0), 4, 4);
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
             int index = PipeFitter.FirstStraightIndexAvoiding(ring, sinks);
@@ -108,6 +75,7 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
             simulation.SetRoomPressure(new Vector3I(2, 1, 2), 1f);
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.PlanetSurface(0.6f, timeOfDay: 0.3f, windSpeed: 40f);
             runner.Track("source", source);
@@ -115,8 +83,10 @@ namespace Thermodynamics.Harness
             return runner;
         }
 
+/// <summary>Run operation.</summary>
         public static List<Row> Run()
         {
+/// <summary>List operation.</summary>
             List<Row> rows = new List<Row>();
 
             foreach (BalanceProfile profile in BalanceProfile.All())
@@ -135,10 +105,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        /// <summary>
-        /// One combination. <paramref name="only"/> false turns <paramref name="single"/> off and
-        /// leaves the rest alone; true turns everything else off and leaves it on.
-        /// </summary>
+/// <summary>Measure operation.</summary>
         private static Row Measure(BalanceProfile profile, string label, Toggle single, bool only)
         {
             Row row = new Row { Profile = profile.Name, Combination = label };
@@ -163,11 +130,13 @@ namespace Thermodynamics.Harness
             bool sink = wanted.EnableRadiation || wanted.EnableConvection;
             row.RunawayExpected = source && !sink;
 
+/// <summary>Copy operation.</summary>
             GridBuilder.SettingsOverride = existing => Copy(existing, wanted);
             Catalog.MaterialOverride = profile.Material;
 
             try
             {
+/// <summary>Rig operation.</summary>
                 ScenarioRunner runner = Rig(wanted);
                 if (runner == null || runner.Samples.Count == 0)
                 {
@@ -190,11 +159,6 @@ namespace Thermodynamics.Harness
 
                 row.Converged = ProfileSweep.Settled(runner.Samples);
 
-                // The same rule the profile sweep uses, and for the same reason: a temperature past
-                // the threshold says the answer is not a ship, and only a failure to settle says it
-                // is not an answer. A *negative* temperature needs no such qualification — a block
-                // below absolute zero is wrong however still it is holding, and it is half of the
-                // signature this matrix exists to catch.
                 row.Diverged = float.IsNaN(row.PeakKelvin) || float.IsInfinity(row.PeakKelvin)
                     || row.ColdestKelvin < 0f
                     || (row.PeakKelvin > ProfileSweep.DivergenceKelvin && !row.Converged);
@@ -213,12 +177,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-        /// <summary>
-        /// Every switch from the combination, over whatever the rig asked for.
-        ///
-        /// Unlike the profile sweep, this one *does* write the mechanism switches: they are the
-        /// experiment rather than something the rig is entitled to choose.
-        /// </summary>
+/// <summary>Copy operation.</summary>
         private static ThermalSettings Copy(ThermalSettings target, ThermalSettings wanted)
         {
             target.HeatTimeScale = wanted.HeatTimeScale;
@@ -245,15 +204,19 @@ namespace Thermodynamics.Harness
             return target.Derive();
         }
 
+/// <summary>N operation.</summary>
         private static string N(float value, int decimals = 1)
         {
             return float.IsNaN(value) || float.IsInfinity(value)
                 ? "inf" : value.ToString("n" + decimals, CultureInfo.InvariantCulture);
         }
 
+/// <summary>Report operation.</summary>
         public static string Report()
         {
+/// <summary>Run operation.</summary>
             List<Row> rows = Run();
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("FEATURE MATRIX — one rig with every mechanism on it, combinations toggled");
@@ -272,6 +235,7 @@ namespace Thermodynamics.Harness
                 if (row.RunawayExpected && !row.Failed) continue;
                 bad++;
                 sb.AppendLine(string.Format("{0,-11} {1,-18} {2,16} {3,12} {4,10}",
+/// <summary>N operation.</summary>
                     row.Profile, row.Combination, N(row.PeakKelvin, 0), N(row.ColdestKelvin, 1),
                     row.Failed ? row.Error : "DIVERGED"));
             }
@@ -292,13 +256,16 @@ namespace Thermodynamics.Harness
             {
                 if (row.Profile != "shipped" || row.Failed) continue;
                 sb.AppendLine(string.Format("  {0,-18} {1,12} {2,12}",
+/// <summary>N operation.</summary>
                     row.Combination, N(row.PeakKelvin, 1), row.Converged ? "" : "~"));
             }
             return sb.ToString();
         }
 
+/// <summary>Csv operation.</summary>
         public static string Csv()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("profile,combination,peak_k,coldest_k,converged,diverged,failed,error,substeps");
             foreach (Row row in Run())

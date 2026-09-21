@@ -14,71 +14,55 @@ namespace RichHudFramework
 
 	namespace UI.Client
 	{
-		/// <summary>
-		/// Represents a horizontally scrolling row of <see cref="ControlTile"/>s within a <see cref="ControlPage"/> 
-		/// in the <see cref="RichHudTerminal"/>.
-		/// </summary>
 		public class ControlCategory : IControlCategory
 		{
-			/// <summary>
-			/// The primary header text displayed above the category.
-			/// </summary>
 			public string HeaderText
 			{
+/// <summary>Returns the orsetmemberfunc.</summary>
 				get { return GetOrSetMemberFunc(null, (int)ControlCatAccessors.HeaderText) as string; }
+/// <summary>Returns the orsetmemberfunc.</summary>
 				set { GetOrSetMemberFunc(value, (int)ControlCatAccessors.HeaderText); }
 			}
 
-			/// <summary>
-			/// The secondary description/subheader text displayed below the header.
-			/// </summary>
 			public string SubheaderText
 			{
+/// <summary>Returns the orsetmemberfunc.</summary>
 				get { return GetOrSetMemberFunc(null, (int)ControlCatAccessors.SubheaderText) as string; }
+/// <summary>Returns the orsetmemberfunc.</summary>
 				set { GetOrSetMemberFunc(value, (int)ControlCatAccessors.SubheaderText); }
 			}
 
-			/// <summary>
-			/// Read-only collection of <see cref="ControlTile"/>s assigned to this category.
-			/// </summary>
 			public IReadOnlyList<ControlTile> Tiles { get; }
 
-			/// <summary>
-			/// Nested collection initializer utility property
-			/// </summary>
 			public IControlCategory TileContainer => this;
 
-			/// <summary>
-			/// Unique identifier used by the Framework API.
-			/// </summary>
 			public object ID => data.Item3;
 
-			/// <summary>
-			/// Determines whether or not the category will be drawn in the menu.
-			/// </summary>
 			public bool Enabled
 			{
+/// <summary>return operation.</summary>
 				get { return (bool)GetOrSetMemberFunc(null, (int)ControlCatAccessors.Enabled); }
+/// <summary>Returns the orsetmemberfunc.</summary>
 				set { GetOrSetMemberFunc(value, (int)ControlCatAccessors.Enabled); }
 			}
 
 			private ApiMemberAccessor GetOrSetMemberFunc => data.Item1;
 			private readonly ControlContainerMembers data;
 
+/// <summary>ControlCategory operation.</summary>
 			public ControlCategory() : this(RichHudTerminal.Instance.GetNewMenuCategory())
 			{ }
 
-			/// <summary>
-			/// Initializes a new control category from an API data tuple.
-			/// </summary>
-			/// <exclude/>
+/// <summary>ControlCategory operation.</summary>
 			public ControlCategory(ControlContainerMembers data)
 			{
 				this.data = RichHudTerminal.Instance.GetNewMenuCategory();
 
 				var GetTileDataFunc = data.Item2.Item1 as Func<int, ControlContainerMembers>;
+/// <summary>ControlTile operation.</summary>
 				Func<int, ControlTile> GetTileFunc = x => new ControlTile(GetTileDataFunc(x));
 
+/// <summary>ReadOnlyApiCollection operation.</summary>
 				Tiles = new ReadOnlyApiCollection<ControlTile>(GetTileFunc, data.Item2.Item2);
 			}
 
@@ -88,16 +72,11 @@ namespace RichHudFramework
 			IEnumerator IEnumerable.GetEnumerator() =>
 				Tiles.GetEnumerator();
 
-			/// <summary>
-			/// Adds a <see cref="ControlTile"/> to the category.
-			/// </summary>
+/// <summary>Adds a .</summary>
 			public void Add(ControlTile tile) =>
 				GetOrSetMemberFunc(tile.ID, (int)ControlCatAccessors.AddMember);
 
-			/// <summary>
-			/// Returns the internal API data tuple.
-			/// </summary>
-			/// <exclude/>
+/// <summary>Returns the apidata.</summary>
 			public ControlContainerMembers GetApiData() =>
 				data;
 		}

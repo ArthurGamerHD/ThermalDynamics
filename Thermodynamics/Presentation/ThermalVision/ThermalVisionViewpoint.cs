@@ -1,6 +1,5 @@
 namespace Thermodynamics.Presentation
 {
-    /// <summary>Client view facts shared by the engine adapter and offline eligibility regressions.</summary>
     public struct ThermalVisionViewpoint
     {
         public bool IsClient;
@@ -17,8 +16,6 @@ namespace Thermodynamics.Presentation
         public bool FirstPerson;
         public long ControlledEntityId;
 
-        /// <summary>Zero means ineligible. A camera must be the locally active view;
-        /// a suit must be both the camera owner and the controlled entity.</summary>
         public long EligibleEntityId
         {
             get

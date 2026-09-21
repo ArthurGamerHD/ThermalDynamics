@@ -4,11 +4,6 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// Incrementally classifies every cell in a grid's bounding box as external space, sealed
-    /// structure, or part of an enclosed room. Resumable, and restart requests coalesce.
-    /// See thermal-model.md, The room map.
-    /// </summary>
     public class RoomMapper
     {
         private enum Phase
@@ -21,24 +16,18 @@ namespace Thermodynamics.Core
 
         private readonly SurfaceMap surfaces;
 
-        /// <summary>
-        /// The flood's frontier: a ring buffer kept between passes rather than a <c>Queue</c> grown
-        /// from empty each time. A pass enqueues every air cell of the bounding volume — 6.6 million
-        /// at half a million blocks — so a queue that doubles from nothing spends about twenty
-        /// reallocations and thirteen million struct copies on growth alone, every pass, having
-        /// already been that large on the previous one. Same order in and out, so the same map.
-        /// See performance.md, Pass 3, Iteration 8.
-        /// </summary>
         private Vector3I[] frontier = new Vector3I[64];
         private int frontierHead;
         private int frontierCount;
 
+/// <summary>FrontierClear operation.</summary>
         private void FrontierClear()
         {
             frontierHead = 0;
             frontierCount = 0;
         }
 
+/// <summary>FrontierEnqueue operation.</summary>
         private void FrontierEnqueue(Vector3I cell)
         {
             if (frontierCount == frontier.Length)
@@ -58,6 +47,7 @@ namespace Thermodynamics.Core
             frontierCount++;
         }
 
+/// <summary>FrontierDequeue operation.</summary>
         private Vector3I FrontierDequeue()
         {
             Vector3I cell = frontier[frontierHead];
@@ -66,58 +56,28 @@ namespace Thermodynamics.Core
             frontierCount--;
             return cell;
         }
-        /// <summary>
-        /// Cells this pass has already classified, one bit each over the search box — a set the region
-        /// is dense in, which is what a bitset is for. See memory.md, 1a.
-        /// </summary>
+/// <summary>CellBitset operation.</summary>
         private readonly CellBitset visited = new CellBitset();
 
-        /// <summary>
-        /// The structural self-airtight bits of every cell in the search box, one byte a cell,
-        /// copied out of the surface map when a pass begins. A pass tests two faces per neighbour
-        /// per cell over the whole bounding volume — fourteen times the block count on a hull — and
-        /// each test was two dictionary probes; here it is two array reads. The copy is exact
-        /// because a sealing change requests a restart, so a pass never reads a surface map that
-        /// has moved under it. Retained between passes and regrown only when the box outgrows it.
-        /// See performance.md, Iteration 4.
-        /// </summary>
         private byte[] sealing = new byte[0];
         private int sealingSizeX;
         private int sealingSizeY;
         private int sealingSizeZ;
 
-        /// <summary>
-        /// Set false to answer every sealing question from the surface map's dictionaries, as the
-        /// pass did before the snapshot. Test hook: <c>RoomMapSnapshotTests</c> runs the same grid
-        /// both ways and compares the published maps cell for cell.
-        /// </summary>
         public bool SnapshotSealing = true;
 
-        /// <summary>Whether the pass in flight is reading the snapshot rather than the map.</summary>
         private bool snapshotLive;
 
-        /// <summary>
-        /// What each face adds to a cell's index in the snapshot and the visited bitset, which share
-        /// one box and one ordering. A neighbour's index is the cell's plus this, once the
-        /// neighbour is known to be inside the box.
-        /// </summary>
         private readonly long[] faceDelta = new long[Face.Count];
 
-        /// <summary>
-        /// Cells belonging to a door. Never classified as solid structure even when they seal on all
-        /// six faces: a door is an openable volume, and a portal needs a region on the door's own
-        /// side to join to. A shut airtight hangar door is a room of one cell, which merges with the
-        /// regions either side when it opens.
-        /// </summary>
+/// <summary>HashSet operation.</summary>
         private readonly HashSet<long> doorCells = new HashSet<long>();
 
         private RoomMap working;
         private RoomMap published = RoomMap.AllExternal;
 
-        /// <summary>The map published before the current one, still readable and not yet reusable.</summary>
         private RoomMap supersededPrevious;
 
-        /// <summary>A map two publishes old, which the next pass writes into instead of allocating.</summary>
         private RoomMap spare;
 
         private Phase phase = Phase.Idle;
@@ -127,48 +87,26 @@ namespace Thermodynamics.Core
         private Vector3I searchMaxExclusive;
         private Vector3I scanCursor;
 
-        /// <summary>
-        /// Where <see cref="scanCursor"/> sits in the snapshot and the visited bitset, which share one
-        /// box and one ordering.
-        ///
-        /// <para>
-        /// **The scan order is the index order**, exactly: the cursor advances x fastest, then y, then
-        /// z, and the index is <c>((z * sizeY) + y) * sizeX + x</c> — so a step of one cell is a step
-        /// of one index, wraps included. The interior scan walks every cell of a bounding volume
-        /// fourteen times the block count, so deriving the index from the coordinates there was three
-        /// subtractions, six compares and a multiply per cell, twice over. It is an increment.
-        /// See performance.md, Iteration 10.
-        /// </para>
-        /// </summary>
         private long scanIndex;
 
         private Vector3I pendingMin;
         private Vector3I pendingMaxExclusive;
         private bool hasPendingBounds;
 
-        /// <summary>
-        /// The grid the pending pass is for, so its doors can be resolved into portals when the pass
-        /// finishes. Held only between a restart request and the publish that answers it; the mapper
-        /// otherwise has no knowledge of blocks.
-        /// </summary>
         private GridModel pendingGrid;
 
-        /// <summary>Raised each time a pass completes and a new map is published.</summary>
         public event Action Completed;
 
-        /// <summary>
-        /// Shared work counters. The mapper and the solver write to the same instance, so a test or
-        /// report reads one figure for what an update touched rather than summing two.
-        /// </summary>
+/// <summary>SimulationWork operation.</summary>
         public SimulationWork Work = new SimulationWork();
 
+/// <summary>RoomMapper operation.</summary>
         public RoomMapper(SurfaceMap surfaces)
         {
             if (surfaces == null) throw new ArgumentNullException("surfaces");
             this.surfaces = surfaces;
         }
 
-        /// <summary>The most recently completed map. Never null, never partially built.</summary>
         public RoomMap Map
         {
             get { return published; }
@@ -184,14 +122,9 @@ namespace Thermodynamics.Core
             get { return IsRunning || restartRequested; }
         }
 
-        /// <summary>Number of passes completed. Useful for tests and diagnostics.</summary>
         public int CompletedPasses { get; private set; }
 
-        /// <summary>
-        /// True when the published map already accounts for this door, so its state can be resolved
-        /// through the portals rather than by remapping. False for a door placed since the last
-        /// pass, and for any block that is not a door.
-        /// </summary>
+/// <summary>Knows operation.</summary>
         public bool Knows(BlockInstance block)
         {
             if (block == null || !block.HasStateDependentSealing) return false;
@@ -203,35 +136,28 @@ namespace Thermodynamics.Core
                 if (portals[i].Block == block) return true;
             }
 
-            // A door with no portal is one the last pass found sealed off or opening onto nothing.
-            // Its state changes nothing, so the map still answers for it, provided the pass saw it.
             return knownDoors.Contains(block);
         }
 
-        /// <summary>Doors present at the last completed pass.</summary>
+/// <summary>HashSet operation.</summary>
         private readonly HashSet<BlockInstance> knownDoors = new HashSet<BlockInstance>();
 
-        /// <summary>
-        /// Cells waiting in the flood fill's frontier; zero when no pass is running. Reported so a
-        /// session can be checked for restarts arriving faster than passes complete.
-        /// </summary>
         public int PendingCells
         {
             get { return frontierCount; }
         }
 
-        /// <summary>
-        /// Marks the map stale. Cheap and idempotent: many calls before the next
-        /// <see cref="Step"/> collapse into a single restart.
-        /// </summary>
+/// <summary>RequestRestart operation.</summary>
         public void RequestRestart(Vector3I gridMin, Vector3I gridMax)
         {
             pendingMin = gridMin - Vector3I.One;
+/// <summary>Vector3I operation.</summary>
             pendingMaxExclusive = gridMax + new Vector3I(2, 2, 2);
             hasPendingBounds = true;
             restartRequested = true;
         }
 
+/// <summary>RequestRestart operation.</summary>
         public void RequestRestart(GridModel grid)
         {
             pendingGrid = grid;
@@ -247,18 +173,10 @@ namespace Thermodynamics.Core
             RequestRestart(grid.Min, grid.Max);
         }
 
-        /// <summary>
-        /// Runs the whole pass to completion. For tests and load-time mapping; gameplay code uses the
-        /// budgeted <see cref="Step"/>. The limit is a guard against a pass that never finishes rather
-        /// than a budget, and is derived from the volume so it cannot bind on one that will.
-        /// See load-and-hitching.md, The room map gave up above seven hundred thousand blocks.
-        /// </summary>
-        /// <param name="safetyLimit">
-        /// Cell visits to allow, or zero to derive one from the search volume.
-        /// </param>
-        /// <returns>True when a pass completed and published a map.</returns>
+/// <summary>RunToCompletion operation.</summary>
         public bool RunToCompletion(int safetyLimit = 0)
         {
+/// <summary>SafetyLimitFromBounds operation.</summary>
             long limit = safetyLimit > 0 ? safetyLimit : SafetyLimitFromBounds();
 
             long spent = 0;
@@ -271,11 +189,7 @@ namespace Thermodynamics.Core
             return !HasWorkPending;
         }
 
-        /// <summary>
-        /// Cell visits to allow for one pass over the bounds it is about to walk: four times the
-        /// volume, saturating rather than overflowing — a volume large enough to overflow an
-        /// <c>int</c> is exactly the case a flat limit got wrong.
-        /// </summary>
+/// <summary>SafetyLimitFromBounds operation.</summary>
         private long SafetyLimitFromBounds()
         {
             Vector3I min = hasPendingBounds ? pendingMin : searchMin;
@@ -291,10 +205,7 @@ namespace Thermodynamics.Core
             return (volume * 4) + 4096;
         }
 
-        /// <summary>
-        /// Advances the pass by at most <paramref name="cellBudget"/> cells.
-        /// </summary>
-        /// <returns>True when a pass completed during this call.</returns>
+/// <summary>Step operation.</summary>
         public bool Step(int cellBudget)
         {
             if (cellBudget <= 0) return false;
@@ -319,8 +230,7 @@ namespace Thermodynamics.Core
                     }
                     if (RunWalkLive)
                     {
-                        // A run is charged for every cell it took, and takes no more than the tick
-                        // has left; where it stops for that reason it enqueues its own remainder.
+/// <summary>StepExternalRun operation.</summary>
                         int cells = StepExternalRun(cellBudget - spent);
                         spent += cells;
                         Work.RoomCellsVisited += cells;
@@ -331,12 +241,14 @@ namespace Thermodynamics.Core
                     spent++;
                     Work.RoomCellsVisited++;
                 }
+/// <summary>if operation.</summary>
                 else if (phase == Phase.Interior)
                 {
                     if (frontierCount > 0)
                     {
                         if (RunWalkLive)
                         {
+/// <summary>StepInteriorRun operation.</summary>
                             int cells = StepInteriorRun(cellBudget - spent);
                             spent += cells;
                             Work.RoomCellsVisited += cells;
@@ -349,6 +261,7 @@ namespace Thermodynamics.Core
                         continue;
                     }
 
+/// <summary>AdvanceScanToNextUnvisited operation.</summary>
                     ScanResult result = AdvanceScanToNextUnvisited(ref spent, cellBudget);
                     if (result == ScanResult.Exhausted)
                     {
@@ -367,6 +280,7 @@ namespace Thermodynamics.Core
             return completed;
         }
 
+/// <summary>BeginPass operation.</summary>
         private void BeginPass()
         {
             Work.RoomPassesBegun++;
@@ -379,11 +293,6 @@ namespace Thermodynamics.Core
                 hasPendingBounds = false;
             }
 
-            // **Three slots rather than a new map a pass.** A published map is read until the
-            // publish after next — `ThermalSolver.exposureMap` holds one across a budgeted refresh,
-            // and a publish only schedules the restart that replaces it — so the map free to be
-            // written again is the one two publishes back. It keeps every array it grew, which is
-            // what makes a pass stop allocating its own map (`D20`).
             if (spare != null)
             {
                 working = spare;
@@ -392,14 +301,12 @@ namespace Thermodynamics.Core
             }
             else
             {
+/// <summary>RoomMap operation.</summary>
                 working = new RoomMap();
             }
 
             working.SetSearchBounds(searchMin, searchMaxExclusive);
 
-            // A rebuild is not a guess: the pass before it found this many room cells, and a hull
-            // that gained or lost a block has very nearly as many. Sizing the store once here is
-            // what removes the doubling copies and the trim copy from every pass after the first.
             if (published != null) working.HintRoomCells(published.RoomCellCount);
             FrontierClear();
             visited.Reset(searchMin, searchMaxExclusive);
@@ -415,11 +322,8 @@ namespace Thermodynamics.Core
                 return;
             }
 
-            // The corner of the padded bounding box is guaranteed to lie outside the grid.
             Vector3I seed = searchMin;
 
-            // The run walk marks and counts what it takes, and it has to be able to extend through
-            // its own seed; the cell walk marks at the enqueue.
             if (!RunWalkLive)
             {
                 visited.Add(seed);
@@ -430,15 +334,12 @@ namespace Thermodynamics.Core
             phase = Phase.External;
         }
 
-        /// <summary>
-        /// Whether this pass is walking runs: the switch is on and the snapshot it needs is live.
-        /// The run walk steps indices, which is only meaningful against a snapshot.
-        /// </summary>
         private bool RunWalkLive
         {
             get { return SpanFlood && snapshotLive; }
         }
 
+/// <summary>TakeSealingSnapshot operation.</summary>
         private void TakeSealingSnapshot()
         {
             snapshotLive = SnapshotSealing;
@@ -451,7 +352,6 @@ namespace Thermodynamics.Core
             long cells = (long)sealingSizeX * sealingSizeY * sealingSizeZ;
             if (cells > int.MaxValue)
             {
-                // A box this large is a fault elsewhere; the dictionary path still answers it.
                 snapshotLive = false;
                 return;
             }
@@ -469,32 +369,16 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>
-        /// One flood step over a cell's six neighbours with the snapshot live: the cell's index and
-        /// its own sealing byte are read once for all six faces, each neighbour's index is an add,
-        /// and the box test is the only per-face geometry. Same faces in the same order as the
-        /// dictionary path, so the same map — and the same order within a room, which is what keeps
-        /// a room's air links, and the sum over them, bit for bit what they were.
-        /// See performance.md, Pass 3, Iteration 2.
-        /// </summary>
-        /// <returns>True when the caller should classify the neighbour; the neighbour's index is out.</returns>
-        /// <summary>
-        /// Whether to walk the external air a run of cells at a time rather than a cell at a time.
-        ///
-        /// <para>
-        /// The switch exists so the two walks can be held against each other on real hulls
-        /// (`RoomSpanFloodTests`), the way `SnapshotSealing` holds the snapshot against the live
-        /// query. The cell walk is the reference: it is the simpler statement of what a flood is,
-        /// and the span walk is only correct if it classifies the same cells.
-        /// </para>
-        /// </summary>
         public bool SpanFlood = true;
 
-        /// <summary>The face indices of −X and +X, and the four that are neither, found once from the offsets.</summary>
+/// <summary>FaceAlong operation.</summary>
         private static readonly int MinusX = FaceAlong(-1, 0, 0);
+/// <summary>FaceAlong operation.</summary>
         private static readonly int PlusX = FaceAlong(1, 0, 0);
+/// <summary>Builds the method table.</summary>
         private static readonly int[] LateralFaces = BuildLateralFaces();
 
+/// <summary>FaceAlong operation.</summary>
         private static int FaceAlong(int x, int y, int z)
         {
             for (int face = 0; face < Face.Count; face++)
@@ -505,6 +389,7 @@ namespace Thermodynamics.Core
             return -1;
         }
 
+/// <summary>Builds the API method table.</summary>
         private static int[] BuildLateralFaces()
         {
             int[] faces = new int[Face.Count - 2];
@@ -517,52 +402,19 @@ namespace Thermodynamics.Core
             return faces;
         }
 
-        /// <summary>
-        /// Walks one maximal run of open air along X and returns how many cells it classified.
-        ///
-        /// <para>
-        /// **Why a run.** The external flood is most of what a pass does — 5.1 million cells of the
-        /// 7.2 million visited on a 505,566-block hull — and nearly all of it is open space around
-        /// the hull, in runs averaging **84 cells**. A cell walk pays a dequeue, an index derivation
-        /// and six face tests for each of those cells, and enqueues each of them. A run walk pays
-        /// the dequeue and the index once, walks the run's own ±X faces as it extends, and enqueues
-        /// only the *first* cell of each unvisited stretch on the four other faces — which is what
-        /// keeps the frontier at tens of thousands of entries rather than millions.
-        /// </para>
-        ///
-        /// <para>
-        /// **Nothing here depends on the order cells are reached in.** External cells are counted,
-        /// not stored, so the pass's outputs — the visited set, the count, and which cells are left
-        /// for the interior scan — are the same set whichever walk finds them.
-        /// </para>
-        ///
-        /// <para>
-        /// A cell can be enqueued more than once, by each of up to four runs beside it; the visited
-        /// test at the top is what makes that harmless, and it is why the enqueue does not mark.
-        /// </para>
-        ///
-        /// <para>
-        /// **A run never outruns the tick's budget.** `RoomMappingNeverExceedsItsBudgetInOneTick`
-        /// holds the mapper to its budget on every tick however large the grid, and a run on a
-        /// large hull is hundreds of cells — so a run stops at <paramref name="most"/> cells and
-        /// **enqueues where it stopped**, which the next tick picks up. The cell it enqueues has
-        /// already been shown reachable by the same test the extension uses, because a seed the
-        /// walk cannot justify would be counted as open air on sight.
-        /// </para>
-        /// </summary>
-        /// <param name="most">Cells this run may take, being what is left of the tick's budget.</param>
+/// <summary>StepExternalRun operation.</summary>
         private int StepExternalRun(int most)
         {
+/// <summary>FrontierDequeue operation.</summary>
             Vector3I seed = FrontierDequeue();
 
+/// <summary>SealingIndex operation.</summary>
             long index = SealingIndex(seed);
             if (index < 0 || visited.ContainsIndex(index)) return 1;
 
             if (most < 1) most = 1;
             int taken = 1;
 
-            // Extend to the low side, then to the high side, stopping at a seal on either face of
-            // the pair, at a cell some other run already took, at the box, or at the budget.
             int low = seed.X;
             long lowIndex = index;
             while (taken < most && ReachesLow(low, lowIndex))
@@ -633,23 +485,13 @@ namespace Thermodynamics.Core
             return length;
         }
 
-        /// <summary>
-        /// The same walk for the inside of a room, and it has one thing to do that the external one
-        /// does not: a cell it reaches is either air, which joins the room, or sealed structure,
-        /// which is recorded as the room's boundary and stops the walk going further that way.
-        ///
-        /// <para>
-        /// **A room's cells now arrive in run order rather than in the order a queue emptied.** That
-        /// is only safe because iteration 4 made a room's air a function of its contents rather than
-        /// of the path through it; before that, this change would have moved every player's air
-        /// temperatures in the last bits.
-        /// </para>
-        /// </summary>
-        /// <param name="most">Cells this run may take, being what is left of the tick's budget.</param>
+/// <summary>StepInteriorRun operation.</summary>
         private int StepInteriorRun(int most)
         {
+/// <summary>FrontierDequeue operation.</summary>
             Vector3I seed = FrontierDequeue();
 
+/// <summary>SealingIndex operation.</summary>
             long index = SealingIndex(seed);
             if (index < 0 || visited.ContainsIndex(index)) return 1;
 
@@ -720,10 +562,9 @@ namespace Thermodynamics.Core
                     }
 
                     int x = low + (int)(i - lowIndex);
+/// <summary>Vector3I operation.</summary>
                     Vector3I cell = new Vector3I(x, y, z);
 
-                    // Structure bounding the room: recorded here and not walked into, so it also
-                    // breaks the stretch beside it.
                     if (TakeIfStructure(neighbour, cell))
                     {
                         inStretch = false;
@@ -740,10 +581,7 @@ namespace Thermodynamics.Core
             return taken;
         }
 
-        /// <summary>
-        /// Records a cell as sealed structure if that is what it is, and says so. Marks it visited
-        /// either way it is structure, because a boundary cell is classified once and never walked.
-        /// </summary>
+/// <summary>TakeIfStructure operation.</summary>
         private bool TakeIfStructure(long index, Vector3I cell)
         {
             if (!IsStructureAt(index, cell)) return false;
@@ -753,7 +591,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-        /// <summary>Whether the run may extend one cell further down X from here.</summary>
+/// <summary>ReachesLow operation.</summary>
         private bool ReachesLow(int x, long index)
         {
             return x > searchMin.X
@@ -762,7 +600,7 @@ namespace Thermodynamics.Core
                 && (sealing[index - 1] & (1 << PlusX)) == 0;
         }
 
-        /// <summary>Whether the run may extend one cell further up X from here.</summary>
+/// <summary>ReachesHigh operation.</summary>
         private bool ReachesHigh(int x, long index)
         {
             return x < searchMaxExclusive.X - 1
@@ -771,6 +609,7 @@ namespace Thermodynamics.Core
                 && (sealing[index + 1] & (1 << MinusX)) == 0;
         }
 
+/// <summary>Reaches operation.</summary>
         private bool Reaches(long index, int sealingHere, Vector3I neighbour, int face, out long neighbourIndex)
         {
             neighbourIndex = -1;
@@ -784,7 +623,7 @@ namespace Thermodynamics.Core
             return (sealing[neighbourIndex] & (1 << Face.Opposite(face))) == 0;
         }
 
-        /// <summary>Index into <see cref="sealing"/>, or -1 outside the box.</summary>
+/// <summary>SealingIndex operation.</summary>
         private long SealingIndex(Vector3I cell)
         {
             int x = cell.X - searchMin.X;
@@ -799,36 +638,39 @@ namespace Thermodynamics.Core
             return (((long)z * sealingSizeY) + y) * sealingSizeX + x;
         }
 
-        /// <summary>
-        /// <see cref="SurfaceMap.IsFaceSealedStructurally"/>, answered from the snapshot when one is
-        /// live: either side's own airtight bit across the shared face seals it.
-        /// </summary>
+/// <summary>IsFaceSealed operation.</summary>
         private bool IsFaceSealed(Vector3I cell, int face, Vector3I neighbour)
         {
             if (!snapshotLive) return surfaces.IsFaceSealedStructurally(cell, face);
 
+/// <summary>SealingIndex operation.</summary>
             long here = SealingIndex(cell);
             if (here >= 0 && (sealing[here] & (1 << face)) != 0) return true;
 
+/// <summary>SealingIndex operation.</summary>
             long there = SealingIndex(neighbour);
             return there >= 0 && (sealing[there] & (1 << Face.Opposite(face))) != 0;
         }
 
-        /// <summary><see cref="SurfaceMap.IsFullySealedStructurally"/>, from the snapshot when one is live.</summary>
+/// <summary>IsFullySealed operation.</summary>
         private bool IsFullySealed(Vector3I cell)
         {
             if (!snapshotLive) return surfaces.IsFullySealedStructurally(cell);
 
+/// <summary>SealingIndex operation.</summary>
             long index = SealingIndex(cell);
             return index >= 0 && (sealing[index] & CellSurface.SelfAirtightMask) == CellSurface.SelfAirtightMask;
         }
 
+/// <summary>StepExternal operation.</summary>
         private void StepExternal()
         {
+/// <summary>FrontierDequeue operation.</summary>
             Vector3I cell = FrontierDequeue();
 
             if (snapshotLive)
             {
+/// <summary>SealingIndex operation.</summary>
                 long index = SealingIndex(cell);
                 int sealingHere = sealing[index];
 
@@ -861,12 +703,15 @@ namespace Thermodynamics.Core
 
         private int currentRoom = -1;
 
+/// <summary>StepInterior operation.</summary>
         private void StepInterior()
         {
+/// <summary>FrontierDequeue operation.</summary>
             Vector3I cell = FrontierDequeue();
 
             if (snapshotLive)
             {
+/// <summary>SealingIndex operation.</summary>
                 long index = SealingIndex(cell);
                 int sealingHere = sealing[index];
 
@@ -911,25 +756,16 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>How a slice of the interior scan ended.</summary>
         private enum ScanResult
         {
-            /// <summary>A cell no fill had reached; a new room starts there.</summary>
             Found,
 
-            /// <summary>The cursor reached the end of the search box. The pass is complete.</summary>
             Exhausted,
 
-            /// <summary>This tick's budget ran out mid-scan. The cursor stays where it is.</summary>
             BudgetSpent
         }
 
-        /// <summary>
-        /// Advances the scan cursor to the next cell no pass has classified, charged against the tick's
-        /// budget **cell by cell**: the walk between two rooms crosses the whole bounding box, so
-        /// charging it as one unit lets a single tick absorb an unbounded sweep.
-        /// See load-and-hitching.md, 2.
-        /// </summary>
+/// <summary>AdvanceScanToNextUnvisited operation.</summary>
         private ScanResult AdvanceScanToNextUnvisited(ref int spent, int budget)
         {
             while (true)
@@ -939,20 +775,6 @@ namespace Thermodynamics.Core
 
                 if (snapshotLive)
                 {
-                    // Most of the box has been visited by the time the scan reaches it — the
-                    // external flood took the air and the interior floods take the rooms — so the
-                    // scan's job is mostly to skip. The bitset does that a word at a time, and the
-                    // charge is per word looked at rather than per cell skipped: still cell by cell
-                    // where cells are unvisited, and never more than one unit per sixty-four.
-                    // **The skip stops at what the tick has left.** A word looked at is a unit
-                    // charged, and the skip used to run to the end of the box in one call and then
-                    // charge for all of it — so a tick could overshoot its budget by however far
-                    // the last skip happened to reach. It is capped to the sixty-four cells a
-                    // remaining unit buys, and the cursor resumes next tick.
-                    // The window ends where the last word this tick can afford ends, so the skip
-                    // examines at most as many words as there are units left — the word holding the
-                    // end is examined too, which an end of `scanIndex + units * 64` would make one
-                    // too many.
                     long window = ((scanIndex >> 6) + (budget - spent)) << 6;
                     if (window > sealingCells) window = sealingCells;
 
@@ -963,8 +785,6 @@ namespace Thermodynamics.Core
 
                     if (next >= window && window < sealingCells)
                     {
-                        // The window closed before an unvisited cell turned up. Move to where it
-                        // closed and let the next tick carry on from there.
                         MoveScanTo(next);
                         return ScanResult.BudgetSpent;
                     }
@@ -979,8 +799,6 @@ namespace Thermodynamics.Core
 
                 if (snapshotLive)
                 {
-                    // The cell at `index` is unvisited by construction of the skip above, so the
-                    // charge for it was the word that found it.
                     if (IsStructureAt(index, cell))
                     {
                         visited.AddIndex(index);
@@ -988,8 +806,6 @@ namespace Thermodynamics.Core
                         continue;
                     }
 
-                    // A run walk takes its own seed: it has to extend *through* it, so it cannot
-                    // be marked or filed here. The cell walk marks at the enqueue, as before.
                     if (!RunWalkLive) visited.AddIndex(index);
                 }
                 else
@@ -1014,14 +830,14 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>True when a cell is solid structure: sealed on every face and not part of a door.</summary>
+/// <summary>IsStructure operation.</summary>
         private bool IsStructure(Vector3I cell)
         {
             if (!IsFullySealed(cell)) return false;
             return !IsDoorCell(cell);
         }
 
-        /// <summary>The same, for a caller that already holds the cell's index in the snapshot.</summary>
+/// <summary>IsStructureAt operation.</summary>
         private bool IsStructureAt(long index, Vector3I cell)
         {
             if (index < 0 || (sealing[index] & CellSurface.SelfAirtightMask) != CellSurface.SelfAirtightMask)
@@ -1032,15 +848,13 @@ namespace Thermodynamics.Core
             return !IsDoorCell(cell);
         }
 
-        /// <summary>
-        /// Whether a cell belongs to a door. The count is tested first because most grids have no
-        /// door at all, and this is asked of every sealed cell in the bounding volume.
-        /// </summary>
+/// <summary>IsDoorCell operation.</summary>
         private bool IsDoorCell(Vector3I cell)
         {
             return doorCells.Count > 0 && doorCells.Contains(GridMath.Key(cell));
         }
 
+/// <summary>CollectDoorCells operation.</summary>
         private void CollectDoorCells()
         {
             doorCells.Clear();
@@ -1060,32 +874,29 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>Doors seen by the pass currently running.</summary>
+/// <summary>HashSet operation.</summary>
         private readonly HashSet<BlockInstance> passDoors = new HashSet<BlockInstance>();
 
-        /// <summary>Points the interior scan at the first cell of the box, with its index.</summary>
+/// <summary>BeginInteriorScan operation.</summary>
         private void BeginInteriorScan()
         {
             scanCursor = searchMin;
             scanIndex = 0;
         }
 
-        /// <summary>Cells in the snapshot's box: the index one past the last cell of the scan.</summary>
         private long sealingCells
         {
+/// <summary>return operation.</summary>
             get { return (long)sealingSizeX * sealingSizeY * sealingSizeZ; }
         }
 
-        /// <summary>
-        /// Moves the scan to an index the bitset found, deriving the cursor from it: the inverse
-        /// of the order the cursor advances in, which <see cref="AdvanceCursor"/> and
-        /// <c>WalkingABoxInScanOrderAdvancesTheIndexByOne</c> hold to be the index order.
-        /// </summary>
+/// <summary>MoveScanTo operation.</summary>
         private void MoveScanTo(long index)
         {
             scanIndex = index;
             if (index >= sealingCells)
             {
+/// <summary>Vector3I operation.</summary>
                 scanCursor = new Vector3I(searchMin.X, searchMin.Y, searchMaxExclusive.Z);
                 return;
             }
@@ -1095,13 +906,13 @@ namespace Thermodynamics.Core
             long rest = index - (z * plane);
             int y = (int)(rest / sealingSizeX);
             int x = (int)(rest - ((long)y * sealingSizeX));
+/// <summary>Vector3I operation.</summary>
             scanCursor = new Vector3I(searchMin.X + x, searchMin.Y + y, searchMin.Z + z);
         }
 
+/// <summary>AdvanceCursor operation.</summary>
         private void AdvanceCursor()
         {
-            // One cell is one index whichever way the cursor wraps, which is the whole reason the
-            // index is carried rather than derived. See scanIndex.
             scanIndex++;
 
             scanCursor.X++;
@@ -1115,13 +926,12 @@ namespace Thermodynamics.Core
             scanCursor.Z++;
         }
 
+/// <summary>Publishes the API table to other mods.</summary>
         private void Publish()
         {
             Work.RoomPassesCompleted++;
             working.DropEmptyRooms();
 
-            // Run after the empty rooms are dropped, so a portal's region indices are the
-            // surviving ones.
             FindPortals(working);
             working.RefreshVenting();
 
@@ -1135,8 +945,6 @@ namespace Thermodynamics.Core
             published = working;
             working = null;
 
-            // The map published before this one is still readable for one more publish; the one
-            // before *that* is not, and becomes the buffer the next pass writes into.
             spare = supersededPrevious;
             supersededPrevious = superseded == RoomMap.AllExternal ? null : superseded;
             phase = Phase.Done;
@@ -1146,10 +954,7 @@ namespace Thermodynamics.Core
             if (handler != null) handler();
         }
 
-        /// <summary>
-        /// Records every face of every door that opens, with the region either side of it. Walks the
-        /// grid's doors rather than its blocks, so the cost is the door count.
-        /// </summary>
+/// <summary>FindPortals operation.</summary>
         private void FindPortals(RoomMap map)
         {
             if (pendingGrid == null) return;
@@ -1169,14 +974,14 @@ namespace Thermodynamics.Core
                     {
                         Vector3I outside = cells[i] + offset;
 
-                        // A face onto another cell of the same door leads nowhere.
                         if (pendingGrid.GetAtCell(outside) == door) continue;
 
+/// <summary>RegionAt operation.</summary>
                         int inner = RegionAt(map, cells[i]);
+/// <summary>RegionAt operation.</summary>
                         int outer = RegionAt(map, outside);
                         if (inner == outer) continue;
 
-                        // Sealed on one side: the door opens onto structure and joins nothing.
                         if (inner == SolidRegion || outer == SolidRegion) continue;
 
                         map.AddPortal(new RoomPortal(door, face, inner, outer));
@@ -1185,17 +990,13 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>
-        /// The region of a cell for portal purposes. Solid structure is not a region a door can open
-        /// into, so a door sealed on one side joins nothing.
-        /// </summary>
+/// <summary>RegionAt operation.</summary>
         private static int RegionAt(RoomMap map, Vector3I cell)
         {
             if (map.IsSolid(cell)) return SolidRegion;
             return map.RegionOf(cell);
         }
 
-        /// <summary>Sentinel region for solid structure, which is neither a room nor open air.</summary>
         private const int SolidRegion = -2;
     }
 }

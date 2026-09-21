@@ -6,6 +6,7 @@ from build_texture import ROOT, OUTPUT, texture_bytes
 
 
 class GlowTextureTests(unittest.TestCase):
+# setUp operation.
     def setUp(self):
         self.data = OUTPUT.read_bytes()
         header = struct.unpack('<31I', self.data[4:128])
@@ -23,9 +24,11 @@ class GlowTextureTests(unittest.TestCase):
             size //= 2
         self.assertEqual(len(self.data), offset)
 
+# test reproducible asset operation.
     def test_reproducible_asset(self):
         self.assertEqual(self.data, texture_bytes())
 
+# test every mip has zero rgba borders operation.
     def test_every_mip_has_zero_rgba_borders(self):
         for size, data in self.mips:
             for y in range(size):
@@ -33,8 +36,10 @@ class GlowTextureTests(unittest.TestCase):
                     if x in (0, size-1) or y in (0, size-1):
                         self.assertEqual(bytes(4), data[4*(y*size+x):4*(y*size+x+1)])
 
+# test radial symmetry and monotone falloff operation.
     def test_radial_symmetry_and_monotone_falloff(self):
         size, data = self.mips[0]
+# pixel operation.
         def pixel(x, y):
             return data[4*(y*size+x):4*(y*size+x+1)]
         for y in range(size):
@@ -47,6 +52,7 @@ class GlowTextureTests(unittest.TestCase):
         self.assertTrue(all(a >= b for a, b in zip(centre_row, centre_row[1:])))
         self.assertGreater(len(set(centre_row)), 40)
 
+# test rgb contains falloff not just alpha operation.
     def test_rgb_contains_falloff_not_just_alpha(self):
         for _, data in self.mips:
             for i in range(0, len(data), 4):
@@ -56,6 +62,7 @@ class GlowTextureTests(unittest.TestCase):
                 linear = value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
                 self.assertLessEqual(abs(linear - a / 255), 0.0065)
 
+# test material is depth tested unlit and bound to asset operation.
     def test_material_is_depth_tested_unlit_and_bound_to_asset(self):
         materials = ET.parse(ROOT / 'Thermodynamics/Content/Data/TransparentMaterials.sbc').findall('.//TransparentMaterial')
         matches = [m for m in materials if m.findtext('Id/SubtypeId') == 'GaugeHeatGlow']

@@ -7,34 +7,9 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **The stopping rule must not be part of the difference.**
-    ///
-    /// <para>
-    /// `Battery.Run` stops when the hottest block moves less than `SettleWithin` — a quarter of a
-    /// kelvin — over a sixty-second chunk, which is what makes a corpus walk affordable: most runs
-    /// are flat long before their clock runs out, and the sampled trial for `CorpusCapWalk` had 232
-    /// of 320 runs stopping at 120 s of an 1,800 s scenario.
-    /// </para>
-    ///
-    /// <para>
-    /// That is fine for a figure read one run at a time and wrong for a *paired* one. Two
-    /// configurations of the same ship stop at different instants, and the difference `C3` is about
-    /// is a hundredth of a kelvin — two orders of magnitude under the tolerance that decides where
-    /// each run stopped. A pair compared that way measures the stopping rule (`M1`, `P6`). So the
-    /// control arm runs first and hands its own elapsed clock to the other through
-    /// <see cref="Battery.RunForSeconds"/>, and these tests are what say that machinery works: that
-    /// the clock is honoured, that the outcome records where it stopped, and that a pair given the
-    /// same settings lands on the same numbers.
-    /// </para>
-    ///
-    /// <para>
-    /// Synthetic blueprints, in the tradition of `BlueprintTests`: the end of the chain is the walk
-    /// itself, and what needs a test here is the harness the walk depends on.
-    /// </para>
-    /// </summary>
     public class PairedRunTests
     {
+/// <summary>WriteBlueprint operation.</summary>
         private static string WriteBlueprint(string blocks)
         {
             string path = Path.Combine(Path.GetTempPath(),
@@ -61,6 +36,7 @@ namespace Thermodynamics.Tests
             return file;
         }
 
+/// <summary>Block operation.</summary>
         private static string Block(string subtype, int x, int y, int z)
         {
             return "<MyObjectBuilder_CubeBlock xsi:type=\"MyObjectBuilder_CubeBlock\">"
@@ -69,10 +45,7 @@ namespace Thermodynamics.Tests
                 + "</MyObjectBuilder_CubeBlock>";
         }
 
-        /// <summary>
-        /// A solid armour cube with a generator on it, so the hull makes heat, conducts it and
-        /// demands more than one substep — a hull demanding one cannot show a cap binding.
-        /// </summary>
+/// <summary>Ship operation.</summary>
         private static Blueprints.Ship Ship()
         {
             System.Text.StringBuilder blocks = new System.Text.StringBuilder();
@@ -94,6 +67,7 @@ namespace Thermodynamics.Tests
             return Blueprints.Read(WriteBlueprint(blocks.ToString()))[0];
         }
 
+/// <summary>Scenario operation.</summary>
         private static Battery.Scenario Scenario(string name)
         {
             foreach (Battery.Scenario scenario in Battery.All())
@@ -104,22 +78,13 @@ namespace Thermodynamics.Tests
             throw new InvalidOperationException("no battery scenario named " + name);
         }
 
-        /// <summary>
-        /// The settle-stopped run records where it stopped, and it is not the scenario's clock.
-        ///
-        /// If it were, the whole pairing machinery would be unnecessary — and that is exactly the
-        /// assumption a reader would make from the scenario table, which lists a clock per case.
-        /// </summary>
         [Fact]
+/// <summary>ASettleStoppedRunRecordsWhereItStoppedAndItIsNotTheClock operation.</summary>
         public void ASettleStoppedRunRecordsWhereItStoppedAndItIsNotTheClock()
         {
             if (!GameBlocks.IsInstalled) return;
 
-            // **An air scenario, because vacuum is the one that does not settle.** In the sampled
-            // corpus trial every atmospheric run stopped at 120 s of an 1,800 s clock and every
-            // `vacuum-shadow` run went to the clock: convection pins a hull to ambient in a couple
-            // of chunks, and radiation alone does not. So the case that shows a settle-stopped run
-            // stopping early has to be one with air in it.
+/// <summary>Scenario operation.</summary>
             Battery.Scenario scenario = Scenario("surface-hot-noon");
             ScenarioOutcome outcome = Battery.Run(Ship(), scenario);
 
@@ -131,14 +96,13 @@ namespace Thermodynamics.Tests
                 + "anywhere else and the pairing machinery has nothing to demonstrate on it");
         }
 
-        /// <summary>
-        /// A fixed clock is honoured, to the chunk the runner advances in.
-        /// </summary>
         [Fact]
+/// <summary>AFixedClockRunStopsWhereItWasTold operation.</summary>
         public void AFixedClockRunStopsWhereItWasTold()
         {
             if (!GameBlocks.IsInstalled) return;
 
+/// <summary>Scenario operation.</summary>
             Battery.Scenario scenario = Scenario("vacuum-shadow");
 
             ScenarioOutcome control = Battery.Run(Ship(), scenario);
@@ -146,8 +110,6 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(control.RunSeconds, paired.RunSeconds, 3);
 
-            // And a clock nobody would reach by settling, so the number is being obeyed rather
-            // than coincidentally matched.
             float longer = control.RunSeconds + (2f * Battery.Chunk);
             ScenarioOutcome held = Battery.RunForSeconds(Ship(), scenario, longer);
 
@@ -157,18 +119,13 @@ namespace Thermodynamics.Tests
                 + "ignored");
         }
 
-        /// <summary>
-        /// The same ship, the same clock and the same settings land on the same numbers.
-        ///
-        /// **This is the zero of every paired reading.** A delta between two arms means something
-        /// only if two arms that differ in nothing produce a delta of nought — otherwise the walk
-        /// is reporting its own noise floor as a cost (`E8`).
-        /// </summary>
         [Fact]
+/// <summary>TwoArmsThatDifferInNothingAgreeExactly operation.</summary>
         public void TwoArmsThatDifferInNothingAgreeExactly()
         {
             if (!GameBlocks.IsInstalled) return;
 
+/// <summary>Scenario operation.</summary>
             Battery.Scenario scenario = Scenario("vacuum-shadow");
 
             ScenarioOutcome control = Battery.Run(Ship(), scenario);
@@ -181,20 +138,13 @@ namespace Thermodynamics.Tests
             Assert.Equal(first.Links, second.Links);
         }
 
-        /// <summary>
-        /// A per-block cap makes a grid's demand `min(demand, cap)`, which is the identity the
-        /// predicted benefit of `C3` rests on.
-        ///
-        /// The floor raises a mirrored capacity to `G x dt / (safety x cap)`, so no element can ask
-        /// for more than the cap grants and the grid's demand — a maximum over elements — becomes
-        /// the smaller of the two. `CorpusCapWalk` asserts the same thing on every ship it walks;
-        /// this is the fast-lane statement of it, so the identity is checked without the corpus.
-        /// </summary>
         [Fact]
+/// <summary>ACapMakesTheDemandTheSmallerOfItselfAndTheCap operation.</summary>
         public void ACapMakesTheDemandTheSmallerOfItselfAndTheCap()
         {
             if (!GameBlocks.IsInstalled) return;
 
+/// <summary>Scenario operation.</summary>
             Battery.Scenario scenario = Scenario("vacuum-shadow");
 
             ScenarioOutcome uncapped = Battery.Run(Ship(), scenario, Settings(0));
@@ -210,37 +160,30 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(Math.Min(uncapped.SubstepsDemanded, cap), capped.SubstepsDemanded, 2);
 
-            // **The reach, which is a different question from the demand.** A cap that binds one
-            // element moves the demand and re-masses almost nothing; a cap below the cliff where
-            // ordinary armour begins re-masses the hull. Only this column tells them apart, and
-            // the control must report nought or it is not a control.
             Assert.Equal(0, uncapped.FlooredNodes);
             Assert.True(capped.FlooredNodes > 0,
                 "the cap moved the demand and floored no node, which cannot both be true");
 
-            // And a cap above the demand binds nothing at all, which is the other half of `min`.
             ScenarioOutcome loose = Battery.RunForSeconds(Ship(), scenario, uncapped.RunSeconds,
                 Settings((int)Math.Ceiling(uncapped.SubstepsDemanded) + 8));
 
             Assert.Equal(uncapped.SubstepsDemanded, loose.SubstepsDemanded, 3);
         }
 
+/// <summary>Sets the tings.</summary>
         private static ThermalSettings Settings(int cap)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubstepsPerBlock = cap;
             return settings;
         }
 
-        /// <summary>
-        /// The cap column tells the two arms apart in the recorded row.
-        ///
-        /// A paired dataset whose arms cannot be distinguished is a dataset with twice as many rows
-        /// and no experiment in it.
-        /// </summary>
         [Fact]
+/// <summary>TheRecordedRowSaysWhichArmItIs operation.</summary>
         public void TheRecordedRowSaysWhichArmItIs()
         {
+/// <summary>List operation.</summary>
             List<string> header = new List<string>(CorpusRecord.OutcomeHeader.Split(','));
             Assert.Contains("cap", header);
             Assert.Contains("run_seconds", header);

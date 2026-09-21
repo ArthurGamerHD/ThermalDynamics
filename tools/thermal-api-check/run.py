@@ -12,6 +12,7 @@ import tempfile
 from xml.sax.saxutils import escape
 
 
+# managed operation.
 def managed(path):
     try:
         data = path.read_bytes()
@@ -23,12 +24,14 @@ def managed(path):
         return False
 
 
+# replace once operation.
 def replace_once(text, old, new):
     if text.count(old) != 1:
         raise RuntimeError("Installed whitelist source changed; inspect bootstrap before adapting: " + old)
     return text.replace(old, new, 1)
 
 
+# main operation.
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("game", type=pathlib.Path, help="SpaceEngineers installation directory")
@@ -43,8 +46,6 @@ def main():
                           "public class GameWhitelistBootstrap")
     source = replace_once(source, "MyVRage.Platform.Scripting.OpenWhitelistBatch()",
                           "MyScriptCompiler.Static.Whitelist.OpenBatch()")
-    # Keep the game/API grants. A small genuine framework subset avoids .NET Framework vs
-    # .NET 9 Delegate/RuntimeType overload differences. This is NOT a general mod validator.
     source = replace_once(source, "AllowDefaultNamespaces(handle);",
                           "handle.AllowTypes(MyWhitelistTarget.Both, typeof(object), typeof(string), typeof(byte), typeof(int), typeof(float), typeof(double), typeof(System.IO.BinaryReader), typeof(System.IO.Stream));\n"
                           "CompatibleNamespaces(handle, MyWhitelistTarget.Both, typeof(Dictionary<,>));")

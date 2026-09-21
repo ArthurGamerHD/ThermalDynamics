@@ -8,35 +8,12 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The simulation must not know the game exists.
-    ///
-    /// That isolation is the reason this suite can run at all, and it is also what makes a second
-    /// host possible: Space Engineers 2 keeps blocks in a different shape — integer AABBs on a
-    /// 0.25 m lattice, cells grouped as boxes rather than listed — and an adapter can only be
-    /// written against a core that takes block layout, an environment sample and a frame length,
-    /// and hands back temperatures. Every game type that leaks into the core is a line that
-    /// adapter would have to fake.
-    ///
-    /// It has always been asserted in prose — <c>tests/README.md</c> says the core references one
-    /// assembly and names it — and never by anything that fails. A stray <c>using Sandbox.Game</c>
-    /// would be caught by the build here, because the reference is not present to satisfy it; a
-    /// type that arrives indirectly, through a shared struct or an interface parameter, would not
-    /// be. These tests read the built assembly rather than the source, so they see what actually
-    /// got compiled.
-    /// </summary>
     public class CoreIsolationTests
     {
+/// <summary>typeof operation.</summary>
         private static readonly Assembly Core = typeof(ThermalSolver).Assembly;
 
-        /// <summary>
-        /// Assemblies the simulation is allowed to depend on.
-        ///
-        /// <c>VRage.Math</c> is the single exception, and a deliberate one: it is pure managed
-        /// maths — <c>Vector3I</c>, <c>Vector3</c>, <c>Matrix</c>, <c>Base6Directions</c> — with no
-        /// session, no entity and no engine behind it, and it loads on .NET on Linux. Everything
-        /// else in that namespace does not.
-        /// </summary>
+/// <summary>IsAllowed operation.</summary>
         private static bool IsAllowed(string assemblyName)
         {
             if (assemblyName == "VRage.Math") return true;
@@ -48,6 +25,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SimulationAssemblyContainsNoThermalVisionPresentation operation.</summary>
         public void SimulationAssemblyContainsNoThermalVisionPresentation()
         {
             foreach(Type type in Core.GetTypes())
@@ -58,6 +36,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ThermalPresentationIsSeparateAndHasNoEngineRuntimeDependency operation.</summary>
         public void ThermalPresentationIsSeparateAndHasNoEngineRuntimeDependency()
         {
             Assembly presentation=typeof(ThermalVisionSurfaceField).Assembly;
@@ -68,8 +47,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheCoreReferencesNothingButMathsAndTheFramework operation.</summary>
         public void TheCoreReferencesNothingButMathsAndTheFramework()
         {
+/// <summary>List operation.</summary>
             List<string> offenders = new List<string>();
 
             AssemblyName[] referenced = Core.GetReferencedAssemblies();
@@ -84,17 +65,11 @@ namespace Thermodynamics.Tests
                 + "dependency an SE2 adapter would have to reimplement.");
         }
 
-        /// <summary>
-        /// And nothing from the game may reach the core through its own public surface either.
-        ///
-        /// The reference list catches a direct dependency. This catches the subtler one: a method
-        /// that takes or returns a type belonging to an assembly the core is not allowed to know,
-        /// which can arrive through a generic argument or an interface without the reference list
-        /// ever changing shape.
-        /// </summary>
         [Fact]
+/// <summary>NoPublicApiInTheCoreSpeaksAGameType operation.</summary>
         public void NoPublicApiInTheCoreSpeaksAGameType()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder offenders = new StringBuilder();
 
             Type[] types = Core.GetTypes();
@@ -117,6 +92,7 @@ namespace Thermodynamics.Tests
                 "game types reach the simulation's public surface:\n" + offenders);
         }
 
+/// <summary>CheckMember operation.</summary>
         private static void CheckMember(Type owner, MemberInfo member, StringBuilder offenders)
         {
             MethodBase method = member as MethodBase;
@@ -144,6 +120,7 @@ namespace Thermodynamics.Tests
             if (field != null) Check(owner, member, field.FieldType, offenders);
         }
 
+/// <summary>Check operation.</summary>
         private static void Check(Type owner, MemberInfo member, Type type, StringBuilder offenders)
         {
             if (type == null) return;
@@ -172,17 +149,11 @@ namespace Thermodynamics.Tests
                      .Append(" from ").Append(assembly).Append('\n');
         }
 
-        /// <summary>
-        /// The whole contract with a host, stated as a test: block layout in, an environment
-        /// sample and a frame length in, temperatures and events out.
-        ///
-        /// If this compiles and runs against nothing but the core, a second host has somewhere to
-        /// plug into. It is deliberately written the way an adapter would write it rather than the
-        /// way the rest of the suite does, because that is the thing being checked.
-        /// </summary>
         [Fact]
+/// <summary>AHostCanDriveTheSimulationThroughTheCoreAlone operation.</summary>
         public void AHostCanDriveTheSimulationThroughTheCoreAlone()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(0.25f);
 
             BlockThermalProperties thermal = new BlockThermalProperties
@@ -197,6 +168,7 @@ namespace Thermodynamics.Tests
 
             BlockModel model = BlockModel.Solid("hull", new Vector3I(2, 2, 2), 120f, thermal);
 
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
             simulation.AddBlock(new BlockInstance(model, Vector3I.Zero, BlockOrientation.Identity), 400f);
             simulation.AddBlock(new BlockInstance(model, new Vector3I(2, 0, 0), BlockOrientation.Identity), 300f);

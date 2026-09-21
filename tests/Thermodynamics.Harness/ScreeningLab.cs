@@ -5,30 +5,13 @@ using Thermodynamics.Core;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Step 2 of the balance lab: every ship in a corpus measured without running it forward, and
-    /// the panel of specimens that population reduces to.
-    ///
-    /// See balance-lab.md.
-    /// </summary>
     public static class ScreeningLab
     {
-        /// <summary>Ships a panel is cut down to when none is asked for.</summary>
         public const int DefaultPanel = 24;
 
-        /// <summary>
-        /// Feature-space distance within which two ships are treated as saying the same thing.
-        ///
-        /// A guess until the scenario battery can check it. It is deliberately generous: calling
-        /// two ships duplicates when they are not throws away information, while keeping a
-        /// duplicate only costs a run.
-        /// </summary>
         public const double RedundantWithin = 0.08d;
 
-        /// <summary>
-        /// Measures every ship. Ships are independent, so this goes as wide as it is allowed to; a
-        /// ship this model cannot build is dropped and shows up as yield rather than losing the pass.
-        /// </summary>
+/// <summary>Measure operation.</summary>
         public static List<ShipProfile> Measure(IList<Blueprints.Ship> ships,
             ThermalSettings settings = null, LabMode mode = LabMode.Parallel)
         {
@@ -36,8 +19,10 @@ namespace Thermodynamics.Harness
             return LabRun.Map(ships, ship => ShipProfile.Measure(ship, settings), mode);
         }
 
+/// <summary>Report operation.</summary>
         public static string Report(string path, int panelSize, LabMode mode = LabMode.Parallel)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             string root = path ?? Blueprints.DefaultPath();
@@ -56,6 +41,7 @@ namespace Thermodynamics.Harness
             }
 
             System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
+/// <summary>Measure operation.</summary>
             List<ShipProfile> profiles = Measure(corpus.Usable, null, mode);
             clock.Stop();
 
@@ -101,7 +87,6 @@ namespace Thermodynamics.Harness
             StiffestBlocks(sb, profiles);
             sb.AppendLine();
 
-            // ---- the panel ----------------------------------------------------------------------
 
             int size = panelSize > 0 ? panelSize : DefaultPanel;
             List<Specimens.Scored> panel = Specimens.Select(profiles, size);
@@ -143,14 +128,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        /// <summary>
-        /// What sets each ship's substep count in air, counted over the corpus.
-        ///
-        /// The desk equivalent of a telemetry dump's stiffness table, and the reason the air
-        /// distribution has two humps in it rather than a tail: a ship's demand is set by whichever
-        /// single block on it is lightest for its exposed area, so the population divides by which
-        /// fitting the builder happened to use rather than by anything about the hull.
-        /// </summary>
+/// <summary>StiffestBlocks operation.</summary>
         private static void StiffestBlocks(StringBuilder sb, List<ShipProfile> profiles)
         {
             Dictionary<string, List<float>> byBlock = new Dictionary<string, List<float>>();
@@ -163,6 +141,7 @@ namespace Thermodynamics.Harness
                 List<float> demands;
                 if (!byBlock.TryGetValue(name, out demands))
                 {
+/// <summary>List operation.</summary>
                     demands = new List<float>();
                     byBlock[name] = demands;
                 }
@@ -197,12 +176,13 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
         }
 
-        /// <summary>How many block subtypes the table above names before it stops.</summary>
         private const int TopStiffestBlocks = 12;
 
+/// <summary>Band operation.</summary>
         private static void Band(StringBuilder sb, string label, List<ShipProfile> profiles,
             Func<ShipProfile, float> property)
         {
+/// <summary>List operation.</summary>
             List<float> values = new List<float>(profiles.Count);
             for (int i = 0; i < profiles.Count; i++) values.Add(property(profiles[i]));
             values.Sort();
@@ -215,11 +195,13 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
         }
 
+/// <summary>At operation.</summary>
         private static float At(List<float> sorted, float fraction)
         {
             return LabStats.PercentileOfSorted(sorted, fraction);
         }
 
+/// <summary>Trim operation.</summary>
         private static string Trim(string text, int width)
         {
             return LabText.Trim(text, width);

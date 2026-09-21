@@ -4,14 +4,9 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The element cost lab's conclusions are a least-squares fit, and a fit that is wrong is
-    /// wrong quietly — it returns numbers either way. These recover known coefficients from
-    /// synthetic rows, so the arithmetic behind a budget recommendation is not itself the thing
-    /// being trusted on sight.
-    /// </summary>
     public class ElementCostFitTests
     {
+/// <summary>Row operation.</summary>
         private static ElementCostLab.Row Row(int nodes, int links, int faces, double cost)
         {
             return new ElementCostLab.Row
@@ -24,9 +19,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheTwoPredictorFitRecoversKnownCoefficients operation.</summary>
         public void TheTwoPredictorFitRecoversKnownCoefficients()
         {
-            // cost = 7*nodes + 2*links, exactly.
             List<ElementCostLab.Row> rows = new List<ElementCostLab.Row>
             {
                 Row(1000, 0, 0, 7000),
@@ -45,13 +40,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheFitHasNoInterceptSoOverheadIsChargedToTheElements operation.</summary>
         public void TheFitHasNoInterceptSoOverheadIsChargedToTheElements()
         {
-            // Every row carries a constant 5,000 ns of per-step overhead on top of 3 ns a link.
-            // A fit through the origin has nowhere to put a constant, so it inflates the per-link
-            // figure instead — which is exactly why the lab drives the substep count into the
-            // tens, where that overhead is a small share of a pass, and why it excludes the dust
-            // shape, which cannot be driven there at all.
             List<ElementCostLab.Row> rows = new List<ElementCostLab.Row>
             {
                 Row(0, 1000, 0, 5000 + 3000),
@@ -65,7 +56,6 @@ namespace Thermodynamics.Tests
             Assert.True(b > 3d, "overhead must inflate the per-link figure, not vanish");
             Assert.True(b < 5d);
 
-            // Take the same rows with the overhead removed and the fit is exact again.
             List<ElementCostLab.Row> clean = new List<ElementCostLab.Row>
             {
                 Row(0, 1000, 0, 3000),
@@ -78,12 +68,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>CollinearPredictorsAreRefusedRatherThanInvented operation.</summary>
         public void CollinearPredictorsAreRefusedRatherThanInvented()
         {
-            // faces = 6*nodes - 2*links holds exactly on a cube lattice, and these rows are built
-            // to be perfectly collinear. The normal equations are singular, and the lab returns
-            // zeroes rather than an arbitrary split of the cost between two predictors that
-            // cannot be told apart.
             List<ElementCostLab.Row> rows = new List<ElementCostLab.Row>
             {
                 Row(100, 200, 0, 1000),
@@ -101,6 +88,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheSinglePredictorFitRecoversItsCoefficient operation.</summary>
         public void TheSinglePredictorFitRecoversItsCoefficient()
         {
             List<ElementCostLab.Row> rows = new List<ElementCostLab.Row>
@@ -118,11 +106,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AWeightIsLinksPerNodeAndSurvivesAChangeOfUnits operation.</summary>
         public void AWeightIsLinksPerNodeAndSurvivesAChangeOfUnits()
         {
-            // The lab reports link-equivalents rather than nanoseconds precisely so the answer
-            // survives being measured on a slower machine — the game is about an order of
-            // magnitude slower than the harness, and a weight must not move with that.
             ElementCostLab.Fit fast = new ElementCostLab.Fit
             {
                 PerNode = 6.4,

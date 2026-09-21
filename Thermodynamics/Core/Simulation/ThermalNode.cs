@@ -4,44 +4,16 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// The thermal state of one block. Geometry and definition data are read from the
-    /// <see cref="BlockInstance"/>; everything here is either simulation state or a value
-    /// derived from the block that would be wasteful to recompute each step.
-    /// </summary>
     public class ThermalNode
     {
         public readonly BlockInstance Block;
 
-        /// <summary>Index into the solver's node array. Stable while the node is registered.</summary>
         public int Index = -1;
 
-        /// <summary>Current temperature, K.</summary>
         public float Temperature;
 
-        /// <summary>Heat capacity of the whole block, J/K. Never below a small floor.</summary>
         public float ThermalMass { get; private set; }
 
-        /// <summary>
-        /// Heat capacity of coolant this block is holding outside any loop, in real J/K before
-        /// <see cref="HeatTimeScale"/>. Zero for every block that is not a pipe whose ring has been
-        /// broken.
-        ///
-        /// <para>
-        /// A ring that stops being a ring has no successor loop and its parcels have nowhere to
-        /// live, so each pipe takes the parcel that was inside it. Taking only the *temperature*
-        /// destroys `M_s / (M_n + M_s)` of the ring's heat; taking the mass as well is exact,
-        /// because the fluid really is still in the block. It is handed back the moment a ring runs
-        /// through this pipe again, which is exact in the other direction too: a mixture is at one
-        /// temperature, so splitting it at that temperature conserves energy term by term.
-        /// </para>
-        ///
-        /// <para>
-        /// It is a separate field rather than a bigger <see cref="BlockInstance.Mass"/> because the
-        /// host owns that figure and recomputes it from build progress, damage and inventory; a
-        /// value this model added would be overwritten the next time the game reported one.
-        /// </para>
-        /// </summary>
         public float HeldCoolantCapacity
         {
             get { return heldCoolantCapacity; }
@@ -56,53 +28,21 @@ namespace Thermodynamics.Core
 
         private float heldCoolantCapacity;
 
-        /// <summary>
-        /// Exposed cell faces per face direction, six counts packed into one field.
-        ///
-        /// <para>
-        /// **An `int[6]` cost 48 bytes a node to hold six small counts** — the array's header and
-        /// the reference to it, for 24 bytes of payload
-        /// (backlog.md `E2`). Ten bits a face holds 1,023, which is
-        /// larger than any face of any block the game has: the widest vanilla block is ten cells
-        /// across, so a hundred is the most a single face can carry.
-        /// </para>
-        ///
-        /// <para>
-        /// Read and written through <see cref="GetExposedFaces"/> and
-        /// <see cref="SetExposedFaces"/>, which is what keeps the packing in one place.
-        /// </para>
-        /// </summary>
         private long exposedFaces;
 
-        /// <summary>Bits each face's count occupies. Ten holds 1,023 against a real worst case of 100.</summary>
         private const int FaceBits = 10;
 
         private const long FaceMask = (1L << FaceBits) - 1L;
 
-        /// <summary>The largest count a face can hold before the packing would lose it.</summary>
         public const int MaxExposedPerFace = (int)FaceMask;
 
-        /// <summary>Exposed cell faces in one direction.</summary>
+/// <summary>Returns the exposedfaces.</summary>
         public int GetExposedFaces(int face)
         {
             return (int)((exposedFaces >> (face * FaceBits)) & FaceMask);
         }
 
-        /// <summary>
-        /// Sets one direction's count. A count past what the packing holds is clamped rather than
-        /// wrapped: losing the high bits would silently turn a fully exposed face into a bare one,
-        /// and the clamp is unreachable for any block the game ships.
-        ///
-        /// <para>
-        /// **Nothing under `Data/Scripts` calls this any more, and it stays anyway.** The exposure
-        /// stage went to <see cref="SetExposedFaces(int[])"/> in Pass 9, Iteration 6; this overload
-        /// and <see cref="RefreshExposure()"/> together are the *oracle* that overload is pinned
-        /// against (`D8`), which is a job only the code that was replaced can do. A `D2` sweep for
-        /// what is reached by nothing will find it, and this paragraph is the answer: it is reached
-        /// by `FacePackingTests`, on purpose, and deleting it unpins an optimisation rather than
-        /// removing dead weight.
-        /// </para>
-        /// </summary>
+/// <summary>Sets the exposedfaces.</summary>
         public void SetExposedFaces(int face, int count)
         {
             if (count < 0) count = 0;
@@ -112,76 +52,28 @@ namespace Thermodynamics.Core
             exposedFaces = (exposedFaces & ~(FaceMask << shift)) | ((long)count << shift);
         }
 
-        /// <summary>Total exposed cell faces.</summary>
         public int TotalExposedFaces { get; private set; }
 
-        /// <summary>Total exposed area, m^2.</summary>
         public float ExposedArea { get; private set; }
 
-        /// <summary>Emissivity * Stefan-Boltzmann * exposed area, precomputed.</summary>
         public float RadiationCoefficient { get; private set; }
 
-        /// <summary>Waste heat from power and thrust, W. Recomputed when the host reports a change.</summary>
         public float HeatGenerationWatts { get; private set; }
 
-        /// <summary>
-        /// Set whenever a value the solver mirrors into its own arrays changes, and cleared by the
-        /// solver when it reads the change, so a step re-reads only the nodes that moved.
-        /// </summary>
         public bool StateDirty = true;
 
-        /// <summary>
-        /// True while this node is waiting for its conduction links to be built.
-        ///
-        /// Read only by the incremental builder, to decide which end of a pair of newly placed
-        /// neighbours adds the link between them. Both ends see each other as a neighbour, so
-        /// without it the pair would be added twice and the joint would conduct double.
-        /// </summary>
         public bool PendingLinks;
 
-        /// <summary>
-        /// How many conduction links touch this node. A count rather than a list of indices: the
-        /// solver walks the link array, not a node's links, so a per-node list would be a heap
-        /// object per block rewritten on every topology change and read by nothing.
-        /// </summary>
         public int LinkCount;
 
-        // ---- last-step diagnostics ---------------------------------------------------------
 
-        /// <summary>
-        /// The per-mechanism watts, or null while nothing has recorded any — which is every node of
-        /// every world running the shipped configuration.
-        ///
-        /// <para>
-        /// **Seven floats that exist for the debug overlay, the crosshair readout and the telemetry
-        /// report, and sat on every node whether or not anything read them** (`E4`). The solver
-        /// writes them only inside its `CollectDiagnostics` branch, so a world with the readouts off
-        /// carried 28 bytes a node it never looked at: 3.5 MB on a 126,731-block hull and 28 on a
-        /// million. Here they are one small object, allocated by the first non-zero write and held
-        /// by the node itself.
-        /// </para>
-        ///
-        /// <para>
-        /// **The node holds it rather than an array holding it by index.** A `float[nodes × 7]`
-        /// keyed on the index has to be reshuffled by both removal paths — the dirty one renumbers
-        /// every node after the hole and the incremental one moves a node between slots — so until
-        /// the next step rewrote them, every node past a removal would read its neighbour's watts on
-        /// the overlay, at the moment a block is destroyed. A reference costs eight bytes of the
-        /// twenty-eight it saves; being unable to be wrong is what the other twenty buy.
-        /// </para>
-        /// </summary>
         private NodeDiagnostics diagnostics;
 
-        /// <summary>What has been recorded for this node, or null if nothing has.</summary>
         public NodeDiagnostics Diagnostics
         {
             get { return diagnostics; }
         }
 
-        // **Each setter carries the null check rather than a shared helper.** A helper would have
-        // to take the field by reference to write it, and a `ref` to a field of a class the caller
-        // does not own is exactly the shape that outlives its object. Seven copies of three lines,
-        // and the shape is identical in each: nothing is recorded until something is non-zero.
 
 
         public float LastConductionWatts
@@ -193,6 +85,7 @@ namespace Thermodynamics.Core
                 {
                     if (value == 0f) return;
 
+/// <summary>NodeDiagnostics operation.</summary>
                     diagnostics = new NodeDiagnostics();
                 }
 
@@ -209,6 +102,7 @@ namespace Thermodynamics.Core
                 {
                     if (value == 0f) return;
 
+/// <summary>NodeDiagnostics operation.</summary>
                     diagnostics = new NodeDiagnostics();
                 }
 
@@ -225,6 +119,7 @@ namespace Thermodynamics.Core
                 {
                     if (value == 0f) return;
 
+/// <summary>NodeDiagnostics operation.</summary>
                     diagnostics = new NodeDiagnostics();
                 }
 
@@ -241,6 +136,7 @@ namespace Thermodynamics.Core
                 {
                     if (value == 0f) return;
 
+/// <summary>NodeDiagnostics operation.</summary>
                     diagnostics = new NodeDiagnostics();
                 }
 
@@ -257,6 +153,7 @@ namespace Thermodynamics.Core
                 {
                     if (value == 0f) return;
 
+/// <summary>NodeDiagnostics operation.</summary>
                     diagnostics = new NodeDiagnostics();
                 }
 
@@ -264,17 +161,8 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>
-        /// A directional drag multiplier on this block's six faces, registered through the API.
-        ///
-        /// **Unset by default, which reads as no change.** A block's exposed faces are what its
-        /// geometry gives it; a profile is a mod saying the air slips past one of them more easily
-        /// than its area suggests — a jet engine is slippery nose-on and blunt side-on, and an
-        /// axis-aligned face count cannot tell (thermal-model.md's change log).
-        /// </summary>
         public DragProfile Drag;
 
-        /// <summary>Watts from mod-registered point heat sources, summed over every source.</summary>
         public float LastHeatSourceWatts
         {
             get { return diagnostics == null ? 0f : diagnostics.HeatSource; }
@@ -284,6 +172,7 @@ namespace Thermodynamics.Core
                 {
                     if (value == 0f) return;
 
+/// <summary>NodeDiagnostics operation.</summary>
                     diagnostics = new NodeDiagnostics();
                 }
 
@@ -291,7 +180,6 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>Watts exchanged with the air of the rooms this block faces.</summary>
         public float LastRoomWatts
         {
             get { return diagnostics == null ? 0f : diagnostics.Room; }
@@ -301,6 +189,7 @@ namespace Thermodynamics.Core
                 {
                     if (value == 0f) return;
 
+/// <summary>NodeDiagnostics operation.</summary>
                     diagnostics = new NodeDiagnostics();
                 }
 
@@ -312,11 +201,6 @@ namespace Thermodynamics.Core
 
         private readonly float cellFaceArea;
 
-        /// <summary>
-        /// Divisor applied to heat capacity. See <see cref="ThermalSettings.HeatTimeScale"/>: specific
-        /// heat is stated in real J/(kg K), and this converts real thermal time into playable
-        /// thermal time.
-        /// </summary>
         public float HeatTimeScale
         {
             get { return heatTimeScale; }
@@ -329,11 +213,13 @@ namespace Thermodynamics.Core
 
         private float heatTimeScale = 1f;
 
+/// <summary>ThermalNode operation.</summary>
         public ThermalNode(BlockInstance block, float gridSize, float initialTemperature)
             : this(block, gridSize, initialTemperature, 1f)
         {
         }
 
+/// <summary>ThermalNode operation.</summary>
         public ThermalNode(BlockInstance block, float gridSize, float initialTemperature, float heatTimeScale)
         {
             if (block == null) throw new ArgumentNullException("block");
@@ -353,72 +239,35 @@ namespace Thermodynamics.Core
             get { return Block.Thermal; }
         }
 
-        /// <summary>
-        /// Area of one of this block's cell faces, m^2, including the definition's
-        /// <c>ExposedSurfaceMultiplier</c>. The unit every area in the simulation is measured in.
-        /// </summary>
         public float CellFaceArea
         {
             get { return cellFaceArea; }
         }
 
-        /// <summary>
-        /// Recomputes heat capacity from the block's current mass. Call after the host reports a
-        /// mass change — build progress, damage, or inventory.
-        /// </summary>
+/// <summary>RefreshThermalMass operation.</summary>
         public void RefreshThermalMass()
         {
             float mass = Math.Max(0f, Block.Mass);
 
-            // Held coolant is stated in real J/K like the block's own, so it goes through the same
-            // divide. Storing the divided figure instead would leave it on whatever clock was
-            // running when the ring broke, and a world that changed `HeatTimeScale` afterwards
-            // would carry one capacity on two clocks with nothing saying so.
             float capacity = (((Thermal.SpecificHeat * mass) + heldCoolantCapacity) / heatTimeScale);
             ThermalMass = Math.Max(ThermalConstants.MinimumThermalMass, capacity);
             StateDirty = true;
         }
 
-        /// <summary>Recomputes the exposure-derived values from the packed face counts.</summary>
+/// <summary>RefreshExposure operation.</summary>
         public void RefreshExposure()
         {
             int total = 0;
             for (int i = 0; i < Face.Count; i++)
             {
+/// <summary>Returns the exposedfaces.</summary>
                 total += GetExposedFaces(i);
             }
 
             SetTotalAndDerived(total);
         }
 
-        /// <summary>
-        /// Sets all six counts from one array and refreshes what they derive, in one walk.
-        ///
-        /// <para>
-        /// **This is the exposure stage's inner loop, and two thirds of the stage was in it.**
-        /// Setting a face at a time is a read-modify-write of <see cref="exposedFaces"/> per face —
-        /// six of them, each dependent on the last — followed by <see cref="RefreshExposure"/>,
-        /// which unpacks all six again to total them. Both loops are over a compile-time constant
-        /// six, over data the caller already holds in a local array, and the field they contend
-        /// over is on a heap object being streamed at a hundred and twenty-six thousand nodes a
-        /// pass. Packed into a local and stored once, the six writes become one and the total falls
-        /// out of the same walk. See performance.md, Pass 9, Iteration 1 for the ablation that
-        /// found it, and Iteration 2 for what it was worth.
-        /// </para>
-        ///
-        /// <para>
-        /// The clamp is per face and identical to <see cref="SetExposedFaces"/>'s, which is what
-        /// lets `FacePackingTests` hold the two together: a count past what ten bits hold is
-        /// clamped rather than wrapped, because losing the high bits would silently turn a fully
-        /// exposed face into a bare one.
-        /// </para>
-        /// </summary>
-        /// <param name="countsByFace">At least <see cref="Face.Count"/> counts, indexed by face.</param>
-        /// <returns>
-        /// Whether anything moved. The caller counts these — see
-        /// <c>SimulationWork.ExposureNodeWrites</c> — because *the skip engaged* is the claim the
-        /// A/B behind it rests on, and a gate that never fires makes two runs agree perfectly.
-        /// </returns>
+/// <summary>Sets the exposedfaces.</summary>
         public bool SetExposedFaces(int[] countsByFace)
         {
             if (countsByFace == null || countsByFace.Length < Face.Count)
@@ -439,17 +288,6 @@ namespace Thermodynamics.Core
                 total += count;
             }
 
-            // **A node whose faces did not move is not a node that changed.** The solver refreshes
-            // exposure over every node whenever the room map republishes, and on a hull that is not
-            // being built the answer is the same one it had — so the writes below are the same
-            // values, and `StateDirty` on all of them makes the next `SyncNodeState` mirror the
-            // whole grid and, on a server, resend it. See performance.md, Pass 9, Iteration 7.
-            //
-            // The total is compared as well as the packing, and that is not redundant: the
-            // single-face `SetExposedFaces` writes the packing without touching what it derives, so
-            // packing alone would let a node skip with a stale area. It has no caller under
-            // `Data/Scripts` and the guard costs one comparison, which is the right price for not
-            // depending on that.
             if (exposedFaces == packed && TotalExposedFaces == total) return false;
 
             exposedFaces = packed;
@@ -457,10 +295,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-        /// <summary>
-        /// The four values a change to the face counts derives, written once. Shared by the two
-        /// ways of setting them so neither can drift from the other (`D3`).
-        /// </summary>
+/// <summary>Sets the totalandderived.</summary>
         private void SetTotalAndDerived(int total)
         {
             TotalExposedFaces = total;
@@ -469,23 +304,22 @@ namespace Thermodynamics.Core
             StateDirty = true;
         }
 
-        /// <summary>Recomputes waste heat from the block's current power figures.</summary>
+/// <summary>RefreshHeatGeneration operation.</summary>
         public void RefreshHeatGeneration()
         {
             float produced = Math.Max(0f, Block.PowerProducedWatts) * Thermal.ProducerWasteEnergy;
             float consumed = (Math.Max(0f, Block.PowerConsumedWatts) + Math.Max(0f, Block.ThrustWatts))
                 * Thermal.ConsumerWasteEnergy;
-            // A block may be hot because of what it is, not only because of the power crossing it.
             HeatGenerationWatts = produced + consumed + Math.Max(0f, Thermal.HeatSourceWatts);
             StateDirty = true;
         }
 
-        /// <summary>Total stored energy above absolute zero, J. Used by conservation checks.</summary>
         public float Energy
         {
             get { return Temperature * ThermalMass; }
         }
 
+/// <summary>ToString operation.</summary>
         public override string ToString()
         {
             return Block.Name + " T=" + Temperature.ToString("n2") + "K";

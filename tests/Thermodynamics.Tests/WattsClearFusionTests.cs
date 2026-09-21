@@ -4,21 +4,9 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The watts row is written by the environment pass rather than zeroed first, and the only thing
-    /// that makes that safe is an ordering claim in three parts: the pass runs first, reaches
-    /// **every** node including buried ones and a switched-off environment, and still does so when
-    /// sliced across frames.
-    ///
-    /// <para>
-    /// The assertion is **bit-identical** rather than close enough (`D8`), because a node whose watts
-    /// were not reset integrates a doubled source term — a slow drift found in a save months later.
-    /// A memset that is *nearly* redundant is a correctness defect at any price, whatever it saves.
-    /// See benchmarks.md, The watts row is written.
-    /// </para>
-    /// </summary>
     public class WattsClearFusionTests
     {
+/// <summary>Builds the API method table.</summary>
         private static ThermalSimulation Build(bool fused)
         {
             ThermalSimulation simulation = Hulls.Driven();
@@ -26,6 +14,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>AssertIdentical operation.</summary>
         private static void AssertIdentical(ThermalSimulation a, ThermalSimulation b, string what)
         {
             SolverAb.AssertIdentical(
@@ -33,14 +22,13 @@ namespace Thermodynamics.Tests
                 "with the row cleared first", "with the environment pass writing it");
         }
 
-        /// <summary>
-        /// In flight, where every term the environment pass can write is live: solar, friction,
-        /// wind-weighted convection, radiation and waste heat.
-        /// </summary>
         [Fact]
+/// <summary>WritingTheWattsRowIsBitIdenticalInFlight operation.</summary>
         public void WritingTheWattsRowIsBitIdenticalInFlight()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation cleared = Build(false);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation fused = Build(true);
 
             EnvironmentSample sample = Worlds.Ab.EveryTermLive();
@@ -52,9 +40,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>WritingTheWattsRowIsBitIdenticalInAnAtmosphere operation.</summary>
         public void WritingTheWattsRowIsBitIdenticalInAnAtmosphere()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation cleared = Build(false);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation fused = Build(true);
 
             EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
@@ -65,15 +56,13 @@ namespace Thermodynamics.Tests
             AssertIdentical(cleared, fused, "atmosphere");
         }
 
-        /// <summary>
-        /// In vacuum in shadow, where solar and friction are both zero and radiation is the only
-        /// environment term — the case where the row's contents are smallest and a stale watt
-        /// would be proportionally largest.
-        /// </summary>
         [Fact]
+/// <summary>WritingTheWattsRowIsBitIdenticalInVacuum operation.</summary>
         public void WritingTheWattsRowIsBitIdenticalInVacuum()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation cleared = Build(false);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation fused = Build(true);
 
             EnvironmentSample sample = Worlds.Ab.SunlitVacuum();
@@ -84,16 +73,8 @@ namespace Thermodynamics.Tests
             AssertIdentical(cleared, fused, "vacuum");
         }
 
-        /// <summary>
-        /// The generation-only path, which the pass takes when the environment is switched off.
-        ///
-        /// It is the one path with no per-node write of its own: with no heat being generated
-        /// either, nothing in the pass touches the row, and the fused path has to zero the range
-        /// itself. Without that branch this is the configuration that would carry watts forward
-        /// from one substep to the next — and it is a configuration a server operator can reach,
-        /// since it is what disabling the environment mechanisms produces.
-        /// </summary>
         [Fact]
+/// <summary>WritingTheWattsRowIsBitIdenticalWithTheEnvironmentOff operation.</summary>
         public void WritingTheWattsRowIsBitIdenticalWithTheEnvironmentOff()
         {
             ThermalSettings settings = Hulls.Uncapped();
@@ -114,12 +95,8 @@ namespace Thermodynamics.Tests
             AssertIdentical(cleared, fused, "environment off");
         }
 
-        /// <summary>
-        /// The same, with waste heat off as well, so the generation-only path has nothing at all
-        /// to write and takes its clear-the-range branch on every substep. Conduction alone moves
-        /// the hull, which is why the fixture is seeded with a spread rather than driven.
-        /// </summary>
         [Fact]
+/// <summary>WritingTheWattsRowIsBitIdenticalWithNothingToWrite operation.</summary>
         public void WritingTheWattsRowIsBitIdenticalWithNothingToWrite()
         {
             ThermalSettings settings = Hulls.Uncapped();
@@ -141,21 +118,16 @@ namespace Thermodynamics.Tests
             AssertIdentical(cleared, fused, "nothing to write");
         }
 
-        /// <summary>
-        /// Spread across frames, which is the case the ordering claim is weakest in: the
-        /// environment pass is sliced by a work budget, so "every node before anything reads the
-        /// row" has to hold across a slice boundary as well as within one.
-        ///
-        /// The three budgets are a slice per node, a slice that lands mid-array on an odd stride,
-        /// and one large enough to take the pass whole.
-        /// </summary>
         [Theory]
         [InlineData(1)]
         [InlineData(97)]
         [InlineData(5000)]
+/// <summary>WritingTheWattsRowSurvivesTheStepBeingSpread operation.</summary>
         public void WritingTheWattsRowSurvivesTheStepBeingSpread(int budget)
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation whole = Build(false);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation spread = Build(true);
 
             EnvironmentState state = EnvironmentSolver.Solve(
@@ -173,15 +145,13 @@ namespace Thermodynamics.Tests
             AssertIdentical(whole, spread, "spread over " + budget);
         }
 
-        /// <summary>
-        /// The per-mechanism watt figures as well as the temperatures, since the fused path also
-        /// changed where the exposed branch reads its source term from — it now reuses the value
-        /// it already loaded rather than reading the row a second time.
-        /// </summary>
         [Fact]
+/// <summary>TheDiagnosticsAgreeAsWell operation.</summary>
         public void TheDiagnosticsAgreeAsWell()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation cleared = Build(false);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation fused = Build(true);
 
             cleared.Solver.CollectDiagnostics = true;
@@ -197,15 +167,13 @@ namespace Thermodynamics.Tests
                 "with the row cleared first", "with the environment pass writing it");
         }
 
-        /// <summary>
-        /// The whole-grid heat totals, which are accumulated in the same loop the change touched.
-        /// A grid's vented and made watts are what the cockpit panel and the mod API report, so
-        /// they are a published result rather than an internal one.
-        /// </summary>
         [Fact]
+/// <summary>TheGridHeatTotalsAgree operation.</summary>
         public void TheGridHeatTotalsAgree()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation cleared = Build(false);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation fused = Build(true);
 
             EnvironmentSample sample = Worlds.Ab.EveryTermLive();
@@ -216,7 +184,6 @@ namespace Thermodynamics.Tests
             Assert.Equal(cleared.Solver.LastHeatGainWatts, fused.Solver.LastHeatGainWatts);
             Assert.Equal(cleared.Solver.LastEnvironmentWatts, fused.Solver.LastEnvironmentWatts);
 
-            // A total of zero would let the assertion above pass on a grid that did nothing.
             Assert.True(fused.Solver.LastHeatGainWatts > 0f,
                 "the driven hull generated no heat, so the totals prove nothing");
         }

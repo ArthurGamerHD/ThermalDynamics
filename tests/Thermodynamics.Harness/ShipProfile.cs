@@ -5,23 +5,6 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Everything about one ship that can be known without running it forward.
-    ///
-    /// <para>
-    /// This is the cheap pass of the balance lab, and it does two jobs at once. It answers the
-    /// questions that need no solver — what the population is built from, how much heat it makes
-    /// against how much surface it has to lose it through, and how stiff it is to integrate — and
-    /// it produces the **feature vector** that everything downstream samples and selects on.
-    /// </para>
-    ///
-    /// <para>
-    /// The features are chosen so that two ships close together here are expected to behave the
-    /// same way in the scenario battery. That expectation is the whole basis for reducing a corpus
-    /// of ten thousand to a panel of a few hundred, and it is a claim that has to be checked rather
-    /// than assumed — see <see cref="Specimens"/>.
-    /// </para>
-    /// </summary>
     public class ShipProfile
     {
         public string Name;
@@ -29,119 +12,53 @@ namespace Thermodynamics.Harness
         public bool Large;
         public int Blocks;
 
-        /// <summary>Kilograms, summed from the definitions.</summary>
         public float Mass;
 
-        /// <summary>Joules per kelvin, after <c>HeatTimeScale</c>. What the ship's heat lands in.</summary>
         public float HeatCapacity;
 
-        /// <summary>Square metres of face that see the environment.</summary>
         public float ExposedArea;
 
-        /// <summary>Share of blocks with any exposed face. The rest are interior.</summary>
         public float ExposedFraction;
 
-        /// <summary>Watts of heat at full rating: every producer, consumer and thruster at once.</summary>
         public float WasteWatts;
 
-        /// <summary>Installed electrical output, watts.</summary>
         public float PowerOutputWatts;
 
-        /// <summary>
-        /// Thrust in the strongest single direction, newtons.
-        ///
-        /// **Not the sum of every thruster**, which is the mistake the first version of this pass
-        /// made and which inflated the load on thruster-heavy ships several-fold. A ship
-        /// accelerates one way at a time: the thrusters facing that way burn and the ones facing
-        /// the other five do not. The heaviest direction is the sustained case.
-        /// </summary>
         public float ThrustNewtons;
 
-        /// <summary>Thrust summed over every direction. The ceiling that never happens.</summary>
         public float ThrustNewtonsAllDirections;
 
-        /// <summary>Vanilla heat vents fitted. The only cooling a stock ship can carry.</summary>
         public int HeatVents;
 
-        /// <summary>
-        /// Watts of heat per square metre of exposed surface, at full rating.
-        ///
-        /// **The single number this whole pass exists to produce.** A grid at equilibrium sheds
-        /// what it makes, and what it sheds goes as the fourth power of temperature over its
-        /// exposed area — so this is the driver of where a ship settles, and everything else is a
-        /// second-order correction to it. If the scenario battery finds anything else predicting
-        /// outcome better, that is a finding worth having.
-        /// </summary>
         public float ThermalStress
         {
             get { return ExposedArea <= 0f ? 0f : WasteWatts / ExposedArea; }
         }
 
-        /// <summary>
-        /// The equilibrium temperature <see cref="ThermalStress"/> implies for a grey body in deep
-        /// space, before conduction, geometry or the sun move it.
-        ///
-        /// A screening estimate rather than a prediction: it assumes every watt reaches the skin
-        /// and every face sees a 2.7 K sky, both of which flatter the ship. A hull this says is hot
-        /// is certainly hot; one it says is cool may still not be.
-        /// </summary>
+/// <summary>EquilibriumKelvin operation.</summary>
         public float EquilibriumKelvin(float emissivity = 0.15f)
         {
             if (ThermalStress <= 0f) return 0f;
             return (float)Math.Pow(ThermalStress / (emissivity * ThermalConstants.StefanBoltzmann), 0.25d);
         }
 
-        /// <summary>
-        /// Substeps the stiffest block on the ship demands of a one-second step.
-        ///
-        /// A step is divided into as many substeps as the stiffest block needs, so this is what a
-        /// grid costs — and it is set by the *lightest* block on the ship rather than the average
-        /// one, which is why a population is needed to know it. See stiffness.md.
-        /// </summary>
         public float PeakSubstepDemand;
 
-        /// <summary>The demand at the 95th percentile of blocks, which is the number a cap reaches.</summary>
         public float SubstepDemandP95;
 
         public float SubstepDemandMedian;
 
-        /// <summary>The subtype that set <see cref="PeakSubstepDemand"/>. Names what to tune.</summary>
         public string StiffestBlock;
 
-        /// <summary>
-        /// The same peak, measured in air at sea level rather than in the vacuum a ship that has
-        /// never stepped is measured in.
-        ///
-        /// <para>Every other figure here is a property of the ship. Stiffness is not: half of it is
-        /// what a block exchanges with the world over its exposed area, and in a vacuum that half is
-        /// radiation alone. A field dump of a fleet flying at 0.73 air density found `SmallLight`
-        /// demanding 23.7 substeps with 3 % of the demand coming from conduction, against the two
-        /// or three the same hulls demand here — so the vacuum figure is not a smaller version of
-        /// the atmospheric one, it is a different quantity.</para>
-        ///
-        /// <para>Both are kept because both are real: a ship in orbit is in the first world and a
-        /// ship over a planet is in the second, and which one a specimen is selected on is a
-        /// decision rather than a default.</para>
-        /// </summary>
         public float PeakSubstepDemandInAir;
 
-        /// <summary>The subtype that set <see cref="PeakSubstepDemandInAir"/>.</summary>
         public string StiffestBlockInAir;
 
-        /// <summary>Sealed compartments the room mapper found, across every grid.</summary>
         public int Rooms;
 
-        /// <summary>Grids in the blueprint, and the mechanical joints linking them.</summary>
         public int Grids;
         public int Joints;
 
-        /// <summary>
-        /// The feature vector used for stratifying, clustering and selecting specimens.
-        ///
-        /// Logarithmic where the quantity spans orders of magnitude, which is most of them: a ship
-        /// of 30 blocks and one of 9,000 differ by a factor no linear distance can weigh sensibly
-        /// against an exposure fraction between 0 and 1.
-        /// </summary>
         public double[] Features
         {
             get
@@ -166,20 +83,16 @@ namespace Thermodynamics.Harness
             "log waste W", "log stress", "log stiffness", "large grid",
         };
 
+/// <summary>Log operation.</summary>
         private static double Log(double value)
         {
             return Math.Log10(value > 0d ? value + 1d : 1d);
         }
 
-        /// <summary>
-        /// Measures one ship. Builds its simulation once, reads it, and lets it go.
-        ///
-        /// Nothing is stepped: every figure here is a property of the grid as built. That is what
-        /// makes this affordable over ten thousand ships, and it is why the expensive passes are
-        /// sampled from what this produces rather than run over everything.
-        /// </summary>
+/// <summary>Measure operation.</summary>
         public static ShipProfile Measure(Blueprints.Ship ship, ThermalSettings settings = null)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings effective = settings ?? new ThermalSettings();
             ShipAssembly assembly = ship.Build(effective);
 
@@ -194,7 +107,9 @@ namespace Thermodynamics.Harness
                 Rooms = assembly.RoomCount,
             };
 
+/// <summary>List operation.</summary>
             List<float> demands = new List<float>(assembly.NodeCount);
+/// <summary>SeaLevelAir operation.</summary>
             EnvironmentState air = SeaLevelAir(effective);
             float peakInAir = 0f;
             float[] thrustByDirection = new float[Face.Count];
@@ -203,8 +118,6 @@ namespace Thermodynamics.Harness
             int exposed = 0;
             float peak = 0f;
 
-            // Every grid in the blueprint, subgrids included: a turret on a rotor is part of the
-            // ship, and its mass, surface and stiffness all belong to the ship's totals.
             for (int g = 0; g < assembly.Simulations.Count; g++)
             {
                 ThermalSolver solver = assembly.Simulations[g].Solver;
@@ -227,8 +140,6 @@ namespace Thermodynamics.Harness
                         profile.StiffestBlock = node.Block.Name;
                     }
 
-                    // A second reading of the same node, differing only in the world it is asked
-                    // about. Costs one more pass over the conductance arrays and no step.
                     float inAir = solver.NodeSubstepDemand(i, ref air);
                     if (inAir > peakInAir)
                     {
@@ -240,9 +151,6 @@ namespace Thermodynamics.Harness
                 }
             }
 
-            // A ship's reactors deliver what its consumers ask for and no more, so the load is
-            // bounded by the draw rather than by the plate rating. Summing every reactor's maximum
-            // output describes a ship with nothing switched on to use it.
             float thrust = 0f;
             for (int i = 0; i < thrustByDirection.Length; i++)
             {
@@ -253,9 +161,6 @@ namespace Thermodynamics.Harness
             profile.ThrustNewtons = thrust;
             profile.PowerOutputWatts = installed;
 
-            // Generators carry what they can and the stores cover any shortfall, each at its own
-            // fraction. A ship whose reactors out-rate its draw has its batteries sitting idle,
-            // which is what they do and what counting their plate rating got wrong.
             float fromGenerators = draw < installed ? draw : installed;
             float shortfall = draw - fromGenerators;
             float fromStores = shortfall < profile.StoreReserveWatts ? shortfall : profile.StoreReserveWatts;
@@ -273,48 +178,29 @@ namespace Thermodynamics.Harness
             profile.PeakSubstepDemand = peak;
             profile.PeakSubstepDemandInAir = peakInAir;
             demands.Sort();
+/// <summary>Percentile operation.</summary>
             profile.SubstepDemandMedian = Percentile(demands, 0.50f);
+/// <summary>Percentile operation.</summary>
             profile.SubstepDemandP95 = Percentile(demands, 0.95f);
 
             return profile;
         }
 
-        /// <summary>
-        /// Still air at sea level on an earthlike world: the world most ships in the corpus were
-        /// built to fly in, and the one a vacuum measurement is furthest from.
-        ///
-        /// Still rather than windy on purpose. Wind raises the convective coefficient and would
-        /// make the figure a statement about the weather; this is the floor of what an atmosphere
-        /// does, so a ship stiffer than this in air is stiffer than this everywhere in air.
-        /// </summary>
+/// <summary>SeaLevelAir operation.</summary>
         private static EnvironmentState SeaLevelAir(ThermalSettings settings)
         {
             return EnvironmentSolver.Solve(
                 settings, PlanetThermalProperties.Default(), Worlds.PlanetSurface(1f, 0.5f));
         }
 
-        /// <summary>Heat from everything that draws power but does not thrust, watts.</summary>
         public float ConsumerWasteWatts;
 
-        /// <summary>Watts of discharge the ship's stores could supply if the generators fell short.</summary>
         public float StoreReserveWatts;
 
-        /// <summary>
-        /// Adds one block's contribution to the ship's rated load.
-        ///
-        /// Rated rather than actual, because a blueprint has no session and so no idea what it
-        /// would really draw. Full rating is the ceiling a ship could reach and the case the
-        /// balance criteria are written against; the battery's `derate` scenario is what finds the
-        /// fraction that is actually sustainable.
-        ///
-        /// Thrust is bucketed by which way the thruster points, so the load can be taken as the
-        /// strongest single direction rather than as the sum of all six.
-        /// </summary>
+/// <summary>Rate operation.</summary>
         private static void Rate(ShipProfile profile, BlockInstance block, float[] thrustByDirection,
             ref float draw, ref float installed)
         {
-            // By model name, not by subtype: a base variant carries its type id as its name and
-            // the empty-subtype entry resolves to whichever of the thirteen a dictionary kept.
             GameBlocks.Definition definition;
             if (!GameBlocks.ByModelName().TryGetValue(block.Name, out definition)) return;
 
@@ -323,9 +209,6 @@ namespace Thermodynamics.Harness
 
             if (definition.TypeId == "HeatVentBlock") profile.HeatVents++;
 
-            // A store rates both ways and is never doing both, so it is neither demand nor supply.
-            // It is reserve, and it only makes heat for the share of the load the generators cannot
-            // cover — which the caller works out once it knows both totals.
             if (ShipLoad.IsStore(definition.TypeId))
             {
                 profile.StoreReserveWatts += definition.PowerOutputWatts;
@@ -350,7 +233,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>Which of the six grid directions a block faces, after its orientation.</summary>
+/// <summary>Direction operation.</summary>
         private static int Direction(BlockInstance block)
         {
             Vector3I facing = block.Orientation.Rotate(Vector3I.Forward);
@@ -362,11 +245,13 @@ namespace Thermodynamics.Harness
             return 0;
         }
 
+/// <summary>Percentile operation.</summary>
         private static float Percentile(List<float> sorted, float fraction)
         {
             return LabStats.PercentileOfSorted(sorted, fraction);
         }
 
+/// <summary>ToString operation.</summary>
         public override string ToString()
         {
             return Name + " (" + Blocks + " blocks, " + ThermalStress.ToString("n0") + " W/m²)";

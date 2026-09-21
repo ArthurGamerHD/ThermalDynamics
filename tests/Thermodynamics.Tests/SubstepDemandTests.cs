@@ -5,23 +5,9 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// What a block demands of a step, asked of a grid that has not stepped and of a world the grid
-    /// is not in.
-    ///
-    /// <para><c>NodeSubstepDemand</c> is the only figure the ship screening reads about stiffness,
-    /// and the screening deliberately steps nothing — that is what makes it affordable over a
-    /// corpus of thousands. It read the mirrored rows the step path fills, which on a grid that has
-    /// never stepped are empty, so it reported conduction alone whatever world it was asked about:
-    /// 0.075 against the 0.47 the same fitting demands in air, and identical figures for a vacuum
-    /// and a sea-level atmosphere.</para>
-    ///
-    /// <para>That is not a small error in a small number. A fleet's cost is set by its stiffest
-    /// block, half of that block's stiffness is what it exchanges with the world over its exposed
-    /// area, and the corpus is stratified on the result.</para>
-    /// </summary>
     public class SubstepDemandTests
     {
+/// <summary>Sets the tings.</summary>
         private static ThermalSettings Settings()
         {
             ThermalSettings settings = new ThermalSettings
@@ -35,12 +21,13 @@ namespace Thermodynamics.Tests
             return settings;
         }
 
-        /// <summary>A light fitting on the end of an armour bar: something to conduct into, and sky.</summary>
+/// <summary>Fitting operation.</summary>
         private static ThermalSimulation Fitting(ThermalSettings settings)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 1, 1));
             builder.Place(BlockModel.Solid("Fitting", Vector3I.One, 16f, Catalog.DefaultThermal()),
+/// <summary>Vector3I operation.</summary>
                 new Vector3I(4, 0, 0));
 
             ThermalSimulation simulation = builder.BuildSimulation(settings);
@@ -48,12 +35,14 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>Air operation.</summary>
         private static EnvironmentState Air(ThermalSettings settings)
         {
             return EnvironmentSolver.Solve(
                 settings, PlanetThermalProperties.Default(), Worlds.PlanetSurface(1f, 0.5f));
         }
 
+/// <summary>Peak operation.</summary>
         private static float Peak(ThermalSolver solver)
         {
             float peak = 0f;
@@ -65,6 +54,7 @@ namespace Thermodynamics.Tests
             return peak;
         }
 
+/// <summary>Peak operation.</summary>
         private static float Peak(ThermalSolver solver, ref EnvironmentState environment)
         {
             float peak = 0f;
@@ -76,20 +66,16 @@ namespace Thermodynamics.Tests
             return peak;
         }
 
-        /// <summary>
-        /// The regression, stated as the thing it should have been all along: stepping a grid barely
-        /// changes what its blocks demand, because almost nothing about the grid changed.
-        ///
-        /// Not exactly nothing — the radiation half of the demand goes as T³ and a step moves T — so
-        /// the claim is a fraction of a per cent rather than equality. Before the fix the two
-        /// differed by a factor of six.
-        /// </summary>
         [Fact]
+/// <summary>AGridThatHasNotSteppedDemandsWhatItWillDemand operation.</summary>
         public void AGridThatHasNotSteppedDemandsWhatItWillDemand()
         {
+/// <summary>Sets the tings.</summary>
             ThermalSettings settings = Settings();
+/// <summary>Fitting operation.</summary>
             ThermalSimulation simulation = Fitting(settings);
 
+/// <summary>Peak operation.</summary>
             float before = Peak(simulation.Solver);
 
             simulation.StepExact(1, Worlds.Shadow());
@@ -97,17 +83,18 @@ namespace Thermodynamics.Tests
             Assert.Equal(1d, Peak(simulation.Solver) / before, 2);
         }
 
-        /// <summary>
-        /// The same, asked about a world the grid is not in. This is the call the ship screening
-        /// makes, and it must not need a step either.
-        /// </summary>
         [Fact]
+/// <summary>TheAnswerAboutAnotherWorldAlsoNeedsNoStep operation.</summary>
         public void TheAnswerAboutAnotherWorldAlsoNeedsNoStep()
         {
+/// <summary>Sets the tings.</summary>
             ThermalSettings settings = Settings();
+/// <summary>Fitting operation.</summary>
             ThermalSimulation simulation = Fitting(settings);
+/// <summary>Air operation.</summary>
             EnvironmentState air = Air(settings);
 
+/// <summary>Peak operation.</summary>
             float before = Peak(simulation.Solver, ref air);
 
             simulation.StepExact(1, Worlds.Shadow());
@@ -115,45 +102,31 @@ namespace Thermodynamics.Tests
             Assert.Equal(1d, Peak(simulation.Solver, ref air) / before, 2);
         }
 
-        /// <summary>
-        /// Air is the whole point of asking. A fitting in a sea-level atmosphere is stiffer than
-        /// the same fitting in vacuum, because convection over a full cell's exposed area is
-        /// larger than its radiation and — at the pace the conversion calibrated to — than its
-        /// conduction as well.
-        ///
-        /// <para>
-        /// **It was four times and it is 2.3.** `C24` took `ConductionScale` to four times what it
-        /// was, so the conduction half of this fitting's stability rate is four times larger and
-        /// the convection half is where it was: 17.41 in air against 7.64 in vacuum, where the
-        /// same fitting used to be over four times stiffer. The whole population moved with it —
-        /// the corpus median hull's stiffest block is 1.07 times stiffer in air where it was 2.34
-        /// (backlog.md `C24`, and <see cref="Census.Corpus"/>) — so this
-        /// is the model rather than the rig. What it does *not* say is that air has stopped cooling
-        /// a hull: the environment terms are untouched and this is a statement about which term
-        /// sets a substep count.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheSameFittingIsStifferInAirThanInVacuum operation.</summary>
         public void TheSameFittingIsStifferInAirThanInVacuum()
         {
+/// <summary>Sets the tings.</summary>
             ThermalSettings settings = Settings();
+/// <summary>Fitting operation.</summary>
             ThermalSimulation simulation = Fitting(settings);
+/// <summary>Air operation.</summary>
             EnvironmentState air = Air(settings);
 
+/// <summary>Peak operation.</summary>
             float vacuum = Peak(simulation.Solver);
+/// <summary>Peak operation.</summary>
             float inAir = Peak(simulation.Solver, ref air);
 
             Assert.True(inAir > vacuum * 2f,
                 "in air " + inAir + " against vacuum " + vacuum);
         }
 
-        /// <summary>
-        /// A buried block exchanges with nothing, so no world changes what it demands. Without this
-        /// the environment half would be charged to every block on a hull rather than to its skin.
-        /// </summary>
         [Fact]
+/// <summary>ABuriedBlockDemandsTheSameInEveryWorld operation.</summary>
         public void ABuriedBlockDemandsTheSameInEveryWorld()
         {
+/// <summary>Sets the tings.</summary>
             ThermalSettings settings = Settings();
 
             GridBuilder builder = GridBuilder.Large();
@@ -162,6 +135,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(settings);
             while (simulation.HasPendingWork) simulation.Update(1f / 60f, Worlds.Shadow());
 
+/// <summary>Air operation.</summary>
             EnvironmentState air = Air(settings);
 
             int buried = -1;
@@ -178,15 +152,15 @@ namespace Thermodynamics.Tests
                 simulation.Solver.NodeSubstepDemand(buried, ref air), 6);
         }
 
-        /// <summary>
-        /// A ship profile carries both, and they are the same quantity measured in two worlds
-        /// rather than an estimate and a correction.
-        /// </summary>
         [Fact]
+/// <summary>AShipProfileReportsBothWorlds operation.</summary>
         public void AShipProfileReportsBothWorlds()
         {
+/// <summary>Sets the tings.</summary>
             ThermalSettings settings = Settings();
+/// <summary>Fitting operation.</summary>
             ThermalSimulation simulation = Fitting(settings);
+/// <summary>Air operation.</summary>
             EnvironmentState air = Air(settings);
 
             Assert.True(Peak(simulation.Solver, ref air) > Peak(simulation.Solver));

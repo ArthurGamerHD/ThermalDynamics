@@ -7,11 +7,6 @@ using VRageMath;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// Heat conduction across a rotor or a piston, where the two blocks belong to different grids and
-    /// so to different solvers — a link that can live in neither. Exchanged once per tick under the
-    /// same clamped, energy-conserving rule. See thermal-model.md, Conduction.
-    /// </summary>
     public static class ThermalBridges
     {
         private class Bridge
@@ -21,6 +16,7 @@ namespace Thermodynamics
             public float Conductance;
         }
 
+/// <summary>List operation.</summary>
         private static readonly List<Bridge> Bridges = new List<Bridge>();
 
         public static int Count
@@ -28,10 +24,7 @@ namespace Thermodynamics
             get { return Bridges.Count; }
         }
 
-        /// <summary>
-        /// Rebuilds the bridge for one mechanical block: dropped when it detaches, created
-        /// against the head's grid when it attaches.
-        /// </summary>
+/// <summary>Rebuild operation.</summary>
         public static void Rebuild(ThermalBlock baseBlock, IMyMechanicalConnectionBlock mechanical)
         {
             RemoveAllFor(baseBlock);
@@ -48,8 +41,6 @@ namespace Thermodynamics
                 baseBlock.Grid.Model.GridSize,
                 topGrid.Model.GridSize);
 
-            // One cell face of contact, along the axis the head sits on: a rotor joint is a single
-            // mounting plate whatever the size of the blocks either side.
             float conductance = ConductionBuilder.Conductance(
                 lattice, baseBlock.Instance, top.Instance, 1, Face.Axis(Face.Up));
 
@@ -58,7 +49,7 @@ namespace Thermodynamics
             Bridges.Add(new Bridge { A = baseBlock, B = top, Conductance = conductance });
         }
 
-        /// <summary>Drops every bridge touching a block. Called when the block goes away.</summary>
+/// <summary>Removes the allfor.</summary>
         public static void RemoveAllFor(ThermalBlock block)
         {
             for (int i = Bridges.Count - 1; i >= 0; i--)
@@ -67,15 +58,13 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>Clear operation.</summary>
         public static void Clear()
         {
             Bridges.Clear();
         }
 
-        /// <summary>
-        /// Exchanges heat across every bridge. Called once per tick from the session, after the
-        /// grids have stepped.
-        /// </summary>
+/// <summary>Update operation.</summary>
         public static void Update(float deltaSeconds)
         {
             if (Bridges.Count == 0 || deltaSeconds <= 0f) return;

@@ -4,23 +4,9 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The conduction pass skips the overshoot clamp on any step where it cannot bind, and the only
-    /// thing that makes that safe is that running it would have produced **the same bits** (`D8`) — a
-    /// gate that is nearly right drops clamping on a grid that needed it and diverges silently.
-    ///
-    /// <para>
-    /// The last two tests are what keep the rest honest: without them a gate that never engaged, or
-    /// one that always did, would pass every equivalence assertion above (`E8`).
-    /// See benchmarks.md, The overshoot clamp A/B.
-    /// </para>
-    /// </summary>
     public class ConductionClampGateTests
     {
-        /// <summary>
-        /// A census hull — the block mix of a real ship, so the stiff tail is the decorative
-        /// blocks it is in the field rather than a shape chosen to make a point.
-        /// </summary>
+/// <summary>Builds the API method table.</summary>
         private static ThermalSimulation Build(bool gate, int maxSubsteps)
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(maxSubsteps));
@@ -28,6 +14,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>AssertIdentical operation.</summary>
         private static void AssertIdentical(ThermalSimulation always, ThermalSimulation gated, string what)
         {
             SolverAb.AssertIdentical(
@@ -35,13 +22,13 @@ namespace Thermodynamics.Tests
                 "with the clamp always on", "with it gated");
         }
 
-        /// <summary>
-        /// The case the gate exists for: enough substeps that nothing is near its stability limit.
-        /// </summary>
         [Fact]
+/// <summary>SkippingTheClampIsBitIdenticalWhenTheGridIsResolved operation.</summary>
         public void SkippingTheClampIsBitIdenticalWhenTheGridIsResolved()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation always = Build(gate: false, maxSubsteps: 4096);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation gated = Build(gate: true, maxSubsteps: 4096);
 
             EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
@@ -53,14 +40,13 @@ namespace Thermodynamics.Tests
             AssertIdentical(always, gated, "resolved");
         }
 
-        /// <summary>
-        /// One substep against a hull that asks for twenty. Every stiff element is over its limit,
-        /// the gate must find one, and the clamp must run exactly as it did before.
-        /// </summary>
         [Fact]
+/// <summary>TheClampStillRunsWhenTheSubstepCountWasRefused operation.</summary>
         public void TheClampStillRunsWhenTheSubstepCountWasRefused()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation always = Build(gate: false, maxSubsteps: 1);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation gated = Build(gate: true, maxSubsteps: 1);
 
             EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
@@ -72,14 +58,13 @@ namespace Thermodynamics.Tests
             AssertIdentical(always, gated, "clamped");
         }
 
-        /// <summary>
-        /// Vacuum as well as atmosphere: the substep demand is lower without convection, so a cap
-        /// that binds in air may not bind in space and the gate flips between the two.
-        /// </summary>
         [Fact]
+/// <summary>SkippingTheClampIsBitIdenticalInVacuum operation.</summary>
         public void SkippingTheClampIsBitIdenticalInVacuum()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation always = Build(gate: false, maxSubsteps: 4096);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation gated = Build(gate: true, maxSubsteps: 4096);
 
             EnvironmentSample sample = Worlds.Ab.SunlitVacuum();
@@ -90,11 +75,6 @@ namespace Thermodynamics.Tests
             AssertIdentical(always, gated, "vacuum");
         }
 
-        /// <summary>
-        /// Across the whole range of substep caps, including the ones either side of where the
-        /// clamp starts to bind. The gate is decided once per step from the substep length, so a
-        /// cap that moves the length moves the decision.
-        /// </summary>
         [Theory]
         [InlineData(1)]
         [InlineData(2)]
@@ -103,9 +83,12 @@ namespace Thermodynamics.Tests
         [InlineData(16)]
         [InlineData(24)]
         [InlineData(64)]
+/// <summary>TheGateNeverChangesTheAnswerAtAnySubstepCap operation.</summary>
         public void TheGateNeverChangesTheAnswerAtAnySubstepCap(int cap)
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation always = Build(gate: false, maxSubsteps: cap);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation gated = Build(gate: true, maxSubsteps: cap);
 
             EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
@@ -116,18 +99,16 @@ namespace Thermodynamics.Tests
             AssertIdentical(always, gated, "cap " + cap);
         }
 
-        /// <summary>
-        /// The same, with the step spread across frames the way the game runs it. The gate is set
-        /// in <c>BeginStep</c> and read by every slice of every substep, so a slice boundary must
-        /// not be able to see a different answer from the one the step began with.
-        /// </summary>
         [Theory]
         [InlineData(1)]
         [InlineData(97)]
         [InlineData(5000)]
+/// <summary>TheGateSurvivesTheStepBeingSpread operation.</summary>
         public void TheGateSurvivesTheStepBeingSpread(int budget)
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation whole = Build(gate: false, maxSubsteps: 4096);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation spread = Build(gate: true, maxSubsteps: 4096);
 
             EnvironmentState state = EnvironmentSolver.Solve(
@@ -145,15 +126,13 @@ namespace Thermodynamics.Tests
             AssertIdentical(whole, spread, "spread over " + budget);
         }
 
-        /// <summary>
-        /// The gate reports what it did. Without this, a gate wired to a constant would satisfy
-        /// every equivalence test above — the ungated run is the reference, so agreeing with it is
-        /// what a gate that never engages does best.
-        /// </summary>
         [Fact]
+/// <summary>TheGateEngagesOnAResolvedGridAndNotOnAStiffOne operation.</summary>
         public void TheGateEngagesOnAResolvedGridAndNotOnAStiffOne()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation resolved = Build(gate: true, maxSubsteps: 4096);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation stiff = Build(gate: true, maxSubsteps: 1);
 
             EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
@@ -165,13 +144,11 @@ namespace Thermodynamics.Tests
             Assert.True(stiff.Solver.ConductionClampLive);
         }
 
-        /// <summary>
-        /// Switching the clamp off in settings is still switching it off: the gate reports the
-        /// clamp dead, and it must not resurrect it on a grid stiff enough to bind.
-        /// </summary>
         [Fact]
+/// <summary>TheSettingStillWins operation.</summary>
         public void TheSettingStillWins()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubsteps = 1;
             settings.MaxElementVisitsPerStep = 0;

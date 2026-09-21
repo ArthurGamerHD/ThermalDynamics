@@ -5,34 +5,16 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **A block telling the drag model it is a different shape than its faces suggest.**
-    ///
-    /// <para>
-    /// The model's only shape term is a projected area — six exposed-face fractions weighted by
-    /// their incidence — so it cannot tell a jet engine from a box of the same size. the drag milestone is the
-    /// interface for a mod that knows its own block's shape to say so, and the mechanism is a
-    /// multiplier on the exposure the solver already computes rather than a parallel model.
-    /// </para>
-    ///
-    /// <para>
-    /// **The risk here is larger than the heat API's and these tests are mostly about the bound.** A
-    /// registered heat source changes a temperature; a registered profile changes how a ship flies,
-    /// so a bad registration is a handling bug in somebody else's mod that looks like one in this
-    /// one. A profile may only *reduce*, anything unusable reads as no change, and it must not
-    /// reach the sun.
-    /// </para>
-    /// </summary>
     public class DragProfileTests
     {
         private const float ThickAir = 1f;
 
+/// <summary>Sets the tings.</summary>
         private static ThermalSettings Settings(bool solar = false)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
 
-            // The environment is off for the drag rigs so friction is the only path; the solar rig
-            // needs it on, because that is the term it is checking has *not* moved.
             settings.EnableEnvironment = solar;
             settings.EnableSolarHeat = solar;
             settings.EnableDamage = false;
@@ -40,6 +22,7 @@ namespace Thermodynamics.Tests
             return settings;
         }
 
+/// <summary>Hull operation.</summary>
         private static ThermalSimulation Hull(bool solar = false)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -47,12 +30,12 @@ namespace Thermodynamics.Tests
 
             ThermalSimulation simulation = builder.BuildSimulation(Settings(solar), 293.15f);
 
-            // `LastSolarWatts` is a diagnostic and is filled only when they are collected.
             if (solar) simulation.Solver.CollectDiagnostics = true;
             simulation.Planet = PlanetThermalProperties.Default();
             return simulation;
         }
 
+/// <summary>Profile operation.</summary>
         private static void Profile(ThermalSimulation simulation, DragProfile profile)
         {
             for (int i = 0; i < simulation.Solver.Nodes.Count; i++)
@@ -61,18 +44,21 @@ namespace Thermodynamics.Tests
             }
         }
 
+/// <summary>DragWatts operation.</summary>
         private static float DragWatts(ThermalSimulation simulation)
         {
             simulation.StepExact(1, Worlds.Flight(ThickAir, 120f));
             return simulation.Solver.LastFrictionWatts;
         }
 
-        /// <summary>**A slippery hull takes less wind**, which is the whole of the feature.</summary>
         [Fact]
+/// <summary>AProfileReducesTheDrag operation.</summary>
         public void AProfileReducesTheDrag()
         {
+/// <summary>DragWatts operation.</summary>
             float plain = DragWatts(Hull());
 
+/// <summary>Hull operation.</summary>
             ThermalSimulation slippery = Hull();
             Profile(slippery, DragProfile.Of(0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f));
 
@@ -80,24 +66,24 @@ namespace Thermodynamics.Tests
             Assert.Equal(plain * 0.5f, DragWatts(slippery), 2);
         }
 
-        /// <summary>
-        /// **It is directional**, which is the point: a nacelle is slippery nose-on and blunt
-        /// side-on. Only the faces the wind is actually on can change the answer.
-        /// </summary>
         [Fact]
+/// <summary>OnlyTheFacesTheWindIsOnMatter operation.</summary>
         public void OnlyTheFacesTheWindIsOnMatter()
         {
+/// <summary>DragWatts operation.</summary>
             float plain = DragWatts(Hull());
 
-            // `Worlds.Flight` moves the ship backward, so the air is on one axis only. A profile on
-            // the faces across the flow changes nothing.
+/// <summary>Hull operation.</summary>
             ThermalSimulation sides = Hull();
             Profile(sides, DragProfile.Of(0f, 0f, 1f, 1f, 0f, 0f));
 
+/// <summary>Hull operation.</summary>
             ThermalSimulation windward = Hull();
             Profile(windward, DragProfile.Of(1f, 1f, 0f, 0f, 1f, 1f));
 
+/// <summary>DragWatts operation.</summary>
             float sidesWatts = DragWatts(sides);
+/// <summary>DragWatts operation.</summary>
             float windwardWatts = DragWatts(windward);
 
             Assert.True(sidesWatts == plain || windwardWatts == plain,
@@ -105,31 +91,28 @@ namespace Thermodynamics.Tests
             Assert.NotEqual(sidesWatts, windwardWatts);
         }
 
-        /// <summary>
-        /// **A profile may only reduce.** Anything over one is clamped, so a registration cannot
-        /// give a block more drag than it has surface.
-        /// </summary>
         [Fact]
+/// <summary>AProfileCannotAddDrag operation.</summary>
         public void AProfileCannotAddDrag()
         {
+/// <summary>DragWatts operation.</summary>
             float plain = DragWatts(Hull());
 
+/// <summary>Hull operation.</summary>
             ThermalSimulation greedy = Hull();
             Profile(greedy, DragProfile.Of(5f, 5f, 5f, 5f, 5f, 5f));
 
             Assert.Equal(plain, DragWatts(greedy), 2);
         }
 
-        /// <summary>
-        /// **Anything unusable reads as no change, not as no drag** (`W4`). A NaN fails every
-        /// comparison, so a clamp written the other way round would have zeroed the face and
-        /// removed drag rather than failing to add a claim.
-        /// </summary>
         [Fact]
+/// <summary>NonsenseReadsAsNoChange operation.</summary>
         public void NonsenseReadsAsNoChange()
         {
+/// <summary>DragWatts operation.</summary>
             float plain = DragWatts(Hull());
 
+/// <summary>Hull operation.</summary>
             ThermalSimulation nonsense = Hull();
             Profile(nonsense, DragProfile.Of(
                 float.NaN, float.NegativeInfinity, -1f, float.PositiveInfinity, float.NaN, -0.5f));
@@ -137,28 +120,27 @@ namespace Thermodynamics.Tests
             Assert.Equal(plain, DragWatts(nonsense), 2);
         }
 
-        /// <summary>An unset profile is the model as it was.</summary>
         [Fact]
+/// <summary>AnUnsetProfileChangesNothing operation.</summary>
         public void AnUnsetProfileChangesNothing()
         {
             Assert.False(default(DragProfile).IsSet);
             for (int f = 0; f < Face.Count; f++) Assert.Equal(1f, default(DragProfile)[f]);
 
+/// <summary>Hull operation.</summary>
             ThermalSimulation cleared = Hull();
             Profile(cleared, default(DragProfile));
 
             Assert.Equal(DragWatts(Hull()), DragWatts(cleared), 2);
         }
 
-        /// <summary>
-        /// **It must not reach the sun.** A nacelle slippery to the air is not slippery to
-        /// sunlight, and the six face shares a profile multiplies are also what the solar term
-        /// reads — so the multiplier is applied where the flow is weighted and nowhere else.
-        /// </summary>
         [Fact]
+/// <summary>AProfileDoesNotDimTheSun operation.</summary>
         public void AProfileDoesNotDimTheSun()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation plain = Hull(solar: true);
+/// <summary>Hull operation.</summary>
             ThermalSimulation slippery = Hull(solar: true);
             Profile(slippery, DragProfile.Of(0f, 0f, 0f, 0f, 0f, 0f));
 

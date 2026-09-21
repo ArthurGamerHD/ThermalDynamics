@@ -3,31 +3,25 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// A block's axis-aligned orientation, mirroring the game's <c>MyBlockOrientation</c> so an
-    /// adapter can convert with a two-field copy.
-    /// </summary>
     public struct BlockOrientation : IEquatable<BlockOrientation>
     {
         public Base6Directions.Direction Forward;
         public Base6Directions.Direction Up;
 
+/// <summary>BlockOrientation operation.</summary>
         public BlockOrientation(Base6Directions.Direction forward, Base6Directions.Direction up)
         {
             Forward = forward;
             Up = up;
         }
 
-        /// <summary>Forward = -Z, Up = +Y. The identity.</summary>
         public static BlockOrientation Identity
         {
+/// <summary>BlockOrientation operation.</summary>
             get { return new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up); }
         }
 
-        /// <summary>
-        /// The rotation taking a direction in block-local space to grid space. Constructed the same
-        /// way the game constructs it, so the results match.
-        /// </summary>
+/// <summary>Returns the matrix.</summary>
         public Matrix GetMatrix()
         {
             return Matrix.CreateWorld(
@@ -36,38 +30,21 @@ namespace Thermodynamics.Core
                 Base6Directions.GetVector(Up));
         }
 
-        /// <summary>Slots in the tables below: six forward directions by six up directions.</summary>
         private const int Slots = 36;
 
-        /// <summary>
-        /// Where each of the three local axes lands in grid space, per orientation, three entries a
-        /// slot; and each local face's grid face, six a slot. Built once from <see cref="GetMatrix"/>
-        /// itself, so the table is the matrix path's own answer and not a second derivation of it.
-        ///
-        /// <para>
-        /// An axis-aligned rotation is a signed permutation, so transforming an integer vector is
-        /// three multiplies by ±1 and three adds — exact in either form, which is what lets the
-        /// cached form replace the matrix bit for bit (`BlockOrientationCacheTests`). Building the
-        /// matrix cost more than the rotation: a block instance rotated every cell and every face
-        /// of every cell through a fresh one at construction, ten matrices a cell on the load path.
-        /// See performance.md, Iteration 3.
-        /// </para>
-        /// </summary>
         private static readonly Vector3I[] rotatedAxes = new Vector3I[Slots * 3];
         private static readonly int[] rotatedFaces = new int[Slots * Face.Count];
 
-        /// <summary>
-        /// Slots whose forward and up are perpendicular. The other twelve pairs are not orientations;
-        /// they keep the matrix path, whatever it answers, rather than a table entry built from it.
-        /// </summary>
         private static readonly bool[] legal = new bool[Slots];
 
+/// <summary>BlockOrientation operation.</summary>
         static BlockOrientation()
         {
             for (int f = 0; f < 6; f++)
             {
                 for (int u = 0; u < 6; u++)
                 {
+/// <summary>BlockOrientation operation.</summary>
                     BlockOrientation orientation = new BlockOrientation(
                         (Base6Directions.Direction)f, (Base6Directions.Direction)u);
 
@@ -93,6 +70,7 @@ namespace Thermodynamics.Core
 
         private int Slot
         {
+/// <summary>return operation.</summary>
             get { return ((int)Forward * 6) + (int)Up; }
         }
 
@@ -105,18 +83,20 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>The matrix path, kept as the oracle the table is built from and checked against.</summary>
+/// <summary>RotateByMatrix operation.</summary>
         public Vector3I RotateByMatrix(Vector3I local)
         {
+/// <summary>Returns the matrix.</summary>
             Matrix m = GetMatrix();
             Vector3I result;
             Vector3I.Transform(ref local, ref m, out result);
             return result;
         }
 
-        /// <summary>The matrix path for <see cref="Unrotate"/>.</summary>
+/// <summary>UnrotateByMatrix operation.</summary>
         public Vector3I UnrotateByMatrix(Vector3I grid)
         {
+/// <summary>Returns the matrix.</summary>
             Matrix m = GetMatrix();
             m.TransposeRotationInPlace();
             Vector3I result;
@@ -124,7 +104,7 @@ namespace Thermodynamics.Core
             return result;
         }
 
-        /// <summary>Rotates a block-local integer direction into grid space.</summary>
+/// <summary>Rotate operation.</summary>
         public Vector3I Rotate(Vector3I local)
         {
             if (!IsLegal) return RotateByMatrix(local);
@@ -140,13 +120,11 @@ namespace Thermodynamics.Core
                 (local.X * x.Z) + (local.Y * y.Z) + (local.Z * z.Z));
         }
 
-        /// <summary>Rotates a grid-space integer direction back into block-local space.</summary>
+/// <summary>Unrotate operation.</summary>
         public Vector3I Unrotate(Vector3I grid)
         {
             if (!IsLegal) return UnrotateByMatrix(grid);
 
-            // The inverse of a signed permutation is its transpose: each local component is the
-            // grid vector's projection onto where that local axis landed.
             int b = Slot * 3;
             Vector3I x = rotatedAxes[b];
             Vector3I y = rotatedAxes[b + 1];
@@ -158,7 +136,7 @@ namespace Thermodynamics.Core
                 (grid.X * z.X) + (grid.Y * z.Y) + (grid.Z * z.Z));
         }
 
-        /// <summary>Rotates a block-local face index into a grid-space face index.</summary>
+/// <summary>RotateFace operation.</summary>
         public int RotateFace(int localFace)
         {
             if (localFace < 0 || localFace >= Face.Count) return -1;
@@ -167,21 +145,25 @@ namespace Thermodynamics.Core
             return rotatedFaces[(Slot * Face.Count) + localFace];
         }
 
+/// <summary>Equals operation.</summary>
         public bool Equals(BlockOrientation other)
         {
             return Forward == other.Forward && Up == other.Up;
         }
 
+/// <summary>Equals operation.</summary>
         public override bool Equals(object obj)
         {
             return obj is BlockOrientation && Equals((BlockOrientation)obj);
         }
 
+/// <summary>Returns the hashcode.</summary>
         public override int GetHashCode()
         {
             return ((int)Forward * 6) + (int)Up;
         }
 
+/// <summary>ToString operation.</summary>
         public override string ToString()
         {
             return "F:" + Forward + " U:" + Up;

@@ -1,4 +1,0 @@
-# SENetworkAPI is vendored and replaced wholesale (docs/rules.md R6).
-# Keep its legacy message-handler warnings scoped to the upstream source file.
-[Thermodynamics/NetworkAPI/Network.cs]
-dotnet_diagnostic.CS0618.severity = none

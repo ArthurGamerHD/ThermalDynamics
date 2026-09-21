@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """The core corpus: a walk of the population that finishes in an hour instead of eleven.
 
 A full walk of the 8,144-ship corpus costs 5.1 hours in air and about 11 in the paired cap
@@ -52,16 +51,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import scoring
 
-# The strata, as (upper block bound, one-in-N kept). The bounds are block counts because block
-# count is what drives both the cost and the statistic, and because it is available from a two
-# minute census parse rather than from a walk — a selection rule that needs a walk to evaluate
-# cannot be used to plan one.
-#
-# **The bands above 10,000 are narrow on purpose.** The sample inside a stratum is systematic
-# rather than random, so a wide band draws a few ships from wherever they happen to fall; narrow
-# bands force the draw to spread across the size range and cut the error on `work p99` from
-# -12.6 % to +6.5 % at the same price. Nothing else about the design moved between those two
-# readings.
 STRATA = [
     (2000, 1),        # 63.9 % of the corpus and 4.5 % of the walk: keeping it whole is free
     (5000, 10),
@@ -74,16 +63,13 @@ STRATA = [
     (10 ** 9, 20),
 ]
 
-# What a walk of the whole corpus costs, in minutes, so the report can price a selection. Measured
-# rather than assumed: `out/air-2026-08-28` walked 8,144 files in 303.6 minutes over nine slices,
-# and the cap walk is the same corpus with a second arm on every scenario -- 228.8 minutes against
-# the same-build air walk's 104.5, so 2.19x rather than the 1.95x a fifty-file sample once said.
 AIR_MINUTES = 303.6
 CAP_OVER_AIR = 2.19
 
 
 
 
+# read operation.
 def read(directory):
     """Every outcome row of a walk, keyed by the ship it belongs to."""
     path = os.path.join(directory, "outcomes.csv")
@@ -92,11 +78,6 @@ def read(directory):
 
     rows = list(csv.DictReader(open(path)))
 
-    # **A paired walk carries two configurations and only one of them ships** (`M1`, `P6`). The
-    # cap walk writes every run twice, uncapped and at 6; mixing the arms into one percentile is
-    # two experiments read as one, and the failure is quiet because the mixture has every column a
-    # single-arm dataset has. `cap.py` is the tool that compares arms; this one scores the shipped
-    # arm, and says how many rows it left behind rather than dropping them in silence.
     arms, shipped = scoring.split_arms(rows)
     if arms:
         print("note: this is a paired walk carrying arms %s; scoring the %d rows of the arm that"
@@ -113,6 +94,7 @@ def read(directory):
     return rows, ships
 
 
+# paths operation.
 def paths(directory):
     """Where each ship's blueprint is, from the walk's own record of what it finished."""
     found = {}
@@ -132,6 +114,7 @@ def paths(directory):
     return found
 
 
+# cost operation.
 def cost(rows, blocks):
     """What one ship costs a walk, in the unit the whole-walk timings were validated against.
 
@@ -151,6 +134,7 @@ def cost(rows, blocks):
     return total
 
 
+# select operation.
 def select(ships):
     """The core corpus, as `{ship: (weight, rule)}`.
 
@@ -196,6 +180,7 @@ def select(ships):
     return chosen, watch
 
 
+# fidelity operation.
 def fidelity(rows, ships, chosen):
     """The selection scored against the population it was drawn from."""
     kept = []
@@ -203,9 +188,11 @@ def fidelity(rows, ships, chosen):
         for row in ships[ship]:
             kept.append((row, weight))
 
+# population operation.
     def population(pick):
         return [pick(r) for r in rows if pick(r) is not None]
 
+# sample operation.
     def sample(pick):
         return [(pick(r), w) for r, w in kept if pick(r) is not None]
 
@@ -234,6 +221,7 @@ def fidelity(rows, ships, chosen):
 WEIGHTS_DEFAULT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "core-corpus.csv")
 
 
+# load weights operation.
 def load_weights(path):
     """The committed selection: what each kept ship stands for, and the rule that kept it."""
     if not os.path.exists(path):
@@ -244,6 +232,7 @@ def load_weights(path):
     return weights
 
 
+# score operation.
 def score(directory, weights):
     """A walk of the core corpus, read with the weights that make it a population estimate."""
     rows, ships = read(directory)
@@ -283,6 +272,7 @@ def score(directory, weights):
     print("  figure here as an estimate with that character, and the whole corpus for a tail.")
 
 
+# main operation.
 def main():
     if "--score" in sys.argv:
         return score(scoring.flag("--score"),

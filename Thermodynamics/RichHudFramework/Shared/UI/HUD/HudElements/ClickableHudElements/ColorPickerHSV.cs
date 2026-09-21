@@ -3,38 +3,21 @@ using VRageMath;
 
 namespace RichHudFramework.UI
 {
-	/// <summary>
-	/// A named color picker using sliders designed to mimic the appearance of the Space Engineers terminal color picker.
-	/// <para>Operating in HSV mode (Hue, Saturation, Value). Alpha (transparency) is not supported.</para>
-	/// </summary>
 	public class ColorPickerHSV : ColorPickerRGB, IValueControl<Vector3>
 	{
-		/// <exclude/>
+/// <summary>Vector3 operation.</summary>
 		protected static readonly Vector3 HSVScale = new Vector3(360f, 100f, 100f);
-		/// <exclude/>
+/// <summary>Vector3 operation.</summary>
 		protected static readonly Vector3 RcpHSVScale = 1f / new Vector3(360f, 100f, 100f);
 
-		/// <summary>
-		/// Gets or sets the color currently specified by the picker.
-		/// Setting this value will automatically update the positions of the sliders.
-		/// </summary>
 		public override Color Value
 		{
 			get { return _color; }
 			set { ColorHSV = value.ColorToHSV() * HSVScale; }
 		}
 
-        /// <summary>
-        /// Gets the currently selected color in HSV format. 
-        /// <para>X = Hue (0-360), Y = Saturation (0-100), Z = Value (0-100).</para>
-        /// </summary>
         Vector3 IValueControl<Vector3>.Value => ColorHSV;
 
-        /// <summary>
-        /// Gets or sets the currently selected color in HSV format. 
-        /// Setting this value will automatically update the positions of the sliders.
-        /// <para>X = Hue (0-360), Y = Saturation (0-100), Z = Value (0-100).</para>
-        /// </summary>
         public Vector3 ColorHSV
 		{
 			get { return _hsvColor; }
@@ -47,20 +30,15 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Gets or sets the currently selected color in normalized HSV format.
-		/// Setting this value will automatically update the positions of the sliders.
-		/// <para>X = Hue (0-1), Y = Saturation (0-1), Z = Value (0-1).</para>
-		/// </summary>
 		public Vector3 ColorHSVNorm
 		{
 			get { return _hsvColor * RcpHSVScale; }
 			set { ColorHSV = value * HSVScale; }
 		}
 
-        /// <exclude/>
         protected Vector3 _hsvColor;
 
+/// <summary>ColorPickerHSV operation.</summary>
 		public ColorPickerHSV(HudParentBase parent = null) : base(parent)
 		{
 			sliders[0].Max = 360f;
@@ -68,10 +46,7 @@ namespace RichHudFramework.UI
 			sliders[2].Max = 100f;
 		}
 
-		/// <summary>
-		/// Updates the Hue value and display when the first slider (channel R) changes.
-		/// </summary>
-		/// <exclude/>
+/// <summary>UpdateChannelR operation.</summary>
 		protected override void UpdateChannelR(object sender, EventArgs args)
 		{
 			var slider = sender as SliderBox;
@@ -82,10 +57,7 @@ namespace RichHudFramework.UI
 			display.Color = _color;
 		}
 
-		/// <summary>
-		/// Updates the Saturation value and display when the second slider (channel G) changes.
-		/// </summary>
-		/// <exclude/>
+/// <summary>UpdateChannelG operation.</summary>
 		protected override void UpdateChannelG(object sender, EventArgs args)
 		{
 			var slider = sender as SliderBox;
@@ -96,10 +68,7 @@ namespace RichHudFramework.UI
 			display.Color = _color;
 		}
 
-		/// <summary>
-		/// Updates the Value (brightness) and display when the third slider (channel B) changes.
-		/// </summary>
-		/// <exclude/>
+/// <summary>UpdateChannelB operation.</summary>
 		protected override void UpdateChannelB(object sender, EventArgs args)
 		{
 			var slider = sender as SliderBox;

@@ -9,80 +9,48 @@ namespace RichHudFramework.UI.Client
 		object // ID
 	>;
 
-	/// <summary>
-	/// The abstract base class for all controls in the <see cref="RichHudTerminal"/>
-	/// </summary>
 	public abstract class TerminalControlBase : ITerminalControl
 	{
-		/// <summary>
-		/// Invoked whenever a change occurs to the control that requires a response (e.g., value change, user interaction).
-		/// </summary>
 		public event EventHandler ControlChanged;
 
-		/// <summary>
-		/// Control change callback initializer property
-		/// </summary>
 		public EventHandler ControlChangedHandler { set { ControlChanged += value; } }
 
-		/// <summary>
-		/// The name or label of the control as it appears in the terminal UI.
-		/// </summary>
 		public string Name
 		{
+/// <summary>Returns the orsetmember.</summary>
 			get { return GetOrSetMember(null, (int)TerminalControlAccessors.Name) as string; }
+/// <summary>Returns the orsetmember.</summary>
 			set { GetOrSetMember(value, (int)TerminalControlAccessors.Name); }
 		}
 
-		/// <summary>
-		/// Determines whether or not the control is visible and interactive in the terminal.
-		/// </summary>
 		public bool Enabled
 		{
+/// <summary>return operation.</summary>
 			get { return (bool)GetOrSetMember(null, (int)TerminalControlAccessors.Enabled); }
+/// <summary>Returns the orsetmember.</summary>
 			set { GetOrSetMember(value, (int)TerminalControlAccessors.Enabled); }
 		}
 
-		/// <summary>
-		/// Optional tooltip text displayed when hovering over the control.
-		/// </summary>
 		public ToolTip ToolTip
 		{
 			get { return _toolTip; }
+/// <summary>Returns the orsetmember.</summary>
 			set { _toolTip = value; GetOrSetMember(value.GetToolTipFunc, (int)TerminalControlAccessors.ToolTip); }
 		}
 
-		/// <summary>
-		/// Unique identifier used by the Framework API.
-		/// </summary>
-		/// <exclude/>
 		public object ID { get; }
 
-		/// <summary>
-		/// Internal API member accessor delegate.
-		/// </summary>
-		/// <exclude/>
 		protected readonly ApiMemberAccessor GetOrSetMember;
 
-		/// <summary>
-		/// Internal tooltip cache.
-		/// </summary>
-		/// <exclude/>
 		protected ToolTip _toolTip;
 
-		/// <summary>
-		/// Initializes a new RHF terminal control corresponding to the given enum type.
-		/// </summary>
-		/// <exclude/>
+/// <summary>TerminalControlBase operation.</summary>
 		public TerminalControlBase(MenuControls controlEnum) : this(RichHudTerminal.Instance.GetNewMenuControl(controlEnum))
 		{
-			// Register event callback
 			GetOrSetMember(new Action(ControlChangedCallback), (int)TerminalControlAccessors.GetOrSetControlCallback);
 		}
 
-		/// <summary>
-		/// Internal callback wrapper for safe event invocation.
-		/// </summary>
-		/// <exclude/>
+/// <summary>ControlChangedCallback operation.</summary>
 		protected virtual void ControlChangedCallback()
 		{
 			if (ControlChanged == null)
@@ -94,20 +62,14 @@ namespace RichHudFramework.UI.Client
 			});
 		}
 
-		/// <summary>
-		/// Initializes control data from internal RHF API data.
-		/// </summary>
-		/// <exclude/>
+/// <summary>TerminalControlBase operation.</summary>
 		public TerminalControlBase(ControlMembers data)
 		{
 			GetOrSetMember = data.Item1;
 			ID = data.Item2;
 		}
 
-		/// <summary>
-		/// Returns the internal API data tuple.
-		/// </summary>
-		/// <exclude/>
+/// <summary>Returns the apidata.</summary>
 		public ControlMembers GetApiData()
 		{
 			return new ControlMembers()
@@ -118,31 +80,25 @@ namespace RichHudFramework.UI.Client
 		}
 	}
 
-	/// <summary>
-	/// Abstract base class for terminal controls that are associated with a specific data value 
-	/// (e.g., sliders, checkboxes) in the <see cref="RichHudTerminal"/>.
-	/// </summary>
-	/// <typeparam name="TValue">The type of the value associated with this control.</typeparam>
 	public abstract class TerminalValue<TValue> : TerminalControlBase, ITerminalValue<TValue>
 	{
-		/// <summary>
-		/// The current value associated with the control.
-		/// </summary>
 		public virtual TValue Value
 		{
+/// <summary>return operation.</summary>
 			get { return (TValue)GetOrSetMember(null, (int)TerminalControlAccessors.Value); }
+/// <summary>Returns the orsetmember.</summary>
 			set { GetOrSetMember(value, (int)TerminalControlAccessors.Value); }
 		}
 
-		/// <summary>
-		/// An optional delegate used to periodically retrieve the value from an external source, keeping the control in sync.
-		/// </summary>
 		public Func<TValue> CustomValueGetter
 		{
+/// <summary>Returns the orsetmember.</summary>
 			get { return GetOrSetMember(null, (int)TerminalControlAccessors.ValueGetter) as Func<TValue>; }
+/// <summary>Returns the orsetmember.</summary>
 			set { GetOrSetMember(value, (int)TerminalControlAccessors.ValueGetter); }
 		}
 
+/// <summary>TerminalValue operation.</summary>
 		public TerminalValue(MenuControls controlEnum) : base(controlEnum)
 		{ }
 	}

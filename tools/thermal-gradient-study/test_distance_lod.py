@@ -5,17 +5,21 @@ from distance_lod import pixels_per_metre,desired_level,allocate,transition_cost
 
 class DistanceLodTests(unittest.TestCase):
     """Guard coverage, near priority, far reduction and transition accounting."""
+# levels operation.
     def levels(self):
         return [dict(triangles=1000,errorMetres=0),dict(triangles=400,errorMetres=0),dict(triangles=60,errorMetres=10),dict(triangles=6,errorMetres=100)]
 
+# test projected size halves at double distance operation.
     def test_projected_size_halves_at_double_distance(self):
         self.assertAlmostEqual(pixels_per_metre(100),2*pixels_per_metre(200))
         self.assertGreater(pixels_per_metre(100,height=2160),pixels_per_metre(100))
 
+# test near full far minimum operation.
     def test_near_full_far_minimum(self):
         self.assertEqual(desired_level(self.levels(),50),0)
         self.assertEqual(desired_level(self.levels(),100000),3)
 
+# test budget reserves far grid and prefers nearest operation.
     def test_budget_reserves_far_grid_and_prefers_nearest(self):
         grids=[dict(distance=50,levels=self.levels()),dict(distance=70,levels=self.levels())]
         chosen=allocate(grids,budget=1100)
@@ -23,6 +27,7 @@ class DistanceLodTests(unittest.TestCase):
         self.assertLessEqual(sum(g['levels'][i]['triangles'] for g,i in zip(grids,chosen)),1100)
         self.assertIsNone(allocate(grids,budget=11))
 
+# test transition counts both meshes and smooth endpoints operation.
     def test_transition_counts_both_meshes_and_smooth_endpoints(self):
         grids=[dict(levels=self.levels())]
         self.assertEqual(transition_cost(grids,[0],[1]),1400)
@@ -31,6 +36,7 @@ class DistanceLodTests(unittest.TestCase):
         self.assertEqual(smooth_weight(.3),1)
         self.assertAlmostEqual(smooth_weight(.15),.5)
 
+# test coarse cells keep occupied blocks and stable bounds operation.
     def test_coarse_cells_keep_occupied_blocks_and_stable_bounds(self):
         nodes=[dict(min=[-3,0,0],max=[-2,1,1]),dict(min=[2,0,0],max=[3,1,1])]
         coarse=coarse_nodes(nodes,4)

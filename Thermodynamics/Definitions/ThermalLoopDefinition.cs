@@ -14,10 +14,6 @@ namespace Thermodynamics
     public class ThermalLoopDefinition
     {
         private static readonly MyStringId GroupId = MyStringId.GetOrCompute("ThermalLoopProperties");
-        // Renamed from "Mass" deliberately. The figure changed meaning from kilograms per loop to
-        // kilograms per pipe, so a world still carrying the old element must not have 500 read as a
-        // per-pipe charge — ten times the fluid it asked for. An unrecognised name falls to the field
-        // default below instead, which is the safe outcome.
         private static readonly MyStringId CoolantMassPerPipeId = MyStringId.GetOrCompute("CoolantMassPerPipe");
         private static readonly MyStringId CoolantDensityId = MyStringId.GetOrCompute("CoolantKilogramsPerCubicMetre");
         private static readonly MyStringId LargeGridFlowRateId = MyStringId.GetOrCompute("LargeGridFlowRate");
@@ -29,80 +25,47 @@ namespace Thermodynamics
         private static readonly MyStringId SinkContactMultiplierId = MyStringId.GetOrCompute("SinkContactMultiplier");
 
 
-        /// <summary>
-        /// Names these properties used to carry, still read when the current name is absent. See
-        /// the note on <c>ThermalCellDefinition</c>: Definition Extensions matches on the string,
-        /// so dropping the old name would silently revert third-party loop definitions to defaults.
-        /// </summary>
         private static readonly MyStringId LegacyParcelRateId = MyStringId.GetOrCompute("SegmentsPerSecondAtFullFlow");
         private static readonly MyStringId LegacyFlowRateId = MyStringId.GetOrCompute("FlowRate");
         private static readonly MyStringId LegacyMassPerPipeId = MyStringId.GetOrCompute("MassPerPipe");
         private static readonly MyStringId LegacyPipeContactId = MyStringId.GetOrCompute("PipeSurfaceAreaScaler");
         private static readonly MyStringId LegacySinkContactId = MyStringId.GetOrCompute("PlateSurfaceAreaScaler");
 
-        /// <summary>Space Engineers' two cell sizes, used to convert the retired parcel-rate name.</summary>
 
 
+/// <summary>MyDefinitionId operation.</summary>
         public static readonly MyDefinitionId DefaultLoopDefinitionId = new MyDefinitionId(typeof(MyObjectBuilder_EnvironmentDefinition), Settings.DefaultLoopSubtypeId);
 
-        /// <summary>
-        /// A flat coolant mass per pipe block, kg, or **zero to charge from
-        /// <see cref="CoolantKilogramsPerCubicMetre"/> and the cell**, which is what ships.
-        ///
-        /// <para>
-        /// Defaults live on the fields rather than in a factory: an element added to the group after
-        /// a world's Loops.xml was written is absent from that file, and a reader that finds nothing
-        /// leaves the field alone. **Zero is now a value rather than an accident** — it used to
-        /// clamp to 1 kg and silently give that world almost no coolant, and it now means the
-        /// density, which is the answer a file that says nothing should get.
-        /// </para>
-        /// </summary>
         [ProtoMember(1)]
         public float CoolantMassPerPipe;
 
-        /// <summary>
-        /// Coolant per cubic metre of the cell a pipe occupies, kg/m³, and what a ring charges from
-        /// unless <see cref="CoolantMassPerPipe"/> states a flat mass instead.
-        ///
-        /// **The per-pipe name is kept rather than repurposed** (`P15`): a third-party `Loops.xml`
-        /// stating 50 there means fifty kilograms in a pipe, and reading it as a density would give
-        /// a large-grid ring sixteen times the fluid it asked for. Silence on both means this
-        /// default, which is what ships. See balance.md, `C43`.
-        /// </summary>
         [ProtoMember(35)]
         public float CoolantKilogramsPerCubicMetre = 33f;
 
-        /// <summary>Fluid-to-wall heat transfer coefficient, W/(m²·K). See thermal-model.md, Coolant loops.</summary>
         [ProtoMember(5)]
         public float HeatTransferCoefficient = 1000f;
 
-        /// <summary>
-        /// Specific heat capacity of the coolant, J/(kg K). Reference values:
-        /// https://en.wikipedia.org/wiki/Table_of_specific_heat_capacities
-        /// </summary>
         [ProtoMember(10)]
         public float SpecificHeat = 3400f;
 
-        /// <summary>Contact area scaler between the coolant and a pipe segment.</summary>
         [ProtoMember(15)]
         public float PipeContactMultiplier = 1f;
 
-        /// <summary>Contact area scaler between the coolant and a block on a sink face.</summary>
         [ProtoMember(20)]
         public float SinkContactMultiplier = 1f;
 
-        /// <summary>Coolant parcels a full-flow pump pushes past a point each second.</summary>
         [ProtoMember(25)]
         public float LargeGridFlowRate = 10f;
 
         public float SmallGridFlowRate = 10f;
 
-        /// <summary>Share of transfer that survives with no circulation, 0..1.</summary>
         [ProtoMember(30)]
         public float StagnantTransferFraction = 0.16f;
 
+/// <summary>Returns the definition.</summary>
         public static ThermalLoopDefinition GetDefinition(MyDefinitionId defId)
         {
+/// <summary>ThermalLoopDefinition operation.</summary>
             ThermalLoopDefinition def = new ThermalLoopDefinition();
             DefinitionExtensionsAPI lookup = Session.Definitions;
 
@@ -112,6 +75,7 @@ namespace Thermodynamics
 
             if (!lookup.DefinitionIdExists(defId) || !carriesGroup)
             {
+/// <summary>MyDefinitionId operation.</summary>
                 defId = new MyDefinitionId(defId.TypeId, Settings.DefaultSubtypeId);
 
                 if (!lookup.DefinitionIdExists(defId))
@@ -141,21 +105,16 @@ namespace Thermodynamics
                 || lookup.TryGetDouble(defId, GroupId, LegacySinkContactId, out dvalue))
                 def.SinkContactMultiplier = (float)dvalue;
 
-            // Flow, newest name first. Both retired spellings are still read, and neither means
-            // quite the same thing, so each converts rather than being copied across.
             if (lookup.TryGetDouble(defId, GroupId, LargeGridFlowRateId, out dvalue))
             {
                 def.LargeGridFlowRate = (float)dvalue;
             }
             else if (lookup.TryGetDouble(defId, GroupId, LegacyFlowRateId, out dvalue))
             {
-                // One rate for both grids, which is what the single dial meant.
                 def.LargeGridFlowRate = (float)dvalue;
             }
             else if (lookup.TryGetDouble(defId, GroupId, LegacyParcelRateId, out dvalue))
             {
-                // Parcels per second: one parcel is one pipe block, so the speed a definition
-                // written this way actually produced depended on the grid it was built on.
                 def.LargeGridFlowRate = (float)dvalue * LoopThermalProperties.LargeGridCellMetres;
             }
 
@@ -176,7 +135,6 @@ namespace Thermodynamics
                 def.StagnantTransferFraction = (float)dvalue;
 
 
-            // Zero is how a file says "use the density"; only a negative one is nonsense.
             def.CoolantMassPerPipe = Math.Max(0, def.CoolantMassPerPipe);
             def.CoolantKilogramsPerCubicMetre = Math.Max(0, def.CoolantKilogramsPerCubicMetre);
 

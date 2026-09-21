@@ -6,25 +6,16 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The extension files the mod ships, read the way Definition Extensions reads them.
-    ///
-    /// The game's own loaders are lenient; Draygo's importer deserialises with the strict .NET
-    /// serialiser, and a file it rejects is rejected silently in ordinary play — one log line in a
-    /// file nobody reads, and every entry in the file quietly absent. The shipped Planets.xml
-    /// carried a "--" inside its header comment, which is illegal XML, so no world that ever
-    /// loaded the mod received a single per-planet climate. The report's
-    /// <c>[from definition: None]</c> line is what finally said so.
-    /// </summary>
     public class DefinitionFileTests
     {
 
-        /// <summary>The files definitionextensions.txt names, which is what the importer walks.</summary>
+/// <summary>ExtensionFiles operation.</summary>
         private static List<string> ExtensionFiles()
         {
             string manifest = Path.Combine(ShippedBlocks.DataRoot(), "definitionextensions.txt");
             Assert.True(File.Exists(manifest), "definitionextensions.txt missing");
 
+/// <summary>List operation.</summary>
             List<string> files = new List<string>();
             foreach (string line in File.ReadAllLines(manifest))
             {
@@ -37,6 +28,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EveryListedFileExists operation.</summary>
         public void EveryListedFileExists()
         {
             foreach (string file in ExtensionFiles())
@@ -45,15 +37,13 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Strict parse, exactly as the importer's serialiser applies it. XmlDocument throws on
-        /// the same things: a "--" in a comment, unbalanced tags, an undeclared entity.
-        /// </summary>
         [Fact]
+/// <summary>EveryListedFileIsStrictlyValidXml operation.</summary>
         public void EveryListedFileIsStrictlyValidXml()
         {
             foreach (string file in ExtensionFiles())
             {
+/// <summary>XmlDocument operation.</summary>
                 XmlDocument document = new XmlDocument();
 
                 try
@@ -68,15 +58,13 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The shape the importer deserialises: Definition entries under CubeBlocks, each carrying
-        /// an Id and a ModExtensions block with at least one Group.
-        /// </summary>
         [Fact]
+/// <summary>EveryEntryCarriesAnIdAndAGroup operation.</summary>
         public void EveryEntryCarriesAnIdAndAGroup()
         {
             foreach (string file in ExtensionFiles())
             {
+/// <summary>XmlDocument operation.</summary>
                 XmlDocument document = new XmlDocument();
                 document.Load(file);
 
@@ -94,16 +82,15 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The generated file keys its entries on the generator id the lookup now asks with:
-        /// PlanetGeneratorDefinition subtypes, one per shipped world plus the fallback.
-        /// </summary>
         [Fact]
+/// <summary>PlanetsCarryTheGeneratorSubtypesTheLookupAsksFor operation.</summary>
         public void PlanetsCarryTheGeneratorSubtypesTheLookupAsksFor()
         {
+/// <summary>XmlDocument operation.</summary>
             XmlDocument document = new XmlDocument();
             document.Load(Path.Combine(ShippedBlocks.DataRoot(), "Planets.xml"));
 
+/// <summary>HashSet operation.</summary>
             HashSet<string> subtypes = new HashSet<string>();
             foreach (XmlNode id in document.SelectNodes(
                 "/Definitions/CubeBlocks/Definition/Id[TypeId='PlanetGeneratorDefinition']/SubtypeId"))
@@ -118,10 +105,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>The regeneration path emits what it claims to: a strictly parseable file.</summary>
         [Fact]
+/// <summary>TheGeneratorEmitsStrictXml operation.</summary>
         public void TheGeneratorEmitsStrictXml()
         {
+/// <summary>XmlDocument operation.</summary>
             XmlDocument document = new XmlDocument();
             document.LoadXml(PlanetLab.Xml());
         }

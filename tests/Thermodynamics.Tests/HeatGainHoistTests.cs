@@ -6,29 +6,9 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **The heat a grid puts into itself cannot change between the substeps of one step**, so it
-    /// is summed once and read twenty-three times rather than summed twenty-four.
-    ///
-    /// <para>
-    /// Waste heat, solar gain and aerodynamic friction are read out of `nodeSourceRow`, which is
-    /// filled on a step's first substep and read by the rest. Summing it every substep computed the
-    /// same float over and over — and not for free: a running float sum is a dependency the loop
-    /// carries from one node to the next, and the two accumulators in that loop measured **35 %**
-    /// of the environment stage between them (performance.md, Pass 5, Iteration 3).
-    /// </para>
-    ///
-    /// <para>
-    /// The sum is over the same values in the same order, so the published figure is unchanged **to
-    /// the bit** — which is what these check, by running the same grid both ways (`D3`, `D8`).
-    /// </para>
-    /// </summary>
     public class HeatGainHoistTests
     {
-        /// <summary>
-        /// A driven hull in atmosphere at speed, so waste heat, solar gain and friction are all
-        /// live and the figure is a sum of three things rather than of one.
-        /// </summary>
+/// <summary>Hull operation.</summary>
         private static ThermalSimulation Hull(bool hoist)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -42,9 +22,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheHoistedFigureIsTheSummedFigureToTheBit operation.</summary>
         public void TheHoistedFigureIsTheSummedFigureToTheBit()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation summed = Hull(false);
+/// <summary>Hull operation.</summary>
             ThermalSimulation hoisted = Hull(true);
 
             EnvironmentState state = EnvironmentSolver.Solve(
@@ -71,7 +54,6 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(8, judged);
 
-            // And the physics is untouched, which is the half a watts figure would not show.
             IList<ThermalNode> a = summed.Solver.Nodes;
             IList<ThermalNode> b = hoisted.Solver.Nodes;
             Assert.True(a.Count > 1000, "only " + a.Count + " nodes");
@@ -84,14 +66,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// A step whose environment rows were rebuilt mid-flight — the sun moved, so the shadow
-        /// map and the rows with it — re-sums rather than carrying the previous step's total. The
-        /// hoist is only sound while the rows it was taken from are.
-        /// </summary>
         [Fact]
+/// <summary>ANewStepDoesNotCarryTheLastStepsTotal operation.</summary>
         public void ANewStepDoesNotCarryTheLastStepsTotal()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation simulation = Hull(true);
             float step = simulation.Settings.StepSeconds;
 
@@ -113,6 +92,7 @@ namespace Thermodynamics.Tests
                 + " step's total rather than taking its own");
         }
 
+/// <summary>Bits operation.</summary>
         private static int Bits(float value)
         {
             return BitConverter.ToInt32(BitConverter.GetBytes(value), 0);

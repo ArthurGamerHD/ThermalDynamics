@@ -15,6 +15,7 @@ namespace Thermodynamics
     [MySessionComponentDescriptor(MyUpdateOrder.NoUpdate)]
     public class PlanetManager : MySessionComponentBase
     {
+/// <summary>PlanetDefinition operation.</summary>
         public static readonly PlanetDefinition NullDef = new PlanetDefinition();
 
         public class Planet
@@ -24,12 +25,7 @@ namespace Thermodynamics
             public MyGravityProviderComponent GravityComponent;
             private PlanetDefinition definition = NullDef;
 
-            /// <summary>
-            /// This planet's thermal definition, or null until the lookup can answer — a null is never
-            /// cached, since the lookup is a mod-to-mod API that initialises on a message. Keyed by the
-            /// *generator*: a planet entity's own DefinitionId is <c>MyObjectBuilder_Planet/(null)</c>.
-            /// See environment.md, When the file does not reach the mod.
-            /// </summary>
+/// <summary>Definition operation.</summary>
             public PlanetDefinition Definition() 
             {
                 if (definition == NullDef && Entity.Generator != null)
@@ -47,24 +43,26 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>List operation.</summary>
         private static List<Planet> Planets = new List<Planet>();
 
-        /// <summary>Copies registered planets without depending on loaded terrain meshes.</summary>
+/// <summary>CopyPlanets operation.</summary>
         public static void CopyPlanets(List<Planet> target) { target.Clear(); target.AddRange(Planets); }
 
+/// <summary>Init operation.</summary>
         public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
             MyAPIGateway.Entities.OnEntityAdd += AddPlanet;
             MyAPIGateway.Entities.OnEntityRemove += RemovePlanet;
         }
 
+/// <summary>Adds a planet.</summary>
         private void AddPlanet(IMyEntity ent)
         {
             if (ent is MyPlanet)
             {
                 MyPlanet entity = ent as MyPlanet;
 
-                //MyLog.Default.Info($"[{Settings.Name}] Added Planet: {entity.DisplayName} - {entity.DefinitionId.HasValue}");
                 Planets.Add(new Planet()
                 {
                     Entity = entity,
@@ -74,13 +72,14 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>Removes the planet.</summary>
         private void RemovePlanet(IMyEntity ent)
         {
             Planets.RemoveAll(p => p.Entity.EntityId == ent.EntityId);
         }
 
 
-        /// <summary>The planet nearest a world position, or null when there is none.</summary>
+/// <summary>Returns the closestplanet.</summary>
         public static Planet GetClosestPlanet(Vector3D position) 
         {
             Planet current = null;

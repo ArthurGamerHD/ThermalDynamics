@@ -13,6 +13,7 @@ namespace Thermodynamics
         private static MyKeys visionKey = MyKeys.T;
         private static bool visionKeyLoaded;
         private const string VisionKeyFile = "ThermalVisionKey.txt";
+/// <summary>LoadVisionKey operation.</summary>
         private static void LoadVisionKey()
         {
             if(visionKeyLoaded) return;
@@ -21,22 +22,25 @@ namespace Thermodynamics
             {
                 if(MyAPIGateway.Utilities.FileExistsInLocalStorage(VisionKeyFile,typeof(ThermalVisionProbe)))
                     using(var reader=MyAPIGateway.Utilities.ReadFileInLocalStorage(VisionKeyFile,typeof(ThermalVisionProbe)))
+/// <summary>if operation.</summary>
                     { MyKeys key; if(Enum.TryParse(reader.ReadToEnd().Trim(),true,out key) && key>=MyKeys.A && key<=MyKeys.Z) visionKey=key; }
             }
             catch(Exception) { RecordEvent("vision key: could not read local preference; using default"); }
         }
+/// <summary>BindVisionKey operation.</summary>
         private static string BindVisionKey(string value)
         {
             LoadVisionKey(); MyKeys key;
             if(!Enum.TryParse(value.Trim(),true,out key) || key<MyKeys.A || key>MyKeys.Z)
                 return "Use /thermal vision bind <A-Z>; binding is Ctrl+Shift+letter";
-            // These chords already belong to other mod tools.
             if(key==MyKeys.S || key==MyKeys.W || key==MyKeys.M) return "S, W and M are already assigned to thermal tools";
+/// <summary>using operation.</summary>
             try { using(var writer=MyAPIGateway.Utilities.WriteFileInLocalStorage(VisionKeyFile,typeof(ThermalVisionProbe))) writer.Write(key.ToString()); }
             catch(Exception) { return "Could not save thermal vision key preference"; }
             visionKey=key;
             return "Grey thermal toggle: Ctrl+Shift+"+key;
         }
+/// <summary>PollVisionKey operation.</summary>
         public static void PollVisionKey()
         {
             if(MyAPIGateway.Utilities==null || MyAPIGateway.Utilities.IsDedicated || MyAPIGateway.Input==null || MyAPIGateway.Gui==null) return;

@@ -11,15 +11,9 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// A one-cell `BlockInstance` is built without walking its cells, and is held to the walk over
-    /// every one of the twenty-four orientations, for a solid block, a partly mounted one, a door
-    /// shut and a door open — the same cell, the same live bits, the same structural bits (`D8`).
-    /// The uniform-bits short cut in the surface rotation is covered by the same comparison, since
-    /// the solid block takes it and the partly mounted one cannot.
-    /// </summary>
     public class BlockInstanceOneCellTests
     {
+/// <summary>Models operation.</summary>
         private static IEnumerable<BlockModel> Models()
         {
             yield return Catalog.LightArmor();
@@ -32,28 +26,15 @@ namespace Thermodynamics.Tests
             yield return Catalog.SlideDoor();
         }
 
-        /// <summary>
-        /// A block holds its two surface layers in one array whenever they cannot differ — every
-        /// block that is not a door, and a door while it is shut — and in two once a door stands
-        /// open, because opening it must leave the structural layer where it was.
-        ///
-        /// <para>
-        /// **A refresh no longer hands back a fresh array for a one-cell block, and that is the
-        /// interning of Pass 9, Iteration 9.** Those arrays are shared per model, orientation and
-        /// layer, so a refresh that changes nothing hands back the same object. What
-        /// `ThermalSimulation.RefreshBlock` actually needs is unaffected — `SameSurfaces` compares
-        /// **by value**, and an array compared against itself reports *unchanged*, which is the
-        /// right answer when nothing changed. A door cycling still swaps *which* interned array the
-        /// live layer points at, so a real change is still a different object with different
-        /// values. Both halves are asserted below rather than left to that argument.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheTwoSurfaceLayersShareOneArrayExactlyWhenTheyCannotDiffer operation.</summary>
         public void TheTwoSurfaceLayersShareOneArrayExactlyWhenTheyCannotDiffer()
         {
+/// <summary>BlockInstance operation.</summary>
             BlockInstance armour = new BlockInstance(Catalog.LightArmor(), Vector3I.Zero, BlockOrientation.Identity);
             Assert.Same(armour.StructuralSurfaces, armour.SelfSurfaces);
 
+/// <summary>BlockInstance operation.</summary>
             BlockInstance door = new BlockInstance(Catalog.SlideDoor(), Vector3I.Zero, BlockOrientation.Identity);
             Assert.True(door.HasStateDependentSealing);
             Assert.True(door.IsSealedByDoorState);
@@ -64,31 +45,23 @@ namespace Thermodynamics.Tests
             door.IsSealedByDoorState = false;
             door.RefreshSurfaces();
 
-            // Opening it leaves the structural layer exactly where it was — the same interned
-            // array, since a door is one cell — and moves the live layer to the *other* interned
-            // array, which is a different object holding different bits. That is what
-            // `RefreshBlock` sees, and it is what it needs to see.
             Assert.Same(structuralBefore, door.StructuralSurfaces);
             Assert.NotSame(liveBefore, door.SelfSurfaces);
             Assert.NotSame(door.StructuralSurfaces, door.SelfSurfaces);
             Assert.Equal(structuralBefore, door.StructuralSurfaces);
             Assert.NotEqual(liveBefore, door.SelfSurfaces);
 
-            // And shutting it again puts the live layer back on the structural array, which is the
-            // round trip a door actually makes.
             door.IsSealedByDoorState = true;
             door.RefreshSurfaces();
             Assert.Same(door.StructuralSurfaces, door.SelfSurfaces);
             Assert.Equal(liveBefore, door.SelfSurfaces);
 
-            // A one-cell block's refresh hands back the interned array, and the values are what a
-            // caller compares. A multi-cell block still gets a fresh one, because only the one-cell
-            // path is interned.
             int[] armourBefore = armour.SelfSurfaces;
             armour.RefreshSurfaces();
             Assert.Equal(armourBefore, armour.SelfSurfaces);
             Assert.Same(armour.StructuralSurfaces, armour.SelfSurfaces);
 
+/// <summary>BlockInstance operation.</summary>
             BlockInstance multi = new BlockInstance(Catalog.LightArmorCube(2), Vector3I.Zero, BlockOrientation.Identity);
             Assert.True(multi.Model.CellCount > 1,
                 "the multi-cell case needs a block with more than one cell to say anything");
@@ -98,29 +71,13 @@ namespace Thermodynamics.Tests
             Assert.Equal(multiBefore, multi.StructuralSurfaces);
         }
 
-        /// <summary>
-        /// **Nothing writes through a block's surface arrays, anywhere in the tree.**
-        ///
-        /// <para>
-        /// One-cell blocks share their surface arrays per model and orientation, so a single
-        /// `block.SelfSurfaces[i] = …` would change every other block of that model and orientation
-        /// on every grid in the session. Nothing does that today; the reason to assert it is that
-        /// the code that would is ordinary-looking and its failure is invisible — a neighbouring
-        /// block's walls quietly change, and every downstream answer stays self-consistent.
-        /// </para>
-        ///
-        /// <para>
-        /// The arrays are read through public properties, so the check is over the source rather
-        /// than over an instance: an element assignment whose target is one of the three
-        /// properties, in any file under `Data/` or `tests/`. The builder inside `BlockInstance`
-        /// writes the private fields, which is where writing belongs and is not what this reads.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>NothingWritesThroughABlocksSurfaceArrays operation.</summary>
         public void NothingWritesThroughABlocksSurfaceArrays()
         {
             string root = ShippedBlocks.RepoRoot();
             string[] properties = { "SelfSurfaces", "StructuralSurfaces", "Cells" };
+/// <summary>List operation.</summary>
             List<string> writes = new List<string>();
 
             foreach (string folder in new[] { "Thermodynamics/Content/Data/", "tests" })
@@ -158,24 +115,15 @@ namespace Thermodynamics.Tests
                 + string.Join(", ", writes.ToArray()));
         }
 
-        /// <summary>
-        /// **Two one-cell blocks of one model and orientation share one surface array, and two of
-        /// different orientations do not.**
-        ///
-        /// <para>
-        /// The sharing is the saving — a census hull is mostly one-cell blocks, each of which was
-        /// allocating an `int[1]` for an answer that depends only on the model and the orientation.
-        /// It is asserted in both directions because a cache keyed too coarsely gives every
-        /// orientation the same bits, which is a wrong grid rather than a slow one, and one keyed
-        /// too finely quietly saves nothing (`E8`).
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>OneCellBlocksOfAModelAndOrientationShareOneSurfaceArray operation.</summary>
         public void OneCellBlocksOfAModelAndOrientationShareOneSurfaceArray()
         {
             BlockModel model = Catalog.LightArmor();
 
+/// <summary>BlockInstance operation.</summary>
             BlockInstance here = new BlockInstance(model, Vector3I.Zero, BlockOrientation.Identity);
+/// <summary>BlockInstance operation.</summary>
             BlockInstance there = new BlockInstance(model, new Vector3I(9, 4, 7), BlockOrientation.Identity);
 
             Assert.Same(here.StructuralSurfaces, there.StructuralSurfaces);
@@ -183,13 +131,14 @@ namespace Thermodynamics.Tests
             Assert.Equal(new Vector3I(9, 4, 7), there.Cells[0]);
             Assert.NotSame(here.Cells, there.Cells);
 
-            // Every orientation gets its own array, and no two orientations that rotate the bits
-            // differently are handed each other's.
+/// <summary>List operation.</summary>
             List<int[]> seen = new List<int[]>();
             int distinct = 0;
             foreach (BlockOrientation orientation in PipeFitter.AllOrientations())
             {
+/// <summary>BlockInstance operation.</summary>
                 BlockInstance block = new BlockInstance(model, Vector3I.Zero, orientation);
+/// <summary>BlockInstance operation.</summary>
                 BlockInstance twin = new BlockInstance(model, new Vector3I(3, 3, 3), orientation);
 
                 Assert.Same(block.StructuralSurfaces, twin.StructuralSurfaces);
@@ -211,6 +160,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AOneCellBlockIsBuiltAsTheCellWalkWouldBuildIt operation.</summary>
         public void AOneCellBlockIsBuiltAsTheCellWalkWouldBuildIt()
         {
             int compared = 0;
@@ -221,23 +171,19 @@ namespace Thermodynamics.Tests
                 {
                     foreach (bool shut in new[] { true, false })
                     {
+/// <summary>Vector3I operation.</summary>
                         Vector3I at = new Vector3I(-4, 7, 2);
+/// <summary>BlockInstance operation.</summary>
                         BlockInstance fast = new BlockInstance(model, at, orientation);
                         fast.IsSealedByDoorState = shut;
                         fast.RefreshSurfaces();
 
+/// <summary>BlockInstance operation.</summary>
                         BlockInstance walked = new BlockInstance(model, at, orientation);
                         walked.IsSealedByDoorState = shut;
                         walked.RefreshSurfaces();
                         walked.BuildGridSurfacesWalkingTheCells();
 
-                        // **The oracle must not have written through the cache the fast path
-                        // reads.** A one-cell block's surface arrays are interned per model and
-                        // orientation, so without the detach in
-                        // `BuildGridSurfacesWalkingTheCells` the walk would write its answer into
-                        // the array `fast` is holding — and the comparison below would be of that
-                        // array against itself, which passes for any two values whatsoever. This is
-                        // the assertion that the two sides are two sides.
                         Assert.NotSame(fast.StructuralSurfaces, walked.StructuralSurfaces);
                         Assert.NotSame(fast.SelfSurfaces, walked.SelfSurfaces);
 

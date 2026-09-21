@@ -7,46 +7,13 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Measures every block this mod ships against the vanilla blocks a player would otherwise
-    /// build, so the definitions can be tuned against numbers instead of against intuition.
-    ///
-    /// The scenarios answer "does this mechanism work". This answers "is this block worth
-    /// building", which is a different question and needs a different shape of measurement: not a
-    /// settling curve, but a per-block figure that can be divided by what the block costs.
-    ///
-    /// Four things are measured, and each one exists because it can bind:
-    ///
-    /// 1. **Capacity** — J/K. How much heat the block swallows before it warms. Free of the solver
-    ///    entirely; it is mass times specific heat over the thermal clock.
-    /// 2. **Shedding** — watts radiated at a reference temperature. What the block gets rid of.
-    /// 3. **Conduction** — W/K through the block's mount faces. What can *reach* it. A radiator
-    ///    that sheds 20 kW and is bolted on by a joint that carries 4 kW sheds 4 kW.
-    /// 4. **Delivered** — an end-to-end steady state with a real load, which is the only one of the
-    ///    four that accounts for all three at once, and the one a player experiences.
-    ///
-    /// Every figure is then divided by mass, by PCU and by cell count, because a block that cools
-    /// twice as well for three times the mass is a worse block and no absolute figure says so.
-    ///
-    /// Deterministic: fixed step counts, no clock, no randomness. The numbers are reproducible and
-    /// diffable, which is what lets <c>BalanceTests</c> pin conclusions drawn from them.
-    /// </summary>
     public static class BalanceLab
     {
-        /// <summary>
-        /// The temperature a shedding figure is quoted at. 600 K is about 327 C: hot enough that a
-        /// ship is in trouble, cool enough that it is a state a player actually sits at rather than
-        /// a moment on the way to damage. Radiation goes as T^4, so a shedding figure means nothing
-        /// without the temperature beside it.
-        /// </summary>
         public const float ReferenceTemperature = 600f;
 
-        /// <summary>Deep space, so a shedding figure is not confounded by convection or sun.</summary>
         public const float ReferenceAmbient = 2.7f;
 
-        // ---- rows ---------------------------------------------------------------------------
 
-        /// <summary>One block, costed and measured.</summary>
         public class BlockRow
         {
             public string Subtype;
@@ -62,36 +29,23 @@ namespace Thermodynamics.Harness
             public float Conductivity;
             public float ExposedSurfaceMultiplier;
 
-            /// <summary>J/K at the shipped thermal clock.</summary>
             public float CapacityJoulesPerKelvin;
 
-            /// <summary>Square metres of radiating surface with every face open.</summary>
             public float ExposedAreaAlone;
 
-            /// <summary>Watts shed at <see cref="ReferenceTemperature"/> with every face open.</summary>
             public float ShedAloneWatts;
 
-            /// <summary>Watts shed once bolted onto a hull, which covers the mounted faces.</summary>
             public float ShedMountedWatts;
 
-            /// <summary>W/K conducted through the block's mount joint to one neighbour.</summary>
             public float ConductanceWattsPerKelvin;
 
-            /// <summary>Which face the joint was measured on — the first the block mounts by.</summary>
             public string JointFace = "none";
 
-            /// <summary>How many of the six faces carry a mount point at all.</summary>
             public int MountFaceCount;
 
-            /// <summary>
-            /// The binding limit as a ratio: shedding over what conduction can deliver across a
-            /// 100 K gradient. Below 1 the block sheds less than reaches it and its surface binds;
-            /// above 1 the joint binds and a better surface buys nothing.
-            /// </summary>
             public float ShedOverReach;
         }
 
-        /// <summary>A vanilla heat source, and the watts it actually puts into the ship.</summary>
         public class LoadRow
         {
             public string Subtype;
@@ -99,36 +53,28 @@ namespace Thermodynamics.Harness
             public bool Large;
             public float RatedMegawatts;
 
-            /// <summary>The fraction Cubes.xml applies to this block's power.</summary>
             public float WasteFraction;
 
-            /// <summary>Watts of heat at full rating, as the shipped definitions compute it.</summary>
             public float WasteWatts;
 
-            /// <summary>Whether the power flows through the fraction that the definition sets.</summary>
             public string Path;
         }
 
-        /// <summary>A head-to-head: what one block of each kind delivers on the same hull.</summary>
         public class DeliveredRow
         {
             public string Label;
             public int Count;
 
-            /// <summary>Steady reactor temperature, kelvin, after the run.</summary>
             public float SettledKelvin;
 
-            /// <summary>Kelvin below the bare hull's settling point.</summary>
             public float KelvinSaved;
 
             public float AddedMass;
             public int AddedPcu;
 
-            /// <summary>Kelvin saved per tonne added.</summary>
             public float KelvinPerTonne;
         }
 
-        /// <summary>The heat pump at one temperature gap.</summary>
         public class PumpRow
         {
             public float ColdKelvin;
@@ -137,11 +83,9 @@ namespace Thermodynamics.Harness
             public float LiftedWatts;
             public float DrawnWatts;
 
-            /// <summary>Which of the three limits decided the outcome.</summary>
             public string Binding;
         }
 
-        /// <summary>A coolant ring of a given size, and what it moves.</summary>
         public class LoopRow
         {
             public int Pipes;
@@ -152,15 +96,7 @@ namespace Thermodynamics.Harness
             public float KelvinSaved;
         }
 
-        /// <summary>
-        /// A one-cell block that turns every watt it draws into heat.
-        ///
-        /// <see cref="Catalog.Reactor"/> wastes what the shipped reactor wastes — a hundredth of
-        /// what it makes — so driving it with 200 kW would put 2 kW into the ship. That is correct
-        /// for a scenario asking what a reactor does, and useless for a table whose rows are
-        /// labelled in watts: every figure would be a hundredth of its heading. This block has a
-        /// fraction of one, so a load of 200 kW is 200 kW of heat and the labels need no asterisk.
-        /// </summary>
+/// <summary>Heater operation.</summary>
         public static BlockModel Heater()
         {
             BlockThermalProperties thermal = Catalog.ReactorThermal();
@@ -169,12 +105,13 @@ namespace Thermodynamics.Harness
             return BlockModel.Solid("Heater", Vector3I.One, 3000f, thermal);
         }
 
-        // ---- block measurements ---------------------------------------------------------------
 
-        /// <summary>Every shipped block, plus the vanilla blocks it is competing with.</summary>
+/// <summary>Blocks operation.</summary>
         public static List<BlockRow> Blocks()
         {
+/// <summary>List operation.</summary>
             List<BlockRow> rows = new List<BlockRow>();
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
 
             foreach (string subtype in ShippedBlocks.Subtypes())
@@ -198,6 +135,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
+/// <summary>Measure operation.</summary>
         private static BlockRow Measure(string subtype, string kind, bool large, Vector3I size,
             float mass, int pcu, float buildSeconds, BlockThermalProperties thermal,
             BlockModel model, ThermalSettings settings)
@@ -220,20 +158,22 @@ namespace Thermodynamics.Harness
                 CapacityJoulesPerKelvin = mass * thermal.SpecificHeat / settings.HeatTimeScale,
             };
 
-            // Alone in space: every face radiates. The upper bound on what the block can shed.
+/// <summary>GridBuilder operation.</summary>
             GridBuilder alone = new GridBuilder(gridSize);
             alone.Place(model, Vector3I.Zero);
             ThermalSimulation simulation = alone.BuildSimulation(settings, ReferenceTemperature);
             ThermalNode node = simulation.Solver.GetNodeAt(Vector3I.Zero);
 
             row.ExposedAreaAlone = node.ExposedArea;
+/// <summary>Radiated operation.</summary>
             row.ShedAloneWatts = Radiated(node, ReferenceTemperature);
 
-            // Bolted onto a hull. Only the faces still open radiate, and the joint is what heat
-            // arrives through, so this is the pair of figures that decides which limit binds.
+/// <summary>FirstMountFace operation.</summary>
             int joint = FirstMountFace(model);
             row.JointFace = joint < 0 ? "none" : Face.Name(joint);
+/// <summary>MountFaceCount operation.</summary>
             row.MountFaceCount = MountFaceCount(model);
+/// <summary>MountedShedding operation.</summary>
             row.ShedMountedWatts = MountedShedding(model, gridSize, settings, joint,
                 out row.ConductanceWattsPerKelvin);
 
@@ -242,6 +182,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
+/// <summary>Radiated operation.</summary>
         private static float Radiated(ThermalNode node, float temperature)
         {
             double hot = (double)temperature * temperature * temperature * temperature;
@@ -249,7 +190,7 @@ namespace Thermodynamics.Harness
             return (float)(node.RadiationCoefficient * (hot - cold));
         }
 
-        /// <summary>Faces of this model that carry a mount surface on at least one cell.</summary>
+/// <summary>MountFaceCount operation.</summary>
         private static int MountFaceCount(BlockModel model)
         {
             int count = 0;
@@ -260,14 +201,7 @@ namespace Thermodynamics.Harness
             return count;
         }
 
-        /// <summary>
-        /// The first face the block can be bolted on by, or -1 if it mounts nowhere.
-        ///
-        /// This has to come from the model rather than being assumed. A coolant pipe mounts on its
-        /// two ends and nothing else; measuring its joint by pressing armour against its side
-        /// would report zero conductance and call the block a thermal island, which is a statement
-        /// about the measurement and not about the block.
-        /// </summary>
+/// <summary>FirstMountFace operation.</summary>
         private static int FirstMountFace(BlockModel model)
         {
             for (int face = 0; face < Face.Count; face++)
@@ -277,13 +211,11 @@ namespace Thermodynamics.Harness
             return -1;
         }
 
-        /// <summary>
-        /// The block bolted to a slab of light armour across one of its own mount faces. Returns
-        /// what it can still radiate, and reports the conductance of the joint it hangs from.
-        /// </summary>
+/// <summary>MountedShedding operation.</summary>
         private static float MountedShedding(BlockModel model, float gridSize, ThermalSettings settings,
             int joint, out float conductance)
         {
+/// <summary>GridBuilder operation.</summary>
             GridBuilder builder = new GridBuilder(gridSize);
             BlockModel armour = BlockModel.Solid("hull", Vector3I.One, 500f, Catalog.DefaultThermal());
 
@@ -292,16 +224,15 @@ namespace Thermodynamics.Harness
 
             if (joint >= 0)
             {
-                // A sheet of armour covering the whole of that face, one cell thick.
                 Vector3I extents = model.Extents;
                 Vector3I step = Face.Offsets[joint];
                 int axis = Face.Axis(joint);
 
                 foreach (Vector3I cell in model.LocalCells())
                 {
-                    // Only the cells on the face itself, so the sheet is a skin and not a block.
                     int along = axis == 0 ? cell.X : axis == 1 ? cell.Y : cell.Z;
                     int span = axis == 0 ? extents.X : axis == 1 ? extents.Y : extents.Z;
+/// <summary>IsPositive operation.</summary>
                     bool onFace = IsPositive(step) ? along == span - 1 : along == 0;
                     if (onFace) builder.Place(armour, cell + step);
                 }
@@ -310,8 +241,6 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = builder.BuildSimulation(settings, ReferenceTemperature);
             ThermalNode node = simulation.Solver.GetNodeAt(placed.Min);
 
-            // Every link that touches this node, summed: the whole joint the block hangs from.
-            // Links are held by node index rather than by reference, so the index comes first.
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             int self = -1;
             for (int i = 0; i < nodes.Count; i++)
@@ -325,14 +254,17 @@ namespace Thermodynamics.Harness
                 if (link.NodeA == self || link.NodeB == self) conductance += link.Conductance;
             }
 
+/// <summary>Radiated operation.</summary>
             return Radiated(node, ReferenceTemperature);
         }
 
+/// <summary>IsPositive operation.</summary>
         private static bool IsPositive(Vector3I step)
         {
             return step.X > 0 || step.Y > 0 || step.Z > 0;
         }
 
+/// <summary>Kind operation.</summary>
         private static string Kind(string subtype)
         {
             if (subtype.Contains("Radiator")) return "radiator";
@@ -342,18 +274,11 @@ namespace Thermodynamics.Harness
             return "other";
         }
 
-        // ---- the load side ----------------------------------------------------------------------
 
-        /// <summary>
-        /// What the vanilla heat sources actually put into a ship, using the fractions the mod's
-        /// own Cubes.xml declares for their types.
-        ///
-        /// This is the denominator of every cooling question — "how many radiators per reactor"
-        /// has no answer until the reactor's number is known — and it is the one figure that is
-        /// decided entirely by definitions rather than by the solver.
-        /// </summary>
+/// <summary>Loads operation.</summary>
         public static List<LoadRow> Loads()
         {
+/// <summary>List operation.</summary>
             List<LoadRow> rows = new List<LoadRow>();
 
             foreach (Vanilla.Block block in Vanilla.Reference)
@@ -364,10 +289,6 @@ namespace Thermodynamics.Harness
                 bool produces = block.PowerOutputMegawatts > 0f && block.TypeId != "Thrust";
                 float rated = produces ? block.PowerOutputMegawatts : block.PowerDrawMegawatts;
 
-                // A reactor and a battery deliver power, so their watts run through the producer
-                // fraction; a thruster consumes, so it runs through the consumer one. Which side a
-                // block lands on is set by the game adapter, not by the definition, and it is the
-                // thing a definition can get wrong without any other symptom.
                 float fraction = produces ? thermal.ProducerWasteEnergy : thermal.ConsumerWasteEnergy;
 
                 rows.Add(new LoadRow
@@ -385,32 +306,13 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        // ---- delivered cooling ------------------------------------------------------------------
 
-        /// <summary>
-        /// The end-to-end question: a 2 MW block with a column of panels stacked on it, measured
-        /// once with the shipped radiator and once with a slab of ordinary light armour of the
-        /// same shape in the same place.
-        ///
-        /// A column rather than a hull, deliberately. The shipped radiator mounts on its top and
-        /// bottom faces only, so a panel bolted to a hull's *side* conducts nothing at all and the
-        /// measurement would be of the boom holding it rather than of the block. Stacking is the
-        /// one arrangement in which every panel is genuinely in the heat path, which makes the
-        /// marginal return of the Nth panel a real number instead of an artefact of the layout.
-        ///
-        /// Same shape, same position, different definition: the difference between the two rows is
-        /// the radiator's emissivity, area scaler and specific heat, and nothing else. That is the
-        /// comparison a tuning decision needs. What bolting a panel flat against a hull costs is a
-        /// different question, and the <c>radiator</c> scenario already answers it.
-        /// </summary>
+/// <summary>Delivered operation.</summary>
         public static List<DeliveredRow> Delivered()
         {
+/// <summary>List operation.</summary>
             List<DeliveredRow> rows = new List<DeliveredRow>();
 
-            // Two loads, because one is not enough to see the shape. 2 MW into a single cell is a
-            // block already far past its rating, where everything saturates and every fit looks
-            // equally useless; 200 kW is a load a player builds around. If a cooling block only
-            // helps at one of the two, that is the most important thing the table can say.
             foreach (float watts in new float[] { 200000f, 2000000f })
             {
                 rows.AddRange(DeliveredAt(watts));
@@ -418,17 +320,22 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
+/// <summary>DeliveredAt operation.</summary>
         private static List<DeliveredRow> DeliveredAt(float watts)
         {
+/// <summary>List operation.</summary>
             List<DeliveredRow> rows = new List<DeliveredRow>();
             ShippedBlocks.Definition radiator = ShippedBlocks.Get("Gauge_LG_Radiator");
+/// <summary>N operation.</summary>
             string load = N(watts / 1000f, 0) + " kW ";
 
+/// <summary>Column operation.</summary>
             float bare = Column(0, false, watts);
             rows.Add(new DeliveredRow { Label = load + "bare source", Count = 0, SettledKelvin = bare });
 
             foreach (int count in new int[] { 1, 2, 4, 8 })
             {
+/// <summary>Column operation.</summary>
                 float settled = Column(count, false, watts);
                 float mass = radiator.Mass * count;
                 rows.Add(new DeliveredRow
@@ -443,10 +350,9 @@ namespace Thermodynamics.Harness
                 });
             }
 
-            // The same slab as plain armour. If armour is close, the radiator's properties are not
-            // earning the block its place in the mod.
             foreach (int count in new int[] { 1, 2, 4, 8 })
             {
+/// <summary>Column operation.</summary>
                 float settled = Column(count, true, watts);
                 float mass = ArmourSlabMass * count;
                 rows.Add(new DeliveredRow
@@ -464,17 +370,9 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        /// <summary>
-        /// A 1x5x2 slab of light armour weighs what ten armour cubes weigh, because that is the
-        /// volume it fills. Costing it any other way would flatter whichever block is being
-        /// argued for.
-        /// </summary>
         private const float ArmourSlabMass = 5000f;
 
-        /// <summary>
-        /// A 2 MW source with <paramref name="panels"/> panels stacked on top of it, run to steady
-        /// state in shadow. Returns the source's temperature in kelvin.
-        /// </summary>
+/// <summary>Column operation.</summary>
         private static float Column(int panels, bool armourInstead, float watts)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -493,6 +391,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -502,99 +401,57 @@ namespace Thermodynamics.Harness
             return runner.Final.Tracked.TryGetValue("source", out value) ? value : 0f;
         }
 
-        // ---- sensitivity: which dial actually moves the number ---------------------------------
 
-        /// <summary>One variation on the shipped radiator, and what it delivered.</summary>
         public class SensitivityRow
         {
             public string Dial;
             public string Change;
             public float SettledKelvin;
 
-            /// <summary>Kelvin below the shipped radiator's result. Negative is worse.</summary>
             public float KelvinVersusShipped;
 
-            /// <summary>Where the panel itself settled, kelvin.</summary>
             public float PanelKelvin;
 
-            /// <summary>The gradient the joint is carrying at equilibrium.</summary>
             public float JointDropKelvin;
 
-            /// <summary>W/K of the source-to-panel joint, measured in this rig.</summary>
             public float JointWattsPerKelvin;
 
-            /// <summary>Watts crossing that joint at equilibrium — what the panel is actually removing.</summary>
             public float ThroughJointWatts;
 
-            /// <summary>
-            /// Substeps the rig demands of the integrator at the shipped step, so a row's cost sits
-            /// beside its gain rather than a page away (`E6`). Zero where the row does not measure
-            /// it. The loop is the element this matters for: a segment's substep is sized from
-            /// `SegmentConductance / SegmentThermalMass`, so a dial that buys transport by raising
-            /// the conductance alone spends it here.
-            /// </summary>
             public float SubstepDemand;
         }
 
-        /// <summary>
-        /// The shipped radiator against a set of one-at-a-time changes, each run on the same
-        /// 200 kW column. This is the table a tuning decision is actually made from: it says which
-        /// property is binding, by changing one at a time and seeing which one the answer moves
-        /// with.
-        ///
-        /// Some of these are dials the definitions already have and some are dials that do not
-        /// exist yet. That is deliberate — the point is to find out whether a dial would be worth
-        /// adding *before* adding it, rather than shipping a knob that turns out to be attached to
-        /// nothing.
-        /// </summary>
+/// <summary>Sensitivity operation.</summary>
         public static List<SensitivityRow> Sensitivity()
         {
+/// <summary>List operation.</summary>
             List<SensitivityRow> rows = new List<SensitivityRow>();
             ShippedBlocks.Definition shipped = ShippedBlocks.Get("Gauge_LG_Radiator");
 
+/// <summary>PanelColumn operation.</summary>
             float baseline = PanelColumn(ShippedBlocks.Model("Gauge_LG_Radiator"));
             rows.Add(Row("(shipped)", "as built", ShippedBlocks.Model("Gauge_LG_Radiator"), baseline));
 
-            // The dial that prompted the question: a bigger fake surface.
             foreach (float scaler in new float[] { 2.5f, 5f, 10f })
             {
                 rows.Add(Row("ExposedSurfaceMultiplier", "x" + N(scaler / shipped.Thermal.ExposedSurfaceMultiplier, 1)
                     + "  (" + N(scaler, 2) + ")", Variant(shipped, t => t.ExposedSurfaceMultiplier = scaler), baseline));
             }
 
-            // The other surface dial the definitions already carry. Swept to 1.0, the ceiling a
-            // surface cannot pass, and labelled from what actually ships - a hand-typed "0.35 ->"
-            // survived the block being re-authored at 0.85 and read as a loss (`E5`).
             rows.Add(Row("Emissivity", N(shipped.Thermal.Emissivity, 2) + " -> 1.00",
                 Variant(shipped, t => t.Emissivity = 1f), baseline));
 
-            // Conduction, three ways. These are the ones the definitions cannot currently express.
             rows.Add(Row("mount faces", "2/6 -> 6/6", MountEverywhere(shipped), baseline));
             rows.Add(Row("panel depth", "1x5x2 -> 1x1x2, same mass", ShortPath(shipped), baseline));
             rows.Add(Row("both of the above", "6/6 and 1x1x2", ShortPathEverywhere(shipped), baseline));
 
-            // The other way to feed a panel, and the reason this table matters. A bolt joint and a
-            // coolant sink face are two different couplings to the same panel, and the definitions
-            // already carry a dial for one of them.
             rows.Add(CoolantFed(baseline, 0f, 0f));
 
-            // **The dial under the sink face.** A sink carries `h · A`, and on a large grid that is
-            // `160 × 6.25 = 1,000 W/K` exactly - so the one number deciding whether a loop can move
-            // a source's heat is the fluid's convective coefficient. Swept to the ceiling the
-            // settings menu already offers, because the rows above say every surface dial leaves
-            // the joint where it found it and this is the only leg left.
             foreach (float coefficient in new float[] { 400f, 1000f, 2000f })
             {
                 rows.Add(CoolantFed(baseline, coefficient, 0f));
             }
 
-            // **And the number underneath the cost.** `CoolantMassPerPipe` is a flat 50 kg with no
-            // grid size in it - 3.2 kg/m³ in a 2.5 m cube, which is a gas, against 400 kg/m³ in a
-            // 0.5 m one, which is a liquid. It is the same defect `HeatTransferCoefficient` was
-            // already corrected for, and it is the denominator of the substep a segment demands.
-            // 820 kg is a large cell 5 % full of water-glycol; the pair is the question this table
-            // exists to answer, because a loop that carries six times as much and asks the
-            // integrator for no more is a different proposition from one that asks for six times.
             foreach (float mass in new float[] { 200f, 515f, 820f, 2000f })
             {
                 rows.Add(CoolantFed(baseline, 1000f, mass));
@@ -603,31 +460,20 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        /// <summary>
-        /// The same panel on the same load, reached through a coolant sink face instead of a bolt
-        /// joint. Everything else is held: same source, same watts, same panel.
-        /// </summary>
-        /// <param name="coefficient">
-        /// Fluid-to-wall convective coefficient, W/(m² K); zero leaves the shipped value alone.
-        /// </param>
-        /// <param name="massPerPipe">
-        /// Coolant carried by one pipe block, kg; zero leaves the shipped value alone.
-        /// </param>
+/// <summary>CoolantFed operation.</summary>
         private static SensitivityRow CoolantFed(float baseline, float coefficient, float massPerPipe)
         {
             GridBuilder builder = GridBuilder.Large();
 
-            // Source and panel sit under the same ring, three cells apart, so they do not touch:
-            // the loop has to be the only path between them or the comparison measures conduction.
-            // Both sink cells are on a straight run, because a corner carries no sink port.
+/// <summary>Vector3I operation.</summary>
             Vector3I sourceCell = new Vector3I(1, 0, 0);
+/// <summary>Vector3I operation.</summary>
             Vector3I panelTop = new Vector3I(4, 0, 0);
 
             builder.Place(Heater(), sourceCell);
             builder.Last.PowerConsumedWatts = 200000f;
             BlockInstance source = builder.Last;
 
-            // The panel hangs below the ring with its top face against the sink.
             builder.Place(ShippedBlocks.Model("Gauge_LG_Radiator"), panelTop - new Vector3I(0, 4, 0));
             BlockInstance panel = builder.Last;
 
@@ -648,6 +494,7 @@ namespace Thermodynamics.Harness
                 simulation.RebuildAll();
             }
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -659,7 +506,6 @@ namespace Thermodynamics.Harness
             runner.Final.Tracked.TryGetValue("source", out sourceKelvin);
             runner.Final.Tracked.TryGetValue("panel", out panelKelvin);
 
-            // A sink face's coupling, for comparison with the bolt joint above it.
             float coupling = 0f;
             IList<CoolantLoop> loops = simulation.Solver.Loops;
             if (loops != null && loops.Count > 0)
@@ -670,6 +516,7 @@ namespace Thermodynamics.Harness
             return new SensitivityRow
             {
                 Dial = "coolant sink",
+/// <summary>Describe operation.</summary>
                 Change = Describe(coefficient, massPerPipe),
                 SettledKelvin = sourceKelvin,
                 KelvinVersusShipped = baseline - sourceKelvin,
@@ -681,18 +528,21 @@ namespace Thermodynamics.Harness
             };
         }
 
-        /// <summary>Names a loop arm by what was changed in it, and nothing by what was not.</summary>
+/// <summary>Describe operation.</summary>
         private static string Describe(float coefficient, float massPerPipe)
         {
             if (coefficient <= 0f && massPerPipe <= 0f) return "fed by a loop, not bolted";
 
+/// <summary>N operation.</summary>
             string text = coefficient > 0f ? "h " + N(coefficient, 0) : "h shipped";
             if (massPerPipe > 0f) text += ", " + N(massPerPipe, 0) + " kg/pipe";
             return text;
         }
 
+/// <summary>Row operation.</summary>
         private static SensitivityRow Row(string dial, string change, BlockModel model, float baseline)
         {
+/// <summary>PanelColumnDetail operation.</summary>
             ColumnResult result = PanelColumnDetail(model);
 
             return new SensitivityRow
@@ -708,37 +558,30 @@ namespace Thermodynamics.Harness
             };
         }
 
-        /// <summary>The shipped radiator with one thermal property changed and nothing else.</summary>
+/// <summary>Variant operation.</summary>
         private static BlockModel Variant(ShippedBlocks.Definition shipped, Action<BlockThermalProperties> change)
         {
             BlockModel model = ShippedBlocks.Model("Gauge_LG_Radiator");
+/// <summary>Clone operation.</summary>
             BlockThermalProperties thermal = Clone(shipped.Thermal);
             change(thermal);
             model.Thermal = thermal;
             return model;
         }
 
+/// <summary>Clone operation.</summary>
         private static BlockThermalProperties Clone(BlockThermalProperties source)
         {
-            // The definition's own Clone; the hand copy this replaces silently dropped
-            // ExcludeFromSimulation, SolarAbsorptivity and HeatSourceWatts.
             return source.Clone();
         }
 
-        /// <summary>The same panel, but bolted on by every face rather than only top and bottom.</summary>
+/// <summary>MountEverywhere operation.</summary>
         private static BlockModel MountEverywhere(ShippedBlocks.Definition shipped)
         {
             return BlockModel.Solid("RadiatorAllMounts", shipped.Size, shipped.Mass, shipped.Thermal);
         }
 
-        /// <summary>
-        /// The same panel's mass and properties in a block one cell deep along its mount axis.
-        ///
-        /// Conduction runs centre-to-interface, so a block's half-depth along the contact axis is
-        /// in the denominator: the shipped panel is five cells tall, which puts 6.25 m of metal
-        /// between its middle and the joint it hangs from. This variant asks how much of the
-        /// radiator's problem is that shape rather than its surface.
-        /// </summary>
+/// <summary>ShortPath operation.</summary>
         private static BlockModel ShortPath(ShippedBlocks.Definition shipped)
         {
             BlockModel model = BlockModel.Solid("RadiatorShallow", new Vector3I(1, 1, 2),
@@ -754,13 +597,13 @@ namespace Thermodynamics.Harness
             return model;
         }
 
+/// <summary>ShortPathEverywhere operation.</summary>
         private static BlockModel ShortPathEverywhere(ShippedBlocks.Definition shipped)
         {
             return BlockModel.Solid("RadiatorShallowAllMounts", new Vector3I(1, 1, 2),
                 shipped.Mass, shipped.Thermal);
         }
 
-        /// <summary>What the column rig settled at, in enough detail to say which limit bound.</summary>
         private class ColumnResult
         {
             public float SourceKelvin;
@@ -768,20 +611,13 @@ namespace Thermodynamics.Harness
             public float JointWattsPerKelvin;
         }
 
+/// <summary>PanelColumn operation.</summary>
         private static float PanelColumn(BlockModel panel)
         {
             return PanelColumnDetail(panel).SourceKelvin;
         }
 
-        /// <summary>
-        /// A 200 kW source with one panel on it — the load where a panel still matters — reporting
-        /// both temperatures and the conductance between them.
-        ///
-        /// Both ends matter. A shed figure quoted at a reference temperature and a conductance
-        /// quoted per kelvin cannot be compared directly, because neither says what temperature the
-        /// panel actually reaches; the drop across the joint at equilibrium is what settles which
-        /// of the two is binding, and it is a measurement rather than an inference.
-        /// </summary>
+/// <summary>PanelColumnDetail operation.</summary>
         private static ColumnResult PanelColumnDetail(BlockModel panel)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -793,17 +629,18 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
             runner.Track("panel", placed);
             runner.Run(14400f, 1200f);
 
+/// <summary>ColumnResult operation.</summary>
             ColumnResult result = new ColumnResult();
             runner.Final.Tracked.TryGetValue("source", out result.SourceKelvin);
             runner.Final.Tracked.TryGetValue("panel", out result.PanelKelvin);
 
-            // The one link between the two, read out of the solver rather than recomputed.
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             int a = -1;
             int b = -1;
@@ -820,16 +657,13 @@ namespace Thermodynamics.Harness
             return result;
         }
 
-        // ---- heat pump ---------------------------------------------------------------------------
 
-        /// <summary>
-        /// The large heat pump across a sweep of temperature gaps, reporting which of its three
-        /// limits binds at each. The block's whole character is which one that is, and it changes
-        /// twice across an ordinary range.
-        /// </summary>
+/// <summary>Pump operation.</summary>
         public static List<PumpRow> Pump()
         {
+/// <summary>List operation.</summary>
             List<PumpRow> rows = new List<PumpRow>();
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             HeatPumpShape shape = ThermalHeatPumpShapes.Get("Gauge_LG_HeatPump", Vector3I.One);
 
@@ -860,16 +694,11 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        // ---- coolant loops --------------------------------------------------------------------------
 
-        /// <summary>
-        /// Rings of rising size around one hot block, so the shape of the return on plumbing is
-        /// visible rather than asserted. Each pipe couples to the fluid at its own full strength,
-        /// so the interesting question is whether the *delivered* cooling keeps up with that or
-        /// flattens against something else.
-        /// </summary>
+/// <summary>Loops operation.</summary>
         public static List<LoopRow> Loops()
         {
+/// <summary>List operation.</summary>
             List<LoopRow> rows = new List<LoopRow>();
 
             foreach (int side in new int[] { 3, 4, 6, 8 })
@@ -879,14 +708,13 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
+/// <summary>Ring operation.</summary>
         private static LoopRow Ring(int side)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(3, 1, 3));
 
-            // The source sits under the ring's near edge, so a sink face can actually reach it.
-            // Under the centre it could not: a rectangle's perimeter never crosses its middle, and
-            // a ring whose sink faces armour is the failure this measurement exists to avoid.
+/// <summary>Vector3I operation.</summary>
             Vector3I under = new Vector3I(1, 0, 0);
             BlockInstance occupant = builder.Grid.GetAtCell(under);
             builder.Grid.Remove(occupant);
@@ -907,6 +735,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -937,20 +766,23 @@ namespace Thermodynamics.Harness
             };
         }
 
-        // ---- reporting -------------------------------------------------------------------------------
 
+/// <summary>N operation.</summary>
         private static string N(float value, int decimals = 1)
         {
             return value.ToString("n" + decimals, CultureInfo.InvariantCulture);
         }
 
-        /// <summary>The whole pass as text, for reading.</summary>
+/// <summary>Report operation.</summary>
         public static string Report()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
 
             sb.AppendLine("BLOCKS  (shed at " + N(ReferenceTemperature, 0) + " K into a "
+/// <summary>N operation.</summary>
                 + N(ReferenceAmbient, 1) + " K sky; reach = conduction across 100 K)");
             sb.AppendLine();
             sb.AppendLine(string.Format("{0,-42} {1,-13} {2,5} {3,8} {4,5} {5,9} {6,8} {7,10} {8,6} {9,9} {10,10}",
@@ -960,6 +792,7 @@ namespace Thermodynamics.Harness
             foreach (BlockRow row in Blocks())
             {
                 sb.AppendLine(string.Format("{0,-42} {1,-13} {2,5} {3,8} {4,5} {5,9} {6,8} {7,10} {8,6} {9,9} {10,10}",
+/// <summary>N operation.</summary>
                     row.Subtype, row.Kind, row.Cells, N(row.Mass, 0), row.Pcu,
                     N(row.CapacityJoulesPerKelvin, 0), N(row.ExposedAreaAlone, 1),
                     N(row.ShedMountedWatts, 0), row.MountFaceCount + "/6",
@@ -975,6 +808,7 @@ namespace Thermodynamics.Harness
             foreach (LoadRow row in Loads())
             {
                 sb.AppendLine(string.Format("{0,-30} {1,-13} {2,10} {3,9} {4,10} {5,12}",
+/// <summary>N operation.</summary>
                     row.Subtype, row.TypeId, N(row.RatedMegawatts, 2), row.Path,
                     N(row.WasteFraction, 3), N(row.WasteWatts, 0)));
             }
@@ -988,6 +822,7 @@ namespace Thermodynamics.Harness
             foreach (DeliveredRow row in Delivered())
             {
                 sb.AppendLine(string.Format("{0,-28} {1,6} {2,12} {3,12} {4,10} {5,12}",
+/// <summary>N operation.</summary>
                     row.Label, row.Count, N(row.SettledKelvin, 1), N(row.KelvinSaved, 1),
                     N(row.AddedMass, 0), N(row.KelvinPerTonne, 2)));
             }
@@ -1002,9 +837,11 @@ namespace Thermodynamics.Harness
             foreach (SensitivityRow row in Sensitivity())
             {
                 sb.AppendLine(string.Format("{0,-20} {1,-30} {2,10} {3,8} {4,9} {5,8} {6,10} {7,11} {8,9}",
+/// <summary>N operation.</summary>
                     row.Dial, row.Change, N(row.SettledKelvin, 1), N(row.KelvinVersusShipped, 1),
                     N(row.PanelKelvin, 1), N(row.JointDropKelvin, 1),
                     N(row.JointWattsPerKelvin, 0), N(row.ThroughJointWatts, 0),
+/// <summary>N operation.</summary>
                     row.SubstepDemand > 0f ? N(row.SubstepDemand, 2) : "-"));
             }
 
@@ -1030,6 +867,7 @@ namespace Thermodynamics.Harness
             foreach (LoopRow row in Loops())
             {
                 sb.AppendLine(string.Format("{0,7} {1,7} {2,12} {3,14} {4,12}",
+/// <summary>N operation.</summary>
                     row.Pipes, row.Sinks, N(row.FluidThermalMass, 0),
                     N(row.CouplingWattsPerKelvin, 0), N(row.SettledKelvin, 1)));
             }
@@ -1039,9 +877,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        /// <summary>The block table as CSV, for diffing a tuning pass against the one before it.</summary>
+/// <summary>BlocksCsv operation.</summary>
         public static string BlocksCsv()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("subtype,kind,large,cells,mass_kg,pcu,build_s,specific_heat,emissivity,"
                 + "conductivity,exposed_surface_multiplier,capacity_j_per_k,area_m2,shed_alone_w,shed_mounted_w,"
@@ -1057,12 +896,14 @@ namespace Thermodynamics.Harness
                     F(row.SpecificHeat), F(row.Emissivity), F(row.Conductivity), F(row.ExposedSurfaceMultiplier),
                     F(row.CapacityJoulesPerKelvin), F(row.ExposedAreaAlone), F(row.ShedAloneWatts),
                     F(row.ShedMountedWatts), row.MountFaceCount.ToString(CultureInfo.InvariantCulture),
+/// <summary>F operation.</summary>
                     row.JointFace, F(row.ConductanceWattsPerKelvin), F(row.ShedOverReach),
                 }));
             }
             return sb.ToString();
         }
 
+/// <summary>F operation.</summary>
         private static string F(float value)
         {
             return value.ToString("r", CultureInfo.InvariantCulture);

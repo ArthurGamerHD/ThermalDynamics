@@ -4,11 +4,6 @@ using Thermodynamics.Core;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// Reading a <c>/thermal heat</c> command, with no <c>Sandbox.*</c> reference in it so the harness
-    /// can link it directly. The parse is the half of the debug tool that can be wrong silently —
-    /// a mis-read magnitude is a modder wondering why their bonfire does nothing.
-    /// </summary>
     public static class HeatSourceCommand
     {
         public enum Verb
@@ -22,7 +17,6 @@ namespace Thermodynamics
             Clear,
         }
 
-        /// <summary>A parsed command, or <see cref="Verb.Help"/> with a reason.</summary>
         public struct Parsed
         {
             public Verb Verb;
@@ -31,13 +25,12 @@ namespace Thermodynamics
             public float Range;
             public int Id;
 
-            /// <summary>Why the parse failed, when it did. Null on success.</summary>
             public string Error;
         }
 
-        /// <summary>Range in metres when a command does not say.</summary>
         public const float DefaultRange = 200f;
 
+/// <summary>Parse operation.</summary>
         public static Parsed Parse(string argument)
         {
             Parsed parsed = new Parsed { Range = DefaultRange };
@@ -60,6 +53,7 @@ namespace Thermodynamics
                     parsed.Verb = Verb.Remove;
                     if (parts.Length < 2 || !TryId(parts[1], out parsed.Id))
                     {
+/// <summary>Fail operation.</summary>
                         return Fail("usage: /thermal heat remove <id>");
                     }
                     return parsed;
@@ -69,6 +63,7 @@ namespace Thermodynamics
                     if (parts.Length < 3 || !TryId(parts[1], out parsed.Id)
                         || !TryWatts(parts[2], out parsed.Watts))
                     {
+/// <summary>Fail operation.</summary>
                         return Fail("usage: /thermal heat set <id> <watts>");
                     }
                     return parsed;
@@ -78,6 +73,7 @@ namespace Thermodynamics
                     if (parts.Length < 3 || !TryWatts(parts[1], out parsed.Watts)
                         || !TryWatts(parts[2], out parsed.Seconds))
                     {
+/// <summary>Fail operation.</summary>
                         return Fail("usage: /thermal heat pulse <watts> <seconds> [range]");
                     }
                     if (parsed.Seconds <= 0f) return Fail("a pulse needs a positive duration");
@@ -93,15 +89,13 @@ namespace Thermodynamics
             return parsed;
         }
 
+/// <summary>Fail operation.</summary>
         private static Parsed Fail(string message)
         {
             return new Parsed { Verb = Verb.Help, Range = DefaultRange, Error = message };
         }
 
-        /// <summary>
-        /// Watts with an optional magnitude suffix, because a useful bonfire is megawatts and
-        /// nobody wants to count the zeroes.
-        /// </summary>
+/// <summary>TryWatts operation.</summary>
         public static bool TryWatts(string text, out float watts)
         {
             watts = 0f;
@@ -127,26 +121,26 @@ namespace Thermodynamics
             return true;
         }
 
+/// <summary>TryId operation.</summary>
         private static bool TryId(string text, out int id)
         {
             return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out id);
         }
 
+/// <summary>RangeOr operation.</summary>
         private static float RangeOr(string text, float fallback)
         {
             float range;
             return TryWatts(text, out range) && range > 0f ? range : fallback;
         }
 
-        /// <summary>
-        /// Watts in the unit a person would say them in. Invariant, because this echoes a figure
-        /// <see cref="TryWatts"/> parsed as invariant and a player may paste it back.
-        /// </summary>
+/// <summary>Describe operation.</summary>
         public static string Describe(float watts)
         {
             return Units.Watts(watts, 2, CultureInfo.InvariantCulture);
         }
 
+/// <summary>Help operation.</summary>
         public static string Help()
         {
             return "heat commands:\n"

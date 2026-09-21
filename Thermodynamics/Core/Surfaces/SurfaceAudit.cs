@@ -3,39 +3,19 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// Why a block face counts as exposed, or does not.
-    ///
-    /// <see cref="SurfaceMap.GetExposedFaces"/> returns only a count, which cannot say why a face
-    /// that looks open to the sky was not counted. Two separate rules can reject a cell face and
-    /// both produce the same count. This records which rule applied, per cell face, and counts
-    /// mount joints alongside rather than as a rejection.
-    /// </summary>
     public struct FaceExposure
     {
-        /// <summary>
-        /// Cell faces on this side of the block. <see cref="Exposed"/>, <see cref="Sealed"/> and
-        /// <see cref="Interior"/> sum to this; <see cref="Mounted"/> is a subset of the first.
-        /// </summary>
         public int Cells;
 
-        /// <summary>Cell faces open to the outside: what the model counts.</summary>
         public int Exposed;
 
-        /// <summary>Rejected because something on the other side is airtight against this face.</summary>
         public int Sealed;
 
-        /// <summary>
-        /// Exposed cell faces that also carry a mount-to-mount joint — a panel with a grating or a
-        /// catwalk bolted flat against it. Not a rejection: a subset of <see cref="Exposed"/>,
-        /// reported so the population that conducts *and* radiates through the same face can be
-        /// counted on a real ship.
-        /// </summary>
         public int Mounted;
 
-        /// <summary>Rejected because the space beyond is inside the ship rather than outdoors.</summary>
         public int Interior;
 
+/// <summary>ToString operation.</summary>
         public override string ToString()
         {
             return Exposed + "/" + Cells
@@ -43,18 +23,9 @@ namespace Thermodynamics.Core
         }
     }
 
-    /// <summary>
-    /// A block's six faces, explained.
-    ///
-    /// A separate walk from the simulation's rather than a flag threaded through it, so the hot path
-    /// stays a counting loop with no diagnostic branches and this runs only when something asks.
-    /// </summary>
     public static class SurfaceAudit
     {
-        /// <summary>
-        /// Explains every face of one block. <paramref name="results"/> must hold six entries and
-        /// is overwritten.
-        /// </summary>
+/// <summary>Explain operation.</summary>
         public static void Explain(
             SurfaceMap surfaces, BlockInstance block, RoomMap rooms, FaceExposure[] results)
         {
@@ -62,6 +33,7 @@ namespace Thermodynamics.Core
 
             for (int i = 0; i < Face.Count; i++)
             {
+/// <summary>default operation.</summary>
                 results[i] = default(FaceExposure);
             }
 
@@ -80,6 +52,7 @@ namespace Thermodynamics.Core
                 int u = span.U;
                 int v = span.V;
 
+/// <summary>default operation.</summary>
                 FaceExposure result = default(FaceExposure);
 
                 for (int a = BoxGeometry.Component(min, u); a < BoxGeometry.Component(maxExclusive, u); a++)
@@ -95,9 +68,6 @@ namespace Thermodynamics.Core
                         int state = surfaces.GetState(cell);
                         Vector3I neighbour = cell + offset;
 
-                        // The order mirrors GetExposedFaces exactly: a cell face rejected by two
-                        // rules is reported against the first, so the rejection counts sum to the
-                        // number of cell faces rather than double-counting.
                         if (CellSurface.NeighbourAirtight(state, face))
                         {
                             result.Sealed++;
@@ -112,9 +82,6 @@ namespace Thermodynamics.Core
 
                         result.Exposed++;
 
-                        // Counted beside the exposure rather than instead of it. A face bolted to
-                        // something that does not seal both conducts through the joint and sees
-                        // the sky, and this is how much of a ship is in that state.
                         if (CellSurface.NeighbourMount(state, face) && CellSurface.SelfMount(state, face))
                         {
                             result.Mounted++;
@@ -126,13 +93,11 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>
-        /// Explains every block on a grid, in model order. Allocates; intended for a report rather
-        /// than a step.
-        /// </summary>
+/// <summary>ExplainAll operation.</summary>
         public static List<BlockExposure> ExplainAll(
             SurfaceMap surfaces, GridModel grid, RoomMap rooms, int limit = int.MaxValue)
         {
+/// <summary>List operation.</summary>
             List<BlockExposure> results = new List<BlockExposure>();
             if (surfaces == null || grid == null) return results;
 
@@ -143,6 +108,7 @@ namespace Thermodynamics.Core
             {
                 Explain(surfaces, blocks[i], rooms, faces);
 
+/// <summary>BlockExposure operation.</summary>
                 BlockExposure entry = new BlockExposure();
                 entry.Block = blocks[i];
                 entry.Faces = (FaceExposure[])faces.Clone();
@@ -153,13 +119,11 @@ namespace Thermodynamics.Core
         }
     }
 
-    /// <summary>One block and the explanation of its six faces.</summary>
     public struct BlockExposure
     {
         public BlockInstance Block;
         public FaceExposure[] Faces;
 
-        /// <summary>Cell faces the model counts as open to the sky, over all six sides.</summary>
         public int TotalExposed
         {
             get

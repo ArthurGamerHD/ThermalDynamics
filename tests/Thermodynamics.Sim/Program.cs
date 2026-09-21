@@ -10,15 +10,9 @@ using Thermodynamics.Harness;
 
 namespace Thermodynamics.Sim
 {
-    /// <summary>
-    /// Command line front end for the scenario library.
-    ///
-    ///   dotnet run --project tests/Thermodynamics.Sim -- list
-    ///   dotnet run --project tests/Thermodynamics.Sim -- run reactor
-    ///   dotnet run --project tests/Thermodynamics.Sim -- run all --csv out/
-    /// </summary>
     public static class Program
     {
+/// <summary>Main operation.</summary>
         public static int Main(string[] args)
         {
             if (args.Length == 0 || args[0] == "help" || args[0] == "--help")
@@ -34,30 +28,39 @@ namespace Thermodynamics.Sim
                     return 0;
 
                 case "run":
+/// <summary>RunCommand operation.</summary>
                     return RunCommand(args);
 
                 case "bench":
+/// <summary>BenchCommand operation.</summary>
                     return BenchCommand(args);
 
                 case "balance":
+/// <summary>BalanceCommand operation.</summary>
                     return BalanceCommand(args);
 
                 case "wind":
+/// <summary>WindCommand operation.</summary>
                     return WindCommand(args);
 
                 case "planets":
+/// <summary>PlanetsCommand operation.</summary>
                     return PlanetsCommand(args);
 
                 case "descent":
+/// <summary>DescentCommand operation.</summary>
                     return DescentCommand(args);
 
                 case "drift":
+/// <summary>DriftCommand operation.</summary>
                     return DriftCommand(args);
 
                 case "inputs":
+/// <summary>InputsCommand operation.</summary>
                     return InputsCommand(args);
 
                 case "prefabs":
+/// <summary>PrefabCommand operation.</summary>
                     return PrefabCommand(args);
 
                 case "thermal-corpus-export":
@@ -109,9 +112,11 @@ namespace Thermodynamics.Sim
                 {
                     int take;
                     int.TryParse(ValueAfter(args, "--top") ?? "25", out take);
+/// <summary>ValueAfter operation.</summary>
                     string census = ValueAfter(args, "--census")
                         ?? "out/census-2026-08-25/composition.csv";
 
+/// <summary>ValueAfter operation.</summary>
                     string triageCsv = ValueAfter(args, "--csv");
                     if (triageCsv != null)
                     {
@@ -122,6 +127,7 @@ namespace Thermodynamics.Sim
                         return 0;
                     }
 
+/// <summary>ValueAfter operation.</summary>
                     string levers = ValueAfter(args, "--levers");
                     if (levers != null)
                     {
@@ -144,8 +150,7 @@ namespace Thermodynamics.Sim
                     int take;
                     int.TryParse(ValueAfter(args, "--ships") ?? "500", out take);
 
-                    // One named file, parsed with the reader's own counters visible even when the
-                    // ship is discarded — which is the state a dropped ship is in.
+/// <summary>ValueAfter operation.</summary>
                     string one_file = ValueAfter(args, "--file");
                     if (one_file != null)
                     {
@@ -160,6 +165,7 @@ namespace Thermodynamics.Sim
                     System.Collections.Generic.List<string> sample =
                         BaseVariantLab.Sample(ValueAfter(args, "--path"), take);
 
+/// <summary>ValueAfter operation.</summary>
                     string ofType = ValueAfter(args, "--type");
                     Console.Write(ofType != null
                         ? BaseVariantLab.ShareReport(sample, ofType)
@@ -198,6 +204,7 @@ namespace Thermodynamics.Sim
                     return 0;
 
                 case "dump":
+/// <summary>DumpCommand operation.</summary>
                     return DumpCommand(args);
 
                 case "corpus":
@@ -237,6 +244,7 @@ namespace Thermodynamics.Sim
                     Console.Write(RetrofitLab.Report(
                         ValueAfter(args, "--path"), retrofitShips, LabRun.ModeOf(args)));
 
+/// <summary>ValueAfter operation.</summary>
                     string retrofitCsv = ValueAfter(args, "--csv");
                     if (retrofitCsv != null && RetrofitLab.LastRows != null)
                     {
@@ -252,6 +260,7 @@ namespace Thermodynamics.Sim
                 {
                     Console.Write(StiffnessLab.Report(ValueAfter(args, "--path"), LabRun.ModeOf(args)));
 
+/// <summary>ValueAfter operation.</summary>
                     string stiffCsv = ValueAfter(args, "--csv");
                     if (stiffCsv != null && StiffnessLab.LastRows != null)
                     {
@@ -278,6 +287,7 @@ namespace Thermodynamics.Sim
                 case "sweep":
                 {
                     Console.Write(ProfileSweep.Report());
+/// <summary>ValueAfter operation.</summary>
                     string directory = ValueAfter(args, "--csv");
                     if (directory != null)
                     {
@@ -297,15 +307,11 @@ namespace Thermodynamics.Sim
             }
         }
 
-        /// <summary>
-        /// `G7`: every ship the game itself spawns, simulated as it arrives.
-        ///
-        /// The compatibility floor, measured on the 705 prefabs in the install rather than on ships
-        /// players uploaded. The criterion is in balance-lab.md and was written before this ran.
-        /// </summary>
+/// <summary>PrefabCommand operation.</summary>
         private static int PrefabCommand(string[] args)
         {
             int limit = 0;
+/// <summary>ValueAfter operation.</summary>
             string configured = ValueAfter(args, "--limit");
             if (configured != null) int.TryParse(configured, out limit);
 
@@ -326,6 +332,7 @@ namespace Thermodynamics.Sim
             List<PrefabLab.Outcome> outcomes = PrefabLab.Run(null, limit, load);
             Console.Write(PrefabLab.Report(outcomes));
 
+/// <summary>ValueAfter operation.</summary>
             string directory = ValueAfter(args, "--csv");
             if (directory != null)
             {
@@ -339,22 +346,19 @@ namespace Thermodynamics.Sim
             return outcomes.Count == 0 ? 1 : 0;
         }
 
-        /// <summary>
-        /// How long a client that joined with the wrong temperatures stays wrong.
-        ///
-        /// Block temperatures are not replicated, so a client joining mid-session starts from the
-        /// last save. This runs the same hull twice from states a stated distance apart and
-        /// measures how the disagreement decays. See the lab for what it does and does not model.
-        /// </summary>
+/// <summary>DriftCommand operation.</summary>
         private static int DriftCommand(string[] args)
         {
+/// <summary>ValueAfter operation.</summary>
             string scenario = ValueAfter(args, "--scenario") ?? "shadow";
 
             float watch = 600f;
+/// <summary>ValueAfter operation.</summary>
             string configured = ValueAfter(args, "--watch");
             if (configured != null) float.TryParse(configured, out watch);
 
             int blocks = 2000;
+/// <summary>ValueAfter operation.</summary>
             string sized = ValueAfter(args, "--size");
             if (sized != null) int.TryParse(sized, out blocks);
 
@@ -365,6 +369,7 @@ namespace Thermodynamics.Sim
                 + ", watched for " + watch.ToString("n0") + " simulated seconds.");
             Console.WriteLine();
 
+/// <summary>List operation.</summary>
             List<ClientDriftLab.Run> runs = new List<ClientDriftLab.Run>();
             for (int i = 0; i < stale.Length; i++)
             {
@@ -373,8 +378,7 @@ namespace Thermodynamics.Sim
 
             Console.Write(ClientDriftLab.Report(runs));
 
-            // The correction sweep, on the worst of the three staleness rungs: what a protocol
-            // that states the near-critical band on an interval buys, and what it costs.
+/// <summary>List operation.</summary>
             List<ClientDriftLab.Run> corrected = new List<ClientDriftLab.Run>();
             if (HasFlag(args, "--correct"))
             {
@@ -398,9 +402,6 @@ namespace Thermodynamics.Sim
                     }
                 }
 
-                // The composition the two above point at: state the whole hull once when the
-                // client joins, then track the band. The expensive packet happens once instead of
-                // every interval.
                 for (int i = 0; i < intervals.Length; i++)
                 {
                     corrected.Add(ClientDriftLab.Measure(scenario, worst, watch, blocks, null,
@@ -411,10 +412,6 @@ namespace Thermodynamics.Sim
                         }));
                 }
 
-                // **The diagnostic, not a proposal.** Replicating every block that can fail is far
-                // more than a session would send; what it answers is whether the residual left by
-                // the band is the update interval or the un-replicated hull around it dragging the
-                // corrected blocks back. Without this row that question is an opinion.
                 for (int i = 0; i < intervals.Length; i++)
                 {
                     corrected.Add(ClientDriftLab.Measure(scenario, worst, watch, blocks, null,
@@ -429,8 +426,7 @@ namespace Thermodynamics.Sim
                 Console.Write(ClientDriftLab.CorrectionReport(corrected));
             }
 
-            // The hardware sweep: a client that keeps losing simulated time, which is the one
-            // property of somebody else's machine this lab can reach.
+/// <summary>List operation.</summary>
             List<ClientDriftLab.Run> hitching = new List<ClientDriftLab.Run>();
             if (HasFlag(args, "--hitch"))
             {
@@ -462,9 +458,11 @@ namespace Thermodynamics.Sim
                 Console.Write(ClientDriftLab.HitchReport(hitching));
             }
 
+/// <summary>ValueAfter operation.</summary>
             string directory = ValueAfter(args, "--csv");
             if (directory != null)
             {
+/// <summary>StringBuilder operation.</summary>
                 StringBuilder csv = new StringBuilder();
                 csv.AppendLine("scenario,blocks,stale_s,seconds,max_k,mean_k,disagree_on_critical,hot_blocks");
 
@@ -490,6 +488,7 @@ namespace Thermodynamics.Sim
 
                 if (corrected.Count > 0)
                 {
+/// <summary>StringBuilder operation.</summary>
                     StringBuilder sweep = new StringBuilder();
                     sweep.AppendLine("scenario,blocks,stale_s,interval_s,band_k,max_blocks,"
                         + "misreading_s,showing_safe_s,crying_wolf_s,updates,bytes,bytes_per_s,peak_blocks,dropped");
@@ -519,23 +518,19 @@ namespace Thermodynamics.Sim
             return 0;
         }
 
-        /// <summary>
-        /// Every input a client drives its own simulation from, degraded one at a time and then all
-        /// at once, with the correction off and on.
-        ///
-        /// The question this answers that `drift` does not: which of those inputs is a
-        /// **perturbation**, which decays on its own, and which is a **bias**, which does not — and
-        /// therefore which of them the readout needs a protocol for rather than patience.
-        /// </summary>
+/// <summary>InputsCommand operation.</summary>
         private static int InputsCommand(string[] args)
         {
+/// <summary>ValueAfter operation.</summary>
             string scenario = ValueAfter(args, "--scenario") ?? "planet";
 
             float watch = 600f;
+/// <summary>ValueAfter operation.</summary>
             string configured = ValueAfter(args, "--watch");
             if (configured != null) float.TryParse(configured, out watch);
 
             int blocks = 2000;
+/// <summary>ValueAfter operation.</summary>
             string sized = ValueAfter(args, "--size");
             if (sized != null) int.TryParse(sized, out blocks);
 
@@ -552,6 +547,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine();
 
             List<ClientInputLab.Degradation> cases = ClientInputLab.All();
+/// <summary>List operation.</summary>
             List<ClientInputLab.Result> results = new List<ClientInputLab.Result>();
 
             foreach (ClientInputLab.Degradation one in cases)
@@ -571,9 +567,11 @@ namespace Thermodynamics.Sim
                 Console.WriteLine("  " + one.Name.PadRight(20) + one.Because);
             }
 
+/// <summary>ValueAfter operation.</summary>
             string directory = ValueAfter(args, "--csv");
             if (directory != null)
             {
+/// <summary>StringBuilder operation.</summary>
                 StringBuilder csv = new StringBuilder();
                 csv.AppendLine("degradation,scenario,blocks,correction_s,whole_hull_on_join,"
                     + "peak_k,standing_k,misreading_s,peak_disagreeing,peak_server_critical,"
@@ -605,13 +603,7 @@ namespace Thermodynamics.Sim
             return 0;
         }
 
-        /// <summary>
-        /// A ship digging from the surface to the core: what the environment does at every depth.
-        ///
-        /// The one place the sun, the wind, the rock's damping and the planet's own heat are read on
-        /// a single axis. <c>--csv &lt;dir&gt;</c> writes the table for comparison against a field
-        /// dump's environment rows, which carry the same columns.
-        /// </summary>
+/// <summary>DescentCommand operation.</summary>
         private static int DescentCommand(string[] args)
         {
             List<Descent.Reading> readings = Descent.Run();
@@ -622,6 +614,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine();
             Console.Write(csv.Replace(",", "\t"));
 
+/// <summary>ValueAfter operation.</summary>
             string directory = ValueAfter(args, "--csv");
             if (directory != null)
             {
@@ -635,15 +628,12 @@ namespace Thermodynamics.Sim
             return 0;
         }
 
-        /// <summary>
-        /// The block balance pass: every shipped block costed and measured against the vanilla
-        /// blocks it competes with. Prints the tables; <c>--csv &lt;dir&gt;</c> also writes the
-        /// block table so one tuning pass can be diffed against the last.
-        /// </summary>
+/// <summary>BalanceCommand operation.</summary>
         private static int BalanceCommand(string[] args)
         {
             Console.Write(BalanceLab.Report());
 
+/// <summary>ValueAfter operation.</summary>
             string directory = ValueAfter(args, "--csv");
             if (directory != null)
             {
@@ -656,21 +646,9 @@ namespace Thermodynamics.Sim
             return 0;
         }
 
-        /// <summary>
-        /// A modelled day of wind over a whole planet: every latitude, several heights, and the day
-        /// from midnight to midnight, in about a second.
-        ///
-        ///   wind                    an earthlike world with terrain, clear weather
-        ///   wind scenarios          every shipped planet, every size, every corner
-        ///   wind --planet Triton    one of the game's own worlds at its usual size
-        ///   wind --diameter 19000   at a chosen diameter, in metres
-        ///   wind --flat             the same with the ground levelled, to isolate terrain
-        ///   wind --weather 1        at full weather intensity
-        ///   wind --csv out/         also write wind-day.csv, in the game's own column layout
-        /// </summary>
+/// <summary>WindCommand operation.</summary>
         private static int WindCommand(string[] args)
         {
-            // The scenario matrix rather than one world.
             for (int i = 1; i < args.Length; i++)
             {
                 if (args[i] == "scenarios" || args[i] == "--scenarios")
@@ -683,9 +661,11 @@ namespace Thermodynamics.Sim
             WindLab.Planet planet = new WindLab.Planet();
             WindLab.Options options = new WindLab.Options();
 
+/// <summary>ValueAfter operation.</summary>
             string world = ValueAfter(args, "--planet");
             if (world != null) planet = WindLab.Planet.Vanilla(world);
 
+/// <summary>ValueAfter operation.</summary>
             string diameter = ValueAfter(args, "--diameter");
             if (diameter != null)
             {
@@ -698,6 +678,7 @@ namespace Thermodynamics.Sim
                 if (args[i] == "--flat") planet.Ground = new WindLab.FlatTerrain(planet);
             }
 
+/// <summary>ValueAfter operation.</summary>
             string weather = ValueAfter(args, "--weather");
             if (weather != null)
             {
@@ -707,6 +688,7 @@ namespace Thermodynamics.Sim
 
             Console.Write(WindLab.Report(planet, options));
 
+/// <summary>ValueAfter operation.</summary>
             string animation = ValueAfter(args, "--animation");
             if (animation != null)
             {
@@ -715,6 +697,7 @@ namespace Thermodynamics.Sim
                 return 0;
             }
 
+/// <summary>ValueAfter operation.</summary>
             string directory = ValueAfter(args, "--csv");
             if (directory != null)
             {
@@ -728,13 +711,7 @@ namespace Thermodynamics.Sim
             return 0;
         }
 
-        /// <summary>
-        /// The thermal properties of every shipped world, derived from its own generator definition.
-        ///
-        ///   planets                         the table and what it comes from
-        ///   planets --xml                   the generated Planets.xml on stdout
-        ///   planets --write Data/Planets.xml   write it
-        /// </summary>
+/// <summary>PlanetsCommand operation.</summary>
         private static int PlanetsCommand(string[] args)
         {
             for (int i = 1; i < args.Length; i++)
@@ -746,6 +723,7 @@ namespace Thermodynamics.Sim
                 }
             }
 
+/// <summary>ValueAfter operation.</summary>
             string path = ValueAfter(args, "--write");
             if (path != null)
             {
@@ -760,17 +738,19 @@ namespace Thermodynamics.Sim
             return 0;
         }
 
-        /// <summary>Whether a bare flag is present, for options that take no value.</summary>
+/// <summary>HasFlag operation.</summary>
         private static bool HasFlag(string[] args, string flag)
         {
             return Cli.Has(args, flag);
         }
 
+/// <summary>ValueAfter operation.</summary>
         private static string ValueAfter(string[] args, string flag)
         {
             return Cli.Value(args, flag);
         }
 
+/// <summary>RunCommand operation.</summary>
         private static int RunCommand(string[] args)
         {
             if (args.Length < 2)
@@ -821,50 +801,29 @@ namespace Thermodynamics.Sim
             return 0;
         }
 
-        /// <summary>
-        /// The load benchmarks. Separate from <c>run</c> because they answer a different
-        /// question — not what the simulation does, but what it costs at sizes no scenario
-        /// would sit through.
-        ///
-        ///   bench scale                       the ladder, ship shape, up to 10^6 blocks
-        ///   bench scale --shape truss         the same ladder on a station spine
-        ///   bench scale --max 125000          stop the ladder early
-        ///   bench hitch --size 250000         per-tick cost with a block welded mid-run
-        ///   bench weld  --size 250000         a block welded on every tick
-        ///   bench load  --size 1000000        what building the grid costs before tick one
-        ///   bench firststep --size 500000      the first steps of a grid's life, with faults
-        ///   bench heatsourcewalk --size 126731 a registered source's per-substep cost against a fold
-        ///   bench stepwalks --size 126731      the fused apply+env pair, and the mirror
-        ///   bench envwalk --size 126731        the buried branch against a compacted walk
-        ///   bench remaplocality --size 32000   what one block change moves of a full remap
-        ///   bench activity --size 32000        the quiet share of a grid, by steps since an event
-        ///   bench floor --size 42000           what a per-block substep cap buys, and costs
-        ///   bench ceiling --size 42000         what refusing a substep demand costs, in air
-        ///   bench ceiling --fixture rings       the same, where the plumbing sets the demand
-        ///   bench parallel --size 600           one grid per thread: does a fleet pay for it
-        ///   bench report --csv out/            the full performance report, as a CSV to diff
-        ///   bench report --baseline out/performance.csv   the same, against an earlier one
-        ///   bench se2tax --factors 1,2,5,10     the same hull on an SE2-fine lattice, per stage
-        ///   bench coarserooms --refine 10       the supercell room flood against the mapper
-        ///   bench condlayout --threads 1,4,16   the conduction kernel in SE2's job shapes
-        /// </summary>
+/// <summary>BenchCommand operation.</summary>
         private static int BenchCommand(string[] args)
         {
             string name = args.Length > 1 ? args[1] : "scale";
+/// <summary>Option operation.</summary>
             string shape = Option(args, "--shape", "ship");
+/// <summary>OptionInt operation.</summary>
             int size = OptionInt(args, "--size", 125000);
+/// <summary>OptionInt operation.</summary>
             int max = OptionInt(args, "--max", int.MaxValue);
+/// <summary>OptionInt operation.</summary>
             int ticks = OptionInt(args, "--ticks", 0);
+/// <summary>Option operation.</summary>
             string csvDirectory = Option(args, "--csv", null);
 
-            // Telemetry switches the solver's per-mechanism watt figures on, so a field report
-            // includes the cost of being measured. This makes that comparable.
+/// <summary>Has operation.</summary>
             LoadBenchmarks.CollectDiagnostics = Has(args, "--diagnostics");
 
             switch (name)
             {
                 case "scale":
                 {
+/// <summary>List operation.</summary>
                     List<int> sizes = new List<int>();
                     foreach (int rung in LoadBenchmarks.DefaultSizes)
                     {
@@ -893,9 +852,6 @@ namespace Thermodynamics.Sim
 
                 case "coolant":
                 {
-                    // The segmented fluid model against the well-mixed one it replaced, on grids
-                    // carrying increasing amounts of pipe. The ratio at one size is a tuning
-                    // question; a ratio that climbs with the plumbing is a design problem.
                     int[] ringCounts = new int[] { 1, 4, 16, 48 };
                     int hull = size > 0 ? size : 8000;
                     int runSteps = ticks > 0 ? ticks : 200;
@@ -905,6 +861,7 @@ namespace Thermodynamics.Sim
                         + " block ship, " + runSteps + " steps per reading.");
                     Console.WriteLine();
 
+/// <summary>List operation.</summary>
                     List<CoolantBenchmarks.Row> rows = new List<CoolantBenchmarks.Row>();
                     for (int i = 0; i < ringCounts.Length; i++)
                     {
@@ -938,14 +895,14 @@ namespace Thermodynamics.Sim
 
                 case "reach":
                 {
+/// <summary>OptionInt operation.</summary>
                     float seconds = OptionInt(args, "--seconds", 10);
+/// <summary>OptionInt operation.</summary>
                     int length = OptionInt(args, "--length", 200);
 
+/// <summary>List operation.</summary>
                     List<LoadBenchmarks.ReachRow> rows = new List<LoadBenchmarks.ReachRow>();
 
-                    // Two sweeps. First the accuracy-first end, raising transfer with enough
-                    // substeps that nothing clamps; then the arcade end, where a single substep
-                    // per step leans on the overshoot clamp to stay bounded.
                     rows.Add(LoadBenchmarks.Reach("sim f8 h225", 8, 1f, 225f, 64, seconds, length));
                     rows.Add(LoadBenchmarks.Reach("def f4 h225", 4, 1f, 225f, 16, seconds, length));
                     rows.Add(LoadBenchmarks.Reach("f4 h3600", 4, 1f, 3600f, 16, seconds, length));
@@ -969,12 +926,12 @@ namespace Thermodynamics.Sim
 
                 case "elements":
                 {
-                    // What a substep costs per node and per link, fitted across shapes chosen for
-                    // their link-to-node ratio. The step budget charges for links alone, so this
-                    // is what it would have to charge for instead.
+/// <summary>OptionInt operation.</summary>
                     int nodes = OptionInt(args, "--nodes", 8000);
+/// <summary>OptionInt operation.</summary>
                     float seconds = OptionInt(args, "--seconds", 20);
 
+/// <summary>Option operation.</summary>
                     string only = Option(args, "--shapes", null);
                     ElementCostLab.OnlyShapes = only == null ? null : only.Split(',');
 
@@ -1002,7 +959,9 @@ namespace Thermodynamics.Sim
 
                 case "stability":
                 {
+/// <summary>OptionInt operation.</summary>
                     float seconds = OptionInt(args, "--seconds", 20);
+/// <summary>List operation.</summary>
                     List<LoadBenchmarks.StabilityRow> rows = new List<LoadBenchmarks.StabilityRow>();
 
                     rows.Add(LoadBenchmarks.Stability("default", 4, 225f, 16, seconds));
@@ -1023,6 +982,7 @@ namespace Thermodynamics.Sim
 
                 case "pace":
                 {
+/// <summary>OptionInt operation.</summary>
                     float seconds = OptionInt(args, "--seconds", 20);
                     Console.WriteLine();
                     Console.WriteLine("== pace " + shape + " " + size.ToString("n0") + " ==");
@@ -1035,6 +995,7 @@ namespace Thermodynamics.Sim
 
                 case "report":
                 {
+/// <summary>List operation.</summary>
                     List<int> ladder = new List<int>();
                     foreach (int rung in LoadBenchmarks.DefaultSizes)
                     {
@@ -1044,12 +1005,10 @@ namespace Thermodynamics.Sim
 
                     int reportTicks = ticks > 0 ? ticks : 20;
 
-                    // How many times each case is timed. Exposed so a session can ask what the
-                    // repeat is worth on this machine rather than trusting that three is enough;
-                    // the report's own default stands when it is not given.
                     PerformanceReport.Repeats = Math.Max(1,
                         OptionInt(args, "--repeats", PerformanceReport.Repeats));
 
+/// <summary>Option operation.</summary>
                     string baseline = Option(args, "--baseline", null);
                     string outDir = csvDirectory ?? "out";
 
@@ -1078,6 +1037,7 @@ namespace Thermodynamics.Sim
                         Console.WriteLine(PerformanceReport.Compare(
                             PerformanceReport.ParseCsv(File.ReadAllText(baseline)), rows));
                     }
+/// <summary>if operation.</summary>
                     else if (baseline != null)
                     {
                         Console.Error.WriteLine("  baseline not found: " + baseline);
@@ -1133,20 +1093,18 @@ namespace Thermodynamics.Sim
                 {
                     int stageBlocks = size > 0 ? size : 125000;
 
-                    // The *floor*: a stage takes at least this many repeats and then keeps going
-                    // until five of them land within two per cent of its best, or until the cap.
-                    // Raise it to make a stage look harder before it is allowed to be satisfied.
-                    // See performance.md, Pass 8, Iteration 3.
+/// <summary>OptionInt operation.</summary>
                     int stageRepeats = OptionInt(args, "--repeats", StageLab.Repeats);
                     StageLab.Repeats = Math.Max(1, stageRepeats);
 
-                    // Every repeat, in order, for a stage whose best-of-N will not settle.
                     if (Array.IndexOf(args, "--trace") >= 0)
                     {
                         StageLab.TraceRepeat = line => Console.WriteLine("  trace " + line);
                     }
                     string stageOut = csvDirectory ?? "out";
+/// <summary>Option operation.</summary>
                     string stageList = Option(args, "--stages", null);
+/// <summary>List operation.</summary>
                     List<string> stages = new List<string>(stageList == null
                         ? StageLab.Stages
                         : stageList.Split(','));
@@ -1163,13 +1121,6 @@ namespace Thermodynamics.Sim
                         + " different walks and the lab says so.");
                     Console.WriteLine();
 
-                    // **One stage per process, when what is wanted is a comparison.**
-                    // `StageLab.Run` settles the heap before every stage and each stage builds its
-                    // own simulation, so the list's order was believed not to carry. It carries
-                    // anyway: settling collects garbage and does not undo what the churn did to the
-                    // heap. Measured — the room pass reads 13.65 ms on one binary and 14.26 on
-                    // another when `place` and `exposure` ran before it, and 14.08 against 14.12,
-                    // flat, when it runs on its own. See performance.md, Pass 9, Iteration 10.
                     bool isolate = Array.IndexOf(args, "--isolate") >= 0;
                     if (isolate)
                     {
@@ -1179,6 +1130,7 @@ namespace Thermodynamics.Sim
                     }
 
                     List<StageLab.Row> stageRows = isolate
+/// <summary>StageInSeparateProcesses operation.</summary>
                         ? StageInSeparateProcesses(args, stages, stageOut)
                         : StageLab.Run(shape, stageBlocks, stages,
                             message => Console.Error.WriteLine("  " + message));
@@ -1190,8 +1142,6 @@ namespace Thermodynamics.Sim
                     File.WriteAllText(stagePath, StageLab.Csv(stageRows));
                     Console.WriteLine("csv -> " + stagePath);
 
-                    // The repeats themselves, for `bench samplestats`. Always written: they cost a
-                    // few hundred kilobytes and a run that was not traced cannot be traced later.
                     string samplePath = Path.Combine(stageOut, "samples.csv");
                     File.WriteAllText(samplePath, StageLab.SamplesCsv(stageRows));
                     Console.WriteLine("csv -> " + samplePath);
@@ -1200,9 +1150,7 @@ namespace Thermodynamics.Sim
 
                 case "samplestats":
                 {
-                    // Several runs of one binary, compared statistic by statistic. The runs are
-                    // directories `bench stages` wrote, and the answer is which summary of a
-                    // stage's repeats two runs of the same code agree on.
+/// <summary>Option operation.</summary>
                     string from = Option(args, "--from", null);
                     if (from == null)
                     {
@@ -1219,6 +1167,7 @@ namespace Thermodynamics.Sim
                         return 2;
                     }
 
+/// <summary>List operation.</summary>
                     List<SampleStatisticLab.Series> series = new List<SampleStatisticLab.Series>();
                     for (int i = 0; i < dirs.Length; i++)
                     {
@@ -1245,10 +1194,6 @@ namespace Thermodynamics.Sim
                         + " on, which is the only property a comparison uses.");
                     Console.WriteLine();
 
-                    // Said before the table rather than after it, because it decides what the
-                    // table's spreads mean: runs of two sessions carry whatever moved between
-                    // them, and no column below can separate that from the statistic's own
-                    // reproducibility. See performance.md, Pass 9, Iteration 6.
                     SampleStatisticLab.WindowSpan window = SampleStatisticLab.Window(series);
                     if (window.Unstamped > 0)
                     {
@@ -1258,6 +1203,7 @@ namespace Thermodynamics.Sim
                             + " spreads below may be between sessions rather than between"
                             + " processes.");
                     }
+/// <summary>if operation.</summary>
                     else if (window.IsOneWindow)
                     {
                         Console.WriteLine("  one window: " + window.Earliest + " to "
@@ -1292,16 +1238,11 @@ namespace Thermodynamics.Sim
 
                 case "se2tax":
                 {
-                    // What the SE2 lattice costs each structure: the same dealt hull re-expressed
-                    // on a lattice up to ten times finer per axis, which is 25 cm under 2.5 m.
-                    // Per-cell structures should climb by the factor squared or cubed and
-                    // per-node ones hold flat; this measures where each stage actually lands.
+/// <summary>OptionInt operation.</summary>
                     int taxBlocks = OptionInt(args, "--size", 8904);
+/// <summary>ParseInts operation.</summary>
                     int[] factors = ParseInts(Option(args, "--factors", "1,2,5,10"));
 
-                    // The effects under test are multiples, not percents, and a `place` repeat at
-                    // factor ten is nine million cell inserts — so the floor is lowered unless
-                    // the caller raises it back.
                     StageLab.Repeats = Math.Max(1, OptionInt(args, "--repeats", 10));
 
                     Console.WriteLine();
@@ -1313,7 +1254,9 @@ namespace Thermodynamics.Sim
                         + " them divides. Factor 10 is SE2's 25 cm under SE1's 2.5 m.");
                     Console.WriteLine();
 
+/// <summary>List operation.</summary>
                     List<Se2LatticeLab.Summary> taxSummaries = new List<Se2LatticeLab.Summary>();
+/// <summary>List operation.</summary>
                     List<Se2LatticeLab.StageRow> taxStages = new List<Se2LatticeLab.StageRow>();
                     Se2LatticeLab.Run(shape, taxBlocks, factors, taxSummaries, taxStages,
                         message => Console.Error.WriteLine("  " + message));
@@ -1335,11 +1278,11 @@ namespace Thermodynamics.Sim
 
                 case "coarserooms":
                 {
-                    // The supercell flood against the shipped mapper on one grid: same rooms,
-                    // and at what price. --refine walks it on the SE2-refined lattice, where the
-                    // question actually lives.
+/// <summary>OptionInt operation.</summary>
                     int roomBlocks = OptionInt(args, "--size", 126731);
+/// <summary>OptionInt operation.</summary>
                     int refine = OptionInt(args, "--refine", 1);
+/// <summary>ParseInts operation.</summary>
                     int[] edges = ParseInts(Option(args, "--edges", refine > 1
                         ? refine.ToString() + "," + (refine * 2)
                         : "2,4,8"));
@@ -1378,10 +1321,9 @@ namespace Thermodynamics.Sim
 
                 case "condlayout":
                 {
-                    // The conduction kernel in the shapes SE2's job system wants — CSR gather,
-                    // serial and across a thread ladder, placement order and Morton order —
-                    // against the scatter shape the solver ships.
+/// <summary>OptionInt operation.</summary>
                     int condBlocks = OptionInt(args, "--size", 126731);
+/// <summary>ParseInts operation.</summary>
                     int[] condThreads = ParseInts(Option(args, "--threads",
                         string.Join(",", Array.ConvertAll(ConductionLayoutLab.DefaultThreads,
                             delegate (int v) { return v.ToString(); }))));
@@ -1411,6 +1353,7 @@ namespace Thermodynamics.Sim
 
                 case "smallgrids":
                 {
+/// <summary>OptionInt operation.</summary>
                     int fleetGrids = OptionInt(args, "--grids", 200);
                     int fleetSteps = ticks > 0 ? ticks : 40;
                     string smallOut = csvDirectory ?? "out";
@@ -1437,9 +1380,8 @@ namespace Thermodynamics.Sim
 
                 case "franken":
                 {
-                    // A million-block grid welded out of real workshop ships, which no published
-                    // blueprint is. backlog.md G5.
                     int frankenTarget = size > 0 ? size : 1000000;
+/// <summary>Option operation.</summary>
                     string ships = Option(args, "--ships", "out/corpus-2026-08-21/ships.csv");
 
                     List<KeyValuePair<int, string>> paths = FrankenHull.LargestFirst(ships);
@@ -1486,8 +1428,7 @@ namespace Thermodynamics.Sim
 
                 case "allowance":
                 {
-                    // What MaxElementVisitsPerStep costs and what it buys, across grid size and
-                    // world. backlog.md C27.
+/// <summary>List operation.</summary>
                     List<int> allowanceSizes = new List<int>();
                     foreach (int rung in AllowanceLab.DefaultSizes)
                     {
@@ -1565,6 +1506,7 @@ namespace Thermodynamics.Sim
 
                 case "wattsclear":
                 {
+/// <summary>List operation.</summary>
                     List<int> clearLadder = new List<int>();
                     foreach (int rung in WattsClearLab.DefaultSizes)
                     {
@@ -1599,6 +1541,7 @@ namespace Thermodynamics.Sim
 
                 case "steppath":
                 {
+/// <summary>List operation.</summary>
                     List<int> ladder = new List<int>();
                     foreach (int rung in LoadBenchmarks.DefaultSizes)
                     {
@@ -1634,6 +1577,7 @@ namespace Thermodynamics.Sim
                 {
                     int[] sizes = { 4, 16, 64, 242 };
                     int each = size > 0 ? size : 600;
+/// <summary>OptionInt operation.</summary>
                     int slices = OptionInt(args, "--slices", 8);
 
                     Console.WriteLine();
@@ -1663,6 +1607,7 @@ namespace Thermodynamics.Sim
                 case "parallel":
                 {
                     int[] sizes = { 1, 2, 4, 8, 16, 32, 64, 128, 242 };
+/// <summary>OptionInt operation.</summary>
                     int threads = OptionInt(args, "--threads", Environment.ProcessorCount);
                     int each = size > 0 ? size : 600;
 
@@ -1682,8 +1627,6 @@ namespace Thermodynamics.Sim
                         sizes, each, threads,
                         message => Console.Error.WriteLine("  " + message))));
 
-                    // A server's fleet is a few capital ships among many small ones, and the
-                    // largest grid is the floor under a fleet-step however many threads there are.
                     int[] uneven = { 8000, 4000, 2000, 1000, 600, 600, 400, 400, 300, 300,
                                      200, 200, 200, 150, 150, 150, 100, 100, 100, 100 };
                     Console.WriteLine("  uneven fleet: " + uneven.Length + " grids, "
@@ -1698,7 +1641,9 @@ namespace Thermodynamics.Sim
 
                 case "ceiling":
                 {
+/// <summary>OptionFloat operation.</summary>
                     float speed = OptionFloat(args, "--speed", 200f);
+/// <summary>Option operation.</summary>
                     string fixture = Option(args, "--fixture",
                         LoadBenchmarks.CeilingFixtures.Census);
 
@@ -1724,6 +1669,7 @@ namespace Thermodynamics.Sim
                         shape, size, ticks > 0 ? ticks : 200, null,
                         message => Console.Error.WriteLine("  " + message),
                         Has(args, "--driven"), OptionInt(args, "--frequency", 0), speed, 1f,
+/// <summary>OptionFloat operation.</summary>
                         fixture, OptionFloat(args, "--flow", 0f))));
                     return 0;
                 }
@@ -1797,12 +1743,14 @@ namespace Thermodynamics.Sim
                 {
                     int firstBlocks = size > 0 ? size : 125000;
                     int firstSteps = ticks > 0 ? ticks : 6;
+/// <summary>Has operation.</summary>
                     bool sunlit = Has(args, "--sunlit");
 
                     Console.WriteLine();
                     Console.WriteLine("== first steps, " + shape + " " + firstBlocks.ToString("n0")
                         + " blocks, " + (sunlit ? "sunlit vacuum" : "shadow") + " ==");
                     Console.WriteLine("  Each of the first " + firstSteps + " full steps on its own"
+/// <summary>grid operation.</summary>
                         + " clock, on a freshly built grid (`D4`).");
                     Console.WriteLine("  A step whose extra time arrives with the faults is paying"
                         + " first touch; one whose faults match a later step's is paying work.");
@@ -1869,6 +1817,7 @@ namespace Thermodynamics.Sim
             }
         }
 
+/// <summary>PrintHitch operation.</summary>
         private static void PrintHitch(HitchResult result)
         {
             Console.WriteLine();
@@ -1882,6 +1831,7 @@ namespace Thermodynamics.Sim
             Console.WriteLine("  " + result.DescribeGc());
         }
 
+/// <summary>Has operation.</summary>
         private static bool Has(string[] args, string flag)
         {
             for (int i = 0; i < args.Length; i++)
@@ -1891,30 +1841,11 @@ namespace Thermodynamics.Sim
             return false;
         }
 
-        /// <summary>
-        /// Runs each stage in a process of its own and collects the rows, so that no stage carries
-        /// what the stage before it did to the heap.
-        ///
-        /// <para>
-        /// **This is the only way to make a stage comparison's control a control.** Pass 3 found
-        /// that a stage churning the heap changes what the stage after it measures and answered it
-        /// by settling between stages; pass 9's tenth iteration found that settling is not enough,
-        /// because a collection reclaims the garbage and leaves the heap it was allocated into. The
-        /// room pass moved 4.5 % between two binaries when `place` and `exposure` ran before it, and
-        /// 0.3 % when it ran alone — and the thing that changed between those binaries was how much
-        /// `place` allocates.
-        /// </para>
-        ///
-        /// <para>
-        /// The child is this same executable with the same arguments, one stage named and
-        /// `--isolate` removed, writing into a directory of its own. A child that fails takes the
-        /// run with it rather than leaving a short table: a comparison missing a row is a
-        /// comparison quietly taken over a different set of stages (`E4`).
-        /// </para>
-        /// </summary>
+/// <summary>StageInSeparateProcesses operation.</summary>
         private static List<StageLab.Row> StageInSeparateProcesses(string[] args,
             IList<string> stages, string outDirectory)
         {
+/// <summary>List operation.</summary>
             List<StageLab.Row> rows = new List<StageLab.Row>();
 
             for (int i = 0; i < stages.Count; i++)
@@ -1923,6 +1854,7 @@ namespace Thermodynamics.Sim
                 string childOut = Path.Combine(outDirectory, "isolated", stage);
                 Directory.CreateDirectory(childOut);
 
+/// <summary>List operation.</summary>
                 List<string> childArgs = new List<string>();
                 for (int a = 0; a < args.Length; a++)
                 {
@@ -1937,6 +1869,7 @@ namespace Thermodynamics.Sim
 
                 Console.Error.WriteLine("  isolated: " + stage);
 
+/// <summary>ProcessStartInfo operation.</summary>
                 ProcessStartInfo start = new ProcessStartInfo();
                 start.FileName = Environment.ProcessPath;
                 foreach (string a in childArgs) start.ArgumentList.Add(a);
@@ -1964,6 +1897,7 @@ namespace Thermodynamics.Sim
             return rows;
         }
 
+/// <summary>Option operation.</summary>
         private static string Option(string[] args, string flag, string fallback)
         {
             for (int i = 0; i < args.Length - 1; i++)
@@ -1973,14 +1907,16 @@ namespace Thermodynamics.Sim
             return fallback;
         }
 
+/// <summary>OptionInt operation.</summary>
         private static int OptionInt(string[] args, string flag, int fallback)
         {
+/// <summary>Option operation.</summary>
             string raw = Option(args, flag, null);
             int value;
             return raw != null && int.TryParse(raw, out value) ? value : fallback;
         }
 
-        /// <summary>A comma-separated integer list, for a flag naming a ladder's rungs.</summary>
+/// <summary>ParseInts operation.</summary>
         private static int[] ParseInts(string list)
         {
             string[] parts = list.Split(',');
@@ -1992,8 +1928,10 @@ namespace Thermodynamics.Sim
             return values;
         }
 
+/// <summary>OptionFloat operation.</summary>
         private static float OptionFloat(string[] args, string flag, float fallback)
         {
+/// <summary>Option operation.</summary>
             string raw = Option(args, flag, null);
             float value;
             return raw != null
@@ -2001,6 +1939,7 @@ namespace Thermodynamics.Sim
                 ? value : fallback;
         }
 
+/// <summary>PrintTable operation.</summary>
         private static void PrintTable(ScenarioResult result)
         {
             string[] lines = result.Csv.Split('\n');
@@ -2014,14 +1953,10 @@ namespace Thermodynamics.Sim
             if (lines.Length > shown) Console.WriteLine("  ... " + (lines.Length - shown) + " more rows");
         }
 
-        /// <summary>
-        /// Audits the newest telemetry dump under a path, or one named directly.
-        ///
-        /// Returns non-zero when a defect check fails, so a dump can be audited from a script
-        /// rather than read.
-        /// </summary>
+/// <summary>DumpCommand operation.</summary>
         private static int DumpCommand(string[] args)
         {
+/// <summary>ValueAfter operation.</summary>
             string path = ValueAfter(args, "--path") ?? DumpAudit.DefaultPath();
             if (path == null)
             {
@@ -2042,6 +1977,7 @@ namespace Thermodynamics.Sim
             return result.Passed ? 0 : 1;
         }
 
+/// <summary>PrintUsage operation.</summary>
         private static void PrintUsage()
         {
             Console.WriteLine("Thermal Dynamics simulation harness");

@@ -7,113 +7,68 @@ namespace RichHudFramework
     {
         namespace Rendering
         {
-            /// <summary>
-            /// Draws a 3D rectangular prism using billboards in world space. Useful for drawing bounding boxes.
-            /// </summary>
             public class BlockBoard
             {
-                /// <summary>
-                /// Gets/sets the dimensions of the block
-                /// </summary>
                 public Vector3D Size { get; set; }
 
-                /// <summary>
-                /// Determines the distance of the block from the center of its transform.
-                /// </summary>
                 public Vector3D Offset { get; set; }
 
-                /// <summary>
-                /// Material board for the front face (-Z).
-                /// </summary>
                 public MatBoard Front => faces[0];
 
-                /// <summary>
-                /// Material board for the back face (+Z).
-                /// </summary>
                 public MatBoard Back => faces[1];
 
-                /// <summary>
-                /// Material board for the top face (+Y).
-                /// </summary>
                 public MatBoard Top => faces[2];
 
-                /// <summary>
-                /// Material board for the bottom face (-Y).
-                /// </summary>
                 public MatBoard Bottom => faces[3];
 
-                /// <summary>
-                /// Material board for the left face (-X).
-                /// </summary>
                 public MatBoard Left => faces[4];
 
-                /// <summary>
-                /// Material board for the right face (+X).
-                /// </summary>
                 public MatBoard Right => faces[5];
 
-                /// <summary>
-                /// Gets all six faces of the block as a read only list.
-                /// </summary>
                 public IReadOnlyList<MatBoard> Faces => faces;
 
-                /// <summary>
-                /// Textured quad faces oriented on the bounds of the block
-                /// </summary>
-                /// <exclude/>
                 protected readonly MatBoard[] faces;
 
-                /// <summary>
-                /// Eight vertex positions on the prisim shared by the faces
-                /// </summary>
-                /// <exclude/>
                 protected readonly Vector3D[] octant;
 
+/// <summary>BlockBoard operation.</summary>
                 public BlockBoard()
                 {
                     faces = new MatBoard[6];
                     octant = new Vector3D[8];
 
                     for (int n = 0; n < 6; n++)
+/// <summary>MatBoard operation.</summary>
                         faces[n] = new MatBoard();
                 }
 
-                /// <summary>
-                /// Applies the given color to every face.
-                /// </summary>
+/// <summary>Sets the color.</summary>
                 public void SetColor(Color color)
                 {
                     for (int n = 0; n < 6; n++)
                         faces[n].Color = color;
                 }
 
-                /// <summary>
-                /// Applies the given material to every face.
-                /// </summary>
+/// <summary>Sets the material.</summary>
                 public void SetMaterial(Material material)
                 {
                     for (int n = 0; n < 6; n++)
                         faces[n].Material = material;
                 }
 
-                /// <summary>
-                /// Sets every face's material alignment.
-                /// </summary>
+/// <summary>Sets the materialalignment.</summary>
                 public void SetMaterialAlignment(MaterialAlignment materialAlignment)
                 {
                     for (int n = 0; n < 6; n++)
                         faces[n].MatAlignment = materialAlignment;
                 }
 
-                /// <summary>
-                /// Draws a block made of billboards in world space using the given matrix transform.
-                /// </summary>
+/// <summary>Draw operation.</summary>
                 public void Draw(ref MatrixD matrix)
                 {
                     MyQuadD faceQuad;
                     UpdateOctant(ref matrix);
 
-                    // -Z/+Z
                     faceQuad.Point0 = octant[3];
                     faceQuad.Point1 = octant[2];
                     faceQuad.Point2 = octant[1];
@@ -128,7 +83,6 @@ namespace RichHudFramework
 
                     faces[1].Draw(ref faceQuad);
 
-                    // -Y/+Y
                     faceQuad.Point0 = octant[7];
                     faceQuad.Point1 = octant[6];
                     faceQuad.Point2 = octant[2];
@@ -143,7 +97,6 @@ namespace RichHudFramework
 
                     faces[3].Draw(ref faceQuad);
 
-                    // -X/+X
                     faceQuad.Point0 = octant[0];
                     faceQuad.Point1 = octant[4];
                     faceQuad.Point2 = octant[7];
@@ -159,18 +112,27 @@ namespace RichHudFramework
                     faces[5].Draw(ref faceQuad);
                 }
 
+/// <summary>UpdateOctant operation.</summary>
                 private void UpdateOctant(ref MatrixD matrix)
                 {
                     Vector3D size = Size * 0.5d;
 
+/// <summary>Vector3D operation.</summary>
                     octant[0] = new Vector3D(-size.X, size.Y, -size.Z);
+/// <summary>Vector3D operation.</summary>
                     octant[1] = new Vector3D(size.X, size.Y, -size.Z);
+/// <summary>Vector3D operation.</summary>
                     octant[2] = new Vector3D(size.X, -size.Y, -size.Z);
+/// <summary>Vector3D operation.</summary>
                     octant[3] = new Vector3D(-size.X, -size.Y, -size.Z);
 
+/// <summary>Vector3D operation.</summary>
                     octant[4] = new Vector3D(-size.X, size.Y, size.Z);
+/// <summary>Vector3D operation.</summary>
                     octant[5] = new Vector3D(size.X, size.Y, size.Z);
+/// <summary>Vector3D operation.</summary>
                     octant[6] = new Vector3D(size.X, -size.Y, size.Z);
+/// <summary>Vector3D operation.</summary>
                     octant[7] = new Vector3D(-size.X, -size.Y, size.Z);
 
                     for (int n = 0; n < 8; n++)

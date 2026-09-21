@@ -5,28 +5,10 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **A step has never been measured by its parts, and three passes have tried to make it
-    /// faster.** Two of them changed the layout of the link stream on the strength of a guess about
-    /// which part of a step was expensive; both were reverted on measurement. `bench stepphases`
-    /// times each stage of a step on its own clock, and these hold the two properties that make its
-    /// reading a reading.
-    ///
-    /// <para>
-    /// The first is that **the instrument does not change what it measures**: the same hull stepped
-    /// with the profile on and with it off must reach the same temperatures, to the bit. An
-    /// instrument on the stepping path that perturbs the step would be worse than none.
-    /// </para>
-    ///
-    /// <para>
-    /// The second is that **each stage is charged the elements it actually walks** — nodes for the
-    /// environment and apply stages, links for conduction, once per substep — which is what makes
-    /// two readings comparable and what says a stage was entered at all (`M6`).
-    /// </para>
-    /// </summary>
     [Collection("the stage lab's dials")]
     public class StepPhaseLabTests
     {
+/// <summary>Hull operation.</summary>
         private static ThermalSimulation Hull(int blocks)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -38,28 +20,30 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>World operation.</summary>
         private static EnvironmentState World(ThermalSimulation simulation)
         {
             return EnvironmentSolver.Solve(simulation.Settings, simulation.Planet, Worlds.Flight(1f, 300f));
         }
 
         [Fact]
+/// <summary>TheProfileIsOffUntilItIsAskedFor operation.</summary>
         public void TheProfileIsOffUntilItIsAskedFor()
         {
             Assert.False(Hull(600).Solver.ProfileStepPhases);
         }
 
-        /// <summary>
-        /// Two identical hulls, one profiled and one not, stepped the same number of times: every
-        /// node ends at the same temperature to the bit (`D8`).
-        /// </summary>
         [Fact]
+/// <summary>ProfilingAStepChangesNothingItMeasures operation.</summary>
         public void ProfilingAStepChangesNothingItMeasures()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation plain = Hull(1200);
+/// <summary>Hull operation.</summary>
             ThermalSimulation profiled = Hull(1200);
             profiled.Solver.ProfileStepPhases = true;
 
+/// <summary>World operation.</summary>
             EnvironmentState state = World(plain);
             float step = plain.Settings.StepSeconds;
 
@@ -86,20 +70,16 @@ namespace Thermodynamics.Tests
 
             Assert.True(spread > 0, "every node sits at the same temperature, so the step did nothing");
 
-            // And the profile actually recorded something, or the comparison above was between two
-            // unprofiled runs.
             Assert.True(profiled.Solver.StepPhases.Visits[2] > 0, "the conduction stage recorded no visits");
         }
 
-        /// <summary>
-        /// Each stage is charged the elements it walks, once per substep: nodes for environment and
-        /// apply, links for conduction. A stage charged something else is a stage whose ns-per-unit
-        /// figure means nothing.
-        /// </summary>
         [Fact]
+/// <summary>EachStageIsChargedTheElementsItWalks operation.</summary>
         public void EachStageIsChargedTheElementsItWalks()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation simulation = Hull(2000);
+/// <summary>World operation.</summary>
             EnvironmentState state = World(simulation);
             float step = simulation.Settings.StepSeconds;
 
@@ -118,9 +98,6 @@ namespace Thermodynamics.Tests
             int links = simulation.Solver.LinkCount;
             ThermalSolver.StepPhaseProfile phases = simulation.Solver.StepPhases;
 
-            // The environment stage is split in two — the substep that fills the rows and the ones
-            // that read them — so it is the pair that must account for every node of every substep,
-            // and the fill must be exactly one substep's worth.
             Assert.Equal(nodes, phases.Visits[ThermalSolver.StepPhaseProfile.EnvironmentFill]);
             Assert.Equal(nodes * substeps,
                 phases.Visits[1] + phases.Visits[ThermalSolver.StepPhaseProfile.EnvironmentFill]);
@@ -138,12 +115,9 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, phases.Slices[ThermalSolver.StepPhaseProfile.EnvironmentFill]);
         }
 
-        /// <summary>
-        /// And the lab refuses a reading whose stages did different work between repeats, rather
-        /// than averaging two different walks. Checked by asking for repeats and getting a row.
-        /// </summary>
         [Fact]
         [Trait("speed", "slow")]
+/// <summary>TheLabReportsEveryStageOfAStep operation.</summary>
         public void TheLabReportsEveryStageOfAStep()
         {
             int repeats = StageLab.Repeats;
@@ -172,6 +146,7 @@ namespace Thermodynamics.Tests
             }
         }
 
+/// <summary>Bits operation.</summary>
         private static int Bits(float value)
         {
             return System.BitConverter.ToInt32(System.BitConverter.GetBytes(value), 0);

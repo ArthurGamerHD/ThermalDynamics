@@ -3,51 +3,32 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Whether a room holds air, decided from the game's answers rather than this model's.
-    ///
-    /// Every one of those answers can veto air and none can insist on it — not because the two
-    /// mistakes are different sizes, which was the reason written down here and is measured false,
-    /// but because the game owns pressurisation and this model has no standing to overrule it.
-    /// **Silence is not one of those answers**, and treating it as one is what `C22` corrected.
-    /// </summary>
     public class RoomPressureTests
     {
         [Fact]
+/// <summary>AWorldWithoutPressurisationHasNoAirAnywhere operation.</summary>
         public void AWorldWithoutPressurisationHasNoAirAnywhere()
         {
-            // The setting the player turned off is the whole answer: a sealed room with a vent
-            // reporting a full tank still holds nothing.
             Assert.Equal(0f, RoomPressure.Level(false, true, 1f), 5);
         }
 
         [Fact]
+/// <summary>ARoomTheGameDoesNotCallSealedHoldsNothing operation.</summary>
         public void ARoomTheGameDoesNotCallSealedHoldsNothing()
         {
-            // The game knows the real shape of a sloped block where this model knows a cell, so
-            // where they disagree the game wins.
             Assert.Equal(0f, RoomPressure.Level(true, false, 1f), 5);
         }
 
         [Fact]
+/// <summary>ASealedRoomHoldsWhatItsVentReports operation.</summary>
         public void ASealedRoomHoldsWhatItsVentReports()
         {
             Assert.Equal(1f, RoomPressure.Level(true, true, 1f), 5);
             Assert.Equal(0.4f, RoomPressure.Level(true, true, 0.4f), 5);
         }
 
-        /// <summary>
-        /// **Reporting empty is an answer; reporting nothing is not** (`C22`).
-        ///
-        /// <para>
-        /// The two were distinct in the input and identical in the output until 2026-08-24 — the
-        /// parameter's own documentation said they were different and the code said `&lt;= 0`. What
-        /// silence actually means here is a compartment the game calls airtight, on a world where
-        /// pressurisation is on, that no lookup found a level for: a lookup that missed rather than
-        /// an answer of empty, which is exactly what two models with different room shapes produce.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ReportingEmptyEmptiesTheRoomAndReportingNothingDoesNot operation.</summary>
         public void ReportingEmptyEmptiesTheRoomAndReportingNothingDoesNot()
         {
             Assert.Equal(0f, RoomPressure.Level(true, true, 0f), 5);
@@ -58,12 +39,8 @@ namespace Thermodynamics.Tests
             Assert.True(RoomPressure.NotReported < 0f);
         }
 
-        /// <summary>
-        /// **Silence does not defeat a veto.** The assumption is the last step and only the last
-        /// step: a world without pressurisation and a room the game does not seal are still empty
-        /// with nothing reported, because those are answers.
-        /// </summary>
         [Fact]
+/// <summary>AnUnansweredRoomIsStillEmptyWhereSomethingElseSaidNo operation.</summary>
         public void AnUnansweredRoomIsStillEmptyWhereSomethingElseSaidNo()
         {
             Assert.Equal(0f, RoomPressure.Level(false, true, RoomPressure.NotReported), 5);
@@ -72,24 +49,22 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnImpossibleReadingIsClampedRatherThanTrusted operation.</summary>
         public void AnImpossibleReadingIsClampedRatherThanTrusted()
         {
             Assert.Equal(1f, RoomPressure.Level(true, true, 4f), 5);
 
-            // Any negative is the sentinel rather than a reading: nothing reports a negative
-            // pressure, so there is no "impossibly low" case to tell apart from silence.
             Assert.Equal(RoomPressure.AssumedWhenUnanswered,
                 RoomPressure.Level(true, true, -3f), 5);
         }
     }
 
-    /// <summary>
-    /// What pressure does to the air itself, once decided.
-    /// </summary>
     public class RoomAirPressureTests
     {
+/// <summary>Room operation.</summary>
         private static RoomAirNode Room(float pressure)
         {
+/// <summary>RoomAirNode operation.</summary>
             RoomAirNode air = new RoomAirNode();
             air.RoomIndex = 0;
             air.CellCount = 8;
@@ -102,22 +77,25 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnEmptyRoomHasNoAirAndOnlyTheSolverFloorOfHeatCapacity operation.</summary>
         public void AnEmptyRoomHasNoAirAndOnlyTheSolverFloorOfHeatCapacity()
         {
+/// <summary>Room operation.</summary>
             RoomAirNode air = Room(0f);
 
             Assert.False(air.HasAir);
             Assert.Equal(0f, air.AirMass, 5);
 
-            // Not zero: heat capacity is a divisor in the step, so it has a floor. The room still
-            // exchanges nothing, because HasAir is what gates that.
             Assert.Equal(ThermalConstants.MinimumThermalMass, air.ThermalMass, 6);
         }
 
         [Fact]
+/// <summary>HalfPressureIsHalfTheAirAndHalfTheHeatCapacity operation.</summary>
         public void HalfPressureIsHalfTheAirAndHalfTheHeatCapacity()
         {
+/// <summary>Room operation.</summary>
             RoomAirNode full = Room(1f);
+/// <summary>Room operation.</summary>
             RoomAirNode half = Room(0.5f);
 
             Assert.True(half.HasAir);
@@ -125,18 +103,9 @@ namespace Thermodynamics.Tests
             Assert.Equal(full.ThermalMass * 0.5f, half.ThermalMass, 3);
         }
     
-        // ---- what counts as a disagreement --------------------------------------------------
 
-        /// <summary>
-        /// The distinction the first version of the room diagnostic got wrong, and the reason it
-        /// is a tested function rather than an inline condition.
-        ///
-        /// Sealed is not full. A cupboard nobody ever piped air into, on a ship in vacuum, is
-        /// airtight and empty and both models are right about it. Testing airtightness instead of
-        /// oxygen flagged eight such compartments on one ship and painted them all magenta in the
-        /// overlay — burying the one room that was genuinely wrong among eight that were not.
-        /// </summary>
         [Fact]
+/// <summary>ASealedEmptyRoomIsNotADisagreement operation.</summary>
         public void ASealedEmptyRoomIsNotADisagreement()
         {
             Assert.False(RoomPressure.Disagrees(false, false, 0f));
@@ -144,6 +113,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AirInTheGameAndNoneHereIsADisagreement operation.</summary>
         public void AirInTheGameAndNoneHereIsADisagreement()
         {
             Assert.True(RoomPressure.Disagrees(false, false, 1f));
@@ -151,75 +121,62 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ARoomThisModelHasFilledIsNeverADisagreement operation.</summary>
         public void ARoomThisModelHasFilledIsNeverADisagreement()
         {
             Assert.False(RoomPressure.Disagrees(true, false, 1f));
         }
 
         [Fact]
+/// <summary>AVentedRoomIsEmptyOnPurpose operation.</summary>
         public void AVentedRoomIsEmptyOnPurpose()
         {
-            // Standing open through a door. Empty is the right answer, whatever the game reports
-            // in the instant before its own fill catches up.
             Assert.False(RoomPressure.Disagrees(false, true, 1f));
         }
 
         [Fact]
+/// <summary>WhatCouldNotBeMeasuredIsNotAFault operation.</summary>
         public void WhatCouldNotBeMeasuredIsNotAFault()
         {
-            // Negative means the gas system could not be asked and no vent could answer either.
-            // A diagnostic that cannot see has nothing to report.
             Assert.False(RoomPressure.Disagrees(false, false, RoomPressure.NotReported));
             Assert.False(RoomPressure.Disagrees(false, false, -1f));
         }
     
-        // ---- the vent fallback ---------------------------------------------------------------
 
-        /// <summary>
-        /// Reading the air vents is a walk over every vent on the grid, so it is worth asking
-        /// whether it can change an answer before paying for it. These pin the cases where it
-        /// cannot.
-        /// </summary>
         [Fact]
+/// <summary>AnUnansweredSealedRoomNeedsTheVentsRead operation.</summary>
         public void AnUnansweredSealedRoomNeedsTheVentsRead()
         {
             Assert.True(RoomPressure.NeedsVentFallback(true, true, RoomPressure.NotReported));
         }
 
         [Fact]
+/// <summary>ARoomTheGameAnsweredForNeedsNoVents operation.</summary>
         public void ARoomTheGameAnsweredForNeedsNoVents()
         {
             Assert.False(RoomPressure.NeedsVentFallback(true, true, 1f));
             Assert.False(RoomPressure.NeedsVentFallback(true, true, 0f));
         }
 
-        /// <summary>
-        /// The case that made this worth adding. A compartment this model finds and the game does
-        /// not call sealed is emptied whatever a vent reports, so the vents were being walked
-        /// every sweep to produce a number that <see cref="RoomPressure.Level"/> discards — and a
-        /// field dump showed one such compartment on an ordinary ship, permanently.
-        /// </summary>
         [Fact]
+/// <summary>ARoomTheGameDoesNotSealNeedsNoVentsBecauseItsAnswerIsAlreadyZero operation.</summary>
         public void ARoomTheGameDoesNotSealNeedsNoVentsBecauseItsAnswerIsAlreadyZero()
         {
             Assert.False(RoomPressure.NeedsVentFallback(true, false, RoomPressure.NotReported));
 
-            // And the answer it would have produced is zero regardless of what a vent said.
             Assert.Equal(0f, RoomPressure.Level(true, false, 1f));
         }
 
         [Fact]
+/// <summary>AWorldWithoutPressurisationNeedsNoVentsAtAll operation.</summary>
         public void AWorldWithoutPressurisationNeedsNoVentsAtAll()
         {
             Assert.False(RoomPressure.NeedsVentFallback(false, true, RoomPressure.NotReported));
             Assert.Equal(0f, RoomPressure.Level(false, true, 1f));
         }
 
-        /// <summary>
-        /// The fallback exists to decide a level, so it must be asked for exactly when the level
-        /// is still open. Anything Level would resolve on its own is work not worth doing.
-        /// </summary>
         [Fact]
+/// <summary>TheFallbackIsNeededExactlyWhenTheAnswerIsStillOpen operation.</summary>
         public void TheFallbackIsNeededExactlyWhenTheAnswerIsStillOpen()
         {
             float[] levels = { RoomPressure.NotReported, 0f, 0.5f, 1f };
@@ -234,8 +191,6 @@ namespace Thermodynamics.Tests
                         bool sealedByGame = g == 1;
                         bool needs = RoomPressure.NeedsVentFallback(world, sealedByGame, levels[i]);
 
-                        // Where the vents are not read, the level computed without them is the
-                        // level that stands. It must not depend on what a vent would have said.
                         if (!needs)
                         {
                             Assert.Equal(
@@ -245,7 +200,6 @@ namespace Thermodynamics.Tests
                         }
                         else
                         {
-                            // Only an unreported level in a room that could hold air.
                             Assert.True(world && sealedByGame && levels[i] < 0f);
                         }
                     }

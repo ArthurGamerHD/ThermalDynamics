@@ -5,35 +5,14 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The lit-fraction sweep is sliced across frames, and a sliced pass has to land on the same
-    /// answer the whole pass would have.
-    ///
-    /// <para>
-    /// Two budgeted walks run behind the sun: the shadow map's, which decides which cell faces the
-    /// sun reaches, and the solver's own, which turns that map into a lit fraction per node face.
-    /// The suite pinned incremental-versus-one-shot equivalence for the conduction graph and for
-    /// the room flood fill, and never for this one — it checked only that the *cached environment
-    /// rows* were invalidated when the sweep published, which is a different claim: it says a stale
-    /// row is not read, not that the row that replaces it is right.
-    /// </para>
-    ///
-    /// <para>
-    /// The gap mattered because the sweep writes into a shared array in place. A cursor that
-    /// overran, a restart that reset the fill value but not the cursor, or a budget boundary that
-    /// skipped a node would leave some faces carrying the previous pass's fraction, and every
-    /// symptom of that is a solar figure slightly wrong on a large grid — which nothing else here
-    /// would catch.
-    /// </para>
-    /// </summary>
     [Trait("speed", "slow")]
     public class SunLitSliceTests
     {
-        /// <summary>Large enough that no budget below completes a sweep in one frame.</summary>
         private const int Blocks = 4000;
 
         private static readonly Vector3 Sun = Vector3.Normalize(new Vector3(0.71f, 0.42f, -0.56f));
 
+/// <summary>Builds the API method table.</summary>
         private static ThermalSimulation Build(bool selfShadow, int shadowBudget, int litBudget)
         {
             ThermalSettings settings = Hulls.Uncapped();
@@ -46,17 +25,14 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-        /// <summary>
-        /// Steps until both walks have settled, then drains any refresh still in flight so the two
-        /// runs are compared at the same point rather than at whichever point their budgets left
-        /// them at.
-        /// </summary>
+/// <summary>Sets the tle.</summary>
         private static void Settle(ThermalSimulation simulation, EnvironmentSample sample, int frames)
         {
             for (int i = 0; i < frames; i++) simulation.StepExact(1, sample);
             simulation.Solver.FinishSunLit();
         }
 
+/// <summary>LitFractions operation.</summary>
         private static float[] LitFractions(ThermalSimulation simulation)
         {
             int nodes = simulation.Solver.Nodes.Count;
@@ -73,11 +49,7 @@ namespace Thermodynamics.Tests
             return lit;
         }
 
-        /// <summary>
-        /// A hull whose faces are not all fully lit or fully dark, which is what makes the
-        /// comparison mean anything: two runs that both wrote 1.0 everywhere agree perfectly and
-        /// assert nothing.
-        /// </summary>
+/// <summary>RequireAShadow operation.</summary>
         private static void RequireAShadow(float[] lit, string what)
         {
             int shaded = 0;
@@ -95,9 +67,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ASlicedSweepLandsWhereAWholeOneDoes operation.</summary>
         public void ASlicedSweepLandsWhereAWholeOneDoes()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation whole = Build(true, int.MaxValue, int.MaxValue);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation sliced = Build(true, 97, 13);
 
             EnvironmentSample sample = Worlds.Space(Sun);
@@ -109,7 +84,9 @@ namespace Thermodynamics.Tests
             Assert.True(sliced.Solver.SunShadow.IsBuilt, "the sliced pass should have completed");
             Assert.False(sliced.Solver.SunLitRefreshPending, "the drain should have finished the sweep");
 
+/// <summary>LitFractions operation.</summary>
             float[] expected = LitFractions(whole);
+/// <summary>LitFractions operation.</summary>
             float[] actual = LitFractions(sliced);
 
             RequireAShadow(expected, "the whole pass");
@@ -125,13 +102,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// With self-shadowing off the sweep still runs — it fills every face with 1.0 — and it is
-        /// still sliced. That path had no test at all, and it is the shipped default.
-        /// </summary>
         [Fact]
+/// <summary>WithSelfShadowingOffEveryFaceEndsFullyLitHoweverThinTheBudget operation.</summary>
         public void WithSelfShadowingOffEveryFaceEndsFullyLitHoweverThinTheBudget()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation sliced = Build(false, 11, 7);
 
             EnvironmentSample sample = Worlds.Space(Sun);
@@ -139,6 +114,7 @@ namespace Thermodynamics.Tests
 
             Assert.False(sliced.Solver.SunLitRefreshPending);
 
+/// <summary>LitFractions operation.</summary>
             float[] lit = LitFractions(sliced);
             Assert.True(lit.Length > 0);
 
@@ -152,22 +128,20 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// A sweep in flight when the sun moves is restarted, not resumed: the fractions it was
-        /// half way through writing belong to the old sun. Compared against a run that saw only the
-        /// final sun, so the answer cannot depend on where the previous sweep had got to.
-        /// </summary>
         [Fact]
+/// <summary>ASunThatMovesMidSweepLeavesNoTraceOfTheOldOne operation.</summary>
         public void ASunThatMovesMidSweepLeavesNoTraceOfTheOldOne()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation disturbed = Build(true, 97, 13);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation clean = Build(true, int.MaxValue, int.MaxValue);
 
-            // Walk the sun round, never letting a sweep finish, and end on the reference direction.
             for (int i = 0; i < 40; i++)
             {
                 float angle = i * 0.4f;
                 Vector3 moving = Vector3.Normalize(
+/// <summary>Vector3 operation.</summary>
                     new Vector3((float)Math.Cos(angle), (float)Math.Sin(angle), 0.3f));
                 disturbed.StepExact(1, Worlds.Space(moving));
             }
@@ -176,7 +150,9 @@ namespace Thermodynamics.Tests
             Settle(disturbed, settled, 600);
             Settle(clean, settled, 4);
 
+/// <summary>LitFractions operation.</summary>
             float[] expected = LitFractions(clean);
+/// <summary>LitFractions operation.</summary>
             float[] actual = LitFractions(disturbed);
 
             RequireAShadow(expected, "the undisturbed run");

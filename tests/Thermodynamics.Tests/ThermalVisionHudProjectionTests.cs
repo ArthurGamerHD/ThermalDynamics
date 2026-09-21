@@ -5,27 +5,28 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>Checks HUD pixel anchoring under camera motion, lens shifts, FOV and DPI changes.</summary>
     public class ThermalVisionHudProjectionTests
     {
         [Theory]
         [InlineData(1920,1080,1,0.8)]
         [InlineData(2578,1440,1.333333,1.2)]
         [InlineData(3440,1440,1.333333,1.5)]
+/// <summary>LegendCornersStayAtTheSamePixelsDuringCameraMotion operation.</summary>
         public void LegendCornersStayAtTheSamePixelsDuringCameraMotion(int width,int height,double dpi,double fov)
         {
+/// <summary>Vector2 operation.</summary>
             var viewport=new Vector2(width,height);
             var projection=MatrixD.CreatePerspectiveFieldOfView(fov,(double)width/height,.1,10000);
-            // Also exercise an off-centre projection, rather than assuming zero lens shift.
             projection.M31=.08; projection.M32=-.04;
             for(int frame=0;frame<40;frame++)
             {
                 var world=MatrixD.CreateFromYawPitchRoll(frame*.13,frame*.04,frame*.03);
+/// <summary>Vector3D operation.</summary>
                 world.Translation=new Vector3D(100000+frame*13,-20000+frame*7,3000-frame*9);
                 var plane=ThermalVisionHudProjection.Create(world,projection,viewport,.101,dpi);
                 foreach(var offset in new[] { new Vector2(0,0),new Vector2(420,112) })
                 {
-                    // Outer and opposite corners of the 420x112 panel, inset 24/38 points.
+/// <summary>Vector3D operation.</summary>
                     var hud=new Vector3D(width/(2*dpi)-24-offset.X,height/(2*dpi)-38-offset.Y,0);
                     var position=Vector3D.Transform(hud,plane);
                     var clip=Vector4D.Transform(new Vector4D(position,1),MatrixD.Invert(world)*projection);

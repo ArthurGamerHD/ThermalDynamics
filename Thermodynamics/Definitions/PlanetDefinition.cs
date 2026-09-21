@@ -28,91 +28,65 @@ namespace Thermodynamics
         private static readonly MyStringId ConvectionCoefficientId = MyStringId.GetOrCompute("ConvectionCoefficient");
         private static readonly MyStringId UndergroundConvectionCoefficientId = MyStringId.GetOrCompute("UndergroundConvectionCoefficient");
 
-        /// <summary>
-        /// Which values the definition actually carried, so a merge writes only those and never a zero
-        /// the definition did not say. See environment.md, When the file does not reach the mod.
-        /// </summary>
         public PlanetField Supplied;
 
+/// <summary>Has operation.</summary>
         public bool Has(PlanetField field)
         {
             return (Supplied & field) != 0;
         }
 
-        /// <summary>Ambient temperature with the sun on the far side of the planet, K.</summary>
         [ProtoMember(10)]
         public float NightTemperature;
 
-        /// <summary>Ambient temperature with the sun directly overhead, K.</summary>
         [ProtoMember(15)]
         public float DayTemperature;
 
-        /// <summary>Ambient temperature underground, K.</summary>
         [ProtoMember(17)]
         public float UndergroundTemperature;
 
-        /// <summary>Temperature at the planet's centre, K.</summary>
         [ProtoMember(20)]
         public float CoreTemperature;
 
-        /// <summary>
-        /// Depth below sea level that stays at the underground temperature, m. Below it the rock
-        /// warms towards the core temperature.
-        /// </summary>
         [ProtoMember(25)]
         public float SealevelDeadzone;
 
-        /// <summary>
-        /// How much colder a pole is than the equator, K.
-        ///
-        /// This and the three fields below carry the model's defaults rather than zero. Zero is a
-        /// valid setting for each of them — no latitude, no lag, no lapse, no damping — so a planet
-        /// file written before they existed would otherwise disable all four.
-        /// </summary>
         [ProtoMember(27)]
         public float PoleTemperatureDrop = 40f;
 
-        /// <summary>How long the air takes to answer the sun, in seconds of play.</summary>
         [ProtoMember(28)]
         public float AmbientLagSeconds = 45f;
 
-        /// <summary>The same lag as a share of this world's own day.</summary>
         public float AmbientLagShareOfDay;
 
-        /// <summary>How much colder a kilometre above sea level is, K.</summary>
         [ProtoMember(29)]
         public float AmbientLapseRate = 4f;
 
-        /// <summary>Depth of rock over which the surface's day-night swing is damped to nothing, m.</summary>
         [ProtoMember(31)]
         public float UndergroundDampingDepth = 20f;
 
-        /// <summary>Fraction of solar energy absorbed by a full-density atmosphere, 0..1.</summary>
         [ProtoMember(30)]
         public float SolarDecay;
 
-        /// <summary>Convective heat transfer coefficient at rest, W/(m^2 K).</summary>
         [ProtoMember(40)]
         public float ConvectionCoefficient;
 
-        /// <summary>Heat transfer coefficient for a grid buried in this planet's rock, W/(m^2 K).</summary>
         public float UndergroundConvectionCoefficient;
 
+/// <summary>Returns the definition.</summary>
         public static PlanetDefinition GetDefinition(MyDefinitionId defId) 
         {
             MyLog.Default.Info($"[{Settings.Name}] Planet Definition: {defId}");
 
+/// <summary>PlanetDefinition operation.</summary>
             PlanetDefinition def = new PlanetDefinition();
             DefinitionExtensionsAPI lookup = Session.Definitions;
 
-            // The lookup arrives asynchronously, on a message from the mod that owns it. Reading it
-            // before it answers returns nothing for every field, and a definition built from that is
-            // indistinguishable from a planet that authored none — permanently, since the caller
-            // caches. Null says "not yet" instead, and the caller asks again.
             if (lookup == null || !lookup.Init) return null;
 
             if (!lookup.DefinitionIdExists(defId))
             {
+/// <summary>MyDefinitionId operation.</summary>
                 defId = new MyDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), Settings.DefaultSubtypeId);
             }
 

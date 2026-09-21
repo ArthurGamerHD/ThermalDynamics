@@ -5,8 +5,10 @@ import numpy as np
 from PIL import Image, ImageDraw
 from corpus_render import raster, font, W, H
 
+# blur operation.
 def blur(values, mask, sigma):
     radius=int(np.ceil(3*sigma));x=np.arange(-radius,radius+1);kernel=np.exp(-.5*(x/sigma)**2);kernel/=kernel.sum()
+# filt operation.
     def filt(a):
         for axis in (0,1):
             a=np.apply_along_axis(lambda row: np.convolve(np.pad(row,(radius,radius)),kernel,'valid'),axis,a)
@@ -14,6 +16,7 @@ def blur(values, mask, sigma):
     weights=filt(mask.astype(float));weighted=filt(np.where(mask,values,0))
     return np.divide(weighted,weights,out=np.zeros_like(weighted),where=weights>1e-12)
 
+# main operation.
 def main(data,out):
     out.mkdir(parents=True,exist_ok=True)
     src=Path('Data/Scripts/Thermodynamics/Presentation/ThermalVision/ThermalVisionPalette.cs').read_text()

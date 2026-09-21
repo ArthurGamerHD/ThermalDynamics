@@ -1,9 +1,5 @@
 ﻿namespace RichHudFramework
 {
-    /// <summary>
-    /// API registration state enums
-    /// </summary>
-    /// <exclude/>
     public enum MsgTypes : int
     {
         RegistrationRequest = 1,
@@ -11,10 +7,6 @@
         RegistrationFailed = 3,
     }
 
-	/// <summary>
-	/// API submodule type enums
-	/// </summary>
-	/// <exclude/>
 	public enum ApiModuleTypes : int
     {
         BindManager = 1,
@@ -24,10 +16,6 @@
         BillBoardUtils = 5
     }
 
-	/// <summary>
-	/// Main client accessor properties
-	/// </summary>
-	/// <exclude/>
 	public enum ClientDataAccessors : int
 	{
 		GetVersionID = 1,
@@ -36,10 +24,6 @@
 		GetIsPausedFunc = 4
 	}
 
-	/// <summary>
-	/// Client configuration enums
-	/// </summary>
-	/// <exclude/>
 	public enum ClientSubtypes : int
     {
         Full = 1,

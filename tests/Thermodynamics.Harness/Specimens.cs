@@ -3,56 +3,32 @@ using System.Collections.Generic;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Which ships are worth keeping, and which are saying what another ship already said.
-    /// **Selection is by coverage, not by frequency** (`M10`): the extremes of every axis first, then
-    /// greedy maximin, because the interior of a cluster is predictable from its edges and a balance
-    /// figure fails at the edges first.
-    ///
-    /// <para>
-    /// **That two close ships behave alike is a hypothesis, not a result**, and until the battery has
-    /// run over a whole corpus once a reduced panel is a guess about what matters. See
-    /// <see cref="Fidelity"/>, and balance-lab.md, Specimens.
-    /// </para>
-    /// </summary>
     public static class Specimens
     {
         public class Scored
         {
             public ShipProfile Ship;
 
-            /// <summary>
-            /// Distance in feature space to the nearest ship already chosen. High means this ship
-            /// occupies a part of the space nothing else does.
-            /// </summary>
             public double Isolation;
 
-            /// <summary>Why it was taken: the axis it is extreme on, or "coverage".</summary>
             public string Reason;
         }
 
-        /// <summary>
-        /// A panel of at most <paramref name="count"/> ships covering the corpus.
-        ///
-        /// Extremes first — the largest, the smallest, the most and least stressed, the stiffest —
-        /// because an axis with no example at its end is an axis the panel cannot speak about at
-        /// all. Then greedy maximin: repeatedly take the ship furthest from everything already
-        /// taken, which is the standard construction for spreading a small sample through a space
-        /// whose density you do not want to reproduce.
-        /// </summary>
+/// <summary>Select operation.</summary>
         public static List<Scored> Select(IList<ShipProfile> corpus, int count)
         {
+/// <summary>List operation.</summary>
             List<Scored> panel = new List<Scored>();
             if (corpus == null || corpus.Count == 0 || count <= 0) return panel;
 
+/// <summary>List operation.</summary>
             List<double[]> features = new List<double[]>(corpus.Count);
             for (int i = 0; i < corpus.Count; i++) features.Add(corpus[i].Features);
 
+/// <summary>Spread operation.</summary>
             double[] scale = Spread(features);
             bool[] taken = new bool[corpus.Count];
 
-            // Extremes, both ends of every axis. A panel missing the stiffest ship in the corpus
-            // cannot answer the one question stiffness was measured for.
             int axes = ShipProfile.FeatureNames.Length;
             for (int axis = 0; axis < axes && panel.Count < count; axis++)
             {
@@ -75,6 +51,7 @@ namespace Thermodynamics.Harness
                 {
                     if (taken[i]) continue;
 
+/// <summary>Nearest operation.</summary>
                     double nearest = Nearest(features[i], panel, scale);
                     if (nearest > furthest)
                     {
@@ -90,6 +67,7 @@ namespace Thermodynamics.Harness
             return panel;
         }
 
+/// <summary>Take operation.</summary>
         private static void Take(IList<ShipProfile> corpus, List<double[]> features, bool[] taken,
             List<Scored> panel, int index, string reason, double[] scale)
         {
@@ -99,11 +77,13 @@ namespace Thermodynamics.Harness
             panel.Add(new Scored
             {
                 Ship = corpus[index],
+/// <summary>Nearest operation.</summary>
                 Isolation = panel.Count == 0 ? double.PositiveInfinity : Nearest(features[index], panel, scale),
                 Reason = reason,
             });
         }
 
+/// <summary>Extreme operation.</summary>
         private static int Extreme(List<double[]> features, int axis, bool highest)
         {
             int best = -1;
@@ -122,12 +102,14 @@ namespace Thermodynamics.Harness
             return best;
         }
 
+/// <summary>Nearest operation.</summary>
         private static double Nearest(double[] candidate, List<Scored> panel, double[] scale)
         {
             double nearest = double.PositiveInfinity;
 
             for (int i = 0; i < panel.Count; i++)
             {
+/// <summary>Distance operation.</summary>
                 double distance = Distance(candidate, panel[i].Ship.Features, scale);
                 if (distance < nearest) nearest = distance;
             }
@@ -135,10 +117,7 @@ namespace Thermodynamics.Harness
             return nearest;
         }
 
-        /// <summary>
-        /// Euclidean distance with every axis divided by its spread across the corpus, so an axis
-        /// that happens to be measured in larger numbers does not dominate one that is not.
-        /// </summary>
+/// <summary>Distance operation.</summary>
         public static double Distance(double[] a, double[] b, double[] scale)
         {
             double total = 0d;
@@ -152,7 +131,7 @@ namespace Thermodynamics.Harness
             return Math.Sqrt(total);
         }
 
-        /// <summary>Per-axis range across the corpus, floored so a constant axis cannot divide by zero.</summary>
+/// <summary>Spread operation.</summary>
         public static double[] Spread(List<double[]> features)
         {
             int axes = ShipProfile.FeatureNames.Length;
@@ -177,28 +156,22 @@ namespace Thermodynamics.Harness
             return scale;
         }
 
-        /// <summary>
-        /// How well a panel represents the corpus it came from, as the distance from the worst-served
-        /// ship to its nearest panel member.
-        ///
-        /// This is the number that decides whether a panel of a few hundred can stand in for ten
-        /// thousand. It is a statement about the *feature space* rather than about behaviour, so it
-        /// is necessary and not sufficient: a panel that covers the space badly certainly cannot
-        /// substitute, and one that covers it well still has to be shown to reproduce the corpus's
-        /// verdicts before anyone trusts it to.
-        /// </summary>
+/// <summary>Fidelity operation.</summary>
         public static double Fidelity(IList<ShipProfile> corpus, List<Scored> panel)
         {
             if (corpus == null || corpus.Count == 0 || panel == null || panel.Count == 0) return 0d;
 
+/// <summary>List operation.</summary>
             List<double[]> features = new List<double[]>(corpus.Count);
             for (int i = 0; i < corpus.Count; i++) features.Add(corpus[i].Features);
 
+/// <summary>Spread operation.</summary>
             double[] scale = Spread(features);
             double worst = 0d;
 
             for (int i = 0; i < corpus.Count; i++)
             {
+/// <summary>Nearest operation.</summary>
                 double nearest = Nearest(features[i], panel, scale);
                 if (nearest > worst) worst = nearest;
             }
@@ -206,13 +179,7 @@ namespace Thermodynamics.Harness
             return worst;
         }
 
-        /// <summary>
-        /// Ships that say nothing another ship has not already said, nearest-duplicate first.
-        ///
-        /// The inverse of <see cref="Select"/> and the more interesting half while a corpus is
-        /// being assembled: it says what the next thousand downloads are *not* buying. A corpus
-        /// whose redundant share is climbing has stopped being worth growing.
-        /// </summary>
+/// <summary>Redundant operation.</summary>
         public static List<KeyValuePair<ShipProfile, double>> Redundant(IList<ShipProfile> corpus,
             double within)
         {
@@ -221,9 +188,11 @@ namespace Thermodynamics.Harness
 
             if (corpus == null || corpus.Count < 2) return redundant;
 
+/// <summary>List operation.</summary>
             List<double[]> features = new List<double[]>(corpus.Count);
             for (int i = 0; i < corpus.Count; i++) features.Add(corpus[i].Features);
 
+/// <summary>Spread operation.</summary>
             double[] scale = Spread(features);
 
             for (int i = 0; i < corpus.Count; i++)
@@ -234,6 +203,7 @@ namespace Thermodynamics.Harness
                 {
                     if (i == j) continue;
 
+/// <summary>Distance operation.</summary>
                     double distance = Distance(features[i], features[j], scale);
                     if (distance < nearest) nearest = distance;
                 }

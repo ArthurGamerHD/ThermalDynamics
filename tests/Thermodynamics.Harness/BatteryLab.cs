@@ -5,36 +5,22 @@ using Thermodynamics.Core;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Step 3 of the balance lab: a panel of ships through the whole scenario battery, and the
-    /// matrix that comes out.
-    ///
-    /// See balance-lab.md.
-    /// </summary>
     public static class BatteryLab
     {
-        /// <summary>One run: a ship in a state.</summary>
         private class Job
         {
             public Blueprints.Ship Ship;
             public Battery.Scenario Scenario;
         }
 
-        /// <summary>
-        /// Every ship through every scenario.
-        ///
-        /// **The run is the unit of parallelism**, not the ship. Every simulation built from one
-        /// <c>Ship</c> shares its <c>BlockInstance</c> objects and the load is written onto them,
-        /// so each job reads the blueprint again for grid state of its own — see
-        /// <c>Blueprints.Ship.Reload</c>. Parsing is a fraction of the settling run it frees, and
-        /// without it a panel of six ships would use six cores of however many there are.
-        /// </summary>
+/// <summary>Run operation.</summary>
         public static List<ScenarioOutcome> Run(IList<Blueprints.Ship> ships,
             IList<Battery.Scenario> scenarios, ThermalSettings settings = null,
             LabMode mode = LabMode.Parallel)
         {
             GameBlocks.Warm();
 
+/// <summary>List operation.</summary>
             List<Job> jobs = new List<Job>(ships.Count * scenarios.Count);
             for (int s = 0; s < ships.Count; s++)
             {
@@ -51,9 +37,11 @@ namespace Thermodynamics.Harness
             }, mode);
         }
 
+/// <summary>Report operation.</summary>
         public static string Report(string path, int panelSize, LabMode mode = LabMode.Parallel,
             bool everyShip = false)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             string root = path ?? Blueprints.DefaultPath();
@@ -70,20 +58,16 @@ namespace Thermodynamics.Harness
                 return sb.ToString();
             }
 
-            // The battery is expensive, so it runs on specimens rather than on everything. The
-            // panel is chosen to cover the feature space rather than to be typical of it.
             List<ShipProfile> profiles = ScreeningLab.Measure(corpus.Usable);
             List<Specimens.Scored> panel = Specimens.Select(profiles, panelSize > 0 ? panelSize : 6);
 
             Dictionary<string, Blueprints.Ship> byName = new Dictionary<string, Blueprints.Ship>();
             for (int i = 0; i < corpus.Usable.Count; i++) byName[corpus.Usable[i].Name] = corpus.Usable[i];
 
+/// <summary>List operation.</summary>
             List<Blueprints.Ship> ships = new List<Blueprints.Ship>();
             if (everyShip)
             {
-                // The whole corpus. Expensive by design and paid once: it is the only way to check
-                // the claim the panel rests on, which is that a ship's neighbours in feature space
-                // behave as it does.
                 ships.AddRange(corpus.Usable);
             }
             else
@@ -97,6 +81,7 @@ namespace Thermodynamics.Harness
 
             List<Battery.Scenario> scenarios = Battery.All();
             System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
+/// <summary>Run operation.</summary>
             List<ScenarioOutcome> outcomes = Run(ships, scenarios, null, mode);
             clock.Stop();
 
@@ -168,6 +153,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>Trim operation.</summary>
         private static string Trim(string text, int width)
         {
             return LabText.Trim(text, width);

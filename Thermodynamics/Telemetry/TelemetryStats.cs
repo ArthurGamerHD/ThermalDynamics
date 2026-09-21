@@ -4,13 +4,6 @@ using System.Text;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// A streaming min/max/mean/stddev accumulator.
-    ///
-    /// Every figure the telemetry module records uses one of these rather than a sample buffer. A
-    /// session can run for hours, over which arrays of samples would exceed the simulation's own
-    /// memory without adding anything a count and two sums do not provide.
-    /// </summary>
     public class RunningStat
     {
         public long Count;
@@ -20,10 +13,9 @@ namespace Thermodynamics
         public float Max = float.MinValue;
         public float Last;
 
+/// <summary>Adds a .</summary>
         public void Add(float value)
         {
-            // NaN would silently poison every derived figure. Telemetry.Anomaly records the
-            // occurrence and the accumulator rejects the sample.
             if (float.IsNaN(value) || float.IsInfinity(value)) return;
 
             Count++;
@@ -60,6 +52,7 @@ namespace Thermodynamics
             get { return Count == 0 ? 0 : Max; }
         }
 
+/// <summary>Merge operation.</summary>
         public void Merge(RunningStat other)
         {
             if (other == null || other.Count == 0) return;
@@ -72,6 +65,7 @@ namespace Thermodynamics
             Last = other.Last;
         }
 
+/// <summary>Format operation.</summary>
         public string Format(string format)
         {
             if (Count == 0) return "-";
@@ -79,28 +73,27 @@ namespace Thermodynamics
                 + " (sd " + StdDev.ToString(format) + ", n " + Count + ")";
         }
 
+/// <summary>ToString operation.</summary>
         public override string ToString()
         {
+/// <summary>Format operation.</summary>
             return Format("n3");
         }
     }
 
-    /// <summary>
-    /// A fixed-edge histogram. Used for temperature distributions and frame-cost distributions,
-    /// where the shape of the tail matters more than the mean.
-    /// </summary>
     public class Histogram
     {
         public readonly float[] Edges;
         public readonly long[] Counts;
 
-        /// <param name="edges">Ascending upper bounds. One extra overflow bucket is appended.</param>
+/// <summary>Histogram operation.</summary>
         public Histogram(float[] edges)
         {
             Edges = edges;
             Counts = new long[edges.Length + 1];
         }
 
+/// <summary>Adds a .</summary>
         public void Add(float value)
         {
             if (float.IsNaN(value)) return;
@@ -127,21 +120,20 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>Merge operation.</summary>
         public void Merge(Histogram other)
         {
             if (other == null || other.Counts.Length != Counts.Length) return;
             for (int i = 0; i < Counts.Length; i++) Counts[i] += other.Counts[i];
         }
 
+/// <summary>Clear operation.</summary>
         public void Clear()
         {
             for (int i = 0; i < Counts.Length; i++) Counts[i] = 0;
         }
 
-        /// <summary>
-        /// Renders as "&lt;100: 12 (3.1%)" lines, skipping empty buckets so a wide range of edges
-        /// stays readable.
-        /// </summary>
+/// <summary>Write operation.</summary>
         public void Write(StringBuilder sb, string indent, string unit)
         {
             long total = Total;
@@ -167,23 +159,19 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>TemperatureEdges operation.</summary>
         public static float[] TemperatureEdges()
         {
             return new float[] { 2.8f, 50, 100, 200, 273.15f, 300, 350, 400, 500, 700, 1000, 1500, 2000, 5000 };
         }
 
+/// <summary>MillisecondEdges operation.</summary>
         public static float[] MillisecondEdges()
         {
             return new float[] { 0.01f, 0.05f, 0.1f, 0.25f, 0.5f, 1, 2, 5, 10, 25, 50, 100 };
         }
     }
 
-    /// <summary>
-    /// Wall-clock cost of one code path: call count, total, mean, worst and distribution.
-    ///
-    /// Not reentrant: Begin/End pairs must not nest on the same instance. Every call site in this mod
-    /// is either a leaf or has its own instance.
-    /// </summary>
     public class TimingStat
     {
         public readonly string Name;
@@ -191,29 +179,34 @@ namespace Thermodynamics
         public double TotalMilliseconds;
         public double MaxMilliseconds;
 
-        /// <summary>The most recent call, so a caller can forward it somewhere else too.</summary>
         public double LastMilliseconds;
 
+/// <summary>Stopwatch operation.</summary>
         private readonly Stopwatch _watch = new Stopwatch();
+/// <summary>Histogram operation.</summary>
         private readonly Histogram _distribution = new Histogram(Histogram.MillisecondEdges());
 
+/// <summary>TimingStat operation.</summary>
         public TimingStat(string name)
         {
             Name = name;
         }
 
+/// <summary>Begin operation.</summary>
         public void Begin()
         {
             _watch.Reset();
             _watch.Start();
         }
 
+/// <summary>End operation.</summary>
         public void End()
         {
             _watch.Stop();
             Record(_watch.Elapsed.TotalMilliseconds);
         }
 
+/// <summary>Record operation.</summary>
         public void Record(double milliseconds)
         {
             LastMilliseconds = milliseconds;
@@ -228,6 +221,7 @@ namespace Thermodynamics
             get { return Calls == 0 ? 0 : TotalMilliseconds / Calls; }
         }
 
+/// <summary>Merge operation.</summary>
         public void Merge(TimingStat other)
         {
             if (other == null || other.Calls == 0) return;
@@ -238,11 +232,13 @@ namespace Thermodynamics
             _distribution.Merge(other._distribution);
         }
 
+/// <summary>WriteDistribution operation.</summary>
         public void WriteDistribution(StringBuilder sb, string indent)
         {
             _distribution.Write(sb, indent, "ms");
         }
 
+/// <summary>WriteRow operation.</summary>
         public void WriteRow(StringBuilder sb)
         {
             sb.Append("  ")
@@ -254,6 +250,7 @@ namespace Thermodynamics
               .Append('\n');
         }
 
+/// <summary>WriteHeader operation.</summary>
         public static void WriteHeader(StringBuilder sb, string title)
         {
             sb.Append("  ")
@@ -266,50 +263,29 @@ namespace Thermodynamics
         }
     }
 
-    /// <summary>
-    /// What the mod cost against the session clock, from timings that nest inside one another. Only
-    /// paths the engine enters independently are roots — the session frame, and the save and load
-    /// callbacks it raises outside one — because summing a row and the row containing it charges the
-    /// same milliseconds twice. See telemetry.md, What the stages leave over.
-    /// </summary>
     public static class CostRollup
     {
-        /// <summary>
-        /// Total wall clock the mod is responsible for, over the roots only. It takes no
-        /// grid-simulation argument by construction, since that nests inside
-        /// <paramref name="sessionFrame"/>; <paramref name="build"/> is a root because a grid's one-off
-        /// build runs from the entity's own callback and nothing here contains it.
-        /// </summary>
+/// <summary>MeasuredMilliseconds operation.</summary>
         public static double MeasuredMilliseconds(
             double sessionFrame, double save, double load, double build)
         {
             return sessionFrame + save + load + build;
         }
 
-        /// <summary>
-        /// The same, with the block-event root the 2026-09-01 field report showed was missing: a
-        /// pasted or welded ship arrives a block at a time from the grid's own callback, which is
-        /// inside neither the session frame nor a grid's tick, and until that report nothing timed
-        /// it. Kept beside the four-argument form rather than replacing it, because
-        /// `CostRollupTests` pins that one against figures taken before this root existed.
-        /// </summary>
+/// <summary>MeasuredMilliseconds operation.</summary>
         public static double MeasuredMilliseconds(
             double sessionFrame, double save, double load, double build, double blockEvents)
         {
             return MeasuredMilliseconds(sessionFrame, save, load, build) + blockEvents;
         }
 
-        /// <summary>
-        /// What a parent row cost that none of its children claimed, reported rather than clamped: a
-        /// large positive figure is work nobody instrumented, and a negative one is two children
-        /// timing the same milliseconds, which a maximum with zero would hide.
-        /// </summary>
+/// <summary>Unattributed operation.</summary>
         public static double Unattributed(double parent, double children)
         {
             return parent - children;
         }
 
-        /// <summary>Share of the session clock the roots account for, or -1 when the clock is unset.</summary>
+/// <summary>ShareOfRealTime operation.</summary>
         public static double ShareOfRealTime(double measuredMilliseconds, double sessionSeconds)
         {
             if (sessionSeconds <= 0.0) return -1.0;

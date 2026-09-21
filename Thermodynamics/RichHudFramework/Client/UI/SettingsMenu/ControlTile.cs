@@ -16,49 +16,30 @@ namespace RichHudFramework.UI.Client
         object // ID
     >;
 
-    /// <summary>
-    /// Represents a vertical layout column within a <see cref="ControlCategory"/> in the <see cref="RichHudTerminal"/>. 
-    /// <para>
-    /// Tiles are organized horizontally within a category. Each tile should generally contain 
-    /// no more than 3 controls to maintain proper UI scaling and layout bounds.
-    /// </para>
-    /// </summary>
     public class ControlTile : IControlTile
     {
-        /// <summary>
-        /// Read-only collection of the <see cref="TerminalControlBase"/> elements attached to this tile.
-        /// </summary>
         public IReadOnlyList<TerminalControlBase> Controls { get; }
 
-        /// <summary>
-        /// Interface accessor for use in collection initializers.
-        /// </summary>
         public IControlTile ControlContainer => this;
 
-        /// <summary>
-        /// Determines whether or not the tile and its contents will be rendered in the list.
-        /// </summary>
         public bool Enabled
         {
+/// <summary>return operation.</summary>
             get { return (bool)GetOrSetMemberFunc(null, (int)ControlTileAccessors.Enabled); }
+/// <summary>Returns the orsetmemberfunc.</summary>
             set { GetOrSetMemberFunc(value, (int)ControlTileAccessors.Enabled); }
         }
 
-        /// <summary>
-        /// Unique identifier used by the Framework API.
-        /// </summary>
         public object ID => tileMembers.Item3;
 
         private ApiMemberAccessor GetOrSetMemberFunc => tileMembers.Item1;
         private readonly ControlContainerMembers tileMembers;
 
+/// <summary>ControlTile operation.</summary>
         public ControlTile() : this(RichHudTerminal.Instance.GetNewMenuTile())
         { }
 
-        /// <summary>
-        /// Internal API initializer
-        /// </summary>
-        /// <exclude/>
+/// <summary>ControlTile operation.</summary>
         public ControlTile(ControlContainerMembers data)
         {
             tileMembers = data;
@@ -66,6 +47,7 @@ namespace RichHudFramework.UI.Client
             var GetControlDataFunc = data.Item2.Item1 as Func<int, ControlMembers>;
             Func<int, TerminalControlBase> GetControlFunc = (x => new TerminalControl(GetControlDataFunc(x)));
 
+/// <summary>ReadOnlyApiCollection operation.</summary>
             Controls = new ReadOnlyApiCollection<TerminalControlBase>(GetControlFunc, data.Item2.Item2);
         }
 
@@ -75,21 +57,17 @@ namespace RichHudFramework.UI.Client
         IEnumerator IEnumerable.GetEnumerator() =>
             Controls.GetEnumerator();
 
-        /// <summary>
-        /// Adds a <see cref="TerminalControlBase"/> to this tile.
-        /// <para>Note: Controls are stacked vertically within the tile.</para>
-        /// </summary>
+/// <summary>Adds a .</summary>
         public void Add(TerminalControlBase control) =>
             GetOrSetMemberFunc(control.ID, (int)ControlTileAccessors.AddControl);
 
-        /// <summary>
-        /// Retrieves the internal data tuple required by the Framework API.
-        /// </summary>
+/// <summary>Returns the apidata.</summary>
         public ControlContainerMembers GetApiData() =>
             tileMembers;
 
         private class TerminalControl : TerminalControlBase
         {
+/// <summary>TerminalControl operation.</summary>
             public TerminalControl(ControlMembers data) : base(data)
             { }
         }

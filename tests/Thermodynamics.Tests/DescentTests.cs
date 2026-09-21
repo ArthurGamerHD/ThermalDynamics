@@ -5,26 +5,19 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// A ship digging from the surface to the core.
-    ///
-    /// The descent is where four parts of the environment hand over to each other, and each was
-    /// written on its own: the sun goes at the surface, the wind over the hull's own height, the
-    /// day's swing over tens of metres of rock, and the rock's own warmth only below the deadzone.
-    /// A field dump showed the second of those was never happening — a grid ten metres under the
-    /// surface was still reading four metres a second of wind, because the wind model clamped a
-    /// negative height to zero and then blew at ground level.
-    /// </summary>
     public class DescentTests
     {
+/// <summary>Readings operation.</summary>
         private static List<Descent.Reading> Readings()
         {
             return Descent.Run();
         }
 
         [Fact]
+/// <summary>TheWindBlowsWhileTheHullIsAboveTheSurface operation.</summary>
         public void TheWindBlowsWhileTheHullIsAboveTheSurface()
         {
+/// <summary>Readings operation.</summary>
             List<Descent.Reading> readings = Readings();
 
             Assert.True(Descent.At(readings, 40).WindSpeed > 0f);
@@ -32,13 +25,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(1f, Descent.At(readings, 0).WindBurial);
         }
 
-        /// <summary>
-        /// The failure the field dump recorded. Nothing below the surface is in a wind, however the
-        /// game's own flag reads.
-        /// </summary>
         [Fact]
+/// <summary>TheWindIsGoneOnceTheHullIsWhollyBuried operation.</summary>
         public void TheWindIsGoneOnceTheHullIsWhollyBuried()
         {
+/// <summary>Readings operation.</summary>
             List<Descent.Reading> readings = Readings();
 
             foreach (double height in new double[] { -6, -10, -20, -100, -1000, -20000 })
@@ -50,14 +41,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Between the two the ship is in the hole it has dug, with part of it still in the open.
-        /// A step change at the rim would put a hovering ship in a gale and the same ship a metre
-        /// lower in dead air.
-        /// </summary>
         [Fact]
+/// <summary>TheWindFadesOverTheHullRatherThanStopping operation.</summary>
         public void TheWindFadesOverTheHullRatherThanStopping()
         {
+/// <summary>Readings operation.</summary>
             List<Descent.Reading> readings = Readings();
 
             float surface = Descent.At(readings, 0).WindSpeed;
@@ -69,8 +57,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheWindFallsMonotonicallyThroughTheDig operation.</summary>
         public void TheWindFallsMonotonicallyThroughTheDig()
         {
+/// <summary>Readings operation.</summary>
             List<Descent.Reading> readings = Readings();
 
             float previous = float.MaxValue;
@@ -85,8 +75,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheSunIsGoneAsSoonAsTheHullIsUnderTheSurface operation.</summary>
         public void TheSunIsGoneAsSoonAsTheHullIsUnderTheSurface()
         {
+/// <summary>Readings operation.</summary>
             List<Descent.Reading> readings = Readings();
 
             Assert.True(Descent.At(readings, 10).SolarWatts > 0f);
@@ -100,35 +92,34 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The rock damps the surface's day out over tens of metres and then warms towards the core
-        /// below the sea-level deadzone. Both must be visible on one descent, or one of them is
-        /// swallowing the other.
-        /// </summary>
         [Fact]
+/// <summary>AmbientDampsToTheRockAndThenWarmsTowardsTheCore operation.</summary>
         public void AmbientDampsToTheRockAndThenWarmsTowardsTheCore()
         {
+/// <summary>Readings operation.</summary>
             List<Descent.Reading> readings = Readings();
+/// <summary>PlanetThermalProperties operation.</summary>
             PlanetThermalProperties planet = new PlanetThermalProperties();
 
             float shallow = Descent.At(readings, -100).AmbientKelvin;
             Assert.InRange(shallow, planet.UndergroundTemperature - 1f, planet.UndergroundTemperature + 1f);
 
-            // Inside the deadzone the rock is still the surface's own mean.
             Assert.InRange(
                 Descent.At(readings, -1000).AmbientKelvin,
                 planet.UndergroundTemperature - 1f, planet.UndergroundTemperature + 1f);
 
-            // Below it, warming, and nowhere near the core until most of the way down.
             Assert.True(Descent.At(readings, -5000).AmbientKelvin > shallow);
             Assert.True(Descent.At(readings, -20000).AmbientKelvin > Descent.At(readings, -5000).AmbientKelvin);
             Assert.True(Descent.At(readings, -59000).AmbientKelvin < planet.CoreTemperature);
         }
 
         [Fact]
+/// <summary>AmbientRisesMonotonicallyBelowTheDeadzone operation.</summary>
         public void AmbientRisesMonotonicallyBelowTheDeadzone()
         {
+/// <summary>Readings operation.</summary>
             List<Descent.Reading> readings = Readings();
+/// <summary>PlanetThermalProperties operation.</summary>
             PlanetThermalProperties planet = new PlanetThermalProperties();
 
             float previous = 0f;
@@ -142,14 +133,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The game's flag is the thing this model cannot rely on: it answers for the grid's centre
-        /// point, so it is already true while the deck is open to the sky. The descent records both,
-        /// and the disagreement is the reason the burial fade exists.
-        /// </summary>
         [Fact]
+/// <summary>TheGamesFlagTurnsBeforeTheHullIsActuallyBuried operation.</summary>
         public void TheGamesFlagTurnsBeforeTheHullIsActuallyBuried()
         {
+/// <summary>Readings operation.</summary>
             List<Descent.Reading> readings = Readings();
             Descent.Reading dug = Descent.At(readings, -1);
 
@@ -159,8 +147,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheCsvCarriesEveryReading operation.</summary>
         public void TheCsvCarriesEveryReading()
         {
+/// <summary>Readings operation.</summary>
             List<Descent.Reading> readings = Readings();
             string csv = Descent.Csv(readings);
 

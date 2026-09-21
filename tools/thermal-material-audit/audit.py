@@ -11,12 +11,14 @@ import struct
 
 
 class Reader:
+#   init   operation.
     def __init__(self, stream):
         self.stream = stream
         stream.seek(0, 2)
         self.end = stream.tell()
         stream.seek(0)
 
+# take operation.
     def take(self, length):
         if length < 0 or length > self.end - self.stream.tell():
             raise ValueError('Truncated or out-of-range field')
@@ -25,15 +27,18 @@ class Reader:
             raise ValueError('Truncated field')
         return value
 
+# integer operation.
     def integer(self):
         return struct.unpack('<i', self.take(4))[0]
 
+# count operation.
     def count(self, maximum):
         value = self.integer()
         if not 0 <= value <= maximum:
             raise ValueError('Invalid collection size')
         return value
 
+# string operation.
     def string(self):
         length = 0
         for shift in range(0, 35, 7):
@@ -45,11 +50,13 @@ class Reader:
                 return self.take(length).decode('utf-8')
         raise ValueError('Invalid string length')
 
+# skip operation.
     def skip(self, count):
         if count < 0 or count > self.end - self.stream.tell():
             raise ValueError('Invalid skip')
         self.stream.seek(count, 1)
 
+# pairs operation.
     def pairs(self):
         result = {}
         for _ in range(self.count(1024)):
@@ -60,6 +67,7 @@ class Reader:
         return result
 
 
+# inspect operation.
 def inspect(stream):
     r = Reader(stream)
     if r.string() != 'Debug':
@@ -117,6 +125,7 @@ def inspect(stream):
     return {'version': version, 'geometry_asset': geometry, 'parts': parts}
 
 
+# main operation.
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('models', type=pathlib.Path)

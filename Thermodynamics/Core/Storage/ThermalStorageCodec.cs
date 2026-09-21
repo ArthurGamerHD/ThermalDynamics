@@ -4,12 +4,12 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>One saved block temperature.</summary>
     public struct StoredTemperature
     {
         public Vector3I Position;
         public float Temperature;
 
+/// <summary>StoredTemperature operation.</summary>
         public StoredTemperature(Vector3I position, float temperature)
         {
             Position = position;
@@ -17,12 +17,12 @@ namespace Thermodynamics.Core
         }
     }
 
-    /// <summary>One saved loop temperature, keyed by the loop's stable signature.</summary>
     public struct StoredLoop
     {
         public long Signature;
         public float Temperature;
 
+/// <summary>StoredLoop operation.</summary>
         public StoredLoop(long signature, float temperature)
         {
             Signature = signature;
@@ -30,20 +30,12 @@ namespace Thermodynamics.Core
         }
     }
 
-    /// <summary>
-    /// How full one ring's coolant is, keyed by the same signature <see cref="StoredLoop"/> uses.
-    ///
-    /// **A section of its own rather than a field on `StoredLoop`**, because `W1` says the format
-    /// grows by adding a section: a build that predates coolant being a consumable reads the four
-    /// sections it knows and skips this one, where a widened record would have made every older
-    /// build reject the payload. A ring saved by such a build simply loads full, which is what it
-    /// was.
-    /// </summary>
     public struct StoredLoopFill
     {
         public long Signature;
         public float Fill;
 
+/// <summary>StoredLoopFill operation.</summary>
         public StoredLoopFill(long signature, float fill)
         {
             Signature = signature;
@@ -51,22 +43,12 @@ namespace Thermodynamics.Core
         }
     }
 
-    /// <summary>
-    /// One pipe's held coolant, keyed by its cell: the real J/K it absorbed when its ring was
-    /// broken, before <see cref="Thermodynamics.Core.ThermalSettings.HeatTimeScale"/>.
-    ///
-    /// <para>
-    /// It is saved because it is heat capacity that no other saved value implies. The block's
-    /// temperature is written whatever happens, so a reload that dropped the capacity would put the
-    /// mixed temperature onto the bare pipe and destroy the fraction the mix had just conserved,
-    /// on a slower trigger.
-    /// </para>
-    /// </summary>
     public struct StoredHeldCoolant
     {
         public Vector3I Position;
         public float Capacity;
 
+/// <summary>StoredHeldCoolant operation.</summary>
         public StoredHeldCoolant(Vector3I position, float capacity)
         {
             Position = position;
@@ -74,12 +56,12 @@ namespace Thermodynamics.Core
         }
     }
 
-    /// <summary>One saved room air temperature, keyed by the room's anchor cell.</summary>
     public struct StoredRoom
     {
         public Vector3I Anchor;
         public float Temperature;
 
+/// <summary>StoredRoom operation.</summary>
         public StoredRoom(Vector3I anchor, float temperature)
         {
             Anchor = anchor;
@@ -87,12 +69,6 @@ namespace Thermodynamics.Core
         }
     }
 
-    /// <summary>
-    /// Serialises grid temperatures to and from a base64 blob. Version 1 is read so old saves load;
-    /// version 2 is **extended by adding a section rather than by changing the marker**, so a reader
-    /// skips what it does not recognise and a newer save still loads on an older build.
-    /// See architecture.md, Persistence.
-    /// </summary>
     public static class ThermalStorageCodec
     {
         private const byte Version2Marker = 0xFD;
@@ -108,36 +84,30 @@ namespace Thermodynamics.Core
         private const int Int32Size = 4;
         private const int RecordSize = 12;   // 8 byte key + 4 byte temperature
 
-        // ---- version 2 ---------------------------------------------------------------------
 
-        /// <summary>Encodes block and loop temperatures in the current format.</summary>
+/// <summary>Encode operation.</summary>
         public static string Encode(IList<StoredTemperature> blocks, IList<StoredLoop> loops)
         {
+/// <summary>Encode operation.</summary>
             return Encode(blocks, loops, null);
         }
 
-        /// <summary>Encodes block, loop and room air temperatures in the current format.</summary>
+/// <summary>Encode operation.</summary>
         public static string Encode(IList<StoredTemperature> blocks, IList<StoredLoop> loops, IList<StoredRoom> rooms)
         {
+/// <summary>Encode operation.</summary>
             return Encode(blocks, loops, rooms, null);
         }
 
-        /// <summary>
-        /// Encodes block, loop, room air and held coolant in the current format. Held coolant is a
-        /// fourth section rather than a new marker, so a build that predates it reads the three it
-        /// knows and skips this one instead of rejecting the payload.
-        /// </summary>
+/// <summary>Encode operation.</summary>
         public static string Encode(IList<StoredTemperature> blocks, IList<StoredLoop> loops,
             IList<StoredRoom> rooms, IList<StoredHeldCoolant> held)
         {
+/// <summary>Encode operation.</summary>
             return Encode(blocks, loops, rooms, held, null);
         }
 
-        /// <summary>
-        /// The same, with how full each ring's coolant is — a fifth section, on the rule `W1`
-        /// states: a build that predates it skips what it does not know, and a ring it saved loads
-        /// full, which is what it was.
-        /// </summary>
+/// <summary>Encode operation.</summary>
         public static string Encode(IList<StoredTemperature> blocks, IList<StoredLoop> loops,
             IList<StoredRoom> rooms, IList<StoredHeldCoolant> held, IList<StoredLoopFill> fills)
         {
@@ -151,16 +121,10 @@ namespace Thermodynamics.Core
                 + (1 + Int32Size + (blockCount * RecordSize))
                 + (1 + Int32Size + (loopCount * RecordSize));
 
-            // A world with room air disabled writes no section rather than an empty one, so the
-            // format costs nothing when the feature is unused.
             if (roomCount > 0) size += 1 + Int32Size + (roomCount * RecordSize);
 
-            // The same rule, and it earns more here: a pipe holds coolant only between a ring
-            // breaking and being rebuilt, so on almost every grid ever saved this section is absent.
             if (heldCount > 0) size += 1 + Int32Size + (heldCount * RecordSize);
 
-            // And once more: a ring that is full is the overwhelming case, and a full ring needs no
-            // record — the fill only has to survive a save while it is short of full.
             if (fillCount > 0) size += 1 + Int32Size + (fillCount * RecordSize);
 
             byte[] bytes = new byte[size];
@@ -229,40 +193,29 @@ namespace Thermodynamics.Core
             return Convert.ToBase64String(bytes);
         }
 
-        /// <summary>
-        /// Decodes either format. Returns false when the payload is unreadable, leaving the
-        /// output lists empty rather than throwing into the host's load path.
-        /// </summary>
+/// <summary>TryDecode operation.</summary>
         public static bool TryDecode(string data, List<StoredTemperature> blocks, List<StoredLoop> loops)
         {
+/// <summary>TryDecode operation.</summary>
             return TryDecode(data, blocks, loops, null);
         }
 
-        /// <summary>
-        /// Decodes either format, including the room air section. A payload written before rooms were
-        /// saved leaves <paramref name="rooms"/> empty.
-        /// </summary>
+/// <summary>TryDecode operation.</summary>
         public static bool TryDecode(string data, List<StoredTemperature> blocks, List<StoredLoop> loops, List<StoredRoom> rooms)
         {
+/// <summary>TryDecode operation.</summary>
             return TryDecode(data, blocks, loops, rooms, null);
         }
 
-        /// <summary>
-        /// Decodes either format, including held coolant. A payload written before pipes could hold
-        /// any — which is every payload a released build has written — leaves
-        /// <paramref name="held"/> empty.
-        /// </summary>
+/// <summary>TryDecode operation.</summary>
         public static bool TryDecode(string data, List<StoredTemperature> blocks, List<StoredLoop> loops,
             List<StoredRoom> rooms, List<StoredHeldCoolant> held)
         {
+/// <summary>TryDecode operation.</summary>
             return TryDecode(data, blocks, loops, rooms, held, null);
         }
 
-        /// <summary>
-        /// The same, including how full each ring is. A payload written before coolant was a
-        /// consumable leaves <paramref name="fills"/> empty, and a ring with no record loads full —
-        /// which is what it was in the world that saved it.
-        /// </summary>
+/// <summary>TryDecode operation.</summary>
         public static bool TryDecode(string data, List<StoredTemperature> blocks, List<StoredLoop> loops,
             List<StoredRoom> rooms, List<StoredHeldCoolant> held, List<StoredLoopFill> fills)
         {
@@ -288,53 +241,58 @@ namespace Thermodynamics.Core
 
             if (bytes[0] == Version2Marker)
             {
+/// <summary>TryDecodeVersion2 operation.</summary>
                 return TryDecodeVersion2(bytes, blocks, loops, rooms, held, fills);
             }
 
+/// <summary>TryDecodeLegacyBlocks operation.</summary>
             return TryDecodeLegacyBlocks(bytes, blocks);
         }
 
+/// <summary>TryDecodeVersion2 operation.</summary>
         private static bool TryDecodeVersion2(byte[] bytes, List<StoredTemperature> blocks,
             List<StoredLoop> loops, List<StoredRoom> rooms, List<StoredHeldCoolant> held,
             List<StoredLoopFill> fills)
         {
-            // Every read is bounds checked up front rather than caught afterwards: the in-game
-            // script compiler's whitelist prohibits IndexOutOfRangeException, so a truncated payload
-            // must be rejected before it is read.
             int at = 1;
             while (at < bytes.Length)
             {
                 byte section = bytes[at++];
 
                 if (at + Int32Size > bytes.Length) return false;
+/// <summary>ReadInt32 operation.</summary>
                 int count = ReadInt32(bytes, ref at);
                 if (count < 0) return false;
 
-                // Guards against a corrupt count claiming more records than the payload holds, and
-                // against the multiplication overflowing on an extreme one.
                 if (count > (bytes.Length - at) / RecordSize) return false;
 
                 for (int i = 0; i < count; i++)
                 {
+/// <summary>ReadInt64 operation.</summary>
                     long key = ReadInt64(bytes, ref at);
+/// <summary>ReadSingle operation.</summary>
                     float temperature = ReadSingle(bytes, ref at);
 
                     if (section == SectionBlocks)
                     {
                         if (blocks != null) blocks.Add(new StoredTemperature(GridMath.FromKey(key), temperature));
                     }
+/// <summary>if operation.</summary>
                     else if (section == SectionLoops)
                     {
                         if (loops != null) loops.Add(new StoredLoop(key, temperature));
                     }
+/// <summary>if operation.</summary>
                     else if (section == SectionRooms)
                     {
                         if (rooms != null) rooms.Add(new StoredRoom(GridMath.FromKey(key), temperature));
                     }
+/// <summary>if operation.</summary>
                     else if (section == SectionHeldCoolant)
                     {
                         if (held != null) held.Add(new StoredHeldCoolant(GridMath.FromKey(key), temperature));
                     }
+/// <summary>if operation.</summary>
                     else if (section == SectionLoopFill)
                     {
                         if (fills != null) fills.Add(new StoredLoopFill(key, temperature));
@@ -344,12 +302,8 @@ namespace Thermodynamics.Core
             return true;
         }
 
-        // ---- version 1 (read only) ----------------------------------------------------------
 
-        /// <summary>
-        /// Encodes in the version 1 format. Retained so tests can verify the reader against data in
-        /// the legacy layout.
-        /// </summary>
+/// <summary>EncodeLegacyBlocks operation.</summary>
         public static string EncodeLegacyBlocks(IList<StoredTemperature> blocks)
         {
             int count = blocks == null ? 0 : blocks.Count;
@@ -374,6 +328,7 @@ namespace Thermodynamics.Core
             return Convert.ToBase64String(bytes);
         }
 
+/// <summary>EncodeLegacyLoops operation.</summary>
         public static string EncodeLegacyLoops(IList<float> loopTemperatures)
         {
             int count = loopTemperatures == null ? 0 : loopTemperatures.Count;
@@ -392,6 +347,7 @@ namespace Thermodynamics.Core
             return Convert.ToBase64String(bytes);
         }
 
+/// <summary>TryDecodeLegacyBlocks operation.</summary>
         private static bool TryDecodeLegacyBlocks(byte[] bytes, List<StoredTemperature> blocks)
         {
             if (bytes.Length % LegacyRecordSize != 0) return false;
@@ -411,7 +367,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-        /// <summary>Decodes the version 1 loop blob, which is keyed by list index.</summary>
+/// <summary>TryDecodeLegacyLoops operation.</summary>
         public static bool TryDecodeLegacyLoops(string data, List<float> temperaturesByIndex)
         {
             if (temperaturesByIndex != null) temperaturesByIndex.Clear();
@@ -444,8 +400,8 @@ namespace Thermodynamics.Core
             return true;
         }
 
-        // ---- primitives ---------------------------------------------------------------------
 
+/// <summary>WriteInt32 operation.</summary>
         private static void WriteInt32(byte[] bytes, ref int at, int value)
         {
             bytes[at++] = (byte)value;
@@ -454,6 +410,7 @@ namespace Thermodynamics.Core
             bytes[at++] = (byte)(value >> 24);
         }
 
+/// <summary>ReadInt32 operation.</summary>
         private static int ReadInt32(byte[] bytes, ref int at)
         {
             int value = bytes[at]
@@ -464,6 +421,7 @@ namespace Thermodynamics.Core
             return value;
         }
 
+/// <summary>WriteInt64 operation.</summary>
         private static void WriteInt64(byte[] bytes, ref int at, long value)
         {
             for (int i = 0; i < 8; i++)
@@ -472,6 +430,7 @@ namespace Thermodynamics.Core
             }
         }
 
+/// <summary>ReadInt64 operation.</summary>
         private static long ReadInt64(byte[] bytes, ref int at)
         {
             long value = 0;
@@ -483,6 +442,7 @@ namespace Thermodynamics.Core
             return value;
         }
 
+/// <summary>WriteSingle operation.</summary>
         private static void WriteSingle(byte[] bytes, ref int at, float value)
         {
             byte[] raw = BitConverter.GetBytes(value);
@@ -492,6 +452,7 @@ namespace Thermodynamics.Core
             bytes[at++] = raw[3];
         }
 
+/// <summary>ReadSingle operation.</summary>
         private static float ReadSingle(byte[] bytes, ref int at)
         {
             float value = BitConverter.ToSingle(bytes, at);

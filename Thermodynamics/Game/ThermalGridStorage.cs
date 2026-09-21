@@ -6,22 +6,12 @@ using VRage.Utils;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// Save and load, through the model's own codec.
-    ///
-    /// The version 1 format truncated every temperature to a whole kelvin and wrote the truncated
-    /// value back onto the running simulation, so saving perturbed the world. The codec keeps the
-    /// full value and does not write to live state.
-    /// </summary>
     public partial class ThermalGrid
     {
-        /// <summary>
-        /// Everything this mod saves on a grid goes under this one key. **The key ending 344 is retired
-        /// and must not be reused**: version 1 wrote loop temperatures under it, and a world saved by
-        /// that build still carries the blob, which nothing reads.
-        /// </summary>
+/// <summary>Guid operation.</summary>
         private static readonly Guid StorageGuid = new Guid("f7cd64ae-9cd8-41f3-8e5d-3db992619343");
 
+/// <summary>Save operation.</summary>
         private void Save()
         {
             if (disabled || Simulation == null || Entity.Storage == null) return;
@@ -56,6 +46,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>Load operation.</summary>
         private void Load()
         {
             if (disabled || Simulation == null || Entity.Storage == null) return;

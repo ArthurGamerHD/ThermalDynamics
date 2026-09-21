@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """What the candidate retune costs in air, which is the environment `G6` is decided in.
 
 `pairs.py` scores `G8` — the significance window — and prints a cost column taken in vacuum, where
@@ -36,49 +35,34 @@ import scoring
 
 DATA = sys.argv[1] if len(sys.argv) > 1 else "out/air-2026-08-23"
 
-# The cell every other one is measured against: conductivity x1 at the clock of 225, which is what
-# shipped when this sweep was designed and is the sweep's own control.
-#
-# **It is the baseline and no longer the shipped configuration.** `C24` shipped `ConductionScale` 9.6
-# and `HeatTimeScale` 90 on 2026-08-24, which is this table's `x4 / 90` row — so the ratio column
-# says how a cell moved against the sweep's control, not against what a player has. Renaming it was
-# the whole of the fix: the arithmetic was never wrong, the word was.
 BASELINE_CLOCK = 225.0
 
-# What ships now, printed under the table so the two are never confused again.
 SHIPPED_CELL = "x4 / 90"
 
-# What MaxSubsteps grants at the shipped defaults. A demand above this is a step integrated at the
-# ceiling with both overshoot clamps live: an approximation rather than a slow step, and one whose
-# price stiffness.md, What refusing the demand costs, has measured.
 GRANTED = 64.0
 
-# The scenarios, in the order they are read. vacuum-shadow ties this pass to the vacuum dataset;
-# the other three are the convection fit's two anchors and its held-out point.
 ORDER = ["vacuum-shadow", "surface-hot-noon", "storm-parked", "reentry"]
 
-# Forced convection at the speed each scenario flies, h = 1 + 0.1*sqrt(v) over still air, as
-# balance.md fits it. Used only to project the 300 m/s case the servers this mod is played on run,
-# which no scenario in this pass measures.
 COEFFICIENT = {"surface-hot-noon": 1.0, "storm-parked": 2.0, "reentry": 2.4142}
 PROJECT_AT = 2.7321
 
 
 
 
+# load operation.
 def load(name):
     return scoring.load(DATA, name)
 
 
-# One definition, in scoring.py, shared with verdict.py — this is the one that survived, and every
-# panel figure this repository publishes was computed with it.
 percentile = scoring.percentile
 
 
+# cell name operation.
 def cell_name(conductivity, clock):
     return f"x{conductivity:g} / {clock:g}"
 
 
+# main operation.
 def main():
     rows = load("air")
     if not rows:
@@ -102,7 +86,6 @@ def main():
           f"{len(cells)} cells, {len(scenarios)} scenarios")
     print()
 
-    # ---- the two directions, side by side ----------------------------------------------------
     print(f"{'cell':>12} {'scenario':>18} {'p50':>8} {'p95':>8} {'p99':>8} {'max':>8}"
           f" {'vs baseline':>11} {'of cap':>8} {'over cap':>9}")
 
@@ -136,7 +119,6 @@ def main():
           f"What ships since 2026-08-24 is {SHIPPED_CELL}, which is a row above.")
     print()
 
-    # ---- G6, per cell ------------------------------------------------------------------------
     print(f"G6: p99 substep demand inside the {GRANTED:.0f} the shipped caps grant, "
           "in the worst environment measured")
     print()
@@ -172,6 +154,7 @@ def main():
     return 0
 
 
+# project operation.
 def project(demand, cell, quantile):
     """Demand at 300 m/s, at one quantile, from this cell's own three atmospheric points.
 

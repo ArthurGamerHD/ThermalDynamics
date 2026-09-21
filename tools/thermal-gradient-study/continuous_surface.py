@@ -10,8 +10,10 @@ from corpus_render import font
 W,H=520,480
 
 class Field:
+#   init   operation.
     def __init__(self,nodes):
         self.centres=np.array([(np.array(n['min'])+n['max'])/2-.5 for n in nodes]);self.temp=np.array([n['kelvin'] for n in nodes]);self.tree=cKDTree(self.centres)
+# sample operation.
     def sample(self,points,sigma):
         points=np.asarray(points);distance,index=self.tree.query(points,k=min(32,len(self.temp)))
         if len(self.temp)==1:return np.full(len(points),self.temp[0])
@@ -21,8 +23,8 @@ class Field:
         result[cold]=self.temp[index[cold,0]]
         return result
 
+# faces operation.
 def faces(nodes):
-    # Exact full-face cancellation removes internal geometry regardless of temperature.
     pending={}
     for n in nodes:
         lo=np.array(n['min'],float)-.5;hi=np.array(n['max'],float)-.5
@@ -38,11 +40,11 @@ def faces(nodes):
                 else: pending[key]=(np.array(quad),axis,side,n['kelvin'])
     return [f for f in pending.values() if f[2]==1] # fixed eye is positive on all axes
 
+# mesh operation.
 def mesh(nodes,sigma,budget=6000,field_nodes=None):
     field=Field(nodes if field_nodes is None else field_nodes);quads=faces(nodes)
     points=np.array([p for q,_,_,_ in quads for p in [*q,q.mean(0)]])
     samples=field.sample(points,sigma).reshape(-1,5)
-    # Centre error identifies localized extrema missed by corner-only interpolation.
     errors=np.abs(samples[:,4]-(samples[:,0]+samples[:,2])*.5)
     refine=set(np.argsort(-errors)[:max(0,(budget-2*len(quads))//2)])
     result=[]
@@ -53,6 +55,7 @@ def mesh(nodes,sigma,budget=6000,field_nodes=None):
             for ids in ((0,1,2),(0,2,3)):result.append((q[list(ids)],t[list(ids)],truth))
     return result,{'triangles':len(result),'baseTriangles':2*len(quads),'budget':budget,'overBudget':len(result)>budget,'refinedFaces':(len(result)-2*len(quads))//2,'sigmaGridUnits':sigma}
 
+# render operation.
 def render(triangles,nodes,reference=False,scale_factor=1):
     mins=np.array([n['min'] for n in nodes],float)-.5;maxs=np.array([n['max'] for n in nodes],float)-.5;centre=(mins.min(0)+maxs.max(0))/2
     eye=np.array([1.,.7,1.2]);eye/=np.linalg.norm(eye);right=np.cross([0,1,0],eye);right/=np.linalg.norm(right);up=np.cross(eye,right)
@@ -73,6 +76,7 @@ def render(triangles,nodes,reference=False,scale_factor=1):
         kelvin[y0:y1+1,x0:x1+1][mask]=values[mask]
     return kelvin
 
+# fixture operation.
 def fixture(cooled):
     nodes=[]
     for x in range(24):
@@ -82,6 +86,7 @@ def fixture(cooled):
             nodes.append({'min':[x,y,0],'max':[x+1,y+1,1],'kelvin':t})
     return {'ship':'Controlled hot plate'+(' / cooled patch' if cooled else ''),'workshopId':'cooled' if cooled else 'hotspot','seconds':0,'nodes':nodes}
 
+# main operation.
 def main(data,out):
     out.mkdir(parents=True,exist_ok=True)
     palette=np.array(re.findall(r'new Vector3\(([0-9.]+)f, ([0-9.]+)f, ([0-9.]+)f\)',Path('Data/Scripts/Thermodynamics/Presentation/ThermalVision/ThermalVisionPalette.cs').read_text())[:256],float)
@@ -105,7 +110,6 @@ def main(data,out):
             descriptions=['One temperature per block','Gaussian width: 0.45 grid cells','Gaussian width: 0.90 grid cells','Gaussian width: 2.25 grid cells']
             for col,(v,label) in enumerate(zip(images,labels)):
                 mask=np.isfinite(v);t=np.clip((np.nan_to_num(v,nan=lo)-lo)/(hi-lo),0,1)
-                # Linear ramp sampling, equivalent to interpolated scalar UVs followed by palette lookup.
                 u=t*255;i=np.minimum(np.floor(u).astype(int),254);f=(u-i)[...,None]
                 rgb=((1-f)*palette[i]+f*palette[i+1])*255 if mode=='colour' else np.repeat((18+225*t)[...,None],3,axis=2)
                 rgb[~mask]=[5,8,12];sheet.paste(Image.fromarray(np.uint8(np.clip(rgb,0,255))),(W*col,145));d.text((W*col+12,86),label,font=font(18),fill='white')

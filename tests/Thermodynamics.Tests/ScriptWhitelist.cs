@@ -11,88 +11,28 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The game's script whitelist, and the mod's source read against it.
-    ///
-    /// <para>
-    /// **Building the mod project is not this check.** `Generic.csproj` compiles `Data/Scripts`
-    /// against the installed game's own assemblies, which catches a member that does not exist and
-    /// cannot catch a member the game *refuses*: Space Engineers compiles a mod through a Roslyn
-    /// analyzer over a positive whitelist, so a type can resolve on this machine and be prohibited
-    /// in a session. It cost one — `Units.Watts` took an `IFormatProvider`, and the only feedback
-    /// was a red wall of text on the loading screen.
-    /// </para>
-    ///
-    /// <para>
-    /// **The list below is transcribed from the game rather than guessed at**, from
-    /// `SpaceEngineers.Game.MySpaceGameDefaultIlChecker`, which builds it in three methods of
-    /// `AllowNamespaceOfTypes` / `AllowTypes` / `AllowMembers` calls, and
-    /// `VRage.Scripting.MyScriptWhitelist`, which matches against it. The shape that catches people
-    /// out is that **`System` is not an allowed namespace** — only the types named one by one are.
-    /// Read it again with `ilspycmd -t SpaceEngineers.Game.MySpaceGameDefaultIlChecker` when the
-    /// game updates; the transcription date is below.
-    /// </para>
-    ///
-    /// <para>
-    /// **This is narrower than the game's rule, deliberately, in the direction that cannot cry
-    /// wolf.** It judges the framework surface only — the types a mod reaches through `netstandard`
-    /// — because that is where the whitelist is a list of individual types and where a mod author
-    /// has no way of knowing. The game half is allowed by whole namespaces, is already exercised by
-    /// every session the mod has ever loaded in, and would need the game's own resolution to judge.
-    /// What is left is exactly the class of mistake that produced this file.
-    /// </para>
-    ///
-    /// <para>
-    /// **Two more names are dropped for the same reason, and both cost sensitivity.** A name the
-    /// game also declares — `Color` is `VRageMath.Color` far more often than `System.Drawing.Color`
-    /// — and a name the mod declares itself. Without resolving the way a compiler does there is no
-    /// telling which was meant, and a check that reported three hundred `Color`s would be switched
-    /// off within a week. The cost is that a genuinely prohibited framework type whose simple name
-    /// collides with a game type is invisible here; the benefit is that everything this reports is
-    /// real.
-    /// </para>
-    /// </summary>
     public static class ScriptWhitelist
     {
-        /// <summary>
-        /// The game build the list was read from, so a failure after an update has somewhere to
-        /// start.
-        /// </summary>
         public const string TranscribedFrom = "Space Engineers, Bin64 of 2026-08-14, read 2026-08-23";
 
-        /// <summary>
-        /// Framework namespaces allowed whole, for `ModApi` or `Both`. Everything under one of
-        /// these is permitted, members and all.
-        /// </summary>
         public static readonly HashSet<string> AllowedNamespaces = new HashSet<string>
         {
-            // AllowNamespaceOfTypes(Both, IEnumerator, HashSet<>, LinkedList<>, IEnumerator<>,
-            //                       StringBuilder, Regex, Calendar)
             "System.Collections",
             "System.Collections.Generic",
             "System.Text",
             "System.Text.RegularExpressions",
             "System.Globalization",
 
-            // AllowNamespaceOfTypes(ModApi, Enumerable, ConcurrentBag<>, ConcurrentDictionary<,>)
             "System.Linq",
             "System.Collections.Concurrent",
 
-            // AllowNamespaceOfTypes(ModApi, System.Timers.Timer)
             "System.Timers",
 
-            // AllowNamespaceOfTypes(Both, ImmutableArray)
             "System.Collections.Immutable",
         };
 
-        /// <summary>
-        /// Framework types allowed one at a time, by simple name. **The whole point of the file is
-        /// that this list is finite**: `System` is not an allowed namespace, so a type of it that
-        /// is not written here does not compile in a session.
-        /// </summary>
         public static readonly HashSet<string> AllowedTypes = new HashSet<string>
         {
-            // AllowTypes(Both, ...) — the System surface.
             "Object", "IDisposable", "String", "StringComparison", "Math", "Enum",
             "Int32", "Int16", "Int64", "UInt32", "UInt16", "UInt64",
             "Double", "Single", "Boolean", "Char", "Byte", "SByte", "Decimal",
@@ -116,13 +56,10 @@ namespace Thermodynamics.Tests
             "INotifyPropertyChanging", "PropertyChangingEventHandler", "PropertyChangingEventArgs",
             "INotifyPropertyChanged", "PropertyChangedEventHandler", "PropertyChangedEventArgs",
 
-            // AllowTypes(Both, Action..., Func...)
             "Action", "Func",
 
-            // AllowTypes(ModApi, Stream, TextWriter, TextReader)
             "Stream", "TextWriter", "TextReader",
 
-            // AllowTypes(ModApi, TraceEventType, the assembly attributes, ...)
             "TraceEventType", "AssemblyProductAttribute", "AssemblyDescriptionAttribute",
             "AssemblyConfigurationAttribute", "AssemblyCompanyAttribute", "AssemblyCultureAttribute",
             "AssemblyVersionAttribute", "AssemblyFileVersionAttribute", "AssemblyCopyrightAttribute",
@@ -130,39 +67,30 @@ namespace Thermodynamics.Tests
             "DefaultValueAttribute", "SerializableAttribute", "GuidAttribute",
             "StructLayoutAttribute", "LayoutKind", "Guid",
 
-            // AllowTypes(ModApi, ... threading ...) and AllowTypes(ModApi, ... Stopwatch, Version)
             "Monitor", "AutoResetEvent", "ManualResetEvent", "Interlocked",
             "Stopwatch", "ConditionalAttribute", "Version", "ObsoleteAttribute",
 
-            // AllowMembers(Both, ...) — the type is not allowed whole, but naming it is, and this
-            // check judges names rather than members.
             "MemberInfo", "Type", "ValueType", "Environment", "Delegate",
 
-            // Keywords that resolve to framework types and can be written either way. A predefined
-            // type keyword is never reported, so these are here for the spelled-out form.
             "Void", "IntPtr", "UIntPtr",
         };
 
-        /// <summary>One prohibited name, and where the mod wrote it.</summary>
         public struct Finding
         {
             public string File;
             public int Line;
             public string Name;
 
-            /// <summary>The namespaces the framework declares that name in.</summary>
             public string Namespaces;
 
+/// <summary>ToString operation.</summary>
             public override string ToString()
             {
                 return File + ":" + Line + "  " + Name + "  (" + Namespaces + ")";
             }
         }
 
-        /// <summary>
-        /// The mod's source root — everything the game compiles. Found through the harness's own
-        /// repository locator, because the test binary is built outside the tree.
-        /// </summary>
+/// <summary>SourceRoot operation.</summary>
         public static string SourceRoot()
         {
             string root = Harness.ShippedBlocks.RepoRoot();
@@ -172,11 +100,7 @@ namespace Thermodynamics.Tests
             return Directory.Exists(candidate) ? candidate : null;
         }
 
-        /// <summary>
-        /// The installed game's `netstandard.dll`, which is the framework surface a mod is compiled
-        /// against — the game passes it to the compiler by name — or null where the game is not
-        /// installed.
-        /// </summary>
+/// <summary>FrameworkFacade operation.</summary>
         public static string FrameworkFacade()
         {
             string content = Harness.GameBlocks.ContentPath();
@@ -190,21 +114,13 @@ namespace Thermodynamics.Tests
             return File.Exists(facade) ? facade : null;
         }
 
-        /// <summary>
-        /// Every framework type name the game would refuse, as simple name to the namespaces it is
-        /// declared in.
-        ///
-        /// <para>
-        /// A name is prohibited only when **every** type of that name is, which is what keeps a
-        /// name the game allows in one namespace from being reported because another framework
-        /// namespace happens to reuse it.
-        /// </para>
-        /// </summary>
+/// <summary>ProhibitedNames operation.</summary>
         public static Dictionary<string, string> ProhibitedNames()
         {
             Dictionary<string, string> prohibited = new Dictionary<string, string>();
             Dictionary<string, List<string>> byName = new Dictionary<string, List<string>>();
 
+/// <summary>FrameworkFacade operation.</summary>
             string facade = FrameworkFacade();
             if (facade == null) return prohibited;
 
@@ -223,8 +139,6 @@ namespace Thermodynamics.Tests
                         metadata.GetString(definition.Name));
                 }
 
-                // netstandard is a facade, so nearly everything in it is a forwarder rather than a
-                // definition. Missing these would leave the check judging almost nothing.
                 foreach (ExportedTypeHandle handle in metadata.ExportedTypes)
                 {
                     ExportedType exported = metadata.GetExportedType(handle);
@@ -233,7 +147,9 @@ namespace Thermodynamics.Tests
                 }
             }
 
+/// <summary>GameTypeNames operation.</summary>
             HashSet<string> shadowed = GameTypeNames();
+/// <summary>DeclaredByTheMod operation.</summary>
             HashSet<string> declared = DeclaredByTheMod();
 
             foreach (KeyValuePair<string, List<string>> entry in byName)
@@ -249,18 +165,14 @@ namespace Thermodynamics.Tests
             return prohibited;
         }
 
-        /// <summary>
-        /// Every public type name the game's own assemblies declare.
-        ///
-        /// The game's namespaces are allowed whole, so a name that exists in one of them is one
-        /// this check cannot pronounce on: `Color` is `VRageMath.Color` in nearly every line of
-        /// this mod and `System.Drawing.Color` in none of them.
-        /// </summary>
+/// <summary>GameTypeNames operation.</summary>
         public static HashSet<string> GameTypeNames()
         {
             if (_gameTypeNames != null) return _gameTypeNames;
 
+/// <summary>HashSet operation.</summary>
             HashSet<string> names = new HashSet<string>();
+/// <summary>FrameworkFacade operation.</summary>
             string facade = FrameworkFacade();
 
             if (facade != null)
@@ -288,6 +200,7 @@ namespace Thermodynamics.Tests
 
         private static HashSet<string> _gameTypeNames;
 
+/// <summary>CollectTypeNames operation.</summary>
         private static void CollectTypeNames(string file, HashSet<string> names)
         {
             try
@@ -310,16 +223,13 @@ namespace Thermodynamics.Tests
             }
             catch (BadImageFormatException)
             {
-                // A native DLL sits beside the managed ones. Nothing to read.
             }
         }
 
-        /// <summary>
-        /// Every type the mod declares itself, so its own `EventHandler` is not reported as the
-        /// framework's.
-        /// </summary>
+/// <summary>DeclaredByTheMod operation.</summary>
         public static HashSet<string> DeclaredByTheMod()
         {
+/// <summary>HashSet operation.</summary>
             HashSet<string> declared = new HashSet<string>();
 
             foreach (string path in Sources())
@@ -343,10 +253,9 @@ namespace Thermodynamics.Tests
             return declared;
         }
 
+/// <summary>Record operation.</summary>
         private static void Record(Dictionary<string, List<string>> byName, string space, string name)
         {
-            // Only the framework: the game's own namespaces are allowed whole and are not what this
-            // check is about.
             if (space.Length == 0 || !(space == "System" || space.StartsWith("System."))) return;
 
             int generic = name.IndexOf('`');
@@ -355,6 +264,7 @@ namespace Thermodynamics.Tests
             List<string> spaces;
             if (!byName.TryGetValue(name, out spaces))
             {
+/// <summary>List operation.</summary>
                 spaces = new List<string>();
                 byName[name] = spaces;
             }
@@ -362,9 +272,10 @@ namespace Thermodynamics.Tests
             spaces.Add(space);
         }
 
-        /// <summary>Every C# file the game would compile.</summary>
+/// <summary>Sources operation.</summary>
         public static List<string> Sources()
         {
+/// <summary>SourceRoot operation.</summary>
             string root = SourceRoot();
             if (root == null) return new List<string>();
 
@@ -373,22 +284,14 @@ namespace Thermodynamics.Tests
                 .ToList();
         }
 
-        /// <summary>
-        /// Reads one file and reports every prohibited framework type it names.
-        ///
-        /// <para>
-        /// **Names written in a type position only**, which is what makes this usable: a field
-        /// called `Size` and a property called `Component` are not types, and a check that could
-        /// not tell would report a hundred of them. The positions are enumerated in
-        /// <see cref="CollectTypes"/> rather than inferred, so what the check looks at is
-        /// legible.
-        /// </para>
-        /// </summary>
+/// <summary>Scan operation.</summary>
         public static List<Finding> Scan(string path, string text, Dictionary<string, string> prohibited)
         {
+/// <summary>List operation.</summary>
             List<Finding> findings = new List<Finding>();
 
             SyntaxNode root = CSharpSyntaxTree.ParseText(text).GetRoot();
+/// <summary>List operation.</summary>
             List<TypeSyntax> types = new List<TypeSyntax>();
             CollectTypes(root, types);
 
@@ -401,14 +304,8 @@ namespace Thermodynamics.Tests
                     string spaces;
                     if (!prohibited.TryGetValue(identifier, out spaces)) continue;
 
-                    // `[XmlAttribute]` is `XmlAttributeAttribute`, which is allowed, and the
-                    // syntax carries the short spelling. The suffix is a language rule rather than
-                    // a special case for this one attribute.
                     if (AllowedTypes.Contains(identifier + "Attribute")) continue;
 
-                    // `a.B` where a is not a namespace this cares about: only the leftmost name of
-                    // a qualified type is the one the framework would own, and Names() already
-                    // returns the pieces, so a qualified game type cannot be reported by its tail.
                     if (name.Parent is QualifiedNameSyntax
                         && ((QualifiedNameSyntax)name.Parent).Right == name
                         && !IsFrameworkQualified((QualifiedNameSyntax)name.Parent))
@@ -416,6 +313,7 @@ namespace Thermodynamics.Tests
                         continue;
                     }
 
+/// <summary>Finding operation.</summary>
                     Finding finding = new Finding();
                     finding.File = path;
                     finding.Line = name.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
@@ -428,7 +326,7 @@ namespace Thermodynamics.Tests
             return findings;
         }
 
-        /// <summary>True when a qualified name is rooted at <c>System</c>.</summary>
+/// <summary>IsFrameworkQualified operation.</summary>
         private static bool IsFrameworkQualified(QualifiedNameSyntax qualified)
         {
             NameSyntax left = qualified.Left;
@@ -438,11 +336,7 @@ namespace Thermodynamics.Tests
             return simple != null && simple.Identifier.ValueText == "System";
         }
 
-        /// <summary>
-        /// Every syntax slot that holds a type. Written out rather than inferred: a name node is a
-        /// <c>TypeSyntax</c> whether or not it is a type, so the only honest way to tell is to ask
-        /// the places a type can be written.
-        /// </summary>
+/// <summary>CollectTypes operation.</summary>
         private static void CollectTypes(SyntaxNode node, List<TypeSyntax> types)
         {
             foreach (SyntaxNode child in node.DescendantNodes())
@@ -463,6 +357,7 @@ namespace Thermodynamics.Tests
                 else if (child is CatchDeclarationSyntax) Add(((CatchDeclarationSyntax)child).Type, types);
                 else if (child is TypeConstraintSyntax) Add(((TypeConstraintSyntax)child).Type, types);
                 else if (child is SimpleBaseTypeSyntax) Add(((SimpleBaseTypeSyntax)child).Type, types);
+/// <summary>if operation.</summary>
                 else if (child is TypeArgumentListSyntax)
                 {
                     foreach (TypeSyntax argument in ((TypeArgumentListSyntax)child).Arguments)
@@ -470,10 +365,12 @@ namespace Thermodynamics.Tests
                         Add(argument, types);
                     }
                 }
+/// <summary>if operation.</summary>
                 else if (child is AttributeSyntax)
                 {
                     Add(((AttributeSyntax)child).Name, types);
                 }
+/// <summary>if operation.</summary>
                 else if (child is BinaryExpressionSyntax)
                 {
                     BinaryExpressionSyntax binary = (BinaryExpressionSyntax)child;
@@ -485,23 +382,22 @@ namespace Thermodynamics.Tests
             }
         }
 
+/// <summary>Adds a .</summary>
         private static void Add(TypeSyntax type, List<TypeSyntax> types)
         {
             if (type != null) types.Add(type);
         }
 
-        /// <summary>
-        /// The simple names inside one written type, unwrapping arrays, nullables and generics. A
-        /// generic's own name and each of its arguments are separate names, which is why
-        /// <c>Dictionary&lt;string, IFormatProvider&gt;</c> reports the argument.
-        /// </summary>
+/// <summary>Names operation.</summary>
         private static IEnumerable<SimpleNameSyntax> Names(TypeSyntax type)
         {
+/// <summary>List operation.</summary>
             List<SimpleNameSyntax> names = new List<SimpleNameSyntax>();
             Walk(type, names);
             return names;
         }
 
+/// <summary>Walk operation.</summary>
         private static void Walk(SyntaxNode node, List<SimpleNameSyntax> names)
         {
             if (node == null) return;

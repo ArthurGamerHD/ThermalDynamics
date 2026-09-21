@@ -2,32 +2,21 @@ using Thermodynamics.Core;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The rolling sweep's slice arithmetic.
-    ///
-    /// A rota is where a mod looks for changes the game raises no event for — block mass here —
-    /// and its failure mode is quiet. A slice that rounds to zero stops the sweep entirely and
-    /// nothing reports it: masses simply stop being noticed, blocks keep the thermal inertia they
-    /// were built with, and the only symptom is temperatures that are subtly wrong on exactly the
-    /// largest grids. That is worth arithmetic tests of its own.
-    /// </summary>
     public class SweepSliceTests
     {
         private const int Interval = 8;
         private const int Cap = 4096;
 
         [Fact]
+/// <summary>NothingToSweepIsNoWork operation.</summary>
         public void NothingToSweepIsNoWork()
         {
             Assert.Equal(0, SimulationScheduler.SweepSlice(0, 1, Interval, Cap));
             Assert.Equal(0, SimulationScheduler.SweepSlice(100, 0, Interval, Cap));
         }
 
-        /// <summary>
-        /// A grid small enough to sweep whole must behave exactly as it did before there was a
-        /// slice at all: one full pass every <c>Interval</c> steps.
-        /// </summary>
         [Fact]
+/// <summary>AGridUnderTheCapIsSweptWholeOverTheInterval operation.</summary>
         public void AGridUnderTheCapIsSweptWholeOverTheInterval()
         {
             const int count = 800;
@@ -41,29 +30,23 @@ namespace Thermodynamics.Tests
             Assert.Equal(count, swept);
         }
 
-        /// <summary>
-        /// A tick that advanced several steps owes several steps' worth, or a grid running behind
-        /// its scheduler would sweep more slowly than its cadence claims.
-        /// </summary>
         [Fact]
+/// <summary>AMultiStepTickOwesEveryStepsShare operation.</summary>
         public void AMultiStepTickOwesEveryStepsShare()
         {
             Assert.Equal(300, SimulationScheduler.SweepSlice(800, 3, Interval, Cap));
         }
 
         [Fact]
+/// <summary>TheCapBoundsTheSliceHoweverLargeTheGrid operation.</summary>
         public void TheCapBoundsTheSliceHoweverLargeTheGrid()
         {
             Assert.Equal(Cap, SimulationScheduler.SweepSlice(1000000, 1, Interval, Cap));
             Assert.Equal(Cap, SimulationScheduler.SweepSlice(1000000, 4, Interval, Cap));
         }
 
-        /// <summary>
-        /// A million blocks times four steps is four million, which is fine — but the same
-        /// product on a grid an order of magnitude larger overflows a 32-bit multiply and comes
-        /// back negative, which reads as "sweep nothing" forever.
-        /// </summary>
         [Fact]
+/// <summary>ALargeGridTimesSeveralStepsDoesNotOverflow operation.</summary>
         public void ALargeGridTimesSeveralStepsDoesNotOverflow()
         {
             int slice = SimulationScheduler.SweepSlice(int.MaxValue / 2, 60, Interval, Cap);
@@ -71,42 +54,32 @@ namespace Thermodynamics.Tests
             Assert.True(slice > 0);
         }
 
-        /// <summary>
-        /// The slice never exceeds what there is to sweep, so a cursor walking it cannot run off
-        /// the end of the rota.
-        /// </summary>
         [Fact]
+/// <summary>TheSliceNeverExceedsTheRota operation.</summary>
         public void TheSliceNeverExceedsTheRota()
         {
             Assert.Equal(3, SimulationScheduler.SweepSlice(3, 60, Interval, Cap));
             Assert.Equal(1, SimulationScheduler.SweepSlice(1, 1, Interval, Cap));
         }
 
-        /// <summary>
-        /// A grid large enough that its share rounds down to nothing must still be swept, or it
-        /// is never swept at all.
-        /// </summary>
         [Fact]
+/// <summary>ASliceNeverRoundsDownToNothing operation.</summary>
         public void ASliceNeverRoundsDownToNothing()
         {
             Assert.Equal(1, SimulationScheduler.SweepSlice(4, 1, 64, Cap));
         }
 
-        /// <summary>
-        /// Walking the rota with the slice must cover every item, whatever the grid size — the
-        /// property the arithmetic exists to provide.
-        /// </summary>
         [Theory]
         [InlineData(1)]
         [InlineData(7)]
         [InlineData(800)]
         [InlineData(50000)]
+/// <summary>WalkingTheRotaCoversEveryItem operation.</summary>
         public void WalkingTheRotaCoversEveryItem(int count)
         {
             bool[] seen = new bool[count];
             int cursor = 0;
 
-            // Generous: enough ticks for even a capped grid to come round twice.
             int ticks = Interval * 2 + (2 * count / Cap) + 2;
 
             for (int tick = 0; tick < ticks; tick++)

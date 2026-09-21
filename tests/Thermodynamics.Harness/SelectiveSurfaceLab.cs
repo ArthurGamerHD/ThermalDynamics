@@ -6,81 +6,51 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// **What a selective surface on the radiator would be worth**, which is the measurement
-    /// backlog.md `C15` asks for before anyone authors one.
-    ///
-    /// <para>
-    /// `SolarAbsorptivity` is separate from `Emissivity` and no shipped block declares one, so
-    /// every block absorbs sunlight at the rate it emits it. Real spacecraft radiators are the one
-    /// surface where that is plainly wrong: a second-surface mirror runs `α ≈ 0.08` against
-    /// `ε ≈ 0.8`, a factor of ten, because a radiator's whole job is to emit in the infrared
-    /// without collecting in the visible. The mod's radiator is authored at `ε 0.35` and therefore
-    /// absorbs a third of the sunlight that lands on it.
-    /// </para>
-    ///
-    /// <para>
-    /// **The rig is a source with radiators stacked on it, in sun and in shadow**, so the two
-    /// halves of the question are separated: absorptivity can only matter where there is sunlight,
-    /// and emissivity matters in both. The shadow column is the control — a surface change that
-    /// moved it would be a bug in the rig rather than a finding.
-    /// </para>
-    /// </summary>
     public static class SelectiveSurfaceLab
     {
-        /// <summary>Watts of heat the source puts into the stack. As `ModHardwareRetest`.</summary>
         public const float SourceWatts = 75000f;
 
-        /// <summary>Simulated seconds each rig runs for. Long enough for a stack to saturate.</summary>
         private const float Seconds = 14400f;
 
-        /// <summary>One surface, in one sky.</summary>
         public class Row
         {
             public string Surface;
 
-            /// <summary>What the radiator emits with, and what it absorbs sunlight with.</summary>
             public float Emissivity;
             public float Absorptivity;
 
             public int Radiators;
 
-            /// <summary>Where the source settled in full sun, and in shadow.</summary>
             public float SunlitKelvin;
             public float ShadowKelvin;
 
-            /// <summary>What the sun costs this surface: sunlit minus shadowed.</summary>
             public float SunPenaltyKelvin
             {
                 get { return SunlitKelvin - ShadowKelvin; }
             }
         }
 
-        /// <summary>The surfaces worth asking about, and why each one is here.</summary>
+/// <summary>Surfaces operation.</summary>
         public static List<Row> Surfaces()
         {
+/// <summary>List operation.</summary>
             List<Row> rows = new List<Row>();
 
-            // What ships: one number doing both jobs.
             rows.Add(Surface("shipped", 0.35f, -1f));
 
-            // The same radiator with a selective finish: it emits exactly as it does now and stops
-            // collecting sunlight. This is the change `C15` is about, and nothing else moves.
             rows.Add(Surface("selective", 0.35f, 0.10f));
 
-            // A real spacecraft radiator: a second-surface mirror, which is both a better emitter
-            // and a worse absorber. Here to say how much of the gap is the absorptivity and how
-            // much is the emissivity the block is authored at.
             rows.Add(Surface("second-surface mirror", 0.80f, 0.10f));
 
-            // And the emissivity alone, so the two halves of the row above are separable.
             rows.Add(Surface("emissive only", 0.80f, -1f));
 
             return rows;
         }
 
+/// <summary>Surface operation.</summary>
         private static Row Surface(string name, float emissivity, float absorptivity)
         {
+/// <summary>Row operation.</summary>
             Row row = new Row();
             row.Surface = name;
             row.Emissivity = emissivity;
@@ -88,30 +58,28 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-        /// <summary>Every surface, at one stack size.</summary>
+/// <summary>Run operation.</summary>
         public static List<Row> Run(int radiators)
         {
+/// <summary>Surfaces operation.</summary>
             List<Row> rows = Surfaces();
 
             for (int i = 0; i < rows.Count; i++)
             {
                 rows[i].Radiators = radiators;
+/// <summary>Sets the tle.</summary>
                 rows[i].SunlitKelvin = Settle(rows[i], radiators, true);
+/// <summary>Sets the tle.</summary>
                 rows[i].ShadowKelvin = Settle(rows[i], radiators, false);
             }
 
             return rows;
         }
 
-        /// <summary>
-        /// The source's settled temperature with this surface on its radiators.
-        ///
-        /// **The sun comes across the stack rather than along it.** A radiator is 1x5x2 and its
-        /// broad faces are the 5x2 ones, so a sun along the stack's axis lights one end cap of one
-        /// block and the rig would answer a question about geometry instead of about surface.
-        /// </summary>
+/// <summary>Sets the tle.</summary>
         private static float Settle(Row row, int radiators, bool sunlit)
         {
+/// <summary>Resurfaced operation.</summary>
             BlockModel radiator = Resurfaced(row.Emissivity, row.Absorptivity);
 
             GridBuilder builder = GridBuilder.Large();
@@ -133,7 +101,7 @@ namespace Thermodynamics.Harness
             return simulation.Solver.GetNode(source).Temperature;
         }
 
-        /// <summary>The shipped radiator with one surface property changed, and nothing else.</summary>
+/// <summary>Resurfaced operation.</summary>
         private static BlockModel Resurfaced(float emissivity, float absorptivity)
         {
             BlockModel model = Catalog.Radiator();
@@ -146,8 +114,10 @@ namespace Thermodynamics.Harness
             return model;
         }
 
+/// <summary>Report operation.</summary>
         public static string Report(int radiators = 8)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("SELECTIVE SURFACE  (a source under " + radiators
@@ -159,6 +129,7 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
             sb.AppendLine("  surface                  emis   absorp     sunlit K    shadow K   sun costs");
 
+/// <summary>Run operation.</summary>
             List<Row> rows = Run(radiators);
 
             foreach (Row row in rows)

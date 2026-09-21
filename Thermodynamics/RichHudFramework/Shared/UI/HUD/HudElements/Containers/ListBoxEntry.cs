@@ -7,37 +7,32 @@ namespace RichHudFramework.UI
 {
 	using RichStringMembers = MyTuple<StringBuilder, GlyphFormatMembers>;
 
-	/// <summary>
-	/// A List Box entry that associates a <see cref="Label"/> with an object of type <typeparamref name="TValue"/>.
-	/// </summary>
-	/// <typeparam name="TValue">Data type associated with the entry</typeparam>
 	public class ListBoxEntry<TValue> : ListBoxEntry<Label, TValue>
 	{ }
 
-	/// <summary>
-	/// A concrete implementation of a List Box entry, pairing a text element with a data value.
-	/// </summary>
-	/// <typeparam name="TElement">UI element type used for the entry</typeparam>
-	/// <typeparam name="TValue">Data type associated with the entry</typeparam>
 	public class ListBoxEntry<TElement, TValue>
 		: SelectionBoxEntryTuple<TElement, TValue>, IListBoxEntry<TElement, TValue>
+/// <summary>new operation.</summary>
 		where TElement : HudElementBase, IMinLabelElement, new()
 	{
+/// <summary>ListBoxEntry operation.</summary>
 		public ListBoxEntry()
 		{
 			SetElement(new TElement());
 			Element.TextBoard.AutoResize = false;
 		}
 
+/// <summary>Reset operation.</summary>
 		public override void Reset()
 		{
 			Enabled = true;
 			AllowHighlighting = true;
+/// <summary>default operation.</summary>
 			AssocMember = default(TValue);
 			Element.TextBoard.Clear();
 		}
 
-		/// <inheritdoc/>
+/// <summary>Returns the orsetmember.</summary>
 		public object GetOrSetMember(object data, int memberEnum)
 		{
 			var member = (ListBoxEntryAccessors)memberEnum;

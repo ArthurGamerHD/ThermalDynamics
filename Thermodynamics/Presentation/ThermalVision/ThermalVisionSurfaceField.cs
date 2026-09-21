@@ -5,22 +5,26 @@ using Region = Thermodynamics.Presentation.ThermalVisionRegionPartition.Region;
 
 namespace Thermodynamics.Presentation
 {
-    /// <summary>Prepared scalar lattice: no block searches or field reconstruction during draw.</summary>
     public sealed class ThermalVisionSurfaceField
     {
         public readonly Region Bounds;
         public readonly Vector3I Steps;
         public readonly float[] Values;
         public int PairedFaceMask;
+/// <summary>ThermalVisionSurfaceField operation.</summary>
         public ThermalVisionSurfaceField(Region bounds, double spacing)
         {
             Bounds=bounds;
             Vector3D size=bounds.Max-bounds.Min;
+/// <summary>Vector3I operation.</summary>
             Steps=new Vector3I(Step(size.X,spacing),Step(size.Y,spacing),Step(size.Z,spacing));
             Values=new float[(Steps.X+1)*(Steps.Y+1)*(Steps.Z+1)];
         }
+/// <summary>Step operation.</summary>
         private static int Step(double size,double spacing) { return Math.Max(1,Math.Min(4,(int)Math.Ceiling(size/Math.Max(.001,spacing)))); }
+/// <summary>Index operation.</summary>
         public int Index(int x,int y,int z) { return (z*(Steps.Y+1)+y)*(Steps.X+1)+x; }
+/// <summary>Point operation.</summary>
         public Vector3D Point(int x,int y,int z)
         { return Bounds.Min+(Bounds.Max-Bounds.Min)*new Vector3D((double)x/Steps.X,(double)y/Steps.Y,(double)z/Steps.Z); }
         public struct Patch
@@ -33,8 +37,10 @@ namespace Thermodynamics.Presentation
         public float Minimum { get; private set; }
         public float Maximum { get; private set; }
         private readonly List<Patch>[] faces = new List<Patch>[6];
+/// <summary>Face operation.</summary>
         public IList<Patch> Face(int axis,bool upper) { return faces[axis*2+(upper?1:0)]; }
         private ThermalVisionSurfaceField transitionReference;
+/// <summary>Builds the API method table.</summary>
         public void BuildFaces(float errorKelvin, bool minimizePatches = false, ThermalVisionSurfaceField previous = null, float leafErrorKelvin = 0)
         {
             if(previous!=null && (previous.Steps!=Steps || previous.Bounds.Min!=Bounds.Min || previous.Bounds.Max!=Bounds.Max))
@@ -43,15 +49,13 @@ namespace Thermodynamics.Presentation
             SavedPatches=0;
             Minimum=float.PositiveInfinity; Maximum=float.NegativeInfinity;
             foreach(float value in Values) { Minimum=Math.Min(Minimum,value); Maximum=Math.Max(Maximum,value); }
-            // At most 100 nonempty rectangles per 4x4 face. Reuse the state buffers
-            // across six faces; costs count patches, never relax temperature tolerance.
             byte[] costs=null, cuts=null;
             for(int axis=0;axis<3;axis++) for(int side=0;side<2;side++)
             {
+/// <summary>List operation.</summary>
                 var list=new List<Patch>(); faces[axis*2+side]=list;
                 int nu=axis==0?Steps.Y:Steps.X, nv=axis==2?Steps.Y:Steps.Z;
                 SplitFace(axis,side==1,0,nu,0,nv,errorKelvin,list);
-                // Flat and nearly unsimplifiable faces cannot justify the extra search.
                 if(minimizePatches && list.Count>1 && list.Count*4<nu*nv*3)
                 {
                     if(costs==null){costs=new byte[625];cuts=new byte[625];}
@@ -64,8 +68,7 @@ namespace Thermodynamics.Presentation
             if(leafErrorKelvin>0) RefineLeafSaddles(leafErrorKelvin);
             transitionReference=null;
         }
-        // Refine only single lattice cells. Merged patches may intentionally represent
-        // a crease across several cells; replacing those with a bilinear patch would blur it.
+/// <summary>RefineLeafSaddles operation.</summary>
         private void RefineLeafSaddles(float error)
         {
             Vector3D step=(Bounds.Max-Bounds.Min)/new Vector3D(Steps.X,Steps.Y,Steps.Z);
@@ -76,6 +79,7 @@ namespace Thermodynamics.Presentation
                 {
                     var patch=face[i];var size=Vector3D.Abs(patch.C-patch.A);
                     if(size.X>step.X+1e-7 || size.Y>step.Y+1e-7 || size.Z>step.Z+1e-7) continue;
+/// <summary>Vector4 operation.</summary>
                     Vector4 old=transitionReference==null?patch.Temperatures:new Vector4(
                         transitionReference.Sample(patch.A),transitionReference.Sample(patch.B),
                         transitionReference.Sample(patch.C),transitionReference.Sample(patch.D));
@@ -87,6 +91,7 @@ namespace Thermodynamics.Presentation
                         Vector3D a=patch.A+(patch.B-patch.A)*((double)x/n)+(patch.D-patch.A)*((double)y/n);
                         Vector3D u=(patch.B-patch.A)/n,v=(patch.D-patch.A)/n;
                         var refined=new Patch { A=a,B=a+u,C=a+u+v,D=a+v,
+/// <summary>Vector4 operation.</summary>
                             Temperatures=new Vector4(Sample(a),Sample(a+u),Sample(a+u+v),Sample(a+v)) };
                         refined.PreviousTemperatures=refined.Temperatures;
                         if(x==0 && y==0)face[i]=refined;else face.Add(refined);
@@ -94,33 +99,37 @@ namespace Thermodynamics.Presentation
                 }
             }
         }
+/// <summary>SaddleError operation.</summary>
         private static double SaddleError(Vector4 t)
         { return Math.Abs((double)t.X-t.Y+t.Z-t.W)*.25; }
+/// <summary>FacePoint operation.</summary>
         private Vector3D FacePoint(int axis,bool upper,int u,int v)
         {
             if(axis==0) return Point(upper?Steps.X:0,u,v);
             if(axis==1) return Point(u,upper?Steps.Y:0,v);
+/// <summary>Point operation.</summary>
             return Point(u,v,upper?Steps.Z:0);
         }
+/// <summary>FaceValue operation.</summary>
         private float FaceValue(int axis,bool upper,int u,int v)
         {
             if(axis==0) return Values[Index(upper?Steps.X:0,u,v)];
             if(axis==1) return Values[Index(u,upper?Steps.Y:0,v)];
             return Values[Index(u,v,upper?Steps.Z:0)];
         }
+/// <summary>FaceNeedsSplit operation.</summary>
         private bool FaceNeedsSplit(int axis,bool upper,int u0,int u1,int v0,int v1,float error,bool alternate=false)
         {
-            // A shared partition must represent both endpoints of the fade. A convex
-            // temporal blend then retains their error bounds at the checked samples.
+/// <summary>FaceValuesNeedSplit operation.</summary>
             return FaceValuesNeedSplit(axis,upper,u0,u1,v0,v1,error,alternate)
                 || (transitionReference!=null && transitionReference.FaceValuesNeedSplit(axis,upper,u0,u1,v0,v1,error,alternate));
         }
+/// <summary>FaceValuesNeedSplit operation.</summary>
         private bool FaceValuesNeedSplit(int axis,bool upper,int u0,int u1,int v0,int v1,float error,bool alternate)
         {
             float ta=FaceValue(axis,upper,u0,v0), tb=FaceValue(axis,upper,u1,v0),
                 tc=FaceValue(axis,upper,u1,v1), td=FaceValue(axis,upper,u0,v1);
             bool split=false;
-            // Preserve changes at every lattice vertex before merging surface patches.
             for(int v=v0;v<=v1 && !split;v++) for(int u=u0;u<=u1 && !split;u++)
             {
                 double x=(double)(u-u0)/(u1-u0), y=(double)(v-v0)/(v1-v0);
@@ -129,8 +138,6 @@ namespace Thermodynamics.Presentation
                     : (x>=y ? ta*(1-x)+tb*(x-y)+tc*y : ta*(1-y)+tc*x+td*(y-x));
                 if(Math.Abs(FaceValue(axis,upper,u,v)-estimate)>error) split=true;
             }
-            // A bilinear saddle may differ between sampled vertices. Check centres too;
-            // leaf patches are the intended two-triangle approximation of the lattice.
             for(int v=v0;v<v1 && !split;v++) for(int u=u0;u<u1 && !split;u++)
             {
                 double x=(u+.5-u0)/(u1-u0), y=(v+.5-v0)/(v1-v0);
@@ -143,8 +150,10 @@ namespace Thermodynamics.Presentation
             }
             return split;
         }
+/// <summary>RectangleKey operation.</summary>
         private static int RectangleKey(int u0,int u1,int v0,int v1)
         { return ((u0*5+u1)*5+v0)*5+v1; }
+/// <summary>PlanFace operation.</summary>
         private int PlanFace(int axis,bool upper,int u0,int u1,int v0,int v1,float error,byte[] costs,byte[] cuts)
         {
             int key=RectangleKey(u0,u1,v0,v1);
@@ -169,19 +178,24 @@ namespace Thermodynamics.Presentation
             }
             costs[key]=(byte)best; cuts[key]=(byte)cut; return best;
         }
+/// <summary>EmitFace operation.</summary>
         private void EmitFace(int axis,bool upper,int u0,int u1,int v0,int v1,byte[] cuts,List<Patch> list)
         {
             int cut=cuts[RectangleKey(u0,u1,v0,v1)];
             if(cut==0 || cut==16)
             {
+/// <summary>Vector4 operation.</summary>
                 Vector4 t=new Vector4(FaceValue(axis,upper,u0,v0),FaceValue(axis,upper,u1,v0),FaceValue(axis,upper,u1,v1),FaceValue(axis,upper,u0,v1));
                 list.Add(new Patch { A=FacePoint(axis,upper,u0,v0),B=FacePoint(axis,upper,u1,v0),C=FacePoint(axis,upper,u1,v1),D=FacePoint(axis,upper,u0,v1),Temperatures=t,PreviousTemperatures=t,AlternateDiagonal=cut==16 });
             }
+/// <summary>if operation.</summary>
             else if(cut<8)
             { EmitFace(axis,upper,u0,cut,v0,v1,cuts,list); EmitFace(axis,upper,cut,u1,v0,v1,cuts,list); }
             else
+/// <summary>EmitFace operation.</summary>
             { cut-=8; EmitFace(axis,upper,u0,u1,v0,cut,cuts,list); EmitFace(axis,upper,u0,u1,cut,v1,cuts,list); }
         }
+/// <summary>SplitFace operation.</summary>
         private void SplitFace(int axis,bool upper,int u0,int u1,int v0,int v1,float error,List<Patch> list)
         {
             float ta=FaceValue(axis,upper,u0,v0), tb=FaceValue(axis,upper,u1,v0),
@@ -196,10 +210,9 @@ namespace Thermodynamics.Presentation
             }
             else
             {
-                // Parent candidates that split never reach the renderer. Only construct
-                // positions for retained leaf patches after the temperature error checks.
                 list.Add(new Patch { A=FacePoint(axis,upper,u0,v0), B=FacePoint(axis,upper,u1,v0),
                     C=FacePoint(axis,upper,u1,v1), D=FacePoint(axis,upper,u0,v1),
+/// <summary>Vector4 operation.</summary>
                     Temperatures=new Vector4(ta,tb,tc,td), PreviousTemperatures=new Vector4(ta,tb,tc,td) });
             }
         }
@@ -208,14 +221,14 @@ namespace Thermodynamics.Presentation
             public Vector3D A,B,C;
             public Vector3 Temperatures;
         }
-        /// <summary>Approximate the near-camera closing surface using the same scalar field.
-        /// Bounded to 64 triangles per input triangle; sampled error is not a global bound.</summary>
+/// <summary>AppendCapTriangles operation.</summary>
         public void AppendCapTriangles(Vector3D a,Vector3D b,Vector3D c,
             ThermalVisionSurfaceField previous,float blend,float error,List<TemperatureTriangle> output)
         {
             AppendCap(a,b,c,BlendSample(previous,a,blend),BlendSample(previous,b,blend),
                 BlendSample(previous,c,blend),previous,blend,error,0,output);
         }
+/// <summary>AppendCap operation.</summary>
         private void AppendCap(Vector3D a,Vector3D b,Vector3D c,float ta,float tb,float tc,
             ThermalVisionSurfaceField previous,float blend,float error,int depth,List<TemperatureTriangle> output)
         {
@@ -235,29 +248,33 @@ namespace Thermodynamics.Presentation
             }
             output.Add(new TemperatureTriangle { A=a,B=b,C=c,Temperatures=new Vector3(ta,tb,tc) });
         }
+/// <summary>PrepareTransition operation.</summary>
         public void PrepareTransition(ThermalVisionSurfaceField previous)
         {
             foreach(var face in faces)
                 for(int i=0;i<face.Count;i++)
                 {
                     var patch=face[i];
+/// <summary>Vector4 operation.</summary>
                     patch.PreviousTemperatures=new Vector4(previous.Sample(patch.A),previous.Sample(patch.B),previous.Sample(patch.C),previous.Sample(patch.D));
                     face[i]=patch;
                 }
         }
-        /// <summary>Exact uniform endpoints permit one constant-colour quad throughout a fade.
-        /// This is eligibility accounting only; native submission still uses two triangles.</summary>
+/// <summary>HasUniformEndpoints operation.</summary>
         public static bool HasUniformEndpoints(Patch patch)
         { return Uniform(patch.Temperatures) && Uniform(patch.PreviousTemperatures); }
+/// <summary>Uniform operation.</summary>
         private static bool Uniform(Vector4 t)
         { return !float.IsNaN(t.X) && !float.IsInfinity(t.X) && t.X==t.Y && t.X==t.Z && t.X==t.W; }
 
+/// <summary>PatchTemperatures operation.</summary>
         public static Vector4 PatchTemperatures(Patch patch,float blend)
         {
             if(blend>=1) return patch.Temperatures;
             blend=Math.Max(0f,blend); float weight=blend*blend*(3-2*blend);
             return patch.PreviousTemperatures+(patch.Temperatures-patch.PreviousTemperatures)*weight;
         }
+/// <summary>BlendSample operation.</summary>
         public float BlendSample(ThermalVisionSurfaceField previous,Vector3D point,float blend)
         {
             float current=Sample(point);
@@ -265,15 +282,15 @@ namespace Thermodynamics.Presentation
             blend=Math.Max(0f,Math.Min(1f,blend));
             return MathHelper.Lerp(previous.Sample(point),current,blend*blend*(3-2*blend));
         }
+/// <summary>Sample operation.</summary>
         public float Sample(Vector3D point)
         {
             Vector3D t=Vector3D.Clamp((point-Bounds.Min)/(Bounds.Max-Bounds.Min),Vector3D.Zero,Vector3D.One)*new Vector3D(Steps.X,Steps.Y,Steps.Z);
             int x=Math.Min(Steps.X-1,(int)t.X), y=Math.Min(Steps.Y-1,(int)t.Y), z=Math.Min(Steps.Z-1,(int)t.Z);
+/// <summary>Vector3D operation.</summary>
             t-=new Vector3D(x,y,z);
             int row=Steps.X+1, layer=row*(Steps.Y+1), index=Index(x,y,z);
             double ix=1-t.X, iy=1-t.Y, iz=1-t.Z;
-            // Keep the original corner/summation order and multiplication association.
-            // Adjacent corner addresses differ only by the row/layer strides.
             double value=0;
             value+=Values[index]*ix*iy*iz;
             value+=Values[index+1]*t.X*iy*iz;

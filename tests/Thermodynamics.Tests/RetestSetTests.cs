@@ -7,25 +7,10 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// That the committed retest set is a set something can actually run.
-    ///
-    /// <para>
-    /// <c>tools/corpus/typical.csv</c> was written by <c>typical.py</c> and then read by nothing for
-    /// a while, which is the defect class this repository keeps finding: built, documented, and
-    /// reached by nothing (`D2`). These checks are the cheap half of wiring it — they need neither
-    /// the corpus opt-in nor a game install, so a set that has gone stale fails in the ordinary
-    /// suite rather than eight hours into a walk.
-    /// </para>
-    /// </summary>
     public class RetestSetTests
     {
-        /// <summary>
-        /// The set is present, has the count its own tool documents, and carries a blueprint path
-        /// per ship — without which the walk falls back to parsing all 9,981 corpus blueprints to
-        /// find forty ships, which is how earlier runs died.
-        /// </summary>
         [Fact]
+/// <summary>TheRetestSetIsReadableAndCarriesAPathPerShip operation.</summary>
         public void TheRetestSetIsReadableAndCarriesAPathPerShip()
         {
             List<ShipSet.Entry> rows = ShipSet.Read("THERMAL_RETEST", "tools/corpus/typical.csv");
@@ -42,15 +27,13 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// **Both grid sizes and every size band are represented.** The set is drawn per grid size
-        /// and across four size bands on purpose, so that a retest is not accidentally all frigates;
-        /// a regenerated set that lost a band would still be forty ships and would still run.
-        /// </summary>
         [Fact]
+/// <summary>TheRetestSetSpansBothGridSizesAndEveryBand operation.</summary>
         public void TheRetestSetSpansBothGridSizesAndEveryBand()
         {
+/// <summary>HashSet operation.</summary>
             HashSet<string> large = new HashSet<string>(StringComparer.Ordinal);
+/// <summary>HashSet operation.</summary>
             HashSet<string> bands = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (ShipSet.Entry entry in
@@ -65,14 +48,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(8, bands.Count);
         }
 
-        /// <summary>
-        /// The membership rule says every ship in the set had all five of the survey's scenarios
-        /// read from it, and the walk adds the two flight cases on top. All seven have to be names
-        /// the battery answers to, or the walk quietly measures fewer scenarios than it reports.
-        /// </summary>
         [Fact]
+/// <summary>EveryScenarioTheRetestAsksForExists operation.</summary>
         public void EveryScenarioTheRetestAsksForExists()
         {
+/// <summary>HashSet operation.</summary>
             HashSet<string> known = new HashSet<string>(StringComparer.Ordinal);
             foreach (Battery.Scenario scenario in Battery.All()) known.Add(scenario.Name);
 
@@ -89,32 +69,18 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The pre-conversion table has the shape the pre-conversion file held — two conductances,
-        /// 200 over 120 apart — and the calibration point holds: mild steel comes out where the
-        /// flat world put every block, which is the whole reason the conversion could be made
-        /// without moving armour.
-        ///
-        /// **The pace is not part of the shape.** At the 2.4 the conversion was made at these read
-        /// 120 and 200 exactly; the shipped scale is 9.6 (`C24`) and both arms run at it, because
-        /// this retest is about flat against differentiated and a counterfactual left at the old
-        /// pace would report the retune instead (`P6`).
-        /// </summary>
         [Fact]
+/// <summary>ThePreConversionTableHasTheShapeTheOldFileHeld operation.</summary>
         public void ThePreConversionTableHasTheShapeTheOldFileHeld()
         {
-            // Mild steel, the calibration point: the flat world is exactly where steel lands.
             Assert.Equal(ConductanceRetest.PreDefault,
                 ReferenceMaterials.MildSteel.Conductivity * ThermalConstants.ConductionScale, 3);
 
-            // And quality 1 is the same 200/120 above it that it always was.
             Assert.Equal(200f / 120f, ConductanceRetest.PreBest / ConductanceRetest.PreDefault, 3);
 
-            // The figures the old file held, at the pace the conversion was calibrated at.
             Assert.Equal(120f, ConductanceRetest.PreDefault * (2.4f / ThermalConstants.ConductionScale), 3);
             Assert.Equal(200f, ConductanceRetest.PreBest * (2.4f / ThermalConstants.ConductionScale), 3);
 
-            // The four families that were authored at quality 1, and nothing else.
             Assert.True(ConductanceRetest.WasBest("Thrust", "LargeBlockLargeThrust"));
             Assert.True(ConductanceRetest.WasBest("Reactor", "LargeBlockLargeGenerator"));
             Assert.True(ConductanceRetest.WasBest("CubeBlock", "Gauge_LG_Radiator"));
@@ -124,12 +90,8 @@ namespace Thermodynamics.Tests
             Assert.False(ConductanceRetest.WasBest("SolarPanel", "LargeBlockSolarPanel"));
         }
 
-        /// <summary>
-        /// Every arm rewrites the family it names and leaves the rest alone. Without this a typo in
-        /// a predicate produces a world that is neither the shipped one nor the old one, and the
-        /// walk reports its difference as a finding.
-        /// </summary>
         [Fact]
+/// <summary>EachArmRewritesOnlyWhatItNames operation.</summary>
         public void EachArmRewritesOnlyWhatItNames()
         {
             Dictionary<string, ConductanceRetest.World> worlds =
@@ -141,10 +103,10 @@ namespace Thermodynamics.Tests
 
             Assert.Null(worlds["shipped"].Material());
 
+/// <summary>Conductivity operation.</summary>
             float armour = Conductivity(worlds["vanilla-flat"], "CubeBlock", "LargeBlockArmorBlock");
             Assert.Equal(ConductanceRetest.Authored(ConductanceRetest.PreDefault), armour, 3);
 
-            // …and the same arm leaves a thruster where the shipped world put it.
             Assert.True(float.IsNaN(
                 Conductivity(worlds["vanilla-flat"], "Thrust", "LargeBlockLargeThrust")));
 
@@ -158,18 +120,13 @@ namespace Thermodynamics.Tests
             Assert.Equal(ConductanceRetest.Authored(ConductanceRetest.PreBest),
                 Conductivity(worlds["mod-blocks"], "CubeBlock", "Gauge_LG_Radiator"), 3);
 
-            // The composite reaches both halves.
             Assert.Equal(ConductanceRetest.Authored(ConductanceRetest.PreDefault),
                 Conductivity(worlds["pre-units"], "CubeBlock", "LargeBlockArmorBlock"), 3);
             Assert.Equal(ConductanceRetest.Authored(ConductanceRetest.PreBest),
                 Conductivity(worlds["pre-units"], "Thrust", "LargeBlockLargeThrust"), 3);
         }
 
-        /// <summary>
-        /// What an arm makes of one block, or NaN where it hands the block straight back — which is
-        /// how "this arm does not reach here" is told apart from "this arm sets it to the same
-        /// value".
-        /// </summary>
+/// <summary>Conductivity operation.</summary>
         private static float Conductivity(ConductanceRetest.World world, string typeId, string subtype)
         {
             BlockThermalProperties source = new BlockThermalProperties { Conductivity = 12.5f };

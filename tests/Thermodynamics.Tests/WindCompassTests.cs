@@ -5,24 +5,18 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The wind turned into the viewer's frame, which is the only form of it a player can act on.
-    ///
-    /// The field itself is pinned by <see cref="WindFieldTests"/>. What these hold is the handedness
-    /// — that "to the right" on screen is the same side as the viewer's right hand — and the cases
-    /// where there is no answer to give, since a needle that swings wildly when the player looks at
-    /// the sky is worse than one that stops.
-    /// </summary>
     public class WindCompassTests
     {
+/// <summary>Vector3 operation.</summary>
         private static readonly Vector3 Up = new Vector3(0f, 1f, 0f);
 
-        /// <summary>The viewer faces north, standing on a plane whose up is +Y.</summary>
+/// <summary>Vector3 operation.</summary>
         private static readonly Vector3 North = new Vector3(0f, 0f, -1f);
 
-        /// <summary>Right of a viewer facing north: <c>cross(forward, up)</c>.</summary>
+/// <summary>Vector3 operation.</summary>
         private static readonly Vector3 East = new Vector3(1f, 0f, 0f);
 
+/// <summary>BearingOf operation.</summary>
         private static float BearingOf(Vector3 wind, Vector3 forward)
         {
             float degrees;
@@ -32,49 +26,52 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>WindGoingTheWayYouFaceReadsDeadAhead operation.</summary>
         public void WindGoingTheWayYouFaceReadsDeadAhead()
         {
             Assert.Equal(0f, BearingOf(North * 12f, North), 3);
         }
 
         [Fact]
+/// <summary>WindGoingRightOfYouReadsNinetyDegrees operation.</summary>
         public void WindGoingRightOfYouReadsNinetyDegrees()
         {
-            // The one that decides handedness: an arrow drawn at 90 must point at the same side of
-            // the screen as the player's right hand, or every reading is mirrored.
             Assert.Equal(90f, BearingOf(East * 12f, North), 3);
         }
 
         [Fact]
+/// <summary>WindInYourFaceReadsAstern operation.</summary>
         public void WindInYourFaceReadsAstern()
         {
             Assert.Equal(180f, BearingOf(-North * 12f, North), 3);
         }
 
         [Fact]
+/// <summary>WindGoingLeftOfYouReadsTwoSeventy operation.</summary>
         public void WindGoingLeftOfYouReadsTwoSeventy()
         {
             Assert.Equal(270f, BearingOf(-East * 12f, North), 3);
         }
 
         [Fact]
+/// <summary>TheBearingIsRelativeToTheFacingRatherThanToTheWorld operation.</summary>
         public void TheBearingIsRelativeToTheFacingRatherThanToTheWorld()
         {
-            // The same wind, read by two players facing opposite ways, is the same wind seen from
-            // in front and from behind.
             Assert.Equal(0f, BearingOf(North * 5f, North), 3);
             Assert.Equal(180f, BearingOf(North * 5f, -North), 3);
         }
 
         [Fact]
+/// <summary>LookingUpOrDownDoesNotSwingTheNeedle operation.</summary>
         public void LookingUpOrDownDoesNotSwingTheNeedle()
         {
-            // A player looking at their feet still faces north. The facing is flattened before the
-            // angle is taken, so a steep camera pitch must not change the reading.
             Vector3 wind = East * 9f;
 
+/// <summary>BearingOf operation.</summary>
             float level = BearingOf(wind, North);
+/// <summary>BearingOf operation.</summary>
             float pitched = BearingOf(wind, Vector3.Normalize(North + (Up * 4f)));
+/// <summary>BearingOf operation.</summary>
             float steep = BearingOf(wind, Vector3.Normalize(North - (Up * 9f)));
 
             Assert.Equal(level, pitched, 2);
@@ -82,16 +79,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AViewerLookingStraightUpHasNoBearingToGive operation.</summary>
         public void AViewerLookingStraightUpHasNoBearingToGive()
         {
-            // Straight up has no horizontal part, so there is nothing to measure an angle against.
-            // Returning false is what lets the readout hide rather than draw a needle at zero.
             float degrees;
             Assert.False(WindCompass.Bearing(East * 9f, Up, Up, out degrees));
             Assert.Equal(0f, degrees);
         }
 
         [Fact]
+/// <summary>StillAirHasNoBearingToGive operation.</summary>
         public void StillAirHasNoBearingToGive()
         {
             float degrees;
@@ -99,20 +96,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AVerticalWindHasNoBearingEitherAlthoughTheFieldMakesNone operation.</summary>
         public void AVerticalWindHasNoBearingEitherAlthoughTheFieldMakesNone()
         {
-            // The field is tangent to the surface, so this cannot arise from it — but the relative
-            // wind subtracts a grid's velocity, and a ship going straight up makes one.
             float degrees;
             Assert.False(WindCompass.Bearing(Up * 40f, North, Up, out degrees));
         }
 
         [Fact]
+/// <summary>HeadAndCrossComponentsSplitTheWindBetweenThem operation.</summary>
         public void HeadAndCrossComponentsSplitTheWindBetweenThem()
         {
-            // A wind on the diagonal is the two components at once, and squaring them back up must
-            // return the speed on the ground: a readout that loses energy between the two figures
-            // would have a player trimming for a wind that is not there.
             Vector3 wind = Vector3.Normalize(North + East) * 20f;
 
             float along = WindCompass.Along(wind, North, Up);
@@ -124,13 +118,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AHeadwindIsNegativeAlongTheFacing operation.</summary>
         public void AHeadwindIsNegativeAlongTheFacing()
         {
-            // The sign is the whole readout: a pilot reads the minus rather than a word.
             Assert.True(WindCompass.Along(-North * 15f, North, Up) < 0f);
         }
 
         [Fact]
+/// <summary>TheVerticalPartOfTheWindIsIgnoredByBothComponents operation.</summary>
         public void TheVerticalPartOfTheWindIsIgnoredByBothComponents()
         {
             Vector3 flat = East * 10f;
@@ -141,11 +136,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ASectorIsCentredOnItsOwnBearingRatherThanStartingAtIt operation.</summary>
         public void ASectorIsCentredOnItsOwnBearingRatherThanStartingAtIt()
         {
-            // A wind a few degrees either side of dead ahead reads as ahead. Starting the sector at
-            // its bearing instead would call anything past 0 "ahead right", so the needle and the
-            // word would disagree for half of every sector.
             Assert.Equal(0, WindCompass.Sector(0f));
             Assert.Equal(0, WindCompass.Sector(20f));
             Assert.Equal(0, WindCompass.Sector(340f));
@@ -155,6 +148,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EverySectorHasAName operation.</summary>
         public void EverySectorHasAName()
         {
             for (int i = 0; i < 8; i++)
@@ -169,6 +163,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnAngleIsAlwaysFoldedIntoOneTurn operation.</summary>
         public void AnAngleIsAlwaysFoldedIntoOneTurn()
         {
             Assert.Equal(10f, WindCompass.Normalise(370f), 3);
@@ -176,18 +171,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, WindCompass.Normalise(float.NaN), 3);
         }
 
-        /// <summary>
-        /// The two halves joined up: wherever the circulation blows, a player standing there gets a
-        /// needle rather than a blank — and where it does not blow, a blank rather than a needle
-        /// pointing at a rounding error.
-        ///
-        /// The equator and the two band edges are calms. `WindField.BandStrength` is what says so,
-        /// and the readout is meant to hide below `MinimumReadableWind` rather than show a bearing
-        /// nobody should trust.
-        /// </summary>
         [Fact]
+/// <summary>TheFieldsOwnWindReadsAsABearingWhereverItBlows operation.</summary>
         public void TheFieldsOwnWindReadsAsABearingWhereverItBlows()
         {
+/// <summary>Vector3 operation.</summary>
             Vector3 axis = new Vector3(0f, 1f, 0f);
             int read = 0;
             int calm = 0;
@@ -200,7 +188,6 @@ namespace Thermodynamics.Tests
 
                 Vector3 wind = WindField.Direction(up, axis);
 
-                // Any facing tangent to the surface will do; take the local east.
                 Vector3 facing = Vector3.Normalize(Vector3.Cross(axis, up));
 
                 float degrees;

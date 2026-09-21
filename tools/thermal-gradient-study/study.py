@@ -10,6 +10,7 @@ from pathlib import Path
 
 SIZE = 32
 
+# temperature operation.
 def temperature(case, x, y, z):
     if case == 'gradient':
         return 290 + 8*x
@@ -27,16 +28,17 @@ def temperature(case, x, y, z):
         if 24 <= x < 28 and 12 <= y < 20 and 12 <= z < 20:
             return 850
         return 350 + 6*x
-    # Deliberately hostile: variation at every block, beyond the leaf budget.
     return 300 if (x+y+z) % 2 else 800
 
 class Cell:
+#   init   operation.
     def __init__(self, lo, width, points):
         self.lo, self.width, self.points = lo, width, points
         values = [p[3] for p in points]
         self.peak = max(values)
         self.error = sum((self.peak-v)**2 for v in values)
 
+# split operation.
     def split(self):
         half = self.width // 2
         groups = {}
@@ -47,10 +49,12 @@ class Cell:
                 for key, values in sorted(groups.items())]
 
 class BinaryCell(Cell):
+#   init   operation.
     def __init__(self, lo, shape, points):
         super().__init__(lo, max(shape), points)
         self.shape = shape
 
+# split operation.
     def split(self):
         choices = []
         for axis in range(3):
@@ -71,6 +75,7 @@ class BinaryCell(Cell):
             choices.append((sum(c.error for c in children), -self.shape[axis], axis, children))
         return min(choices, key=lambda v: v[:3])[3]
 
+# adaptive operation.
 def adaptive(points, budget, binary=False):
     """Spend leaves on maximum-estimator error, retaining a peak in every leaf."""
     root = BinaryCell((0, 0, 0), (SIZE, SIZE, SIZE), points) if binary else Cell((0, 0, 0), SIZE, points)
@@ -89,6 +94,7 @@ def adaptive(points, budget, binary=False):
             serial += 1
     return list(leaves.values())
 
+# fixed operation.
 def fixed(points, width=4):
     groups = {}
     for point in points:
@@ -96,6 +102,7 @@ def fixed(points, width=4):
         groups.setdefault(lo, []).append(point)
     return [Cell(lo, width, values) for lo, values in groups.items()]
 
+# predict operation.
 def predict(cells):
     result = {}
     for cell in cells:
@@ -106,8 +113,8 @@ def predict(cells):
             result[key] = cell.peak
     return result
 
+# verify geometry operation.
 def verify_geometry(points, cells):
-    # Independently evaluate box ownership; do not use the samples assigned to a leaf.
     volume = {}
     for cell in cells:
         shape = getattr(cell, 'shape', (cell.width,)*3)
@@ -119,6 +126,7 @@ def verify_geometry(points, cells):
     assert volume == predict(cells), 'geometry does not match sample assignment'
     assert len(volume) == len(points)
 
+# metrics operation.
 def metrics(points, cells):
     predicted = predict(cells)
     assert len(predicted) == len(points)
@@ -128,6 +136,7 @@ def metrics(points, cells):
             'max_error_K': max(errors), 'false_hot_blocks': sum(p[3] < 600 <= predicted[p[:3]] for p in points),
             'exact_blocks': sum(e == 0 for e in errors), 'total_blocks': len(points)}
 
+# run operation.
 def run(output):
     output.mkdir(parents=True, exist_ok=True)
     report = {}
@@ -154,7 +163,6 @@ def run(output):
             svg.append(f'<text x="{left}" y="{top-10}" font-size="13">{case}: {escape(name)}</text>')
             for y in range(SIZE):
                 for x in range(SIZE):
-                    # One shared fixed 290..850 K scale, no per-panel contrast tricks.
                     shade = round(18+225*max(0,min(1,(data[x,y,16]-290)/560)))
                     svg.append(f'<rect x="{left+x*8}" y="{top+y*8}" width="8" height="8" fill="rgb({shade},{shade},{shade})"/>')
     svg.append('</g></svg>')

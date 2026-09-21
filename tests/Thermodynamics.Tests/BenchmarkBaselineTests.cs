@@ -5,45 +5,26 @@ using Thermodynamics.Harness;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The committed baseline is the tree a change is measured against, and it rots without
-    /// announcing that it has.
-    ///
-    /// <para>
-    /// A comparison joins on <c>section / case / metric</c>. Rename a profile, add a section, or
-    /// change what a metric means, and the join stops matching: the affected rows leave the
-    /// regression list and appear under "new" and "gone", where they read as bookkeeping rather
-    /// than as a baseline that can no longer answer the question. The baseline in this repository
-    /// had drifted exactly that far — two profiles renamed and every substep figure rescaled by an
-    /// earlier units change — and produced seventy false moves against an unmodified tree.
-    /// </para>
-    ///
-    /// <para>
-    /// This does not check the figures. Timings belong to the machine that took them and comparing
-    /// them across machines is what the calibration row is for. It checks the <em>keys</em>, which
-    /// belong to the code, so a change that makes the baseline unusable fails here instead of six
-    /// weeks later in the middle of a measurement.
-    /// </para>
-    /// </summary>
     [Trait("speed", "slow")]
     public class BenchmarkBaselineTests
     {
+/// <summary>RepoRoot operation.</summary>
         private static string RepoRoot()
         {
-            // Delegates rather than walking up from the assembly, because the build output no
-            // longer sits inside the repository — see Directory.Build.props. ShippedBlocks anchors
-            // itself to its own compiled-in source path, which survives the move.
             return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
 
+/// <summary>Keys operation.</summary>
         private static HashSet<string> Keys(IEnumerable<ReportRow> rows)
         {
+/// <summary>HashSet operation.</summary>
             HashSet<string> keys = new HashSet<string>();
             foreach (ReportRow row in rows) keys.Add(row.Key);
             return keys;
         }
 
         [Fact]
+/// <summary>TheCommittedBaselineCarriesTheKeysTheReportStillProduces operation.</summary>
         public void TheCommittedBaselineCarriesTheKeysTheReportStillProduces()
         {
             string path = Path.Combine(RepoRoot(), "tests", "benchmarks", "performance.csv");
@@ -52,17 +33,19 @@ namespace Thermodynamics.Tests
             PerformanceReport.Repeats = 1;
             List<ReportRow> fresh = PerformanceReport.Run("ship", 600, 2, new int[] { 600 });
 
+/// <summary>Keys operation.</summary>
             HashSet<string> committed = Keys(PerformanceReport.ParseCsv(File.ReadAllText(path)));
+/// <summary>Keys operation.</summary>
             HashSet<string> current = Keys(fresh);
 
-            // The ladder rungs are the one part of the key set the caller chooses, so they are
-            // expected to differ between this small run and the committed one.
+/// <summary>List operation.</summary>
             List<string> missing = new List<string>();
             foreach (string key in current)
             {
                 if (!key.StartsWith("ladder/") && !committed.Contains(key)) missing.Add(key);
             }
 
+/// <summary>List operation.</summary>
             List<string> orphaned = new List<string>();
             foreach (string key in committed)
             {

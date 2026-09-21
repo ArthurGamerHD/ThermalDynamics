@@ -6,12 +6,13 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>Apparent planetary size, tangent geometry and sky projection without voxel meshes.</summary>
     public class ThermalVisionCelestialTests
     {
         [Fact]
+/// <summary>PreparedRingsMatchIndependentSphereSamplesAcrossScaleAndOrientation operation.</summary>
         public void PreparedRingsMatchIndependentSphereSamplesAcrossScaleAndOrientation()
         {
+/// <summary>Random operation.</summary>
             var random=new Random(7331);
             for(int body=0;body<100;body++)
             {
@@ -37,8 +38,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>LimbUsesAngularRadiusAndNormalIsTangent operation.</summary>
         public void LimbUsesAngularRadiusAndNormalIsTangent()
         {
+/// <summary>Vector3D operation.</summary>
             var centre=new Vector3D(0,0,-1000000);
             for(int i=0;i<64;i++)
             {
@@ -49,9 +52,11 @@ namespace Thermodynamics.Tests
             }
         }
         [Fact]
+/// <summary>SkyProjectionPreservesDirectionWhileRemainingInsideCameraFarPlane operation.</summary>
         public void SkyProjectionPreservesDirectionWhileRemainingInsideCameraFarPlane()
         {
             var camera=MatrixD.CreateFromYawPitchRoll(.3,.2,.1);
+/// <summary>Vector3D operation.</summary>
             camera.Translation=new Vector3D(10000,20000,30000);
             var ray=Vector3D.Normalize(camera.Forward+camera.Right*.3+camera.Up*.2);
             Vector3D point;
@@ -61,6 +66,7 @@ namespace Thermodynamics.Tests
             Assert.False(ThermalVisionCelestial.Project(-camera.Forward,camera,14900,out point));
         }
         [Fact]
+/// <summary>FarPlanetsRemainVisibleWithoutAnyVoxelOrFarPlaneQuery operation.</summary>
         public void FarPlanetsRemainVisibleWithoutAnyVoxelOrFarPlaneQuery()
         {
             var projection=MatrixD.CreatePerspectiveFieldOfView(1,1.8,.1,15000);

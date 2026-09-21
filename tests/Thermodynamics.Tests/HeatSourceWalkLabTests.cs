@@ -4,17 +4,10 @@ using Thermodynamics.Harness;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The heat-source-walk lab prices a registered source per step on redesign.md's fourth
-    /// sweep. What is pinned is that the fixture actually exercises the path — the sources reach
-    /// the solver and cost something, monotonically in their count — and that the source
-    /// contribution is real heat, not a no-op the timing would measure as free (`E8`). The
-    /// injection helper itself is pinned too: a source registered on the sample must raise a
-    /// node's watts, or the lab is timing a mechanism that never ran.
-    /// </summary>
     public class HeatSourceWalkLabTests
     {
         [Fact]
+/// <summary>MoreSourcesCostMoreAndTheStepIsAlwaysTimed operation.</summary>
         public void MoreSourcesCostMoreAndTheStepIsAlwaysTimed()
         {
             List<HeatSourceWalkLab.Row> rows = HeatSourceWalkLab.Run("ship", 4000, 4);
@@ -28,22 +21,19 @@ namespace Thermodynamics.Tests
                 if (row.Sources == 0) baseMs = row.StepMs;
             }
 
-            // The 32-source step must cost at least as much as the 0-source one. Timing noise can
-            // shuffle adjacent rows, so the claim is on the widest gap the panel offers, not on
-            // strict monotonicity between neighbours.
             HeatSourceWalkLab.Row high = null;
             foreach (HeatSourceWalkLab.Row row in rows) { if (row.Sources == 32) high = row; }
             Assert.NotNull(high);
             Assert.True(high.StepMs >= baseMs,
+/// <summary>sources operation.</summary>
                 "32 sources (" + high.StepMs + " ms) cost less than none (" + baseMs
                 + " ms); the sources are not reaching the solver");
         }
 
         [Fact]
+/// <summary>ARegisteredSourceActuallyHeatsANode operation.</summary>
         public void ARegisteredSourceActuallyHeatsANode()
         {
-            // The injection helper is the lab's foundation: if a source on the sample does not
-            // reach a node, every row above is timing nothing (`E8`).
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", 2000));
             ThermalSimulation warm = builder.BuildSimulation(Hulls.Uncapped(), 293.15f);

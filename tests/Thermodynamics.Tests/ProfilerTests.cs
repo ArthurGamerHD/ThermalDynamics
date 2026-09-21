@@ -5,21 +5,16 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The instrumentation hook the telemetry module hangs its stage timings on.
-    ///
-    /// What matters is that every stage is bracketed correctly and that a simulation with no
-    /// profiler attached behaves exactly as it did before the hook existed — that is the whole
-    /// basis of "comprehensive when testing, free in production".
-    /// </summary>
     public class ProfilerTests
     {
         private class RecordingProfiler : ISimulationProfiler
         {
+/// <summary>List operation.</summary>
             public readonly List<string> Events = new List<string>();
             public readonly Dictionary<SimulationPhase, int> Depth = new Dictionary<SimulationPhase, int>();
             public bool Unbalanced;
 
+/// <summary>Begin operation.</summary>
             public void Begin(SimulationPhase phase)
             {
                 int depth;
@@ -29,6 +24,7 @@ namespace Thermodynamics.Tests
                 Events.Add("begin " + phase);
             }
 
+/// <summary>End operation.</summary>
             public void End(SimulationPhase phase)
             {
                 int depth;
@@ -38,6 +34,7 @@ namespace Thermodynamics.Tests
                 Events.Add("end " + phase);
             }
 
+/// <summary>Count operation.</summary>
             public int Count(string what)
             {
                 int count = 0;
@@ -49,6 +46,7 @@ namespace Thermodynamics.Tests
             }
         }
 
+/// <summary>Builds the API method table.</summary>
         private static ThermalSimulation BuildSimulation()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -57,9 +55,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EveryPhaseIsBracketed operation.</summary>
         public void EveryPhaseIsBracketed()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = BuildSimulation();
+/// <summary>RecordingProfiler operation.</summary>
             RecordingProfiler profiler = new RecordingProfiler();
             simulation.Profiler = profiler;
 
@@ -77,18 +78,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RebuildAllReportsTopologyRoomMappingAndExposure operation.</summary>
         public void RebuildAllReportsTopologyRoomMappingAndExposure()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = BuildSimulation();
+/// <summary>RecordingProfiler operation.</summary>
             RecordingProfiler profiler = new RecordingProfiler();
             simulation.Profiler = profiler;
 
             simulation.RebuildAll();
 
-            // Two topology spans, not one: the graph rebuild opens the first, and the step
-            // prologue — the full node mirror and the link-mass fill, hoisted onto the rebuild
-            // tick so the first step does not pay it (`D4`) — is charged as the second, after
-            // exposure has run, rather than to no row at all.
             Assert.Equal(2, profiler.Count("begin " + SimulationPhase.Topology));
             Assert.Equal(1, profiler.Count("begin " + SimulationPhase.RoomMapping));
             Assert.Equal(1, profiler.Count("begin " + SimulationPhase.Exposure));
@@ -96,32 +96,28 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EveryUpdateReportsTheSolver operation.</summary>
         public void EveryUpdateReportsTheSolver()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = BuildSimulation();
             simulation.RebuildAll();
 
+/// <summary>RecordingProfiler operation.</summary>
             RecordingProfiler profiler = new RecordingProfiler();
             simulation.Profiler = profiler;
 
-            // A frame far too short to owe a whole step at four steps a second. It still owes a
-            // share of one, and doing that share is the point: a step is spread across the frames
-            // of its window rather than landing whole on one of them.
-            //
-            // This test used to assert the opposite — that a short frame reported no solver at
-            // all — which was true when an update either ran a whole step or none.
             simulation.Update(0.001f, Worlds.Shadow());
 
             Assert.Equal(1, profiler.Count("begin " + SimulationPhase.Solver));
             Assert.Equal(1, profiler.Count("end " + SimulationPhase.Solver));
 
-            // And it must not have finished one on a frame worth a two-hundred-and-fiftieth of a
-            // step, or the spreading is not spreading.
             Assert.Equal(0, simulation.Solver.StepCount);
             Assert.True(simulation.StepInFlight);
         }
 
         [Fact]
+/// <summary>PlacingABlockReportsATopologyRebuild operation.</summary>
         public void PlacingABlockReportsATopologyRebuild()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -129,6 +125,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
             simulation.RebuildAll();
 
+/// <summary>RecordingProfiler operation.</summary>
             RecordingProfiler profiler = new RecordingProfiler();
             simulation.Profiler = profiler;
 
@@ -138,16 +135,16 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, profiler.Count("begin " + SimulationPhase.Topology));
         }
 
-        /// <summary>
-        /// The production path: no profiler, and the simulation has to produce exactly the same
-        /// temperatures it would have produced before the hook was added.
-        /// </summary>
         [Fact]
+/// <summary>ProfilingChangesNothingAboutTheResult operation.</summary>
         public void ProfilingChangesNothingAboutTheResult()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation instrumented = BuildSimulation();
+/// <summary>RecordingProfiler operation.</summary>
             instrumented.Profiler = new RecordingProfiler();
 
+/// <summary>Builds the method table.</summary>
             ThermalSimulation plain = BuildSimulation();
 
             instrumented.RebuildAll();
@@ -169,16 +166,15 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The same contract for the other half of the instrumentation: recording per-mechanism
-        /// watts must not change what the solver computes, only what it reports.
-        /// </summary>
         [Fact]
+/// <summary>CollectingDiagnosticsChangesNothingAboutTheResult operation.</summary>
         public void CollectingDiagnosticsChangesNothingAboutTheResult()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation instrumented = BuildSimulation();
             instrumented.Solver.CollectDiagnostics = true;
 
+/// <summary>Builds the method table.</summary>
             ThermalSimulation plain = BuildSimulation();
             Assert.False(plain.Solver.CollectDiagnostics);
 
@@ -196,19 +192,15 @@ namespace Thermodynamics.Tests
                 Assert.Equal(b[i].Temperature, a[i].Temperature);
             }
 
-            // ...and the figures themselves only exist on the instrumented run.
             Assert.True(a[0].LastRadiationWatts != 0f);
             Assert.Equal(0f, b[0].LastRadiationWatts);
         }
 
-        /// <summary>
-        /// The solver mirrors node state into flat arrays, so anything that writes a node from
-        /// outside a step has to be picked up on the next one. Temperature is the case that
-        /// matters: loading a save, a grid split, and conduction across a rotor all do it.
-        /// </summary>
         [Fact]
+/// <summary>ATemperatureWrittenFromOutsideIsPickedUp operation.</summary>
         public void ATemperatureWrittenFromOutsideIsPickedUp()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = BuildSimulation();
             simulation.RebuildAll();
             simulation.Update(1f / 6f, Worlds.Shadow());
@@ -218,15 +210,15 @@ namespace Thermodynamics.Tests
 
             simulation.Update(1f / 6f, Worlds.Shadow());
 
-            // It cools from 900 rather than resuming from where the arrays had it.
             Assert.True(node.Temperature > 700f, "temperature was " + node.Temperature);
             Assert.True(node.Temperature < 900f, "the block should have cooled, not held at 900");
         }
 
-        /// <summary>Mass changes have to reach the solver's mirrored arrays too.</summary>
         [Fact]
+/// <summary>AMassChangeIsPickedUp operation.</summary>
         public void AMassChangeIsPickedUp()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = BuildSimulation();
             simulation.RebuildAll();
             simulation.Update(1f / 6f, Worlds.Shadow());
@@ -242,19 +234,17 @@ namespace Thermodynamics.Tests
             float start = node.Temperature;
             simulation.Update(1f / 6f, Worlds.Shadow());
 
-            // A ten times heavier block cools ten times more slowly; the point is only that the
-            // step used the new mass at all.
             Assert.NotEqual(start, node.Temperature);
         }
 
         [Fact]
+/// <summary>NoProfilerMeansNoInstrumentation operation.</summary>
         public void NoProfilerMeansNoInstrumentation()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = BuildSimulation();
             Assert.Null(simulation.Profiler);
 
-            // Nothing to assert beyond this not throwing: the point is that the simulation runs
-            // its whole update with the hooks unattached.
             simulation.RebuildAll();
             simulation.Update(1f / 6f, Worlds.Shadow());
         }

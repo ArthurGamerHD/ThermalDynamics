@@ -8,6 +8,7 @@ OUTPUT = ROOT / 'Thermodynamics/Content/Textures/Particles/GaugeHeatGlow.dds'
 SIZE = 128
 
 
+# profile operation.
 def profile(x, y):
     r2 = x * x + y * y
     if r2 >= 1:
@@ -15,16 +16,17 @@ def profile(x, y):
     return (0.72 * math.exp(-5 * r2) + 0.28 * math.exp(-1.5 * r2)) * (1 - r2) ** 2
 
 
+# srgb operation.
 def srgb(linear):
     return 12.92 * linear if linear <= 0.0031308 else 1.055 * linear ** (1 / 2.4) - 0.055
 
 
+# levels operation.
 def levels():
     size = SIZE
     values = [[profile(2 * x / (size - 1) - 1, 2 * y / (size - 1) - 1)
                for x in range(size)] for y in range(size)]
     while True:
-        # Transparent borders remain transparent at every mip, including the final texel.
         for i in range(size):
             values[0][i] = values[-1][i] = values[i][0] = values[i][-1] = 0.0
         pixels = bytearray()
@@ -40,6 +42,7 @@ def levels():
                    for x in range(size)] for y in range(size)]
 
 
+# texture bytes operation.
 def texture_bytes():
     mips = list(levels())
     header = [124, 0x2100F, SIZE, SIZE, SIZE * 4, 0, len(mips)] + [0] * 11

@@ -8,45 +8,18 @@ using Xunit.Abstractions;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **Every dial moves something.**
-    ///
-    /// <para>
-    /// A balance pass turns dials and reads what happened. The failure that wastes a pass is a dial
-    /// that reaches nothing: the curve comes back flat, which reads as *this dial does not matter*
-    /// and is indistinguishable from *this dial is not wired to anything*. This repository has been
-    /// caught by that shape repeatedly — a coolant sink face no test ever exercised, a reactor
-    /// making no heat while 1,179 tests stayed green, a panel rule that selected no reactors.
-    /// </para>
-    ///
-    /// <para>
-    /// <see cref="KnobBaselineTests"/> is the other half and does not overlap: it checks each
-    /// dial's *shipped* value is the one that actually ships, so a curve is read from where the mod
-    /// sits. This checks the dial is connected to the simulation at all.
-    /// </para>
-    ///
-    /// <para>
-    /// **It is a reach test, not a balance test.** It asserts a dial changes an outcome and says
-    /// nothing about whether the change is the right size or the right direction — a direction is a
-    /// claim about the model and belongs with the model. Keeping it to reach is what makes it
-    /// survive every retune without being touched.
-    /// </para>
-    /// </summary>
     [Trait("speed", "slow")]
     public class DialReachTests
     {
         private readonly ITestOutputHelper output;
 
+/// <summary>DialReachTests operation.</summary>
         public DialReachTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-        /// <summary>
-        /// A hull with something of everything on it: a heat source that produces, one that draws,
-        /// armour around them, and faces on the sky. A dial that acts on any of those has somewhere
-        /// to act.
-        /// </summary>
+/// <summary>Rig operation.</summary>
         private static ThermalSimulation Rig(
             ThermalSettings settings,
             Func<string, string, BlockThermalProperties, BlockThermalProperties> material)
@@ -56,9 +29,8 @@ namespace Thermodynamics.Tests
             BlockThermalProperties armour = Catalog.DefaultThermal();
             if (material != null) armour = material("CubeBlock", "LargeBlockArmorBlock", armour);
 
-            // A shell rather than a solid block, so the two heat sources have cells of their own
-            // and the armour still wraps them: a source buried in armour is how one is installed.
             builder.Shell(BlockModel.Solid("LargeBlockArmorBlock", Vector3I.One, 500f, armour),
+/// <summary>Vector3I operation.</summary>
                 Vector3I.Zero, new Vector3I(4, 4, 4));
 
             Vanilla.Block reactor = Vanilla.Find("LargeBlockLargeGenerator");
@@ -67,6 +39,7 @@ namespace Thermodynamics.Tests
 
             builder.Place(
                 BlockModel.Solid(reactor.Subtype, Vector3I.One, reactor.Mass, reactorThermal),
+/// <summary>Vector3I operation.</summary>
                 new Vector3I(1, 1, 1));
             builder.Producing(reactor.PowerOutputMegawatts * ThermalConstants.MegawattsToWatts);
 
@@ -74,38 +47,25 @@ namespace Thermodynamics.Tests
             BlockThermalProperties thrusterThermal = thruster.Thermal;
             if (material != null)
             {
+/// <summary>material operation.</summary>
                 thrusterThermal = material("Thrust", thruster.Subtype, thrusterThermal);
             }
 
             builder.Place(
                 BlockModel.Solid(thruster.Subtype, Vector3I.One, thruster.Mass, thrusterThermal),
+/// <summary>Vector3I operation.</summary>
                 new Vector3I(2, 1, 1));
             builder.Thrusting(thruster.PowerDrawMegawatts * ThermalConstants.MegawattsToWatts);
 
-            // **A drive and an engine, because two dials each act on nothing else.** A rig without
-            // them reports `jumpdrive-waste` and `engine-waste` as inert, which is true of the rig
-            // and says nothing about the mod — the failure this test exists to tell apart.
             Charging(builder, material, "LargeJumpDrive", new Vector3I(1, 2, 1));
             Charging(builder, material, "LargeHydrogenEngine", new Vector3I(2, 2, 1));
 
-            // **And a generator, for `oxygen-waste`, added the day that dial was.** It is a
-            // *consumer* — it draws power rather than making it, and `Charging` already tells the
-            // two apart — which is why the dial moves `ConsumerWasteEnergy` where the reactor's and
-            // the engine's move the producer side. The rig refused the dial as inert before this
-            // block existed, which is the check working: the oxygen generator is a type that is
-            // 14.4 % of a real ship's waste and was 0 % of what the instruments carried. Swept over
-            // the panel on 2026-08-30 once it was in both — see balance.md, What the oxygen
-            // generator's fraction is worth on real ships.
             Charging(builder, material, "LargeBlockOxygenGeneratorLab", new Vector3I(1, 1, 2));
 
             return builder.BuildSimulation(settings ?? new ThermalSettings());
         }
 
-        /// <summary>
-        /// Places one of the game's own blocks at its rated draw or output, so a dial aimed at that
-        /// type has somewhere to act. Silently does nothing where the game is not installed, which
-        /// is the same terms every other test here runs on.
-        /// </summary>
+/// <summary>Charging operation.</summary>
         private static void Charging(GridBuilder builder,
             Func<string, string, BlockThermalProperties, BlockThermalProperties> material,
             string subtype, Vector3I at)
@@ -115,15 +75,6 @@ namespace Thermodynamics.Tests
             GameBlocks.Definition definition;
             if (!bySubtype.TryGetValue(subtype, out definition))
             {
-                // **A rig block that is not there is a dial that reads as inert**, which is the one
-                // thing this test exists to tell apart — and this returned silently until
-                // 2026-08-28, when `oxygen-waste` was added as `LargeBlockOxygenGenerator` and the
-                // subtype is `OxygenGenerator`. The dial reported *moved nothing*, which was true
-                // of the rig and said nothing about the mod (`E8`).
-                //
-                // An empty table is a machine with no game installed and is left alone: that is the
-                // condition the silent return was for, and it is not the same as a name that is
-                // wrong.
                 if (bySubtype.Count == 0) return;
 
                 throw new InvalidOperationException("the reach rig asks for \"" + subtype
@@ -142,23 +93,20 @@ namespace Thermodynamics.Tests
             else builder.Consuming(definition.PowerDrawWatts);
         }
 
-        /// <summary>
-        /// What the rig settles at, in the environment a dial is measured in. One reading, so a
-        /// dial that moves the answer moves this.
-        /// </summary>
+/// <summary>Sets the tled.</summary>
         private static void Settled(KnobLab.Configuration configuration, string scenario,
             out float hottest, out int overCritical, out float early)
         {
+/// <summary>Rig operation.</summary>
             ThermalSimulation simulation = Rig(configuration.Settings(), configuration.Material());
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
+/// <summary>World operation.</summary>
             runner.Environment = t => World(scenario);
 
-            // **Read early as well as settled, because one dial is a transient dial.** Heat
-            // capacity does not change where a block ends up, only how fast it gets there, so a
-            // reading taken at rest cannot see `jumpdrive-capacity` at all — a third fact about the
-            // instrument rather than about the mod.
             runner.Run(300f, 60f);
+/// <summary>Hottest operation.</summary>
             early = Hottest(simulation);
 
             runner.Run(3300f, 300f);
@@ -174,6 +122,7 @@ namespace Thermodynamics.Tests
             }
         }
 
+/// <summary>Hottest operation.</summary>
         private static float Hottest(ThermalSimulation simulation)
         {
             float hottest = 0f;
@@ -185,7 +134,7 @@ namespace Thermodynamics.Tests
             return hottest;
         }
 
-        /// <summary>The environments the dials are swept in, as this rig can build them.</summary>
+/// <summary>World operation.</summary>
         private static EnvironmentSample World(string scenario)
         {
             switch (scenario)
@@ -198,14 +147,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// **Every dial `KnobLab` sweeps changes an outcome somewhere it is swept.**
-        ///
-        /// Each dial is tried at its own levels, in its own scenarios, against the same rig at its
-        /// shipped value. A dial that never moves the reading is either disconnected or is being
-        /// swept in an environment it cannot act in, and both are a dial whose curve is worthless.
-        /// </summary>
         [Fact]
+/// <summary>EveryDialMovesAnOutcomeSomewhere operation.</summary>
         public void EveryDialMovesAnOutcomeSomewhere()
         {
             List<KnobLab.Knob> knobs = KnobLab.Knobs();
@@ -214,6 +157,7 @@ namespace Thermodynamics.Tests
                 "only " + knobs.Count + " dials were read, so this test would pass on a table"
                 + " that had lost most of them");
 
+/// <summary>List operation.</summary>
             List<string> inert = new List<string>();
             int judged = 0;
 
@@ -255,10 +199,6 @@ namespace Thermodynamics.Tests
                         if (early > earlyHigh) earlyHigh = early;
                     }
 
-                    // **Two outcomes, because one dial moves neither temperature nor the other.**
-                    // `critical-temperature` cannot change where a block settles — it changes
-                    // whether settling there destroys it — so a rig reading only kelvin reports it
-                    // inert, which is a fact about the reading.
                     float spread = highest - lowest;
                     if (mostCritical > fewestCritical) spread = Math.Max(spread, 1f);
                     spread = Math.Max(spread, earlyHigh - earlyLow);
@@ -272,8 +212,6 @@ namespace Thermodynamics.Tests
 
                 output.WriteLine("{0,-22} widest spread {1,9:n2} K  in {2}", knob.Name, widest, where);
 
-                // A tenth of a kelvin. Small enough that a dial with a genuinely weak effect still
-                // counts as connected, large enough that floating-point noise does not.
                 if (widest < 0.1f) inert.Add(knob.Name + " moved nothing across its own levels");
             }
 

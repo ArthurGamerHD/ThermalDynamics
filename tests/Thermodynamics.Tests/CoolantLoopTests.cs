@@ -7,25 +7,16 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// A ring of pipe becoming a loop, and the loop moving heat.
-    ///
-    /// <para>
-    /// Two halves, and the first decides whether the second means anything: topology — what counts as
-    /// a closed ring, that a ring is found once wherever the search starts, and that the loop's
-    /// identity survives a rebuild so a saved temperature comes back to the right fluid — and
-    /// transport, where the assertions are on energy rather than on temperature, because a loop that
-    /// leaks energy still produces plausible-looking numbers.
-    /// </para>
-    /// </summary>
     public class CoolantLoopTests
     {
+/// <summary>Isolated operation.</summary>
         private static ThermalSettings Isolated()
         {
             return Isolation.DeadWorld();
         }
 
         [Fact]
+/// <summary>AClosedPumpedRingIsDetected operation.</summary>
         public void AClosedPumpedRingIsDetected()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -38,13 +29,8 @@ namespace Thermodynamics.Tests
             Assert.True(simulation.Solver.Loops[0].HasPump);
         }
 
-        /// <summary>
-        /// A ring with no pump is still a loop. It holds coolant and circulates none.
-        ///
-        /// Requiring a pump for the loop to exist is what made grinding a pump delete the ring and
-        /// every joule its coolant held, which a player could use to dump heat on demand.
-        /// </summary>
         [Fact]
+/// <summary>ARingWithoutAPumpIsStillALoop operation.</summary>
         public void ARingWithoutAPumpIsStillALoop()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -61,6 +47,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnOpenRunIsNotALoop operation.</summary>
         public void AnOpenRunIsNotALoop()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -76,6 +63,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>BreakingTheRingDestroysTheLoop operation.</summary>
         public void BreakingTheRingDestroysTheLoop()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -91,6 +79,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ClosingTheRingCreatesTheLoop operation.</summary>
         public void ClosingTheRingCreatesTheLoop()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -111,6 +100,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ARingIsFoundOnlyOnceNoMatterWhereTheSearchStarts operation.</summary>
         public void ARingIsFoundOnlyOnceNoMatterWhereTheSearchStarts()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -123,6 +113,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TwoSeparateRingsAreBothFound operation.</summary>
         public void TwoSeparateRingsAreBothFound()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -134,19 +125,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AMultiCellPumpIsWalkedEndToEnd operation.</summary>
         public void AMultiCellPumpIsWalkedEndToEnd()
         {
-            // A 1x1x3 pump stands in for three consecutive cells of the ring. The original
-            // crawler handled this by multiplying the step by three whenever the subtype name
-            // was the small grid pump; here the block's ports say where they are.
             GridBuilder builder = GridBuilder.Large();
 
-            // 2 x 5 ring in the XZ plane
+/// <summary>List operation.</summary>
             List<Vector3I> path = new List<Vector3I>();
             for (int z = 0; z < 5; z++) path.Add(new Vector3I(0, 0, z));
             for (int z = 4; z >= 0; z--) path.Add(new Vector3I(1, 0, z));
 
-            // the pump occupies path cells 1, 2 and 3
             BlockModel pump = Catalog.CoolantPumpLong();
             builder.Place(pump, new Vector3I(0, 0, 1), BlockOrientation.Identity);
 
@@ -170,11 +158,11 @@ namespace Thermodynamics.Tests
             Assert.Single(simulation.Solver.Loops);
             Assert.True(simulation.Solver.Loops[0].HasPump);
 
-            // seven single cells plus the pump
             Assert.Equal(8, simulation.Solver.Loops[0].PipeCount);
         }
 
         [Fact]
+/// <summary>LoopSignatureIsStableAcrossRebuilds operation.</summary>
         public void LoopSignatureIsStableAcrossRebuilds()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -190,19 +178,8 @@ namespace Thermodynamics.Tests
             Assert.NotEqual(0L, first);
         }
 
-        /// <summary>
-        /// **A loop's identity does not depend on the order its pipes were built in**, which is
-        /// what makes it an identity two machines can both arrive at.
-        ///
-        /// <para>
-        /// The signature is an order-independent hash of every pipe position in the ring, and a
-        /// client receives blocks in whatever order the engine streams them. If the signature moved
-        /// with build order, a client's loop would be a *different loop* from the server's, and a
-        /// saved or replicated coolant temperature would land on nothing
-        /// (backlog.md `F22`).
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ALoopKeepsItsIdentityWhateverOrderItsPipesArrivedIn operation.</summary>
         public void ALoopKeepsItsIdentityWhateverOrderItsPipesArrivedIn()
         {
             GridBuilder ordered = GridBuilder.Large();
@@ -220,19 +197,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(first.PipeCount, second.PipeCount);
         }
 
-        /// <summary>
-        /// **One pipe more is a different loop, not the same loop with more pipe in it** — so a
-        /// temperature saved against the old shape does not come back to the new one.
-        ///
-        /// <para>
-        /// That is the intended behaviour and the reason the identity is a hash of the ring rather
-        /// than an index: an index-keyed loop would let a reload put one loop's coolant temperature
-        /// into another. What it costs is that a client whose ring differs by a single block does
-        /// not hold a *wrong* loop temperature, it holds a different loop — which is the whole of
-        /// what `F22` says about topology, in the one place the mod keys state on shape.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ARingOnePipeLongerIsADifferentLoopAndDoesNotTakeTheOldOnesTemperature operation.</summary>
         public void ARingOnePipeLongerIsADifferentLoopAndDoesNotTakeTheOldOnesTemperature()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -246,8 +212,6 @@ namespace Thermodynamics.Tests
 
             string saved = simulation.Save();
 
-            // The same ring one cell longer in one direction: every pipe of the old ring that
-            // survives is still where it was, and the shape is not the shape that was saved.
             GridBuilder grown = GridBuilder.Large();
             PipeFitter.BuildRing(grown, PipeFitter.RectangleXZ(Vector3I.Zero, 4, 3));
 
@@ -264,6 +228,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ARebuildKeepsTheCoolantTemperature operation.</summary>
         public void ARebuildKeepsTheCoolantTemperature()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -277,20 +242,13 @@ namespace Thermodynamics.Tests
             Assert.Equal(777f, simulation.Solver.Loops[0].Temperature, 3);
         }
 
-        /// <summary>
-        /// A sink face carries heat the pipe blocks alone would not.
-        ///
-        /// The original form of this test asked only that the fluid warmed and the block cooled,
-        /// with the hot block directly under a pipe — which conducts block to block whether a sink
-        /// face exists or not, so the assertions held with no sink present at all. And none was:
-        /// the sink was requested on ring index 1, which is where the pump goes on every rectangle,
-        /// and the pump silently discarded it. The comparison against the same ring without a sink
-        /// is what makes this about sink faces.
-        /// </summary>
         [Fact]
+/// <summary>ASinkFaceCarriesMoreThanThePipesAlone operation.</summary>
         public void ASinkFaceCarriesMoreThanThePipesAlone()
         {
+/// <summary>HeatDrawnFromABlockUnderTheRing operation.</summary>
             float withSink = HeatDrawnFromABlockUnderTheRing(true);
+/// <summary>HeatDrawnFromABlockUnderTheRing operation.</summary>
             float withoutSink = HeatDrawnFromABlockUnderTheRing(false);
 
             Assert.True(withSink > withoutSink * 1.2f,
@@ -298,6 +256,7 @@ namespace Thermodynamics.Tests
                 + " W from the pipes alone; a sink that adds nothing is a sink that is not there");
         }
 
+/// <summary>HeatDrawnFromABlockUnderTheRing operation.</summary>
         private static float HeatDrawnFromABlockUnderTheRing(bool sink)
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -320,6 +279,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>CoolantMovesHeatFromASinkFaceIntoTheFluid operation.</summary>
         public void CoolantMovesHeatFromASinkFaceIntoTheFluid()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -346,6 +306,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>CoolantTransportConservesEnergy operation.</summary>
         public void CoolantTransportConservesEnergy()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -368,12 +329,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(1f, after / before, 3);
         }
 
-        /// <summary>
-        /// A loop reports what it drew and what it shed as two figures, because a loop doing its job
-        /// has a net of about zero. This is the case the two-figure form exists for: a reactor at one
-        /// sink and a radiator at another, where the fluid is a conduit rather than a store.
-        /// </summary>
         [Fact]
+/// <summary>AWorkingLoopReportsGrossFlowNotItsNearZeroNet operation.</summary>
         public void AWorkingLoopReportsGrossFlowNotItsNearZeroNet()
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -387,6 +344,7 @@ namespace Thermodynamics.Tests
             builder.Place(Catalog.Reactor(), cells[1] + Vector3I.Down).Producing(200000f);
             builder.Place(Catalog.Radiator(), cells[5] + Vector3I.Up);
 
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableSolarHeat = false;
             settings.EnableFriction = false;
@@ -395,12 +353,6 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(settings.Derive(), 293.15f);
             CoolantLoop loop = simulation.Solver.Loops[0];
 
-            // **Stepped until the fluid stops warming, rather than for a fixed count.** Balance is
-            // the condition this test is about, and how long it takes to reach is a property of the
-            // coolant's own mass — `C43` gave a large-grid pipe ten times the fluid it used to
-            // carry, and a fixed 30,000 steps stopped reading a ring that had not arrived. A run
-            // length that has to be re-tuned every time a capacity moves is a stop criterion that
-            // is really a time limit (`M1`).
             const int Chunk = 10000;
             const int Bound = 600000;
 
@@ -423,18 +375,13 @@ namespace Thermodynamics.Tests
             Assert.True(loop.LastWattsRejected > 1000f,
                 "the loop reports shedding only " + loop.LastWattsRejected + " W into a radiator");
 
-            // The point of the pair: the net is small against either gross figure, so a single
-            // net figure would describe this loop as idle.
             Assert.True(Math.Abs(loop.LastNetWatts) < loop.LastWattsAbsorbed * 0.1f,
                 "net " + loop.LastNetWatts + " W against " + loop.LastWattsAbsorbed
                 + " W absorbed: the loop has not reached balance, so this is not testing the case");
         }
 
-        /// <summary>
-        /// The two figures are the same energy the integrator applied to the fluid, so their
-        /// difference has to be the change in the fluid's own heat content and nothing else.
-        /// </summary>
         [Fact]
+/// <summary>TheReportedFlowAccountsForTheFluidsChangeInHeat operation.</summary>
         public void TheReportedFlowAccountsForTheFluidsChangeInHeat()
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -459,8 +406,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(1f, reported / actual, 2);
         }
 
-        /// <summary>An idle loop reports zero rather than whatever it last carried.</summary>
         [Fact]
+/// <summary>ALoopInBalanceWithItsSurroundingsReportsNothing operation.</summary>
         public void ALoopInBalanceWithItsSurroundingsReportsNothing()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -475,17 +422,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, loop.LastWattsRejected, 3);
         }
 
-        /// <summary>
-        /// A longer ring holds proportionally more coolant, so it is a bigger buffer rather than a
-        /// better cooler — and it costs the solver the same per pipe however long it is.
-        ///
-        /// The fluid charge used to be a fixed figure for the whole loop. That made a longer ring
-        /// couple harder to the grid while holding no more coolant, so length was a free cooling
-        /// multiplier; and it divided the same fluid into ever smaller parcels, so every parcel got
-        /// stiffer to integrate as a player added pipe. Charging per pipe fixes both at once: the
-        /// parcel capacity and the parcel's contact area are now both constant.
-        /// </summary>
         [Fact]
+/// <summary>ALongerRingHoldsMoreCoolantAndCostsTheSamePerPipe operation.</summary>
         public void ALongerRingHoldsMoreCoolantAndCostsTheSamePerPipe()
         {
             CoolantLoop small, large;
@@ -496,28 +434,24 @@ namespace Thermodynamics.Tests
             Assert.Equal(8, small.PipeCount);
             Assert.Equal(32, large.PipeCount);
 
-            // One parcel per pipe, each holding the same charge.
             Assert.Equal(small.SegmentThermalMass, large.SegmentThermalMass, 3);
 
-            // So the ring's total capacity scales with its length.
             Assert.Equal(small.ThermalMass * 4f, large.ThermalMass, 1);
 
-            // And every link is still full strength: nothing divides by segment count.
+/// <summary>TotalConductance operation.</summary>
             float perLink = TotalConductance(small) / small.Links.Count;
             Assert.Equal(perLink, TotalConductance(large) / large.Links.Count, 1);
         }
 
-        /// <summary>
-        /// The stiffness a ring presents to the integrator does not grow with its length, because a
-        /// parcel's capacity and the links it carries both stay put as the ring grows. This is the
-        /// property that lets a player plumb a whole ship without making the solver pay for it.
-        /// </summary>
         [Fact]
+/// <summary>RingLengthDoesNotChangeWhatTheSolverPaysPerParcel operation.</summary>
         public void RingLengthDoesNotChangeWhatTheSolverPaysPerParcel()
         {
             CoolantLoop small, large;
             ThermalNode smallSink, largeSink;
+/// <summary>RingOverOneHotBlock operation.</summary>
             ThermalSimulation a = RingOverOneHotBlock(3, 3, out small, out smallSink);
+/// <summary>RingOverOneHotBlock operation.</summary>
             ThermalSimulation b = RingOverOneHotBlock(20, 20, out large, out largeSink);
 
             Assert.Equal(8, small.PipeCount);
@@ -526,10 +460,10 @@ namespace Thermodynamics.Tests
             a.StepExact(1, Worlds.Shadow());
             b.StepExact(1, Worlds.Shadow());
 
-            // A ring nine times longer must not demand more substeps of the grid it is on.
             Assert.Equal(a.Solver.LastRequiredSubsteps, b.Solver.LastRequiredSubsteps, 2);
         }
 
+/// <summary>TotalConductance operation.</summary>
         private static float TotalConductance(CoolantLoop loop)
         {
             float total = 0f;
@@ -537,14 +471,7 @@ namespace Thermodynamics.Tests
             return total;
         }
 
-        /// <summary>
-        /// A ring of the given rectangle with a sink face genuinely against the hot block below it.
-        ///
-        /// The sink index matters: every rectangle's first straight run is index 1, which is where
-        /// <c>PipeFitter</c> puts the pump, and a pump carries no sink ports. Asking for a sink there
-        /// used to drop it in silence. <c>BuildRing</c> now moves the pump aside instead, and the
-        /// caller asserts the sink exists rather than assuming it.
-        /// </summary>
+/// <summary>RingOverOneHotBlock operation.</summary>
         private static ThermalSimulation RingOverOneHotBlock(int width, int depth,
             out CoolantLoop loop, out ThermalNode sink)
         {
@@ -568,8 +495,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>DisablingLoopsRemovesThemFromTheSolver operation.</summary>
         public void DisablingLoopsRemovesThemFromTheSolver()
         {
+/// <summary>Isolated operation.</summary>
             ThermalSettings settings = Isolated();
             settings.EnableCoolantLoops = false;
 
@@ -581,8 +510,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>PipeAndPlateConductanceRespectTheirScalers operation.</summary>
         public void PipeAndPlateConductanceRespectTheirScalers()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(2.5f);
             BlockInstance pipe = grid.Add(Catalog.CoolantPipeStraight(), Vector3I.Zero);
 

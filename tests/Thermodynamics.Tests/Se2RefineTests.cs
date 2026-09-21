@@ -5,16 +5,12 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Refining the lattice moves no block and changes no topology: the same nodes, the same
-    /// links, the same rooms — only the cells under them multiply. These are the invariants that
-    /// make `bench se2tax` a measurement of the lattice rather than of an accidentally different
-    /// ship.
-    /// </summary>
     public class Se2RefineTests
     {
+/// <summary>Prepared operation.</summary>
         private static ThermalSimulation Prepared(GridBuilder builder)
         {
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -27,19 +23,18 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-        /// <summary>
-        /// Node and link counts are per block and per touching pair, so the lattice cannot move
-        /// them; cells multiply by the factor cubed exactly.
-        /// </summary>
         [Fact]
+/// <summary>NodesAndLinksHoldWhileCellsCube operation.</summary>
         public void NodesAndLinksHoldWhileCellsCube()
         {
             GridBuilder source = GridBuilder.Large();
             source.PlaceCensus(LoadShapes.Build("ship", 2000));
+/// <summary>Prepared operation.</summary>
             ThermalSimulation coarse = Prepared(source);
 
             const int factor = 3;
             GridBuilder refined = Se2Refine.Refined(source, factor);
+/// <summary>Prepared operation.</summary>
             ThermalSimulation fine = Prepared(refined);
 
             Assert.Equal(coarse.Solver.Nodes.Count, fine.Solver.Nodes.Count);
@@ -52,13 +47,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(coarseCells * factor * factor * factor, fineCells);
         }
 
-        /// <summary>
-        /// The refined hull holds the same rooms — the count is invariant and every room's cell
-        /// count multiplies by the factor cubed. Doorless by construction: a closed door's sealed
-        /// cells are roomable one by one, so a door room's cells shear rather than cube, which is
-        /// a property of the door rule and not of the refinement.
-        /// </summary>
         [Fact]
+/// <summary>RoomsSurviveRefinementWithTheirVolumesCubed operation.</summary>
         public void RoomsSurviveRefinementWithTheirVolumesCubed()
         {
             GridBuilder source = GridBuilder.Large();
@@ -70,18 +60,22 @@ namespace Thermodynamics.Tests
                 source.Place(armour, new Vector3I(4, y, z));
             }
 
+/// <summary>Prepared operation.</summary>
             ThermalSimulation coarse = Prepared(source);
             Assert.True(coarse.Rooms.Map.RoomCount > 0, "no rooms, so invariance proves nothing");
 
             const int factor = 3;
             GridBuilder refined = Se2Refine.Refined(source, factor);
+/// <summary>Prepared operation.</summary>
             ThermalSimulation fine = Prepared(refined);
 
             RoomMap before = coarse.Rooms.Map;
             RoomMap after = fine.Rooms.Map;
             Assert.Equal(before.RoomCount, after.RoomCount);
 
+/// <summary>List operation.</summary>
             List<int> coarseSizes = new List<int>();
+/// <summary>List operation.</summary>
             List<int> fineSizes = new List<int>();
             for (int r = 0; r < before.RoomCount; r++) coarseSizes.Add(before.CellsInRoom(r) * factor * factor * factor);
             for (int r = 0; r < after.RoomCount; r++) fineSizes.Add(after.CellsInRoom(r));
@@ -90,30 +84,26 @@ namespace Thermodynamics.Tests
             Assert.Equal(coarseSizes, fineSizes);
         }
 
-        /// <summary>
-        /// A partially sealed cell's fine interior stays one connected volume joined to its own
-        /// open face — the expansion opens interior faces — so no phantom pocket appears inside
-        /// it, and none inside solid armour either.
-        /// </summary>
         [Fact]
+/// <summary>PartialSealingRefinesWithoutPhantomPockets operation.</summary>
         public void PartialSealingRefinesWithoutPhantomPockets()
         {
             GridBuilder source = GridBuilder.Large();
             BlockModel armour = Catalog.LightArmor();
             source.Shell(armour, new Vector3I(-1, -1, -1), new Vector3I(5, 5, 5));
 
-            // A cell sealed on five faces, open toward the pocket: part of the room at coarse,
-            // and its refined interior must stay part of exactly that room.
             BlockModel vented = BlockModel.Solid("Vented", Vector3I.One, 100f, null);
             int open = CellSurface.WithSelfAirtight(
                 CellSurface.SelfAirtightMask | CellSurface.SelfMountMask, 0, false);
             vented.SetLocalSurface(Vector3I.Zero, open);
             source.Place(vented, new Vector3I(2, 2, 2));
 
+/// <summary>Prepared operation.</summary>
             ThermalSimulation coarse = Prepared(source);
 
             const int factor = 3;
             GridBuilder refined = Se2Refine.Refined(source, factor);
+/// <summary>Prepared operation.</summary>
             ThermalSimulation fine = Prepared(refined);
 
             Assert.Equal(coarse.Rooms.Map.RoomCount, fine.Rooms.Map.RoomCount);

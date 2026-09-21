@@ -3,19 +3,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// What a planet definition that says less than everything does to the climate.
-    ///
-    /// A field dump taken on an earthlike world read 2.7 K of ambient at 0.93 air density, no
-    /// convection at all, and no solar decay — the vacuum figures, in breathable air — with 232,000
-    /// points of heat damage behind them. The planet's thermal group had not reached the mod, and
-    /// every value it did not supply arrived as zero and was written over the model's own default.
-    /// A definition now overrides only what it carried.
-    /// </summary>
     public class PlanetPropertyMergeTests
     {
+/// <summary>Read operation.</summary>
         private static PlanetThermalProperties Read()
         {
+/// <summary>PlanetThermalProperties operation.</summary>
             PlanetThermalProperties read = new PlanetThermalProperties();
             read.DayTemperature = 400f;
             read.NightTemperature = 300f;
@@ -26,11 +19,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ADefinitionThatSuppliedNothingLeavesTheModelsOwnClimate operation.</summary>
         public void ADefinitionThatSuppliedNothingLeavesTheModelsOwnClimate()
         {
+/// <summary>PlanetThermalProperties operation.</summary>
             PlanetThermalProperties defaults = new PlanetThermalProperties();
 
             PlanetThermalProperties merged = PlanetProperties.Merge(
+/// <summary>PlanetThermalProperties operation.</summary>
                 defaults, new PlanetThermalProperties(), PlanetField.None);
 
             Assert.Equal(defaults.DayTemperature, merged.DayTemperature);
@@ -39,10 +35,11 @@ namespace Thermodynamics.Tests
             Assert.False(PlanetProperties.IsVacuum(merged));
         }
 
-        /// <summary>The dump's case: a lookup that answered for nothing must not make a vacuum.</summary>
         [Fact]
+/// <summary>ABlankDefinitionCannotTurnBreathableAirIntoSpace operation.</summary>
         public void ABlankDefinitionCannotTurnBreathableAirIntoSpace()
         {
+/// <summary>PlanetThermalProperties operation.</summary>
             PlanetThermalProperties blank = new PlanetThermalProperties();
             blank.DayTemperature = 0f;
             blank.NightTemperature = 0f;
@@ -52,6 +49,7 @@ namespace Thermodynamics.Tests
             Assert.True(PlanetProperties.IsVacuum(blank));
 
             PlanetThermalProperties merged = PlanetProperties.Merge(
+/// <summary>PlanetThermalProperties operation.</summary>
                 new PlanetThermalProperties(), blank, PlanetField.None);
 
             Assert.False(PlanetProperties.IsVacuum(merged));
@@ -59,28 +57,33 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>OnlyTheFieldsNamedAreTaken operation.</summary>
         public void OnlyTheFieldsNamedAreTaken()
         {
+/// <summary>PlanetThermalProperties operation.</summary>
             PlanetThermalProperties defaults = new PlanetThermalProperties();
 
             PlanetThermalProperties merged = PlanetProperties.Merge(
+/// <summary>Read operation.</summary>
                 defaults, Read(), PlanetField.DayTemperature | PlanetField.ConvectionCoefficient);
 
             Assert.Equal(400f, merged.DayTemperature);
             Assert.Equal(12f, merged.ConvectionCoefficient);
 
-            // Named by neither, so unchanged.
             Assert.Equal(defaults.NightTemperature, merged.NightTemperature);
             Assert.Equal(defaults.CoreTemperature, merged.CoreTemperature);
             Assert.Equal(defaults.SolarDecay, merged.SolarDecay);
         }
 
         [Fact]
+/// <summary>AFullDefinitionIsTakenWhole operation.</summary>
         public void AFullDefinitionIsTakenWhole()
         {
+/// <summary>Read operation.</summary>
             PlanetThermalProperties read = Read();
 
             PlanetThermalProperties merged = PlanetProperties.Merge(
+/// <summary>PlanetThermalProperties operation.</summary>
                 new PlanetThermalProperties(), read, PlanetField.All);
 
             Assert.Equal(read.DayTemperature, merged.DayTemperature);
@@ -90,15 +93,17 @@ namespace Thermodynamics.Tests
             Assert.Equal(read.CoreTemperature, merged.CoreTemperature);
         }
 
-        /// <summary>A definition is entitled to say zero. Saying nothing is what must not.</summary>
         [Fact]
+/// <summary>ADefinitionMaySupplyZeroDeliberately operation.</summary>
         public void ADefinitionMaySupplyZeroDeliberately()
         {
+/// <summary>PlanetThermalProperties operation.</summary>
             PlanetThermalProperties read = new PlanetThermalProperties();
             read.ConvectionCoefficient = 0f;
             read.PoleTemperatureDrop = 0f;
 
             PlanetThermalProperties merged = PlanetProperties.Merge(
+/// <summary>PlanetThermalProperties operation.</summary>
                 new PlanetThermalProperties(), read,
                 PlanetField.ConvectionCoefficient | PlanetField.PoleTemperatureDrop);
 
@@ -107,11 +112,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NeitherArgumentIsModified operation.</summary>
         public void NeitherArgumentIsModified()
         {
+/// <summary>PlanetThermalProperties operation.</summary>
             PlanetThermalProperties defaults = new PlanetThermalProperties();
             float day = defaults.DayTemperature;
 
+/// <summary>Read operation.</summary>
             PlanetThermalProperties read = Read();
             PlanetProperties.Merge(defaults, read, PlanetField.All);
 
@@ -120,13 +128,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheResultIsClampedToWhatTheSolverCanUse operation.</summary>
         public void TheResultIsClampedToWhatTheSolverCanUse()
         {
+/// <summary>PlanetThermalProperties operation.</summary>
             PlanetThermalProperties read = new PlanetThermalProperties();
             read.DayTemperature = -50f;
             read.SolarDecay = 4f;
 
             PlanetThermalProperties merged = PlanetProperties.Merge(
+/// <summary>PlanetThermalProperties operation.</summary>
                 new PlanetThermalProperties(), read,
                 PlanetField.DayTemperature | PlanetField.SolarDecay);
 
@@ -135,6 +146,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AMissingBaselineIsTheModelsOwnDefaults operation.</summary>
         public void AMissingBaselineIsTheModelsOwnDefaults()
         {
             PlanetThermalProperties merged = PlanetProperties.Merge(null, null, PlanetField.All);

@@ -7,28 +7,8 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// **What the room pressure sweep costs at station scale**, which the room-pressure rota was deferred on and
-    /// could not answer because every grid in the library and in the corpus is a ship.
-    ///
-    /// <para>
-    /// The sweep makes two host API calls per compartment every eight steps and is the one
-    /// whole-grid pass in the mod that is neither a rota nor a budgeted slice. Its cost is therefore
-    /// the compartment count times two, and the compartment count is the figure nobody had: the
-    /// shipped 0.054 % was measured on **twelve**.
-    /// </para>
-    ///
-    /// <para>
-    /// **The two host calls stay out of reach and are reported as such.** `GameOxygenAt` and
-    /// `IsRoomAtPositionAirtight` are the game's, so what a lab can price is the count that
-    /// multiplies them and `ThermalSimulation.SetRoomPressure`, which is the core work the sweep
-    /// does per room and is this repository's own code. What is expected is in balance-lab.md with
-    /// its falsifiers, written before this ran.
-    /// </para>
-    /// </summary>
     public static class RoomSweepLab
     {
-        /// <summary>Solver steps between one sweep and the next — `MassSweepInterval`.</summary>
         public const int SweepIntervalSteps = 8;
 
         public class Row
@@ -41,19 +21,15 @@ namespace Thermodynamics.Harness
             public double SweepMilliseconds;
             public double MicrosecondsPerRoom;
 
-            /// <summary>Core sweep cost as a share of real time at the shipped cadence.</summary>
             public double ShareOfRealTime;
         }
 
-        /// <summary>
-        /// One shape, built, mapped and swept. The sweep is timed over
-        /// <paramref name="repeats"/> passes so a room count small enough to finish inside the
-        /// clock's resolution still produces a figure (`M4`).
-        /// </summary>
+/// <summary>Measure operation.</summary>
         public static Row Measure(string shape, IEnumerable<Vector3I> cells, int repeats = 20)
         {
             GridBuilder builder = GridBuilder.Large();
 
+/// <summary>List operation.</summary>
             List<Vector3I> ordered = new List<Vector3I>(cells);
             ordered.Sort(delegate (Vector3I a, Vector3I b)
             {
@@ -65,6 +41,7 @@ namespace Thermodynamics.Harness
             BlockModel armour = Catalog.LightArmor();
             foreach (Vector3I cell in ordered) builder.Place(armour, cell);
 
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableRoomAir = true;
             settings.Derive();
@@ -78,14 +55,13 @@ namespace Thermodynamics.Harness
 
             RoomMap rooms = simulation.Rooms.Map;
 
+/// <summary>List operation.</summary>
             List<Vector3I> anchors = new List<Vector3I>();
             for (int i = 0; i < rooms.RoomCount; i++)
             {
                 if (rooms.CellsInRoom(i) > 0) anchors.Add(rooms.CellsOf(i)[0]);
             }
 
-            // Warm: the first pass through a room touches rows the later ones find in cache, and
-            // the sweep in a session is the steady-state one rather than the first (`D4`).
             for (int i = 0; i < anchors.Count; i++) simulation.SetRoomPressure(anchors[i], 1f);
 
             watch.Restart();
@@ -115,22 +91,25 @@ namespace Thermodynamics.Harness
             };
         }
 
-        /// <summary>
-        /// The ladder: stations from the `F27` size upward, and the ship it is matched against, so
-        /// the count is read against a shape the library already has rather than in isolation.
-        /// </summary>
+/// <summary>Ladder operation.</summary>
         public static List<Row> Ladder()
         {
+/// <summary>List operation.</summary>
             List<Row> rows = new List<Row>();
 
             rows.Add(Measure("ship 40x9", GridShapes.Ship(40, 9, 12)));
 
             Vector3I[] sizes =
             {
+/// <summary>Vector3I operation.</summary>
                 new Vector3I(17, 15, 19),
+/// <summary>Vector3I operation.</summary>
                 new Vector3I(21, 19, 23),
+/// <summary>Vector3I operation.</summary>
                 new Vector3I(27, 23, 27),
+/// <summary>Vector3I operation.</summary>
                 new Vector3I(35, 31, 35),
+/// <summary>Vector3I operation.</summary>
                 new Vector3I(43, 39, 43),
             };
 
@@ -143,10 +122,13 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
+/// <summary>Report operation.</summary>
         public static string Report()
         {
+/// <summary>Ladder operation.</summary>
             List<Row> rows = Ladder();
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("ROOM SWEEP AT STATION SCALE  (A4)");
             sb.AppendLine();

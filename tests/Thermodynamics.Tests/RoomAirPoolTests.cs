@@ -7,29 +7,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **Room air nodes are pooled across rebuilds, and a rebuild is the same rebuild for it.**
-    ///
-    /// <para>
-    /// A rebuild allocated a node and a link list per room every time — 2,573 KB on a
-    /// 126,731-block hull, mostly the links — and it runs on every completed room pass. Reusing the
-    /// node keeps the list's capacity, which is where the bytes were.
-    /// </para>
-    ///
-    /// <para>
-    /// **The bug this could cause is silent and physical, not a crash**, which is why the tests are
-    /// paired rather than a smoke check. The carry-over map used to hold the *nodes* a rebuild was
-    /// about to reuse, so a room could have read a temperature belonging to whichever room reused
-    /// its node first; it holds copies now. And `Initialised` was the one field written on only one
-    /// of the two branches, so a pooled node would have arrived at a fresh room already claiming to
-    /// hold a meaningful temperature.
-    /// </para>
-    /// </summary>
     public class RoomAirPoolTests
     {
-        /// <summary>A sealed box with an interior void, so the hull has room air to carry.</summary>
+/// <summary>Hull operation.</summary>
         private static ThermalSimulation Hull(int side)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableRoomAir = true;
             settings.Derive();
@@ -46,8 +29,10 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>State operation.</summary>
         private static string State(ThermalSimulation simulation)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
             for (int i = 0; i < simulation.RoomAir.Count; i++)
             {
@@ -65,6 +50,7 @@ namespace Thermodynamics.Tests
             return text.ToString();
         }
 
+/// <summary>Rebuild operation.</summary>
         private static void Rebuild(ThermalSimulation simulation)
         {
             simulation.Rooms.RequestRestart(simulation.Grid);
@@ -72,21 +58,21 @@ namespace Thermodynamics.Tests
             simulation.Solver.RebuildRoomAir(simulation.Rooms.Map);
         }
 
-        /// <summary>
-        /// **Rebuilding repeatedly is rebuilding once.** Every field a room's air carries, against a
-        /// simulation that rebuilt only the once and so pooled nothing.
-        /// </summary>
         [Fact]
+/// <summary>RepeatedRebuildsAgreeWithASingleOne operation.</summary>
         public void RepeatedRebuildsAgreeWithASingleOne()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation reused = Hull(6);
             Rebuild(reused);
+/// <summary>State operation.</summary>
             string first = State(reused);
 
             Assert.False(string.IsNullOrEmpty(first), "the hull carried no room air, so this compared nothing");
 
             for (int i = 0; i < 4; i++) Rebuild(reused);
 
+/// <summary>Hull operation.</summary>
             ThermalSimulation fresh = Hull(6);
             Rebuild(fresh);
 
@@ -94,13 +80,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(State(fresh), State(reused));
         }
 
-        /// <summary>
-        /// **A filled room keeps its air across a rebuild, and that is what the carry-over is for.**
-        /// The copies have to survive being taken from nodes the same rebuild then reuses.
-        /// </summary>
         [Fact]
+/// <summary>AFilledRoomCarriesItsTemperatureAndPressureOver operation.</summary>
         public void AFilledRoomCarriesItsTemperatureAndPressureOver()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation simulation = Hull(6);
             Rebuild(simulation);
 
@@ -132,21 +116,11 @@ namespace Thermodynamics.Tests
             Assert.True(carried > 0, "no room carried its pressure over");
         }
 
-        /// <summary>
-        /// **A room that did not exist before must not inherit one that did.** This is the field the
-        /// pool leaks if nothing writes it: `Initialised` is set on the carry-over branch only, so a
-        /// reused node arriving at a room with no remembered anchor has to be told it holds nothing.
-        ///
-        /// <para>
-        /// **The rooms have to actually change, or this tests nothing.** A rebuild of the same hull
-        /// finds every anchor in the carry-over map and never takes the branch at all — the first
-        /// version of this test did exactly that and passed with the field deliberately unwritten.
-        /// So the room's lowest cell is filled in between, which moves its anchor.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ARoomWithNoCarryOverIsNotMarkedInitialised operation.</summary>
         public void ARoomWithNoCarryOverIsNotMarkedInitialised()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation simulation = Hull(6);
             Rebuild(simulation);
 
@@ -169,10 +143,8 @@ namespace Thermodynamics.Tests
 
             Assert.True(any, "the hull carried no room air, so this tests nothing");
 
-            // Fill the room's own anchor cell. The room survives, smaller, with a *different*
-            // lowest cell — so the carry-over map has no entry for it and the else branch runs on
-            // a node that has just been told it is initialised.
             simulation.AddBlock(
+/// <summary>BlockInstance operation.</summary>
                 new BlockInstance(Catalog.HeavyArmor(), anchor, BlockOrientation.Identity), 293.15f);
 
             Rebuild(simulation);
@@ -193,10 +165,11 @@ namespace Thermodynamics.Tests
             Assert.True(checkedOne, "no room moved its anchor, so the branch was never taken");
         }
 
-        /// <summary>**And it is what removes the garbage**, measured rather than assumed.</summary>
         [Fact]
+/// <summary>ARepeatedRebuildAllocatesLess operation.</summary>
         public void ARepeatedRebuildAllocatesLess()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation simulation = Hull(10);
             Rebuild(simulation);
             Rebuild(simulation);
@@ -208,11 +181,13 @@ namespace Thermodynamics.Tests
             simulation.Solver.RebuildRoomAir(simulation.Rooms.Map);
             long after = GC.GetAllocatedBytesForCurrentThread() - before;
 
+/// <summary>Hull operation.</summary>
             ThermalSimulation cold = Hull(10);
             Rebuild(cold);
             GC.Collect();
             GC.WaitForPendingFinalizers();
             long coldBefore = GC.GetAllocatedBytesForCurrentThread();
+/// <summary>Hull operation.</summary>
             ThermalSimulation second = Hull(10);
             Rebuild(second);
             long coldCost = GC.GetAllocatedBytesForCurrentThread() - coldBefore;

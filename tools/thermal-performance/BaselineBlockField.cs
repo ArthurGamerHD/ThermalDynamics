@@ -1,5 +1,4 @@
 using Thermodynamics.Presentation;
-// Reference implementation for block temperature sampling (offline use only).
 using System;
 using System.Collections.Generic;
 using VRageMath;
@@ -7,7 +6,6 @@ using Region = Thermodynamics.Presentation.ThermalVisionRegionPartition.Region;
 
 namespace ThermalPerformance.Baseline
 {
-    /// <summary>Original block temperatures indexed independently of the render partition.</summary>
     public sealed class ThermalVisionBlockField
     {
         private readonly double blur, bucketSize;
@@ -18,12 +16,16 @@ namespace ThermalPerformance.Baseline
             public int Axis;
             public double Plane;
             public SearchNode Low,High;
+/// <summary>List operation.</summary>
             public List<Region> Items=new List<Region>();
         }
         private readonly SearchNode nearest;
         public int NearestSamples { get; private set; }
+/// <summary>Axis operation.</summary>
         private static double Axis(Vector3D p,int axis) { return axis==0?p.X:axis==1?p.Y:p.Z; }
+/// <summary>Sets the axis.</summary>
         private static Vector3D SetAxis(Vector3D p,int axis,double v) { if(axis==0)p.X=v; else if(axis==1)p.Y=v; else p.Z=v; return p; }
+/// <summary>Insert operation.</summary>
         private static void Insert(SearchNode node,Region value,int depth)
         {
             node.Min=node.HasBounds?Vector3D.Min(node.Min,value.Min):value.Min;
@@ -41,8 +43,10 @@ namespace ThermalPerformance.Baseline
             }
             Insert(Axis((value.Min+value.Max)*.5,node.Axis)<node.Plane?node.Low:node.High,value,depth+1);
         }
+/// <summary>Distance operation.</summary>
         private static double Distance(Vector3D point,Vector3D min,Vector3D max)
         { return Vector3D.DistanceSquared(point,Vector3D.Clamp(point,min,max)); }
+/// <summary>FindNearest operation.</summary>
         private static void FindNearest(SearchNode node,Vector3D point,ref double distance,ref float kelvin)
         {
             if(node==null || !node.HasBounds || Distance(point,node.Min,node.Max)>=distance) return;
@@ -57,7 +61,7 @@ namespace ThermalPerformance.Baseline
             FindNearest(a<=b?node.Low:node.High,point,ref distance,ref kelvin);
             FindNearest(a<=b?node.High:node.Low,point,ref distance,ref kelvin);
         }
-        // Gets a temperature sample for points outside any region with fallback.
+/// <summary>OutsideSupport operation.</summary>
         private float OutsideSupport(Vector3D point,float fallback)
         {
             if(nearest!=null && nearest.HasBounds)
@@ -71,22 +75,24 @@ namespace ThermalPerformance.Baseline
         public int Count { get; private set; }
         public int Queries { get; private set; }
         public int Fallbacks { get; private set; }
-        // Initializes a new instance with the specified parameters.
+/// <summary>ThermalVisionBlockField operation.</summary>
         public ThermalVisionBlockField(double blockSize, double blur, Region? sourceBounds = null)
         {
             if(sourceBounds.HasValue) nearest=new SearchNode { SpaceMin=sourceBounds.Value.Min,SpaceMax=sourceBounds.Value.Max };
             this.blur = Math.Max(blockSize * .35, blur);
             bucketSize = Math.Max(blockSize * 4, this.blur * 2);
         }
+/// <summary>Key operation.</summary>
         private Vector3I Key(Vector3D p)
         { return new Vector3I((int)Math.Floor(p.X/bucketSize), (int)Math.Floor(p.Y/bucketSize), (int)Math.Floor(p.Z/bucketSize)); }
-        // Adds a region to the field and updates the nearest search tree.
+/// <summary>Adds a .</summary>
         public void Add(Region sample)
         {
-            // Indexes support for efficient bucket-based queries.
+/// <summary>Key operation.</summary>
             Vector3I lo = Key(sample.Min-new Vector3D(blur)), hi = Key(sample.Max+new Vector3D(blur));
             for(int x=lo.X;x<=hi.X;x++) for(int y=lo.Y;y<=hi.Y;y++) for(int z=lo.Z;z<=hi.Z;z++)
             {
+/// <summary>Vector3I operation.</summary>
                 var key=new Vector3I(x,y,z); List<Region> list;
                 if(!buckets.TryGetValue(key,out list)) { list=new List<Region>(); buckets.Add(key,list); }
                 list.Add(sample);
@@ -94,7 +100,7 @@ namespace ThermalPerformance.Baseline
             if(nearest!=null) Insert(nearest,sample,0);
             Count++;
         }
-        // Gets a temperature sample at the specified point with fallback.
+/// <summary>Sample operation.</summary>
         public float Sample(Vector3D point, float fallback)
         {
             Queries++;
@@ -108,33 +114,35 @@ namespace ThermalPerformance.Baseline
                 Vector3D q=(point-centre)/scale;
                 double d=q.LengthSquared();
                 if(d>=1) continue;
-                // Interpolation kernel: center preserves temperature, edges blend without hotter values.
-                // while edges blend continuously without inventing hotter values.
                 double weight=(1-d)*(1-d)/Math.Max(1e-12,d);
                 total+=weight; sum+=weight*sample.Kelvin;
             }
             if(total>1e-12) return (float)(sum/total);
+/// <summary>OutsideSupport operation.</summary>
             return OutsideSupport(point,fallback);
         }
     }
 
-    /// <summary>Prepared scalar lattice: no block searches or field reconstruction during draw.</summary>
     public sealed class ThermalVisionSurfaceField
     {
         public readonly Region Bounds;
         public readonly Vector3I Steps;
         public readonly float[] Values;
         public int PairedFaceMask;
-        // Initializes a new instance with the specified bounds and spacing.
+/// <summary>ThermalVisionSurfaceField operation.</summary>
         public ThermalVisionSurfaceField(Region bounds, double spacing)
         {
             Bounds=bounds;
             Vector3D size=bounds.Max-bounds.Min;
+/// <summary>Vector3I operation.</summary>
             Steps=new Vector3I(Step(size.X,spacing),Step(size.Y,spacing),Step(size.Z,spacing));
             Values=new float[(Steps.X+1)*(Steps.Y+1)*(Steps.Z+1)];
         }
+/// <summary>Step operation.</summary>
         private static int Step(double size,double spacing) { return Math.Max(1,Math.Min(4,(int)Math.Ceiling(size/Math.Max(.001,spacing)))); }
+/// <summary>Index operation.</summary>
         public int Index(int x,int y,int z) { return (z*(Steps.Y+1)+y)*(Steps.X+1)+x; }
+/// <summary>Point operation.</summary>
         public Vector3D Point(int x,int y,int z)
         { return Bounds.Min+(Bounds.Max-Bounds.Min)*new Vector3D((double)x/Steps.X,(double)y/Steps.Y,(double)z/Steps.Z); }
         public struct Patch
@@ -145,40 +153,42 @@ namespace ThermalPerformance.Baseline
         public float Minimum { get; private set; }
         public float Maximum { get; private set; }
         private readonly List<Patch>[] faces = new List<Patch>[6];
+/// <summary>Face operation.</summary>
         public IList<Patch> Face(int axis,bool upper) { return faces[axis*2+(upper?1:0)]; }
-        // Builds the surface faces from the field values with the specified error tolerance.
+/// <summary>Builds the API method table.</summary>
         public void BuildFaces(float errorKelvin)
         {
             Minimum=float.PositiveInfinity; Maximum=float.NegativeInfinity;
             foreach(float value in Values) { Minimum=Math.Min(Minimum,value); Maximum=Math.Max(Maximum,value); }
             for(int axis=0;axis<3;axis++) for(int side=0;side<2;side++)
             {
+/// <summary>List operation.</summary>
                 var list=new List<Patch>(); faces[axis*2+side]=list;
                 int nu=axis==0?Steps.Y:Steps.X, nv=axis==2?Steps.Y:Steps.Z;
                 SplitFace(axis,side==1,0,nu,0,nv,errorKelvin,list);
             }
         }
+/// <summary>FacePoint operation.</summary>
         private Vector3D FacePoint(int axis,bool upper,int u,int v)
         {
             if(axis==0) return Point(upper?Steps.X:0,u,v);
             if(axis==1) return Point(u,upper?Steps.Y:0,v);
+/// <summary>Point operation.</summary>
             return Point(u,v,upper?Steps.Z:0);
         }
+/// <summary>SplitFace operation.</summary>
         private void SplitFace(int axis,bool upper,int u0,int u1,int v0,int v1,float error,List<Patch> list)
         {
             Vector3D a=FacePoint(axis,upper,u0,v0), b=FacePoint(axis,upper,u1,v0),
                 c=FacePoint(axis,upper,u1,v1), d=FacePoint(axis,upper,u0,v1);
             float ta=Sample(a), tb=Sample(b), tc=Sample(c), td=Sample(d);
             bool split=false;
-            // Preserve changes at every lattice vertex before merging surface patches.
             for(int v=v0;v<=v1 && !split;v++) for(int u=u0;u<=u1 && !split;u++)
             {
                 double x=(double)(u-u0)/(u1-u0), y=(double)(v-v0)/(v1-v0);
                 double estimate=x>=y ? ta*(1-x)+tb*(x-y)+tc*y : ta*(1-y)+tc*x+td*(y-x);
                 if(Math.Abs(Sample(FacePoint(axis,upper,u,v))-estimate)>error) split=true;
             }
-            // Check centers for bilinear saddle accuracy; leaf patches approximate lattice.
-            // leaf patches are the intended two-triangle approximation of the lattice.
             for(int v=v0;v<v1 && !split;v++) for(int u=u0;u<u1 && !split;u++)
             {
                 double x=(u+.5-u0)/(u1-u0), y=(v+.5-v0)/(v1-v0);
@@ -194,25 +204,26 @@ namespace ThermalPerformance.Baseline
             }
             else list.Add(new Patch { A=a,B=b,C=c,D=d, Temperatures=new Vector4(ta,tb,tc,td), PreviousTemperatures=new Vector4(ta,tb,tc,td) });
         }
-        // Prepares temperature values for transition from a previous field.
+/// <summary>PrepareTransition operation.</summary>
         public void PrepareTransition(ThermalVisionSurfaceField previous)
         {
             foreach(var face in faces)
                 for(int i=0;i<face.Count;i++)
                 {
                     var patch=face[i];
+/// <summary>Vector4 operation.</summary>
                     patch.PreviousTemperatures=new Vector4(previous.Sample(patch.A),previous.Sample(patch.B),previous.Sample(patch.C),previous.Sample(patch.D));
                     face[i]=patch;
                 }
         }
-        // Gets the blended temperatures for a patch between previous and current values.
+/// <summary>PatchTemperatures operation.</summary>
         public static Vector4 PatchTemperatures(Patch patch,float blend)
         {
             if(blend>=1) return patch.Temperatures;
             blend=Math.Max(0f,blend); float weight=blend*blend*(3-2*blend);
             return patch.PreviousTemperatures+(patch.Temperatures-patch.PreviousTemperatures)*weight;
         }
-        // Gets a blended sample value between previous and current field samples.
+/// <summary>BlendSample operation.</summary>
         public float BlendSample(ThermalVisionSurfaceField previous,Vector3D point,float blend)
         {
             float current=Sample(point);
@@ -220,11 +231,12 @@ namespace ThermalPerformance.Baseline
             blend=Math.Max(0f,Math.Min(1f,blend));
             return MathHelper.Lerp(previous.Sample(point),current,blend*blend*(3-2*blend));
         }
-        // Gets a temperature sample at the specified point using trilinear interpolation.
+/// <summary>Sample operation.</summary>
         public float Sample(Vector3D point)
         {
             Vector3D t=Vector3D.Clamp((point-Bounds.Min)/(Bounds.Max-Bounds.Min),Vector3D.Zero,Vector3D.One)*new Vector3D(Steps.X,Steps.Y,Steps.Z);
             int x=Math.Min(Steps.X-1,(int)t.X), y=Math.Min(Steps.Y-1,(int)t.Y), z=Math.Min(Steps.Z-1,(int)t.Z);
+/// <summary>Vector3D operation.</summary>
             t-=new Vector3D(x,y,z); double value=0;
             for(int i=0;i<8;i++)
                 value+=Values[Index(x+(i&1),y+((i>>1)&1),z+((i>>2)&1))]

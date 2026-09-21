@@ -6,38 +6,23 @@ using Xunit.Abstractions;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **The link list's order is a function of the graph, not of the walk that found it.**
-    ///
-    /// <para>
-    /// The conduction pass accumulates watts by running down the link streams in order, and a sum
-    /// of floats depends on its order — so until this was sorted, the sequence a rebuild emitted
-    /// links in was part of the answer. Any change to how neighbours are found moved the last bit
-    /// of every temperature on every grid, which is why the previous pass had to hold five
-    /// optimisations to the exact emission order, and why the one change that would actually make
-    /// the stage faster was refused (backlog.md `D3b`).
-    /// </para>
-    ///
-    /// <para>
-    /// **A canonicalisation that reorders nothing buys nothing**, so the second check here is the
-    /// one that matters: the walk's own order is *not* already sorted on a real hull. Without that,
-    /// the freedom this iteration claims to buy would be imaginary.
-    /// </para>
-    /// </summary>
     public class CanonicalLinkOrderTests
     {
         private readonly ITestOutputHelper output;
 
+/// <summary>CanonicalLinkOrderTests operation.</summary>
         public CanonicalLinkOrderTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
+/// <summary>Census operation.</summary>
         private static ThermalSimulation Census(bool canonical, int blocks)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", blocks));
 
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             simulation.Solver.CanonicalLinkOrder = canonical;
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
@@ -45,7 +30,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-        /// <summary>Where a list first departs from ascending (NodeA, NodeB), or −1.</summary>
+/// <summary>FirstDescent operation.</summary>
         private static int FirstDescent(IList<ThermalLink> links)
         {
             for (int i = 1; i < links.Count; i++)
@@ -58,13 +43,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheLinkListComesOutSortedByItsEnds operation.</summary>
         public void TheLinkListComesOutSortedByItsEnds()
         {
+/// <summary>Census operation.</summary>
             ThermalSimulation simulation = Census(true, 6000);
             IList<ThermalLink> links = simulation.Solver.Links;
 
             Assert.True(links.Count > 5000, "only " + links.Count + " links, so little is checked");
 
+/// <summary>FirstDescent operation.</summary>
             int descent = FirstDescent(links);
             Assert.True(descent < 0,
                 descent < 0 ? "" : "link " + descent + " joins " + links[descent].NodeA + "-"
@@ -72,16 +60,15 @@ namespace Thermodynamics.Tests
                     + links[descent - 1].NodeB + ", so the list is not in the order the graph implies");
         }
 
-        /// <summary>
-        /// And the walk does not already produce that order, so the sort is doing something and the
-        /// freedom it buys is real.
-        /// </summary>
         [Fact]
+/// <summary>TheWalksOwnOrderIsNotAlreadySorted operation.</summary>
         public void TheWalksOwnOrderIsNotAlreadySorted()
         {
+/// <summary>Census operation.</summary>
             ThermalSimulation simulation = Census(false, 6000);
             IList<ThermalLink> links = simulation.Solver.Links;
 
+/// <summary>FirstDescent operation.</summary>
             int descent = FirstDescent(links);
 
             output.WriteLine(links.Count.ToString("n0") + " links; the walk's own order first"
@@ -92,14 +79,13 @@ namespace Thermodynamics.Tests
                 + " nothing and buys no freedom for a walk that finds them differently");
         }
 
-        /// <summary>
-        /// Every link still joins the pair it always did, whichever order they are held in: the
-        /// sort is a permutation of the same set, not a different graph.
-        /// </summary>
         [Fact]
+/// <summary>SortingIsAPermutationOfTheSameGraph operation.</summary>
         public void SortingIsAPermutationOfTheSameGraph()
         {
+/// <summary>Census operation.</summary>
             ThermalSimulation walked = Census(false, 6000);
+/// <summary>Census operation.</summary>
             ThermalSimulation sorted = Census(true, 6000);
 
             IList<ThermalLink> a = walked.Solver.Links;
@@ -125,7 +111,6 @@ namespace Thermodynamics.Tests
                 Assert.Equal(conductance, b[i].Conductance);
             }
 
-            // And every node still carries the same number of links.
             IList<ThermalNode> nodesA = walked.Solver.Nodes;
             IList<ThermalNode> nodesB = sorted.Solver.Nodes;
             for (int i = 0; i < nodesA.Count; i++)

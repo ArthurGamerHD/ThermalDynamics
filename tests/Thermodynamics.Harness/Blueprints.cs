@@ -9,27 +9,8 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Real ships, read from Space Engineers blueprint files and turned into grids the solver can
-    /// run.
-    ///
-    /// <para>
-    /// Everything this repository has measured has been measured on a hull it built itself.
-    /// <see cref="Census"/> is honest about what that costs — its tiers come from the telemetry
-    /// dump of one 1,381-block ship, and its own summary says "one ship is one ship". A synthetic
-    /// hull built from those tiers asks for about the substeps a real hull asks for, which is a
-    /// better hypothesis than heavy armour and gratings and is still a hypothesis.
-    /// </para>
-    ///
-    /// <para>
-    /// A blueprint corpus replaces the hypothesis with a population. It is the difference between
-    /// "a ship like this overheats" and "eleven per cent of the ships people actually build
-    /// overheat", and only the second kind of statement can decide a default.
-    /// </para>
-    /// </summary>
     public static class Blueprints
     {
-        /// <summary>One grid inside a blueprint: a hull, or a turret on a rotor.</summary>
         public class Grid
         {
             public string Name;
@@ -37,45 +18,28 @@ namespace Thermodynamics.Harness
             public int Blocks;
             public GridBuilder Builder;
 
-            /// <summary>Entity id to the cell of the block carrying it, for resolving joints.</summary>
             public readonly Dictionary<long, Vector3I> BlocksById = new Dictionary<long, Vector3I>();
 
-            /// <summary>Mechanical bases here: the cell each sits on, and the head it holds.</summary>
             public readonly List<KeyValuePair<Vector3I, long>> Mechanical =
                 new List<KeyValuePair<Vector3I, long>>();
         }
 
-        /// <summary>
-        /// One ship: **a whole blueprint, subgrids included.**
-        ///
-        /// A blueprint is one machine, not a pile of separate ones. A turret is a small grid on a
-        /// rotor bolted to the hull, a drilling rig is a piston stack, a hangar door is a set of
-        /// advanced rotors. Reading each grid as its own ship measures something that does not
-        /// exist — a turret floating in space with a heat budget of its own — and gets both halves
-        /// wrong at once: the subgrid has no hull to dump into, and the hull has no subgrid warming
-        /// it.
-        /// </summary>
         public class Ship
         {
-            /// <summary>The blueprint's own name.</summary>
             public string Name;
 
-            /// <summary>Where it came from, so a surprising result can be looked at by hand.</summary>
             public string Path;
 
-            /// <summary>Workshop id when the file came from a subscribed or fetched item, else 0.</summary>
             public long WorkshopId;
 
-            /// <summary>Every grid in the blueprint, largest first.</summary>
+/// <summary>List operation.</summary>
             public readonly List<Grid> Grids = new List<Grid>();
 
-            /// <summary>Whether the biggest grid in it is a large-grid one.</summary>
             public bool Large
             {
                 get { return Grids.Count > 0 && Grids[0].Large; }
             }
 
-            /// <summary>Blocks placed across every grid.</summary>
             public int Blocks
             {
                 get
@@ -86,30 +50,16 @@ namespace Thermodynamics.Harness
                 }
             }
 
-            /// <summary>Grids beyond the hull: turrets, doors, drills, piston stacks.</summary>
             public int Subgrids
             {
                 get { return Grids.Count == 0 ? 0 : Grids.Count - 1; }
             }
 
-            /// <summary>
-            /// Blocks skipped because no vanilla definition carries that subtype. One is enough to
-            /// disqualify the blueprint: there is no telling whether it was a decorative panel or
-            /// the reactor.
-            /// </summary>
             public int UnknownBlocks;
 
-            /// <summary>
-            /// Blocks whose type and subtype named no definition, and which were resolved on the
-            /// subtype alone.
-            ///
-            /// **Not an error and not nothing.** It is how a modded block that reuses a vanilla
-            /// subtype under its own type still builds, and it is the only place the old
-            /// subtype-keyed behaviour survives — so a walk that finds a lot of them is a walk
-            /// resolving blocks by a key that is not an identity (`P1`).
-            /// </summary>
             public int AmbiguousBlocks;
 
+/// <summary>List operation.</summary>
             public List<string> UnknownSubtypes = new List<string>();
 
             public bool IsVanilla
@@ -117,13 +67,12 @@ namespace Thermodynamics.Harness
                 get { return UnknownBlocks == 0 && Blocks > 0; }
             }
 
-            /// <summary>
-            /// The whole blueprint as one running assembly: every grid stepped together, with heat
-            /// crossing the mechanical joints between them.
-            /// </summary>
+/// <summary>Builds the API method table.</summary>
             public ShipAssembly Build(ThermalSettings settings = null, float kelvin = 293.15f)
             {
+/// <summary>ThermalSettings operation.</summary>
                 ThermalSettings effective = settings ?? new ThermalSettings();
+/// <summary>ShipAssembly operation.</summary>
                 ShipAssembly assembly = new ShipAssembly();
 
                 for (int i = 0; i < Grids.Count; i++)
@@ -135,11 +84,7 @@ namespace Thermodynamics.Harness
                 return assembly;
             }
 
-            /// <summary>
-            /// Resolves every mechanical connection the blueprint records into a bridge. A stator
-            /// carries the entity id of the head it holds, and the head is a block in another grid
-            /// with that id, so the joints are recoverable exactly.
-            /// </summary>
+/// <summary>LinkJoints operation.</summary>
             private void LinkJoints(ShipAssembly assembly)
             {
                 for (int i = 0; i < Grids.Count; i++)
@@ -159,7 +104,9 @@ namespace Thermodynamics.Harness
                             if (!Grids[j].BlocksById.TryGetValue(topId, out topCell)) continue;
 
                             assembly.Bridge2(
+/// <summary>NodeAt operation.</summary>
                                 assembly.Simulations[i], NodeAt(assembly.Simulations[i], baseCell),
+/// <summary>NodeAt operation.</summary>
                                 assembly.Simulations[j], NodeAt(assembly.Simulations[j], topCell));
                             break;
                         }
@@ -167,6 +114,7 @@ namespace Thermodynamics.Harness
                 }
             }
 
+/// <summary>NodeAt operation.</summary>
             private static ThermalNode NodeAt(ThermalSimulation simulation, Vector3I cell)
             {
                 IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -177,36 +125,24 @@ namespace Thermodynamics.Harness
                 return null;
             }
 
-            /// <summary>
-            /// The same blueprint, read again, with grid state of its own. See the note in
-            /// <c>BatteryLab</c>: this is what lets a run be the unit of parallelism.
-            /// </summary>
+/// <summary>Reload operation.</summary>
             public Ship Reload()
             {
                 if (Path == null) return this;
 
+/// <summary>Read operation.</summary>
                 List<Ship> ships = Read(Path);
                 return ships.Count > 0 ? ships[0] : this;
             }
 
+/// <summary>ToString operation.</summary>
             public override string ToString()
             {
                 return Name + " (" + Blocks + " blocks, " + Grids.Count + " grids)";
             }
         }
 
-        /// <summary>
-        /// **Where the corpus lives, and it is deliberately outside the mod folder.**
-        ///
-        /// This repository *is* the mod folder — it is linked into the game so a change is testable
-        /// without copying — which means anything sitting in it is part of what gets published. A
-        /// corpus of ten thousand ships is over a hundred gigabytes of other people's blueprints,
-        /// and none of it belongs in a mod. Nor do the fetch manifest or the workshop ids in it.
-        ///
-        /// So it lives under the user's data directory instead, and the only thing publishing has
-        /// to know about it is that it is not there. Override with `--path`, or `THERMAL_CORPUS`
-        /// for a machine that wants it on another disk.
-        /// </summary>
+/// <summary>CorpusPath operation.</summary>
         public static string CorpusPath()
         {
             string configured = Environment.GetEnvironmentVariable("THERMAL_CORPUS");
@@ -224,50 +160,31 @@ namespace Thermodynamics.Harness
         }
 
 
-        /// <summary>
-        /// Whether an entry of a legacy workshop archive is the blueprint.
-        ///
-        /// <para>
-        /// **Matched on the extension rather than on the whole name, because some of these archives
-        /// have lost the front of it.** Three of the 3,904 in the corpus hold entries called
-        /// <c>p.sbc</c>, <c>.sbc</c> and <c>humb.png</c> — the leading characters gone — and an
-        /// exact test for <c>bp.sbc</c> skipped all three silently, which is three blueprints the
-        /// corpus has held and never read. Nothing else in one of these archives ends in
-        /// <c>.sbc</c>, so the extension is enough to tell it from the thumbnail.
-        /// </para>
-        /// </summary>
+/// <summary>IsLegacyBlueprintEntry operation.</summary>
         public static bool IsLegacyBlueprintEntry(string name)
         {
             return !string.IsNullOrEmpty(name)
                 && name.EndsWith(".sbc", StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>
-        /// The directory a command should read when it was not told one: the corpus if it has
-        /// anything in it, else the subscribed workshop items, else nothing.
-        /// </summary>
+/// <summary>DefaultPath operation.</summary>
         public static string DefaultPath()
         {
+/// <summary>CorpusPath operation.</summary>
             string corpus = CorpusPath();
             if (Directory.Exists(corpus) && Files(corpus).Count > 0) return corpus;
 
+/// <summary>WorkshopPath operation.</summary>
             return WorkshopPath();
         }
 
-        /// <summary>
-        /// The subscribed-workshop directory of an installed game, or null.
-        ///
-        /// Items subscribed in game land here already unpacked, so a corpus can be grown by
-        /// subscribing to blueprints and letting Steam fetch them — no credentials, no API and no
-        /// rate limit. It is the slow way to ten thousand ships and the free way to the first few
-        /// hundred, and it is the same on-disk layout a bulk download would produce.
-        /// </summary>
+/// <summary>WorkshopPath operation.</summary>
         public static string WorkshopPath()
         {
             string content = GameBlocks.ContentPath();
             if (content == null) return null;
 
-            // .../steamapps/common/SpaceEngineers/Content/Data -> .../steamapps/workshop/content/244850
+/// <summary>DirectoryInfo operation.</summary>
             DirectoryInfo directory = new DirectoryInfo(content);
             for (int i = 0; i < 4 && directory != null; i++) directory = directory.Parent;
             if (directory == null) return null;
@@ -276,9 +193,10 @@ namespace Thermodynamics.Harness
             return Directory.Exists(workshop) ? workshop : null;
         }
 
-        /// <summary>Every blueprint file under a directory, searched recursively.</summary>
+/// <summary>Files operation.</summary>
         public static List<string> Files(string root)
         {
+/// <summary>List operation.</summary>
             List<string> files = new List<string>();
             if (root == null || !Directory.Exists(root)) return files;
 
@@ -286,10 +204,7 @@ namespace Thermodynamics.Harness
             return files;
         }
 
-        /// <summary>
-        /// The installed game's own prefab directory, or null — the ships the game spawns rather
-        /// than the ships players upload.
-        /// </summary>
+/// <summary>PrefabPath operation.</summary>
         public static string PrefabPath()
         {
             string content = GameBlocks.ContentPath();
@@ -299,16 +214,13 @@ namespace Thermodynamics.Harness
             return Directory.Exists(prefabs) ? prefabs : null;
         }
 
-        /// <summary>
-        /// Every prefab file the game ships, sorted so a walk is deterministic.
-        ///
-        /// One file is one prefab — checked, not assumed: all 705 hold exactly one — and a prefab's
-        /// several grids are its subgrids, exactly as a blueprint's are.
-        /// </summary>
+/// <summary>PrefabFiles operation.</summary>
         public static List<string> PrefabFiles(string root = null)
         {
+/// <summary>List operation.</summary>
             List<string> files = new List<string>();
 
+/// <summary>PrefabPath operation.</summary>
             string path = root ?? PrefabPath();
             if (path == null || !Directory.Exists(path)) return files;
 
@@ -317,14 +229,10 @@ namespace Thermodynamics.Harness
             return files;
         }
 
-        /// <summary>
-        /// Which family of spawn a prefab belongs to, from the directory the game keeps it in.
-        ///
-        /// It is what decides the environment `G7` runs it in, and the game's own layout is the
-        /// only statement of it there is.
-        /// </summary>
+/// <summary>PrefabCategory operation.</summary>
         public static string PrefabCategory(string path)
         {
+/// <summary>PrefabPath operation.</summary>
             string root = PrefabPath();
             if (path == null || root == null) return "";
 
@@ -336,29 +244,16 @@ namespace Thermodynamics.Harness
             return slash < 0 ? "" : relative.Substring(0, slash);
         }
 
-        /// <summary>
-        /// Reads one blueprint file into **one ship**, whatever number of grids it holds.
-        ///
-        /// Returns a list because a file can hold more than one blueprint, which is rare. It does
-        /// not return one entry per grid. Never throws: a corpus of ten thousand files will contain
-        /// some that no parser should die on.
-        /// </summary>
+/// <summary>Read operation.</summary>
         public static List<Ship> Read(string path)
         {
             try
             {
+/// <summary>ReadFile operation.</summary>
                 return ReadFile(path);
             }
             catch (Exception error)
             {
-                // The contract above is "never throws", and for a long time it was kept only
-                // against a malformed file: the guard sat on XDocument.Load and everything after
-                // it — resolving definitions, placing blocks into a grid — ran unprotected. A
-                // single real blueprint in the workshop puts two blocks in one cell, GridModel
-                // refuses it, and the exception came up through the parse and killed the scan of
-                // the entire corpus. Ten thousand ships were lost to one of them.
-                //
-                // A file nobody can read is a fact about that file. It is recorded and skipped.
                 lock (UnreadableGate)
                 {
                     unreadable[path] = error.GetType().Name + ": " + error.Message;
@@ -368,19 +263,13 @@ namespace Thermodynamics.Harness
             }
         }
 
+/// <summary>object operation.</summary>
         private static readonly object UnreadableGate = new object();
 
         private static readonly Dictionary<string, string> unreadable =
             new Dictionary<string, string>(StringComparer.Ordinal);
 
-        /// <summary>
-        /// The files that could not be read, and what stopped them — one entry per path, in no
-        /// particular order.
-        ///
-        /// A silent skip is how a corpus quietly stops being the population it is reported to be,
-        /// so the skips are kept rather than swallowed and the scan reports them alongside the
-        /// ships that were modded or too small.
-        /// </summary>
+/// <summary>Unreadable operation.</summary>
         public static Dictionary<string, string> Unreadable()
         {
             lock (UnreadableGate)
@@ -389,37 +278,38 @@ namespace Thermodynamics.Harness
             }
         }
 
+/// <summary>ReadFile operation.</summary>
         private static List<Ship> ReadFile(string path)
         {
+/// <summary>List operation.</summary>
             List<Ship> ships = new List<Ship>();
 
+/// <summary>Load operation.</summary>
             XDocument document = Load(path);
             if (document == null) return ships;
 
             Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
 
-            // A workshop blueprint names itself in a `ShipBlueprint`; the game's own prefabs name
-            // themselves in a `Prefab`. Everything below the name is identical — both hold
-            // `<CubeGrids><CubeGrid>` with the same block elements in it — which is why reading the
-            // game's 705 prefabs needed one element rather than a second parser.
+/// <summary>NameOf operation.</summary>
             string name = NameOf(document, "ShipBlueprint") ?? NameOf(document, "Prefab");
 
             Ship ship = new Ship
             {
                 Path = path,
+/// <summary>WorkshopIdOf operation.</summary>
                 WorkshopId = WorkshopIdOf(path),
                 Name = name,
             };
 
             foreach (XElement grid in document.Descendants("CubeGrid"))
             {
+/// <summary>ReadGrid operation.</summary>
                 Grid part = ReadGrid(grid, definitions, ship);
                 if (part != null && part.Blocks > 0) ship.Grids.Add(part);
             }
 
             if (ship.Grids.Count == 0) return ships;
 
-            // Largest first, so the hull is Grids[0] and a report can name the ship by it.
             ship.Grids.Sort(delegate (Grid a, Grid b) { return b.Blocks.CompareTo(a.Blocks); });
 
             if (string.IsNullOrEmpty(ship.Name)) ship.Name = ship.Grids[0].Name;
@@ -428,19 +318,13 @@ namespace Thermodynamics.Harness
             return ships;
         }
 
-        /// <summary>
-        /// Read one file and return the ship **whether or not it would be kept**, so the counters
-        /// of a discarded ship can be seen.
-        ///
-        /// <see cref="Read"/> drops a ship whose grids all came back empty, which is the right
-        /// behaviour and makes the reason invisible: the counts that say *why* live on the object
-        /// that was thrown away. This is for a person holding one blueprint and asking what
-        /// happened to it, and is not on any measurement path.
-        /// </summary>
+/// <summary>Probe operation.</summary>
         public static Ship Probe(string path)
         {
+/// <summary>WorkshopIdOf operation.</summary>
             Ship ship = new Ship { Path = path, WorkshopId = WorkshopIdOf(path) };
 
+/// <summary>Load operation.</summary>
             XDocument document = Load(path);
             if (document == null) return ship;
 
@@ -448,6 +332,7 @@ namespace Thermodynamics.Harness
 
             foreach (XElement grid in document.Descendants("CubeGrid"))
             {
+/// <summary>ReadGrid operation.</summary>
                 Grid part = ReadGrid(grid, definitions, ship);
                 if (part != null && part.Blocks > 0) ship.Grids.Add(part);
             }
@@ -455,27 +340,7 @@ namespace Thermodynamics.Harness
             return ship;
         }
 
-        /// <summary>
-        /// The workshop item a blueprint belongs to, read from its path.
-        ///
-        /// <para>
-        /// **A workshop item can be a collection, and then the blueprint is one level deeper.**
-        /// Most items are <c>.../244850/&lt;id&gt;/bp.sbc</c>, but a collection is
-        /// <c>.../244850/&lt;id&gt;/&lt;ship name&gt;/bp.sbc</c> — so reading the immediate parent
-        /// folder gets the *ship's name* and parses to nothing. It fell back to 0, and 0 is a
-        /// workshop id like any other as far as every reader is concerned: on the 2026-08-28 air
-        /// walk **fourteen distinct ships shared it**, from at least two collections, and anything
-        /// keyed by workshop id — the core corpus's selection, the census, the standing panel —
-        /// treated the fourteen as one ship.
-        /// </para>
-        ///
-        /// <para>
-        /// So the id is looked for by walking up to the segment under the app id rather than
-        /// assumed to be the first parent, and a path that has no such segment returns 0 as before.
-        /// That case is a blueprint outside the corpus root, which is a different thing from a
-        /// collection and is left alone.
-        /// </para>
-        /// </summary>
+/// <summary>WorkshopIdOf operation.</summary>
         private static long WorkshopIdOf(string path)
         {
             long id;
@@ -486,8 +351,6 @@ namespace Thermodynamics.Harness
                 string name = Path.GetFileName(folder);
                 string parent = Path.GetDirectoryName(folder);
 
-                // The id is the segment directly under the game's app id, whatever depth the
-                // blueprint itself sits at.
                 if (!string.IsNullOrEmpty(parent) && Path.GetFileName(parent) == AppId
                     && long.TryParse(name, NumberStyles.Integer, CultureInfo.InvariantCulture,
                         out id))
@@ -498,15 +361,14 @@ namespace Thermodynamics.Harness
                 folder = parent;
             }
 
-            // No app-id segment at all: a blueprint from somewhere other than the workshop corpus.
             folder = Path.GetFileName(Path.GetDirectoryName(path) ?? "");
             return long.TryParse(folder, NumberStyles.Integer, CultureInfo.InvariantCulture, out id)
                 ? id : 0L;
         }
 
-        /// <summary>The game's Steam app id, which is the folder every workshop item sits under.</summary>
         private const string AppId = "244850";
 
+/// <summary>ReadGrid operation.</summary>
         private static Grid ReadGrid(XElement grid,
             Dictionary<string, GameBlocks.Definition> definitions, Ship ship)
         {
@@ -530,19 +392,11 @@ namespace Thermodynamics.Harness
 
                 if (string.IsNullOrEmpty(subtype))
                 {
-                    // An empty SubtypeName is how the game spells the base variant of a type, and
-                    // the type is what identifies it. Armour is the common case and was for a long
-                    // time the *only* case this handled — see BaseVariantOf.
+/// <summary>TypeOf operation.</summary>
                     named = TypeOf(block);
+/// <summary>BaseVariantOf operation.</summary>
                     definition = BaseVariantOf(named, large);
 
-                    // **`CubeBlock` is the one type the game resolves by convention rather than by
-                    // a definition.** Armour cubes all carry subtypes, so there is no empty-subtype
-                    // `CubeBlock` for `BaseVariants` to find, and a blueprint spelling one with an
-                    // empty `SubtypeName` means the plain cube of its grid's size. It is written as
-                    // its own case rather than as a fallback so that a type nobody has thought
-                    // about resolves to *nothing* and is counted, instead of quietly becoming
-                    // armour — which is exactly how eleven types came to be armour for a year.
                     if (definition == null && named == "CubeBlock")
                     {
                         named = large ? "LargeBlockArmorBlock" : "SmallBlockArmorBlock";
@@ -551,27 +405,17 @@ namespace Thermodynamics.Harness
                 }
                 else
                 {
-                    // **The pair first, because a subtype is not an identity.** Three of the game's
-                    // subtypes are claimed by two types each, and `LargePistonBase` belongs to both
-                    // `PistonBase` and `ExtendedPistonBase` — same components, same power, sizes
-                    // 1x2x1 and 1x3x1 — so resolving on the subtype alone built every extended
-                    // piston a cell short. See GameBlocks.ByTypeAndSubtype.
+/// <summary>TypeOf operation.</summary>
                     string typeId = TypeOf(block);
                     if (typeId == null
                         || !GameBlocks.ByTypeAndSubtype().TryGetValue(
                             GameBlocks.TypeAndSubtypeKey(typeId, subtype), out definition))
                     {
-                        // **The fallback is for modded blocks and is counted, not silent.** A mod
-                        // may name a subtype the game holds under another type; refusing those
-                        // would change which ships the corpus admits, which is a bigger error than
-                        // the one being fixed. `AmbiguousBlocks` is what says how often it happens.
                         definition = null;
                         if (definitions.TryGetValue(subtype, out definition)) ship.AmbiguousBlocks++;
                     }
                 }
 
-                // A blueprint's grid size and a definition's must agree, or a small-grid ship would
-                // be built out of large-grid blocks that happen to share a subtype name.
                 if (definition == null || definition.Large != large)
                 {
                     ship.UnknownBlocks++;
@@ -583,18 +427,19 @@ namespace Thermodynamics.Harness
                     continue;
                 }
 
+/// <summary>ParseCell operation.</summary>
                 Vector3I cell = ParseCell(block.Element("Min"));
                 part.Builder.Place(Model(definition), cell, Orientation(block));
                 part.Blocks++;
 
-                // Entity ids, and the head each mechanical base holds. The blueprint records its
-                // joints exactly, so they are recoverable without guessing from geometry.
+/// <summary>ParseLong operation.</summary>
                 long entityId = ParseLong(block.Element("EntityId"));
                 if (entityId != 0L && !part.BlocksById.ContainsKey(entityId))
                 {
                     part.BlocksById[entityId] = cell;
                 }
 
+/// <summary>ParseLong operation.</summary>
                 long topId = ParseLong(block.Element("TopBlockId"));
                 if (topId != 0L) part.Mechanical.Add(new KeyValuePair<Vector3I, long>(cell, topId));
             }
@@ -602,15 +447,7 @@ namespace Thermodynamics.Harness
             return part;
         }
 
-        /// <summary>
-        /// Reads an `.sbc`, compressed or not, or null where nothing could be read.
-        ///
-        /// **The game writes some of its own content gzipped** and reads it back transparently, so
-        /// a loader that only handles text is not reading what the game reads. One of the 705
-        /// prefabs in the install is compressed — `LegacyContent/LargeShipRed` — and it was the one
-        /// file `G7` could not measure until this existed. It is sniffed by the two magic bytes
-        /// rather than by the extension, because the extension is the same either way.
-        /// </summary>
+/// <summary>Load operation.</summary>
         private static XDocument Load(string path)
         {
             try
@@ -635,7 +472,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>The subtype of the first <paramref name="element"/> in a document, or null.</summary>
+/// <summary>NameOf operation.</summary>
         private static string NameOf(XDocument document, string element)
         {
             foreach (XElement definition in document.Descendants(element))
@@ -649,6 +486,7 @@ namespace Thermodynamics.Harness
             return null;
         }
 
+/// <summary>ParseLong operation.</summary>
         private static long ParseLong(XElement element)
         {
             long value;
@@ -656,28 +494,7 @@ namespace Thermodynamics.Harness
                 NumberStyles.Integer, CultureInfo.InvariantCulture, out value) ? value : 0L;
         }
 
-        /// <summary>
-        /// The definition a block with an empty <c>SubtypeName</c> is, resolved from its type.
-        ///
-        /// <para>
-        /// **This returned the plain armour cube until 2026-08-25, and the comment that said so
-        /// described the bug as the design**: *every such block is a cube of the grid's own size,
-        /// so the fallback only has to be a block that exists and weighs the right thing*. It is
-        /// not — the game leaves <c>SubtypeId</c> empty on **thirteen** definitions, and eleven of
-        /// them are not armour. Every vanilla oxygen generator, air vent, oxygen tank, gravity
-        /// generator, door, hangar door, passage, ladder and large turret in the corpus was built
-        /// as a 500 kg armour cube: wrong mass, wrong material, and **no power draw at all**, so it
-        /// made no heat. Measured over a sixty-blueprint sample, 4,094 blocks of 406,361 — one per
-        /// cent — were mis-built this way.
-        /// </para>
-        ///
-        /// <para>
-        /// It is the exact failure the old comment worried about — *guessing wrong here would
-        /// silently make a hull out of something else* — reached by guessing narrowly rather than
-        /// by guessing cleverly. Nothing guesses now: the type is what the blueprint states and
-        /// <see cref="GameBlocks.BaseVariants"/> is keyed on it.
-        /// </para>
-        /// </summary>
+/// <summary>BaseVariantOf operation.</summary>
         private static GameBlocks.Definition BaseVariantOf(string typeId, bool large)
         {
             GameBlocks.Definition definition;
@@ -685,10 +502,7 @@ namespace Thermodynamics.Harness
                 GameBlocks.BaseVariantKey(typeId, large), out definition) ? definition : null;
         }
 
-        /// <summary>
-        /// The block's type, from the <c>xsi:type</c> its element carries, with the object-builder
-        /// prefix stripped so it matches what <see cref="GameBlocks"/> keys on.
-        /// </summary>
+/// <summary>TypeOf operation.</summary>
         private static string TypeOf(XElement block)
         {
             XAttribute type = block.Attribute(
@@ -700,36 +514,11 @@ namespace Thermodynamics.Harness
                 ? value.Substring("MyObjectBuilder_".Length) : value;
         }
 
-        /// <summary>
-        /// Models by subtype, read by every worker on every block it places.
-        ///
-        /// Concurrent rather than lock-guarded: this is consulted once per placed block, so a
-        /// corpus pass takes the lock on the order of a billion times across thirty-odd threads,
-        /// and a single monitor in that position is a queue rather than a cache. Reads here are
-        /// lock-free and a duplicate build on first sight of a subtype is harmless — the models are
-        /// value-like, and whichever one lands first is the one everyone gets.
-        /// </summary>
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, BlockModel> Models =
             new System.Collections.Concurrent.ConcurrentDictionary<string, BlockModel>(StringComparer.Ordinal);
 
-        /// <summary>
-        /// The model for a definition, built once and shared. A corpus places millions of blocks
-        /// across a few thousand distinct types, so this is the difference between a pass that runs
-        /// and one that does not.
-        /// </summary>
         private static Func<string, string, BlockThermalProperties, BlockThermalProperties> materialOverride;
 
-        /// <summary>
-        /// Rewrites a block's thermal properties as its model is built, for a sweep asking what one
-        /// dial does to a real hull. Handed the type and subtype, so a dial can move one family and
-        /// leave the rest of the game alone.
-        ///
-        /// <para>
-        /// **Setting it empties the model cache**, without which an override installed after the first
-        /// ship applies to nothing. **Set it between passes, never during one**: a change mid-pass
-        /// mixes two worlds into one measurement.
-        /// </para>
-        /// </summary>
         public static Func<string, string, BlockThermalProperties, BlockThermalProperties> MaterialOverride
         {
             get { return materialOverride; }
@@ -740,14 +529,9 @@ namespace Thermodynamics.Harness
             }
         }
 
+/// <summary>Model operation.</summary>
         public static BlockModel Model(GameBlocks.Definition definition)
         {
-            // **Keyed on the pair, because neither half is an identity on its own.** Thirteen
-            // definitions share the empty subtype, so a cache keyed on subtype hands an air vent
-            // whichever of the thirteen was built first; and three subtypes are claimed by two
-            // types, so a cache keyed on the model *name* hands an `ExtendedPistonBase` the
-            // `PistonBase` model — same name, and a size of 1x2x1 against 1x3x1, which puts a
-            // block in a cell that is already occupied.
             string key = GameBlocks.TypeAndSubtypeKey(definition.TypeId, definition.SubtypeId);
             string name = GameBlocks.ModelName(definition);
 
@@ -757,19 +541,11 @@ namespace Thermodynamics.Harness
             BlockThermalProperties thermal = ShippedBlocks.DeriveWithFunction(
                 definition.Components, definition.TypeId, definition.PowerEfficiency);
 
-            // The one place a sweep can reach a corpus ship's materials. Synthetic rigs go through
-            // Catalog, which has had an override for as long as the profiles have existed; corpus
-            // ships are built here and had none, so every block-level dial — heat capacity,
-            // emissivity, conductivity, the waste fractions — was unmeasurable on a real hull.
             Func<string, string, BlockThermalProperties, BlockThermalProperties> material = materialOverride;
             if (material != null) thermal = material(definition.TypeId, definition.SubtypeId, thermal);
 
             model = BlockModel.Solid(name, definition.Size, definition.Mass, thermal);
 
-            // A definition that declares no mount points has them generated from its model, which
-            // is geometry this harness cannot read. Treating that silence as "mounts nowhere" is
-            // what made a battery a sealed box; the honest fallback is the one BlockModel.Solid
-            // already applies, which is that every face mounts.
             bool[] mounts = new bool[Face.Count];
             bool everyFace = true;
 
@@ -779,16 +555,8 @@ namespace Thermodynamics.Harness
                 if (!mounts[face]) everyFace = false;
             }
 
-            // Sealing follows the definition where it states one, and defaults to sealing where it
-            // does not. The game decides the unstated case per face from a pressurisation table
-            // this harness does not read.
             bool seals = definition.Airtight ?? true;
 
-            // **Both halves have to be written from the same source.** Entering this branch because
-            // a block does not seal, and then filling the mount bits from a definition that
-            // declared none, is what zeroed the mounts of every non-airtight block that leaves its
-            // mount points to the model — batteries and decoys among them. They came out with no
-            // conduction and no exposure at all, and read as a balance problem.
             if (!everyFace || !seals)
             {
                 foreach (Vector3I cell in model.LocalCells())
@@ -805,6 +573,7 @@ namespace Thermodynamics.Harness
             return Models.GetOrAdd(key, model);
         }
 
+/// <summary>ParseCell operation.</summary>
         private static Vector3I ParseCell(XElement element)
         {
             if (element == null) return Vector3I.Zero;
@@ -815,6 +584,7 @@ namespace Thermodynamics.Harness
                 ParseInt(element.Attribute("z")));
         }
 
+/// <summary>ParseInt operation.</summary>
         private static int ParseInt(XAttribute attribute)
         {
             int value;
@@ -822,14 +592,7 @@ namespace Thermodynamics.Harness
                 NumberStyles.Integer, CultureInfo.InvariantCulture, out value) ? value : 0;
         }
 
-        /// <summary>
-        /// A block's orientation, as the forward and up directions the blueprint records.
-        ///
-        /// A blueprint stores these as <c>Forward</c> and <c>Up</c> attributes on a
-        /// <c>BlockOrientation</c> element, spelled with the same names as
-        /// <c>Base6Directions.Direction</c>. A block that omits the element is identity, which is
-        /// what the game assumes for it too.
-        /// </summary>
+/// <summary>Orientation operation.</summary>
         private static BlockOrientation Orientation(XElement block)
         {
             XElement element = block.Element("BlockOrientation");
@@ -840,6 +603,7 @@ namespace Thermodynamics.Harness
                 DirectionOf((string)element.Attribute("Up"), Base6Directions.Direction.Up));
         }
 
+/// <summary>DirectionOf operation.</summary>
         private static Base6Directions.Direction DirectionOf(string name, Base6Directions.Direction fallback)
         {
             switch (name)

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Conduction against the clock: does the pair reach the significance window, and at what cost.
 
 Reads the dataset `PairSweep` writes and scores `G8` on every cell — under sustained full
@@ -31,54 +30,39 @@ import scoring
 
 DATA = sys.argv[1] if len(sys.argv) > 1 else "out/pairs-2026-08-23"
 
-# The clock of this sweep's control cell, which is what shipped when the sweep was designed.
-#
-# **It is the baseline and not the shipped configuration.** `C24` shipped `ConductionScale` 9.6 and
-# `HeatTimeScale` 90 on 2026-08-24 — conductivity x4 at a clock of 90 in this sweep's coordinates,
-# which is a cell of the grid rather than the control. Every "control" here means the cell the grid
-# was laid out around; `air.py` carries the same correction.
 BASELINE_CLOCK = 225.0
 
-# G8, as balance-lab.md wrote it down before this run — and its settling half as corrected before
-# this dataset was scored, which is the recovery time rather than an idle settling time. Idle in
-# vacuum shadow has no equilibrium, so the figure there reads its own 120 s floor at low clock.
 WINDOW = (120.0, 300.0)
 RECOVERY_BOUND = 3600.0
 
-# The floor Battery.SettleSeconds can return: the scan starts at the second sample. A column of
-# these is a blind spot, and the idle column is printed only to show it.
 SETTLE_FLOOR = 120.0
 
-# The thresholds G1, G2 and G5 are already scored at, copied in shape from verdict.py rather than
-# reinvented: same scenarios, same numbers, same direction.
 WARM_KELVIN = 400.0
 G1_MAX_SHARE = 1.0
 G2_MIN_SHARE = 20.0
 G5_MIN_SHARE = 95.0
 
-# A hull that never crossed critical, ordered past every hull that did.
 INFINITE = float("inf")
 
-# Anything past here is "ran away" and not a temperature — the lab never destroys an overheating
-# block (E9).
 CENSORED = 1500.0
 
 
 
 
+# load operation.
 def load(name):
     return scoring.load(DATA, name)
 
 
+# median operation.
 def median(values):
     return statistics.median(values) if values else None
 
 
-# One definition, in scoring.py, shared with air.py — the two documents this keys are read
-# side by side.
 cell_key = scoring.pair_cell
 
 
+# crossings operation.
 def crossings(rows):
     """Seconds to the first crossing for every loaded hull, censored above where there was none.
 
@@ -95,6 +79,7 @@ def crossings(rows):
     return out
 
 
+# crossing median operation.
 def crossing_median(rows):
     """The population median crossing, or None where more than half the hulls never crossed.
 
@@ -109,12 +94,11 @@ def crossing_median(rows):
     if not values:
         return None, 0, 0
 
-    # One definition of this statistic, in `scoring.py` beside its tests, because the bootstrap
-    # that says how *stable* a median is has to take the same median the verdict does (`P5`).
     middle = scoring.censored_median(values)
     return (None if middle == INFINITE else middle), crossed, len(values)
 
 
+# where operation.
 def where(cells, per_cell, cell_crossing):
     """What the measured curves say about where a cell satisfying `G8` would have to be.
 
@@ -164,8 +148,6 @@ def where(cells, per_cell, cell_crossing):
     for conductivity in censored_rungs:
         print(f"{conductivity:>12g} {'censored':>14} {'-':>6} {'-':>7} {'no cell has a median':>22}")
 
-    # The recovery bound, read off the measured clocks rather than fitted: the two clocks the
-    # bound falls between, over every cell that has one, so the reading carries its own resolution.
     below = []
     above = []
     for key in cells:
@@ -194,6 +176,7 @@ def where(cells, per_cell, cell_crossing):
     print("    bound overlap. Rows whose band lies entirely below that clock cannot, at any clock.")
 
 
+# main operation.
 def main():
     rows = load("pairs")
     if not rows:
@@ -233,7 +216,7 @@ def main():
         print("no shipped cell in this dataset, so nothing has a baseline")
         return 1
 
-    # ---- the edges, which are what the interaction is read against -------------------------
+# cell crossing operation.
     def cell_crossing(key):
         loaded = [r for r in per_cell.get(key, []) if r["scenario"] == "full-electrical"]
         return crossing_median(loaded)[0]
@@ -261,9 +244,6 @@ def main():
 
         cross, crossed, loaded_count = crossing_median(loaded)
 
-        # **Recovery is where the settling half is scored**, because the hull is driven somewhere
-        # and back, so the figure is a real duration. A run that never settled reports -1 and
-        # counts as past the bound rather than as missing — its ceiling is already past it.
         returns = []
         for row in recovery:
             value = scoring.number(row, "seconds_to_settle")
@@ -273,8 +253,6 @@ def main():
 
         back = median(returns)
 
-        # The idle column, printed only so the blind spot stays visible: at low clock a hull has
-        # barely moved and reports the floor, which is why this is not what G8 is scored on.
         idle_settles = [scoring.number(r, "seconds_to_settle") or -1.0 for r in idle]
         on_floor = sum(1 for v in idle_settles if 0 <= v <= SETTLE_FLOOR)
 
@@ -340,7 +318,6 @@ def main():
     else:
         print("No cell in this grid satisfies G8.")
 
-    # ---- does the interaction compose? ------------------------------------------------------
     print()
     print("Does the pair compose? Predicted from the two edges against measured")
     print()
@@ -354,8 +331,6 @@ def main():
         if c == 1.0 or h == BASELINE_CLOCK:
             continue
 
-        # An edge that was never run is a different absence from an edge that ran and had no
-        # median, and collapsing the two would report a gap in the grid as a censored measurement.
         if (1.0, h) not in per_cell:
             no_edge += 1
             continue
@@ -368,8 +343,6 @@ def main():
             no_median += 1
             continue
 
-        # Both edges are ratios against the same control, so the multiplicative prediction is
-        # base x (edge_c/base) x (edge_h/base).
         predicted = edge_c * edge_h / base
         print(f"{c:>12g} {h:>6g} {predicted:>10.1f} {measured:>10.1f}"
               f" {measured / predicted:>6.2f}x")
@@ -393,7 +366,6 @@ def main():
 
     where(cells, per_cell, cell_crossing)
 
-    # ---- censoring ---------------------------------------------------------------------------
     censored = sum(1 for r in rows
                    if (scoring.number(r, "peak_k") or 0) >= CENSORED)
     print()

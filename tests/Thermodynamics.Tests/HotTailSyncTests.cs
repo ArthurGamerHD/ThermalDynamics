@@ -6,29 +6,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **The protocol around the packet**: which grid a message is about, when a server sends one,
-    /// when a client asks for one, and what is dropped when nobody is there any more.
-    ///
-    /// <para>
-    /// `HotTailTests` covers the packet itself. This covers everything the transport decides —
-    /// and it is here rather than in a session because a session is the one place none of it can
-    /// be checked. Registration and addressing are host code; the policy is not, so the policy
-    /// lives in `Core` where it can be run (`C5`).
-    /// </para>
-    ///
-    /// <para>
-    /// Two of these are about failures that are silent by construction. A message with no grid on
-    /// it would be applied to whichever hull received it, because block positions are only an
-    /// identity inside a grid. And a ledger that is never pruned costs one entry per grid that has
-    /// ever existed per player who has ever joined — invisible in a session with one player, and a
-    /// leak on the servers this mod is for. See backlog.md `B30`.
-    /// </para>
-    /// </summary>
     public class HotTailSyncTests
     {
+/// <summary>Hull operation.</summary>
         private static List<StoredTemperature> Hull(int blocks)
         {
+/// <summary>List operation.</summary>
             List<StoredTemperature> hull = new List<StoredTemperature>(blocks);
 
             for (int i = 0; i < blocks; i++)
@@ -39,15 +22,14 @@ namespace Thermodynamics.Tests
             return hull;
         }
 
-        // ---- the envelope ----------------------------------------------------------------------
 
         [Fact]
+/// <summary>AMessageSaysWhichGridItIsAbout operation.</summary>
         public void AMessageSaysWhichGridItIsAbout()
         {
-            // The whole reason the envelope exists. Block positions repeat on every grid in the
-            // world, so a packet without a grid id is one that could be applied to the wrong hull —
-            // and every record of it would land, because every position is a legal position.
+/// <summary>Hull operation.</summary>
             List<StoredTemperature> hull = Hull(4);
+/// <summary>List operation.</summary>
             List<StoredTemperature> got = new List<StoredTemperature>();
 
             byte[] message = HotTailMessage.EncodeTemperatures(
@@ -60,12 +42,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AHullSnapshotIsNotABandUpdate operation.</summary>
         public void AHullSnapshotIsNotABandUpdate()
         {
-            // They carry identical records, and a client has to tell them apart: one ends the
-            // asking and the other does not. A band update taken for a snapshot is a client that
-            // stops asking for the thing measured to be what actually fixes it.
+/// <summary>Hull operation.</summary>
             List<StoredTemperature> hull = Hull(3);
+/// <summary>List operation.</summary>
             List<StoredTemperature> got = new List<StoredTemperature>();
             long gridId;
 
@@ -78,8 +60,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ARequestCarriesAGridAndNothingElse operation.</summary>
         public void ARequestCarriesAGridAndNothingElse()
         {
+/// <summary>List operation.</summary>
             List<StoredTemperature> got = new List<StoredTemperature>();
             byte[] message = HotTailMessage.EncodeSnapshotRequest(-99L);
 
@@ -91,11 +75,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NothingUnrecognisedIsApplied operation.</summary>
         public void NothingUnrecognisedIsApplied()
         {
-            // These bytes are written onto a live simulation, so a reader that decoded what it
-            // could would be a hull moved to values nobody sent.
+/// <summary>Hull operation.</summary>
             List<StoredTemperature> hull = Hull(6);
+/// <summary>List operation.</summary>
             List<StoredTemperature> got = new List<StoredTemperature>();
             long gridId;
 
@@ -121,10 +106,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ARequestWithAPayloadIsNotARequest operation.</summary>
         public void ARequestWithAPayloadIsNotARequest()
         {
-            // A message some other build wrote. Reading the part that looks familiar is how a
-            // reader acts on something it did not understand.
             byte[] message = new byte[HotTailMessage.HeaderSize + 4];
             byte[] real = HotTailMessage.EncodeSnapshotRequest(3L);
             System.Array.Copy(real, message, real.Length);
@@ -135,25 +119,27 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AKindThatIsNotTemperaturesIsNotEncodedAsThem operation.</summary>
         public void AKindThatIsNotTemperaturesIsNotEncodedAsThem()
         {
+/// <summary>Hull operation.</summary>
             List<StoredTemperature> hull = Hull(2);
 
             Assert.Null(HotTailMessage.EncodeTemperatures(HotTailKind.SnapshotRequest, 1L, hull, 0, 2));
             Assert.Null(HotTailMessage.EncodeTemperatures(HotTailKind.Unknown, 1L, hull, 0, 2));
         }
 
-        // ---- slicing a hull too large for one message -------------------------------------------
 
         [Fact]
+/// <summary>EverySliceIsAWholeMessageAndTheSlicesAreTheHull operation.</summary>
         public void EverySliceIsAWholeMessageAndTheSlicesAreTheHull()
         {
-            // A million-block station does not fit in one message and there is no reassembly: each
-            // slice is complete, applied on arrival, and a lost one costs its own records rather
-            // than the hull.
             int blocks = HotTailMessage.RecordsPerMessage * 2 + 37;
+/// <summary>Hull operation.</summary>
             List<StoredTemperature> hull = Hull(blocks);
+/// <summary>List operation.</summary>
             List<StoredTemperature> rebuilt = new List<StoredTemperature>();
+/// <summary>List operation.</summary>
             List<StoredTemperature> got = new List<StoredTemperature>();
 
             int messages = 0;
@@ -187,11 +173,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ASliceOffTheEndIsClippedRatherThanThrown operation.</summary>
         public void ASliceOffTheEndIsClippedRatherThanThrown()
         {
-            // The whitelist does not admit the out-of-range exception types, so bounds are checked
-            // rather than caught — see development.md. An overrun here would be a mod that stops
-            // loading in a session and builds clean here.
+/// <summary>Hull operation.</summary>
             List<StoredTemperature> hull = Hull(5);
 
             Assert.Equal(HotTailCodec.SizeOf(2), HotTailCodec.Encode(hull, 3, 40).Length);
@@ -201,8 +186,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ASliceHoldsTheSameRecordsAsAWholePacketOfThoseRecords operation.</summary>
         public void ASliceHoldsTheSameRecordsAsAWholePacketOfThoseRecords()
         {
+/// <summary>Hull operation.</summary>
             List<StoredTemperature> hull = Hull(20);
             List<StoredTemperature> middle = hull.GetRange(6, 7);
 
@@ -214,10 +201,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnEmptySelectionIsOneMessage operation.</summary>
         public void AnEmptySelectionIsOneMessage()
         {
-            // Not zero: the count is what a caller loops on, and a zero would be a hull nobody ever
-            // sends anything about.
             Assert.Equal(1, HotTailMessage.Messages(0));
             Assert.Equal(1, HotTailCodec.Packets(0, 2048));
             Assert.Equal(1, HotTailCodec.Packets(2048, 2048));
@@ -225,11 +211,12 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, HotTailCodec.Packets(5, 0));
         }
 
-        // ---- when the server sends --------------------------------------------------------------
 
         [Fact]
+/// <summary>NothingIsDueBeforeTheIntervalAndTheBandIsDueAfterIt operation.</summary>
         public void NothingIsDueBeforeTheIntervalAndTheBandIsDueAfterIt()
         {
+/// <summary>HotTailSchedule operation.</summary>
             HotTailSchedule schedule = new HotTailSchedule();
             schedule.IntervalSeconds = 5f;
 
@@ -239,15 +226,14 @@ namespace Thermodynamics.Tests
             schedule.Advance(0.2f);
             Assert.Equal(HotTailSend.Band, schedule.Next());
 
-            // And the interval restarts, rather than firing every pass once it is overdue.
             Assert.Equal(HotTailSend.Nothing, schedule.Next());
         }
 
         [Fact]
+/// <summary>TheHullOutranksTheBandAndResetsTheInterval operation.</summary>
         public void TheHullOutranksTheBandAndResetsTheInterval()
         {
-            // A snapshot states every block a band update would have carried, so a band sent behind
-            // it is bytes for values the client already holds.
+/// <summary>HotTailSchedule operation.</summary>
             HotTailSchedule schedule = new HotTailSchedule();
             schedule.IntervalSeconds = 5f;
 
@@ -262,17 +248,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AskingTwiceInsideTheCooldownIsRefused operation.</summary>
         public void AskingTwiceInsideTheCooldownIsRefused()
         {
-            // The snapshot is the one large thing this protocol sends — 94 KB on a 9,430-node hull.
-            // A client asking in a loop would otherwise be a client that makes the server transmit
-            // a hull per frame.
+/// <summary>HotTailSchedule operation.</summary>
             HotTailSchedule schedule = new HotTailSchedule();
             schedule.SnapshotCooldownSeconds = 5f;
 
             Assert.True(schedule.RequestSnapshot());
 
-            // Outstanding, so a repeat before it has even been served is not a second snapshot.
             Assert.False(schedule.RequestSnapshot());
             Assert.Equal(HotTailSend.Snapshot, schedule.Next());
 
@@ -285,13 +269,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnHonestRetryIsAnsweredAndAFloodIsNot operation.</summary>
         public void AnHonestRetryIsAnsweredAndAFloodIsNot()
         {
-            // The cooldown is shorter than the retry, so a client whose request or answer was lost
-            // is served on its next attempt rather than punished for the loss. If this ever
-            // inverted, a lossy link would become a client that can never be corrected.
             Assert.True(HotTailSchedule.DefaultSnapshotCooldownSeconds < HotTailSchedule.RetrySeconds);
 
+/// <summary>HotTailSchedule operation.</summary>
             HotTailSchedule schedule = new HotTailSchedule();
             Assert.True(schedule.RequestSnapshot());
             Assert.Equal(HotTailSend.Snapshot, schedule.Next());
@@ -301,8 +284,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnIntervalOfZeroStopsTheBandAndNotTheHull operation.</summary>
         public void AnIntervalOfZeroStopsTheBandAndNotTheHull()
         {
+/// <summary>HotTailSchedule operation.</summary>
             HotTailSchedule schedule = new HotTailSchedule();
             schedule.IntervalSeconds = 0f;
 
@@ -313,11 +298,12 @@ namespace Thermodynamics.Tests
             Assert.Equal(HotTailSend.Snapshot, schedule.Next());
         }
 
-        // ---- when the client asks ---------------------------------------------------------------
 
         [Fact]
+/// <summary>AClientAsksAtOnceAndThenBacksOff operation.</summary>
         public void AClientAsksAtOnceAndThenBacksOff()
         {
+/// <summary>HotTailRequest operation.</summary>
             HotTailRequest request = new HotTailRequest();
             request.RetrySeconds = 8f;
             request.MaxRetrySeconds = 32f;
@@ -336,8 +322,6 @@ namespace Thermodynamics.Tests
             request.Advance(8f);
             Assert.True(request.ShouldAsk());
 
-            // Doubling, and capped: a grid nobody will ever answer for costs a header a minute
-            // rather than a header every eight seconds forever.
             request.Advance(31f);
             Assert.False(request.ShouldAsk());
             request.Advance(1f);
@@ -350,8 +334,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AClientStopsAskingWhenItHasTheHull operation.</summary>
         public void AClientStopsAskingWhenItHasTheHull()
         {
+/// <summary>HotTailRequest operation.</summary>
             HotTailRequest request = new HotTailRequest();
             Assert.True(request.ShouldAsk());
 
@@ -364,10 +350,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AClientNeverGivesUpOnAGridItStillHas operation.</summary>
         public void AClientNeverGivesUpOnAGridItStillHas()
         {
-            // Giving up would leave this machine on a stale hull for the rest of the session, which
-            // is exactly the defect the protocol exists to remove.
+/// <summary>HotTailRequest operation.</summary>
             HotTailRequest request = new HotTailRequest();
 
             for (int i = 0; i < 200; i++)
@@ -379,11 +365,12 @@ namespace Thermodynamics.Tests
             Assert.True(request.ShouldAsk());
         }
 
-        // ---- the ledgers ------------------------------------------------------------------------
 
         [Fact]
+/// <summary>WhatIsOwedToAPlayerWhoLeftIsDropped operation.</summary>
         public void WhatIsOwedToAPlayerWhoLeftIsDropped()
         {
+/// <summary>HotTailServerState operation.</summary>
             HotTailServerState state = new HotTailServerState();
 
             state.Next(1UL, 100L);
@@ -404,8 +391,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AGridThatIsGoneIsForgottenAndAGridThatComesBackIsAskedAboutAgain operation.</summary>
         public void AGridThatIsGoneIsForgottenAndAGridThatComesBackIsAskedAboutAgain()
         {
+/// <summary>HotTailClientState operation.</summary>
             HotTailClientState client = new HotTailClientState();
 
             Assert.True(client.ShouldAsk(9L));
@@ -413,23 +402,19 @@ namespace Thermodynamics.Tests
             Assert.True(client.HasHull(9L));
             Assert.Equal(0, client.Waiting);
 
-            // Streamed out.
             client.Forget(new HashSet<long>());
             Assert.Equal(0, client.Tracked);
 
-            // And back: this machine rebuilt it from whatever the engine had, which is the stale
-            // state the protocol is about.
             Assert.False(client.HasHull(9L));
             Assert.True(client.ShouldAsk(9L));
             Assert.Equal(1, client.Waiting);
         }
 
         [Fact]
+/// <summary>TheLedgerAdvancesEverySchedulesClockIncludingOneNothingAskedAbout operation.</summary>
         public void TheLedgerAdvancesEverySchedulesClockIncludingOneNothingAskedAbout()
         {
-            // A grid skipped by a pass — out of range, or still building — keeps its place in the
-            // interval instead of restarting it, so a client that comes back into range is stated
-            // on the first pass rather than after another interval.
+/// <summary>HotTailServerState operation.</summary>
             HotTailServerState state = new HotTailServerState();
             state.IntervalSeconds = 5f;
 
@@ -440,8 +425,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnIntervalChangedMidSessionReachesASchedulePlacedBeforeIt operation.</summary>
         public void AnIntervalChangedMidSessionReachesASchedulePlacedBeforeIt()
         {
+/// <summary>HotTailServerState operation.</summary>
             HotTailServerState state = new HotTailServerState();
             state.IntervalSeconds = 60f;
             state.Next(1UL, 100L);
@@ -455,8 +442,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ARefusedRequestLeavesNothingOutstanding operation.</summary>
         public void ARefusedRequestLeavesNothingOutstanding()
         {
+/// <summary>HotTailServerState operation.</summary>
             HotTailServerState state = new HotTailServerState();
 
             Assert.True(state.Request(3UL, 55L));
@@ -467,21 +456,21 @@ namespace Thermodynamics.Tests
             Assert.False(state.Wants(3UL, 55L));
         }
 
-        // ---- against a real hull -----------------------------------------------------------------
 
         [Fact]
+/// <summary>TheWholeHullAndTheBandAreTheSameCallWithADifferentBand operation.</summary>
         public void TheWholeHullAndTheBandAreTheSameCallWithADifferentBand()
         {
-            // The mod states the whole hull with a band wide enough to hold everything, which is
-            // the call the join packet was measured with. Two definitions of "the whole hull" would
-            // drift apart silently, and the measured protocol would stop being the shipped one.
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings().Derive();
             ThermalSimulation simulation = Hulls.Driven(settings, 400);
 
             int steps = (int)(240f / settings.StepSeconds);
             for (int i = 0; i < steps; i++) simulation.StepExact(1, Worlds.Shadow());
 
+/// <summary>List operation.</summary>
             List<StoredTemperature> hull = new List<StoredTemperature>();
+/// <summary>List operation.</summary>
             List<StoredTemperature> band = new List<StoredTemperature>();
 
             simulation.ExportHotTail(float.MaxValue, 0, hull);
@@ -490,8 +479,6 @@ namespace Thermodynamics.Tests
             Assert.True(hull.Count > 0);
             Assert.True(band.Count <= hull.Count);
 
-            // And the hull is every node the solver has that can fail at all, which is what makes
-            // it a statement rather than a selection.
             int ratable = 0;
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             for (int i = 0; i < nodes.Count; i++)
@@ -503,10 +490,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AHullTravelsThroughTheWireAndArrivesOnTheOtherMachine operation.</summary>
         public void AHullTravelsThroughTheWireAndArrivesOnTheOtherMachine()
         {
-            // The end to end shape of one join: the server states its hull, the bytes are cut into
-            // messages, and a client that was somewhere else entirely takes the server's answer.
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings().Derive();
 
             ThermalSimulation server = Hulls.Driven(settings, 300);
@@ -515,9 +502,11 @@ namespace Thermodynamics.Tests
             int steps = (int)(300f / settings.StepSeconds);
             for (int i = 0; i < steps; i++) server.StepExact(1, Worlds.Shadow());
 
+/// <summary>List operation.</summary>
             List<StoredTemperature> hull = new List<StoredTemperature>();
             server.ExportHotTail(float.MaxValue, 0, hull);
 
+/// <summary>List operation.</summary>
             List<StoredTemperature> got = new List<StoredTemperature>();
             int applied = 0;
 
@@ -538,8 +527,6 @@ namespace Thermodynamics.Tests
 
             Assert.True(applied > 0, "the join packet moved nothing, so the client was already right");
 
-            // Within the wire's own resolution, which is a tenth of a kelvin, and no further: a
-            // tighter claim here would be this test asserting a precision the packet does not have.
             IList<ThermalNode> theirs = server.Solver.Nodes;
             IList<ThermalNode> ours = client.Solver.Nodes;
 

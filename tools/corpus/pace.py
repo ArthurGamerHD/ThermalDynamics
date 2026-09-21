@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """**What a walk in progress will cost, and how to tell whether the estimate means anything.**
 
 A corpus walk runs for hours and its progress file is the only thing anybody can read while it
@@ -40,12 +39,11 @@ import datetime
 import os
 import sys
 
-# Where the corpus lives when nothing says otherwise. Only needed for the block-share estimate,
-# which needs a file's size to know where in the walk order it sits.
 CORPUS = os.path.expanduser(
     "~/.local/share/thermal-dynamics/corpus/steamapps/workshop/content/244850")
 
 
+# marks operation.
 def marks(path):
     """`(minutes walked, files done)` for every batch line a walk wrote, earliest first.
 
@@ -79,16 +77,9 @@ def marks(path):
                 continue
 
             if parts[2] == "resuming," and len(parts) > 3:
-                # Bank the slice that just ended and start a new one; its marks begin from zero.
                 if slice_start is not None and slice_last is not None:
                     walked += (slice_last - slice_start).total_seconds() / 60.0
 
-                # **The new slice's clock starts here, not at its first mark.** A mark is every ten
-                # files, so the work before the first one is real walking — for the first slice
-                # that is excluded by the convention this file has always used, and repeating that
-                # exclusion once per slice would undercount a sliced walk by a mark's worth each
-                # time. The cost of restarting the process is inside this and is part of what
-                # slicing costs.
                 slice_start = datetime.datetime.strptime(parts[0], "%H:%M:%S")
                 slice_last = slice_start
                 try:
@@ -116,6 +107,7 @@ def marks(path):
     return order
 
 
+# elapsed operation.
 def elapsed(order, files):
     """Minutes walked up to the mark at `files`, or None where there is no such mark.
 
@@ -132,6 +124,7 @@ def elapsed(order, files):
     return None
 
 
+# selection operation.
 def selection(path):
     """The selection a walk was narrowed to, as workshop ids, or None where it walked the corpus.
 
@@ -173,6 +166,7 @@ def selection(path):
     return ids or None
 
 
+# walk order operation.
 def walk_order(root=CORPUS, only=None):
     """The corpus in the order a walk reads it: every `bp.sbc`, largest file first.
 
@@ -199,6 +193,7 @@ def walk_order(root=CORPUS, only=None):
     return sized
 
 
+# block counts operation.
 def block_counts(path):
     """`workshop id -> blocks`, from any walk's outcomes.
 
@@ -217,6 +212,7 @@ def block_counts(path):
     return counts
 
 
+# coverage operation.
 def coverage(order, counts, root=CORPUS, only=None):
     """Cumulative share of the walked blocks after each file of the walk order, 0..1.
 
@@ -245,6 +241,7 @@ def coverage(order, counts, root=CORPUS, only=None):
     return shares
 
 
+# block share estimate operation.
 def block_share_estimate(order, shares):
     """The estimator that abandoned the cap walk: remaining blocks over the latest block rate.
 
@@ -278,6 +275,7 @@ def block_share_estimate(order, shares):
     return rows
 
 
+# spread operation.
 def spread(rows):
     """What the block-share estimate says over a run of marks, as a range rather than a number.
 
@@ -294,19 +292,12 @@ def spread(rows):
             f"median {middle:.0f}")
 
 
-#: Files a walk covers between marks. Stated by the walk, not inferred: it writes one every ten.
 MARK_FILES = 10
 
-#: How wide a gap between two reference marks may be and still be read between.
-#:
-#: **Five marks, and the reason it is bounded at all is the ordering.** The corpus is walked largest
-#: first, so cost per file falls steeply and a straight line across a wide gap is a poor assumption
-#: — which is what the *one mark in common* case was always about: a reference with marks at ten
-#: files and seventy carries no information about file twenty, and reading it there would be
-#: inventing one. Within a few marks the line is the same assumption the marks themselves carry.
 WIDEST_BRACKET = 5 * MARK_FILES
 
 
+# bracket operation.
 def bracket(counts, files):
     """How far apart the two reference marks either side of `files` are."""
     if files <= counts[0] or files >= counts[-1]:
@@ -323,6 +314,7 @@ def bracket(counts, files):
     return counts[high] - counts[low]
 
 
+# at operation.
 def at(counts, walked, files):
     """Minutes the reference had walked by `files`, interpolated between the marks either side.
 
@@ -351,6 +343,7 @@ def at(counts, walked, files):
     return walked[low] + (walked[high] - walked[low]) * share
 
 
+# ratio operation.
 def ratio(subject, reference):
     """How much dearer the subject walk is per file, over the marks the two walks share.
 
@@ -359,13 +352,6 @@ def ratio(subject, reference):
     """
     mine = {files: walked for walked, files in subject}
 
-    # **The reference is read at the subject's file counts rather than at counts the two happen to
-    # share**, which is not a refinement — without it a resumed walk is compared on its first slice
-    # alone. A walk writes a mark every ten files, so an unbroken run's marks are multiples of ten
-    # and two such walks share nearly all of them; a *resumed* one counts from where it left off,
-    # so its marks are 2,106 and 2,116 where the reference has 2,100 and 2,110 and the intersection
-    # is empty. Measured on the 2026-08-28 air re-take: 21 of 268 marks were being used, all of
-    # them from before the first resume, and the ratio had not moved since.
     ordered = sorted(reference, key=lambda pair: pair[1])
     counts = [files for _, files in ordered]
     walked = [minutes for minutes, _ in ordered]
@@ -388,6 +374,7 @@ def ratio(subject, reference):
     return span_subject / span_reference, first, last
 
 
+# main operation.
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("progress", help="the progress file of the walk being estimated")
@@ -404,8 +391,6 @@ def main():
     print(f"{args.progress}: {len(subject)} marks, "
           f"{subject[-1][1]} files, {elapsed(subject, subject[-1][1]):.1f} min so far")
 
-    # **A narrowed walk reads a different corpus, and every figure below depends on which one.**
-    # The walk says so on its own first line, so it is read rather than guessed.
     narrowed = selection(args.progress)
     if narrowed:
         print(f"  narrowed to a selection of {len(narrowed):,} blueprints, so every share below is "
@@ -437,13 +422,6 @@ def main():
 
     print(f"{args.reference}: finished, {reference[-1][1]} files in {total:.1f} min")
 
-    # **The per-file ratio compares file N with file N, and that is only a comparison when the two
-    # walks read the same file N.** A selection walk's 520th file is the 520th largest ship *of the
-    # selection*; a corpus walk's is the 520th largest in the population, which is very much bigger.
-    # Refused rather than printed, because the number it produces looks entirely reasonable — on
-    # the 2026-08-28 core cap walk it read **0.04x per file** and projected **0.2 hours** for a walk
-    # budgeted at 78 minutes, which is the ratio of a fighter to a capital hull and not a ratio
-    # between two walks (`P2`, `E8`).
     reference_narrowed = selection(args.reference)
     if bool(narrowed) != bool(reference_narrowed) or (
             narrowed and reference_narrowed and narrowed != reference_narrowed):

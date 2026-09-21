@@ -5,7 +5,6 @@ using Region = Thermodynamics.Presentation.ThermalVisionRegionPartition.Region;
 
 namespace Thermodynamics.Presentation
 {
-    /// <summary>Original block temperatures indexed independently of the render partition.</summary>
     public sealed class ThermalVisionBlockField
     {
         private readonly double blur, bucketSize;
@@ -20,8 +19,11 @@ namespace Thermodynamics.Presentation
         }
         private readonly SearchNode nearest;
         public int NearestSamples { get; private set; }
+/// <summary>Axis operation.</summary>
         private static double Axis(Vector3D p,int axis) { return axis==0?p.X:axis==1?p.Y:p.Z; }
+/// <summary>Sets the axis.</summary>
         private static Vector3D SetAxis(Vector3D p,int axis,double v) { if(axis==0)p.X=v; else if(axis==1)p.Y=v; else p.Z=v; return p; }
+/// <summary>Insert operation.</summary>
         private static void Insert(SearchNode node,Region value,int depth)
         {
             node.Min=node.HasBounds?Vector3D.Min(node.Min,value.Min):value.Min;
@@ -43,8 +45,10 @@ namespace Thermodynamics.Presentation
             }
             Insert(Axis((value.Min+value.Max)*.5,node.Axis)<node.Plane?node.Low:node.High,value,depth+1);
         }
+/// <summary>Distance operation.</summary>
         private static double Distance(Vector3D point,Vector3D min,Vector3D max)
         { return Vector3D.DistanceSquared(point,Vector3D.Clamp(point,min,max)); }
+/// <summary>FindNearest operation.</summary>
         private static void FindNearest(SearchNode node,Vector3D point,double boundDistance,ref double distance,ref float kelvin)
         {
             if(node==null || !node.HasBounds || boundDistance>=distance) return;
@@ -54,12 +58,12 @@ namespace Thermodynamics.Presentation
                 { double d=Distance(point,item.Min,item.Max); if(d<distance) { distance=d; kelvin=item.Kelvin; } }
                 return;
             }
-            // Carry child bounds into recursion: sorting already computed these distances.
             double a=node.Low.HasBounds?Distance(point,node.Low.Min,node.Low.Max):double.PositiveInfinity;
             double b=node.High.HasBounds?Distance(point,node.High.Min,node.High.Max):double.PositiveInfinity;
             FindNearest(a<=b?node.Low:node.High,point,a<=b?a:b,ref distance,ref kelvin);
             FindNearest(a<=b?node.High:node.Low,point,a<=b?b:a,ref distance,ref kelvin);
         }
+/// <summary>OutsideSupport operation.</summary>
         private float OutsideSupport(Vector3D point,float fallback)
         {
             if(nearest!=null && nearest.HasBounds)
@@ -79,8 +83,10 @@ namespace Thermodynamics.Presentation
         public int Count { get; private set; }
         public int Queries { get; private set; }
         public int Fallbacks { get; private set; }
+/// <summary>ThermalVisionBlockField operation.</summary>
         public ThermalVisionBlockField(double blockSize, double blur, Region? sourceBounds = null, int expectedBlocks = 0)
         {
+/// <summary>List operation.</summary>
             kernels=new List<Kernel>(Math.Max(0,Math.Min(expectedBlocks,32768)));
             buckets=new Dictionary<Vector3I,List<int>>(Math.Max(0,Math.Min(expectedBlocks,8192)));
             if(sourceBounds.HasValue) nearest=new SearchNode { SpaceMin=sourceBounds.Value.Min,SpaceMax=sourceBounds.Value.Max };
@@ -94,6 +100,7 @@ namespace Thermodynamics.Presentation
             }
             bucketSize = Math.Max(blockSize * bucketBlocks, this.blur * 2);
         }
+/// <summary>Key operation.</summary>
         private Vector3I Key(Vector3D p)
         { return new Vector3I((int)Math.Floor(p.X/bucketSize), (int)Math.Floor(p.Y/bucketSize), (int)Math.Floor(p.Z/bucketSize)); }
         private Dictionary<Vector3D,float> sampleCache;
@@ -101,11 +108,9 @@ namespace Thermodynamics.Presentation
         private bool cacheDisabled;
         public int CacheHits { get; private set; }
         public int CacheEntries { get { return sampleCache==null?0:sampleCache.Count; } }
-        /// <summary>Exact repeated-point reuse during one immutable field refresh. Sparse
-        /// queries disable caching after a short trial; entries are bounded to 4096.</summary>
+/// <summary>SampleCached operation.</summary>
         public float SampleCached(Vector3D point,float fallback)
         {
-            // Without a source tree the fallback is caller-dependent, not a point value.
             if(cacheDisabled || nearest==null || Count==0) return Sample(point,fallback);
             if(sampleCache==null) sampleCache=new Dictionary<Vector3D,float>();
             cacheProbes++;
@@ -116,24 +121,24 @@ namespace Thermodynamics.Presentation
             { cacheDisabled=true; sampleCache=null; }
             else
             {
-                // Keep locality on large grids instead of retaining only the first vertices.
                 if(sampleCache.Count>=4096) sampleCache.Clear();
                 sampleCache.Add(point,value);
             }
             return value;
         }
+/// <summary>Adds a .</summary>
         public void Add(Region sample)
         {
             if(sampleCache!=null || cacheProbes>0)
             { sampleCache=null; cacheProbes=0; CacheHits=0; cacheDisabled=false; }
-            // Index the support, including large multi-cell functional blocks. Queries touch
-            // one bucket rather than walking the entire ship for every surface vertex.
             var kernel=new Kernel { Centre=(sample.Min+sample.Max)*.5,
                 Scale=(sample.Max-sample.Min)*.5+new Vector3D(blur), Kelvin=sample.Kelvin };
             int kernelIndex=kernels.Count; kernels.Add(kernel);
+/// <summary>Key operation.</summary>
             Vector3I lo = Key(sample.Min-new Vector3D(blur)), hi = Key(sample.Max+new Vector3D(blur));
             for(int x=lo.X;x<=hi.X;x++) for(int y=lo.Y;y<=hi.Y;y++) for(int z=lo.Z;z<=hi.Z;z++)
             {
+/// <summary>Vector3I operation.</summary>
                 var key=new Vector3I(x,y,z); List<int> list;
                 if(!buckets.TryGetValue(key,out list)) { list=new List<int>(); buckets.Add(key,list); }
                 list.Add(kernelIndex);
@@ -141,6 +146,7 @@ namespace Thermodynamics.Presentation
             if(nearest!=null) Insert(nearest,sample,0);
             Count++;
         }
+/// <summary>Sample operation.</summary>
         public float Sample(Vector3D point, float fallback)
         {
             Queries++;
@@ -153,12 +159,11 @@ namespace Thermodynamics.Presentation
                 Vector3D q=(point-sample.Centre)/sample.Scale;
                 double d=q.LengthSquared();
                 if(d>=1) continue;
-                // Interpolating kernel: a block centre retains its own temperature,
-                // while edges blend continuously without inventing hotter values.
                 double weight=(1-d)*(1-d)/Math.Max(1e-12,d);
                 total+=weight; sum+=weight*sample.Kelvin;
             }
             if(total>1e-12) return (float)(sum/total);
+/// <summary>OutsideSupport operation.</summary>
             return OutsideSupport(point,fallback);
         }
     }

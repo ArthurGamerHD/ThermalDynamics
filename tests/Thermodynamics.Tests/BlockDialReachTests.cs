@@ -9,47 +9,27 @@ using Xunit.Abstractions;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **Every number describing a block reaches the solver**, which completes the set: the
-    /// coolant's are <see cref="LoopDialReachTests"/>, the world's are
-    /// <see cref="SettingsDialReachTests"/>, the planet's are <see cref="PlanetDialReachTests"/>,
-    /// and a block's are here.
-    ///
-    /// <para>
-    /// <see cref="DialReachTests"/> already covers seven of these, because they are seven of the
-    /// eighteen dials `KnobLab` sweeps. The four it does not — a surface's absorptivity, a block's
-    /// own heat source, the damage rate and the exclusion switch — each have a dedicated test class
-    /// somewhere, which is not the same thing: **the point of enumerating is the field written
-    /// tomorrow**, and this repository's recurring defect is something built, documented and
-    /// reached by nothing.
-    /// </para>
-    ///
-    /// <para>
-    /// **It is a reach test**, and says nothing about the direction or the size of what a field
-    /// changes.
-    /// </para>
-    /// </summary>
     public class BlockDialReachTests
     {
         private readonly ITestOutputHelper output;
 
+/// <summary>BlockDialReachTests operation.</summary>
         public BlockDialReachTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
+/// <summary>Sets the tings.</summary>
         private static ThermalSettings Settings()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubsteps = 4096;
             settings.MaxElementVisitsPerStep = 0;
             return settings.Derive();
         }
 
-        /// <summary>
-        /// What one rig reports: the hull it heats, how hot the subject itself gets, whether
-        /// anything crossed its rating, what that cost in damage, and what the step cost.
-        /// </summary>
+/// <summary>Read operation.</summary>
         private static void Read(ThermalSimulation simulation, BlockInstance subject,
             List<float> into)
         {
@@ -75,8 +55,6 @@ namespace Thermodynamics.Tests
             into.Add(nodes.Count);
             into.Add(simulation.Solver.RequiredSubsteps(0.25f));
 
-            // **The simulation's record rather than the solver's**: the solver's list is the last
-            // step's, and a block that crossed early and settled has an empty one.
             IList<OverheatEvent> overheats = simulation.Overheats;
             float damage = 0f;
             for (int i = 0; overheats != null && i < overheats.Count; i++)
@@ -86,18 +64,14 @@ namespace Thermodynamics.Tests
             into.Add(damage);
         }
 
-        /// <summary>
-        /// The subject bolted into a hull, in one world. **The block carries the properties under
-        /// test and the armour around it does not**, so a change lands on one node rather than on
-        /// every node at once — which is what tells a field that acts on the block apart from one
-        /// that acts on the hull it is in.
-        /// </summary>
+/// <summary>Rig operation.</summary>
         private static void Rig(BlockThermalProperties properties, EnvironmentSample world,
             float watts, bool exposed, List<float> into)
         {
             Rig(properties, world, watts, exposed, false, into);
         }
 
+/// <summary>Rig operation.</summary>
         private static void Rig(BlockThermalProperties properties, EnvironmentSample world,
             float watts, bool exposed, bool consuming, List<float> into)
         {
@@ -107,8 +81,6 @@ namespace Thermodynamics.Tests
 
             if (exposed)
             {
-                // A bar with the subject on the end: its own skin sees the sky, so a surface
-                // property has somewhere to act.
                 builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(1, 1, 4));
                 builder.Place(subject, new Vector3I(0, 0, 4));
             }
@@ -121,10 +93,6 @@ namespace Thermodynamics.Tests
 
             BlockInstance instance = builder.Last;
 
-            // **Which of the two waste fractions is being read is the rig's choice, not the
-            // block's.** A producer's heat comes off its output through `ProducerWasteEnergy` and a
-            // consumer's off its draw through `ConsumerWasteEnergy`, so a battery of rigs that only
-            // ever produces reports the consumer fraction inert.
             if (watts > 0f)
             {
                 if (consuming) builder.Consuming(watts); else builder.Producing(watts);
@@ -136,41 +104,28 @@ namespace Thermodynamics.Tests
             Read(simulation, instance, into);
         }
 
-        /// <summary>Every rig a block property might be reachable in, at one set of properties.</summary>
+/// <summary>Fingerprint operation.</summary>
         private static List<float> Fingerprint(BlockThermalProperties properties)
         {
+/// <summary>List operation.</summary>
             List<float> readings = new List<float>();
 
-            // Buried and cold: conduction, capacity, the block's own heat source.
             Rig(properties, Worlds.Shadow(), 0f, false, readings);
 
-            // **Buried and producing hard enough to cook itself past its rating**, which is what
-            // the rating and the damage rate need: at a tenth of this load the subject settles at
-            // 679 K against a 900 K limit, nothing crosses, and both of them read inert.
             Rig(properties, Worlds.Shadow(), 60000000f, false, readings);
 
-            // Exposed in the dark: emissivity and the exposed-surface multiplier, with no sun to
-            // confound them.
             Rig(properties, Worlds.Shadow(), 200000f, true, readings);
 
-            // Exposed in the sun: absorptivity, which is the one property that cannot be seen in
-            // any of the three above.
             Rig(properties, Worlds.Space(new Vector3(0f, 0f, 1f)), 0f, true, readings);
 
-            // In air on a planet, so a convective path exists as well as a radiative one.
             Rig(properties, Worlds.PlanetSurface(1f, 0.5f, 20f), 200000f, true, readings);
 
-            // The same block *drawing* rather than producing, which is the other waste fraction.
             Rig(properties, Worlds.Shadow(), 60000000f, false, true, readings);
 
             return readings;
         }
 
-        /// <summary>
-        /// The levels a field is tried at. **`SolarAbsorptivity` is swept from its sentinel**: −1
-        /// means *follow the emissivity*, so scaling it lands on another negative and the field
-        /// reads inert while being the switch that decides whether a surface is selective.
-        /// </summary>
+/// <summary>Levels operation.</summary>
         private static object[] Levels(FieldInfo field, BlockThermalProperties shipped)
         {
             if (field.FieldType == typeof(bool))
@@ -185,6 +140,7 @@ namespace Thermodynamics.Tests
             return new object[] { value * 0.25f, value * 4f };
         }
 
+/// <summary>Same operation.</summary>
         private static bool Same(List<float> a, List<float> b)
         {
             if (a.Count != b.Count) return false;
@@ -199,14 +155,11 @@ namespace Thermodynamics.Tests
             return true;
         }
 
-        /// <summary>
-        /// **Every settable field on <see cref="BlockThermalProperties"/> changes something the
-        /// solver computes.** Enumerated, so a property added after this is checked without anyone
-        /// remembering the file exists.
-        /// </summary>
         [Fact]
+/// <summary>EveryBlockDialReachesTheSimulation operation.</summary>
         public void EveryBlockDialReachesTheSimulation()
         {
+/// <summary>List operation.</summary>
             List<FieldInfo> fields = new List<FieldInfo>();
 
             foreach (FieldInfo field in typeof(BlockThermalProperties)
@@ -220,8 +173,10 @@ namespace Thermodynamics.Tests
                 "only " + fields.Count + " block properties were found, so this test would pass on"
                 + " a definition that had lost most of them");
 
+/// <summary>Fingerprint operation.</summary>
             List<float> shipped = Fingerprint(Catalog.DefaultThermal());
 
+/// <summary>List operation.</summary>
             List<string> inert = new List<string>();
 
             foreach (FieldInfo field in fields)

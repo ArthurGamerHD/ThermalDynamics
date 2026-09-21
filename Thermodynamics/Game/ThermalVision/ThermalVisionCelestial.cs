@@ -12,11 +12,13 @@ namespace Thermodynamics
 {
     public static partial class ThermalVisionProbe
     {
+/// <summary>List operation.</summary>
         private static readonly List<PlanetManager.Planet> skyPlanets=new List<PlanetManager.Planet>();
         private struct SkyVertex { public Vector3D Position; public Vector2 Uv; public bool Valid; }
         private static readonly SkyVertex[,] skyVertices=new SkyVertex[13,97];
         private static readonly Vector2D[][] skyAngles=BuildSkyAngles();
 
+/// <summary>Builds the API method table.</summary>
         private static Vector2D[][] BuildSkyAngles()
         {
             var angles=new Vector2D[97][];
@@ -26,6 +28,7 @@ namespace Thermodynamics
                 for(int i=0;i<count;i++)
                 {
                     double angle=2*Math.PI*i/count;
+/// <summary>Vector2D operation.</summary>
                     angles[count][i]=new Vector2D(Math.Cos(angle),Math.Sin(angle));
                 }
                 angles[count][count]=angles[count][0];
@@ -33,6 +36,7 @@ namespace Thermodynamics
             return angles;
         }
 
+/// <summary>DrawThermalSky operation.</summary>
         private static void DrawThermalSky()
         {
             int start=regionBillboards;
@@ -40,11 +44,8 @@ namespace Thermodynamics
             var world=camera.WorldMatrix;
             Vector3D sun=Vector3D.Normalize(MyVisualScriptLogicProvider.GetSunDirection());
             double depth=ThermalVisionViewPolicy.BackdropDistance(BlockFleetViewDistance())*.999;
-            // Vanilla Environment.sbc outer solar-disc cosine. This is an angular marker,
-            // not a claim to a simulated stellar temperature.
             DrawSkyDisc(sun*1e9,Math.Sqrt(1-.99875*.99875)*1e9,sun,Vector3D.Up,null,true,depth);
             PlanetManager.CopyPlanets(skyPlanets);
-            // Planet counts are small: insertion sort avoids a captured comparison allocation per frame.
             for(int i=1;i<skyPlanets.Count;i++)
             {
                 var planet=skyPlanets[i];
@@ -59,8 +60,6 @@ namespace Thermodynamics
                 if(planet.Entity==null || planet.Entity.MarkedForClose) continue;
                 Vector3D centre=planet.Entity.PositionComp.WorldMatrixRef.Translation-world.Translation;
                 double radius=planet.Entity.AverageRadius;
-                // Close terrain keeps its actual depth silhouette. The far-plane overlay
-                // supplies the distant planetary disc wherever no closer opaque surface exists.
                 if(centre.Length()<=radius) continue;
                 DrawSkyDisc(centre,radius,sun,planet.Entity.WorldMatrix.Up,planet.Definition(),false,depth);
             }
@@ -68,6 +67,7 @@ namespace Thermodynamics
                 +" triangles="+(regionBillboards-start)+" depth-m="+depth.ToString("F1")
                 +" planets=climate-estimate sun=saturated exposure=excluded",false);
         }
+/// <summary>DrawSkyDisc operation.</summary>
         private static void DrawSkyDisc(Vector3D centre,double radius,Vector3D sun,Vector3D axis,
             PlanetDefinition definition,bool solar,double depth)
         {
@@ -99,11 +99,11 @@ namespace Thermodynamics
                 if(r>0) SkyTriangle(skyVertices[r,s],skyVertices[r+1,s+1],skyVertices[r,s+1],solar||climate!=null);
             }
         }
+/// <summary>SkyTriangle operation.</summary>
         private static void SkyTriangle(SkyVertex a,SkyVertex b,SkyVertex c,bool known)
         {
             if(!a.Valid || !b.Valid || !c.Valid) return;
             Vector3 normal=(Vector3)MyAPIGateway.Session.Camera.WorldMatrix.Backward;
-            // Keen marks this overload "Only for modders"; this is the mod API.
 #pragma warning disable CS0618
             MyTransparentGeometry.AddTriangleBillboard(a.Position,b.Position,c.Position,normal,normal,normal,
                 a.Uv,b.Uv,c.Uv,known?(State.Current==ThermalVisionState.Mode.Cividis?GradientColour:GradientGrey):CompositeSurfaceMaterial,

@@ -5,18 +5,14 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Natural heat cue visibility: fixed endpoint and midpoint oracles, full distance/angle sweeps,
-    /// grid-scale offsets and warmed allocation accounting. This does not exercise the SE1 renderer.
-    /// </summary>
     public class HeatGlowStyleTests
     {
-        /// <summary>Uses the installed engine's decoder, independently of the production colour encoder.</summary>
         [Theory]
         [InlineData(0f, 0f)]
         [InlineData(0.1f, 0.8f)]
         [InlineData(0.5f, 4f)]
         [InlineData(1f, 8f)]
+/// <summary>EngineReceivesLinearHdrWarningRamp operation.</summary>
         public void EngineReceivesLinearHdrWarningRamp(float glow, float expected)
         {
             Vector4 emission = HeatGlowStyle.LinearEmission(new Vector3(1f, 0.5f, 0f), glow);
@@ -28,6 +24,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>DistanceAndGrazingFadeScaleRadianceWithoutChangingHue operation.</summary>
         public void DistanceAndGrazingFadeScaleRadianceWithoutChangingHue()
         {
             Vector4 emission = HeatGlowStyle.LinearEmission(new Vector3(1f, 0.5f, 0.25f), 1f);
@@ -45,6 +42,7 @@ namespace Thermodynamics.Tests
         [InlineData(0.125, 0.5)]
         [InlineData(0.25, 1)]
         [InlineData(1, 1)]
+/// <summary>FacingHasContinuousGrazingFade operation.</summary>
         public void FacingHasContinuousGrazingFade(double cosine, float expected)
         {
             Assert.Equal(expected, HeatGlowStyle.FacingFade(cosine), 6);
@@ -56,12 +54,14 @@ namespace Thermodynamics.Tests
         [InlineData(1800, 0.5)]
         [InlineData(2000, 0)]
         [InlineData(2100, 0)]
+/// <summary>DistanceFadesBeforeTheCullBoundary operation.</summary>
         public void DistanceFadesBeforeTheCullBoundary(double distance, float expected)
         {
             Assert.Equal(expected, HeatGlowStyle.RangeFade(distance, 2000), 6);
         }
 
         [Fact]
+/// <summary>InvalidViewsDrawNothing operation.</summary>
         public void InvalidViewsDrawNothing()
         {
             Assert.Equal(0f, HeatGlowStyle.FacingFade(double.NaN));
@@ -72,6 +72,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>FadesAreBoundedMonotoneAndDoNotPopAtTheEnds operation.</summary>
         public void FadesAreBoundedMonotoneAndDoNotPopAtTheEnds()
         {
             float previousFacing = 0f, previousRange = 1f;
@@ -89,6 +90,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SmallAndLargeGridsUseTheSameRelativeOffset operation.</summary>
         public void SmallAndLargeGridsUseTheSameRelativeOffset()
         {
             Assert.Equal(0.004f, HeatGlowStyle.StandOff(0.5f), 6);
@@ -96,9 +98,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>WarmedViewShapingAllocatesNoManagedMemory operation.</summary>
         public void WarmedViewShapingAllocatesNoManagedMemory()
         {
             double sum = 0;
+/// <summary>Vector3 operation.</summary>
             Vector3 locus = new Vector3(1f, 0.5f, 0.25f);
             for (int i = 0; i < 10000; i++)
             {

@@ -4,13 +4,11 @@ using System.Text;
 
 namespace Thermodynamics
 {
-    /// <summary>One frame the mod cost more than it usually does, and what was happening on it.</summary>
     public struct FrameSample
     {
         public long Frame;
         public double SessionSeconds;
 
-        /// <summary>Wall clock the mod spent on this frame, across every grid.</summary>
         public double TotalMs;
 
         public double TopologyMs;
@@ -18,26 +16,18 @@ namespace Thermodynamics
         public double ExposureMs;
         public double SolverMs;
 
-        /// <summary>The two stages that sit around the simulation rather than inside it.</summary>
         public double SampleMs;
         public double AfterStepMs;
 
-        /// <summary>Grids that did any work, and the worst single one.</summary>
         public int Grids;
         public double WorstGridMs;
         public string WorstGrid;
         public int WorstGridBlocks;
 
-        /// <summary>What the one-shot stages touched, summed over the frame.</summary>
         public long TopologyNodeVisits;
         public long ExposureNodeVisits;
         public long RoomCellsVisited;
 
-        /// <summary>
-        /// What the frame cost that no stage claimed. Derived rather than measured, so it cannot drift
-        /// from the rows above it, and a negative figure — two stages timing the same milliseconds —
-        /// is shown rather than clamped away.
-        /// </summary>
         public double UnattributedMs
         {
             get
@@ -47,8 +37,10 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>Describe operation.</summary>
         public string Describe()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.Append("frame ").Append(Frame)
@@ -78,40 +70,24 @@ namespace Thermodynamics
         }
     }
 
-    /// <summary>
-    /// What the mod costs per frame across every grid, and which frames were the worst — the one
-    /// figure here that is not per grid, because a stutter is not. The worst sixteen are kept in full
-    /// rather than summarised, since only the full sample says what that frame was doing. Bounded by
-    /// design: no per-frame history. See telemetry.md, Frame cost and hitching.
-    /// </summary>
     public class FrameCostTracker
     {
-        /// <summary>How many worst frames to keep in full.</summary>
         public const int Keep = 16;
 
-        /// <summary>
-        /// Frames costing less than this are not considered for the hitch list.
-        ///
-        /// A 60 fps frame is 16.7 ms for everything the game does, so a mod taking a quarter of one
-        /// is the reporting threshold. Without a floor the list fills with the sixteen most ordinary
-        /// frames of a quiet session.
-        /// </summary>
         public double HitchThresholdMs = 4d;
 
+/// <summary>TimingStat operation.</summary>
         public readonly TimingStat Frame = new TimingStat("mod, all grids, per frame");
 
+/// <summary>List operation.</summary>
         private readonly List<FrameSample> worst = new List<FrameSample>();
 
-        /// <summary>Frames on which the mod did any work at all.</summary>
         public long FramesWithWork;
 
-        /// <summary>Frames that cost more than one 60 fps frame on their own.</summary>
         public long FramesOverBudget;
 
-        /// <summary>One rendered frame at 60 fps, in milliseconds.</summary>
         public const double FrameBudgetMs = 1000d / 60d;
 
-        // ---- accumulation for the frame in progress ----------------------------------------
 
         private double total;
         private double topology;
@@ -128,7 +104,7 @@ namespace Thermodynamics
         private long exposureVisits;
         private long roomCells;
 
-        /// <summary>Adds one grid's whole update to the frame in progress.</summary>
+/// <summary>Adds a grid.</summary>
         public void AddGrid(string name, double milliseconds, int blocks)
         {
             if (double.IsNaN(milliseconds) || double.IsInfinity(milliseconds)) return;
@@ -142,7 +118,7 @@ namespace Thermodynamics
             worstGridBlocks = blocks;
         }
 
-        /// <summary>Adds a stage's cost, which is nested inside a grid's update.</summary>
+/// <summary>Adds a stage.</summary>
         public void AddStage(int phase, double milliseconds)
         {
             if (double.IsNaN(milliseconds) || double.IsInfinity(milliseconds)) return;
@@ -156,23 +132,21 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Adds a stage the host drives rather than the simulation: reading the world before a step,
-        /// and reading the step's output after it. Both are nested inside a grid's update.
-        /// </summary>
+/// <summary>Adds a sample.</summary>
         public void AddSample(double milliseconds)
         {
             if (double.IsNaN(milliseconds) || double.IsInfinity(milliseconds)) return;
             sample += milliseconds;
         }
 
+/// <summary>Adds a afterstep.</summary>
         public void AddAfterStep(double milliseconds)
         {
             if (double.IsNaN(milliseconds) || double.IsInfinity(milliseconds)) return;
             afterStep += milliseconds;
         }
 
-        /// <summary>Adds what the one-shot stages touched, so a hitch records its cause as well as its cost.</summary>
+/// <summary>Adds a work.</summary>
         public void AddWork(long topologyNodes, long exposureNodes, long cellsFlooded)
         {
             topologyVisits += topologyNodes;
@@ -180,13 +154,7 @@ namespace Thermodynamics
             roomCells += cellsFlooded;
         }
 
-        /// <summary>
-        /// Closes the frame in progress and records it.
-        ///
-        /// Called at the top of the next frame rather than the end of this one: a mod cannot control
-        /// the order in which the engine runs session and entity components, and a frame closed
-        /// before its grids have run would record nothing.
-        /// </summary>
+/// <summary>EndFrame operation.</summary>
         public void EndFrame(long frame, double sessionSeconds)
         {
             if (total <= 0d)
@@ -204,8 +172,10 @@ namespace Thermodynamics
             Reset();
         }
 
+/// <summary>Builds the API method table.</summary>
         private FrameSample BuildSample(long frame, double sessionSeconds)
         {
+/// <summary>FrameSample operation.</summary>
             FrameSample sample = new FrameSample();
             sample.Frame = frame;
             sample.SessionSeconds = sessionSeconds;
@@ -226,10 +196,7 @@ namespace Thermodynamics
             return sample;
         }
 
-        /// <summary>
-        /// Keeps the sample when it is worse than the least severe one held, so the list holds the
-        /// session's worst frames rather than its most recent.
-        /// </summary>
+/// <summary>Offer operation.</summary>
         private void Offer(FrameSample sample)
         {
             if (worst.Count < Keep)
@@ -245,11 +212,13 @@ namespace Thermodynamics
             worst.Sort(Compare);
         }
 
+/// <summary>Compare operation.</summary>
         private static int Compare(FrameSample a, FrameSample b)
         {
             return b.TotalMs.CompareTo(a.TotalMs);
         }
 
+/// <summary>Reset operation.</summary>
         private void Reset()
         {
             total = 0d;
@@ -268,19 +237,11 @@ namespace Thermodynamics
             roomCells = 0;
         }
 
-        /// <summary>The worst frames of the session, worst first.</summary>
         public IList<FrameSample> Worst
         {
             get { return worst; }
         }
 
-        /// <summary>
-        /// Peak-to-median frame cost ratio.
-        ///
-        /// Near one indicates a uniformly expensive mod, which costs frame rate; a ratio in the
-        /// hundreds indicates one that is cheap on average and occasionally very expensive, which
-        /// costs a stutter. The two call for different fixes.
-        /// </summary>
         public double SpikeRatio
         {
             get
@@ -291,6 +252,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>Clear operation.</summary>
         public void Clear()
         {
             worst.Clear();

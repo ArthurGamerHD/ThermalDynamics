@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """**Two walks that saw the same ship should have written the same row.**
 
 `verdict.py --baseline` compares two datasets' *summaries*, which is the right instrument for
@@ -24,8 +23,6 @@ import csv
 import os
 import sys
 
-# Columns worth comparing: what the walks are read for. Everything else in a row is an identifier
-# or a name, and a mismatch in those would show as a row one side does not have.
 COLUMNS = [
     "peak_k", "mean_k", "median_k", "p95_k", "min_k",
     "substeps_demanded", "substeps_granted", "substep_cost", "run_seconds",
@@ -35,6 +32,7 @@ COLUMNS = [
 ]
 
 
+# rows operation.
 def rows(directory, arm=None):
     """Every outcome row of a dataset, keyed by ship, workshop id, scenario and arm.
 
@@ -58,17 +56,20 @@ def rows(directory, arm=None):
     return keyed
 
 
+# normalise operation.
 def normalise(cap):
     """`0` and a missing column are the same arm: the cap off, which is what ships."""
     return "" if cap in (None, "", "0") else cap
 
 
+# key operation.
 def key(row):
     """A row's identity, with the arm normalised so an unpaired walk keys like a control arm."""
     return (row.get("ship", ""), row.get("workshop_id", ""),
             row.get("scenario", ""), normalise(row.get("cap", "")))
 
 
+# difference operation.
 def difference(before, after, column):
     """Relative difference in one column, or None where either side does not carry it."""
     try:
@@ -83,6 +84,7 @@ def difference(before, after, column):
     return abs(a - b) / max(abs(a), 1e-9)
 
 
+# compare operation.
 def compare(before, after, tolerance):
     """`(shared, mismatches, worst)` over the rows both datasets carry."""
     shared = sorted(set(before) & set(after))
@@ -105,6 +107,7 @@ def compare(before, after, tolerance):
     return shared, mismatches, worst
 
 
+# main operation.
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("before")
@@ -126,8 +129,6 @@ def main():
     print(f"shared: {len(shared)}; only in the first: {len(set(before) - set(after))}; "
           f"only in the second: {len(set(after) - set(before))}")
 
-    # **A comparison with nothing in common is not a reproduction** (`E8`). It is the shape a
-    # renamed scenario or a rekeyed row takes, and it prints as a perfect match.
     if not shared:
         print("nothing in common, so this compared nothing")
         return 1

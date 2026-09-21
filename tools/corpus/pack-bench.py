@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Packs every corpus dataset into the one payload the balance bench reads.
 
 Four passes feed it and they are different shapes, so the packing is not uniform:
@@ -34,6 +33,7 @@ TARGET = sys.argv[4] if len(sys.argv) > 4 else "out/bench.json"
 PANEL = "tools/corpus/panel.csv"
 
 
+# rows operation.
 def rows(path):
     if not os.path.exists(path):
         return []
@@ -41,6 +41,7 @@ def rows(path):
         return list(csv.DictReader(handle))
 
 
+# number operation.
 def number(row, key, default=0.0):
     """A cell as a float, defaulting to nought — this tool's own choice (`scoring.number_or`).
 
@@ -52,6 +53,7 @@ def number(row, key, default=0.0):
 
 
 
+# r2 operation.
 def r2(value, places=2):
     return round(value, places)
 
@@ -66,11 +68,6 @@ blockheat = rows(BLOCKHEAT)
 print(f"survey {len(survey):,}  census {len(census):,}  composition {len(composition):,}  "
       f"knobs {len(knobs):,}  panel {len(panel):,}  blockheat {len(blockheat):,}")
 
-# ---- shared name tables ---------------------------------------------------------------------
-# **A ship is a name and a workshop id together, never a name alone.** The corpus holds ships whose
-# names collide, so a name-keyed join silently merges them: it reported 8,142 joined rows where the
-# honest join is 8,132, and every correlation was computed against a few ships' figures crossed
-# with another's. Identity here is the pair; the name is carried separately for display.
 scenarios = sorted(set(r["scenario"] for r in survey))
 keys = sorted(set(scoring.key_of(r) for r in survey) | set(scoring.key_of(r) for r in census))
 blocks = sorted(set(r["hottest_block"] for r in survey)
@@ -82,15 +79,11 @@ bi = {b: i for i, b in enumerate(blocks)}
 ships = [k[0] for k in keys]
 workshop = [k[1] for k in keys]
 
-# Which hulls actually mount a jump drive, read from the composition rather than inferred from
-# whichever block happened to end up hottest — the drive is 67 % of the corpus's load heat and the
-# split is a finding, so it has to be membership and not a proxy.
 has_drive = [0] * len(keys)
 for r in composition:
     if "JumpDrive" in r["subtype"] and scoring.key_of(r) in shi:
         has_drive[shi[scoring.key_of(r)]] = 1
 
-# ---- the survey -------------------------------------------------------------------------------
 outcomes = [[
     shi[scoring.key_of(r)], si[r["scenario"]], int(number(r, "blocks")),
     r2(number(r, "peak_k")), r2(number(r, "median_k")),
@@ -101,10 +94,6 @@ outcomes = [[
     r2(number(r, "hotspot_k")),
 ] for r in survey if scoring.key_of(r) in shi]
 
-# **The worst index any block a ship carries scores** — from the full composition, not from the
-# one or two block names the outcome rows happen to mention. Inferring it from the hottest block
-# plus the census top source misclassified badly: it put the 0.25–0.50 band at 90 % losing a block
-# where the honest figure is 47 %, because it silently missed every other block aboard.
 index_by_block = {r["subtype"]: (number(r, "index"), number(r, "self_index")) for r in blockheat}
 worst_index = {}
 worst_self = {}
@@ -117,7 +106,6 @@ for r in composition:
     worst_index[i] = max(worst_index.get(i, 0.0), entry[0])
     worst_self[i] = max(worst_self.get(i, 0.0), entry[1])
 
-# ---- the census -------------------------------------------------------------------------------
 CENSUS_KEEP = [
     ("large", int), ("blocks", int), ("grids", int), ("rooms", int),
     ("exposed_blocks", int), ("buried_blocks", int), ("buried_share", lambda v: r2(v, 4)),
@@ -128,7 +116,6 @@ CENSUS_KEEP = [
     ("tool_n", int), ("consumer_n", int), ("consumer_draw_w", int), ("other_n", int),
     ("waste_idle_w", int), ("waste_full_w", int), ("waste_burn_w", int),
     ("exposure_m2_per_kw", lambda v: r2(v, 3)), ("capacity_j_per_k_per_w", lambda v: r2(v, 3)),
-    # ---- arrangement, which is what a hot spot is about -------------------------------------
     ("heat_sources", int), ("w_per_m2", lambda v: r2(v, 2)),
     ("max_depth", int), ("heat_depth_mean", lambda v: r2(v, 3)), ("heat_depth_max", int),
     ("clumping", lambda v: r2(v, 3)), ("heat_gini", lambda v: r2(v, 4)),
@@ -142,8 +129,6 @@ census_rows = [[shi[scoring.key_of(r)]] + [cast(number(r, name)) for name, cast 
                   r2(worst_self.get(shi[scoring.key_of(r)], 0.0), 3)]
                for r in census if scoring.key_of(r) in shi]
 
-# ---- composition, two ways ---------------------------------------------------------------------
-# Corpus-wide: where the heat is made, one row per block type.
 totals = {}
 for r in composition:
     name = r["subtype"]
@@ -154,7 +139,6 @@ heat_by_block = sorted(
     ([bi[name], int(watts), count, hulls] for name, (watts, count, hulls) in totals.items()),
     key=lambda row: -row[1])[:60]
 
-# Per panel ship: what this hull is made of, so a distribution reads against its heating.
 panel_keys = set(scoring.key_of(r) for r in panel)
 panel_composition = {}
 for r in composition:
@@ -167,7 +151,6 @@ for entries in panel_composition.values():
     entries.sort(key=lambda e: -e[2])
     del entries[12:]
 
-# ---- the panel ----------------------------------------------------------------------------------
 rules = sorted(set(r["rule"] for r in panel))
 ri = {r: i for i, r in enumerate(rules)}
 whys = {}
@@ -183,7 +166,6 @@ panel_rows = [[
     int(number(r, "load_seconds_to_critical", -1)),
 ] for r in panel if scoring.key_of(r) in shi]
 
-# ---- the knob sweep --------------------------------------------------------------------------
 knob_names = sorted(set(r["knob"] for r in knobs))
 ki = {k: i for i, k in enumerate(knob_names)}
 knob_scenarios = sorted(set(r["scenario"] for r in knobs))
@@ -197,9 +179,6 @@ knob_rows = [[
     r2(number(r, "seconds_to_settle"), 1), r2(number(r, "substeps_demanded")),
 ] for r in knobs if scoring.key_of(r) in shi]
 
-# ---- the per-block index ----------------------------------------------------------------------
-# Computed from the definitions with no simulation at all, so it is independent of everything else
-# here and is the one table that stays valid when the corpus is re-run.
 heat_index = [[
     r["subtype"], r["type_id"], int(number(r, "large")), r["source"],
     int(number(r, "waste_w")), r2(number(r, "area_m2"), 1), r2(number(r, "critical_k"), 1),
@@ -240,10 +219,6 @@ payload = {
                       "radiatedW", "conductedW", "index", "selfIndex", "hullAreaNeeded"],
     "heatIndex": heat_index,
 
-    # Counts the page states about itself. They were written into the HTML by hand and one of them
-    # — the panel, which grew from 36 ships to 50 — had gone stale, which is the one kind of error
-    # a page of measurements cannot afford: a reader who catches a wrong count stops believing the
-    # right ones.
     "compositionRows": len(composition),
 }
 

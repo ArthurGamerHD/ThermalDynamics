@@ -6,70 +6,31 @@ using Xunit.Abstractions;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **Which cell size is actually the harder one to cool, and the answer is not the one this
-    /// repository had written down.**
-    ///
-    /// <para>
-    /// balance.md argued from the arithmetic of a cell face that "the
-    /// arithmetic that decides everything else on this page is against small grids by about 2.5×",
-    /// and used that to block `C43`'s density correction: half of it is a regression, and it lands
-    /// on the size that is already behind. **The first half of that sentence is exact and the
-    /// second was never measured.** A small cell face is 0.25 m² against 2.5 m², so the loop pickup
-    /// really is a twenty-fifth — but radiation, conduction and the ship's own skin scale by three
-    /// different powers of the cell edge, and the game's waste figures scale by none of them.
-    /// </para>
-    ///
-    /// <para>
-    /// Measured here, per block, from the definitions alone: **a small grid is 2.1× behind on a
-    /// block's own skin, 2.3× behind on the loop pickup, and 2.5× *ahead* on conduction into the
-    /// hull.** `tools/corpus/cellsize.py` is the other half, over 8,137 corpus ships, and it says
-    /// the same thing louder — a small-grid ship carries 2.47× the exposed skin per kilowatt, buries
-    /// a fifth as much of it, and gives its hottest block **19.75×** the path into the hull per watt
-    /// that a large-grid ship does.
-    /// </para>
-    ///
-    /// <para>
-    /// **So the handicap belongs to the pickup alone, and it does not need a dial.** At the face
-    /// count `C42` already measured — three, which is what a routed rectangle gives past a one-cell
-    /// source — 79 of the 80 paired blocks have a cooling answer on a small grid exactly where they
-    /// have one on a large grid. The exception is the small prototech jump drive, and buying it
-    /// costs a **×5.63** small-grid coefficient that would make every other small-grid block
-    /// strictly easier to cool than its large counterpart. See balance.md, *What a small cell is
-    /// behind on, and what it is not*, and backlog.md `C43`.
-    /// </para>
-    /// </summary>
     public class CellSizeTests
     {
         private readonly ITestOutputHelper output;
 
+/// <summary>CellSizeTests operation.</summary>
         public CellSizeTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-        /// <summary>
-        /// Watts below which a paired block is a lamp rather than a cooling problem. Every headline
-        /// here is quoted over the pairs above it, because a camera's handicap is arithmetic about
-        /// nothing (`E6`).
-        /// </summary>
         private const float WattsFloor = 10000f;
 
-        /// <summary>
-        /// Sink faces a routed rectangle gives past a one-cell source. `C42`'s figure, and its
-        /// argument for why the count is not a lever: a pipe carries at most two and a pump none.
-        /// </summary>
         private const int RoutedFaces = 3;
 
+/// <summary>Coefficient operation.</summary>
         private static float Coefficient()
         {
             return LoopThermalProperties.Default().HeatTransferCoefficient;
         }
 
-        /// <summary>Paired blocks with no cooling answer at a face count and a coefficient.</summary>
+/// <summary>WithNoAnswer operation.</summary>
         private static List<string> WithNoAnswer(IList<CellSizeLab.Pair> pairs, bool large,
             int faces, float coefficient)
         {
+/// <summary>List operation.</summary>
             List<string> names = new List<string>();
 
             for (int i = 0; i < pairs.Count; i++)
@@ -88,12 +49,8 @@ namespace Thermodynamics.Tests
             return names;
         }
 
-        /// <summary>
-        /// **The pairing found blocks at all**, which is the check that keeps every figure below
-        /// from being a statement about an empty list. The game ships eighty families at both sizes
-        /// and forty of them make more than ten kilowatts.
-        /// </summary>
         [Fact]
+/// <summary>TheGameShipsEnoughPairedBlocksToMeasure operation.</summary>
         public void TheGameShipsEnoughPairedBlocksToMeasure()
         {
             List<CellSizeLab.Pair> pairs = CellSizeLab.Pairs();
@@ -114,7 +71,6 @@ namespace Thermodynamics.Tests
                 "only " + heavy + " paired families make more than " + WattsFloor.ToString("n0")
                 + " W, and the medians below are quoted over those");
 
-            // Both variants of one block, and never the same reading twice.
             for (int i = 0; i < pairs.Count; i++)
             {
                 Assert.True(pairs[i].Large.Large, pairs[i].Family + " paired a large that is not");
@@ -123,13 +79,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// **A small cell divides the four terms by four different numbers**, which is why "small
-        /// grids are behind" cannot be one statement. Radiation and the loop pickup go as the cell
-        /// face and conduction as the cell edge, while the game's waste figures answer to nothing
-        /// geometric at all.
-        /// </summary>
         [Fact]
+/// <summary>TheFourTermsDoNotScaleTogether operation.</summary>
         public void TheFourTermsDoNotScaleTogether()
         {
             List<CellSizeLab.Pair> pairs = CellSizeLab.Pairs();
@@ -156,31 +107,17 @@ namespace Thermodynamics.Tests
                 + "; both are area terms against a waste figure that is not, so both were expected"
                 + " to be behind and a change here means the game's waste figures moved");
 
-            // The two area terms cannot disagree by much: they divide the same cell face by the
-            // same waste. Radiation differs only because a block's exposed-surface multiplier and
-            // its shape are in it and the pickup's single cell face is not.
             Assert.True(pickup / radiation < 2f && radiation / pickup < 2f,
                 "the two area terms parted company: radiation " + radiation.ToString("n2")
                 + " against pickup " + pickup.ToString("n2"));
         }
 
-        /// <summary>
-        /// **The one figure that decides the row, and it is not a median.** `C42` fixed the test for
-        /// whether a block has a cooling answer: watts over the pickup is the gradient it is forced
-        /// to sit at whatever is hung off the far end of the loop, and a gradient past its own
-        /// rating is a block no radiator count can reach.
-        ///
-        /// <para>
-        /// At the shipped coefficient and one sink face nine small-grid families fail that test
-        /// against three large-grid ones. **At three faces it is one against none**, and the one is
-        /// the small prototech jump drive, whose large twin is this mod's standing example of a
-        /// block that survives only as slow damage.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>AtTheFaceCountARoutedRingGivesTheTwoSizesAgree operation.</summary>
         public void AtTheFaceCountARoutedRingGivesTheTwoSizesAgree()
         {
             List<CellSizeLab.Pair> pairs = CellSizeLab.Pairs();
+/// <summary>Coefficient operation.</summary>
             float h = Coefficient();
 
             output.WriteLine("  faces    small    large");
@@ -191,7 +128,9 @@ namespace Thermodynamics.Tests
                     WithNoAnswer(pairs, true, faces, h).Count);
             }
 
+/// <summary>WithNoAnswer operation.</summary>
             List<string> small = WithNoAnswer(pairs, false, RoutedFaces, h);
+/// <summary>WithNoAnswer operation.</summary>
             List<string> large = WithNoAnswer(pairs, true, RoutedFaces, h);
 
             output.WriteLine("at {0} faces, small: {1}", RoutedFaces, string.Join(", ", small));
@@ -206,25 +145,15 @@ namespace Thermodynamics.Tests
             Assert.Contains("PrototechJumpDrive", small);
         }
 
-        /// <summary>
-        /// **What closing that last block would cost, which is the case against doing it.** The
-        /// smallest small-grid coefficient that takes the gap to zero is more than five times the
-        /// shipped one, and it applies to every small-grid loop in the game.
-        ///
-        /// <para>
-        /// A coefficient large enough to save the drive puts every other small-grid block far below
-        /// its large counterpart's forced gradient — the median handicap is 2.3, so a factor of 5.6
-        /// overshoots parity by two and a half times. **A grid-size dial cannot fix a per-block
-        /// spread**, and the spread here runs from 0.83 to 25: the small reactor is already better
-        /// off than the large one and the small battery is eight times worse, on the same cell face.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ADialLargeEnoughToCloseItWouldOvershootEveryOtherBlock operation.</summary>
         public void ADialLargeEnoughToCloseItWouldOvershootEveryOtherBlock()
         {
             List<CellSizeLab.Pair> pairs = CellSizeLab.Pairs();
+/// <summary>Coefficient operation.</summary>
             float h = Coefficient();
 
+/// <summary>WithNoAnswer operation.</summary>
             int target = WithNoAnswer(pairs, true, RoutedFaces, h).Count;
 
             float needed = 0f;
@@ -265,36 +194,24 @@ namespace Thermodynamics.Tests
                 + " twin, which is what makes a single grid-size dial the wrong instrument");
         }
 
-        /// <summary>
-        /// **The rung that is honest physics is worth nothing, so it is refused and priced (`P14`).**
-        ///
-        /// <para>
-        /// Fluid-to-wall transfer in a pipe goes as `Nu·k/D`, and under Dittus-Boelter with the flow
-        /// held at the rate the mod ships, `h ∝ D^-0.2`. The loop's bore is a fifth of the
-        /// cell, so a small-grid bore is a fifth of a large one and its coefficient is `5^0.2` —
-        /// **1.38× — larger for the same fluid**. That is a real grid-size dependence with a
-        /// derivation under it, and it is not the 2.28 the median block needs.
-        /// </para>
-        ///
-        /// <para>
-        /// Applied, it takes the families with no answer at one sink face from nine to eight. It
-        /// changes no verdict at the face count a ring actually gives. So the mod does not carry it:
-        /// a term whose whole effect is a number nobody can observe is cost.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheBoreDerivedCoefficientIsRealPhysicsAndChangesNothing operation.</summary>
         public void TheBoreDerivedCoefficientIsRealPhysicsAndChangesNothing()
         {
             List<CellSizeLab.Pair> pairs = CellSizeLab.Pairs();
+/// <summary>Coefficient operation.</summary>
             float h = Coefficient();
 
-            // (D_small / D_large)^-0.2, with both bores the same fraction of their own cell.
             double ratio = Catalog.SmallGridSize / (double)Catalog.LargeGridSize;
             float bore = (float)System.Math.Pow(ratio, -0.2);
 
+/// <summary>WithNoAnswer operation.</summary>
             int oneFaceShipped = WithNoAnswer(pairs, false, 1, h).Count;
+/// <summary>WithNoAnswer operation.</summary>
             int oneFaceBore = WithNoAnswer(pairs, false, 1, h * bore).Count;
+/// <summary>WithNoAnswer operation.</summary>
             int routedShipped = WithNoAnswer(pairs, false, RoutedFaces, h).Count;
+/// <summary>WithNoAnswer operation.</summary>
             int routedBore = WithNoAnswer(pairs, false, RoutedFaces, h * bore).Count;
 
             output.WriteLine("bore-derived small-grid coefficient x{0:n3}", bore);

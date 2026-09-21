@@ -3,19 +3,11 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The gate on a periodic diagnostic scan.
-    ///
-    /// It exists because the lost-room scan re-derived the same answer for every grid in a fleet
-    /// every thirty seconds — a game call per external cell, on 292 grids, all inside one frame's
-    /// after-step. Two properties matter and they pull against each other: a scan must never be
-    /// skipped when its subject has moved, and must never repeat when it has not.
-    /// </summary>
     public class RescanGateTests
     {
         private const int Interval = 240;
 
-        /// <summary>Runs a number of steps at one version, returning how many scans were allowed.</summary>
+/// <summary>Run operation.</summary>
         private static int Run(RescanGate gate, int version, int steps)
         {
             int scans = 0;
@@ -28,8 +20,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheFirstCheckScans operation.</summary>
         public void TheFirstCheckScans()
         {
+/// <summary>RescanGate operation.</summary>
             RescanGate gate = new RescanGate(Interval);
 
             Assert.True(gate.Due(0, 1));
@@ -37,8 +31,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NothingScansAgainUntilTheIntervalHasPassed operation.</summary>
         public void NothingScansAgainUntilTheIntervalHasPassed()
         {
+/// <summary>RescanGate operation.</summary>
             RescanGate gate = new RescanGate(Interval);
             gate.Due(0, 1);
 
@@ -46,10 +42,11 @@ namespace Thermodynamics.Tests
             Assert.True(gate.Due(1, 1));
         }
 
-        /// <summary>The saving. A fleet at anchor remaps nothing and must scan nothing.</summary>
         [Fact]
+/// <summary>AnUnchangedSubjectIsNeverScannedTwice operation.</summary>
         public void AnUnchangedSubjectIsNeverScannedTwice()
         {
+/// <summary>RescanGate operation.</summary>
             RescanGate gate = new RescanGate(Interval);
 
             Assert.Equal(1, Run(gate, 7, Interval * 20));
@@ -57,21 +54,21 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AChangedSubjectIsScannedAtTheNextInterval operation.</summary>
         public void AChangedSubjectIsScannedAtTheNextInterval()
         {
+/// <summary>RescanGate operation.</summary>
             RescanGate gate = new RescanGate(Interval);
             Run(gate, 7, Interval * 4);
 
             Assert.Equal(1, Run(gate, 8, Interval + 1));
         }
 
-        /// <summary>
-        /// A subject that changes every step is still held to the cadence: the interval is spent
-        /// whether or not anything moved, which is what makes this a budget rather than a trigger.
-        /// </summary>
         [Fact]
+/// <summary>ASubjectChangingConstantlyIsStillHeldToTheCadence operation.</summary>
         public void ASubjectChangingConstantlyIsStillHeldToTheCadence()
         {
+/// <summary>RescanGate operation.</summary>
             RescanGate gate = new RescanGate(Interval);
 
             int scans = 0;
@@ -84,8 +81,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>GoingIdleMakesTheNextReaderWaitForNothing operation.</summary>
         public void GoingIdleMakesTheNextReaderWaitForNothing()
         {
+/// <summary>RescanGate operation.</summary>
             RescanGate gate = new RescanGate(Interval);
             Run(gate, 3, Interval * 2);
 
@@ -95,13 +94,11 @@ namespace Thermodynamics.Tests
             Assert.True(gate.Due(3, 1));
         }
 
-        /// <summary>
-        /// A scan the caller ran itself — the report forces one at dump time — counts as this
-        /// cadence's scan, so the work is not immediately repeated.
-        /// </summary>
         [Fact]
+/// <summary>AForcedScanSatisfiesTheCadence operation.</summary>
         public void AForcedScanSatisfiesTheCadence()
         {
+/// <summary>RescanGate operation.</summary>
             RescanGate gate = new RescanGate(Interval);
             gate.Mark(12);
 
@@ -110,8 +107,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AMultiStepTickAdvancesByAllOfIt operation.</summary>
         public void AMultiStepTickAdvancesByAllOfIt()
         {
+/// <summary>RescanGate operation.</summary>
             RescanGate gate = new RescanGate(Interval);
             gate.Due(0, 1);
 
@@ -120,8 +119,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnIntervalOfZeroScansEveryChange operation.</summary>
         public void AnIntervalOfZeroScansEveryChange()
         {
+/// <summary>RescanGate operation.</summary>
             RescanGate gate = new RescanGate(0);
 
             Assert.True(gate.Due(1, 1));

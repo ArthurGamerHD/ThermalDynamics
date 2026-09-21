@@ -4,86 +4,41 @@ using System.Text;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// **Which blocks a balance pass should look at, in the order it should look at them.**
-    ///
-    /// <para>
-    /// A per-block pass that walks the game alphabetically spends most of itself on blocks nobody
-    /// notices. Two facts already exist and had never been put together: <see cref="BlockHeatIndex"/>
-    /// says whether a block can survive itself, from the definition alone and with no simulation at
-    /// all; and a corpus census says how much of a real fleet's heat each type actually carries.
-    /// **Severity says whether a block is wrong. Reach says whether being wrong matters.**
-    /// </para>
-    ///
-    /// <para>
-    /// So this ranks by the two together and prints both columns, because they disagree usefully:
-    /// `LargePrototechReactor` is the worst block in the game by index and almost nobody builds one,
-    /// while a jump drive is survivable and is three quarters of a loaded fleet's heat.
-    /// </para>
-    ///
-    /// <para>
-    /// **It is triage, not a verdict.** The index is a bound computed from a definition — every face
-    /// radiating to deep space *and* every face bolted to armour held at ambient, both at once — so
-    /// a block it clears is a block no arrangement can break, and a block it flags still has to be
-    /// rigged to find out what it actually does. That is the point: it turns "simulate 1,503 blocks"
-    /// into "simulate the twenty this names".
-    /// </para>
-    /// </summary>
     public static class BlockTriageLab
     {
-        /// <summary>One block, with what is wrong with it and how much that matters.</summary>
         public class Row
         {
             public string Subtype;
             public string TypeId;
             public bool Large;
 
-            /// <summary>Waste watts at full rating, from the definition.</summary>
             public float Watts;
 
-            /// <summary>Heat made over the most it could shed. Above 1 the block is impossible.</summary>
             public float Index;
 
-            /// <summary>The same against its own skin alone. Above 1 it cannot cool itself.</summary>
             public float SelfIndex;
 
-            /// <summary>Where it settles bare, K, and what it is allowed, K.</summary>
             public float EquilibriumKelvin;
 
             public float CriticalKelvin;
 
-            /// <summary>Share of a censused fleet's full-load waste this type carries, 0..1.</summary>
             public float FleetShare;
 
-            /// <summary>Ships in the census carrying at least one.</summary>
             public int Carriers;
 
-            /// <summary>
-            /// Severity times reach, which is what the list is sorted on.
-            ///
-            /// **Severity is the index clamped at 1 rather than the index itself**, because a block
-            /// at 17.9 is not eighteen times more worth fixing than one at 1.0 — both are
-            /// impossible, and past the line the number stops carrying information about priority.
-            /// Reach is the fleet share, floored so a block with no census row still sorts on its
-            /// own severity rather than vanishing.
-            /// </summary>
             public float Priority;
         }
 
-        /// <summary>Reach below which a type is ranked on severity alone.</summary>
         private const float ReachFloor = 0.0001f;
 
-        /// <summary>
-        /// Every heat-making block the game defines, ranked. `composition` is a census's
-        /// `composition.csv`; without one the reach column is empty and the ranking is severity
-        /// alone, which is stated rather than silently assumed.
-        /// </summary>
+/// <summary>Rank operation.</summary>
         public static List<Row> Rank(string composition)
         {
             Dictionary<string, float> share;
             Dictionary<string, int> carriers;
             Reach(composition, out share, out carriers);
 
+/// <summary>List operation.</summary>
             List<Row> rows = new List<Row>();
 
             foreach (BlockHeatIndex.Reading reading in BlockHeatIndex.All())
@@ -118,12 +73,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        /// <summary>
-        /// Each type's share of a census's full-load waste, and how many ships carry one.
-        ///
-        /// Read straight from the composition rather than through `provenance.py`, because this
-        /// wants every type rather than only the ones whose fraction is an admitted opinion.
-        /// </summary>
+/// <summary>Reach operation.</summary>
         private static void Reach(string composition,
             out Dictionary<string, float> share, out Dictionary<string, int> carriers)
         {
@@ -139,6 +89,7 @@ namespace Thermodynamics.Harness
 
             foreach (string line in System.IO.File.ReadLines(composition))
             {
+/// <summary>Split operation.</summary>
                 string[] fields = Split(line);
                 if (fields.Length < 6 || fields[3] == "type_id") continue;
 
@@ -157,6 +108,7 @@ namespace Thermodynamics.Harness
                 HashSet<string> set;
                 if (!ships.TryGetValue(type, out set))
                 {
+/// <summary>HashSet operation.</summary>
                     set = new HashSet<string>(StringComparer.Ordinal);
                     ships[type] = set;
                 }
@@ -176,33 +128,16 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// A CSV line, respecting the quotes a ship name needs. This lab's own copy was the naive
-        /// quote-toggle, which silently dropped the escaped quote the writers legitimately
-        /// produce — the drift CsvLine.Split's summary records.
-        /// </summary>
+/// <summary>Split operation.</summary>
         private static string[] Split(string line)
         {
             return CsvLine.Split(line).ToArray();
         }
 
-        /// <summary>
-        /// What each lever would have to do to bring one block to a target self index.
-        ///
-        /// <para>
-        /// `SelfIndex = watts / (e * sigma * A * (T^4 - Tambient^4))`, so dividing it by *k* means
-        /// dividing the watts by *k*, or multiplying the emissivity or the exposed area by *k* — or
-        /// **raising the rating by the fourth root of *k***, which is why the temperature lever is
-        /// always the mildest of the four and worth quoting first.
-        /// </para>
-        ///
-        /// <para>
-        /// Arithmetic on a definition, not a measurement: it says what would reach the target, and
-        /// nothing about whether the result is a block anybody wants. A rig says that.
-        /// </para>
-        /// </summary>
+/// <summary>Levers operation.</summary>
         public static string Levers(string composition, float target, float minimumReach)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("LEVERS TO A SELF INDEX OF " + target.ToString("n1")
                 + "  (blocks a censused fleet actually carries)");
@@ -240,8 +175,6 @@ namespace Thermodynamics.Harness
                 sb.Append((row.CriticalKelvin * rating).ToString("n0").PadLeft(11));
                 sb.Append(emissivity.ToString("n2").PadLeft(11));
 
-                // An emissivity that would have to go past 1 is not a lever at all, and saying so
-                // is the difference between four options and two.
                 if (emissivity > 0f && emissivity * k > 1f) sb.Append("   (emis impossible)");
 
                 sb.AppendLine();
@@ -256,9 +189,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        /// <summary>The ranking as a table, for crossing against a population.</summary>
+/// <summary>Csv operation.</summary>
         public static string Csv(string composition)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("subtype,type_id,large,watts,index,self_index,settles_k,critical_k,fleet_share,carriers");
 
@@ -280,10 +214,13 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>Report operation.</summary>
         public static string Report(string composition, int take)
         {
+/// <summary>Rank operation.</summary>
             List<Row> rows = Rank(composition);
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("BLOCK TRIAGE  (no simulation: an index from the definition, a reach from a census)");
             sb.AppendLine("  index      heat made over the most it could shed, every face radiating AND bolted");

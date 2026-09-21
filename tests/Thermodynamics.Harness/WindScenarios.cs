@@ -7,17 +7,6 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// The wind model put through every world the game ships and every corner of one — the whole model
-    /// against real planets at their real sizes, where the unit tests hold each piece against a case
-    /// built to exercise it. Space Engineers planets are a hundredth the size of real ones, so every
-    /// borrowed constant lands somewhere unexpected.
-    ///
-    /// <para>
-    /// Each scenario states what it is for and what would be wrong, and they run in about a second
-    /// between them. See environment.md, The scenario matrix, and World size.
-    /// </para>
-    /// </summary>
     public static class WindScenarios
     {
         public class Scenario
@@ -27,39 +16,27 @@ namespace Thermodynamics.Harness
             public WindLab.Planet Planet;
             public WindLab.Options Options;
 
-            /// <summary>Latitudes this scenario is interested in, or null for the standard sweep.</summary>
             public double[] Latitudes;
 
-            /// <summary>Heights above ground, or null for the option's own list.</summary>
             public double[] Heights;
         }
 
-        /// <summary>
-        /// Latitudes that matter to this model rather than a plain sweep: the equator, where the
-        /// field's known fault is; the middles of the three circulation bands at 15°, 45° and 75°,
-        /// where the wind is purely zonal; and the band edges at 30° and 60°, where it is purely
-        /// meridional. Negative and positive, because the hemispheres are mirrored and that is worth
-        /// catching if it ever stops being true.
-        /// </summary>
         public static readonly double[] InterestingLatitudes =
         {
             -89d, -75d, -60d, -45d, -30d, -15d, -1d, 0d, 1d, 15d, 30d, 45d, 60d, 75d, 89d,
         };
 
-        /// <summary>
-        /// Heights that mean something: on the ground, at the weather-station reference, either side
-        /// of the diurnal crossover, at the top of the boundary layer, and well above it.
-        /// </summary>
         public static readonly double[] InterestingHeights =
         {
             0d, 0.5d, 2d, 10d, 40d, 80d, 160d, 400d, 600d, 1200d, 5000d, 20000d,
         };
 
+/// <summary>All operation.</summary>
         public static List<Scenario> All()
         {
+/// <summary>List operation.</summary>
             List<Scenario> list = new List<Scenario>();
 
-            // ---- every shipped world, at the size the game usually makes it -------------------
             for (int i = 0; i < WindLab.Planet.VanillaNames.Length; i++)
             {
                 string name = WindLab.Planet.VanillaNames[i];
@@ -74,7 +51,6 @@ namespace Thermodynamics.Harness
                 });
             }
 
-            // ---- the size range, on one planet type, so size is the only variable -------------
             double[] diameters = { 19000d, 60000d, 80000d, 120000d };
             for (int i = 0; i < diameters.Length; i++)
             {
@@ -89,7 +65,6 @@ namespace Thermodynamics.Harness
                 });
             }
 
-            // A modded extreme at each end. Nothing stops a mod shipping these.
             list.Add(new Scenario
             {
                 Name = "size:2km-moddedtiny",
@@ -110,7 +85,6 @@ namespace Thermodynamics.Harness
                 Heights = InterestingHeights,
             });
 
-            // ---- settings pushed to their ends ----------------------------------------------
             list.Add(Tuned("settings:glass", "the smoothest ground the setting allows",
                 o => { o.Roughness = 0.0001f; }));
 
@@ -144,7 +118,6 @@ namespace Thermodynamics.Harness
             list.Add(Tuned("settings:storm", "the worst weather the game reports",
                 o => { o.WeatherIntensity = 1f; o.WeatherWind = 2f; }));
 
-            // ---- degenerate inputs -----------------------------------------------------------
             WindLab.Planet still = WindLab.Planet.Vanilla("EarthLike");
             still.MaxWindSpeed = 0f;
             list.Add(new Scenario
@@ -196,6 +169,7 @@ namespace Thermodynamics.Harness
             return list;
         }
 
+/// <summary>Tuned operation.</summary>
         private static Scenario Tuned(string name, string asks, Action<WindLab.Options> tune)
         {
             WindLab.Options options = new WindLab.Options();
@@ -212,7 +186,6 @@ namespace Thermodynamics.Harness
             };
         }
 
-        /// <summary>What one scenario produced, reduced to the figures worth comparing.</summary>
         public struct Outcome
         {
             public string Name;
@@ -233,57 +206,29 @@ namespace Thermodynamics.Harness
             public int OverCeiling;
             public int Bad;
 
-            /// <summary>Samples where the wind was over the friction threshold with nothing moving.</summary>
             public int OverFriction;
 
-            /// <summary>
-            /// The same, and the fastest wind, taken only where a grid could be **parked**.
-            ///
-            /// The distinction `B17` turns on. A grid four kilometres up is flying, and the wind it
-            /// meets there is stronger because the boundary-layer profile says so — that is the
-            /// model working. A grid standing on the ground in a wind over the friction threshold
-            /// is the defect the wind field was written to prevent, and nothing had ever separated
-            /// the two.
-            /// </summary>
             public int OverFrictionNearGround;
 
             public float MaxSpeedNearGround;
         }
 
-        /// <summary>
-        /// Height above ground at or below which a grid is taken to be parked rather than flying, m.
-        ///
-        /// A ship is landed within a hull's height of the ground; a hundred metres is generous and
-        /// still an order of magnitude below where the profile does its work.
-        /// </summary>
         public const float ParkedHeightMetres = 100f;
 
-        /// <summary>
-        /// Speed at which friction heating on a hull becomes material — the bound wind scenarios
-        /// judge parked and calm air against.
-        ///
-        /// <para>
-        /// **A constant now, because the setting it read stopped meaning this.** It was read from
-        /// `FrictionAtSpeedsAbove` while that was the speed heating started at (`D3`'s lesson —
-        /// a transcribed `100f` here judged parked grids against twice the shipped figure). The
-        /// shipped floor is 0 since 2026-09-02 — friction is live at every speed and vanishes at
-        /// low ones by the v³ law — so "where heating starts" no longer exists as a setting, and
-        /// what these scenarios actually ask is *where it starts to matter*: 50 m/s is where the
-        /// term reaches ~150 W per windward m², the same order as convection on a mildly warm
-        /// hull, and it is the figure the wind field was originally shaped against.
-        /// </para>
-        /// </summary>
         public const float FrictionThreshold = 50f;
 
+/// <summary>Run operation.</summary>
         public static Outcome Run(Scenario scenario)
         {
             WindLab.Options options = scenario.Options;
             if (scenario.Heights != null) options.Heights = scenario.Heights;
 
             List<WindLab.Row> rows = scenario.Latitudes != null
+/// <summary>RunAt operation.</summary>
                 ? RunAt(scenario.Planet, options, scenario.Latitudes)
                 : WindLab.Run(scenario.Planet, options);
 
+/// <summary>Outcome operation.</summary>
             Outcome outcome = new Outcome();
             outcome.Name = scenario.Name;
             outcome.Asks = scenario.Asks;
@@ -344,21 +289,19 @@ namespace Thermodynamics.Harness
             return outcome;
         }
 
-        /// <summary>
-        /// A day at named latitudes rather than an even sweep, so the band edges and the equator are
-        /// hit exactly rather than straddled.
-        /// </summary>
+/// <summary>RunAt operation.</summary>
         public static List<WindLab.Row> RunAt(
             WindLab.Planet planet, WindLab.Options options, double[] latitudes)
         {
+/// <summary>List operation.</summary>
             List<WindLab.Row> all = new List<WindLab.Row>();
 
             for (int i = 0; i < latitudes.Length; i++)
             {
+/// <summary>Copy operation.</summary>
                 WindLab.Options one = Copy(options);
                 one.LatitudeLimit = Math.Abs(latitudes[i]);
 
-                // A single latitude, taken by making the sweep's limit and step land on it.
                 one.LatitudeStep = one.LatitudeLimit > 0d ? one.LatitudeLimit * 2d : 1d;
 
                 List<WindLab.Row> rows = WindLab.Run(planet, one);
@@ -372,6 +315,7 @@ namespace Thermodynamics.Harness
             return all;
         }
 
+/// <summary>Copy operation.</summary>
         private static WindLab.Options Copy(WindLab.Options options)
         {
             return new WindLab.Options
@@ -394,9 +338,12 @@ namespace Thermodynamics.Harness
             };
         }
 
+/// <summary>Report operation.</summary>
         public static string Report()
         {
+/// <summary>All operation.</summary>
             List<Scenario> scenarios = All();
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.Append("Wind model across every shipped world, every size and every corner\n\n");
@@ -426,6 +373,7 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < scenarios.Count; i++)
             {
+/// <summary>Run operation.</summary>
                 Outcome o = Run(scenarios[i]);
 
                 sb.Append(string.Format(CultureInfo.InvariantCulture,

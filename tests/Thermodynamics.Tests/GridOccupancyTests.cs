@@ -6,30 +6,10 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **The bit in front of the probe says exactly what the probe would have said.**
-    ///
-    /// <para>
-    /// The air rebuild and the room-side exposure refresh walk the six faces of every cell of every
-    /// room and ask the grid what stands across each. Nine faces in ten hold nothing, so a bitset
-    /// over the padded bounding box answers first and the dictionary is asked only where the bit is
-    /// set (performance.md, Pass 4, Iteration 6). That is a fast path in front of a lookup, which is
-    /// the shape that goes wrong quietly: a bit clear where a block stands is a wall that stops
-    /// bounding a room, and nothing else in the model would report it.
-    /// </para>
-    ///
-    /// <para>
-    /// So these check the bit against the dictionary — two structures written by different code —
-    /// over every cell of a real hull, and check that the set is not allowed to go stale.
-    /// </para>
-    /// </summary>
     public class GridOccupancyTests
     {
-        /// <summary>
-        /// Over the whole padded box, the bit and the dictionary agree cell for cell. Not only over
-        /// the occupied cells: a bit set where nothing stands is the other half of the failure.
-        /// </summary>
         [Fact]
+/// <summary>TheOccupancyBitAgreesWithTheBlockTableOverTheWholeBox operation.</summary>
         public void TheOccupancyBitAgreesWithTheBlockTableOverTheWholeBox()
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(), 4000);
@@ -37,6 +17,7 @@ namespace Thermodynamics.Tests
             CellBitset occupied = grid.Occupancy();
 
             Vector3I min = grid.Min - Vector3I.One;
+/// <summary>Vector3I operation.</summary>
             Vector3I maxExclusive = grid.Max + new Vector3I(2, 2, 2);
 
             int set = 0;
@@ -48,6 +29,7 @@ namespace Thermodynamics.Tests
                 {
                     for (int x = min.X; x < maxExclusive.X; x++)
                     {
+/// <summary>Vector3I operation.</summary>
                         Vector3I cell = new Vector3I(x, y, z);
                         bool bit = occupied.Contains(cell);
                         bool block = grid.GetAtCell(cell) != null;
@@ -67,13 +49,8 @@ namespace Thermodynamics.Tests
             Assert.True(judged > set * 2, "the box is barely larger than the hull, so no empty cells were judged");
         }
 
-        /// <summary>
-        /// **Stepping by index lands on the neighbour the offset names.** The walk adds a per-face
-        /// constant to a cell's index rather than deriving the neighbour's, which is only sound
-        /// away from the box's own boundary — so it is checked over every cell of a real hull, on
-        /// every face, against deriving it.
-        /// </summary>
         [Fact]
+/// <summary>SteppingAnIndexByAFaceLandsOnThatFacesNeighbour operation.</summary>
         public void SteppingAnIndexByAFaceLandsOnThatFacesNeighbour()
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(), 4000);
@@ -107,12 +84,8 @@ namespace Thermodynamics.Tests
             Assert.True(judged > 10000, "only " + judged + " steps were judged");
         }
 
-        /// <summary>
-        /// A block placed after the set was built is in it the next time it is asked for. Without
-        /// this the set is a cache with no invalidation, which is the same defect as a fast path
-        /// that answers wrongly — only later.
-        /// </summary>
         [Fact]
+/// <summary>PlacingOrRemovingABlockRebuildsTheSet operation.</summary>
         public void PlacingOrRemovingABlockRebuildsTheSet()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -121,7 +94,7 @@ namespace Thermodynamics.Tests
             GridModel grid = builder.Grid;
             Assert.True(grid.Occupancy().Contains(new Vector3I(0, 0, 0)));
 
-            // Inside the shell's hollow, so the box does not change and only the bit can.
+/// <summary>Vector3I operation.</summary>
             Vector3I inside = new Vector3I(1, 1, 1);
             Assert.False(grid.Occupancy().Contains(inside));
 

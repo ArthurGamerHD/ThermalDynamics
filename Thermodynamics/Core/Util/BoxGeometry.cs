@@ -3,20 +3,13 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// Analytic geometry on integer, axis-aligned block bounds — every function O(1) in the size of the
-    /// blocks, which is what lets one grid mix block sizes. Bounds are half-open and areas are counted
-    /// in lattice cell faces. See scale-design.md, Cell-centric to boundary-centric.
-    /// </summary>
     public static class BoxGeometry
     {
-        /// <summary>Face index for the +axis direction: X → Right, Y → Up, Z → Backward.</summary>
         private static readonly int[] PositiveFace = { Face.Right, Face.Up, Face.Backward };
 
-        /// <summary>Face index for the -axis direction: X → Left, Y → Down, Z → Forward.</summary>
         private static readonly int[] NegativeFace = { Face.Left, Face.Down, Face.Forward };
 
-        /// <summary>Component of a vector on an axis: 0 = X, 1 = Y, 2 = Z.</summary>
+/// <summary>Component operation.</summary>
         public static int Component(Vector3I v, int axis)
         {
             switch (axis)
@@ -27,66 +20,53 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>
-        /// One face of a box, as the numbers a caller needs to walk its cells.
-        ///
-        /// **Six lines of arithmetic that were written out four times.** The slab index is the far
-        /// row on a positive face and the near one on a negative face — the `- 1` is the half-open
-        /// bound and is exactly the sort of thing that is right in three copies and wrong in the
-        /// fourth, silently, because a wrong slab still walks a real face of a real block.
-        /// </summary>
         public struct FaceSpan
         {
-            /// <summary>The face's unit offset, which is what a neighbour lookup steps by.</summary>
             public Vector3I Offset;
 
-            /// <summary>The axis the face is normal to: 0 = X, 1 = Y, 2 = Z.</summary>
             public int Axis;
 
-            /// <summary>Whether the face is on the axis's positive side.</summary>
             public bool Positive;
 
-            /// <summary>The row of cells the face is made of, on <see cref="Axis"/>.</summary>
             public int Slab;
 
-            /// <summary>The two axes the face spans, in the order a caller should nest them.</summary>
             public int U;
             public int V;
 
-            /// <summary>Half-open bounds of the face on <see cref="U"/> and <see cref="V"/>.</summary>
             public int MinU;
             public int MaxExclusiveU;
             public int MinV;
             public int MaxExclusiveV;
         }
 
-        /// <summary>
-        /// The <see cref="FaceSpan"/> of one face of a half-open box.
-        ///
-        /// The caller supplies the face index because what it does with the span differs — counting
-        /// exposure, auditing it, or building a room map — while the frame it walks does not.
-        /// </summary>
+/// <summary>Span operation.</summary>
         public static FaceSpan Span(Vector3I min, Vector3I maxExclusive, int face)
         {
             Vector3I offset = Face.Offsets[face];
             int axis = Face.Axis(face);
+/// <summary>Component operation.</summary>
             bool positive = Component(offset, axis) > 0;
 
             FaceSpan span;
             span.Offset = offset;
             span.Axis = axis;
             span.Positive = positive;
+/// <summary>Component operation.</summary>
             span.Slab = positive ? Component(maxExclusive, axis) - 1 : Component(min, axis);
             span.U = (axis + 1) % 3;
             span.V = (axis + 2) % 3;
+/// <summary>Component operation.</summary>
             span.MinU = Component(min, span.U);
+/// <summary>Component operation.</summary>
             span.MaxExclusiveU = Component(maxExclusive, span.U);
+/// <summary>Component operation.</summary>
             span.MinV = Component(min, span.V);
+/// <summary>Component operation.</summary>
             span.MaxExclusiveV = Component(maxExclusive, span.V);
             return span;
         }
 
-        /// <summary>Length of the overlap of two half-open intervals, or 0 when they do not overlap.</summary>
+/// <summary>Overlap operation.</summary>
         public static int Overlap(int minA, int maxExclusiveA, int minB, int maxExclusiveB)
         {
             int low = Math.Max(minA, minB);
@@ -94,22 +74,20 @@ namespace Thermodynamics.Core
             return high > low ? high - low : 0;
         }
 
-        /// <summary>
-        /// The face of box A that touches box B, or -1 when they do not share a face.
-        ///
-        /// Two boxes touch when they abut on one axis and overlap on both of the others. Boxes
-        /// that merely meet along an edge or at a corner do not touch, because their shared area
-        /// is zero.
-        /// </summary>
+/// <summary>TouchingFace operation.</summary>
         public static int TouchingFace(
             Vector3I minA, Vector3I maxExclusiveA,
             Vector3I minB, Vector3I maxExclusiveB)
         {
             for (int axis = 0; axis < 3; axis++)
             {
+/// <summary>Component operation.</summary>
                 int aMin = Component(minA, axis);
+/// <summary>Component operation.</summary>
                 int aMax = Component(maxExclusiveA, axis);
+/// <summary>Component operation.</summary>
                 int bMin = Component(minB, axis);
+/// <summary>Component operation.</summary>
                 int bMax = Component(maxExclusiveB, axis);
 
                 bool positive = aMax == bMin;
@@ -123,10 +101,7 @@ namespace Thermodynamics.Core
             return -1;
         }
 
-        /// <summary>
-        /// Shared area of two boxes abutting on <paramref name="axis"/>, in lattice cell faces.
-        /// This is the product of their overlaps on the two perpendicular axes.
-        /// </summary>
+/// <summary>ContactCells operation.</summary>
         public static int ContactCells(
             Vector3I minA, Vector3I maxExclusiveA,
             Vector3I minB, Vector3I maxExclusiveB,
@@ -137,6 +112,7 @@ namespace Thermodynamics.Core
             {
                 if (other == axis) continue;
 
+/// <summary>Overlap operation.</summary>
                 int overlap = Overlap(
                     Component(minA, other), Component(maxExclusiveA, other),
                     Component(minB, other), Component(maxExclusiveB, other));
@@ -147,23 +123,18 @@ namespace Thermodynamics.Core
             return area;
         }
 
-        /// <summary>
-        /// Shared area of two boxes in lattice cell faces, whichever axis they abut on, or 0
-        /// when they do not touch.
-        /// </summary>
+/// <summary>ContactCells operation.</summary>
         public static int ContactCells(
             Vector3I minA, Vector3I maxExclusiveA,
             Vector3I minB, Vector3I maxExclusiveB)
         {
+/// <summary>TouchingFace operation.</summary>
             int face = TouchingFace(minA, maxExclusiveA, minB, maxExclusiveB);
             if (face < 0) return 0;
             return ContactCells(minA, maxExclusiveA, minB, maxExclusiveB, Face.Axis(face));
         }
 
-        /// <summary>
-        /// Area of one face of a box, in lattice cell faces: the product of the two extents
-        /// perpendicular to that face.
-        /// </summary>
+/// <summary>FaceAreaCells operation.</summary>
         public static int FaceAreaCells(Vector3I extents, int face)
         {
             int axis = Face.Axis(face);
@@ -176,10 +147,7 @@ namespace Thermodynamics.Core
             return area;
         }
 
-        /// <summary>
-        /// Total boundary area of a box, in lattice cell faces. Equal to the sum of
-        /// <see cref="FaceAreaCells"/> over all six faces.
-        /// </summary>
+/// <summary>SurfaceAreaCells operation.</summary>
         public static int SurfaceAreaCells(Vector3I extents)
         {
             int x = Math.Max(0, extents.X);
@@ -188,22 +156,13 @@ namespace Thermodynamics.Core
             return 2 * ((x * y) + (y * z) + (x * z));
         }
 
-        /// <summary>
-        /// Depth of a box along an axis, in metres — the distance heat travels straight through
-        /// it. Used as twice the half-depth in the series-conduction formula.
-        /// </summary>
+/// <summary>Depth operation.</summary>
         public static float Depth(Vector3I extents, int axis, float latticeSize)
         {
             return Math.Max(1, Component(extents, axis)) * latticeSize;
         }
 
-        /// <summary>
-        /// Enumerates the lattice cells of one face of a box, in grid space. This is the box's
-        /// two-dimensional boundary on that side, not its volume.
-        /// </summary>
-        /// <remarks>
-        /// Ordering is stable: the two perpendicular axes are walked in ascending index order.
-        /// </remarks>
+/// <summary>ForEachFaceCell operation.</summary>
         public static void ForEachFaceCell(
             Vector3I min, Vector3I maxExclusive, int face, Action<Vector3I> action)
         {
@@ -212,9 +171,10 @@ namespace Thermodynamics.Core
             int axis = Face.Axis(face);
             bool positive = Face.Offsets[face].X + Face.Offsets[face].Y + Face.Offsets[face].Z > 0;
 
-            // The slab of cells on this side of the box.
             int fixedValue = positive
+/// <summary>Component operation.</summary>
                 ? Component(maxExclusive, axis) - 1
+/// <summary>Component operation.</summary>
                 : Component(min, axis);
 
             int u = (axis + 1) % 3;
@@ -225,15 +185,18 @@ namespace Thermodynamics.Core
                 for (int b = Component(min, v); b < Component(maxExclusive, v); b++)
                 {
                     Vector3I cell = Vector3I.Zero;
+/// <summary>WithComponent operation.</summary>
                     cell = WithComponent(cell, axis, fixedValue);
+/// <summary>WithComponent operation.</summary>
                     cell = WithComponent(cell, u, a);
+/// <summary>WithComponent operation.</summary>
                     cell = WithComponent(cell, v, b);
                     action(cell);
                 }
             }
         }
 
-        /// <summary>Returns a copy of a vector with one axis replaced.</summary>
+/// <summary>WithComponent operation.</summary>
         public static Vector3I WithComponent(Vector3I v, int axis, int value)
         {
             switch (axis)

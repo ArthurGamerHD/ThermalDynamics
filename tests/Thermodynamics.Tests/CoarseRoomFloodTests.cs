@@ -5,18 +5,12 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The supercell flood finds the shipped mapper's partition exactly — external count, room
-    /// count, and every room's cell set under a bijection of ids — on the grids whose shapes
-    /// exercise its seams: rooms smaller than a supercell, rooms spanning many, structure on a
-    /// supercell boundary, a closed door's roomable cell, a partially sealed cell's pocket, and a
-    /// dealt hull. A speedup measured on any other partition would be a speedup at finding the
-    /// wrong rooms, so this suite is what lets `bench coarserooms` report milliseconds at all.
-    /// </summary>
     public class CoarseRoomFloodTests
     {
+/// <summary>Prepared operation.</summary>
         private static ThermalSimulation Prepared(GridBuilder builder)
         {
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -28,13 +22,16 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>AssertMatches operation.</summary>
         private static void AssertMatches(GridBuilder builder, int edge, string what)
         {
+/// <summary>Prepared operation.</summary>
             ThermalSimulation simulation = Prepared(builder);
             RoomMap oracle = simulation.Rooms.Map;
             Assert.True(oracle.RoomCount > 0,
                 what + ": the mapper found no rooms, so agreement proves nothing");
 
+/// <summary>CoarseRoomFlood operation.</summary>
             CoarseRoomFlood flood = new CoarseRoomFlood(edge);
             flood.Run(simulation.Grid, simulation.Surfaces);
 
@@ -42,8 +39,8 @@ namespace Thermodynamics.Tests
             Assert.True(mismatch == null, what + " at edge " + edge + ": " + mismatch);
         }
 
-        /// <summary>A shell around one pocket, at edges that divide the box and edges that leave ragged tiles.</summary>
         [Fact]
+/// <summary>OneRoomShellMatchesAtEveryEdge operation.</summary>
         public void OneRoomShellMatchesAtEveryEdge()
         {
             foreach (int edge in new[] { 2, 3, 4, 7 })
@@ -54,11 +51,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Two pockets separated by a one-cell wall that lands inside a supercell, so the coarse
-        /// walk must split what its own tile joins.
-        /// </summary>
         [Fact]
+/// <summary>AWallInsideOneSupercellStillSplitsTheRooms operation.</summary>
         public void AWallInsideOneSupercellStillSplitsTheRooms()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -72,8 +66,8 @@ namespace Thermodynamics.Tests
             AssertMatches(builder, 4, "divided shell");
         }
 
-        /// <summary>An open lattice block is air to the flood, at fine and at coarse alike.</summary>
         [Fact]
+/// <summary>AnOpenFrameCellJoinsItsRoom operation.</summary>
         public void AnOpenFrameCellJoinsItsRoom()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -82,12 +76,8 @@ namespace Thermodynamics.Tests
             AssertMatches(builder, 3, "framed pocket");
         }
 
-        /// <summary>
-        /// A closed door's cell is sealed and yet roomable — the one exception to "all six bits is
-        /// structure" — and the prototype must inherit the exception or every hull with a door
-        /// disagrees by a room.
-        /// </summary>
         [Fact]
+/// <summary>AClosedDoorCellIsARoomNotStructure operation.</summary>
         public void AClosedDoorCellIsARoomNotStructure()
         {
             GridBuilder builder = RoomFixtures.DooredShell();
@@ -95,8 +85,8 @@ namespace Thermodynamics.Tests
             AssertMatches(builder, 3, "shell with a door");
         }
 
-        /// <summary>A dealt census hull, the shape the benchmark measures, at the edge it defaults to.</summary>
         [Fact]
+/// <summary>ACensusHullMatchesTheMapper operation.</summary>
         public void ACensusHullMatchesTheMapper()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -104,8 +94,8 @@ namespace Thermodynamics.Tests
             AssertMatches(builder, 4, "census hull");
         }
 
-        /// <summary>The SE2 case: the same hull on a refined lattice, walked at the refinement's own edge.</summary>
         [Fact]
+/// <summary>ARefinedHullMatchesTheMapperAtTheLatticeFactor operation.</summary>
         public void ARefinedHullMatchesTheMapperAtTheLatticeFactor()
         {
             GridBuilder builder = GridBuilder.Large();

@@ -11,81 +11,49 @@ namespace RichHudFramework.UI
 	using CollectionData = MyTuple<Func<int, ApiMemberAccessor>, Func<int>>;
 	using RichStringMembers = MyTuple<StringBuilder, GlyphFormatMembers>;
 
-	/// <summary>
-	/// A non-scrolling list of arbitrary selectable UI elements.
-	/// Specialization of SelectionBox using HudChain
-	/// </summary>
-	/// <typeparam name="TContainer">Container element type wrapping the UI element</typeparam>
-	/// <typeparam name="TElement">UI element in the list</typeparam>
-	/// <typeparam name="TValue">Data type stored associated with each entry</typeparam>
 	public class ChainSelectionBox<TContainer, TElement, TValue>
 		: SelectionBox<HudChain<TContainer, TElement>, TContainer, TElement, TValue>
+/// <summary>new operation.</summary>
 		where TContainer : class, IListBoxEntry<TElement, TValue>, new()
 		where TElement : HudElementBase, IMinLabelElement
 	{
+/// <summary>ChainSelectionBox operation.</summary>
 		public ChainSelectionBox(HudParentBase parent) : base(parent)
 		{ }
 
+/// <summary>ChainSelectionBox operation.</summary>
 		public ChainSelectionBox() : base(null)
 		{ }
 	}
 
-	/// <summary>
-	/// A scrollable list of arbitrary selectable UI elements.
-	/// Generic SelectionBox using ScrollBox
-	/// </summary>
-	/// <typeparam name="TContainer">Container element type wrapping the UI element</typeparam>
-	/// <typeparam name="TElement">UI element in the list</typeparam>
-	/// <typeparam name="TValue">Data type stored associated with each entry</typeparam>
 	public class ScrollSelectionBox<TContainer, TElement, TValue>
 		: SelectionBox<ScrollBox<TContainer, TElement>, TContainer, TElement, TValue>
+/// <summary>new operation.</summary>
 		where TContainer : class, IListBoxEntry<TElement, TValue>, new()
 		where TElement : HudElementBase, IMinLabelElement
 	{
-		/// <summary>
-		/// Background color
-		/// </summary>
 		public Color Color { get { return EntryChain.Color; } set { EntryChain.Color = value; } }
 
-		/// <summary>
-		/// If enabled scrolling using the scrollbar and mousewheel will be allowed
-		/// </summary>
 		public virtual bool EnableScrolling { get { return EntryChain.EnableScrolling; } set { EntryChain.EnableScrolling = value; } }
 
-		/// <summary>
-		/// Enable/disable smooth scrolling and range clipping
-		/// </summary>
 		public virtual bool UseSmoothScrolling { get { return EntryChain.UseSmoothScrolling; } set { EntryChain.UseSmoothScrolling = value; } }
 
-		/// <summary>
-		/// Minimum number of visible elements allowed. Supercedes maximum length. If the number of elements that
-		/// can fit within the maximum length is less than this value, then this element will expand beyond its maximum
-		/// size.
-		/// </summary>
 		public virtual int MinVisibleCount { get { return EntryChain.MinVisibleCount; } set { EntryChain.MinVisibleCount = value; } }
 
-		/// <summary>
-		/// Minimum total length (on the align axis) of visible members allowed in the scrollbox.
-		/// </summary>
 		public virtual float MinLength { get { return EntryChain.MinLength; } set { EntryChain.MinLength = value; } }
 
-		/// <summary>
-		/// Entry highlight selection box width
-		/// </summary>
-		/// <exclude/>
 		protected override float HighlightWidth =>
 			EntryChain.Size.X - Padding.X - EntryChain.ScrollBar.Width - EntryChain.Padding.X - HighlightPadding.X;
 
+/// <summary>ScrollSelectionBox operation.</summary>
 		public ScrollSelectionBox(HudParentBase parent) : base(parent)
 		{ }
 
+/// <summary>ScrollSelectionBox operation.</summary>
 		public ScrollSelectionBox() : base(null)
 		{ }
 
-		/// <summary>
-		/// Updates visible entry range to track input scrolling
-		/// </summary>
-		/// <exclude/>
+/// <summary>HandleInput operation.</summary>
 		protected override void HandleInput(Vector2 cursorPos)
 		{
 			if (listInput.KeyboardScroll)
@@ -94,6 +62,7 @@ namespace RichHudFramework.UI
 				{
 					EntryChain.End = listInput.HighlightIndex;
 				}
+/// <summary>if operation.</summary>
 				else if (listInput.HighlightIndex < EntryChain.Start)
 				{
 					EntryChain.Start = listInput.HighlightIndex;
@@ -102,72 +71,52 @@ namespace RichHudFramework.UI
 		}
 	}
 
-	/// <summary>
-	/// Generic list of pooled, selectable entries of uniform size.
-	/// </summary>
-	/// <typeparam name="TChain">Linear stacking element containing entries. May or may not be scrollable.</typeparam>
-	/// <typeparam name="TContainer">Container element type wrapping the UI element</typeparam>
-	/// <typeparam name="TElement">UI element in the list</typeparam>
-	/// <typeparam name="TValue">Data type stored associated with each entry</typeparam>
 	public class SelectionBox<TChain, TContainer, TElement, TValue>
 		: SelectionBoxBase<TChain, TContainer, TElement>
+/// <summary>new operation.</summary>
 		where TChain : HudChain<TContainer, TElement>, new()
+/// <summary>new operation.</summary>
 		where TContainer : class, IListBoxEntry<TElement, TValue>, new()
 		where TElement : HudElementBase, IMinLabelElement
 	{
-		/// <summary>
-		/// Enables collection-initializer syntax (e.g., new SelectionBox { ListContainer = { entry1, entry2 } })
-		/// </summary>
 		public new SelectionBox<TChain, TContainer, TElement, TValue> ListContainer => this;
 
-		/// <summary>
-		/// Padding applied to list members.
-		/// </summary>
 		public Vector2 MemberPadding { get; set; }
 
-		/// <summary>
-		/// Sets padding for the list independent of selection box padding.
-		/// </summary>
 		public virtual Vector2 ListPadding { get { return EntryChain.Padding; } set { EntryChain.Padding = value; } }
 
-		/// <summary>
-		/// Uniform height applied to list entries
-		/// </summary>
 		public float LineHeight { get; set; }
 
-		/// <summary>
-		/// Tintable border surrounding the selection box
-		/// </summary>
 		public readonly BorderBox border;
 
-		/// <summary>
-		/// Pool of reusable entry containers
-		/// </summary>
-		/// <exclude/>
 		protected readonly ObjectPool<TContainer> entryPool;
 
+/// <summary>SelectionBox operation.</summary>
 		public SelectionBox(HudParentBase parent) : base(parent)
 		{
+/// <summary>ObjectPool operation.</summary>
 			entryPool = new ObjectPool<TContainer>(GetNewEntry, ResetEntry);
 			EntryChain.SizingMode = HudChainSizingModes.FitMembersOffAxis;
 
+/// <summary>BorderBox operation.</summary>
 			border = new BorderBox(EntryChain)
 			{
 				DimAlignment = DimAlignments.Size,
+/// <summary>Color operation.</summary>
 				Color = new Color(58, 68, 77),
 				Thickness = 1f,
 			};
 
 			LineHeight = 28f;
+/// <summary>Vector2 operation.</summary>
 			MemberPadding = new Vector2(20f, 6f);
 		}
 
+/// <summary>SelectionBox operation.</summary>
 		public SelectionBox() : this(null)
 		{ }
 
-		/// <summary>
-		/// Adds a new pooled container entry to the list in its default state and returns it.
-		/// </summary>
+/// <summary>Adds a new.</summary>
 		public TContainer AddNew()
 		{
 			TContainer entry = entryPool.Get();
@@ -175,10 +124,7 @@ namespace RichHudFramework.UI
 			return entry;
 		}
 
-		/// <summary>
-		/// Adds a new member to the list box with the given name and associated
-		/// object.
-		/// </summary>
+/// <summary>Adds a .</summary>
 		public TContainer Add(RichText name, TValue assocMember, bool enabled = true)
 		{
 			TContainer entry = entryPool.Get();
@@ -191,9 +137,7 @@ namespace RichHudFramework.UI
 			return entry;
 		}
 
-		/// <summary>
-		/// Adds the given range of entries to the list box.
-		/// </summary>
+/// <summary>Adds a range.</summary>
 		public void AddRange(IReadOnlyList<MyTuple<RichText, TValue, bool>> entries)
 		{
 			for (int n = 0; n < entries.Count; n++)
@@ -207,9 +151,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Inserts an entry at the given index.
-		/// </summary>
+/// <summary>Insert operation.</summary>
 		public void Insert(int index, RichText name, TValue assocMember, bool enabled = true)
 		{
 			TContainer entry = entryPool.Get();
@@ -220,9 +162,7 @@ namespace RichHudFramework.UI
 			EntryChain.Insert(index, entry);
 		}
 
-		/// <summary>
-		/// Removes the member at the given index from the list box.
-		/// </summary>
+/// <summary>Removes the at.</summary>
 		public void RemoveAt(int index)
 		{
 			TContainer entry = EntryChain.Collection[index];
@@ -230,9 +170,7 @@ namespace RichHudFramework.UI
 			entryPool.Return(entry);
 		}
 
-		/// <summary>
-		/// Removes the member at the given index from the list box.
-		/// </summary>
+/// <summary>Removes the .</summary>
 		public bool Remove(TContainer entry)
 		{
 			if (EntryChain.Remove(entry))
@@ -244,18 +182,14 @@ namespace RichHudFramework.UI
 				return false;
 		}
 
-		/// <summary>
-		/// Removes the specified range of indices from the list box.
-		/// </summary>
+/// <summary>Removes the range.</summary>
 		public void RemoveRange(int index, int count)
 		{
 			entryPool.ReturnRange(EntryChain.Collection, index, count - index);
 			EntryChain.RemoveRange(index, count);
 		}
 
-		/// <summary>
-		/// Removes all entries from the list box.
-		/// </summary>
+/// <summary>ClearEntries operation.</summary>
 		public void ClearEntries()
 		{
 			ClearSelection();
@@ -263,9 +197,7 @@ namespace RichHudFramework.UI
 			EntryChain.Clear();
 		}
 
-		/// <summary>
-		/// Sets the selection to the member associated with the given object.
-		/// </summary>
+/// <summary>Sets the selection.</summary>
 		public void SetSelection(TValue assocMember)
 		{
 			int index = EntryChain.FindIndex(x => assocMember.Equals(x.AssocMember));
@@ -276,12 +208,10 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Returns an empty entry with formatting set/reset to match the selection box
-		/// </summary>
-		/// <exclude/>
+/// <summary>Returns the newentry.</summary>
 		protected virtual TContainer GetNewEntry()
 		{
+/// <summary>TContainer operation.</summary>
 			var entry = new TContainer();
 			entry.Element.TextBoard.Format = Format;
 			entry.Element.Padding = MemberPadding;
@@ -292,10 +222,7 @@ namespace RichHudFramework.UI
 			return entry;
 		}
 
-		/// <summary>
-		/// Clears and returns an entry to the internal pool
-		/// </summary>
-		/// <exclude/>
+/// <summary>ResetEntry operation.</summary>
 		protected virtual void ResetEntry(TContainer entry)
 		{
 			if (Value == entry)
@@ -304,10 +231,7 @@ namespace RichHudFramework.UI
 			entry.Reset();
 		}
 
-		/// <summary>
-		/// Internal API interop method
-		/// </summary>
-		/// <exclude/>
+/// <summary>Returns the orsetmember.</summary>
 		public virtual object GetOrSetMember(object data, int memberEnum)
 		{
 			var member = (ListBoxAccessors)memberEnum;
@@ -359,6 +283,7 @@ namespace RichHudFramework.UI
 						break;
 					}
 				case ListBoxAccessors.Remove:
+/// <summary>Removes the .</summary>
 					return Remove(data as TContainer);
 				case ListBoxAccessors.RemoveAt:
 					RemoveAt((int)data); break;

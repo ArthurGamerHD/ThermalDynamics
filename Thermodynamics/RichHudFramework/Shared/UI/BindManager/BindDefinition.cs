@@ -8,18 +8,13 @@ namespace RichHudFramework
 
 	namespace UI
 	{
-		/// <summary>
-		/// Wrapper for serializing bind aliases (alternate key combinations) to XML.
-		/// </summary>
 		[XmlType(TypeName = "Alias")]
 		public struct BindAliasDefinition
 		{
-			/// <summary>
-			/// The names of the controls in this alias combination.
-			/// </summary>
 			[XmlArray("Controls")]
 			public string[] controlNames;
 
+/// <summary>BindAliasDefinition operation.</summary>
 			public BindAliasDefinition(string[] controlNames)
 			{
 				this.controlNames = controlNames;
@@ -30,37 +25,26 @@ namespace RichHudFramework
 				return aliasDef.controlNames;
 			}
 
+/// <summary>BindAliasDefinition operation.</summary>
 			public static implicit operator BindAliasDefinition(string[] alias)
 			{
 				return new BindAliasDefinition(alias);
 			}
 		}
 
-		/// <summary>
-		/// Serializable container for individual key binds.
-		/// <para>Includes the bind name, the primary control combination, and any optional aliases.</para>
-		/// </summary>
 		[XmlType(TypeName = "Bind")]
 		public struct BindDefinition
 		{
-			/// <summary>
-			/// The unique identifier/name of the bind.
-			/// </summary>
 			[XmlAttribute]
 			public string name;
 
-			/// <summary>
-			/// The list of control names for the primary key combination.
-			/// </summary>
 			[XmlArray("Controls")]
 			public string[] controlNames;
 
-			/// <summary>
-			/// Optional list of alternative key combinations (aliases) for this bind.
-			/// </summary>
 			[XmlArray("Aliases")]
 			public BindAliasDefinition[] aliases;
 
+/// <summary>BindDefinition operation.</summary>
 			public BindDefinition(string name, string[] controlNames, BindAliasDefinition[] aliases = null)
 			{
 				this.name = name;
@@ -68,17 +52,13 @@ namespace RichHudFramework
 				this.aliases = aliases;
 			}
 
-			/// <summary>
-			/// Converts legacy tuple data into a BindDefinition.
-			/// </summary>
+/// <summary>BindDefinition operation.</summary>
 			public static implicit operator BindDefinition(BindDefinitionDataOld value)
 			{
 				return new BindDefinition(value.Item1, value.Item2);
 			}
 
-			/// <summary>
-			/// Explicitly converts internal Tuple-based bind data to the serializable BindDefinition struct.
-			/// </summary>
+/// <summary>BindDefinition operation.</summary>
 			public static explicit operator BindDefinition(BindDefinitionData value)
 			{
 				BindAliasDefinition[] aliases = null;
@@ -89,15 +69,14 @@ namespace RichHudFramework
 					aliases = new BindAliasDefinition[aliasData.Length];
 
 					for (int i = 0; i < aliasData.Length; i++)
+/// <summary>BindAliasDefinition operation.</summary>
 						aliases[i] = new BindAliasDefinition(aliasData[i]);
 				}
 
 				return new BindDefinition(value.Item1, value.Item2, aliases);
 			}
 
-			/// <summary>
-			/// Explicitly converts a BindDefinition back to the internal Tuple-based format.
-			/// </summary>
+/// <summary>BindDefinitionData operation.</summary>
 			public static explicit operator BindDefinitionData(BindDefinition value)
 			{
 				string[][] aliasData = null;

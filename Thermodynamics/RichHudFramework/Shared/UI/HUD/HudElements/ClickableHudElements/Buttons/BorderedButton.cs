@@ -3,57 +3,28 @@ using VRageMath;
 
 namespace RichHudFramework.UI
 {
-    /// <summary>
-    /// <see cref="LabelBoxButton"/> styled to closely match the appearance of buttons in the SE terminal.
-    /// <para>Formatting temporarily changes when it gains input focus.</para>
-    /// </summary>
     public class BorderedButton : LabelBoxButton
     {
-        /// <summary>
-        /// Color of the border surrounding the button
-        /// </summary>
         public Color BorderColor { get { return border.Color; } set { border.Color = value; } }
 
-        /// <summary>
-        /// Thickness of the border surrounding the button
-        /// </summary>
         public float BorderThickness { get { return border.Thickness; } set { border.Thickness = value; } }
 
-        /// <summary>
-        /// Background highlight color
-        /// </summary>
         public override Color HighlightColor { get; set; }
 
-        /// <summary>
-        /// Text color used when the control gains focus.
-        /// </summary>
         public Color FocusTextColor { get; set; }
 
-        /// <summary>
-        /// Background color used when the control gains focus.
-        /// </summary>
         public Color FocusColor { get; set; } 
 
-        /// <summary>
-        /// If true, then the button will change formatting when it takes focus.
-        /// Enabled by default.
-        /// </summary>
         public bool UseFocusFormatting { get; set; }
 
-		/// <summary>
-		/// Renders a colored border around the button
-		/// </summary>
-		/// <exclude/>
 		protected readonly BorderBox border;
 
-        /// <summary>
-        /// Background and text colors last used before highlighting
-        /// </summary>
-        /// <exclude/>
         protected Color lastColor, lastTextColor;
 
+/// <summary>BorderedButton operation.</summary>
         public BorderedButton(HudParentBase parent) : base(parent)
         {
+/// <summary>BorderBox operation.</summary>
             border = new BorderBox(this)
             {
                 Thickness = 1f,
@@ -65,8 +36,11 @@ namespace RichHudFramework.UI
             FocusTextColor = TerminalFormatting.Charcoal;
             Text = "NewBorderedButton";
 
+/// <summary>Vector2 operation.</summary>
             TextPadding = new Vector2(32f, 0f);
+/// <summary>Vector2 operation.</summary>
             Padding = new Vector2(37f, 0f);
+/// <summary>Vector2 operation.</summary>
             Size = new Vector2(253f, 50f);
             HighlightEnabled = true;
 
@@ -80,13 +54,11 @@ namespace RichHudFramework.UI
 			FocusHandler.LostInputFocus += LoseFocus;
         }
 
+/// <summary>BorderedButton operation.</summary>
         public BorderedButton() : this(null)
         { }
 
-        /// <summary>
-        /// Handles keyboard input when the button has input focus
-        /// </summary>
-        /// <exclude/>
+/// <summary>HandleInput operation.</summary>
 		protected override void HandleInput(Vector2 cursorPos)
         {
             if (FocusHandler.HasFocus)
@@ -98,10 +70,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Invoked when the cursor first howvers over the button
-		/// </summary>
-		/// <exclude/>
+/// <summary>CursorEnter operation.</summary>
 		protected override void CursorEnter(object sender, EventArgs args)
         {
             if (HighlightEnabled)
@@ -121,10 +90,7 @@ namespace RichHudFramework.UI
             }
         }
 
-		/// <summary>
-		/// Invoked when the cursor moves out of the button
-		/// </summary>
-		/// <exclude/>
+/// <summary>CursorExit operation.</summary>
 		protected override void CursorExit(object sender, EventArgs args)
         {
             if (HighlightEnabled)
@@ -144,10 +110,7 @@ namespace RichHudFramework.UI
             }
         }
 
-		/// <summary>
-		/// Invoked when the button has input focus
-		/// </summary>
-		/// <exclude/>
+/// <summary>GainFocus operation.</summary>
 		protected virtual void GainFocus(object sender, EventArgs args)
         {
             if (UseFocusFormatting)
@@ -163,10 +126,7 @@ namespace RichHudFramework.UI
             }
         }
 
-		/// <summary>
-		/// Invoked when the button loses input focus
-		/// </summary>
-		/// <exclude/>
+/// <summary>LoseFocus operation.</summary>
 		protected virtual void LoseFocus(object sender, EventArgs args)
         {
             if (UseFocusFormatting)

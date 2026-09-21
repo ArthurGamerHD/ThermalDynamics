@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Which test classes cost more than the fast lane's threshold, and which of them say so.
 
 **The rule this checks is stated in tests/README.md and has rotted twice.** A class costing more
@@ -28,17 +27,14 @@ import re
 import sys
 import xml.etree.ElementTree as ElementTree
 
-#: Seconds of suite time above which a class belongs in the slow lane. The rule's own number.
 THRESHOLD = 2.0
 
-#: Below this a class carrying the trait is being skipped for no saving. Deliberately well under
-#: THRESHOLD rather than equal to it, so a class hovering either side of the rule is not reported as
-#: drift every time the machine breathes.
 CHEAP = 0.5
 
 NS = "{http://microsoft.com/schemas/VisualStudio/TeamTest/2010}"
 
 
+# seconds operation.
 def seconds(duration):
     """A trx `hh:mm:ss.fffffff` as seconds, or 0 where the runner recorded none."""
     if not duration:
@@ -51,6 +47,7 @@ def seconds(duration):
     return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
 
 
+# costs operation.
 def costs(path):
     """`{class: seconds}` summed over every test the run recorded."""
     tree = ElementTree.parse(path)
@@ -73,6 +70,7 @@ def costs(path):
     return total
 
 
+# tagged operation.
 def tagged(source):
     """Every class carrying `[Trait("speed", "slow")]`, from the test sources.
 
@@ -93,6 +91,7 @@ def tagged(source):
     return found
 
 
+# drift operation.
 def drift(total, slow):
     """`(over threshold and untagged, under CHEAP and tagged)`, each sorted by cost."""
     heavy = sorted(((n, s) for n, s in total.items() if s >= THRESHOLD and n not in slow),
@@ -102,6 +101,7 @@ def drift(total, slow):
     return heavy, idle
 
 
+# main operation.
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     path = args[0] if args else "out/lanes/lanes.trx"
@@ -145,8 +145,6 @@ def main():
         print()
         print("  the lane holds: nothing over the threshold is untagged, and nothing tagged is free")
 
-    # Non-zero only for the direction that makes the lane slow. An over-tagged class costs coverage
-    # rather than time, and failing on it would make this refuse to pass on a machine that ran fast.
     return 1 if heavy else 0
 
 

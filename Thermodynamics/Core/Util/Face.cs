@@ -3,11 +3,6 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// The six block faces, in the one canonical order used everywhere in the simulation.
-    /// The ordering matters: <see cref="Opposite"/> relies on index + opposite == 5, and the
-    /// surface bit flags are packed in this order.
-    /// </summary>
     public static class Face
     {
         public const int Forward = 0;
@@ -18,7 +13,6 @@ namespace Thermodynamics.Core
         public const int Backward = 5;
         public const int Count = 6;
 
-        /// <summary>Unit offsets, indexed by face.</summary>
         public static readonly Vector3I[] Offsets = new Vector3I[]
         {
             Vector3I.Forward,
@@ -29,14 +23,19 @@ namespace Thermodynamics.Core
             Vector3I.Backward,
         };
 
-        /// <summary>Float unit offsets, indexed by face.</summary>
         public static readonly Vector3[] Normals = new Vector3[]
         {
+/// <summary>Vector3 operation.</summary>
             new Vector3(0, 0, -1),
+/// <summary>Vector3 operation.</summary>
             new Vector3(-1, 0, 0),
+/// <summary>Vector3 operation.</summary>
             new Vector3(0, 1, 0),
+/// <summary>Vector3 operation.</summary>
             new Vector3(0, -1, 0),
+/// <summary>Vector3 operation.</summary>
             new Vector3(1, 0, 0),
+/// <summary>Vector3 operation.</summary>
             new Vector3(0, 0, 1),
         };
 
@@ -45,20 +44,19 @@ namespace Thermodynamics.Core
             "Forward", "Left", "Up", "Down", "Right", "Backward"
         };
 
-        /// <summary>The face pointing the other way.</summary>
+/// <summary>Opposite operation.</summary>
         public static int Opposite(int face)
         {
             return 5 - face;
         }
 
+/// <summary>Name operation.</summary>
         public static string Name(int face)
         {
             return (face >= 0 && face < Count) ? NamesByIndex[face] : "NotAFace";
         }
 
-        /// <summary>
-        /// Face index for a single-axis unit offset, or -1 when the vector is not one.
-        /// </summary>
+/// <summary>IndexOf operation.</summary>
         public static int IndexOf(Vector3I offset)
         {
             for (int i = 0; i < Count; i++)
@@ -68,9 +66,7 @@ namespace Thermodynamics.Core
             return -1;
         }
 
-        /// <summary>
-        /// The axis this face lies on: 0 = X, 1 = Y, 2 = Z.
-        /// </summary>
+/// <summary>Axis operation.</summary>
         public static int Axis(int face)
         {
             switch (face)

@@ -4,15 +4,8 @@ using VRageMath;
 
 namespace RichHudFramework.UI.Rendering
 {
-	/// <summary>
-	/// Renders a regular 2D polygon (e.g., triangle, hexagon, circle approximation) using billboards.
-	/// The shape is constructed as a triangle fan from the center.
-	/// </summary>
 	public class PolyBoard
 	{
-		/// <summary>
-		/// The color tint applied to the polygon material.
-		/// </summary>
 		public virtual Color Color
 		{
 			get { return _color; }
@@ -25,9 +18,6 @@ namespace RichHudFramework.UI.Rendering
 			}
 		}
 
-		/// <summary>
-		/// The texture applied to the polygon.
-		/// </summary>
 		public virtual Material Material
 		{
 			get { return matFrame.Material; }
@@ -42,9 +32,6 @@ namespace RichHudFramework.UI.Rendering
 			}
 		}
 
-		/// <summary>
-		/// Determines how the texture is scaled to fit the polygon's bounding box.
-		/// </summary>
 		public MaterialAlignment MatAlignment
 		{
 			get { return matFrame.Alignment; }
@@ -58,10 +45,6 @@ namespace RichHudFramework.UI.Rendering
 			}
 		}
 
-		/// <summary>
-		/// The number of sides (vertices) on the polygon perimeter.
-		/// Higher values approximate a circle.
-		/// </summary>
 		public virtual int Sides
 		{
 			get { return _sides; }
@@ -74,58 +57,42 @@ namespace RichHudFramework.UI.Rendering
 			}
 		}
 
-		/// <exclude/>
 		protected int _sides;
 
-		/// <exclude/>
 		protected Color _color;
 
-		/// <summary>
-		/// Internal flags used to indicate stale vertex positions and material alignment
-		/// </summary>
-		/// <exclude/>
 		protected bool updateVertices, updateMatFit;
 
-		/// <summary>
-		/// Material for texturing an object with an arbitrary number of vertices
-		/// </summary>
-		/// <exclude/>
 		protected PolyMaterial polyMat;
 
-		/// <exclude/>
 		protected readonly MaterialFrame matFrame;
 
-		/// <summary>
-		/// Unscaled internal geometry
-		/// </summary>
-		/// <exclude/>
 		protected readonly List<int> triangles;
-		/// <exclude/>
 		protected readonly List<Vector2> vertices;
 
-		/// <summary>
-		/// Buffer for final scaled vertices
-		/// </summary>
-		/// <exclude/>
 		protected readonly List<Vector2> drawVertices;
 
+/// <summary>PolyBoard operation.</summary>
 		public PolyBoard()
 		{
+/// <summary>List operation.</summary>
 			triangles = new List<int>();
+/// <summary>List operation.</summary>
 			vertices = new List<Vector2>();
+/// <summary>List operation.</summary>
 			drawVertices = new List<Vector2>();
 
+/// <summary>MaterialFrame operation.</summary>
 			matFrame = new MaterialFrame();
 			polyMat = PolyMaterial.Default;
+/// <summary>List operation.</summary>
 			polyMat.texCoords = new List<Vector2>();
 
 			_sides = 16;
 			updateVertices = true;
 		}
 
-		/// <summary>
-		/// Renders the full polygon defined by <see cref="Sides"/> with the specified dimensions and position.
-		/// </summary>
+/// <summary>Draw operation.</summary>
 		public virtual void Draw(Vector2 size, Vector2 origin, MatrixD[] matrixRef)
 		{
 			if (_sides > 2)
@@ -143,7 +110,6 @@ namespace RichHudFramework.UI.Rendering
 					updateMatFit = false;
 				}
 
-				// Generate final vertices for drawing from unscaled vertices
 				for (int i = 0; i < drawVertices.Count; i++)
 				{
 					drawVertices[i] = origin + size * vertices[i];
@@ -153,10 +119,7 @@ namespace RichHudFramework.UI.Rendering
 			}
 		}
 
-		/// <summary>
-		/// Renders a specific range of faces (pie slice) of the polygon.
-		/// </summary>
-		/// <param name="faceRange">The start and end index of the triangles to draw.</param>
+/// <summary>Draw operation.</summary>
 		public virtual void Draw(Vector2 size, Vector2 origin, Vector2I faceRange, MatrixD[] matrixRef)
 		{
 			if (_sides > 2)
@@ -174,7 +137,6 @@ namespace RichHudFramework.UI.Rendering
 					updateMatFit = false;
 				}
 
-				// Generate final vertices for drawing from unscaled vertices
 				int max = drawVertices.Count - 1;
 				drawVertices[max] = origin + size * vertices[max];
 
@@ -188,10 +150,7 @@ namespace RichHudFramework.UI.Rendering
 			}
 		}
 
-		/// <summary>
-		/// Calculates the center offset of a specific slice of the polygon relative to the billboard center.
-		/// Useful for radial menus or separated pie charts.
-		/// </summary>
+/// <summary>Returns the sliceoffset.</summary>
 		public virtual Vector2 GetSliceOffset(Vector2 bbSize, Vector2I range)
 		{
 			if (updateVertices)
@@ -205,7 +164,7 @@ namespace RichHudFramework.UI.Rendering
 			return bbSize * (start + end + center) / 3f;
 		}
 
-		/// <exclude/>
+/// <summary>GeneratePolygon operation.</summary>
 		protected virtual void GeneratePolygon()
 		{
 			GenerateVertices();
@@ -218,7 +177,7 @@ namespace RichHudFramework.UI.Rendering
 			updateMatFit = true;
 		}
 
-		/// <exclude/>
+/// <summary>GenerateTriangles operation.</summary>
 		protected virtual void GenerateTriangles()
 		{
 			int max = vertices.Count - 1;
@@ -233,7 +192,7 @@ namespace RichHudFramework.UI.Rendering
 			}
 		}
 
-		/// <exclude/>
+/// <summary>GenerateTextureCoordinates operation.</summary>
 		protected virtual void GenerateTextureCoordinates()
 		{
 			Vector2 texScale = polyMat.texBounds.Size,
@@ -251,7 +210,7 @@ namespace RichHudFramework.UI.Rendering
 			}
 		}
 
-		/// <exclude/>
+/// <summary>GenerateVertices operation.</summary>
 		protected virtual void GenerateVertices()
 		{
 			float rotStep = (float)(Math.PI * 2f / _sides),

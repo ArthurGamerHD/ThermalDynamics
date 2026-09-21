@@ -7,20 +7,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Temperature thresholds another mod can register, and the edge semantics they promise.
-    ///
-    /// <para>
-    /// The whole difficulty is not reporting twice. A block sitting exactly on a threshold, a block
-    /// crossing it inside a multi-step update, and a block crossing the wrong way each have a case
-    /// here, because a threshold that fires repeatedly is worse than one that never fires: the caller
-    /// acts on it.
-    /// </para>
-    /// </summary>
     public class ThresholdTests
     {
+/// <summary>OneBlock operation.</summary>
         private static ThermalSimulation OneBlock(float initial, ThermalSettings settings = null)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings effective = settings ?? new ThermalSettings();
             effective.EnableEnvironment = false;
             effective.Derive();
@@ -31,8 +23,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NothingRegisteredReportsNothing operation.</summary>
         public void NothingRegisteredReportsNothing()
         {
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation simulation = OneBlock(300f);
             simulation.Solver.Nodes[0].Block.PowerProducedWatts = 15e6f;
             simulation.Solver.RefreshHeatGeneration();
@@ -43,8 +37,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ARisingBlockReportsOnceAsItPasses operation.</summary>
         public void ARisingBlockReportsOnceAsItPasses()
         {
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation simulation = OneBlock(300f);
             int id = simulation.Thresholds.Add(400f, ThresholdDirection.Rising);
 
@@ -69,19 +65,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ARisingThresholdIgnoresABlockCoolingThroughIt operation.</summary>
         public void ARisingThresholdIgnoresABlockCoolingThroughIt()
         {
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation simulation = OneBlock(500f);
             simulation.Thresholds.Add(400f, ThresholdDirection.Rising);
 
-            // radiate into empty space until it falls past the threshold
             simulation.Settings.EnableEnvironment = true;
             simulation.Settings.Derive();
 
-            // Long enough for the block to have radiated past the threshold, which is a length
-            // of thermal time rather than of steps: at the clock `C24` ships four hundred steps
-            // leave it above 400 K and the test reads "no crossing" from a run that had not got
-            // there yet. See LabClock.
             int seen = 0;
             for (int i = 0; i < LabClock.Steps(400); i++)
             {
@@ -94,8 +87,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AFallingThresholdCatchesIt operation.</summary>
         public void AFallingThresholdCatchesIt()
         {
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation simulation = OneBlock(500f);
             simulation.Thresholds.Add(400f, ThresholdDirection.Falling);
             simulation.Settings.EnableEnvironment = true;
@@ -118,11 +113,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>BothCatchesEitherDirection operation.</summary>
         public void BothCatchesEitherDirection()
         {
+/// <summary>ThermalThresholds operation.</summary>
             ThermalThresholds thresholds = new ThermalThresholds();
             int id = thresholds.Add(400f, ThresholdDirection.Both);
 
+/// <summary>List operation.</summary>
             List<ThresholdCrossing> results = new List<ThresholdCrossing>();
             thresholds.Collect(null, 390f, 410f, results);
             thresholds.Collect(null, 410f, 390f, results);
@@ -134,14 +132,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SittingOnAThresholdDoesNotReportTwice operation.</summary>
         public void SittingOnAThresholdDoesNotReportTwice()
         {
+/// <summary>ThermalThresholds operation.</summary>
             ThermalThresholds thresholds = new ThermalThresholds();
             thresholds.Add(400f, ThresholdDirection.Both);
 
+/// <summary>List operation.</summary>
             List<ThresholdCrossing> results = new List<ThresholdCrossing>();
 
-            // up onto the threshold exactly, then past it
             thresholds.Collect(null, 399f, 400f, results);
             thresholds.Collect(null, 400f, 401f, results);
 
@@ -149,8 +149,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>CrossingsSurviveAMultiStepUpdate operation.</summary>
         public void CrossingsSurviveAMultiStepUpdate()
         {
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation simulation = OneBlock(300f);
             simulation.Thresholds.Add(310f, ThresholdDirection.Rising);
             simulation.Thresholds.Add(320f, ThresholdDirection.Rising);
@@ -158,15 +160,16 @@ namespace Thermodynamics.Tests
             simulation.Solver.Nodes[0].Block.PowerProducedWatts = 15e6f;
             simulation.Solver.RefreshHeatGeneration();
 
-            // one call, many steps: both thresholds are passed inside it and both must survive
             simulation.StepExact(400, Worlds.Shadow());
 
             Assert.Equal(2, simulation.Crossings.Count);
         }
 
         [Fact]
+/// <summary>RemovingAThresholdStopsIt operation.</summary>
         public void RemovingAThresholdStopsIt()
         {
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation simulation = OneBlock(300f);
             int id = simulation.Thresholds.Add(310f, ThresholdDirection.Rising);
             Assert.True(simulation.Thresholds.Remove(id));
@@ -179,8 +182,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>CrossingCarriesTheBlockThatCrossed operation.</summary>
         public void CrossingCarriesTheBlockThatCrossed()
         {
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation simulation = OneBlock(300f);
             simulation.Thresholds.Add(310f, ThresholdDirection.Rising);
 

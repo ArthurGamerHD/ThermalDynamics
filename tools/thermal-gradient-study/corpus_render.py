@@ -13,8 +13,10 @@ from study import BinaryCell
 
 W,H=640,580
 FONT=subprocess.check_output(['fc-match','-f','%{file}','sans'],text=True).strip()
+# font operation.
 def font(n): return ImageFont.truetype(FONT,n)
 
+# estimates operation.
 def estimates(nodes):
     points=[tuple(n['position'])+(n['kelvin'],) for n in nodes]
     assert len(set(p[:3] for p in points)) == len(points)
@@ -45,6 +47,7 @@ def estimates(nodes):
     return [truth,uniform,directed],{'uniformCells':len(groups),'uniformWidthBlocks':width,'directedCells':len(leaves),
         'uniformMeanErrorK':float(np.mean(uniform-truth)),'directedMeanErrorK':float(np.mean(directed-truth))}
 
+# raster operation.
 def raster(nodes,cutaway=False):
     mins=np.array([n['min'] for n in nodes],float)-.5
     maxs=np.array([n['max'] for n in nodes],float)-.5
@@ -82,6 +85,7 @@ def raster(nodes,cutaway=False):
     assert (owner>=0).any()
     return owner,shade
 
+# main operation.
 def main(data,out,palette_source,flat=False):
     out.mkdir(parents=True,exist_ok=True)
     files=sorted(data.glob('*.json')); snapshots=sorted([json.loads(p.read_text()) for p in files],key=lambda s:(s['workshopId'],s['seconds']))
@@ -90,7 +94,6 @@ def main(data,out,palette_source,flat=False):
     ranges={}
     for s in snapshots:
         ranges.setdefault(s['workshopId'],[]).extend(n['kelvin'] for n in s['nodes'])
-    # Shared per-ship full physical range across phases; no percentile clipping or per-candidate exposure.
     ranges={k:(min(v)-2,max(min(v)+20,max(v)+2)) for k,v in ranges.items()}
     index=['<!doctype html><meta charset="utf-8"><title>Corpus thermal appearance lab</title><style>body{background:#111820;color:#dde6ec;font:17px sans-serif;margin:32px}img{width:100%;max-width:1920px}a{color:#9dd7ef}section{margin-bottom:40px}</style><h1>Corpus thermal appearance lab</h1><p>Real blueprints and solver temperatures. Offline block-bound proxies, not native game screenshots. Each comparison has identical camera, exposure and geometry. Surface shading is an illustrative 0–12% cue, not an implemented shader.</p><p>Reference = individual simulated block temperatures. Uniform = coarse maximum groups. Directed = temperature-driven partition assigned at block positions, not a native volume-rendering prediction. Cutaways deliberately remove half the hull.</p>']
     if flat:
@@ -113,7 +116,6 @@ def main(data,out,palette_source,flat=False):
                     rgb*=shade[:,:,None];rgb[~mask]=[5,8,12]
                     sheet.paste(Image.fromarray(np.uint8(np.clip(rgb,0,255))),(column*W,110))
                     d.text((column*W+18,80),label,font=font(20),fill='white')
-                # The unshaded shared legend makes physical temperature interpretation explicit.
                 for x in range(500):
                     v=x/499;c=(int(18+225*v),)*3 if mode=='grey' else tuple((palette[round(v*255)]*255).astype(int))
                     d.line((20+x,H+126,20+x,H+139),fill=c)

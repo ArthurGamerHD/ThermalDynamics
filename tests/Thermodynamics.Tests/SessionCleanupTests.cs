@@ -9,16 +9,21 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>Pins the failed-unload incident: injected faults must not skip later cleanup or disappear from reports.</summary>
     public class SessionCleanupTests
     {
         [Fact]
+/// <summary>FailedTelemetryCannotPreventLightsAndDefinitionsFromUnloading operation.</summary>
         public void FailedTelemetryCannotPreventLightsAndDefinitionsFromUnloading()
         {
+/// <summary>List operation.</summary>
             var visited = new List<string>();
+/// <summary>List operation.</summary>
             var faults = new List<int>();
+/// <summary>NullReferenceException operation.</summary>
             var resetFailure = new NullReferenceException("injected telemetry reset failure");
+/// <summary>InvalidOperationException operation.</summary>
             var lightFailure = new InvalidOperationException("injected light cleanup failure");
+/// <summary>List operation.</summary>
             var errors = new List<Exception>();
             SessionCleanup.Run(new Action[]
             {
@@ -36,6 +41,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>CleanAndRepeatedCleanupKeepsOrderWithoutReportingFaults operation.</summary>
         public void CleanAndRepeatedCleanupKeepsOrderWithoutReportingFaults()
         {
             int value = 9;
@@ -49,6 +55,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ActualSessionUnloadRoutesAllStagesThroughTheFailureBoundary operation.</summary>
         public void ActualSessionUnloadRoutesAllStagesThroughTheFailureBoundary()
         {
             string path = Path.Combine(ShippedBlocks.RepoRoot(), "Thermodynamics/Session.cs");

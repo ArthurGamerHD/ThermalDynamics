@@ -3,16 +3,15 @@ using VRageMath;
 
 namespace Thermodynamics.Presentation
 {
-    /// <summary>Analytic apparent planet geometry, independent of terrain mesh LOD.</summary>
     public static class ThermalVisionCelestial
     {
-        /// <summary>Reusable disc basis; camera-dependent work is performed once per body.</summary>
         public struct Disc
         {
             private Vector3D centre, axis, right, up;
             private double distance, radius;
             public double AngularRadius;
 
+/// <summary>Disc operation.</summary>
             public Disc(Vector3D centreFromEye, double bodyRadius)
             {
                 centre=centreFromEye; radius=bodyRadius; distance=centre.Length();
@@ -22,7 +21,7 @@ namespace Thermodynamics.Presentation
                 AngularRadius=Math.Asin(radius/distance);
             }
 
-            /// <summary>Prepares a ring shared by all azimuth samples. Requires an exterior eye.</summary>
+/// <summary>PrepareRing operation.</summary>
             public Ring PrepareRing(double fraction)
             {
                 double phi=AngularRadius*Math.Max(0d,Math.Min(1d,fraction));
@@ -32,20 +31,21 @@ namespace Thermodynamics.Presentation
             }
         }
 
-        /// <summary>Samples a prepared ring without repeated basis construction or trigonometry.</summary>
         public struct Ring
         {
             private Vector3D axis, right, up, centre;
             private double hit;
+/// <summary>Ring operation.</summary>
             internal Ring(Vector3D a,Vector3D r,Vector3D u,Vector3D c,double h)
             { axis=a; right=r; up=u; centre=c; hit=h; }
+/// <summary>Sample operation.</summary>
             public void Sample(double cosine,double sine,out Vector3D ray,out Vector3D normal)
             {
                 ray=axis+right*cosine+up*sine;
                 normal=Vector3D.Normalize(ray*hit-centre);
             }
         }
-        /// <summary>Angular frustum test with no far-plane rejection for celestial bodies.</summary>
+/// <summary>InViewport operation.</summary>
         public static bool InViewport(Vector3D centre,double radius,MatrixD camera,MatrixD projection)
         {
             Vector3D p=Vector3D.TransformNormal(centre,MatrixD.Transpose(camera.GetOrientation()));
@@ -56,7 +56,7 @@ namespace Thermodynamics.Presentation
                 && p.Y*projection.M22+depth*(1-projection.M32)>=-radius*Math.Sqrt(projection.M22*projection.M22+(1-projection.M32)*(1-projection.M32))
                 && -p.Y*projection.M22+depth*(1+projection.M32)>=-radius*Math.Sqrt(projection.M22*projection.M22+(1+projection.M32)*(1+projection.M32));
         }
-        /// <summary>Samples a visible spherical disc from its centre to its tangent limb.</summary>
+/// <summary>Sample operation.</summary>
         public static bool Sample(Vector3D centreFromEye,double radius,double ring,double angle,
             out Vector3D ray,out Vector3D normal)
         {
@@ -74,7 +74,7 @@ namespace Thermodynamics.Presentation
             return true;
         }
 
-        /// <summary>Projects an angular ray onto a far camera plane, preserving apparent size.</summary>
+/// <summary>Project operation.</summary>
         public static bool Project(Vector3D ray,MatrixD camera,double depth,out Vector3D point)
         {
             double forward=Vector3D.Dot(ray,camera.Forward);

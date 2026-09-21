@@ -8,55 +8,30 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Sweeps <see cref="ThermalSettings.Frequency"/> to find where the substep cost bottoms out.
-    /// **Total substep work is invariant in Frequency** — <c>Frequency x (stiffness / Frequency)</c> —
-    /// until substeps per step reach their floor of one, so the theory predicts a knee rather than a
-    /// slope, and says nothing about which side of it is cheaper on a clock.
-    /// See configuration.md, Frequency is not the cost dial it looks like.
-    /// </summary>
     public static class FrequencyLab
     {
         public class Row
         {
             public int Frequency;
 
-            /// <summary>Substeps the last step actually took.</summary>
             public float SubstepsPerStep;
 
-            /// <summary>The product — what the theory says is invariant.</summary>
             public float SubstepsPerSecond;
 
-            /// <summary>What the stability estimate asked for, before any cap.</summary>
             public float Demanded;
 
-            /// <summary>True when the estimate was refused; the answer is then approximate.</summary>
             public bool Starved;
 
             public double MillisecondsPerStep;
 
-            /// <summary>The figure that decides it: real milliseconds per simulated second.</summary>
             public double MillisecondsPerSimulatedSecond;
 
             public float SettledKelvin;
 
-            /// <summary>
-            /// Simulated seconds to reach 90 % of the total rise.
-            ///
-            /// The column that answers whether Frequency is a propagation dial. Substepping is an
-            /// accuracy device, not a rate one: the integrated transfer over a second is the same
-            /// however the second is chopped up, so if this is flat then Frequency moves no heat
-            /// and is purely latency and cost.
-            /// </summary>
             public float SecondsTo90Percent;
         }
 
-        /// <summary>
-        /// A grid with a real stiffness spread: heavy armour, light panels and a driven source, so
-        /// the substep estimate has something to say at every frequency. Deliberately not a census
-        /// hull — this measures the shape of a curve, and a smaller grid measures it faster without
-        /// changing the shape.
-        /// </summary>
+/// <summary>Rig operation.</summary>
         private static ThermalSimulation Rig(ThermalSettings settings, out BlockInstance source)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -70,8 +45,8 @@ namespace Thermodynamics.Harness
                 }
             }
 
-            // The light block that sets the pace, as a real ship's fittings do.
             builder.Place(BlockModel.Solid("Fitting", Vector3I.One, 24f, Catalog.DefaultThermal()),
+/// <summary>Vector3I operation.</summary>
                 new Vector3I(0, 2, 0));
 
             builder.Place(Catalog.Reactor(), new Vector3I(5, 2, 5));
@@ -81,26 +56,20 @@ namespace Thermodynamics.Harness
             return builder.BuildSimulation(settings, 293.15f);
         }
 
-        /// <summary>
-        /// The sweep. Simulated seconds are held constant so the rows are comparable.
-        ///
-        /// Warmed up and taken best-of-three. The first cut of this reported a five-fold drop in
-        /// cost between Frequency 6 and 8, which was the JIT finishing rather than anything about
-        /// frequency: the early rows paid for compiling the solver and the later ones did not.
-        /// Best-of-three because a mean measures the machine — the same mistake the coolant
-        /// benchmark made once and documents.
-        /// </summary>
+/// <summary>Run operation.</summary>
         public static List<Row> Run(float simulatedSeconds = 600f)
         {
             Measure(4, 60f);
             Measure(4, 60f);
 
+/// <summary>List operation.</summary>
             List<Row> rows = new List<Row>();
             foreach (int frequency in new int[] { 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 60 })
             {
                 Row best = null;
                 for (int attempt = 0; attempt < 3; attempt++)
                 {
+/// <summary>Measure operation.</summary>
                     Row row = Measure(frequency, simulatedSeconds);
                     if (best == null || row.MillisecondsPerSimulatedSecond < best.MillisecondsPerSimulatedSecond)
                     {
@@ -112,6 +81,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
+/// <summary>Measure operation.</summary>
         private static Row Measure(int frequency, float simulatedSeconds)
         {
             ThermalSettings settings = new ThermalSettings
@@ -120,9 +90,6 @@ namespace Thermodynamics.Harness
                 SimulationSpeed = 1f,
                 HeatTimeScale = 225f,
 
-                // High enough that the estimate is granted at every frequency, so the sweep
-                // measures the cost of a choice rather than the cost of being refused. A capped
-                // run would flatten the curve and hide the knee it exists to find.
                 MaxSubsteps = 4096,
                 MaxSubstepsPerBlock = 0,
                 MaxElementVisitsPerStep = 0,
@@ -130,8 +97,10 @@ namespace Thermodynamics.Harness
             settings.Derive();
 
             BlockInstance source;
+/// <summary>Rig operation.</summary>
             ThermalSimulation simulation = Rig(settings, out source);
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -146,7 +115,6 @@ namespace Thermodynamics.Harness
             float settled;
             runner.Final.Tracked.TryGetValue("source", out settled);
 
-            // Where the transient crossed nine tenths of its rise, from the samples.
             float start = 293.15f;
             float target = start + ((settled - start) * 0.9f);
             float crossed = simulatedSeconds;
@@ -171,14 +139,18 @@ namespace Thermodynamics.Harness
             };
         }
 
+/// <summary>N operation.</summary>
         private static string N(double value, int decimals = 2)
         {
             return value.ToString("n" + decimals, CultureInfo.InvariantCulture);
         }
 
+/// <summary>Report operation.</summary>
         public static string Report()
         {
+/// <summary>Run operation.</summary>
             List<Row> rows = Run();
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("FREQUENCY SWEEP — where does substep cost bottom out?");
@@ -198,6 +170,7 @@ namespace Thermodynamics.Harness
                 }
 
                 sb.AppendLine(string.Format("{0,6} {1,12} {2,14} {3,11} {4,12} {5,14} {6,11} {7,10}",
+/// <summary>N operation.</summary>
                     row.Frequency, N(row.SubstepsPerStep), N(row.SubstepsPerSecond, 1),
                     N(row.Demanded, 1) + (row.Starved ? "!" : ""), N(row.MillisecondsPerStep, 4),
                     N(row.MillisecondsPerSimulatedSecond, 3), N(row.SettledKelvin, 1),
@@ -206,6 +179,7 @@ namespace Thermodynamics.Harness
 
             sb.AppendLine();
             sb.AppendLine("cheapest by wall clock: Frequency " + bestFrequency
+/// <summary>N operation.</summary>
                 + " at " + N(best, 3) + " ms per simulated second");
             sb.AppendLine();
             sb.AppendLine("substeps/s is the column the theory says should be flat: a shorter step");
@@ -215,8 +189,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>Csv operation.</summary>
         public static string Csv()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("frequency,substeps_per_step,substeps_per_second,demanded,starved,"
                 + "ms_per_step,ms_per_simulated_second,settled_k");

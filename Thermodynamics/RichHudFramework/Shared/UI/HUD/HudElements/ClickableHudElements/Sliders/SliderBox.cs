@@ -3,169 +3,92 @@ using System;
 
 namespace RichHudFramework.UI
 {
-	/// <summary>
-	/// A horizontal slider control designed to mimic the appearance of the standard sliders found 
-	/// in the Space Engineers terminal.
-	/// </summary>
 	public class SliderBox : HudElementBase, IClickableElement, IValueControl<float>
     {
-		/// <summary>
-		/// Invoked when the current value of the slider changes.
-		/// </summary>
 		public event EventHandler ValueChanged
 		{
 			add { slide.ValueChanged += value; }
 			remove { slide.ValueChanged -= value; }
 		}
 
-		/// <summary>
-		/// Helper property for registering a value update callback during initialization.
-		/// </summary>
 		public EventHandler UpdateValueCallback
 		{
 			set { slide.ValueChanged += value; }
 		}
 
-		/// <summary>
-		/// The minimum allowable value for the slider.
-		/// </summary>
 		public float Min { get { return slide.Min; } set { slide.Min = value; } }
 
-		/// <summary>
-		/// The maximum allowable value for the slider.
-		/// </summary>
 		public float Max { get { return slide.Max; } set { slide.Max = value; } }
 
-		/// <summary>
-		/// The current value of the slider, clamped between <see cref="Min"/> and <see cref="Max"/>.
-		/// </summary>
 		public float Value { get { return slide.Value; } set { slide.Value = value; } }
 
-		/// <summary>
-		/// The current value expressed as a normalized percentage (0.0 to 1.0) of the range between Min and Max.
-		/// </summary>
 		public float Percent { get { return slide.Percent; } set { slide.Percent = value; } }
 
-		/// <summary>
-		/// The color of the slider track (the background bar).
-		/// </summary>
 		public Color BarColor { get { return slide.BarColor; } set { slide.BarColor = value; lastBarColor = value; } }
 
-		/// <summary>
-		/// The color of the slider track when moused over.
-		/// </summary>
 		public Color BarHighlight { get { return slide.BarHighlight; } set { slide.BarHighlight = value; } }
 
-		/// <summary>
-		/// The color of the slider track when the control has input focus.
-		/// </summary>
 		public Color BarFocusColor { get; set; }
 
-		/// <summary>
-		/// The color of the slider thumb (the movable button) when not moused over.
-		/// </summary>
 		public Color SliderColor { get { return slide.SliderColor; } set { slide.SliderColor = value; lastSliderColor = value; } }
 
-		/// <summary>
-		/// The color of the slider thumb (the movable button) when moused over.
-		/// </summary>
 		public Color SliderHighlight { get { return slide.SliderHighlight; } set { slide.SliderHighlight = value; } }
 
-		/// <summary>
-		/// The color of the slider thumb (the movable button) when the control has input focus.
-		/// </summary>
 		public Color SliderFocusColor { get; set; }
 
-		/// <summary>
-		/// The color of the background container box.
-		/// </summary>
 		public Color BackgroundColor { get { return background.Color; } set { background.Color = value; lastBackgroundColor = value; } }
 
-		/// <summary>
-		/// The color of the background container box when moused over.
-		/// </summary>
 		public Color BackgroundHighlight { get; set; }
 
-		/// <summary>
-		/// The color of the background container box when the control has input focus.
-		/// </summary>
 		public Color BackgroundFocusColor { get; set; }
 
-		/// <summary>
-		/// The color of the border surrounding the background box.
-		/// </summary>
 		public Color BorderColor { get { return border.Color; } set { border.Color = value; } }
 
-		/// <summary>
-		/// If true, the slider box will change visual appearance when moused over.
-		/// </summary>
 		public bool HighlightEnabled { get; set; }
 
-		/// <summary>
-		/// If true, the slider box will change visual appearance when it has input focus.
-		/// </summary>
 		public bool UseFocusFormatting { get; set; }
 
-		/// <summary>
-		/// Interface used to manage the element's input focus state.
-		/// </summary>
 		public IFocusHandler FocusHandler { get; }
 
-		/// <summary>
-		/// Mouse input interface for this clickable element.
-		/// </summary>
 		public IMouseInput MouseInput => slide;
 
-		/// <summary>
-		/// Indicates whether the cursor is currently over this element.
-		/// </summary>
 		public override bool IsMousedOver => slide.IsMousedOver;
 
-		/// <summary>
-		/// The background container behind the slider.
-		/// </summary>
-		/// <exclude/>
 		protected readonly TexturedBox background;
 
-		/// <summary>
-		/// The border surrounding the background.
-		/// </summary>
-		/// <exclude/>
 		protected readonly BorderBox border;
 
-		/// <summary>
-		/// The actual slider logic and rendering element.
-		/// </summary>
-		/// <exclude/>
 		protected readonly SliderBar slide;
 
-		/// <summary>
-		/// Cached colors used to restore state after highlighting or focus changes.
-		/// </summary>
-		/// <exclude/>
 		protected Color lastBarColor, lastSliderColor, lastBackgroundColor;
 
+/// <summary>SliderBox operation.</summary>
 		public SliderBox(HudParentBase parent) : base(parent)
 		{
+/// <summary>TexturedBox operation.</summary>
 			background = new TexturedBox(this)
 			{
 				DimAlignment = DimAlignments.Size
 			};
 
+/// <summary>BorderBox operation.</summary>
 			border = new BorderBox(background)
 			{
 				Thickness = 1f,
 				DimAlignment = DimAlignments.Size,
 			};
 
+/// <summary>InputFocusHandler operation.</summary>
 			FocusHandler = new InputFocusHandler(this)
 			{
 				GainedInputFocusCallback = GainFocus,
 				LostInputFocusCallback = LoseFocus
 			};
+/// <summary>SliderBar operation.</summary>
 			slide = new SliderBar(this)
 			{
 				DimAlignment = DimAlignments.UnpaddedSize,
+/// <summary>Vector2 operation.</summary>
 				SliderSize = new Vector2(14f, 28f),
 				BarHeight = 5f,
 				MouseInput =
@@ -191,17 +114,17 @@ namespace RichHudFramework.UI
 			UseFocusFormatting = true;
 			HighlightEnabled = true;
 
+/// <summary>Vector2 operation.</summary>
 			Padding = new Vector2(18f, 18f);
+/// <summary>Vector2 operation.</summary>
 			Size = new Vector2(317f, 47f);
 		}
 
+/// <summary>SliderBox operation.</summary>
 		public SliderBox() : this(null)
 		{ }
 
-		/// <summary>
-		/// Handles arrow key input for fine-tuning the slider value when focused.
-		/// </summary>
-		/// <exclude/>
+/// <summary>HandleInput operation.</summary>
 		protected override void HandleInput(Vector2 cursorPos)
 		{
 			if (FocusHandler.HasFocus)
@@ -210,6 +133,7 @@ namespace RichHudFramework.UI
 				{
 					Percent -= 0.01f;
 				}
+/// <summary>if operation.</summary>
 				else if (SharedBinds.RightArrow.IsNewPressed || SharedBinds.RightArrow.IsPressedAndHeld)
 				{
 					Percent += 0.01f;
@@ -217,10 +141,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Applies highlight and focus formatting when the cursor enters the slider area.
-		/// </summary>
-		/// <exclude/>
+/// <summary>CursorEnter operation.</summary>
 		protected virtual void CursorEnter(object sender, EventArgs args)
 		{
 			if (HighlightEnabled)
@@ -238,10 +159,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Restores original colors when the cursor exits the slider area.
-		/// </summary>
-		/// <exclude/>
+/// <summary>CursorExit operation.</summary>
 		protected virtual void CursorExit(object sender, EventArgs args)
 		{
 			if (HighlightEnabled)
@@ -261,10 +179,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Applies focus-specific formatting when the slider gains input focus.
-		/// </summary>
-		/// <exclude/>
+/// <summary>GainFocus operation.</summary>
 		protected virtual void GainFocus(object sender, EventArgs args)
 		{
 			if (UseFocusFormatting && !MouseInput.IsMousedOver)
@@ -279,10 +194,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Clears focus-specific formatting when the slider loses input focus.
-		/// </summary>
-		/// <exclude/>
+/// <summary>LoseFocus operation.</summary>
 		protected virtual void LoseFocus(object sender, EventArgs args)
 		{
 			if (UseFocusFormatting)

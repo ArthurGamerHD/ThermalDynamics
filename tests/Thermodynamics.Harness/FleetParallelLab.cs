@@ -7,54 +7,20 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// **Does solving one grid per thread pay, and from what fleet size?** The measurement
-    /// backlog.md `D19` asks for before anything is threaded.
-    ///
-    /// <para>
-    /// The two figures the row carries point opposite ways: eight thousand blocks solve in
-    /// 0.128 ms, which may be under the cost of a hand-off, while a 242-grid fleet spent 25.9 % of
-    /// real time in the solver. Those are answers to different questions — one grid split across
-    /// threads, and many grids one per thread — and this lab measures the second, because it is the
-    /// one the fleet figure argues for.
-    /// </para>
-    ///
-    /// <para>
-    /// **What it can and cannot stand in for.** Every grid carries its own solver and the core holds
-    /// no mutable static state, so a fleet is embarrassingly parallel and this measures the real
-    /// arithmetic. It does *not* measure the engine's scheduler: the mod would fan out through
-    /// `MyAPIGateway.Parallel`, backed by `ParallelTasks`, and this uses the framework's own
-    /// <see cref="Parallel"/>. The hand-off column is therefore a lower bound on the engine's, and
-    /// is measured rather than assumed by fanning out over the same grid count with no work in the
-    /// body (`D6`).
-    /// </para>
-    ///
-    /// <para>
-    /// **The subject is the parallel execution itself**, which is the one case `M2` does not cover:
-    /// a wall-clock figure taken while every core is busy is exactly what is being asked for here.
-    /// Every row is the fastest of several repeats and the spread between fastest and slowest is
-    /// reported beside it (`M4`, `M5`).
-    /// </para>
-    /// </summary>
     public static class FleetParallelLab
     {
-        /// <summary>One fleet size, sequential against parallel.</summary>
         public class Row
         {
             public int Grids;
             public int NodesEach;
             public int Threads;
 
-            /// <summary>Milliseconds for one fleet-step — every grid stepped once — in order.</summary>
             public double SequentialMs;
 
-            /// <summary>The same fleet-step with the grids fanned out.</summary>
             public double ParallelMs;
 
-            /// <summary>Fan-out and join for this grid count with nothing in the body.</summary>
             public double HandoffMs;
 
-            /// <summary>Slowest repeat over fastest, for each of the two: the noise floor (`M4`).</summary>
             public double SequentialSpread;
             public double ParallelSpread;
 
@@ -63,34 +29,25 @@ namespace Thermodynamics.Harness
                 get { return ParallelMs <= 0d ? 0d : SequentialMs / ParallelMs; }
             }
 
-            /// <summary>Milliseconds of one grid's step, from the sequential run.</summary>
             public double PerGridMs
             {
                 get { return Grids <= 0 ? 0d : SequentialMs / Grids; }
             }
 
-            /// <summary>What the hand-off costs as a share of the work it is fanning out.</summary>
             public double HandoffShare
             {
                 get { return SequentialMs <= 0d ? 0d : HandoffMs / SequentialMs; }
             }
         }
 
-        /// <summary>Repeats per figure. The fastest is kept and the spread reported (`M4`).</summary>
         public const int Repeats = 5;
 
-        /// <summary>Fleet-steps per timed repeat.</summary>
         public const int StepsPerRepeat = 20;
 
-        /// <summary>
-        /// A fleet of identical driven hulls, each with its own solver, room map and node list.
-        ///
-        /// Identical on purpose: a fleet of different ships measures the scheduler's ability to
-        /// balance uneven work as well as the fan-out, and those are two findings in one number.
-        /// The uneven case is <see cref="RunUneven"/>.
-        /// </summary>
+/// <summary>Fleet operation.</summary>
         public static List<ThermalSimulation> Fleet(int grids, int nodesEach, ThermalSettings settings)
         {
+/// <summary>List operation.</summary>
             List<ThermalSimulation> fleet = new List<ThermalSimulation>();
 
             for (int i = 0; i < grids; i++)
@@ -109,18 +66,19 @@ namespace Thermodynamics.Harness
             return fleet;
         }
 
-        /// <summary>
-        /// Sequential against parallel over a ladder of fleet sizes, at one grid size.
-        /// </summary>
+/// <summary>Run operation.</summary>
         public static List<Row> Run(IList<int> fleetSizes, int nodesEach, int threads,
             Action<string> log = null)
         {
+/// <summary>List operation.</summary>
             List<Row> rows = new List<Row>();
 
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
+/// <summary>EnvironmentState operation.</summary>
             EnvironmentState state = new EnvironmentState();
             bool haveState = false;
 
@@ -129,6 +87,7 @@ namespace Thermodynamics.Harness
                 int grids = fleetSizes[f];
                 if (log != null) log(grids + " grids of " + nodesEach);
 
+/// <summary>Fleet operation.</summary>
                 List<ThermalSimulation> fleet = Fleet(grids, nodesEach, settings);
                 if (!haveState)
                 {
@@ -136,12 +95,12 @@ namespace Thermodynamics.Harness
                     haveState = true;
                 }
 
+/// <summary>Row operation.</summary>
                 Row row = new Row();
                 row.Grids = grids;
                 row.NodesEach = fleet[0].Solver.Nodes.Count;
                 row.Threads = threads;
 
-                // Warm the JIT and the caches on both paths before either is timed.
                 StepSequential(fleet, settings, state, 2);
                 StepParallel(fleet, settings, state, 2, threads);
 
@@ -165,20 +124,15 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        /// <summary>
-        /// The same comparison on a fleet whose grids differ in size, which is what a server has.
-        ///
-        /// A fan-out over equal work is the best case for any scheduler. Real fleets are a few
-        /// capital ships among many small ones, and the largest grid sets the floor under a
-        /// fleet-step however many threads there are — so this reports that floor beside the
-        /// speed-up (`P1`: the figure carries the population it was taken over).
-        /// </summary>
+/// <summary>RunUneven operation.</summary>
         public static Row RunUneven(IList<int> gridSizes, int threads, Action<string> log = null)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
+/// <summary>List operation.</summary>
             List<ThermalSimulation> fleet = new List<ThermalSimulation>();
             for (int i = 0; i < gridSizes.Count; i++)
             {
@@ -189,6 +143,7 @@ namespace Thermodynamics.Harness
             EnvironmentState state =
                 EnvironmentSolver.Solve(settings, fleet[0].Planet, Worlds.Shadow());
 
+/// <summary>Row operation.</summary>
             Row row = new Row();
             row.Grids = fleet.Count;
             row.Threads = threads;
@@ -222,6 +177,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
+/// <summary>StepSequential operation.</summary>
         public static void StepSequential(IList<ThermalSimulation> fleet, ThermalSettings settings,
             EnvironmentState state, int steps)
         {
@@ -234,15 +190,11 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// One grid per work item, joined at the end of every fleet-step.
-        ///
-        /// The barrier is the point: the mod would solve in parallel and apply on the game thread,
-        /// so a step is only as short as its slowest grid however many threads there are.
-        /// </summary>
+/// <summary>StepParallel operation.</summary>
         public static void StepParallel(IList<ThermalSimulation> fleet, ThermalSettings settings,
             EnvironmentState state, int steps, int threads)
         {
+/// <summary>ParallelOptions operation.</summary>
             ParallelOptions options = new ParallelOptions();
             options.MaxDegreeOfParallelism = threads;
 
@@ -255,9 +207,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>The fan-out and join with nothing in the body: what a hand-off costs.</summary>
+/// <summary>FanOutOnly operation.</summary>
         private static void FanOutOnly(int grids, int steps, int threads)
         {
+/// <summary>ParallelOptions operation.</summary>
             ParallelOptions options = new ParallelOptions();
             options.MaxDegreeOfParallelism = threads;
 
@@ -267,16 +220,18 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>Written to so the empty body cannot be optimised away.</summary>
         public static long Sink;
 
+/// <summary>Time operation.</summary>
         private static void Time(Action action, out double fastest, out double slowest)
         {
             LabTiming.FastestOf(Repeats, action, out fastest, out slowest);
         }
 
+/// <summary>Table operation.</summary>
         public static string Table(IList<Row> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.Append("grids".PadLeft(7))

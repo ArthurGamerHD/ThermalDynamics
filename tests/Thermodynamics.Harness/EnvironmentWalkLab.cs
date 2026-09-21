@@ -7,31 +7,6 @@ using Thermodynamics.Core;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// What the environment read's buried nodes still cost after the branch that already
-    /// short-circuits them — priced against the alternative shape, a bulk clear plus a walk over
-    /// a compacted index of exposed nodes only.
-    ///
-    /// <para>
-    /// This is the evaluation instrument for the second-sweep candidate on redesign.md. The
-    /// obvious version of "visit fewer elements" for the environment pass — skip the buried
-    /// nodes, which are 30 to 70 per cent of a hull — is mostly collected already: the shipped
-    /// loop tests <c>nodeExposedFaces[i] &lt;= 0</c> and a buried node costs one branch, one row
-    /// load and one store. What is left on the table is exactly that residue, times twenty-seven
-    /// read substeps a step, and whether it is worth a design is a number, not an argument.
-    /// **The criterion, fixed before the first run** (`E1`): the compacted shape earns a design
-    /// row if it beats the shipped shape by ten per cent or more at 505,566 blocks, where two
-    /// thirds of the hull is buried; anything less is a refusal with the figure attached.
-    /// </para>
-    ///
-    /// <para>
-    /// Both shapes run on a real hull's exposure pattern, not a synthetic one — the whole
-    /// question is how the buried cells interleave with the exposed ones, and a made-up pattern
-    /// would answer about itself (the `StepFloorLab` rule). Both shapes must produce the same
-    /// watts row exactly, which the lab asserts before it reports a single time: two loops that
-    /// disagree are two different passes, not two shapes of one (`E8`, `P4`).
-    /// </para>
-    /// </summary>
     public static class EnvironmentWalkLab
     {
         public class Row
@@ -43,6 +18,7 @@ namespace Thermodynamics.Harness
             public double NsPerNode;
         }
 
+/// <summary>Run operation.</summary>
         public static List<Row> Run(string shape, int blocks, int repeats = 30)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -52,9 +28,6 @@ namespace Thermodynamics.Harness
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             int count = nodes.Count;
 
-            // The rows the read touches, with the real hull's sparsity: buried rows are zero the
-            // way the fill leaves them, exposed rows carry plausible magnitudes, and generation
-            // sits wherever the census put a producer.
             int[] exposedFaces = new int[count];
             float[] temperature = new float[count];
             float[] radiationRow = new float[count];
@@ -63,7 +36,9 @@ namespace Thermodynamics.Harness
             float[] wattsA = new float[count];
             float[] wattsB = new float[count];
 
+/// <summary>List operation.</summary>
             List<int> exposedList = new List<int>();
+/// <summary>List operation.</summary>
             List<int> buriedGeneratingList = new List<int>();
             for (int i = 0; i < count; i++)
             {
@@ -90,9 +65,9 @@ namespace Thermodynamics.Harness
             const float Ambient = 220f;
             const float AmbientPow4 = Ambient * Ambient * Ambient * Ambient;
 
-            // Prove the two shapes are one pass before timing either: identical watts per node,
-            // exactly — every node's result is independent, so nothing may differ by a bit.
+/// <summary>Branchy operation.</summary>
             float sumA = Branchy(exposedFaces, temperature, radiationRow, convectionRow, sourceRow, wattsA, Ambient, AmbientPow4);
+/// <summary>Compact operation.</summary>
             float sumB = Compact(exposedIndex, buriedGenerating, temperature, radiationRow, convectionRow, sourceRow, wattsB, Ambient, AmbientPow4);
             for (int i = 0; i < count; i++)
             {
@@ -103,13 +78,12 @@ namespace Thermodynamics.Harness
                         + " — two different passes, not two shapes of one");
                 }
             }
-            // The accumulator may differ in the last bits: the compact shape sums in a different
-            // order. It is checked loosely here and belongs to the design if one is ever built.
             if (Math.Abs(sumA - sumB) > Math.Abs(sumA) * 1e-3f + 1f)
             {
                 throw new InvalidOperationException("the accumulators diverged: " + sumA + " against " + sumB);
             }
 
+/// <summary>List operation.</summary>
             List<Row> rows = new List<Row>();
             rows.Add(Time("branchy (shipped shape)", count, exposedIndex.Length, repeats,
                 () => Branchy(exposedFaces, temperature, radiationRow, convectionRow, sourceRow, wattsA, Ambient, AmbientPow4)));
@@ -118,11 +92,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        /// <summary>
-        /// The shipped read shape: one loop over every node, the buried branch first — one
-        /// compare, one row load and one store for a buried node, full arithmetic for an exposed
-        /// one. The arithmetic mirrors the radiation and convection terms of the real read.
-        /// </summary>
+/// <summary>Branchy operation.</summary>
         private static float Branchy(int[] exposedFaces, float[] temperature, float[] radiationRow,
             float[] convectionRow, float[] sourceRow, float[] watts, float ambient, float ambientPow4)
         {
@@ -148,10 +118,7 @@ namespace Thermodynamics.Harness
             return accumulator;
         }
 
-        /// <summary>
-        /// The candidate shape: the watts row cleared in bulk, the buried producers written from
-        /// a sparse list, and the arithmetic walked over a compacted index of exposed nodes.
-        /// </summary>
+/// <summary>Compact operation.</summary>
         private static float Compact(int[] exposedIndex, int[] buriedGenerating, float[] temperature,
             float[] radiationRow, float[] convectionRow, float[] sourceRow, float[] watts,
             float ambient, float ambientPow4)
@@ -181,16 +148,18 @@ namespace Thermodynamics.Harness
             return accumulator;
         }
 
+/// <summary>Time operation.</summary>
         private static Row Time(string shape, int nodes, int exposed, int repeats, Func<float> pass)
         {
-            // Once untimed, so neither shape pays the JIT inside its clock.
             pass();
 
             double best = double.MaxValue;
+/// <summary>Stopwatch operation.</summary>
             Stopwatch watch = new Stopwatch();
             for (int r = 0; r < repeats; r++)
             {
                 watch.Restart();
+/// <summary>pass operation.</summary>
                 float sink = pass();
                 watch.Stop();
                 if (float.IsNaN(sink)) throw new InvalidOperationException("the pass produced NaN");
@@ -198,6 +167,7 @@ namespace Thermodynamics.Harness
                 if (ns < best) best = ns;
             }
 
+/// <summary>Row operation.</summary>
             Row row = new Row();
             row.Shape = shape;
             row.Nodes = nodes;
@@ -207,14 +177,17 @@ namespace Thermodynamics.Harness
             return row;
         }
 
+/// <summary>Report operation.</summary>
         public static string Report(string shape, int blocks, Action<string> log = null)
         {
             if (log != null) log(blocks.ToString("n0", CultureInfo.InvariantCulture) + " blocks");
             return Table(Run(shape, blocks));
         }
 
+/// <summary>Table operation.</summary>
         public static string Table(List<Row> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
             text.Append("shape".PadRight(26))
                 .Append("nodes".PadLeft(10))

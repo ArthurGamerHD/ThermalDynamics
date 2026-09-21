@@ -5,24 +5,15 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// That a material override actually reaches a block built the corpus way.
-    ///
-    /// <para>
-    /// This is the load-bearing assertion under every knob sweep. Models are built once and shared,
-    /// with the derived thermal properties baked in, so an override that arrives after the cache is
-    /// warm applies to nothing at all — and the failure is silent in the worst way: the sweep runs,
-    /// every configuration produces numbers, and every dial reads as having no effect. A response
-    /// surface of flat lines looks like a finding rather than a bug.
-    /// </para>
-    /// </summary>
     public class MaterialOverrideTests
     {
         [Fact]
+/// <summary>AnOverrideReachesABlockBuiltTheCorpusWay operation.</summary>
         public void AnOverrideReachesABlockBuiltTheCorpusWay()
         {
             if (!GameBlocks.IsInstalled) return;
 
+/// <summary>Pick operation.</summary>
             GameBlocks.Definition definition = Pick();
             if (definition == null) return;
 
@@ -48,8 +39,6 @@ namespace Thermodynamics.Tests
                 Assert.Equal(baseHeat * 4f, scaled.SpecificHeat, 3);
                 Assert.Equal(baseEmissivity * 0.5f, scaled.Emissivity, 4);
 
-                // And it comes back. A sweep sets an override per configuration and clears it
-                // between, so an override that stuck would contaminate every later measurement.
                 Blueprints.MaterialOverride = null;
                 Assert.Equal(baseHeat, Blueprints.Model(definition).Thermal.SpecificHeat, 3);
             }
@@ -59,15 +48,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// That a dial aimed at one block type moves that type and leaves everything else alone.
-        ///
-        /// Per-type dials are how a balance change is actually shipped — the survey named a short
-        /// list of types carrying the tail, and moving all of them plus every other block in the
-        /// game is a different question. A targeted override that quietly applied to everything
-        /// would read as an enormously effective dial.
-        /// </summary>
         [Fact]
+/// <summary>ADialAimedAtOneTypeLeavesTheRestAlone operation.</summary>
         public void ADialAimedAtOneTypeLeavesTheRestAlone()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -111,7 +93,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>A definition with real components, so its derived properties are not the fallback.</summary>
+/// <summary>Pick operation.</summary>
         private static GameBlocks.Definition Pick()
         {
             Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();

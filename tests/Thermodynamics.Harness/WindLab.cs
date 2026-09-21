@@ -7,66 +7,33 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// A whole planet's wind, modelled at a desk — every latitude and a full day in a second, because
-    /// the field is a pure function of position, weather and the hour. **It runs the shipped code, not
-    /// a copy**: every sample goes through <see cref="WindSolver.Solve"/>, and only the planet and its
-    /// ground are modelled here. The columns match the game's environment CSV one for one.
-    /// See environment.md, Measuring it.
-    /// </summary>
     public static class WindLab
     {
-        /// <summary>
-        /// A planet, built by the engine's own arithmetic read out of <c>Sandbox.Game.dll</c>:
-        ///
-        /// <code>
-        /// maxHillHeight      = HillParams.Max * radius
-        /// minHillHeight      = HillParams.Min * radius
-        /// OuterRadius        = radius + maxHillHeight
-        /// InnerRadius        = radius + minHillHeight
-        /// AtmosphereAltitude = maxHillHeight * Atmosphere.LimitAltitude
-        /// </code>
-        ///
-        /// <para>**Everything about a Space Engineers planet is a fraction of its radius**, and that
-        /// radius is about a hundredth of a real one, which is why every borrowed constant lands
-        /// oddly. See environment.md, World size.</para>
-        /// </summary>
         public class Planet
         {
             public string Name = "EarthLike";
 
-            /// <summary>Mean radius, m — what the engine measures altitude against.</summary>
             public double AverageRadius = 60000d;
 
-            /// <summary>Deepest trench as a fraction of the radius. Negative.</summary>
             public double HillMin = -0.01d;
 
-            /// <summary>Highest peak as a fraction of the radius.</summary>
             public double HillMax = 0.12d;
 
-            /// <summary>Atmosphere height as a multiple of the highest peak.</summary>
             public double LimitAltitude = 2.0d;
 
-            /// <summary>Sea-level air density, the definition's own figure.</summary>
             public float Density = 1f;
 
-            /// <summary>The definition's maximum wind speed, m/s.</summary>
             public float MaxWindSpeed = 80f;
 
             public bool HasAtmosphere = true;
 
-            /// <summary>The planet's north.</summary>
+/// <summary>Vector3 operation.</summary>
             public Vector3 Axis = new Vector3(0f, 1f, 0f);
 
-            /// <summary>Seconds in a full sun rotation. The game's default is two hours.</summary>
             public double DayLength = 7200d;
 
             private Terrain ground;
 
-            /// <summary>
-            /// The ground. Defaults to terrain scaled to this planet's own hill range, so a moon
-            /// gets a moon's relief without anyone setting a number.
-            /// </summary>
             public Terrain Ground
             {
                 get { return ground ?? (ground = new Terrain(this)); }
@@ -78,25 +45,11 @@ namespace Thermodynamics.Harness
             public double OuterRadius { get { return AverageRadius + MaxHillHeight; } }
             public double InnerRadius { get { return AverageRadius + MinHillHeight; } }
 
-            /// <summary>
-            /// <c>AtmosphereAltitude = MaxHillHeight × LimitAltitude</c>. Note what that means: the
-            /// atmosphere is measured from the *mean* radius and so are the mountains, so a
-            /// <c>LimitAltitude</c> under one puts the peaks outside the air.
-            /// </summary>
             public double AtmosphereAltitude { get { return MaxHillHeight * LimitAltitude; } }
 
-            /// <summary>True when this world's highest ground stands above its own air. Triton does.</summary>
             public bool PeaksAboveAir { get { return HasAtmosphere && LimitAltitude < 1d; } }
 
-            /// <summary>
-            /// <c>MyPlanet.GetAirDensity</c>, reproduced from the decompiled engine:
-            /// <c>clamp(1 - (r - AverageRadius)/AtmosphereAltitude, 0, 1) * Density</c>.
-            ///
-            /// Note what it does not do: it measures against the mean radius, not the ground, so a
-            /// valley floor below the mean radius returns *more* air — and therefore more wind —
-            /// than the ridge above it. That is the engine's behaviour, faithfully reproduced,
-            /// because a model that quietly corrected it would stop predicting the game.
-            /// </summary>
+/// <summary>AirDensity operation.</summary>
             public float AirDensity(double radius)
             {
                 if (!HasAtmosphere || AtmosphereAltitude <= 0d) return 0f;
@@ -107,54 +60,40 @@ namespace Thermodynamics.Harness
                 return (float)share * Density;
             }
 
-            /// <summary><c>MyPlanet.GetWindSpeed</c>: the maximum, scaled by that density.</summary>
+/// <summary>WindCeiling operation.</summary>
             public float WindCeiling(double radius)
             {
                 return MaxWindSpeed * AirDensity(radius);
             }
 
-            /// <summary>The unit vector at a latitude and longitude, in degrees.</summary>
+/// <summary>UpAt operation.</summary>
             public Vector3D UpAt(double latitude, double longitude)
             {
                 double lat = latitude * Math.PI / 180d;
                 double lon = longitude * Math.PI / 180d;
 
-                // The axis is +Y, so latitude runs into Y and longitude round the XZ plane.
                 return Vector3D.Normalize(new Vector3D(
                     Math.Cos(lat) * Math.Cos(lon),
                     Math.Sin(lat),
                     Math.Cos(lat) * Math.Sin(lon)));
             }
 
-            /// <summary>Distance from the centre to the ground at a point on the sphere.</summary>
+/// <summary>GroundRadius operation.</summary>
             public double GroundRadius(Vector3D up)
             {
                 return AverageRadius + Ground.Height(up);
             }
 
-            /// <summary>
-            /// How far someone standing this high can see before the world curves away, m.
-            ///
-            /// Worth having because the answer is startling: on a 60 km world the horizon from head
-            /// height is about 490 m, against 5 km on Earth. Anything this model draws or reasons
-            /// about at kilometre range is mostly over the edge of the world.
-            /// </summary>
+/// <summary>HorizonFrom operation.</summary>
             public double HorizonFrom(double height)
             {
                 if (height <= 0d) return 0d;
                 return Math.Sqrt((2d * AverageRadius * height) + (height * height));
             }
 
-            /// <summary>Metres of ground per degree of latitude. A circulation band is 30 of these.</summary>
             public double MetresPerDegree { get { return AverageRadius * Math.PI / 180d; } }
 
-            /// <summary>
-            /// Sine of the sun's elevation at a latitude and longitude, at an hour of the day.
-            ///
-            /// No axial tilt and no seasons — the game has neither. The sun goes round the equator,
-            /// so the day is the same length everywhere and the poles are permanently at grazing
-            /// incidence, which is exactly what the climate model already assumes.
-            /// </summary>
+/// <summary>SunElevationSine operation.</summary>
             public double SunElevationSine(double latitude, double longitude, double dayFraction)
             {
                 double lat = latitude * Math.PI / 180d;
@@ -163,18 +102,13 @@ namespace Thermodynamics.Harness
                 return Math.Cos(lat) * Math.Cos(hourAngle);
             }
 
-            // ---- the shipped worlds ----------------------------------------------------------
 
-            /// <summary>Every planet the game ships, by subtype.</summary>
             public static readonly string[] VanillaNames =
             {
                 "EarthLike", "Alien", "Mars", "Pertam", "Triton", "Europa", "Titan", "Moon",
             };
 
-            /// <summary>
-            /// The diameter each is usually generated at, m. A world-generation choice rather than a
-            /// property of the definition — the star system scenario's figures.
-            /// </summary>
+/// <summary>UsualDiameter operation.</summary>
             public static double UsualDiameter(string subtype)
             {
                 switch (subtype)
@@ -188,13 +122,10 @@ namespace Thermodynamics.Harness
                 }
             }
 
-            /// <summary>
-            /// One of the game's own planets, at a diameter. Every figure is from
-            /// <c>PlanetGeneratorDefinitions.sbc</c>; the diameter is supplied because it is a
-            /// world-generation choice rather than part of the definition.
-            /// </summary>
+/// <summary>Vanilla operation.</summary>
             public static Planet Vanilla(string subtype, double diameterMetres)
             {
+/// <summary>Planet operation.</summary>
                 Planet planet = new Planet();
                 planet.Name = subtype;
                 planet.AverageRadius = diameterMetres * 0.5d;
@@ -222,15 +153,11 @@ namespace Thermodynamics.Harness
                         break;
 
                     case "Triton":
-                        // The odd one: 20% of the radius in mountain against an atmosphere only 9.4%
-                        // of it deep, so its peaks stand in vacuum.
                         planet.HillMin = -0.05d; planet.HillMax = 0.20d;
                         planet.LimitAltitude = 0.47d; planet.Density = 1f; planet.MaxWindSpeed = 80f;
                         break;
 
                     case "Europa":
-                        // Density and LimitAltitude are not authored on this one; the object
-                        // builder's defaults stand in. An assumption, not a reading.
                         planet.HillMin = -0.03d; planet.HillMax = 0.06d;
                         planet.LimitAltitude = 2.0d; planet.Density = 1f; planet.MaxWindSpeed = 30f;
                         break;
@@ -253,57 +180,35 @@ namespace Thermodynamics.Harness
                 return planet;
             }
 
-            /// <summary>The same planet at the diameter the game usually generates it at.</summary>
+/// <summary>Vanilla operation.</summary>
             public static Planet Vanilla(string subtype)
             {
                 return Vanilla(subtype, UsualDiameter(subtype));
             }
         }
 
-        /// <summary>
-        /// A heightmap standing in for voxels.
-        ///
-        /// <para>Sinusoids at four scales, deterministic in position, with the relief scaled to the
-        /// planet's own hill range — so a moon gets a moon's terrain and an earthlike world gets
-        /// seven kilometres of mountain.</para>
-        ///
-        /// <para>The frequencies are in <b>unit-sphere</b> coordinates rather than metres, and that
-        /// is deliberate: the game's heightmap is a fixed-resolution cube map per planet whatever its
-        /// size, so a small moon's landforms are a small moon's size. Terrain in Space Engineers is
-        /// self-similar across planet sizes and this reproduces that — which means a 300 m terrain
-        /// ring spans a fraction of one landform on a 60 km world and several on a 9.5 km moon.
-        /// Those are different regimes and both need testing.</para>
-        /// </summary>
         public class Terrain
         {
-            /// <summary>Relative weights per octave, largest feature first.</summary>
             public double[] Weights = { 0.62d, 0.24d, 0.11d, 0.03d };
 
-            /// <summary>
-            /// Spatial frequencies on the unit sphere: about 47 km, 6 km, 1.3 km and 400 m of arc on
-            /// a 60 km world, and a sixth of each of those on a 9.5 km moon.
-            /// </summary>
             public double[] Frequencies = { 8d, 60d, 300d, 900d };
 
-            /// <summary>Metres from the deepest trench to the highest peak.</summary>
             public double Relief = 7800d;
 
-            /// <summary>Metres the mean surface sits above the planet's average radius.</summary>
             public double Offset = 3300d;
 
+/// <summary>Terrain operation.</summary>
             public Terrain() { }
 
-            /// <summary>Terrain sized to a planet's own hill range, as the game generates it.</summary>
+/// <summary>Terrain operation.</summary>
             public Terrain(Planet planet)
             {
                 Relief = planet.MaxHillHeight - planet.MinHillHeight;
 
-                // Centred in the hill range, so the ground swings between the planet's own floor and
-                // its ceiling rather than pushing through either.
                 Offset = (planet.MaxHillHeight + planet.MinHillHeight) * 0.5d;
             }
 
-            /// <summary>Height above the mean radius, m.</summary>
+/// <summary>Height operation.</summary>
             public virtual double Height(Vector3D up)
             {
                 double shape = 0d;
@@ -312,9 +217,6 @@ namespace Thermodynamics.Harness
                 {
                     double k = Frequencies[i];
 
-                    // A product of sinusoids on two axes makes ridges and basins rather than
-                    // corrugations, and the third term breaks the symmetry so the pattern does not
-                    // repeat visibly on the diagonal.
                     shape += Weights[i]
                         * Math.Sin((up.X * k) + (i * 1.7d))
                         * Math.Cos((up.Z * k) + (i * 0.9d))
@@ -325,16 +227,16 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>A perfectly flat world, for separating terrain effects from everything else.</summary>
         public class FlatTerrain : Terrain
         {
+/// <summary>FlatTerrain operation.</summary>
             public FlatTerrain() { }
             public FlatTerrain(Planet planet) : base(planet) { }
+/// <summary>Height operation.</summary>
             public override double Height(Vector3D up) { return 0d; }
         }
 
 
-        /// <summary>What the model is being run with. Mirrors the world settings by the same names.</summary>
         public class Options
         {
             public float Roughness = 0.03f;
@@ -344,44 +246,32 @@ namespace Thermodynamics.Harness
             public float TerrainInfluence = 1f;
             public float TerrainRadius = 300f;
 
-            /// <summary>Slope wind: air up a mountain by day, draining down it at night. 0..1.</summary>
             public float SlopeStrength = 1f;
 
-            /// <summary>Weather intensity applied everywhere, 0..1. Zero is a clear day.</summary>
             public float WeatherIntensity = 0f;
 
-            /// <summary>The weather's own wind modifier. One is weather that does nothing to wind.</summary>
             public float WeatherWind = 1f;
 
-            /// <summary>The climate's lag, which the daily heating curve shares.</summary>
             public float AmbientLagSeconds = 45f;
 
-            /// <summary>
-            /// The same lag as a share of this world's day, which is what the model uses wherever
-            /// the day's length is known. Zero leaves the absolute figure in charge.
-            /// </summary>
             public float AmbientLagShareOfDay = 0.083f;
 
-            /// <summary>The lag to use on a world with this day, in seconds.</summary>
+/// <summary>LagSecondsFor operation.</summary>
             public float LagSecondsFor(double dayLengthSeconds)
             {
                 if (AmbientLagShareOfDay <= 0f || dayLengthSeconds <= 0d) return AmbientLagSeconds;
                 return (float)(AmbientLagShareOfDay * dayLengthSeconds);
             }
 
-            /// <summary>Latitudes sampled, degrees, from −this to +this.</summary>
             public double LatitudeLimit = 80d;
             public double LatitudeStep = 20d;
             public double LongitudeStep = 45d;
 
-            /// <summary>Heights above ground sampled, m.</summary>
             public double[] Heights = { 2d, 10d, 100d, 400d, 1200d };
 
-            /// <summary>Steps the day is divided into.</summary>
             public int StepsPerDay = 72;
         }
 
-        /// <summary>One modelled sample: the same fields the game's environment CSV carries.</summary>
         public struct Row
         {
             public double Seconds;
@@ -403,22 +293,16 @@ namespace Thermodynamics.Harness
             public float BearingDegrees;
         }
 
-        /// <summary>
-        /// Runs a full day over the whole planet and returns every sample.
-        ///
-        /// The heating curve is carried forward per site rather than recomputed, because it is a lag
-        /// and a lag has a history: the whole point of it is that the windiest part of the afternoon
-        /// is not the sun's high point. Sites are stepped through the day together for that reason.
-        /// </summary>
+/// <summary>Run operation.</summary>
         public static List<Row> Run(Planet planet, Options options)
         {
             if (planet == null) planet = new Planet();
             if (options == null) options = new Options();
 
+/// <summary>List operation.</summary>
             List<Row> rows = new List<Row>();
 
-            // Every site on the globe, with its terrain read once — the ground does not change over
-            // the day, and reading it per step would be the only expensive thing here.
+/// <summary>List operation.</summary>
             List<Site> sites = new List<Site>();
 
             for (double latitude = -options.LatitudeLimit;
@@ -447,7 +331,6 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        /// <summary>One place on the planet, carrying its own heating history.</summary>
         private class Site
         {
             public readonly double Latitude;
@@ -458,23 +341,24 @@ namespace Thermodynamics.Harness
 
             private float heating = -1f;
 
+/// <summary>Site operation.</summary>
             public Site(Planet planet, Options options, double latitude, double longitude)
             {
                 Latitude = latitude;
                 Longitude = longitude;
                 Up = planet.UpAt(latitude, longitude);
                 GroundRadius = planet.GroundRadius(Up);
+/// <summary>ReadRing operation.</summary>
                 Ring = ReadRing(planet, options, Up, GroundRadius);
             }
 
+/// <summary>Advance operation.</summary>
             public void Advance(
                 Planet planet, Options options, double dayFraction, float step, double seconds,
                 List<Row> rows)
             {
                 double sunSine = planet.SunElevationSine(Latitude, Longitude, dayFraction);
 
-                // The lag is a share of the day, and this lab knows exactly how long its day is —
-                // so it does not need the estimator the game side runs. See backlog C6.
                 heating = WindProfile.Heating(
                     heating, (float)sunSine, step,
                     options.LagSecondsFor(planet.DayLength));
@@ -502,9 +386,6 @@ namespace Thermodynamics.Harness
                     inputs.HeightAboveGround = (float)height;
                     inputs.Heating = heating;
                     inputs.Roughness = options.Roughness;
-                    // Capped by the air over this site's own ground, exactly as the game side does
-                    // it — several shipped worlds have less atmosphere than the configured boundary
-                    // layer is tall. See WindProfile.GradientHeightIn and backlog B20.
                     inputs.GradientHeight = WindProfile.GradientHeightIn(
                         options.GradientHeight,
                         planet.HasAtmosphere
@@ -520,6 +401,7 @@ namespace Thermodynamics.Harness
 
                     WindSolver.Result wind = WindSolver.Solve(ref inputs);
 
+/// <summary>Row operation.</summary>
                     Row row = new Row();
                     row.Seconds = seconds;
                     row.DayFraction = dayFraction;
@@ -549,14 +431,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// The ring of ground heights around a site, in the layout <see cref="WindTerrain"/> expects.
-        ///
-        /// This is the offline twin of the game's sixteen surface lookups, and it does the same thing
-        /// in the same order: step out along each bearing, put the point back on the site's own
-        /// sphere so the tangent plane falling away does not read as a slope, and take the height
-        /// there relative to the site's own ground.
-        /// </summary>
+/// <summary>ReadRing operation.</summary>
         public static float[] ReadRing(Planet planet, Options options, Vector3D up, double groundRadius)
         {
             float[] ring = new float[WindTerrain.SampleCount];
@@ -587,6 +462,7 @@ namespace Thermodynamics.Harness
             return ring;
         }
 
+/// <summary>Clamp operation.</summary>
         private static double Clamp(double value, double low, double high)
         {
             if (value < low) return low;
@@ -594,14 +470,11 @@ namespace Thermodynamics.Harness
             return value;
         }
 
-        // ---- output -------------------------------------------------------------------------
 
-        /// <summary>
-        /// The columns the game's environment CSV uses for wind, so a modelled day and a measured
-        /// session can be compared without translating either.
-        /// </summary>
+/// <summary>Csv operation.</summary>
         public static string Csv(List<Row> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append("time_s,day_fraction,latitude_deg,longitude_deg,ground_elev_m,")
               .Append("sun_elevation_deg,wind_agl_m,wind_ceiling,wind_band_share,wind_profile,")
@@ -624,26 +497,22 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>N operation.</summary>
         private static string N(double value)
         {
             return value.ToString("0.####", CultureInfo.InvariantCulture);
         }
 
-        /// <summary>
-        /// A readable summary of a modelled day: what the wind does with latitude, with height and
-        /// with the hour, and how much of the answer the ground is responsible for.
-        ///
-        /// The three tables are the three questions a field dump has so far been unable to answer,
-        /// because a session is short, a test world is at one latitude and the ground under it was
-        /// nearly flat.
-        /// </summary>
+/// <summary>Report operation.</summary>
         public static string Report(Planet planet, Options options)
         {
             if (planet == null) planet = new Planet();
             if (options == null) options = new Options();
 
+/// <summary>Run operation.</summary>
             List<Row> rows = Run(planet, options);
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append("Wind model, one simulated day on ").Append(planet.Name).Append('\n');
             sb.Append("  ").Append(rows.Count.ToString("n0")).Append(" samples: ")
@@ -657,6 +526,7 @@ namespace Thermodynamics.Harness
                 lat += options.LatitudeStep)
             {
                 double target = lat;
+/// <summary>Stat operation.</summary>
                 Stat speed = new Stat(), bear = new Stat(), terr = new Stat();
                 for (int i = 0; i < rows.Count; i++)
                 {
@@ -678,6 +548,7 @@ namespace Thermodynamics.Harness
             for (int h = 0; h < options.Heights.Length; h++)
             {
                 double height = options.Heights[h];
+/// <summary>Stat operation.</summary>
                 Stat day = new Stat(), night = new Stat();
                 for (int i = 0; i < rows.Count; i++)
                 {
@@ -693,6 +564,7 @@ namespace Thermodynamics.Harness
             }
 
             sb.Append("\nWhat the ground is doing\n");
+/// <summary>Stat operation.</summary>
             Stat up = new Stat(), shelter = new Stat(), channel = new Stat(), elev = new Stat();
             for (int i = 0; i < rows.Count; i++)
             {
@@ -711,10 +583,12 @@ namespace Thermodynamics.Harness
                 "  shelter           {0,7:n3} .. {1,6:n3}  (mean {2:n3})\n",
                 shelter.Min, shelter.Max, shelter.Mean));
             sb.Append(string.Format(CultureInfo.InvariantCulture,
+/// <summary>deg operation.</summary>
                 "  channelling       {0,7:n1} .. {1,6:n1} deg (mean {2:n1})\n",
                 channel.Min, channel.Max, channel.Mean));
 
             sb.Append("\nAgainst the engine's own figure\n");
+/// <summary>Stat operation.</summary>
             Stat ceiling = new Stat(), speeds = new Stat();
             int over = 0;
             for (int i = 0; i < rows.Count; i++)
@@ -739,6 +613,7 @@ namespace Thermodynamics.Harness
             private double min, max, total;
             private int count;
 
+/// <summary>Adds a .</summary>
             public void Add(double value)
             {
                 if (count == 0 || value < min) min = value;

@@ -6,20 +6,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The offline planet, and the three questions a field dump could not answer.
-    ///
-    /// The first run of wind telemetry from a real world produced 2.9 minutes of samples, at
-    /// latitudes 5° to 30°, on ground so gentle that sheltering never took more than 7% and
-    /// channelling never turned the wind more than a degree for 57% of samples. None of the model's
-    /// interesting behaviour was exercised. These hold the simulator to exercising all of it, so
-    /// that a change to the model is answerable at a desk and only the *world* has to be checked in
-    /// game.
-    /// </summary>
     public class WindLabTests
     {
+/// <summary>AtHeight operation.</summary>
         private static List<WindLab.Row> AtHeight(List<WindLab.Row> rows, double height)
         {
+/// <summary>List operation.</summary>
             List<WindLab.Row> found = new List<WindLab.Row>();
             for (int i = 0; i < rows.Count; i++)
             {
@@ -28,6 +20,7 @@ namespace Thermodynamics.Tests
             return found;
         }
 
+/// <summary>Mean operation.</summary>
         private static double Mean(List<WindLab.Row> rows, Func<WindLab.Row, double> of)
         {
             if (rows.Count == 0) return 0d;
@@ -36,20 +29,7 @@ namespace Thermodynamics.Tests
             return total / rows.Count;
         }
 
-        /// <summary>
-        /// The afternoon and the night at one height, **paired by latitude before they are
-        /// compared** (`E6`).
-        ///
-        /// The unpaired form averaged every latitude into one figure and divided the two. That was
-        /// wrong in a way nothing noticed while every latitude had wind: the day and the night
-        /// samples are not the same set — the sun does not rise at every latitude — so the ratio
-        /// carried a latitude difference as well as a diurnal one. It became visible when the band
-        /// edges became the calms they should always have been and three of the nine sampled
-        /// latitudes went to zero.
-        ///
-        /// A latitude with no wind at either end of the day has nothing to say about the diurnal
-        /// cycle and is skipped rather than averaged in as a zero.
-        /// </summary>
+/// <summary>DayNight operation.</summary>
         private static void DayNight(
             List<WindLab.Row> rows, double height, out double day, out double night)
         {
@@ -78,8 +58,6 @@ namespace Thermodynamics.Tests
                 double dayMean = dayTotal[entry.Key] / entry.Value;
                 double nightMean = nightTotal[entry.Key] / nights;
 
-                // A band edge is calm all day and all night. It agrees with itself and says nothing
-                // about the cycle, so it is not evidence either way.
                 if (dayMean <= 1e-6d && nightMean <= 1e-6d) continue;
 
                 dayMeans += dayMean;
@@ -95,6 +73,7 @@ namespace Thermodynamics.Tests
             night = nightMeans / latitudes;
         }
 
+/// <summary>Adds a .</summary>
         private static void Add(Dictionary<double, double> totals, Dictionary<double, int> counts,
             double latitude, double speed)
         {
@@ -107,14 +86,11 @@ namespace Thermodynamics.Tests
             counts[latitude] = count + 1;
         }
 
-        // ---- the engine, reproduced ----------------------------------------------------------
 
         [Fact]
+/// <summary>TheEnginesOwnWindFigureIsReproducedExactly operation.</summary>
         public void TheEnginesOwnWindFigureIsReproducedExactly()
         {
-            // Decompiled from Sandbox.Game.dll:
-            //   clamp(1 - (r - AverageRadius)/AtmosphereAltitude, 0, 1) * Density, times MaxWindSpeed.
-            // If this drifts, every comparison between a modelled run and a field dump is worthless.
             WindLab.Planet planet = new WindLab.Planet();
 
             Assert.Equal(80f, planet.WindCeiling(planet.AverageRadius), 4);
@@ -122,15 +98,13 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, planet.WindCeiling(planet.AverageRadius + planet.AtmosphereAltitude), 4);
             Assert.Equal(0f, planet.WindCeiling(planet.AverageRadius + (planet.AtmosphereAltitude * 5d)), 4);
 
-            // Below the mean radius it clamps rather than exceeding the maximum.
             Assert.Equal(80f, planet.WindCeiling(planet.AverageRadius - 2000d), 4);
         }
 
         [Fact]
+/// <summary>TheEnginesFalloffIsLinearRatherThanExponential operation.</summary>
         public void TheEnginesFalloffIsLinearRatherThanExponential()
         {
-            // Worth pinning because it is the surprising half: real air thins exponentially and this
-            // does not, so anything reasoning about altitude from physics will disagree with the game.
             WindLab.Planet planet = new WindLab.Planet();
 
             double quarter = planet.AverageRadius + (planet.AtmosphereAltitude * 0.25d);
@@ -143,10 +117,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheEnginesWindIgnoresTheGroundEntirelyAndIsInvertedByIt operation.</summary>
         public void TheEnginesWindIgnoresTheGroundEntirelyAndIsInvertedByIt()
         {
-            // The finding that decided this model: altitude is measured against the mean sphere, so
-            // a valley floor below it reads *windier* than the ridge above. Reproduced deliberately.
             WindLab.Planet planet = new WindLab.Planet();
 
             float valley = planet.WindCeiling(planet.AverageRadius - 500d);
@@ -156,18 +129,11 @@ namespace Thermodynamics.Tests
                 "the engine gives a valley more wind than a ridge; the sim must not quietly fix that");
         }
 
-        // ---- the daily cycle -----------------------------------------------------------------
 
         [Fact]
+/// <summary>TheSurfaceIsWindiestByDayAndTheAirAloftIsWindiestAtNight operation.</summary>
         public void TheSurfaceIsWindiestByDayAndTheAirAloftIsWindiestAtNight()
         {
-            // The behaviour that cannot be seen in a three-minute session, and the reason the
-            // simulator exists. One modelled day shows both halves of the cycle at once.
-            //
-            // Slope wind is switched off here on purpose. This tests the *boundary layer* cycle —
-            // mixing by day, decoupling by night — and slope wind is a separate mechanism that
-            // legitimately opposes it near the ground. Leaving it on makes this measure the two
-            // fighting each other, which is what the test below is for.
             WindLab.Options options = new WindLab.Options();
             options.SlopeStrength = 0f;
 
@@ -185,15 +151,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SlopeWindCanOverturnTheSurfaceCycleOnSlopedGround operation.</summary>
         public void SlopeWindCanOverturnTheSurfaceCycleOnSlopedGround()
         {
-            // An emergent result worth recording rather than smoothing away: with slope winds on,
-            // the mean 2 m wind over this planet's hills is very nearly as strong before dawn as in
-            // the afternoon — the nocturnal drainage flow all but cancels the boundary layer's own
-            // night-time minimum.
-            //
-            // That is what happens on real sloped ground, and it is why a valley at night is not the
-            // still place the boundary layer alone would predict.
             List<WindLab.Row> withSlope = WindLab.Run(new WindLab.Planet(), new WindLab.Options());
 
             WindLab.Options off = new WindLab.Options();
@@ -212,6 +172,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ThereIsAHeightBetweenThemWhereTheDayBarelyMatters operation.</summary>
         public void ThereIsAHeightBetweenThemWhereTheDayBarelyMatters()
         {
             WindLab.Options options = new WindLab.Options();
@@ -226,10 +187,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AboveTheBoundaryLayerTheDayStopsMatteringAtAll operation.</summary>
         public void AboveTheBoundaryLayerTheDayStopsMatteringAtAll()
         {
-            // The fault the first field dump caught: a grid 7 km above the ground was reading a
-            // full-strength nocturnal jet. Above the boundary layer there is no cycle to have.
             List<WindLab.Row> rows = WindLab.Run(new WindLab.Planet(), new WindLab.Options());
 
             double day, night;
@@ -239,11 +199,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheHeatingCurveCoversTheWholeDay operation.</summary>
         public void TheHeatingCurveCoversTheWholeDay()
         {
-            // A lag needs a day to move through. The field run reached 0.286 and fell to 0.003
-            // because it was three minutes long and after sunset; a modelled day must not have that
-            // excuse, or none of the tests above are testing anything.
             List<WindLab.Row> rows = WindLab.Run(new WindLab.Planet(), new WindLab.Options());
 
             float low = 1f, high = 0f;
@@ -257,14 +215,12 @@ namespace Thermodynamics.Tests
             Assert.True(high > 0.8f, "and a proper afternoon, got " + high);
         }
 
-        // ---- the ground ----------------------------------------------------------------------
 
         [Fact]
+/// <summary>TheSimulatedGroundIsRoughEnoughToExerciseTheTerrainModel operation.</summary>
         public void TheSimulatedGroundIsRoughEnoughToExerciseTheTerrainModel()
         {
-            // The world the first dump was taken in was flat enough that shelter never took more
-            // than 7% and channelling never turned the wind past a degree in most samples. A
-            // simulator that reproduced that would be no use for developing the terrain model.
+/// <summary>AtHeight operation.</summary>
             List<WindLab.Row> rows = AtHeight(
                 WindLab.Run(new WindLab.Planet(), new WindLab.Options()), 10d);
 
@@ -282,14 +238,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>LevellingTheGroundSwitchesEveryTerrainEffectOff operation.</summary>
         public void LevellingTheGroundSwitchesEveryTerrainEffectOff()
         {
-            // The control. Whatever the terrain factors are doing on the rough world, they must be
-            // doing exactly nothing on a flat one — otherwise they are reading something that is
-            // not the ground.
             WindLab.Planet flat = new WindLab.Planet();
             flat.Ground = new WindLab.FlatTerrain();
 
+/// <summary>AtHeight operation.</summary>
             List<WindLab.Row> rows = AtHeight(WindLab.Run(flat, new WindLab.Options()), 10d);
             Assert.NotEmpty(rows);
 
@@ -302,17 +257,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TurningTerrainOffMatchesFlatteningTheWorld operation.</summary>
         public void TurningTerrainOffMatchesFlatteningTheWorld()
         {
-            // Two ways of removing the ground's influence that have to agree, since one is a setting
-            // a player can move and the other is the physical case it is standing in for.
             WindLab.Options off = new WindLab.Options();
             off.TerrainInfluence = 0f;
 
             WindLab.Planet flat = new WindLab.Planet();
             flat.Ground = new WindLab.FlatTerrain();
 
+/// <summary>AtHeight operation.</summary>
             List<WindLab.Row> a = AtHeight(WindLab.Run(new WindLab.Planet(), off), 10d);
+/// <summary>AtHeight operation.</summary>
             List<WindLab.Row> b = AtHeight(WindLab.Run(flat, new WindLab.Options()), 10d);
 
             Assert.Equal(a.Count, b.Count);
@@ -320,13 +276,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(Mean(a, r => r.Shelter), Mean(b, r => r.Shelter), 4);
         }
 
-        // ---- the whole planet ------------------------------------------------------------------
 
         [Fact]
+/// <summary>EveryLatitudeIsSampledIncludingTheOnesAFieldRunNeverReaches operation.</summary>
         public void EveryLatitudeIsSampledIncludingTheOnesAFieldRunNeverReaches()
         {
-            // The field data spans 5° to 30°. The circulation bands live at 15°, 45° and 75°, and
-            // the equator is where the pattern's known fault is. A model run has to cover all of it.
             List<WindLab.Row> rows = WindLab.Run(new WindLab.Planet(), new WindLab.Options());
 
             bool equator = false, mid = false, polar = false;
@@ -342,11 +296,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheWindIsNeverNegativeNorAbsurdAnywhereOnThePlanetAtAnyHour operation.</summary>
         public void TheWindIsNeverNegativeNorAbsurdAnywhereOnThePlanetAtAnyHour()
         {
-            // A sweep over every latitude, height and hour at once, which is the cheapest thing the
-            // simulator buys: whatever a change to the model does, it has to survive the whole globe
-            // rather than the one place a test world happens to sit.
             WindLab.Options options = new WindLab.Options();
             options.WeatherIntensity = 1f;
 
@@ -365,10 +317,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheCsvCarriesTheSameColumnNamesTheGameWrites operation.</summary>
         public void TheCsvCarriesTheSameColumnNamesTheGameWrites()
         {
-            // The point of the whole exercise: a modelled day and a measured session line up without
-            // anything being translated between them.
             string csv = WindLab.Csv(WindLab.Run(new WindLab.Planet(), new WindLab.Options()));
             string header = csv.Substring(0, csv.IndexOf('\n'));
 
@@ -383,10 +334,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ARunIsRepeatable operation.</summary>
         public void ARunIsRepeatable()
         {
-            // Nothing in the field is random, so two runs of the same planet must agree exactly, or
-            // a change measured against a previous run is measuring noise.
             List<WindLab.Row> a = WindLab.Run(new WindLab.Planet(), new WindLab.Options());
             List<WindLab.Row> b = WindLab.Run(new WindLab.Planet(), new WindLab.Options());
 

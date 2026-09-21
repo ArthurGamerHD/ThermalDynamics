@@ -4,27 +4,9 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The per-mechanism watt figures are written on the last substep of a step and on no other.
-    ///
-    /// <para>
-    /// Each substep overwrites what the one before it wrote, and every consumer — the telemetry
-    /// report, the crosshair readout, the debug overlay, the mod API — reads between steps. So
-    /// only the last substep's writes were ever observed, and the earlier ones were five stores
-    /// into a node object per node and two into another per link, discarded by the next substep.
-    /// A step at nineteen substeps did that eighteen times for nothing, and switching diagnostics
-    /// on nearly doubled the step: 3.93 ms to 7.51 ms on a 32,800-block hull.
-    /// </para>
-    ///
-    /// <para>
-    /// The assertion is bit-identical against writing on every substep, because "the last substep's
-    /// figures" has to mean exactly that. Anything less means the batching changed which substep is
-    /// being reported, which would make every watt figure in a telemetry dump describe a different
-    /// moment than the one it claims.
-    /// </para>
-    /// </summary>
     public class DiagnosticBatchingTests
     {
+/// <summary>Builds the API method table.</summary>
         private static ThermalSimulation Build(bool everySubstep, int maxSubsteps)
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(maxSubsteps));
@@ -33,6 +15,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>AssertIdentical operation.</summary>
         private static void AssertIdentical(ThermalSimulation every, ThermalSimulation last, string what)
         {
             SolverAb.AssertIdentical(
@@ -46,9 +29,12 @@ namespace Thermodynamics.Tests
         [InlineData(2)]
         [InlineData(4)]
         [InlineData(4096)]
+/// <summary>OnlyTheLastSubstepIsPublishedAndItIsTheSameOne operation.</summary>
         public void OnlyTheLastSubstepIsPublishedAndItIsTheSameOne(int maxSubsteps)
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation every = Build(everySubstep: true, maxSubsteps: maxSubsteps);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation last = Build(everySubstep: false, maxSubsteps: maxSubsteps);
 
             EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
@@ -59,14 +45,13 @@ namespace Thermodynamics.Tests
             AssertIdentical(every, last, "atmosphere at " + maxSubsteps);
         }
 
-        /// <summary>
-        /// In vacuum, where convection is off and solar is the term that moves — a different set of
-        /// the six is non-zero, so a batching mistake confined to one mechanism still shows.
-        /// </summary>
         [Fact]
+/// <summary>TheSameHoldsInVacuum operation.</summary>
         public void TheSameHoldsInVacuum()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation every = Build(everySubstep: true, maxSubsteps: 4096);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation last = Build(everySubstep: false, maxSubsteps: 4096);
 
             EnvironmentSample sample = Worlds.Ab.SunlitVacuum();
@@ -77,17 +62,16 @@ namespace Thermodynamics.Tests
             AssertIdentical(every, last, "vacuum");
         }
 
-        /// <summary>
-        /// Spread across frames as well. The flag is set when a substep begins and read by every
-        /// slice of it, so a slice boundary must not be able to see a different answer.
-        /// </summary>
         [Theory]
         [InlineData(1)]
         [InlineData(97)]
         [InlineData(5000)]
+/// <summary>BatchingSurvivesTheStepBeingSpread operation.</summary>
         public void BatchingSurvivesTheStepBeingSpread(int budget)
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation whole = Build(everySubstep: true, maxSubsteps: 4096);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation spread = Build(everySubstep: false, maxSubsteps: 4096);
 
             EnvironmentState state = EnvironmentSolver.Solve(
@@ -105,13 +89,11 @@ namespace Thermodynamics.Tests
             AssertIdentical(whole, spread, "spread over " + budget);
         }
 
-        /// <summary>
-        /// Switching diagnostics off still switches them off. The batching decides which substep
-        /// writes, not whether any does.
-        /// </summary>
         [Fact]
+/// <summary>NothingIsPublishedWhenDiagnosticsAreOff operation.</summary>
         public void NothingIsPublishedWhenDiagnosticsAreOff()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = Build(everySubstep: false, maxSubsteps: 4096);
             simulation.Solver.CollectDiagnostics = false;
 

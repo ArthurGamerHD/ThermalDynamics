@@ -6,29 +6,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// A blueprint's subgrids are one machine, and heat crosses between them.
-    ///
-    /// <para>
-    /// backlog.md `F12` said the opposite — that "subgrids are read as
-    /// separate ships" and "the lab does not reassemble them", so every corpus figure was taken on
-    /// a hull the game would not have simulated that way. It is not true, and had not been for as
-    /// long as `ShipAssembly` existed: 747 of the first 1,002 ships of the 2026-08-22 sweep hold
-    /// more than one grid, 695 of them resolved mechanical joints, and 29,604 joints were built
-    /// across them.
-    /// </para>
-    ///
-    /// <para>
-    /// What was missing is this: `CorpusSurvey` *counts* bridges and asserts the population resolves
-    /// them, and nothing anywhere checked that a bridge actually **moves heat**. A count is not a
-    /// mechanism, and a claim about the lab reassembling ships should not rest on one.
-    /// </para>
-    /// </summary>
     public class SubgridBridgeTests
     {
-        /// <summary>A hot grid, a cold one, and optionally the joint between them.</summary>
+/// <summary>Pair operation.</summary>
         private static ShipAssembly Pair(bool bridged, out ThermalNode hot, out ThermalNode cold)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -42,6 +25,7 @@ namespace Thermodynamics.Tests
             GridBuilder second = GridBuilder.Large();
             second.Place(Catalog.HeavyArmor(), Vector3I.Zero);
 
+/// <summary>ShipAssembly operation.</summary>
             ShipAssembly assembly = new ShipAssembly();
             ThermalSimulation a = first.BuildSimulation(settings, 800f);
             ThermalSimulation b = second.BuildSimulation(settings, 300f);
@@ -56,14 +40,12 @@ namespace Thermodynamics.Tests
             return assembly;
         }
 
-        /// <summary>
-        /// **The claim `F12` denied.** Two grids joined by a rotor exchange heat, and the exchange
-        /// conserves energy — a bridge that leaked would be worse than no bridge at all.
-        /// </summary>
         [Fact]
+/// <summary>HeatCrossesAJointBetweenTwoGrids operation.</summary>
         public void HeatCrossesAJointBetweenTwoGrids()
         {
             ThermalNode hot, cold;
+/// <summary>Pair operation.</summary>
             ShipAssembly assembly = Pair(true, out hot, out cold);
 
             Assert.Single(assembly.Bridges);
@@ -81,14 +63,12 @@ namespace Thermodynamics.Tests
             Assert.Equal(before, after, before * 0.001f);
         }
 
-        /// <summary>
-        /// And the control: without the joint they are two ships and nothing crosses. Without it the
-        /// case above would pass on a shared environment rather than on a bridge.
-        /// </summary>
         [Fact]
+/// <summary>NothingCrossesWithoutOne operation.</summary>
         public void NothingCrossesWithoutOne()
         {
             ThermalNode hot, cold;
+/// <summary>Pair operation.</summary>
             ShipAssembly assembly = Pair(false, out hot, out cold);
 
             Assert.Empty(assembly.Bridges);
@@ -99,18 +79,14 @@ namespace Thermodynamics.Tests
             Assert.Equal(300f, cold.Temperature, 1);
         }
 
-        /// <summary>
-        /// A joint never carries more than would equalise the pair it connects, which is the same
-        /// bound the solver puts on its own links. Without it a large step across a light block
-        /// overshoots and the pair oscillates apart.
-        /// </summary>
         [Fact]
+/// <summary>AJointCannotOvershootThePairItConnects operation.</summary>
         public void AJointCannotOvershootThePairItConnects()
         {
             ThermalNode hot, cold;
+/// <summary>Pair operation.</summary>
             ShipAssembly assembly = Pair(true, out hot, out cold);
 
-            // One enormous step: a second at once, where the shipped clock takes an eighth.
             assembly.Step(Worlds.Shadow(), 60f);
 
             float low = Math.Min(300f, 800f);

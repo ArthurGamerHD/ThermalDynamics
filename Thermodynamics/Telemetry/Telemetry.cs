@@ -9,50 +9,28 @@ using VRage.Utils;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// Session-wide data collection for the live mod: streaming statistics, no sample buffers, and
-    /// memory bounded by the block definitions and grids that have existed.
-    /// **Observations are gated on <see cref="Enabled"/>; faults are not.** See telemetry.md.
-    /// </summary>
     public static class Telemetry
     {
-        /// <summary>
-        /// Whether collection is running. A plain static field rather than a property or settings
-        /// lookup, since it is read on the mod's hottest path.
-        /// </summary>
         public static bool Enabled;
 
-        /// <summary>
-        /// One cell update in this many feeds the wide per-block-type statistics. Peak
-        /// temperatures, update counts and damage are recorded on every update regardless.
-        /// </summary>
         public static int SampleStride
         {
             get { return Gate.Stride; }
             set { Gate.Stride = value; }
         }
 
-        /// <summary>Grid records kept in full. Beyond this, grids are counted but not detailed.</summary>
         public const int MaxGridRecords = 2048;
 
-        /// <summary>
-        /// Block faces the session holds for the surface dump, across every grid. Six per block, so
-        /// roughly fifty thousand blocks.
-        /// </summary>
         public const int MaxSurfaceRows = 300000;
 
-        /// <summary>Rows currently held. A record returns its rows to this budget when it re-snapshots.</summary>
         public static int SurfaceRowsCaptured;
         public const int MaxAnomalyKinds = 64;
         public const int MaxBlockTypes = 4096;
 
-        /// <summary>Stack frames kept with a recorded exception.</summary>
         public const int ExceptionFrames = 6;
 
-        /// <summary>Temperature above which a reading is recorded as an anomaly. The sun is about 5772 K.</summary>
         public const float ImplausibleTemperature = 20000f;
 
-        // ---- session identity -------------------------------------------------------------
         public static DateTime StartedUtc;
         public static string WorldName = "(unknown)";
         public static string OnlineMode = "(unknown)";
@@ -64,19 +42,10 @@ namespace Thermodynamics
         public static DateTime GameStartDate;
         public static string GameVersion = "(unknown)";
 
-        /// <summary>
-        /// The world's own settings, flattened from the serialised session settings, and the mods
-        /// loaded beside this one. Both decide what the mod is allowed to do, so a dump that omits
-        /// them cannot be read on its own.
-        /// </summary>
         public static readonly List<KeyValuePair<string, string>> WorldSettingsRows = new List<KeyValuePair<string, string>>();
+/// <summary>List operation.</summary>
         public static readonly List<string> Mods = new List<string>();
 
-        /// <summary>
-        /// The climate each planet is actually being simulated with, and which of its values its
-        /// definition supplied. A dump where a planet reads as vacuum in breathable air is answered
-        /// by this line and by nothing else in the report.
-        /// </summary>
         public static readonly Dictionary<string, string> PlanetProperties = new Dictionary<string, string>();
         public static DateTime GameEndDate;
         public static Settings SettingsSnapshot;
@@ -85,12 +54,15 @@ namespace Thermodynamics
         public static long SimulationStepsObserved;
         public static long CellUpdatesObserved;
 
+/// <summary>Stopwatch operation.</summary>
         private static readonly Stopwatch SessionClock = new Stopwatch();
+/// <summary>SampleGate operation.</summary>
         private static readonly SampleGate Gate = new SampleGate();
         private static bool _started;
         private static bool _finished;
         private static bool _identityCaptured;
 
+/// <summary>List operation.</summary>
         public static readonly List<GridTelemetry> Grids = new List<GridTelemetry>();
         public static readonly Dictionary<long, GridTelemetry> GridsById = new Dictionary<long, GridTelemetry>();
         public static long GridsSeen;
@@ -99,11 +71,7 @@ namespace Thermodynamics
         public static readonly Dictionary<MyDefinitionId, BlockTypeTelemetry> BlockTypes = new Dictionary<MyDefinitionId, BlockTypeTelemetry>(MyDefinitionId.Comparer);
         public static long BlockTypeRecordsDropped;
 
-        /// <summary>
-        /// Anomalies and faults, one record per kind. The gating rule — observations only while
-        /// collecting, faults always — lives on the registry, which is free of game types and so
-        /// testable outside a session.
-        /// </summary>
+/// <summary>AnomalyRegistry operation.</summary>
         public static readonly AnomalyRegistry Faults = new AnomalyRegistry(MaxAnomalyKinds);
 
         public static Dictionary<string, AnomalyRecord> Anomalies
@@ -116,27 +84,18 @@ namespace Thermodynamics
             get { return Faults.KindsDropped; }
         }
 
-        /// <summary>
-        /// Guards the three registries above: grids and blocks are not created on one thread. Taken
-        /// once per grid and once per block type, so it is off every hot path.
-        /// See known-issues.md, Block placement is not a main-thread-only path.
-        /// </summary>
+/// <summary>object operation.</summary>
         private static readonly object RegistryLock = new object();
 
-        /// <summary>
-        /// What the block overlay costs the client. Replaced rather than cleared on reset, since a
-        /// second world starts a second overlay.
-        /// </summary>
+/// <summary>OverlayTelemetry operation.</summary>
         public static OverlayTelemetry Overlay = new OverlayTelemetry();
+/// <summary>ThermalVisionTelemetry operation.</summary>
         public static ThermalVisionTelemetry Vision = new ThermalVisionTelemetry();
 
-        /// <summary>Wall clock spent inside the mod's own per-frame entry points.</summary>
+/// <summary>TimingStat operation.</summary>
         public static readonly TimingStat SessionFrameTime = new TimingStat("session frame");
 
-        /// <summary>
-        /// Cost per frame across every grid, and the worst frames of the session. Every other figure
-        /// here is per grid and a stutter is per frame. See telemetry.md, Frame cost and hitching.
-        /// </summary>
+/// <summary>FrameCostTracker operation.</summary>
         public static readonly FrameCostTracker FrameCost = new FrameCostTracker();
 
         public static double SessionSeconds
@@ -144,10 +103,8 @@ namespace Thermodynamics
             get { return SessionClock.Elapsed.TotalSeconds; }
         }
 
-        // ------------------------------------------------------------------------------------
-        // Lifecycle
-        // ------------------------------------------------------------------------------------
 
+/// <summary>Start operation.</summary>
         public static void Start()
         {
             if (_started) return;
@@ -167,12 +124,7 @@ namespace Thermodynamics
             MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] collection " + (Enabled ? "started" : "disabled"));
         }
 
-        /// <summary>
-        /// Turns collection on or off during a session, without a reload.
-        ///
-        /// Switching on attaches records and stage profilers to grids that already exist; switching
-        /// off detaches them, after which every hook in the mod costs one static bool read.
-        /// </summary>
+/// <summary>Sets the enabled.</summary>
         public static void SetEnabled(bool enabled)
         {
             if (!_started) Start();
@@ -191,11 +143,7 @@ namespace Thermodynamics
                 + (enabled ? "enabled" : "disabled") + " at runtime");
         }
 
-        /// <summary>
-        /// Captures session identity for the report. Not reliably available from the component
-        /// constructor, and mostly gone by the time <c>UnloadData</c> runs, so it is taken on the
-        /// first frame that can see it.
-        /// </summary>
+/// <summary>CaptureIdentity operation.</summary>
         private static void CaptureIdentity()
         {
             if (_identityCaptured) return;
@@ -227,10 +175,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Reads the world's settings through the serialiser rather than field by field, so a
-        /// setting the game gains is dumped without a change here.
-        /// </summary>
+/// <summary>CaptureWorldSettings operation.</summary>
         private static void CaptureWorldSettings()
         {
             WorldSettingsRows.Clear();
@@ -241,10 +186,7 @@ namespace Thermodynamics
             WorldSettingsRows.AddRange(WorldSettings.Parse(MyAPIGateway.Utilities.SerializeToXML(settings)));
         }
 
-        /// <summary>
-        /// The mod list, which decides which block and planet definitions exist at all. A world that
-        /// loads a planet pack answers different climate questions from one that does not.
-        /// </summary>
+/// <summary>CaptureMods operation.</summary>
         private static void CaptureMods()
         {
             Mods.Clear();
@@ -263,7 +205,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Records the climate in force for one planet, the first time it is resolved.</summary>
+/// <summary>NotePlanetProperties operation.</summary>
         public static void NotePlanetProperties(string planet, PlanetThermalProperties properties, string supplied)
         {
             if (!Enabled || properties == null) return;
@@ -288,14 +230,11 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Called once per rendered/simulated frame from the session component.</summary>
+/// <summary>FrameTick operation.</summary>
         public static void FrameTick()
         {
             if (!Enabled) return;
 
-            // The frame being closed is the previous one. A mod cannot control the order in which
-            // the engine runs session and entity components, and a frame closed before its grids
-            // have run would record nothing.
             FrameCost.EndFrame(FramesObserved, SessionSeconds);
 
             FramesObserved++;
@@ -308,10 +247,7 @@ namespace Thermodynamics
             catch { }
         }
 
-        /// <summary>
-        /// Writes the report. Safe to call more than once; only the first call produces output,
-        /// unless <paramref name="force"/> is set, which the manual dump command uses.
-        /// </summary>
+/// <summary>Finish operation.</summary>
         public static void Finish(string reason, bool force = false)
         {
             if (!_started || !Enabled) return;
@@ -322,14 +258,11 @@ namespace Thermodynamics
             {
                 SessionClock.Stop();
 
-                // The final-state histograms are rebuilt from scratch, so a manual mid-session dump
-                // does not carry its counts into the next report.
                 foreach (BlockTypeTelemetry type in BlockTypes.Values)
                 {
                     type.FinalTemperatures.Clear();
                 }
 
-                // A grid that is still alive has not yet had its final state read.
                 for (int i = 0; i < Grids.Count; i++)
                 {
                     GridTelemetry g = Grids[i];
@@ -349,7 +282,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Clears everything, so a second world in the same process starts clean.</summary>
+/// <summary>Reset operation.</summary>
         public static void Reset()
         {
             Enabled = false;
@@ -370,7 +303,9 @@ namespace Thermodynamics
             Mods.Clear();
             PlanetProperties.Clear();
             GameVersion = "(unknown)";
+/// <summary>OverlayTelemetry operation.</summary>
             Overlay = new OverlayTelemetry();
+/// <summary>ThermalVisionTelemetry operation.</summary>
             Vision = new ThermalVisionTelemetry();
 
             lock (RegistryLock)
@@ -383,11 +318,6 @@ namespace Thermodynamics
 
             SessionClock.Reset();
 
-            // Clearing the registry alone is insufficient: every live grid still holds the record
-            // it was handed and keeps writing to it. Its cost, steps and node updates would then be
-            // recorded but absent from every aggregate, and its opened-at would be read from a
-            // stopwatch just reset to zero, producing a grid lifetime longer than its session. The
-            // references are cleared along with the list.
             IList<ThermalGrid> live = ThermalGrid.LiveGrids;
             for (int i = 0; i < live.Count; i++)
             {
@@ -396,19 +326,16 @@ namespace Thermodynamics
             }
         }
 
-        // ------------------------------------------------------------------------------------
-        // Registration
-        // ------------------------------------------------------------------------------------
 
+/// <summary>Registers the API and message handler.</summary>
         public static GridTelemetry RegisterGrid(ThermalGrid grid)
         {
-            // A grid can be created before the session component's Init has run, so registration
-            // also starts collection if nothing else has.
             if (!_started) Start();
             if (!Enabled || grid == null) return null;
 
             try
             {
+/// <summary>GridTelemetry operation.</summary>
                 GridTelemetry record = new GridTelemetry(grid);
 
                 lock (RegistryLock)
@@ -434,6 +361,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>Returns the blocktype.</summary>
         public static BlockTypeTelemetry GetBlockType(MyDefinitionId id)
         {
             if (!Enabled) return null;
@@ -451,6 +379,7 @@ namespace Thermodynamics
                         return null;
                     }
 
+/// <summary>BlockTypeTelemetry operation.</summary>
                     type = new BlockTypeTelemetry(id);
                     BlockTypes.Add(id, type);
                     return type;
@@ -463,17 +392,8 @@ namespace Thermodynamics
             }
         }
 
-        // ------------------------------------------------------------------------------------
-        // Simulation hooks
-        // ------------------------------------------------------------------------------------
 
-        /// <summary>
-        /// One call per grid per batch of solver steps.
-        ///
-        /// The solver steps a whole grid at once, so grid-level figures are read from it directly
-        /// and per-block detail comes from a rotating slice of nodes rather than a per-block
-        /// callback.
-        /// </summary>
+/// <summary>OnGridStepped operation.</summary>
         public static void OnGridStepped(ThermalGrid grid, int steps)
         {
             if (!Enabled || grid == null || grid.Stats == null) return;
@@ -489,10 +409,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Classifies one node's temperature. Called from the sampling walk, so the cost is the
-        /// same rotating fraction of the grid the rest of the sampling pays.
-        /// </summary>
+/// <summary>CheckNode operation.</summary>
         public static void CheckNode(GridTelemetry grid, ThermalNode node)
         {
             CellUpdatesObserved++;
@@ -508,11 +425,7 @@ namespace Thermodynamics
                 + " from " + previous.ToString("n2"));
         }
 
-        /// <summary>
-        /// Records a room map that disagrees with the grid under it: the flood fill classified a cell
-        /// holding a block as open space, so anything that block was meant to enclose is mapped as
-        /// outdoors. Names the first offending block, which identifies the definition to correct.
-        /// </summary>
+/// <summary>NoteRoomLeak operation.</summary>
         public static void NoteRoomLeak(GridTelemetry grid, RoomAudit audit)
         {
             string example = (grid == null ? "grid" : grid.Name) +
@@ -527,6 +440,7 @@ namespace Thermodynamics
             Anomaly("room map treats structure as open space", example);
         }
 
+/// <summary>OnCriticalDamage operation.</summary>
         public static void OnCriticalDamage(ThermalBlock block, float damage)
         {
             if (!Enabled || block == null) return;
@@ -541,32 +455,20 @@ namespace Thermodynamics
             }
         }
 
-        // ------------------------------------------------------------------------------------
-        // Anomalies and exceptions
-        // ------------------------------------------------------------------------------------
 
+/// <summary>Anomaly operation.</summary>
         public static void Anomaly(string kind, string example)
         {
             Record(kind, example, false);
         }
 
-        /// <summary>
-        /// Records a caught exception, <b>whether or not collection is running</b>, and puts the first
-        /// of each kind in the game log. A fault is not data collection: it costs nothing until
-        /// something has already gone wrong, and by then it is the only evidence there will be.
-        /// See telemetry.md, Faults are recorded whether or not collection is running.
-        /// </summary>
+/// <summary>Exception operation.</summary>
         public static void Exception(string where, Exception e)
         {
             Record("exception in " + where, Describe(e), true);
         }
 
-        /// <summary>
-        /// Records a grid whose published figures have gone bad — NaN, infinite, or a temperature
-        /// past anything the model reaches. Filed as a fault, and so recorded and logged whether or
-        /// not collection is running: it is a defect in the simulation rather than a reading from
-        /// it, and it is the failure that costs a player their ship.
-        /// </summary>
+/// <summary>GridFault operation.</summary>
         public static void GridFault(ThermalGrid grid, string kind)
         {
             string example;
@@ -588,6 +490,7 @@ namespace Thermodynamics
             Record(kind, example, true);
         }
 
+/// <summary>Record operation.</summary>
         private static void Record(string kind, string example, bool fault)
         {
             if (!Enabled && !fault) return;
@@ -605,10 +508,7 @@ namespace Thermodynamics
             catch { }
         }
 
-        /// <summary>
-        /// One block naming every fault of the session, written as the world closes whether or not
-        /// collection is running.
-        /// </summary>
+/// <summary>LogFaultSummary operation.</summary>
         public static void LogFaultSummary()
         {
             try
@@ -624,6 +524,7 @@ namespace Thermodynamics
             catch { }
         }
 
+/// <summary>LogLine operation.</summary>
         private static void LogLine(string text)
         {
             try
@@ -633,11 +534,7 @@ namespace Thermodynamics
             catch { }
         }
 
-        /// <summary>
-        /// Message plus the top frames of the stack. The message alone does not identify the call
-        /// that threw, and throws often originate inside game code the mod reaches indirectly.
-        /// Bounded: only the first and last example of each kind are kept, and both are reported.
-        /// </summary>
+/// <summary>Describe operation.</summary>
         private static string Describe(Exception e)
         {
             if (e == null) return "(null)";
@@ -662,6 +559,7 @@ namespace Thermodynamics
             return message;
         }
 
+/// <summary>Describe operation.</summary>
         private static string Describe(GridTelemetry grid, ThermalNode node)
         {
             try

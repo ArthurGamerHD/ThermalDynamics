@@ -27,6 +27,7 @@ namespace Thermodynamics
         private static bool blockLabMode;
         private static MatrixD regionRenderMatrix = MatrixD.Identity;
         private static double blockLabNext;
+/// <summary>List operation.</summary>
         private static readonly List<BlockFleetJob> blockFleet = new List<BlockFleetJob>();
         private static bool blockFleetScanning;
         private static IEnumerator<bool> blockFleetComposition;
@@ -36,6 +37,7 @@ namespace Thermodynamics
         private static double blockFleetStarted;
         private static MatrixD blockFleetBasis = MatrixD.Identity;
 
+/// <summary>StopBlockFleet operation.</summary>
         private static void StopBlockFleet()
         {
             foreach (var job in blockFleet) { if (job.Scan != null) job.Scan.Dispose(); if (job.Mean != null) job.Mean.Dispose(); }
@@ -44,6 +46,7 @@ namespace Thermodynamics
             blockFleet.Clear(); blockFleetScanning = false; blockLabNext = 0;
         }
 
+/// <summary>FleetSamples operation.</summary>
         private static IEnumerable<Region> FleetSamples(BlockFleetJob job, bool collectDetail = true)
         {
             double size = job.Grid.Grid.GridSize;
@@ -52,11 +55,14 @@ namespace Thermodynamics
                 if (block == null || block.Node == null) continue;
                 float t = block.Node.Temperature;
                 if (float.IsNaN(t) || float.IsInfinity(t) || t < 0 || t > 100000) continue;
+/// <summary>Region operation.</summary>
                 var sample = new Region(((Vector3D)block.Block.Min - new Vector3D(.5)) * size,
                     ((Vector3D)block.Block.Max + new Vector3D(.5)) * size, t);
                 if (collectDetail)
                 {
+/// <summary>FleetTransform operation.</summary>
                     var visibleBounds = FleetTransform(sample, job.Matrix);
+/// <summary>BoundingBoxD operation.</summary>
                     var worldBox = new BoundingBoxD(visibleBounds.Min, visibleBounds.Max);
                     job.Detail.Observe(sample, MyAPIGateway.Session.Camera.IsInFrustum(ref worldBox));
                 }
@@ -65,6 +71,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>StartBlockFleet operation.</summary>
         private static void StartBlockFleet(double now)
         {
             StopBlockFleet();
@@ -77,13 +84,10 @@ namespace Thermodynamics
                 var bounds = grid.PositionComp.WorldAABB;
                 if (!camera.IsInFrustum(ref bounds)) continue;
                 double distance = Vector3D.Distance(eye, Vector3D.Max(bounds.Min, Vector3D.Min(eye, bounds.Max)));
-                // IsInFrustum includes the active game's far plane. A radial cutoff would
-                // incorrectly remove visible objects near the far corners of a wide viewport.
                 double radius = bounds.HalfExtents.Length();
                 blockFleet.Add(new BlockFleetJob { Grid = thermal, Matrix = grid.WorldMatrix, BlockCount = thermal.BlockCount,
                     Weight = Math.Min(1, radius * radius / Math.Max(25, distance * distance)) });
             }
-            // No silent prefix when the viewport itself exceeds the finite field budget.
             int recovered = ThermalVisionFleetBudget.ForViewport(blockFleetCapacity, blockFleetPressureGridCount, blockFleet.Count);
             if (recovered != blockFleetCapacity)
                 RecordEvent("fleet viewport recovery: grids=" + blockFleetPressureGridCount + " -> " + blockFleet.Count
@@ -108,7 +112,9 @@ namespace Thermodynamics
             for (int i = 0; i < blockFleet.Count; i++)
             {
                 var job = blockFleet[i]; job.Budget = budgets[i];
+/// <summary>ThermalVisionBlockDetail operation.</summary>
                 job.Detail = new ThermalVisionBlockDetail(job.Budget, Vector3D.Transform(eye, MatrixD.Invert(job.Matrix)));
+/// <summary>ThermalVisionRegionScan operation.</summary>
                 job.Scan = new ThermalVisionRegionScan(job.Grid.Grid.GridSize, job.Detail.CoarseCapacity, 1, 10485760,
                     origin: ((Vector3D)job.Grid.Grid.Min - new Vector3D(.5)) * job.Grid.Grid.GridSize);
                 job.Scan.Start(new List<IEnumerable<Region>> { FleetSamples(job) });
@@ -116,15 +122,15 @@ namespace Thermodynamics
             blockFleetStarted = now; blockFleetCursor = 0; blockFleetScanning = true;
         }
 
+/// <summary>FleetSourceValid operation.</summary>
         private static bool FleetSourceValid(BlockFleetJob job)
         {
             var grid = job.Grid.Grid;
             if (grid == null || grid.MarkedForClose || job.Grid.BlockCount != job.BlockCount) return false;
-            // Sampling is grid-local. Rigid movement cannot invalidate these temperatures;
-            // bind the completed field to current transforms at publication instead.
             return true;
         }
 
+/// <summary>FleetTransform operation.</summary>
         private static Region FleetTransform(Region region, MatrixD matrix)
         {
             Vector3D centre = Vector3D.Transform((region.Min+region.Max)*.5, matrix);
@@ -133,6 +139,7 @@ namespace Thermodynamics
             return new Region(centre-extent, centre+extent, region.Kelvin);
         }
 
+/// <summary>UpdateBlockField operation.</summary>
         private static void UpdateBlockField(double now)
         {
             if (regionOrder != null && regionPublishedSources.Count == 1)
@@ -148,22 +155,27 @@ namespace Thermodynamics
             if (!blockFleetScanning) return;
             foreach (var job in blockFleet)
                 if (!FleetSourceValid(job) || now-blockFleetStarted > 8)
+/// <summary>StopBlockFleet operation.</summary>
                 { StopBlockFleet(); regionOrder = null; regionStatus = "FLEET REFRESH / scene moved"; blockLabNext = now + .1; return; }
             int work = 0, idle = 0;
             while (work < 32768 && ProbeClock.Elapsed.TotalMilliseconds < 2 && idle < blockFleet.Count)
             {
                 var job = blockFleet[blockFleetCursor]; blockFleetCursor = (blockFleetCursor+1)%blockFleet.Count;
                 if (job.Scan.Running) { work += job.Scan.Advance(128); idle = 0; }
+/// <summary>if operation.</summary>
                 else if (job.Scan.Failure == null && job.Mean == null)
                 {
                     double distance = Vector3D.Distance(MyAPIGateway.Session.Camera.WorldMatrix.Translation,
                         Vector3D.Max(job.Grid.Grid.PositionComp.WorldAABB.Min, Vector3D.Min(MyAPIGateway.Session.Camera.WorldMatrix.Translation, job.Grid.Grid.PositionComp.WorldAABB.Max)));
                     double focalPixels = Math.Max(1, MyAPIGateway.Session.Camera.ViewportSize.Y * .5 * Math.Abs(MyAPIGateway.Session.Camera.ProjectionMatrix.M22));
                     job.SurfaceSpacing = Math.Max(job.Grid.Grid.GridSize, distance * 4 / focalPixels);
+/// <summary>ThermalVisionBlockField operation.</summary>
                     job.TemperatureField = new ThermalVisionBlockField(job.Grid.Grid.GridSize, job.SurfaceSpacing * .6);
+/// <summary>ThermalVisionRegionScan operation.</summary>
                     job.Mean = new ThermalVisionRegionScan(job.Scan.CellSize, job.Detail.CoarseCapacity, 1, average: true, origin: job.Scan.Origin);
                     job.Mean.Start(new List<IEnumerable<Region>> { FleetSamples(job, false) }); idle = 0;
                 }
+/// <summary>if operation.</summary>
                 else if (job.Mean != null && job.Mean.Running) { work += job.Mean.Advance(128); idle = 0; }
                 else idle++;
             }
@@ -178,8 +190,7 @@ namespace Thermodynamics
                 }
         }
 
-        // Yield between partition insertions instead of composing the entire fleet in one frame.
-        // Individual local-detail builds and final BSP builds remain soft-budget operations.
+/// <summary>ComposeBlockFleet operation.</summary>
         private static IEnumerable<bool> ComposeBlockFleet()
         {
             foreach (var job in blockFleet) job.Matrix = job.Grid.Grid.WorldMatrix;
@@ -188,15 +199,16 @@ namespace Thermodynamics
             ThermalVisionRegionOrder ordered = null;
             bool built = false;
             int exactCount = 0;
-            // Complete coarse coverage is retried if exact bounds exhaust the shared partition.
             for (int pass = 0; pass < 2 && !built; pass++)
             {
                 int leafLimit = 1536; // Preparation capacity, not a billboard submission quota.
+/// <summary>ThermalVisionRegionPartition operation.</summary>
                 var field = new ThermalVisionRegionPartition(leafLimit);
                 bool valid = true; exactCount = 0;
                 foreach (var job in blockFleet)
                 {
                     var regions = job.Detail.Build(job.Mean, pass == 0);
+/// <summary>List operation.</summary>
                     job.SmoothSamples = new List<Region>(regions);
                     yield return true;
                     job.AllExact = job.Detail.AllExact; job.Refined = job.Detail.RefinedBlocks;
@@ -226,16 +238,16 @@ namespace Thermodynamics
                 blockLabNext = now + (previous == blockFleetCapacity ? 1 : .1);
                 yield break;
             }
+/// <summary>Dictionary operation.</summary>
             var pendingCorners = new Dictionary<Region,ThermalVisionSurfaceField>();
             int unmatchedCells=0, preparedTriangles=0;
             if (smoothFleet)
             {
+/// <summary>List operation.</summary>
                 var cells = new List<Region>();
                 ordered.WriteNearToFar(Vector3D.Zero,cells);
                 foreach(var cell in cells)
                 {
-                    // Partition overlaps select hotter input. Recover that input's owning grid
-                    // before sampling, so nearby independent grids never share a temperature field.
                     int owner=-1;
                     Vector3D midpoint=(cell.Min+cell.Max)*.5;
                     for(int j=0;j<blockFleet.Count && owner<0;j++)
@@ -249,6 +261,7 @@ namespace Thermodynamics
                         }
                     }
                     if(owner<0) unmatchedCells++;
+/// <summary>ThermalVisionSurfaceField operation.</summary>
                     var temperatures=new ThermalVisionSurfaceField(cell, owner<0 ? double.MaxValue : blockFleet[owner].SurfaceSpacing);
                     MatrixD toGrid=owner<0?MatrixD.Identity:blockFleetBasis*MatrixD.Invert(blockFleet[owner].Matrix);
                     for(int z=0;z<=temperatures.Steps.Z;z++) for(int y=0;y<=temperatures.Steps.Y;y++) for(int x=0;x<=temperatures.Steps.X;x++)
@@ -265,6 +278,7 @@ namespace Thermodynamics
             }
             now = RegionTime.Elapsed.TotalSeconds;
             blockFleetScanning = false; blockLabNext = now + .3;
+/// <summary>List operation.</summary>
             var sources = new List<RegionGrid>();
             foreach (var job in blockFleet) sources.Add(new RegionGrid { Grid = job.Grid, Matrix = job.Matrix,
                 Blocks = job.BlockCount, Radius = job.Grid.Grid.PositionComp.WorldAABB.HalfExtents.Length(), DetailCellSize = job.Grid.Grid.GridSize });
@@ -282,11 +296,13 @@ namespace Thermodynamics
                 + " prepared-face-triangles=" + preparedTriangles + " unmatched-field-cells=" + unmatchedCells
                 + " submission-cap=" + (smoothFleet ? "none-stress-test" : "none")
                 + " source-budget=" + blockFleetCapacity + " build-age-ms=" + ((now-blockFleetStarted)*1000)
+/// <summary>BlockFleetViewDistance operation.</summary>
                 + " view-distance-m=" + BlockFleetViewDistance(), false);
             foreach (var job in blockFleet) RecordEvent("block fleet grid=" + job.Grid.Grid.EntityId + " blocks=" + job.BlockCount
                 + " budget=" + job.Budget + " exact-blocks=" + job.Refined + " all-exact=" + job.AllExact + " coarse-cells=" + job.Scan.Count + " coarse-m=" + job.Scan.CellSize + " thermal-samples=" + (job.TemperatureField == null ? 0 : job.TemperatureField.Count) + " field-queries=" + (job.TemperatureField == null ? 0 : job.TemperatureField.Queries) + " field-fallbacks=" + (job.TemperatureField == null ? 0 : job.TemperatureField.Fallbacks) + " surface-spacing-m=" + job.SurfaceSpacing, false);
         }
 
+/// <summary>BlockFleetViewDistance operation.</summary>
         private static double BlockFleetViewDistance()
         {
             var session = MyAPIGateway.Session;

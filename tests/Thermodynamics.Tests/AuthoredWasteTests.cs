@@ -8,81 +8,56 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Every waste fraction `Cubes.xml` authors says where it came from, and the ones that claim a
-    /// real conversion or the game's own field are held to it.
-    ///
-    /// <para>
-    /// **This is <see cref="AuthoredMaterialTests"/>'s rule applied to the half of a definition
-    /// that had no rule at all.** A `Conductivity` claiming aluminium has been checked since `C2`;
-    /// a `ConsumerWasteEnergy` claimed nothing, which is how the jump drive came to sit at `0.15`
-    /// under the note *"storage is efficient; the dump is not"* while its own definition stated
-    /// `PowerEfficiency 0.8` — on the block carrying most of the corpus's full-load waste heat. See
-    /// definitions.md, *Every waste fraction says where it came from*, which owns the counts.
-    /// </para>
-    ///
-    /// <para>
-    /// Four kinds of provenance, and a fraction must claim exactly one. `waste:` names a conversion
-    /// in <see cref="ReferenceEfficiencies"/> and is held to its band. `derived:` names a field the
-    /// game's own definitions state and is recomputed from them. `no producer:` says the fraction
-    /// is never read, and is checked against every definition of that type declaring no power
-    /// output. `invented:` is an admitted opinion and is nobody's business but the author's — but it
-    /// has to be said, so that a value cannot arrive with no provenance and read as though it had
-    /// one. See definitions.md, Where a block's properties come from.
-    /// </para>
-    /// </summary>
     public class AuthoredWasteTests
     {
-        /// <summary>The two fractions that decide what a block does with the power crossing it.</summary>
         private static readonly string[] Waste = { "ProducerWasteEnergy", "ConsumerWasteEnergy" };
 
+/// <summary>Read operation.</summary>
         private static List<AuthoredValues.Entry> Read()
         {
             return AuthoredValues.Read(Waste);
         }
 
-        /// <summary>The conversion a note names, or null where it names none.</summary>
+/// <summary>Claimed operation.</summary>
         private static string Claimed(string note)
         {
             Match match = Regex.Match(note ?? "", @"^waste:\s*([^.,\n]+)", RegexOptions.IgnoreCase);
             return match.Success ? match.Groups[1].Value.Trim() : null;
         }
 
-        /// <summary>The game field a note derives from, or null.</summary>
+/// <summary>Derived operation.</summary>
         private static string Derived(string note)
         {
             Match match = Regex.Match(note ?? "", @"^derived:\s*([A-Za-z]+)", RegexOptions.IgnoreCase);
             return match.Success ? match.Groups[1].Value.Trim() : null;
         }
 
+/// <summary>Unreachable operation.</summary>
         private static bool Unreachable(string note)
         {
             return Regex.IsMatch(note ?? "", @"^no producer\s*:", RegexOptions.IgnoreCase);
         }
 
+/// <summary>Invented operation.</summary>
         private static bool Invented(string note)
         {
             return (note ?? "").TrimStart().StartsWith("invented", StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>
-        /// Every fraction says where it came from — a conversion, a field the game states, a
-        /// statement that nothing reads it, or that it was invented.
-        ///
-        /// The rule that keeps the others from decaying: without it a new fraction can be added
-        /// with no comment at all and pass, because a value claiming nothing is a value every other
-        /// check skips.
-        /// </summary>
         [Fact]
+/// <summary>EveryWasteFractionSaysWhereItCameFrom operation.</summary>
         public void EveryWasteFractionSaysWhereItCameFrom()
         {
+/// <summary>Read operation.</summary>
             List<AuthoredValues.Entry> authored = Read();
             Assert.NotEmpty(authored);
 
+/// <summary>List operation.</summary>
             List<string> unexplained = new List<string>();
 
             foreach (AuthoredValues.Entry entry in authored)
             {
+/// <summary>Claimed operation.</summary>
                 string conversion = Claimed(entry.Note);
 
                 if (conversion != null && ReferenceEfficiencies.IsKnown(conversion)) continue;
@@ -98,24 +73,21 @@ namespace Thermodynamics.Tests
             Assert.True(unexplained.Count == 0, string.Join("\n  ", unexplained));
         }
 
-        /// <summary>
-        /// Every fraction that names a conversion is inside the band that conversion spans.
-        ///
-        /// A band rather than a tolerance, because efficiency figures are ranges over frame sizes
-        /// and duty points and a point value with a percentage around it would be inventing a
-        /// precision the source does not have.
-        /// </summary>
         [Fact]
+/// <summary>EveryFractionThatNamesAConversionIsInsideItsBand operation.</summary>
         public void EveryFractionThatNamesAConversionIsInsideItsBand()
         {
+/// <summary>Read operation.</summary>
             List<AuthoredValues.Entry> authored = Read();
             Assert.NotEmpty(authored);
 
             int judged = 0;
+/// <summary>List operation.</summary>
             List<string> wrong = new List<string>();
 
             foreach (AuthoredValues.Entry entry in authored)
             {
+/// <summary>Claimed operation.</summary>
                 string name = Claimed(entry.Note);
                 if (name == null || !ReferenceEfficiencies.IsKnown(name)) continue;
 
@@ -134,16 +106,8 @@ namespace Thermodynamics.Tests
             Assert.True(wrong.Count == 0, string.Join("\n  ", wrong));
         }
 
-        /// <summary>
-        /// Every fraction called unreachable is on a type where no definition in the game declares
-        /// power output, so nothing multiplies it.
-        ///
-        /// **The claim is about the producer side only**, because that is the side the game answers.
-        /// A block's *draw* is a live figure the definitions frequently do not state — a turret, a
-        /// beacon and an antenna all draw and none of them says so in an `.sbc` — so "this block
-        /// consumes nothing" is not a claim this repository can check, and no fraction makes it.
-        /// </summary>
         [Fact]
+/// <summary>EveryUnreachableFractionIsOnATypeThatProducesNothing operation.</summary>
         public void EveryUnreachableFractionIsOnATypeThatProducesNothing()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -151,9 +115,6 @@ namespace Thermodynamics.Tests
             Dictionary<string, float> output = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
             foreach (GameBlocks.Definition definition in GameBlocks.All())
             {
-                // Every type is entered, including at zero: a dictionary written only where output
-                // is positive says "the game has never heard of this type" for every type that
-                // produces nothing, which is exactly the set this check is about.
                 float most;
                 if (!output.TryGetValue(definition.TypeId, out most) || definition.PowerOutputWatts > most)
                 {
@@ -162,6 +123,7 @@ namespace Thermodynamics.Tests
             }
 
             int judged = 0, verified = 0;
+/// <summary>List operation.</summary>
             List<string> wrong = new List<string>();
 
             foreach (AuthoredValues.Entry entry in Read())
@@ -186,8 +148,6 @@ namespace Thermodynamics.Tests
                 float watts;
                 if (!output.TryGetValue(entry.TypeId, out watts))
                 {
-                    // A type the game has never heard of is a claim nothing here can settle, and
-                    // counting it as judged would let the check pass on a file of them (`E8`).
                     continue;
                 }
 
@@ -202,31 +162,28 @@ namespace Thermodynamics.Tests
             }
 
             Assert.True(judged > 0,
+/// <summary>nothing operation.</summary>
                 "no fraction claims to be unreachable, so this test judged nothing (`E8`)");
             Assert.True(verified > 100,
                 "only " + verified + " of " + judged + " unreachable claims name a type the game"
+/// <summary>anything operation.</summary>
                 + " knows, so most of them were not checked against anything (`E8`)");
             Assert.True(wrong.Count == 0, string.Join("\n  ", wrong));
         }
 
-        /// <summary>
-        /// Every fraction that says it is derived matches what the game's own definitions state,
-        /// recomputed through the rule the mod itself uses.
-        ///
-        /// The authored value stands in for the family, so it is held to the efficiency most of the
-        /// family states — the prototech drives override it per block, which is the whole reason
-        /// the derivation exists.
-        /// </summary>
         [Fact]
+/// <summary>EveryDerivedFractionMatchesTheEfficiencyTheGameStates operation.</summary>
         public void EveryDerivedFractionMatchesTheEfficiencyTheGameStates()
         {
             if (!GameBlocks.IsInstalled) return;
 
             int judged = 0;
+/// <summary>List operation.</summary>
             List<string> wrong = new List<string>();
 
             foreach (AuthoredValues.Entry entry in Read())
             {
+/// <summary>Derived operation.</summary>
                 string field = Derived(entry.Note);
                 if (field == null) continue;
 
@@ -272,21 +229,16 @@ namespace Thermodynamics.Tests
             }
 
             Assert.True(judged > 0,
+/// <summary>nothing operation.</summary>
                 "no fraction claims to be derived, so this test judged nothing (`E8`)");
             Assert.True(wrong.Count == 0, string.Join("\n  ", wrong));
         }
 
-        /// <summary>
-        /// What the file's provenance actually is, pinned so it cannot drift quietly.
-        ///
-        /// **The counts are the finding**, and they are what definitions.md quotes: the sources that
-        /// exist for a waste fraction are thin, and most of the file is an admitted opinion. A block
-        /// added without a source moves the invented count, which is a decision somebody should see
-        /// in a diff rather than a number nobody is watching (`D5`).
-        /// </summary>
         [Fact]
+/// <summary>TheProvenanceOfEveryFractionIsCounted operation.</summary>
         public void TheProvenanceOfEveryFractionIsCounted()
         {
+/// <summary>Read operation.</summary>
             List<AuthoredValues.Entry> authored = Read();
 
             int sourced = 0, derived = 0, unreachable = 0, invented = 0;
@@ -301,36 +253,14 @@ namespace Thermodynamics.Tests
             Assert.Equal(232, authored.Count);
             Assert.Equal(sourced + derived + unreachable + invented, authored.Count);
 
-            // 15 / 1 / 108 / 104 until 2026-08-24, when the computer-and-screen third closed:
-            // 27 fractions the first law fixes at 1.0 moved from *invented* to *sourced* against
-            // the `all of it` conversion, which has no band width because it is a bound rather
-            // than a measurement. The two lamps that point out of the hull stayed invented, and
-            // now say why they are under 1.0.
-            //
-            // 42 / 1 / 108 / 77 until 2026-08-25, when the last of the three inventions with a real
-            // figure beside it closed the other way round from the reactor's: the oxygen
-            // generator's 0.6 put two of six vanilla blocks past critical in open space, and it is
-            // 0.40 against `water electrolysis` now.
-            //
-            // 43 / 1 / 108 / 76 until 2026-09-08 and the debug heat source, which is two blocks
-            // and so four fractions: two producer fractions on a type that produces nothing, and
-            // two consumer fractions at `all of it`. The second pair is the first law on a block
-            // that does no work leaving it by any path power could take — it has no resource sink
-            // at all, so nothing multiplies them, and the figure is authored so that it stays
-            // right if one is ever attached. Nothing was invented, which is the point of writing
-            // the counts down.
             Assert.Equal(45, sourced);
             Assert.Equal(1, derived);
             Assert.Equal(110, unreachable);
             Assert.Equal(76, invented);
         }
 
-        /// <summary>
-        /// The checks can fail. A fraction outside its band, a conversion nobody has heard of and a
-        /// note that claims nothing all have to be caught, or the tests above pass because they
-        /// judge nothing.
-        /// </summary>
         [Fact]
+/// <summary>AFractionThatDisagreesWithItsConversionIsCaught operation.</summary>
         public void AFractionThatDisagreesWithItsConversionIsCaught()
         {
             ReferenceEfficiencies.Reference motor = ReferenceEfficiencies.Get("electric motor");

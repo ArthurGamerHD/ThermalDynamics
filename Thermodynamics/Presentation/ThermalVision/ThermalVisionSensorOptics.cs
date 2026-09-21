@@ -3,19 +3,21 @@ using VRageMath;
 
 namespace Thermodynamics.Presentation
 {
-    /// <summary>Projection and unknown-surface presentation for the approximate survey sensor.</summary>
     public static class ThermalVisionSensorOptics
     {
-        /// <summary>Dock the snapshot away from the live centre reticle, below its status panel.</summary>
+/// <summary>Layout operation.</summary>
         public static void Layout(Vector2 screen, float aspect, out Vector2 size, out Vector2 offset)
         {
             float width = Math.Min(560f, screen.X * .36f);
             float height = Math.Min(width / aspect, screen.Y * .4f);
+/// <summary>Vector2 operation.</summary>
             size = new Vector2(height * aspect, height);
+/// <summary>Vector2 operation.</summary>
             offset = new Vector2(screen.X * .5f - size.X * .5f - 24,
                 screen.Y * .5f - height * .5f - 190);
         }
 
+/// <summary>Ray operation.</summary>
         public static Vector3D Ray(int x, int y, int width, int height, MatrixD projection, MatrixD world)
         {
             if (width < 1 || height < 1 || x < 0 || y < 0 || x >= width || y >= height
@@ -30,6 +32,7 @@ namespace Thermodynamics.Presentation
             return ray;
         }
 
+/// <summary>Shade operation.</summary>
         public static Color Shade(bool hit, float kelvin, float facing, int x, int y,
             ThermalVisionState.Mode mode, float low, float high)
         {

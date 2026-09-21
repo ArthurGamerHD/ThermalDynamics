@@ -9,20 +9,21 @@ using VRageMath;
 
 namespace RichHudFramework
 {
-	/// <summary>
-	/// Aggregates multiple exceptions into a single exception with a combined message.
-	/// Used by <see cref="TaskPool"/> for clean error reporting when parallel tasks fail.
-	/// </summary>
 	public class AggregateException : Exception
 	{
+/// <summary>AggregateException operation.</summary>
 		public AggregateException(string aggregatedMsg) : base(aggregatedMsg) { }
 
+/// <summary>AggregateException operation.</summary>
 		public AggregateException(IReadOnlyList<Exception> exceptions) : base(BuildMessage(exceptions)) { }
 
+/// <summary>AggregateException operation.</summary>
 		public AggregateException(IReadOnlyList<AggregateException> exceptions) : base(BuildMessage(exceptions)) { }
 
+/// <summary>Builds the method table.</summary>
 		private static string BuildMessage<T>(IReadOnlyList<T> exceptions) where T : Exception
 		{
+/// <summary>StringBuilder operation.</summary>
 			var sb = new StringBuilder();
 
 			for (int i = 0; i < exceptions.Count; i++)
@@ -36,27 +37,18 @@ namespace RichHudFramework
 		}
 	}
 
-	/// <summary>
-	/// Marks an exception as expected/known (e.g., failed file load, invalid user data).
-	/// Allows the framework to distinguish between bugs and recoverable errors.
-	/// </summary>
 	public class KnownException : Exception
 	{
+/// <summary>KnownException operation.</summary>
 		public KnownException() : base() { }
+/// <summary>KnownException operation.</summary>
 		public KnownException(string message) : base(message) { }
+/// <summary>KnownException operation.</summary>
 		public KnownException(string message, Exception innerException) : base(message, innerException) { }
 	}
 
-	/// <summary>
-	/// Global parallel task pool used by RichHudFramework. Limits concurrent background tasks.
-	/// Tasks are started from the main thread only; results/actions can be posted back safely.
-	/// </summary>
-	/// <exclude/>
 	public class TaskPool : RichHudComponentBase
 	{
-		/// <summary>
-		/// Global limit on simultaneously running tasks across all <see cref="TaskPool"/> instances.
-		/// </summary>
 		public static int MaxTasksRunning { get { return maxTasksRunning; } set { maxTasksRunning = MathHelper.Clamp(value, 1, 10); } }
         private static int maxTasksRunning = 1, tasksRunningCount = 0;
 
@@ -65,24 +57,23 @@ namespace RichHudFramework
 		private readonly ConcurrentQueue<Action> actions;
 		private readonly Action<List<KnownException>, AggregateException> errorCallback;
 
+/// <summary>TaskPool operation.</summary>
 		public TaskPool(Action<List<KnownException>, AggregateException> errorCallback) : base(true, true)
 		{
 			this.errorCallback = errorCallback;
 
+/// <summary>List operation.</summary>
 			tasksRunning = new List<Task>();
+/// <summary>ConcurrentQueue operation.</summary>
 			actions = new ConcurrentQueue<Action>();
+/// <summary>Queue operation.</summary>
 			tasksWaiting = new Queue<Action>();
 		}
 
-		/// <summary>
-		/// Called when the mod is unloaded
-		/// </summary>
+/// <summary>Close operation.</summary>
 		public override void Close() => tasksRunningCount = 0;
 
-		/// <summary>
-		/// Main-thread update: starts new tasks if under limit, cleans completed/failed tasks,
-		/// executes actions posted from background threads, and reports exceptions.
-		/// </summary>
+/// <summary>Draw operation.</summary>
 		public override void Draw()
 		{
 			TryStartWaitingTasks();
@@ -90,38 +81,31 @@ namespace RichHudFramework
 			RunTaskActions();
 		}
 
-		/// <summary>
-		/// Enqueues a delegate to run on a background thread (via ParallelTasks).
-		/// Must be called from the main thread.
-		/// </summary>
+/// <summary>EnqueueTask operation.</summary>
 		public void EnqueueTask(Action action)
 		{
 			if (Parent == null && RichHudCore.Instance != null)
 				RegisterComponent(RichHudCore.Instance);
+/// <summary>if operation.</summary>
 			else if (ExceptionHandler.Unloading)
 				throw new Exception("New tasks cannot be started while the mod is being unloaded.");
 
 			tasksWaiting.Enqueue(action);
 		}
 
-		/// <summary>
-		/// Enqueues an action to be executed on the next main-thread update.
-		/// Thread-safe – intended for background tasks to safely affect game state.
-		/// </summary>
+/// <summary>EnqueueAction operation.</summary>
 		public void EnqueueAction(Action action)
 		{
 			if (Parent == null && RichHudCore.Instance != null)
 				RegisterComponent(RichHudCore.Instance);
+/// <summary>if operation.</summary>
 			else if (ExceptionHandler.Unloading)
 				throw new Exception("New tasks cannot be started while the mod is being unloaded.");
 
 			actions.Enqueue(action);
 		}
 
-		/// <summary>
-		/// Attempts to start any tasks in the waiting queue if the number of tasks running
-		/// is below a set threshold.
-		/// </summary>
+/// <summary>TryStartWaitingTasks operation.</summary>
 		private void TryStartWaitingTasks()
 		{
 			Action action;
@@ -133,12 +117,12 @@ namespace RichHudFramework
 			}
 		}
 
-		/// <summary>
-		/// Checks the task list for invalid tasks and tasks with exceptions then logs and throws exceptions as needed.
-		/// </summary>
+/// <summary>UpdateRunningTasks operation.</summary>
 		private void UpdateRunningTasks()
 		{
+/// <summary>List operation.</summary>
 			List<KnownException> knownExceptions = new List<KnownException>();
+/// <summary>List operation.</summary>
 			List<Exception> otherExceptions = new List<Exception>(); //unknown exceptions
 			AggregateException unknownExceptions = null;
 
@@ -165,15 +149,13 @@ namespace RichHudFramework
 			}
 
 			if (otherExceptions.Count > 0)
+/// <summary>AggregateException operation.</summary>
 				unknownExceptions = new AggregateException(otherExceptions);
 
 			errorCallback(knownExceptions, unknownExceptions);
 		}
 
-		/// <summary>
-		/// Checks actions queue for any actions sent from tasks to be executed on the main 
-		/// thread and executes them.
-		/// </summary>
+/// <summary>RunTaskActions operation.</summary>
 		private void RunTaskActions()
 		{
 			Action action;

@@ -6,20 +6,14 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The self-shadow scenario, checked against geometry worked out independently of the model.
-    ///
-    /// The scenario exists to answer "which faces of a solid hull are lit"; a test that asked the
-    /// model the same question twice would agree with whatever the model happened to do. So the
-    /// expected shares are computed here by ray-versus-cube against the same geometry, and the
-    /// scenario's own figures have to match them.
-    /// </summary>
     [Collection("alone")]
     public class SelfShadowScenarioTests
     {
+/// <summary>Vector3 operation.</summary>
         private static readonly Vector3 Sun = new Vector3(0.9004f, 0.1619f, -0.4038f);
 
         [Fact]
+/// <summary>EveryDirectionMatchesGeometryWorkedOutIndependently operation.</summary>
         public void EveryDirectionMatchesGeometryWorkedOutIndependently()
         {
             ScenarioResult result = Scenarios.Run("self-shadow");
@@ -54,14 +48,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheFaceTurnedToTheSunIsLitWholeAndTheRecessIsDark operation.</summary>
         public void TheFaceTurnedToTheSunIsLitWholeAndTheRecessIsDark()
         {
             ScenarioResult result = Scenarios.Run("self-shadow");
             ThermalSimulation simulation = result.Runner.Simulation;
             SunShadowMap shadow = simulation.Solver.SunShadow;
 
-            // Nothing stands in front of the +X face of the slab, so all of it is lit. This is the
-            // case that a per-block shadow gets wrong: only the outermost row survives it.
             for (int y = 0; y < 7; y++)
             {
                 for (int z = 0; z < 4; z++)
@@ -72,7 +65,6 @@ namespace Thermodynamics.Tests
                 }
             }
 
-            // The floor of the recess looks out through a hole whose wall is between it and the sun.
             for (int y = 2; y < 5; y++)
             {
                 for (int z = 1; z < 3; z++)
@@ -85,14 +77,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheHeadlineSharesAreTheOnesTheGeometryImplies operation.</summary>
         public void TheHeadlineSharesAreTheOnesTheGeometryImplies()
         {
             string summary = Scenarios.Run("self-shadow").Summary;
 
-            // The face turned to the sun is lit whole; the flanks are lit nearly whole, because
-            // they stand in the open even where the sun cannot reach them square-on; the recess is
-            // dark. A model that shadowed by block instead of by face would light one row of the
-            // flanks and read far lower here.
             Assert.Contains("sunward 100%", summary);
             Assert.Contains("recess floor 0%", summary);
 
@@ -100,6 +89,7 @@ namespace Thermodynamics.Tests
             Assert.True(Share(summary, "flank ") >= 70f, summary);
         }
 
+/// <summary>Share operation.</summary>
         private static float Share(string summary, string after)
         {
             int start = summary.IndexOf(after) + after.Length;
@@ -109,12 +99,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SelfShadowingTakesSolarGainAwayAndNeverAddsIt operation.</summary>
         public void SelfShadowingTakesSolarGainAwayAndNeverAddsIt()
         {
             ScenarioResult result = Scenarios.Run("self-shadow");
 
-            // The summary states both totals; the shadowed one cannot be the larger.
+/// <summary>Extract operation.</summary>
             float shadowed = Extract(result.Summary, "self-shadowing ");
+/// <summary>Extract operation.</summary>
             float cheap = Extract(result.Summary, "against ");
 
             Assert.True(shadowed < cheap,
@@ -122,20 +114,21 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SelfShadowingCostsNothingPerStepBetweenPasses operation.</summary>
         public void SelfShadowingCostsNothingPerStepBetweenPasses()
         {
             string summary = Scenarios.Run("shadow-cost").Summary;
 
+/// <summary>Milliseconds operation.</summary>
             float off = Milliseconds(summary, "self-shadowing off ");
+/// <summary>Milliseconds operation.</summary>
             float on = Milliseconds(summary, ", on ");
 
-            // The walk is a pass, not per-step work: between passes all it adds to a step is one
-            // multiply per face. If this ever starts costing real time per step, something has
-            // moved the walk back onto the stepping path — which is the mistake worth catching.
             Assert.True(on < (off * 1.5f) + 0.005f,
                 "per-step cost should be near identical between passes: " + summary);
         }
 
+/// <summary>Milliseconds operation.</summary>
         private static float Milliseconds(string summary, string after)
         {
             int start = summary.IndexOf(after) + after.Length;
@@ -144,6 +137,7 @@ namespace Thermodynamics.Tests
                 System.Globalization.CultureInfo.InvariantCulture);
         }
 
+/// <summary>Extract operation.</summary>
         private static float Extract(string summary, string after)
         {
             int start = summary.IndexOf(after) + after.Length;

@@ -2,20 +2,9 @@ using Thermodynamics.Core;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The one definition of "the same map": cell for cell, room for room, portal for portal,
-    /// venting included. A map is not a temperature, so "close" has no meaning — one cell
-    /// classified differently is a different room, a different exposure, a different ship.
-    ///
-    /// <para>
-    /// Shared by <see cref="RoomMapSnapshotTests"/> (the snapshot path against the dictionary
-    /// path) and <see cref="RoomMapRecyclingTests"/> (a recycled map against a fresh one),
-    /// because two drifted copies of a map comparison would each pass on what the other
-    /// catches, silently (`P5`).
-    /// </para>
-    /// </summary>
     internal static class RoomMapAssert
     {
+/// <summary>SameMap operation.</summary>
         internal static void SameMap(RoomMap expected, RoomMap actual, string what)
         {
             Assert.True(expected.RoomCount > 0, what + ": the reference map found no rooms, so agreement proves nothing");

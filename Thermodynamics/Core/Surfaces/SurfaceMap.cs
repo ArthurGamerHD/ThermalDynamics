@@ -4,59 +4,35 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// Per-cell surface state for a grid: which faces seal and which carry mount surfaces, for
-    /// the cell itself and for whatever sits next to it.
-    ///
-    /// Neighbour bits are always derived, never authored, so the two halves cannot drift out of
-    /// sync with each other.
-    /// </summary>
     public class SurfaceMap
     {
-        /// <summary>
-        /// Both layers of every occupied cell in one entry: the live state in the low 32 bits and the
-        /// structural state — every door read as shut — in the high 32. One dictionary rather than
-        /// two, because the two were keyed on the same cells and refreshed in the same call, so
-        /// every probe was made twice and every entry held twice. A cell's two states are still
-        /// written from the same block in the same call, never independently.
-        /// See thermal-model.md, Two layers, and performance.md, Iteration 5.
-        /// </summary>
         private readonly Dictionary<long, long> cells = new Dictionary<long, long>();
 
-        /// <summary>The table is keyed on <see cref="GridMath.Key"/>, as the grid's is; see performance.md, Iteration 11.</summary>
+/// <summary>KeyOf operation.</summary>
         private static long KeyOf(Vector3I cell)
         {
             return GridMath.Key(cell);
         }
 
-        /// <summary>
-        /// Scratch for the derived pass below, kept rather than allocated per rebuild.
-        ///
-        /// <para>
-        /// **A rebuild used to allocate two `long[cells]` every time** — 2 MB on a 126,731-block
-        /// hull, which was the whole of what the `surfaces` stage allocated, and a rebuild runs on
-        /// every structural change. They are scratch: filled from the table, read by index and
-        /// dropped, so keeping them changes nothing but the garbage. Both loops below are bounded
-        /// by `count` rather than by `Length`, which is what lets the buffers be longer than the
-        /// hull that last used them.
-        /// </para>
-        /// </summary>
         private long[] rebuildKeys = new long[0];
         private long[] rebuildSelves = new long[0];
 
         private const int StructuralShift = 32;
         private const long LiveMask = 0xFFFFFFFFL;
 
+/// <summary>Pack operation.</summary>
         private static long Pack(int live, int structural)
         {
             return (live & LiveMask) | ((long)structural << StructuralShift);
         }
 
+/// <summary>Live operation.</summary>
         private static int Live(long packed)
         {
             return (int)(packed & LiveMask);
         }
 
+/// <summary>Structural operation.</summary>
         private static int Structural(long packed)
         {
             return (int)(packed >> StructuralShift);
@@ -75,19 +51,20 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>Surface state of a cell, or 0 when the cell is empty.</summary>
+/// <summary>Returns the state.</summary>
         public int GetState(Vector3I cell)
         {
             long packed;
             return cells.TryGetValue(KeyOf(cell), out packed) ? Live(packed) : 0;
         }
 
+/// <summary>HasCell operation.</summary>
         public bool HasCell(Vector3I cell)
         {
             return cells.ContainsKey(KeyOf(cell));
         }
 
-        /// <summary>Writes a block's cells into the map and refreshes the affected neighbours.</summary>
+/// <summary>Adds a block.</summary>
         public void AddBlock(BlockInstance block)
         {
             if (block == null) return;
@@ -111,7 +88,7 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>Removes a block's cells and refreshes what was touching them.</summary>
+/// <summary>Removes the block.</summary>
         public void RemoveBlock(BlockInstance block)
         {
             if (block == null) return;
@@ -128,10 +105,7 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>
-        /// Rebuilds the whole map from a grid. Cheaper and more predictable than a long chain of
-        /// incremental edits when many blocks change at once.
-        /// </summary>
+/// <summary>Rebuild operation.</summary>
         public void Rebuild(GridModel grid)
         {
             cells.Clear();
@@ -152,10 +126,6 @@ namespace Thermodynamics.Core
                 }
             }
 
-            // Snapshotted as keys *and* self states, so the derived half of every cell is computed
-            // from the array rather than by asking the dictionary for what was just put in it, and
-            // written back exactly once. A neighbour's key is this cell's plus a constant
-            // (`GridMath.KeyByFace`), so no cell is converted to a key or back inside the loop.
             int count = cells.Count;
             if (rebuildKeys.Length < count)
             {
@@ -189,14 +159,16 @@ namespace Thermodynamics.Core
                     structural |= CellSurface.NeighbourContribution(Structural(neighbour), face);
                 }
 
+/// <summary>Pack operation.</summary>
                 cells[key] = Pack(live, structural);
             }
         }
 
-        /// <summary>Recomputes the derived neighbour half of one cell, in both layers, from one probe per neighbour.</summary>
+/// <summary>RefreshCell operation.</summary>
         public void RefreshCell(Vector3I cell)
         {
             long packed;
+/// <summary>KeyOf operation.</summary>
             long key = KeyOf(cell);
             if (!cells.TryGetValue(key, out packed)) return;
 
@@ -214,9 +186,11 @@ namespace Thermodynamics.Core
                 }
             }
 
+/// <summary>Pack operation.</summary>
             cells[key] = Pack(live, structural);
         }
 
+/// <summary>RefreshNeighboursOf operation.</summary>
         private void RefreshNeighboursOf(Vector3I cell)
         {
             for (int face = 0; face < Face.Count; face++)
@@ -225,57 +199,50 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>
-        /// True when nothing can pass between two adjacent cells. Either side sealing is sufficient.
-        /// </summary>
+/// <summary>IsFaceSealed operation.</summary>
         public bool IsFaceSealed(Vector3I cell, int face)
         {
+/// <summary>Returns the state.</summary>
             int state = GetState(cell);
             if (CellSurface.SelfAirtight(state, face)) return true;
 
+/// <summary>Returns the state.</summary>
             int neighbourState = GetState(cell + Face.Offsets[face]);
             return CellSurface.SelfAirtight(neighbourState, Face.Opposite(face));
         }
 
-        /// <summary>True when every face of the cell seals, meaning solid structure rather than a gap.</summary>
+/// <summary>IsFullySealed operation.</summary>
         public bool IsFullySealed(Vector3I cell)
         {
             return CellSurface.IsFullySealed(GetState(cell));
         }
 
-        /// <summary>Structural state of a cell, with every door read as shut, or 0 when empty.</summary>
+/// <summary>Returns the structuralstate.</summary>
         public int GetStructuralState(Vector3I cell)
         {
             long packed;
             return cells.TryGetValue(KeyOf(cell), out packed) ? Structural(packed) : 0;
         }
 
-        /// <summary>
-        /// <see cref="IsFaceSealed"/> against the structure layer. This is the connectivity rule the
-        /// room mapper walks, so the rooms it finds depend on how the grid is built rather than on
-        /// which doors are open.
-        /// </summary>
+/// <summary>IsFaceSealedStructurally operation.</summary>
         public bool IsFaceSealedStructurally(Vector3I cell, int face)
         {
+/// <summary>Returns the structuralstate.</summary>
             int state = GetStructuralState(cell);
             if (CellSurface.SelfAirtight(state, face)) return true;
 
+/// <summary>Returns the structuralstate.</summary>
             int neighbourState = GetStructuralState(cell + Face.Offsets[face]);
             return CellSurface.SelfAirtight(neighbourState, Face.Opposite(face));
         }
 
+/// <summary>IsFullySealedStructurally operation.</summary>
         public bool IsFullySealedStructurally(Vector3I cell)
         {
             return CellSurface.IsFullySealed(GetStructuralState(cell));
         }
 
-        /// <summary>
-        /// Writes each occupied cell's six structural self-airtight bits into a dense box, one byte a
-        /// cell, indexed <c>((z * sizeY) + y) * sizeX + x</c> from <paramref name="min"/>. Cells outside
-        /// the box are skipped and empty cells stay zero, which is what <see cref="GetStructuralState"/>
-        /// answers for them. The room mapper walks this instead of probing the dictionary twice per
-        /// face of every cell in the bounding volume. See performance.md, Iteration 4.
-        /// </summary>
+/// <summary>CopyStructuralSealing operation.</summary>
         public void CopyStructuralSealing(Vector3I min, Vector3I maxExclusive, byte[] sealing)
         {
             if (sealing == null) return;
@@ -300,11 +267,7 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>
-        /// Counts, per face direction, how many of a block's cell faces are open to the outside: on the
-        /// boundary, external beyond, and not sealed against. A mount joint is deliberately not a
-        /// rejection. See thermal-model.md, Exposure.
-        /// </summary>
+/// <summary>Returns the exposedfaces.</summary>
         public void GetExposedFaces(BlockInstance block, RoomMap rooms, int[] resultsByFace)
         {
             if (resultsByFace == null || resultsByFace.Length < Face.Count)
@@ -315,13 +278,10 @@ namespace Thermodynamics.Core
             Array.Clear(resultsByFace, 0, Face.Count);
             if (block == null) return;
 
-            // A one-cell block has one cell face per face, so the slab walk below is six tests on
-            // one cell state, read once rather than once a face. Same faces, same two questions in
-            // the same order; ExposureFastPathTests holds the two paths together.
-            // See performance.md, Pass 2, Iteration 3.
             if (block.CellCount == 1)
             {
                 Vector3I cell = block.Min;
+/// <summary>Returns the state.</summary>
                 int state = GetState(cell);
                 for (int face = 0; face < Face.Count; face++)
                 {
@@ -335,11 +295,7 @@ namespace Thermodynamics.Core
             GetExposedFacesWalkingTheBoundary(block, rooms, resultsByFace);
         }
 
-        /// <summary>
-        /// The general count: every cell on each face of the block's box, which a multi-cell block
-        /// needs and a one-cell block does not. Public so a test can hold the one-cell path to it.
-        /// The caller has cleared <paramref name="resultsByFace"/>.
-        /// </summary>
+/// <summary>Returns the exposedfaceswalkingtheboundary.</summary>
         public void GetExposedFacesWalkingTheBoundary(BlockInstance block, RoomMap rooms, int[] resultsByFace)
         {
             if (block == null || resultsByFace == null) return;
@@ -347,9 +303,6 @@ namespace Thermodynamics.Core
             Vector3I min = block.Min;
             Vector3I maxExclusive = block.MaxExclusive;
 
-            // Only the block's boundary is walked. A radiating face must be on the outside, so the
-            // interior cells of a multi-cell block cannot contribute one; walking the volume would
-            // cost the cube of block size rather than the square.
             for (int face = 0; face < Face.Count; face++)
             {
                 BoxGeometry.FaceSpan span = BoxGeometry.Span(min, maxExclusive, face);
@@ -370,15 +323,12 @@ namespace Thermodynamics.Core
                         cell = BoxGeometry.WithComponent(cell, u, a);
                         cell = BoxGeometry.WithComponent(cell, v, b);
 
+/// <summary>Returns the state.</summary>
                         int state = GetState(cell);
                         Vector3I neighbour = cell + offset;
 
-                        // Something on the other side seals this face off.
                         if (CellSurface.NeighbourAirtight(state, face)) continue;
 
-                        // The space beyond must reach the outside. A mount joint is deliberately not
-                        // tested: the sealing test above already took every joint that buries a face,
-                        // so a mount test could only reach a hull panel under a catwalk.
                         if (rooms != null && !rooms.IsExternal(neighbour)) continue;
 
                         count++;
@@ -389,11 +339,7 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>
-        /// Counts, per room, how many of a block's cell faces look into that room's air — a different
-        /// test from <see cref="GetExposedFaces"/>, since a bulkhead's inner skin both seals the
-        /// compartment and warms it. The caller owns and clears <paramref name="results"/>.
-        /// </summary>
+/// <summary>Returns the roomcontacts.</summary>
         public void GetRoomContacts(BlockInstance block, RoomMap rooms, List<RoomContact> results)
         {
             if (results == null || block == null || rooms == null) return;
@@ -421,7 +367,6 @@ namespace Thermodynamics.Core
 
                         Vector3I neighbour = cell + offset;
 
-                        // Another block on the far side is a conduction joint, not air.
                         if (HasCell(neighbour)) continue;
 
                         int room = rooms.RoomIndexOf(neighbour);
@@ -433,18 +378,20 @@ namespace Thermodynamics.Core
             }
         }
 
+/// <summary>Accumulate operation.</summary>
         private static void Accumulate(List<RoomContact> results, int room)
         {
             for (int i = 0; i < results.Count; i++)
             {
                 if (results[i].RoomIndex != room) continue;
+/// <summary>RoomContact operation.</summary>
                 results[i] = new RoomContact(room, results[i].Faces + 1);
                 return;
             }
             results.Add(new RoomContact(room, 1));
         }
 
-        /// <summary>Convenience wrapper allocating the result array.</summary>
+/// <summary>Returns the exposedfaces.</summary>
         public int[] GetExposedFaces(BlockInstance block, RoomMap rooms)
         {
             int[] result = new int[Face.Count];
@@ -452,6 +399,7 @@ namespace Thermodynamics.Core
             return result;
         }
 
+/// <summary>Clear operation.</summary>
         public void Clear()
         {
             cells.Clear();

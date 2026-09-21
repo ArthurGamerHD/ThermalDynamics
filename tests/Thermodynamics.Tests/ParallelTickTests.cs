@@ -5,41 +5,22 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **The boundary a fleet is solved in parallel across, checked as text.**
-    ///
-    /// <para>
-    /// `D19`'s shape is *solve in parallel, apply on the game thread*, and what makes it safe is not
-    /// the threading but the boundary: `ThermalGrid.SolveTick` touches nothing outside its own grid,
-    /// and everything that reads or writes the game happens in `PrepareTick` or `PublishTick`. That
-    /// is a property of the source rather than of a run — the harness cannot construct a game
-    /// component at all, and a session is the only place a violation would show, as a crash on a
-    /// worker thread that nobody can reproduce.
-    /// </para>
-    ///
-    /// <para>
-    /// So it is asserted the way this repository asserts the settings plumbing: by reading the file.
-    /// A test that runs the parallel path is not possible here; a test that says *this method does
-    /// not name the game* is, and it is the check that would have caught the mistake.
-    /// </para>
-    /// </summary>
     public class ParallelTickTests
     {
+/// <summary>RepoRoot operation.</summary>
         private static string RepoRoot()
         {
             return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
 
+/// <summary>Source operation.</summary>
         private static string Source(string file)
         {
             return File.ReadAllText(Path.Combine(
                 RepoRoot(), "Thermodynamics", "Game", file));
         }
 
-        /// <summary>
-        /// The body of one method, from its signature to the brace that closes it, by counting
-        /// braces. Crude and enough: these are C# methods in a file this repository owns.
-        /// </summary>
+/// <summary>Body operation.</summary>
         private static string Body(string source, string signature)
         {
             int at = source.IndexOf(signature);
@@ -52,6 +33,7 @@ namespace Thermodynamics.Tests
             for (int i = open; i < source.Length; i++)
             {
                 if (source[i] == '{') depth++;
+/// <summary>if operation.</summary>
                 else if (source[i] == '}')
                 {
                     depth--;
@@ -63,29 +45,26 @@ namespace Thermodynamics.Tests
             return null;
         }
 
-        /// <summary>Comments are prose about the game and say so freely; code is the subject.</summary>
+/// <summary>CodeOnly operation.</summary>
         private static string CodeOnly(string body)
         {
             body = Regex.Replace(body, @"/\*.*?\*/", " ", RegexOptions.Singleline);
             return Regex.Replace(body, @"//[^\n]*", " ");
         }
 
-        /// <summary>
-        /// **What a worker thread may not touch.** `MyAPIGateway` is the game's own API and most of
-        /// it asserts it is on the game thread; `Grid` is the engine's entity; `Telemetry`'s frame
-        /// totals are one object for the whole session; and the block list is rewritten by the
-        /// game's own add and remove events.
-        /// </summary>
         private static readonly string[] Forbidden =
         {
             "MyAPIGateway", "Grid.", "Telemetry.FrameCost", "MyLog", "blocks[", "Terminal",
         };
 
         [Fact]
+/// <summary>TheSolveHalfNamesNothingThatBelongsToTheGame operation.</summary>
         public void TheSolveHalfNamesNothingThatBelongsToTheGame()
         {
+/// <summary>CodeOnly operation.</summary>
             string body = CodeOnly(Body(Source("ThermalGridSimulation.cs"), "public void SolveTick()"));
 
+/// <summary>List operation.</summary>
             List<string> found = new List<string>();
             foreach (string name in Forbidden)
             {
@@ -97,13 +76,11 @@ namespace Thermodynamics.Tests
                 + ", which a worker thread may not touch — move it into PrepareTick or PublishTick");
         }
 
-        /// <summary>
-        /// And the halves that *do* touch the game are the ones the scheduler keeps on the game
-        /// thread, which is what makes the boundary above worth anything.
-        /// </summary>
         [Fact]
+/// <summary>TheSchedulerPreparesAndPublishesAroundTheFanOut operation.</summary>
         public void TheSchedulerPreparesAndPublishesAroundTheFanOut()
         {
+/// <summary>CodeOnly operation.</summary>
             string scheduler = CodeOnly(Source("ThermalGridScheduler.cs"));
 
             int prepare = scheduler.IndexOf("PrepareTick");
@@ -119,13 +96,8 @@ namespace Thermodynamics.Tests
                 + " thread, solved anywhere, and published on the game thread");
         }
 
-        /// <summary>
-        /// **It ships off**, and that is the state a session has to change rather than a default
-        /// this repository chose. Asserted because the reasoning beside it — the engine's scheduler,
-        /// the machine a mod shares, whether a worker's exception reaches a log — is unanswered
-        /// rather than answered in the negative.
-        /// </summary>
         [Fact]
+/// <summary>TheParallelPathShipsOff operation.</summary>
         public void TheParallelPathShipsOff()
         {
             string settings = File.ReadAllText(Path.Combine(

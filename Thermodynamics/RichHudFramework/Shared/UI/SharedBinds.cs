@@ -5,9 +5,6 @@ namespace RichHudFramework.UI
     using Client;
     using Server;
 
-    /// <summary>
-    /// A collection of immutable, commonly used key binds used by the framework library.
-    /// </summary>
     public sealed class SharedBinds : RichHudComponentBase
     {
         public static IBind LeftButton { get { return Instance.sharedMain[0]; } }
@@ -43,12 +40,14 @@ namespace RichHudFramework.UI
 
         private static SharedBinds Instance
         {
+/// <summary>Init operation.</summary>
             get { Init(); return instance; }
             set { instance = value; }
         }
         private static SharedBinds instance;
         private readonly IBindGroup sharedMain, sharedModifiers;
 
+/// <summary>SharedBinds operation.</summary>
         private SharedBinds() : base(false, true)
         {
             sharedMain = BindManager.GetOrCreateGroup("SharedBinds");
@@ -90,16 +89,15 @@ namespace RichHudFramework.UI
             });
         }
 
+/// <summary>Init operation.</summary>
         private static void Init()
         {
             if (instance == null)
+/// <summary>SharedBinds operation.</summary>
                 instance = new SharedBinds();
         }
 
-        /// <summary>
-        /// Internal component closing callback
-        /// </summary>
-        /// <exclude/>
+/// <summary>Close operation.</summary>
         public override void Close()
         {
             Instance = null;

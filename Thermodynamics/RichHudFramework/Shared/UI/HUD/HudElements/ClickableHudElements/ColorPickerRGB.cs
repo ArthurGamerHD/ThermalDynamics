@@ -4,43 +4,21 @@ using VRageMath;
 
 namespace RichHudFramework.UI
 {
-	/// <summary>
-	/// A named color picker component utilizing RGB sliders, styled to mimic the Space Engineers terminal interface.
-	/// <para>Operating in RGB mode. Alpha (transparency) is not supported.</para>
-	/// </summary>
 	public class ColorPickerRGB : HudElementBase, IValueControl<Color>
 	{
-		/// <summary>
-		/// Event invoked when the selected color value changes.
-		/// </summary>
 		public event EventHandler ValueChanged;
 
-		/// <summary>
-		/// Utility property for registering a value update callback via object initializers.
-		/// </summary>
 		public EventHandler UpdateValueCallback
 		{
 			set { ValueChanged += value; }
 		}
 
-		/// <summary>
-		/// Gets or sets the text content of the picker's label.
-		/// </summary>
 		public RichText Name { get { return name.TextBoard.GetText(); } set { name.TextBoard.SetText(value); } }
 
-		/// <summary>
-		/// Gets the text builder backing the label.
-		/// </summary>
 		public ITextBuilder NameBuilder => name.TextBoard;
 
-		/// <summary>
-		/// Gets or sets the glyph formatting used by the main label.
-		/// </summary>
 		public GlyphFormat NameFormat { get { return name.TextBoard.Format; } set { name.TextBoard.SetFormatting(value); } }
 
-		/// <summary>
-		/// Gets or sets the glyph formatting used by the numeric value labels next to the sliders.
-		/// </summary>
 		public GlyphFormat ValueFormat
 		{
 			get { return sliderText[0].Format; }
@@ -51,10 +29,6 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Gets or sets the color currently specified by the picker.
-		/// <para>Setting this value will automatically update the positions of the sliders.</para>
-		/// </summary>
 		public virtual Color Value
 		{
 			get { return _color; }
@@ -67,83 +41,50 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		// Header
 
-		/// <summary>
-		/// Color picker label located to the left of the color preview.
-		/// </summary>
-		/// <exclude/>
 		protected readonly Label name;
 
-		/// <summary>
-		/// The visual preview box displaying the selected color.
-		/// </summary>
-		/// <exclude/>
 		protected readonly TexturedBox display;
 
-		/// <summary>
-		/// Horizontal container layout for the name label and display box.
-		/// </summary>
-		/// <exclude/>
 		protected readonly HudChain headerChain;
 
-		// Slider text
 
-		/// <summary>
-		/// Array of labels displaying numeric values, arranged in a vertical column to the right of the sliders.
-		/// </summary>
-		/// <exclude/>
 		protected readonly Label[] sliderText;
 
-		/// <exclude/>
 		protected readonly HudChain<HudElementContainer<Label>, Label> colorNameColumn;
 
-		// Sliders
 
-		/// <summary>
-		/// Vertical column of slider controls located to the left of the value labels.
-		/// </summary>
-		/// <exclude/>
 		public readonly SliderBox[] sliders;
 
-		/// <exclude/>
 		protected readonly HudChain<HudElementContainer<SliderBox>, SliderBox> colorSliderColumn;
 
-		/// <summary>
-		/// Layout chain combining the slider column and the value label column.
-		/// </summary>
-		/// <exclude/>
 		protected readonly HudChain colorChain;
 
-		/// <summary>
-		/// Stores the current and previous color states. Previous color is used to detect changes for event firing.
-		/// </summary>
-		/// <exclude/>
 		protected Color _color, lastColor;
 
-		/// <summary>
-		/// The index of the color slider that currently has input focus, or -1 if none.
-		/// </summary>
-		/// <exclude/>
 		protected int focusedChannel;
 
+/// <summary>ColorPickerRGB operation.</summary>
 		public ColorPickerRGB(HudParentBase parent) : base(parent)
 		{
-			// Header
+/// <summary>Label operation.</summary>
 			name = new Label()
 			{
 				Format = GlyphFormat.Blueish.WithSize(1.08f),
 				Text = "NewColorPicker",
 				AutoResize = false,
+/// <summary>Vector2 operation.</summary>
 				Size = new Vector2(88f, 22f)
 			};
 
+/// <summary>TexturedBox operation.</summary>
 			display = new TexturedBox()
 			{
 				Width = 231f,
 				Color = Color.Black
 			};
 
+/// <summary>BorderBox operation.</summary>
 			var dispBorder = new BorderBox(display)
 			{
 				Color = Color.White,
@@ -151,6 +92,7 @@ namespace RichHudFramework.UI
 				DimAlignment = DimAlignments.Size,
 			};
 
+/// <summary>HudChain operation.</summary>
 			headerChain = new HudChain(false)
 			{
 				Height = 22f,
@@ -158,11 +100,13 @@ namespace RichHudFramework.UI
 				CollectionContainer = { name, { display, 1f } }
 			};
 
-			// Color picker
 			sliderText = new Label[]
 			{
+/// <summary>Label operation.</summary>
 				new Label() { AutoResize = false, Format = TerminalFormatting.ControlFormat, Height = 47f },
+/// <summary>Label operation.</summary>
 				new Label() { AutoResize = false, Format = TerminalFormatting.ControlFormat, Height = 47f },
+/// <summary>Label operation.</summary>
 				new Label() { AutoResize = false, Format = TerminalFormatting.ControlFormat, Height = 47f }
 			};
 
@@ -181,16 +125,19 @@ namespace RichHudFramework.UI
 			
 			sliders = new SliderBox[]
 			{
+/// <summary>SliderBox operation.</summary>
 				new SliderBox()
 				{
 					Min = 0f, Max = 255f, Height = 47f,
 					UpdateValueCallback = UpdateChannelR
 				},
+/// <summary>SliderBox operation.</summary>
 				new SliderBox()
 				{
 					Min = 0f, Max = 255f, Height = 47f,
 					UpdateValueCallback = UpdateChannelG
 				},
+/// <summary>SliderBox operation.</summary>
 				new SliderBox()
 				{
 					Min = 0f, Max = 255f, Height = 47f,
@@ -211,12 +158,14 @@ namespace RichHudFramework.UI
 				}
 			};
 
+/// <summary>HudChain operation.</summary>
 			colorChain = new HudChain(false)
 			{
 				SizingMode = HudChainSizingModes.FitMembersOffAxis,
 				CollectionContainer = { { colorNameColumn, 0f }, { colorSliderColumn, 1f } }
 			};
 
+/// <summary>HudChain operation.</summary>
 			var mainChain = new HudChain(true, this)
 			{
 				DimAlignment = DimAlignments.UnpaddedSize,
@@ -229,6 +178,7 @@ namespace RichHudFramework.UI
 				}
 			};
 
+/// <summary>Vector2 operation.</summary>
 			Size = new Vector2(318f, 163f);
 			UseCursor = true;
 			ShareCursor = true;
@@ -237,13 +187,11 @@ namespace RichHudFramework.UI
 			lastColor = _color;
 		}
 
+/// <summary>ColorPickerRGB operation.</summary>
 		public ColorPickerRGB() : this(null)
 		{ }
 
-		/// <summary>
-		/// Sets input focus to the slider corresponding to the given color channel index.
-		/// </summary>
-		/// <param name="channel">The index of the slider to focus (0 to 2).</param>
+/// <summary>Sets the channelfocused.</summary>
 		public void SetChannelFocused(int channel)
 		{
 			channel = MathHelper.Clamp(channel, 0, 2);
@@ -252,10 +200,7 @@ namespace RichHudFramework.UI
 				focusedChannel = channel;
 		}
 
-		/// <summary>
-		/// Updates the Red channel value and display when the first slider changes.
-		/// </summary>
-		/// <exclude/>
+/// <summary>UpdateChannelR operation.</summary>
 		protected virtual void UpdateChannelR(object sender, EventArgs args)
 		{
 			var slider = sender as SliderBox;
@@ -264,10 +209,7 @@ namespace RichHudFramework.UI
 			display.Color = _color;
 		}
 
-		/// <summary>
-		/// Updates the Green channel value and display when the second slider changes.
-		/// </summary>
-		/// <exclude/>
+/// <summary>UpdateChannelG operation.</summary>
 		protected virtual void UpdateChannelG(object sender, EventArgs args)
 		{
 			var slider = sender as SliderBox;
@@ -276,10 +218,7 @@ namespace RichHudFramework.UI
 			display.Color = _color;
 		}
 
-		/// <summary>
-		/// Updates the Blue channel value and display when the third slider changes.
-		/// </summary>
-		/// <exclude/>
+/// <summary>UpdateChannelB operation.</summary>
 		protected virtual void UpdateChannelB(object sender, EventArgs args)
 		{
 			var slider = sender as SliderBox;
@@ -288,12 +227,7 @@ namespace RichHudFramework.UI
 			display.Color = _color;
 		}
 
-		/// <summary>
-		/// Updates input handling for the picker.
-		/// <para>Manages keyboard navigation (Up/Down arrows) between sliders and triggers value change events.</para>
-		/// </summary>
-		/// <param name="cursorPos">The current position of the cursor.</param>
-		/// <exclude/>
+/// <summary>HandleInput operation.</summary>
 		protected override void HandleInput(Vector2 cursorPos)
 		{
 			if (_color != lastColor)
@@ -317,6 +251,7 @@ namespace RichHudFramework.UI
 						i = MathHelper.Clamp(i - 1, 0, sliders.Length - 1);
 						sliders[i].FocusHandler.GetInputFocus();
 					}
+/// <summary>if operation.</summary>
 					else if (SharedBinds.DownArrow.IsNewPressed)
 					{
 						i = MathHelper.Clamp(i + 1, 0, sliders.Length - 1);

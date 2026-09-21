@@ -6,40 +6,20 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// A step spread across many frames must produce exactly the same answer as the same step run
-    /// in one go.
-    ///
-    /// This is the whole safety argument for spreading, and it is not a small claim. The original
-    /// mod also spread its work across frames and that was a defect: it advanced <em>different
-    /// blocks on different frames</em>, so a block's neighbours could be a frame ahead of or
-    /// behind it, the result depended on iteration order, and it had to alternate sweep direction
-    /// every pass to keep the bias fair.
-    ///
-    /// What is spread here is the arithmetic of a single substep, never the simulation. Every
-    /// exchange is computed from the temperatures at the start of the substep and summed into a
-    /// watts buffer that is applied to every node together at the end — and a sum has the same
-    /// value however many pieces it is computed in. So the assertion is not "close enough", it is
-    /// <b>bit-identical</b>, and anything less means a slice is reading state another slice has
-    /// already moved.
-    /// </summary>
     [Trait("speed", "slow")]
     public class SpreadStepTests
     {
-        /// <summary>A grid with everything in it that a substep touches.</summary>
+/// <summary>Builds the API method table.</summary>
         private static ThermalSimulation Build()
         {
             GridBuilder builder = GridBuilder.Large();
 
-            // Two block types, so the grid is stiff enough to need several substeps — spreading
-            // has to be right across substep boundaries as well as within one.
             int index = 0;
             foreach (Vector3I cell in GridShapes.Ship(fuselageLength: 24, fuselageWidth: 7, bulkheadSpacing: 6))
             {
                 builder.Place((index++ % 8) == 0 ? Catalog.Grating() : Catalog.HeavyArmor(), cell);
             }
 
-            // A reactor, so waste heat and a real gradient are in play.
             BlockInstance occupant = builder.Grid.GetAtCell(new Vector3I(3, 3, 6));
             if (occupant != null)
             {
@@ -54,6 +34,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>Seed operation.</summary>
         private static void Seed(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -64,30 +45,22 @@ namespace Thermodynamics.Tests
             }
         }
 
+/// <summary>Sky operation.</summary>
         private static EnvironmentSample Sky()
         {
             return Worlds.PlanetSurface(0.6f, timeOfDay: 0.4f, windSpeed: 15f);
         }
 
-        /// <summary>
-        /// Reading the simulation must not move it, and a step now spans many frames, so
-        /// "observing between steps" is no longer a thing that exists — telemetry profiles a grid
-        /// while a step is part way through one.
-        ///
-        /// <c>ThermalSolver.ProfileSubsteps</c> is the dangerous one, because the natural way to
-        /// write it is to bring the mirrored state up to date first — and <c>SyncNodeState</c>
-        /// rewrites the row the publish stage measures its change against, which would silently
-        /// zero every block's reported delta and discard any temperature a host had written
-        /// mid-step. It refuses to synchronise while a step is in flight; this is what holds it
-        /// to that.
-        /// </summary>
         [Theory]
         [InlineData(1)]
         [InlineData(97)]
         [InlineData(1000)]
+/// <summary>ProfilingAStepInFlightDoesNotChangeIt operation.</summary>
         public void ProfilingAStepInFlightDoesNotChangeIt(int budget)
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation clean = Build();
+/// <summary>Builds the method table.</summary>
             ThermalSimulation observed = Build();
             Seed(clean);
             Seed(observed);
@@ -124,9 +97,12 @@ namespace Thermodynamics.Tests
         [InlineData(7)]
         [InlineData(64)]
         [InlineData(1000)]
+/// <summary>ASpreadStepIsBitIdenticalToAWholeOne operation.</summary>
         public void ASpreadStepIsBitIdenticalToAWholeOne(int budget)
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation whole = Build();
+/// <summary>Builds the method table.</summary>
             ThermalSimulation spread = Build();
             Seed(whole);
             Seed(spread);
@@ -147,14 +123,13 @@ namespace Thermodynamics.Tests
                 "spread over " + slices + " slices", "run whole", "run in slices");
         }
 
-        /// <summary>
-        /// And it must stay identical over many steps, so nothing drifts across step boundaries —
-        /// the substep count, the heat pump bookkeeping, the published deltas.
-        /// </summary>
         [Fact]
+/// <summary>ManySpreadStepsStayIdenticalToManyWholeOnes operation.</summary>
         public void ManySpreadStepsStayIdenticalToManyWholeOnes()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation whole = Build();
+/// <summary>Builds the method table.</summary>
             ThermalSimulation spread = Build();
             Seed(whole);
             Seed(spread);
@@ -178,15 +153,13 @@ namespace Thermodynamics.Tests
             Assert.Equal(whole.Solver.LastSubsteps, spread.Solver.LastSubsteps);
         }
 
-        /// <summary>
-        /// The reported per-step change must describe the whole step, not the slice that happened
-        /// to finish it. The HUD's rate of change and the anomaly classifier both recover the
-        /// previous temperature by subtracting it.
-        /// </summary>
         [Fact]
+/// <summary>ThePublishedDeltaDescribesTheWholeStep operation.</summary>
         public void ThePublishedDeltaDescribesTheWholeStep()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation whole = Build();
+/// <summary>Builds the method table.</summary>
             ThermalSimulation spread = Build();
             Seed(whole);
             Seed(spread);
@@ -205,17 +178,15 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Overheat events and threshold crossings are produced during the step and must all
-        /// survive it, however many slices it took.
-        /// </summary>
         [Fact]
+/// <summary>EventsRaisedDuringASpreadStepAllSurvive operation.</summary>
         public void EventsRaisedDuringASpreadStepAllSurvive()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation whole = Build();
+/// <summary>Builds the method table.</summary>
             ThermalSimulation spread = Build();
 
-            // Hot enough that a good share of the grid is over its critical temperature.
             foreach (ThermalSimulation simulation in new[] { whole, spread })
             {
                 IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -232,26 +203,20 @@ namespace Thermodynamics.Tests
             Assert.Equal(whole.Solver.Overheats.Count, spread.Solver.Overheats.Count);
         }
 
-        /// <summary>
-        /// A step abandoned part way must leave every temperature where the last completed substep
-        /// left it, rather than half-applying one.
-        ///
-        /// The host abandons a step when the grid changes shape underneath it — node indices move
-        /// and the half-summed watts buffer refers to a grid that no longer exists — so this is
-        /// the property that makes it safe to do so.
-        /// </summary>
         [Fact]
+/// <summary>AnAbandonedStepLeavesTheGridWhereTheLastSubstepLeftIt operation.</summary>
         public void AnAbandonedStepLeavesTheGridWhereTheLastSubstepLeftIt()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = Build();
             Seed(simulation);
 
             EnvironmentState state = EnvironmentSolver.Solve(
+/// <summary>Sky operation.</summary>
                 simulation.Settings, simulation.Planet, Sky());
 
             simulation.Solver.BeginStep(simulation.Settings.StepSeconds, state);
 
-            // Part way through, but not finished.
             simulation.Solver.AdvanceStep(simulation.Solver.StepWorkUnits / 3);
             Assert.True(simulation.Solver.StepInFlight);
 
@@ -263,25 +228,19 @@ namespace Thermodynamics.Tests
                 "abandoning a step", "before", "after");
         }
 
-        // ---- pacing ---------------------------------------------------------------------------
 
-        /// <summary>
-        /// Every frame must do its share, and no frame the lot.
-        ///
-        /// This is the property the whole arrangement exists for. A step covers fifteen frames at
-        /// the default settings, and the simulation used to do all of it on one of them: fourteen
-        /// frames of nothing and one of everything. The same total work spread evenly is felt as a
-        /// frame rate rather than as a stutter.
-        /// </summary>
         [Fact]
+/// <summary>EveryFrameDoesItsShareAndNoFrameDoesTheLot operation.</summary>
         public void EveryFrameDoesItsShareAndNoFrameDoesTheLot()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = Build();
             Seed(simulation);
 
             const float frame = 1f / 60f;
             const int frames = 120;
 
+/// <summary>List operation.</summary>
             List<long> perFrame = new List<long>();
             for (int i = 0; i < frames; i++)
             {
@@ -308,17 +267,15 @@ namespace Thermodynamics.Tests
                 + "; a step landing whole on one frame would be about fifteen times the mean");
         }
 
-        /// <summary>
-        /// And the rate must still be exactly what the settings ask for. Spreading work is only
-        /// worth anything if the same amount of simulation comes out of the other end.
-        /// </summary>
         [Theory]
         [InlineData(1, 1f)]
         [InlineData(4, 1f)]
         [InlineData(10, 1f)]
         [InlineData(4, 2f)]
+/// <summary>TheConfiguredRateSurvivesBeingSpread operation.</summary>
         public void TheConfiguredRateSurvivesBeingSpread(int frequency, float speed)
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = Build();
 
             simulation.Settings.Frequency = frequency;
@@ -327,7 +284,6 @@ namespace Thermodynamics.Tests
 
             long before = simulation.Solver.StepCount;
 
-            // Two seconds of frames.
             for (int i = 0; i < 120; i++)
             {
                 simulation.Update(1f / 60f, Sky());
@@ -341,14 +297,13 @@ namespace Thermodynamics.Tests
                 + " steps in two seconds, got " + steps);
         }
 
-        /// <summary>
-        /// A grid small enough that its share of a frame rounds below a single element must still
-        /// advance. Dropping the fraction would leave a fighter frozen while the fleet simulates.
-        /// </summary>
         [Fact]
+/// <summary>AGridTooSmallToOweAWholeElementPerFrameStillAdvances operation.</summary>
         public void AGridTooSmallToOweAWholeElementPerFrameStillAdvances()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(Catalog.LargeGridSize);
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
             simulation.AddBlock(new BlockInstance(Catalog.LightArmor(), Vector3I.Zero,
                 BlockOrientation.Identity), 900f);
@@ -362,17 +317,16 @@ namespace Thermodynamics.Tests
                 + " steps in two seconds, and four a second was asked for");
         }
 
-        /// <summary>
-        /// The work estimate has to be roughly what the step actually does, or the pacing built on
-        /// it spreads the step over the wrong number of frames.
-        /// </summary>
         [Fact]
+/// <summary>TheWorkEstimateMatchesWhatTheStepActuallyCosts operation.</summary>
         public void TheWorkEstimateMatchesWhatTheStepActuallyCosts()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = Build();
             Seed(simulation);
 
             EnvironmentState state = EnvironmentSolver.Solve(
+/// <summary>Sky operation.</summary>
                 simulation.Settings, simulation.Planet, Sky());
 
             simulation.Solver.BeginStep(simulation.Settings.StepSeconds, state);

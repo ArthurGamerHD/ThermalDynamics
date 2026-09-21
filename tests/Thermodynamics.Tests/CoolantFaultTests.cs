@@ -6,22 +6,16 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// "I built a ring and nothing happened" is the commonest way a coolant loop fails, and the loop
-    /// list cannot answer it: the whole symptom is that the loop is absent. These pin the reason
-    /// given for each way a run can fail to close.
-    ///
-    /// The case that prompted it: a field dump held six copies of one ship, four with a working loop
-    /// and two without, and nothing in the report could say what differed between them.
-    /// </summary>
     public class CoolantFaultTests
     {
+/// <summary>Isolated operation.</summary>
         private static ThermalSettings Isolated()
         {
             return Isolation.DeadWorld();
         }
 
         [Fact]
+/// <summary>AWorkingRingReportsNoFaultAtAll operation.</summary>
         public void AWorkingRingReportsNoFaultAtAll()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -35,14 +29,8 @@ namespace Thermodynamics.Tests
             Assert.False(diagnostics.HasFaults);
         }
 
-        /// <summary>
-        /// A closed ring with no pump is a loop, and one that circulates nothing.
-        ///
-        /// It used to be no loop at all, which is what made destroying a pump delete the ring and every
-        /// joule its coolant held — a ship could dump heat by grinding its own pump. The ring now keeps
-        /// its coolant and its heat, and moves neither.
-        /// </summary>
         [Fact]
+/// <summary>AClosedRingWithNoPumpIsALoopThatCirculatesNothing operation.</summary>
         public void AClosedRingWithNoPumpIsALoopThatCirculatesNothing()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -63,6 +51,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ARingBrokenOpenReportsAnOpenEnd operation.</summary>
         public void ARingBrokenOpenReportsAnOpenEnd()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -72,7 +61,6 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(Isolated());
             Assert.Single(simulation.Solver.Loops);
 
-            // Grind one pipe out of the ring. The pump survives; the run no longer closes.
             simulation.RemoveBlock(ring[3]);
 
             CoolantLoopDiagnostics diagnostics = simulation.DiagnoseLoops();
@@ -80,27 +68,21 @@ namespace Thermodynamics.Tests
             Assert.Equal(0, diagnostics.Loops);
             Assert.Equal(7, diagnostics.PipesAdrift);
             Assert.True(diagnostics.CountOf(CoolantFault.OpenEnd) > 0,
+/// <summary>Reasons operation.</summary>
                 "a broken ring should report an open end, not " + Reasons(diagnostics));
         }
 
-        /// <summary>
-        /// Two pipes bolted together at rotations whose ports do not line up. This is the fault that
-        /// is invisible by eye — the run looks continuous and carries nothing — so it earns its own
-        /// reason rather than being reported as an open end.
-        ///
-        /// The orientations are a measured pair rather than an obvious one: the walk always leaves a
-        /// block by its first port, so which fault a half-connected run reports depends on which
-        /// side that port is. Found by sweeping all 24 by 24 placements for one that reaches this
-        /// branch.
-        /// </summary>
         [Fact]
+/// <summary>PipesTouchingAtTheWrongRotationSayTheirPortsDoNotMeet operation.</summary>
         public void PipesTouchingAtTheWrongRotationSayTheirPortsDoNotMeet()
         {
             GridBuilder builder = GridBuilder.Large();
 
             builder.Place(Catalog.CoolantPump(), Vector3I.Zero,
+/// <summary>BlockOrientation operation.</summary>
                 new BlockOrientation(Base6Directions.Direction.Backward, Base6Directions.Direction.Left));
             builder.Place(Catalog.CoolantPipeStraight(), new Vector3I(0, 0, 1),
+/// <summary>BlockOrientation operation.</summary>
                 new BlockOrientation(Base6Directions.Direction.Left, Base6Directions.Direction.Up));
 
             CoolantLoopDiagnostics diagnostics = builder.BuildSimulation(Isolated()).DiagnoseLoops();
@@ -110,11 +92,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>APipeRunningIntoOrdinaryArmourNamesTheBlockingBlock operation.</summary>
         public void APipeRunningIntoOrdinaryArmourNamesTheBlockingBlock()
         {
             GridBuilder builder = GridBuilder.Large();
 
             builder.Place(Catalog.CoolantPump(), Vector3I.Zero,
+/// <summary>BlockOrientation operation.</summary>
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
             builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 1));
             builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, -1));
@@ -127,10 +111,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnExampleNamesACellThePlayerCanWalkTo operation.</summary>
         public void AnExampleNamesACellThePlayerCanWalkTo()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.CoolantPump(), new Vector3I(4, 5, 6),
+/// <summary>BlockOrientation operation.</summary>
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
 
             CoolantLoopDiagnostics diagnostics = builder.BuildSimulation(Isolated()).DiagnoseLoops();
@@ -140,14 +126,15 @@ namespace Thermodynamics.Tests
             Assert.Equal(CoolantFault.OpenEnd, diagnostics.Examples[0].Fault);
         }
 
-        /// <summary>Examples are capped so a grid of broken plumbing cannot flood a readout.</summary>
         [Fact]
+/// <summary>ExamplesAreCappedButCountsAreNot operation.</summary>
         public void ExamplesAreCappedButCountsAreNot()
         {
             GridBuilder builder = GridBuilder.Large();
             for (int i = 0; i < 30; i++)
             {
                 builder.Place(Catalog.CoolantPump(), new Vector3I(i * 2, 0, 0),
+/// <summary>BlockOrientation operation.</summary>
                     new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
             }
 
@@ -158,14 +145,15 @@ namespace Thermodynamics.Tests
             Assert.Equal(3, diagnostics.Examples.Count);
         }
 
-        /// <summary>Diagnostics are opt-in: an ordinary rebuild must not pay for them.</summary>
         [Fact]
+/// <summary>TheOrdinarySearchDoesNotBuildDiagnostics operation.</summary>
         public void TheOrdinarySearchDoesNotBuildDiagnostics()
         {
             GridBuilder builder = GridBuilder.Large();
             PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
             GridModel grid = builder.Grid;
 
+/// <summary>SimulationWork operation.</summary>
             SimulationWork work = new SimulationWork();
             List<CoolantLoop> loops = CoolantLoopBuilder.FindLoops(
                 grid, LoopThermalProperties.Default(), 293.15f, work);
@@ -174,23 +162,19 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, work.LoopSearches);
         }
 
-        /// <summary>
-        /// Every coolant block on the grid is accounted for exactly once: in a loop, or adrift with a
-        /// reason. A diagnostic that silently drops a block would report a healthy grid while a pipe
-        /// sat there doing nothing.
-        /// </summary>
         [Fact]
+/// <summary>EveryCoolantBlockIsAccountedForExactlyOnce operation.</summary>
         public void EveryCoolantBlockIsAccountedForExactlyOnce()
         {
             GridBuilder builder = GridBuilder.Large();
 
-            // A working ring, a pumpless ring, and a dead-end stub, all on one grid.
             PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
 
             List<Vector3I> pumpless = PipeFitter.RectangleXZ(new Vector3I(0, 10, 0), 3, 3);
             PipeFitter.BuildPumplessRing(builder, pumpless);
 
             builder.Place(Catalog.CoolantPump(), new Vector3I(0, 20, 0),
+/// <summary>BlockOrientation operation.</summary>
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
 
             ThermalSimulation simulation = builder.BuildSimulation(Isolated());
@@ -206,30 +190,25 @@ namespace Thermodynamics.Tests
             Assert.Equal(8 + 8 + 1, coolantBlocks);
             Assert.Equal(coolantBlocks, diagnostics.PipesInLoops + diagnostics.PipesAdrift);
 
-            // Both closed rings are loops — the pumpless one circulates nothing but exists — and only
-            // the lone pump with free ends is adrift.
             Assert.Equal(2, diagnostics.Loops);
             Assert.Equal(16, diagnostics.PipesInLoops);
             Assert.Equal(1, diagnostics.PipesAdrift);
             Assert.Equal(1, diagnostics.CountOf(CoolantFault.OpenEnd));
         }
 
-        /// <summary>
-        /// The per-block form the terminal uses. It has to agree with the whole-grid diagnosis, or a
-        /// player reading one pipe's panel gets a different answer from the report.
-        /// </summary>
         [Fact]
+/// <summary>DiagnosingOneBlockAgreesWithDiagnosingTheGrid operation.</summary>
         public void DiagnosingOneBlockAgreesWithDiagnosingTheGrid()
         {
             GridBuilder builder = GridBuilder.Large();
 
-            // A working ring, a pumpless ring (also a loop), and a lone pump that is adrift.
             PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
 
             List<Vector3I> pumpless = PipeFitter.RectangleXZ(new Vector3I(0, 10, 0), 3, 3);
             PipeFitter.BuildPumplessRing(builder, pumpless);
 
             builder.Place(Catalog.CoolantPump(), new Vector3I(0, 20, 0),
+/// <summary>BlockOrientation operation.</summary>
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
 
             ThermalSimulation simulation = builder.BuildSimulation(Isolated());
@@ -249,11 +228,11 @@ namespace Thermodynamics.Tests
                 Assert.Equal(whole.Counts[fault], perBlock[fault]);
             }
 
-            // And the blocks in the working ring report no fault at all.
             Assert.Equal(whole.PipesInLoops, perBlock[(int)CoolantFault.None]);
         }
 
         [Fact]
+/// <summary>ABlockInAWorkingLoopReportsItsLoopAndNoFault operation.</summary>
         public void ABlockInAWorkingLoopReportsItsLoopAndNoFault()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -270,6 +249,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ABlockWithNoPlumbingIsNotDiagnosedAtAll operation.</summary>
         public void ABlockWithNoPlumbingIsNotDiagnosedAtAll()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -282,6 +262,7 @@ namespace Thermodynamics.Tests
             Assert.Null(simulation.FindLoopContaining(armour));
         }
 
+/// <summary>Reasons operation.</summary>
         private static string Reasons(CoolantLoopDiagnostics diagnostics)
         {
             string text = "";

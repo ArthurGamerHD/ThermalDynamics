@@ -19,6 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOTS = [HERE, os.path.normpath(os.path.join(HERE, "..", "lanes"))]
 
 
+# tool files operation.
 def tool_files():
     files = []
     for root in ROOTS:
@@ -28,6 +29,7 @@ def tool_files():
     return files
 
 
+# module bindings operation.
 def module_bindings(tree):
     """Every name a module binds at its top level."""
     names = set()
@@ -52,7 +54,6 @@ def module_bindings(tree):
                 if alias.name != "*":
                     names.add(alias.asname or alias.name)
         elif isinstance(node, (ast.If, ast.Try, ast.For, ast.While)):
-            # A guard block can bind too; one level down is as deep as these tools go.
             for inner in ast.walk(node):
                 if isinstance(inner, (ast.FunctionDef, ast.ClassDef)):
                     names.add(inner.name)
@@ -71,6 +72,7 @@ class TheLanesSuiteIsReachedByTheOneDiscoveryCommand(unittest.TestCase):
     everyone runs loads and runs the lanes suite too, and fails if it shrinks to nothing.
     """
 
+# test the lanes tests are found and pass operation.
     def test_the_lanes_tests_are_found_and_pass(self):
         lanes = os.path.normpath(os.path.join(HERE, "..", "lanes"))
         suite = unittest.TestLoader().discover(
@@ -91,6 +93,7 @@ class TheLanesSuiteIsReachedByTheOneDiscoveryCommand(unittest.TestCase):
 class EveryToolStillImportsItsSiblings(unittest.TestCase):
     __doc__ = __doc__
 
+# test every local from import names something the target binds operation.
     def test_every_local_from_import_names_something_the_target_binds(self):
         trees = {}
         for path in tool_files():

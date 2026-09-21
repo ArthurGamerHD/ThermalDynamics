@@ -5,24 +5,26 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Builds synthetic grids for scenarios and tests.
-    /// </summary>
     public class GridBuilder
     {
         private readonly GridModel grid;
+/// <summary>List operation.</summary>
         private readonly List<BlockInstance> placed = new List<BlockInstance>();
 
+/// <summary>GridBuilder operation.</summary>
         public GridBuilder(float gridSize = Catalog.LargeGridSize)
         {
+/// <summary>GridModel operation.</summary>
             grid = new GridModel(gridSize);
         }
 
+/// <summary>Large operation.</summary>
         public static GridBuilder Large()
         {
             return new GridBuilder(Catalog.LargeGridSize);
         }
 
+/// <summary>Small operation.</summary>
         public static GridBuilder Small()
         {
             return new GridBuilder(Catalog.SmallGridSize);
@@ -33,37 +35,40 @@ namespace Thermodynamics.Harness
             get { return grid; }
         }
 
-        /// <summary>Blocks in placement order.</summary>
         public IList<BlockInstance> Placed
         {
             get { return placed; }
         }
 
-        /// <summary>The most recently placed block.</summary>
         public BlockInstance Last
         {
             get { return placed.Count == 0 ? null : placed[placed.Count - 1]; }
         }
 
+/// <summary>Place operation.</summary>
         public GridBuilder Place(BlockModel model, Vector3I at)
         {
+/// <summary>Place operation.</summary>
             return Place(model, at, BlockOrientation.Identity);
         }
 
+/// <summary>Place operation.</summary>
         public GridBuilder Place(BlockModel model, Vector3I at, BlockOrientation orientation)
         {
+/// <summary>BlockInstance operation.</summary>
             BlockInstance block = new BlockInstance(model, at, orientation);
             grid.Add(block);
             placed.Add(block);
             return this;
         }
 
+/// <summary>Place operation.</summary>
         public GridBuilder Place(BlockModel model, int x, int y, int z)
         {
             return Place(model, new Vector3I(x, y, z));
         }
 
-        /// <summary>Fills a solid box, inclusive minimum and exclusive maximum.</summary>
+/// <summary>Fill operation.</summary>
         public GridBuilder Fill(BlockModel model, Vector3I min, Vector3I maxExclusive)
         {
             for (int z = min.Z; z < maxExclusive.Z; z++)
@@ -79,7 +84,7 @@ namespace Thermodynamics.Harness
             return this;
         }
 
-        /// <summary>Builds a hollow shell: every cell on the surface of the box, nothing inside.</summary>
+/// <summary>Shell operation.</summary>
         public GridBuilder Shell(BlockModel model, Vector3I min, Vector3I maxExclusive)
         {
             for (int z = min.Z; z < maxExclusive.Z; z++)
@@ -100,26 +105,14 @@ namespace Thermodynamics.Harness
             return this;
         }
 
-        /// <summary>Sets the power figures on the most recently placed block.</summary>
+/// <summary>Producing operation.</summary>
         public GridBuilder Producing(float watts)
         {
             if (Last != null) Last.PowerProducedWatts = watts;
             return this;
         }
 
-        /// <summary>
-        /// Drives the last placed block to put <paramref name="watts"/> of heat into the hull,
-        /// whatever fraction of its power that block wastes.
-        ///
-        /// <para>
-        /// **A rig that wants a heat source should say so in watts of heat.** Saying it in watts of
-        /// *output* couples the rig to a block's efficiency, which is how every scenario in this
-        /// repository came to be quoted off a reactor wasting a quarter of its output where the
-        /// shipped one wastes a hundredth (backlog.md `C4`). A rig that is
-        /// *about* a reactor still drives it at a real rating through <see cref="Producing"/>; this
-        /// is for the ones where the block is only a place to put watts.
-        /// </para>
-        /// </summary>
+/// <summary>Wasting operation.</summary>
         public GridBuilder Wasting(float watts)
         {
             if (Last == null) return this;
@@ -136,26 +129,21 @@ namespace Thermodynamics.Harness
             return this;
         }
 
+/// <summary>Consuming operation.</summary>
         public GridBuilder Consuming(float watts)
         {
             if (Last != null) Last.PowerConsumedWatts = watts;
             return this;
         }
 
+/// <summary>Thrusting operation.</summary>
         public GridBuilder Thrusting(float watts)
         {
             if (Last != null) Last.ThrustWatts = watts;
             return this;
         }
 
-        /// <summary>
-        /// Takes a block back out, of the model and of the builder's own list.
-        ///
-        /// Removing straight from <see cref="Grid"/> is not enough and is quietly wrong:
-        /// <see cref="BuildSimulation"/> adds every block this builder has ever placed, so a block
-        /// removed from the model alone comes back as a node with no cells in the grid — and every
-        /// per-block figure computed afterwards silently includes it.
-        /// </summary>
+/// <summary>Removes the .</summary>
         public GridBuilder Remove(Vector3I cell)
         {
             BlockInstance block = grid.GetAtCell(cell);
@@ -166,43 +154,10 @@ namespace Thermodynamics.Harness
             return this;
         }
 
-        /// <summary>
-        /// Applied to every settings object this builder is handed, when set.
-        ///
-        /// The scenario library constructs its own <see cref="ThermalSettings"/> in forty-one
-        /// places, each tuned to the shipped defaults. This is the one seam that lets a profile
-        /// sweep run all of them without editing any: set it, run, clear it. Null by default, so
-        /// an ordinary scenario run is byte-identical to what it was.
-        /// </summary>
-        /// <remarks>
-        /// Thread-local. xUnit runs test classes in parallel, and a plain static here
-        /// leaked one test's profile into every other test running at that moment —
-        /// sixty-six unrelated failures, none of them reproducible alone. The sweep is
-        /// single-threaded, so it is unaffected.
-        /// </remarks>
         [ThreadStatic]
         public static Func<ThermalSettings, ThermalSettings> SettingsOverride;
 
-        /// <summary>
-        /// Permutes the order the placed blocks will be handed to the simulation in, moving none of
-        /// them.
-        ///
-        /// <para>
-        /// **The same ship with a different index space.** A node's index comes from the order
-        /// blocks were added, and two machines do not build a grid in the same order — a client
-        /// receives blocks in whatever order the engine streams them, a server has them in the
-        /// order they were welded or pasted. Every block stays at the cell it was placed at and
-        /// keeps the model it was placed with, so the conduction graph, the surfaces, the rooms and
-        /// the physics are identical: only the indices differ. That is what makes it the clean test
-        /// of a correction that is keyed on position rather than on index
-        /// (backlog.md `F22`).
-        /// </para>
-        ///
-        /// <para>
-        /// Deterministic, so two runs at one seed build the same permutation; a seed of zero is a
-        /// no-op, which is what lets a caller pass the knob straight through.
-        /// </para>
-        /// </summary>
+/// <summary>ReorderPlacement operation.</summary>
         public GridBuilder ReorderPlacement(int seed)
         {
             if (seed == 0 || placed.Count < 2) return this;
@@ -225,18 +180,16 @@ namespace Thermodynamics.Harness
             return this;
         }
 
+/// <summary>Builds the API method table.</summary>
         public ThermalSimulation BuildSimulation(ThermalSettings settings = null, float initialTemperature = 293.15f)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings effective = settings ?? new ThermalSettings();
             if (SettingsOverride != null) effective = SettingsOverride(effective);
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(effective, grid);
             simulation.DefaultTemperature = initialTemperature;
 
-            // **The count is known here and the solver's lists would otherwise grow into it.** Every
-            // harness build comes through this method — the corpus walks, the labs and the suite —
-            // so the hint `ThermalGrid` gives the game's own load path belongs here too. The grid's
-            // cell table is already full by now, because a builder is filled before it is built; a
-            // blueprint is parsed a block at a time and never knows its own count in advance.
             simulation.EnsureCapacity(placed.Count);
 
             for (int i = 0; i < placed.Count; i++)

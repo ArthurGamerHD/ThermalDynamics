@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """The load against the clock: can a dial that is not transport reach the significance window.
 
 Conduction reaches it. `balance.md` measures what that costs — a coolant sink stops out-performing
@@ -49,14 +48,10 @@ from pairs import (  # noqa: E402
     median,
 )
 
-# The cell parse is scoring.number — cleanup 7 consolidated the twelve copies and deleted
-# pairs.number while this import still named it, and this tool would not import for six days
-# because nothing imports the tools (the record's iteration 41, and the gate is iteration 42).
 number = scoring.number
 
 DATA = sys.argv[1] if len(sys.argv) > 1 else "out/load-2026-08-23"
 
-# What each load case is, in one line, because a table of three is unreadable without them.
 CASES = {
     "full-electrical": "(every jump drive charging, for the whole run — a bound)",
     "full-electrical-charged": "(the same load, drives full — the other bound)",
@@ -64,16 +59,19 @@ CASES = {
 }
 
 
+# load operation.
 def load(name):
     return scoring.load(DATA, name)
 
 
+# share operation.
 def share(rows, predicate):
     if not rows:
         return None
     return 100.0 * sum(1 for r in rows if predicate(r)) / len(rows)
 
 
+# settles operation.
 def settles(rows):
     """Seconds to settle for every hull, censored above where it never did."""
     values = []
@@ -83,6 +81,7 @@ def settles(rows):
     return values
 
 
+# recovery median operation.
 def recovery_median(rows):
     """Seconds to settle after the load stops, with a run that never settled ordered past the end.
 
@@ -96,11 +95,11 @@ def recovery_median(rows):
 
     settled = sum(1 for v in values if v != float("inf"))
 
-    # The same median the crossing takes, from the one place it is defined (`P5`).
     middle = scoring.censored_median(values)
     return (None if middle == float("inf") else middle), settled, len(values)
 
 
+# main operation.
 def main():
     rows = load("load")
     if not rows:
@@ -111,6 +110,7 @@ def main():
     for row in rows:
         cells.setdefault(row["cell"], []).append(row)
 
+# axes operation.
     def axes(name):
         first = cells[name][0]
         return (number(first, "waste") or 1.0, -(number(first, "clock") or 0.0))
@@ -158,11 +158,6 @@ def main():
 
             ratio = (settle / crossing) if (crossing and settle) else None
 
-            # **How often the same cell still satisfies `G8` on a fleet drawn from the same
-            # population.** A censored median has a cliff at half the hulls, and a cell can sit a
-            # ship or two clear of it: the crossing share is what decides that, and it is not
-            # visible in the median itself. Paired, because `G8` is one criterion with two halves
-            # and both are medians over the same hulls.
             by_ship = {r["ship"]: r for r in recovery}
             paired = [r for r in loaded if r["ship"] in by_ship]
             holds = scoring.joint_median_stability([

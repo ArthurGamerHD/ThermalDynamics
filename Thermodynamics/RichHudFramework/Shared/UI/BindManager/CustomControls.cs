@@ -5,12 +5,8 @@ namespace RichHudFramework
 {
     namespace UI
     {
-        /// <summary>
-        /// Unified control enum type for keyboard, mouse and gamepad/joystick
-        /// </summary>
         public enum RichHudControls : int
         {
-            // VRage.Input.MyKeys
             None = 0,
             LeftButton = 1,
             RightButton = 2,
@@ -207,11 +203,9 @@ namespace RichHudFramework
             PA1 = 253,
             OEMClear = 254,
 
-            // Custom controls
             MousewheelUp = 256,
             MousewheelDown = 257,
 
-            // Gamepad/joystick
             LeftStickLeft = 258,
             LeftStickRight = 259,
             LeftStickUp = 260,
@@ -249,14 +243,8 @@ namespace RichHudFramework
             LeftBumper = ReservedEnd + MyJoystickButtonsEnum.J05,
             RightBumper = ReservedEnd + MyJoystickButtonsEnum.J06,
 
-            /// <summary>
-            /// Back button on Xbox 360, View button on newer controllers
-            /// </summary>
             GpadView = ReservedEnd + MyJoystickButtonsEnum.J07,
 
-            /// <summary>
-            /// Start button on 360, Menu button on newer controllers
-            /// </summary>
             GpadMenu = ReservedEnd + MyJoystickButtonsEnum.J08,
 
             LeftStickBtn = ReservedEnd + MyJoystickButtonsEnum.J09,

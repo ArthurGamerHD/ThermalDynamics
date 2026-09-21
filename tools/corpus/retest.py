@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """What the conversion to real conductances did to the ships people fly.
 
 Reads the dataset `ConductanceRetestWalk` writes and prints, per scenario, what each arm of the
@@ -35,21 +34,22 @@ DATA = sys.argv[1] if len(sys.argv) > 1 else "out/retest-2026-08-23"
 
 CONTROL = "shipped"
 
-# The key that identifies one measurement: a ship in a scenario. The world is the axis being
-# compared, so it is not part of the key.
 KEY = scoring.ROW_KEY + ("scenario",)
 
 
 
 
+# load operation.
 def load(name):
     return scoring.load(DATA, name)
 
 
+# median operation.
 def median(values):
     return statistics.median(values) if values else float("nan")
 
 
+# main operation.
 def main():
     rows = load("retest")
     reach = load("reach")
@@ -60,17 +60,11 @@ def main():
         print('      dotnet test --filter "FullyQualifiedName~ConductanceRetestWalk"')
         return 1
 
-    # Worlds come from the reach file where there is one: it is written before any scenario runs,
-    # so an interrupted walk still knows how many arms it was going to have. Reading them off the
-    # results instead makes a run that died after one world look like a run with one world (`E4`).
     worlds = []
     for row in reach + rows:
         if row["world"] not in worlds:
             worlds.append(row["world"])
 
-    # The population is the set the walk was given, which the reach file records before any
-    # scenario runs. Taking it from the results instead shrinks the denominator to whatever
-    # finished, and a partial run then reports itself as complete.
     ships = {(r["ship"], r["workshop_id"]) for r in (reach or rows)}
     scenarios = []
     for row in rows:
@@ -80,9 +74,6 @@ def main():
     print(f"{DATA}: {len(rows)} rows, {len(ships)} ships, {len(scenarios)} scenarios, "
           f"{len(worlds)} worlds")
 
-    # **A partial walk says so.** Every figure below is a median over whatever landed, and a walk
-    # killed halfway through a world has measured the ships it happened to reach — which on this set
-    # is not a random half of it (`E4`).
     per_world = {w: len({(r["ship"], r["workshop_id"]) for r in rows if r["world"] == w})
                  for w in worlds}
     short = [w for w in worlds if per_world.get(w, 0) < len(ships)]
@@ -93,7 +84,6 @@ def main():
             print(f"    {world}: {per_world.get(world, 0)} of {len(ships)} ships")
     print()
 
-    # ---- reach -----------------------------------------------------------------------------
     print("What each arm could reach")
     print()
     print(f"{'arm':<22} {'blocks retuned':>15} {'of blocks':>11} {'share':>8} {'ships':>7}")
@@ -118,18 +108,6 @@ def main():
     print("against itself. That is the expected result for the mod's own blocks on a vanilla corpus.")
     print()
 
-    # ---- censoring -------------------------------------------------------------------------
-    # **The lab never destroys an overheating block** (`E9`), so anything past critical kept
-    # generating for the rest of the clock and a peak above about 1,500 K says *ran away* and
-    # nothing finer. Differences taken between two censored runs are differences between two
-    # harness artefacts, so the share is printed before any of them.
-    # **Censoring begins at a block's own rating, not at 1,500 K.** From the moment anything is
-    # past critical it keeps generating undamped for the rest of the clock, so the peak is a
-    # harness artefact from that point on. Reading it off the magnitude instead said 9 % of these
-    # runs were censored when 31 % of them were, and 9 % against 85 % in `burn-forward` — which is
-    # how the +34.7 K that [backlog.md](../../docs/backlog.md) `C2` was deciding on came to be read
-    # as a temperature. The 1,500 K line is kept below it as the stronger flag: past there a peak
-    # says *ran away* and nothing finer.
     censored = {}
     for row in rows:
         peak = scoring.number(row, "peak_k")
@@ -161,7 +139,6 @@ def main():
     print("and the counts below and not the peak: those are decided before anything diverges.")
     print()
 
-    # ---- the effect ------------------------------------------------------------------------
     indexed = {}
     for row in rows:
         indexed[(row["world"],) + tuple(row[k] for k in KEY)] = row
@@ -170,9 +147,6 @@ def main():
         ("peak_k", "peak temperature", "K"),
         ("over_critical", "blocks over critical", ""),
         ("seconds_to_critical", "seconds to first block over critical", "s"),
-        # The crossing is not the loss, and the loss is what costs a player something
-        # (balance.md, How long a block has after it crosses). Both are here because a change
-        # that moves one without the other says which half it touched.
         ("seconds_to_first_loss", "seconds to the first block lost", "s"),
     ):
         print(f"Shipped minus pre-conversion, {label}")
@@ -200,8 +174,6 @@ def main():
                     if a is None or b is None:
                         continue
 
-                    # A run that never crossed reports -1, which is not a duration and must not be
-                    # averaged with ones that are.
                     if column.startswith("seconds_to") and (a < 0 or b < 0):
                         continue
 
@@ -210,10 +182,6 @@ def main():
                 if not deltas:
                     line += f"{'-':>22}"
                 else:
-                    # **The median is not enough for a count.** Blocks over critical is zero for
-                    # most ships in most scenarios, so its median is zero however many hulls the
-                    # change pushed over the line; the split says which way the ones that moved
-                    # went, and it is the half that carries the finding.
                     up = sum(1 for d in deltas if d > 1e-3)
                     down = sum(1 for d in deltas if d < -1e-3)
                     cell = f"{median(deltas):+.2f}{unit} {up}up {down}dn"
@@ -223,10 +191,6 @@ def main():
 
         print()
 
-    # ---- the criteria, as they already stand ------------------------------------------------
-    # Copied in shape from verdict.py rather than reimagined: same scenarios, same thresholds, same
-    # direction. Forty ships is not the population the thresholds were written for, so what matters
-    # here is the difference between worlds rather than the absolute verdict.
     print("G1, G2 and G5 per world — the criteria as verdict.py computes them, on this set")
     print()
     print(f"{'world':<22}{'G1 critical at idle':>22}{'G2 warm under load':>22}{'G5 recovered':>18}")
@@ -237,6 +201,7 @@ def main():
         loaded = [r for r in mine if r["scenario"] == "full-electrical"]
         recovery = [r for r in mine if r["scenario"] == "recovery"]
 
+# share operation.
         def share(subset, test):
             if not subset:
                 return "-"

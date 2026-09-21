@@ -7,15 +7,8 @@ namespace RichHudFramework
 	{
 		namespace Rendering
 		{
-			/// <summary>
-			/// A high-level wrapper for drawing textured, colored, and optionally clipped rectangular billboards.
-			/// Utilizes <see cref="VRage.Game.MyTransparentGeometry"/> for rendering.
-			/// </summary>
 			public class MatBoard
 			{
-				/// <summary>
-				/// The color tint applied to the material.
-				/// </summary>
 				public Color Color
 				{
 					get { return color; }
@@ -28,9 +21,6 @@ namespace RichHudFramework
 					}
 				}
 
-				/// <summary>
-				/// The texture or sprite atlas region applied to the billboard.
-				/// </summary>
 				public Material Material
 				{
 					get { return matFrame.Material; }
@@ -45,9 +35,6 @@ namespace RichHudFramework
 					}
 				}
 
-				/// <summary>
-				/// Determines how the texture is scaled or cropped relative to the billboard's dimensions.
-				/// </summary>
 				public MaterialAlignment MatAlignment
 				{
 					get { return matFrame.Alignment; }
@@ -68,11 +55,10 @@ namespace RichHudFramework
 				private QuadBoard minBoard;
 				private readonly MaterialFrame matFrame;
 
-				/// <summary>
-				/// Initializes a new MatBoard with zero size and a default white material.
-				/// </summary>
+/// <summary>MatBoard operation.</summary>
 				public MatBoard()
 				{
+/// <summary>MaterialFrame operation.</summary>
 					matFrame = new MaterialFrame();
 					minBoard = QuadBoard.Default;
 
@@ -80,25 +66,17 @@ namespace RichHudFramework
 					bbAspect = -1f;
 				}
 
-				/// <summary>
-				/// Renders the billboard in world space using a pre-calculated quad.
-				/// </summary>
+/// <summary>Draw operation.</summary>
 				public void Draw(ref MyQuadD quad)
 				{
 					BillBoardUtils.AddQuad(ref minBoard.materialData, ref quad);
 				}
 
-				/// <summary>
-				/// Renders the billboard in world space, facing the +Z direction of the provided matrix.
-				/// Handles masking (cropping) if a mask is provided in the <paramref name="box"/>.
-				/// </summary>
-				/// <param name="box">Defines the bounds and the optional mask for the billboard.</param>
-				/// <param name="matrixRef">Matrix defining position and orientation.</param>
+/// <summary>Draw operation.</summary>
 				public void Draw(ref CroppedBox box, MatrixD[] matrixRef)
 				{
 					bool isDisjoint = false;
 
-					// Check if the billboard is completely outside the mask area
 					if (box.mask != null)
 					{
 						isDisjoint =
@@ -120,7 +98,6 @@ namespace RichHudFramework
 								bbAspect = newAspect;
 								minBoard.materialData.texBounds = Material.UVBounds;
 
-								// Calculate scaling required to fit the material to the billboard
 								if (matFrame.Alignment != MaterialAlignment.StretchToFit)
 									matScale = matFrame.GetAlignmentScale(bbAspect);
 							}
@@ -129,15 +106,17 @@ namespace RichHudFramework
 								box.bounds.Scale(matScale);
 						}
 
+/// <summary>FlatQuad operation.</summary>
 						FlatQuad quad = new FlatQuad()
 						{
 							Point0 = box.bounds.Max,
+/// <summary>Vector2 operation.</summary>
 							Point1 = new Vector2(box.bounds.Max.X, box.bounds.Min.Y),
 							Point2 = box.bounds.Min,
+/// <summary>Vector2 operation.</summary>
 							Point3 = new Vector2(box.bounds.Min.X, box.bounds.Max.Y),
 						};
 
-						// Apply skew (rhombus effect) if defined
 						if (minBoard.skewRatio != 0f)
 						{
 							Vector2 start = quad.Point0, end = quad.Point3,

@@ -3,29 +3,22 @@ using Thermodynamics.Harness;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The activity lab is the instrument that decides the sleep-threshold candidate on
-    /// redesign.md, so what is pinned is that it can tell quiet from
-    /// busy at all: thresholds are monotone (a looser threshold never reports fewer quiet nodes),
-    /// the driven hull is busier than the parked one at the same mark, the disturbance makes the
-    /// background it lands on measurably busier, and every judged population is the whole grid —
-    /// a lab that judged three nodes would agree with anything (`E8`).
-    /// </summary>
     public class NodeActivityLabTests
     {
         private static NodeActivityLab.Result result;
 
+/// <summary>Result operation.</summary>
         private static NodeActivityLab.Result Result()
         {
-            // Short marks: the tests pin the instrument, and the long default marks are the
-            // evaluation run's business.
             if (result == null) result = NodeActivityLab.Run(4000, null, new[] { 10, 50, 200 });
             return result;
         }
 
         [Fact]
+/// <summary>EveryRowJudgesTheWholeGridAndThresholdsAreMonotone operation.</summary>
         public void EveryRowJudgesTheWholeGridAndThresholdsAreMonotone()
         {
+/// <summary>Result operation.</summary>
             List<NodeActivityLab.Row> rows = Result().Rows;
             Assert.True(rows.Count >= 6, "expected marks for two scenarios, got " + rows.Count + " rows");
 
@@ -42,9 +35,6 @@ namespace Thermodynamics.Tests
                         row.Scenario + " step " + row.AtStep + ": a looser threshold reported fewer quiet links");
                 }
 
-                // A link is quiet only when both ends are, so the quiet-link share can never
-                // exceed what a fully clustered quiet set would allow — and must be zero when no
-                // node is quiet. The cheap invariant: quiet links require quiet nodes.
                 if (row.QuietNodes[1] == 0)
                 {
                     Assert.True(row.QuietLinks[1] == 0,
@@ -54,28 +44,31 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheDrivenHullIsBusierThanTheParkedOne operation.</summary>
         public void TheDrivenHullIsBusierThanTheParkedOne()
         {
+/// <summary>Find operation.</summary>
             NodeActivityLab.Row parked = Find("parked in air", 200);
+/// <summary>Find operation.</summary>
             NodeActivityLab.Row driven = Find("driven in vacuum", 200);
 
             double parkedQuiet = (double)parked.QuietNodes[1] / parked.Nodes;
             double drivenQuiet = (double)driven.QuietNodes[1] / driven.Nodes;
 
             Assert.True(drivenQuiet <= parkedQuiet,
+/// <summary>quieter operation.</summary>
                 "the driven hull reads quieter (" + drivenQuiet + ") than the parked one (" + parkedQuiet
                 + ") at the millikelvin threshold; the scenarios are not measuring what their names say");
         }
 
         [Fact]
+/// <summary>TheDisturbanceWakesSomethingAndTheLabSaysHowMuch operation.</summary>
         public void TheDisturbanceWakesSomethingAndTheLabSaysHowMuch()
         {
+/// <summary>Result operation.</summary>
             List<NodeActivityLab.WavefrontRow> wavefront = Result().Wavefront;
             Assert.Equal(50, wavefront.Count);
 
-            // The first step after a +300 K node must show activity — the disturbed node itself
-            // moves, and so do its neighbours. A wavefront of zero means the lab measured before
-            // stepping or after the wrong grid.
             Assert.True(wavefront[0].ActiveNodes >= 1,
                 "one step after a 300 K disturbance nothing was active");
 
@@ -88,6 +81,7 @@ namespace Thermodynamics.Tests
                 "the disturbance woke the whole grid, so the wavefront claim judged nothing");
         }
 
+/// <summary>Find operation.</summary>
         private static NodeActivityLab.Row Find(string scenario, int step)
         {
             foreach (NodeActivityLab.Row row in Result().Rows)

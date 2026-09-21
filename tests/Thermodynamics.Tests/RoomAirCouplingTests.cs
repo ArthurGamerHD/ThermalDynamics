@@ -6,24 +6,11 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The properties the game's own pressurisation path relied on and did not have.
-    ///
-    /// Room air was sound everywhere it was tested and dead everywhere it ran. Every test and the
-    /// mod API set pressure through <see cref="ThermalSimulation.SetRoomPressure"/>, which rebuilds
-    /// the room's links and seeds new air from the walls holding it. The game's own sweep assigned
-    /// the field directly and refreshed the mass by hand, so in a live world a pressurised room got
-    /// its air mass, no links at all, and whatever temperature the last rebuild left behind — 2.7 K
-    /// for a ship in vacuum. Measured: a 30-cell cabin with two vents on it, the game reporting it
-    /// sealed and 99% full, running at zero pressure.
-    ///
-    /// These pin the two properties that made the difference, so a caller that bypasses the solver
-    /// again fails here rather than in somebody's world.
-    /// </summary>
     public class RoomAirCouplingTests
     {
         private static readonly Vector3I Interior = Vector3I.Zero;
 
+/// <summary>Shell operation.</summary>
         private static ThermalSimulation Shell(float blockTemperature)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -31,6 +18,7 @@ namespace Thermodynamics.Tests
             return builder.BuildSimulation(new ThermalSettings(), blockTemperature);
         }
 
+/// <summary>AirOf operation.</summary>
         private static RoomAirNode AirOf(ThermalSimulation simulation)
         {
             IList<RoomAirNode> air = simulation.Solver.RoomAir;
@@ -38,15 +26,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AirGivenToARoomIsCoupledToTheWalls operation.</summary>
         public void AirGivenToARoomIsCoupledToTheWalls()
         {
+/// <summary>Shell operation.</summary>
             ThermalSimulation simulation = Shell(300f);
 
+/// <summary>AirOf operation.</summary>
             RoomAirNode air = AirOf(simulation);
             Assert.NotNull(air);
 
-            // At zero pressure a room has no air and no links, which is the point of it costing
-            // nothing until something says otherwise.
             Assert.False(air.HasAir);
             Assert.Empty(air.Links);
 
@@ -55,21 +44,20 @@ namespace Thermodynamics.Tests
             Assert.True(air.HasAir);
             Assert.True(air.AirMass > 0f);
 
-            // A room with mass and no links is air bolted to nothing: it holds heat that never
-            // moves, and nothing about the grid changes because of it.
             Assert.NotEmpty(air.Links);
         }
 
         [Fact]
+/// <summary>AirAppearingForTheFirstTimeTakesTheTemperatureOfTheWalls operation.</summary>
         public void AirAppearingForTheFirstTimeTakesTheTemperatureOfTheWalls()
         {
-            // In vacuum, where ambient is 2.7 K and the walls are not. Seeding from ambient rather
-            // than from the walls put 150 kg of near-absolute-zero gas inside a warm ship.
+/// <summary>Shell operation.</summary>
             ThermalSimulation simulation = Shell(300f);
             simulation.Update(1f, Worlds.Shadow());
 
             simulation.SetRoomPressure(Interior, 1f);
 
+/// <summary>AirOf operation.</summary>
             RoomAirNode air = AirOf(simulation);
             Assert.NotNull(air);
 
@@ -79,13 +67,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>APressurisedRoomActuallyMovesHeat operation.</summary>
         public void APressurisedRoomActuallyMovesHeat()
         {
-            // The end-to-end property. Air that is linked and warm exchanges with the hull; air
-            // that is linked to nothing cannot, however much of it there is.
+/// <summary>Shell operation.</summary>
             ThermalSimulation simulation = Shell(300f);
             simulation.SetRoomPressure(Interior, 1f);
 
+/// <summary>AirOf operation.</summary>
             RoomAirNode air = AirOf(simulation);
             Assert.NotNull(air);
 
@@ -98,31 +87,15 @@ namespace Thermodynamics.Tests
                 "cold air beside warm walls did not warm: " + air.Temperature + " K");
         }
 
-        /// <summary>
-        /// **The coupling carries no pressure term, so room air is a binary input above zero.**
-        ///
-        /// <para>
-        /// A link's conductance is `RoomConvectionCoefficient × faces × cellFaceArea` and nothing
-        /// else — a compartment at a fiftieth of an atmosphere couples its walls exactly as hard as
-        /// a full one. What pressure does move is the air's heat capacity, and by the same argument
-        /// that settles `mass error` in the client sweep, capacity does not appear in the balance a
-        /// hull settles at, only in how long it takes to get there.
-        /// </para>
-        ///
-        /// <para>
-        /// This is the mechanism behind `F21`'s finding: a client's disagreement about how full a
-        /// room is is worth almost nothing until it crosses zero, and then it is worth the whole
-        /// 30 kW/K of coupling. Pinned here rather than only in the lab, because it is a property of
-        /// the model and it is what makes the veto chain in
-        /// thermal-model.md an asymmetric choice.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ConductanceToARoomsAirDoesNotDependOnHowFullTheRoomIs operation.</summary>
         public void ConductanceToARoomsAirDoesNotDependOnHowFullTheRoomIs()
         {
+/// <summary>Shell operation.</summary>
             ThermalSimulation simulation = Shell(300f);
 
             simulation.SetRoomPressure(Interior, 1f);
+/// <summary>AirOf operation.</summary>
             RoomAirNode air = AirOf(simulation);
 
             float full = 0f;
@@ -137,43 +110,21 @@ namespace Thermodynamics.Tests
             Assert.True(full > 0f, "a full room has no coupling at all, so this judges nothing");
             Assert.Equal(full, sliver, 4);
 
-            // Capacity is the half that does move, or the claim above would be that pressure
-            // reaches nothing.
             Assert.True(air.ThermalMass < fullMass * 0.1f,
                 "a room at 2 % pressure holds " + air.ThermalMass + " J/K against a full room's "
                 + fullMass + " J/K, so pressure is not reaching the capacity either");
 
-            // And zero is the discontinuity: the whole coupling, not a smaller one.
             simulation.SetRoomPressure(Interior, 0f);
             Assert.Empty(AirOf(simulation).Links);
         }
 
-        /// <summary>
-        /// **A sliver of air is the stiffest thing on a grid, and refusing its substeps approximates
-        /// rather than diverges.**
-        ///
-        /// <para>
-        /// Room air is the coolant loop's twin: one lumped mass carrying a link to every surface
-        /// bounding it, which is the shape the pairwise overshoot clamp cannot hold on its own — it
-        /// bounds each wall against the air and lets six walls together take six times the energy
-        /// that equalises the air between them. At 2 % pressure the capacity is a fiftieth and the
-        /// coupling is the whole 30 kW/K, so this is the case that makes it visible.
-        /// </para>
-        ///
-        /// <para>
-        /// Written with backlog.md `A10`, which was the same defect on the
-        /// coolant path and was found there first. The bound is the per-node relaxation applied to
-        /// the coupled passes: with it a substep is a convex combination of the temperatures
-        /// pulling on a node, and cannot leave the range they span.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>RefusingTheAirsDemandApproximatesRatherThanDiverging operation.</summary>
         public void RefusingTheAirsDemandApproximatesRatherThanDiverging()
         {
-            // The rig starts 300 K apart, and nothing in it makes heat: a bounded integrator can
-            // only ever narrow that, whatever it is granted. The unclamped run is the control —
-            // without it, a clamp that had quietly stopped working would read as a pass.
+/// <summary>AirSpreadAtCeiling operation.</summary>
             float refused = AirSpreadAtCeiling(1, true);
+/// <summary>AirSpreadAtCeiling operation.</summary>
             float unclamped = AirSpreadAtCeiling(1, false);
 
             Assert.True(refused <= 300f,
@@ -185,12 +136,10 @@ namespace Thermodynamics.Tests
                 + " over-subscribes the air and the clamped figure above is proving nothing");
         }
 
-        /// <summary>
-        /// A hot shell around a thin, cold room, run for five simulated minutes at a chosen substep
-        /// ceiling. The answer is how far the air ended from the walls.
-        /// </summary>
+/// <summary>AirSpreadAtCeiling operation.</summary>
         private static float AirSpreadAtCeiling(int ceiling, bool clamp)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.Frequency = 1;                  // a one second step, so one substep is one h
             settings.EnableEnvironment = false;
@@ -207,13 +156,10 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(settings, 600f);
             simulation.SetRoomPressure(Interior, 0.02f);
 
-            // The walls hot and the air cold. Left alike there is nothing to exchange and the run
-            // reports zero however it was integrated, which is a green test measuring nothing.
+/// <summary>AirOf operation.</summary>
             RoomAirNode air = AirOf(simulation);
             air.Temperature = 300f;
 
-            // The widest the hull ever got, rather than where it ended: a bounded run relaxes back
-            // to one temperature, so the end of it is the same number for every ceiling.
             float widest = 0f;
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
 
@@ -237,8 +183,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>DroppingPressureTakesTheLinksAwayAgain operation.</summary>
         public void DroppingPressureTakesTheLinksAwayAgain()
         {
+/// <summary>Shell operation.</summary>
             ThermalSimulation simulation = Shell(300f);
             simulation.SetRoomPressure(Interior, 1f);
 
@@ -246,6 +194,7 @@ namespace Thermodynamics.Tests
 
             simulation.SetRoomPressure(Interior, 0f);
 
+/// <summary>AirOf operation.</summary>
             RoomAirNode air = AirOf(simulation);
             Assert.False(air.HasAir);
             Assert.Empty(air.Links);

@@ -6,37 +6,15 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The drop-in client (`tools/modkit/ThermalDynamicsApi.cs`) binds exactly the delegate table
-    /// `ThermalApi.cs` publishes — every key, with the same signature, in both directions.
-    ///
-    /// <para>
-    /// The client is a *copy* of the API's shape, held in another file so a consumer can drop it
-    /// into their mod without referencing this one's assembly. A copy drifts (`D3`): add a key to
-    /// the API and the client silently cannot reach it; change a signature on one side and the
-    /// client's cast returns null in a consumer's session with no message anywhere. This is the
-    /// test that keeps the two identical, the same way `ModApiShapeTests` keeps api.md identical to
-    /// the table.
-    /// </para>
-    ///
-    /// <para>
-    /// Textual on both sides, because the client binds game types this project does not reference
-    /// and the table cannot be built without a session — so neither can be reached except as source.
-    /// The client itself is compiled against the game by `Generic.csproj` (it is under the mod
-    /// project's glob and outside `Data/Scripts`, so it is checked but never run in this mod), which
-    /// is what proves it is valid C# 6; this test proves it is the *right* C# 6.
-    /// </para>
-    /// </summary>
     public class ThermalDynamicsClientTests
     {
+/// <summary>RepoRoot operation.</summary>
         private static string RepoRoot()
         {
             return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
 
-        /// <summary>Reads one balanced <c>Func&lt;…&gt;</c> from <paramref name="source"/> at or after
-        /// <paramref name="from"/>, matching angle brackets so a nested <c>MyTuple&lt;…&gt;</c> is not
-        /// cut short. Returns the whitespace-stripped signature, or null.</summary>
+/// <summary>ReadFunc operation.</summary>
         private static string ReadFunc(string source, int from)
         {
             int start = source.IndexOf("Func<", from, StringComparison.Ordinal);
@@ -47,6 +25,7 @@ namespace Thermodynamics.Tests
             for (int i = open; i < source.Length; i++)
             {
                 if (source[i] == '<') depth++;
+/// <summary>if operation.</summary>
                 else if (source[i] == '>')
                 {
                     depth--;
@@ -59,12 +38,13 @@ namespace Thermodynamics.Tests
             return null;
         }
 
+/// <summary>Normalise operation.</summary>
         private static string Normalise(string signature)
         {
             return Regex.Replace(signature, @"\s+", "");
         }
 
-        /// <summary>Every <c>methods["Name"] = Guard(new Func&lt;…&gt;(…), …)</c> in the API table.</summary>
+/// <summary>ApiTable operation.</summary>
         private static Dictionary<string, string> ApiTable()
         {
             string source = File.ReadAllText(Path.Combine(RepoRoot(), "Thermodynamics", "ThermalApi.cs"));
@@ -72,13 +52,14 @@ namespace Thermodynamics.Tests
             Dictionary<string, string> shapes = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (Match match in Regex.Matches(source, @"methods\[""(\w+)""\]"))
             {
+/// <summary>ReadFunc operation.</summary>
                 string signature = ReadFunc(source, match.Index);
                 if (signature != null) shapes[match.Groups[1].Value] = signature;
             }
             return shapes;
         }
 
-        /// <summary>Every <c>Get&lt;Func&lt;…&gt;&gt;(table, "Name")</c> the client binds.</summary>
+/// <summary>ClientBindings operation.</summary>
         private static Dictionary<string, string> ClientBindings()
         {
             string source = File.ReadAllText(Path.Combine(RepoRoot(),
@@ -86,10 +67,9 @@ namespace Thermodynamics.Tests
 
             Dictionary<string, string> shapes = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            // Get<Func<...>>(table, "Name") — read the Func by bracket match, then the name that
-            // follows the cast's own closing ">>(".
             foreach (Match match in Regex.Matches(source, @"Get<"))
             {
+/// <summary>ReadFunc operation.</summary>
                 string signature = ReadFunc(source, match.Index);
                 if (signature == null) continue;
 
@@ -102,9 +82,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheClientBindsEveryApiKeyWithTheSameSignature operation.</summary>
         public void TheClientBindsEveryApiKeyWithTheSameSignature()
         {
+/// <summary>ApiTable operation.</summary>
             Dictionary<string, string> api = ApiTable();
+/// <summary>ClientBindings operation.</summary>
             Dictionary<string, string> client = ClientBindings();
 
             Assert.True(api.Count >= 15,
@@ -113,6 +96,7 @@ namespace Thermodynamics.Tests
                 "only " + client.Count + " client bindings were read, so the client's Get<> pattern"
                 + " changed and this test no longer sees it");
 
+/// <summary>List operation.</summary>
             List<string> problems = new List<string>();
 
             foreach (KeyValuePair<string, string> entry in api)
@@ -143,11 +127,8 @@ namespace Thermodynamics.Tests
                 + " keys:\n  " + string.Join("\n  ", problems.ToArray()));
         }
 
-        /// <summary>
-        /// The client's channel and supported major match the mod's own, or a consumer binds the
-        /// wrong channel or refuses the running build for nothing.
-        /// </summary>
         [Fact]
+/// <summary>TheClientChannelAndVersionMatchTheMod operation.</summary>
         public void TheClientChannelAndVersionMatchTheMod()
         {
             string apiSource = File.ReadAllText(Path.Combine(RepoRoot(),

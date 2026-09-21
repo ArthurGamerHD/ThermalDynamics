@@ -11,33 +11,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The conclusions the balance pass reached, pinned so they cannot quietly invert.
-    ///
-    /// These are not assertions about the solver — the physics suite covers that. They are
-    /// assertions about the *definitions*: that the radiator still beats the armour it displaces,
-    /// that the coolant loop is still the stiffest way to feed a panel, that a block's mass is
-    /// still the sum of its components. Every one of them is a statement a design decision was
-    /// made on, and every one of them would otherwise be re-derived from memory a year from now.
-    ///
-    /// Figures come from <see cref="BalanceLab"/>, which reads the shipped XML at run time, so
-    /// editing a definition moves these tests. That is the point: a tuning change that inverts a
-    /// conclusion should have to say so out loud.
-    /// </summary>
     [Trait("speed", "slow")]
     public class BalanceTests
     {
-        // ---- the reference data ------------------------------------------------------------
 
-        /// <summary>
-        /// The transcribed vanilla figures against the installed game, when there is one.
-        ///
-        /// <see cref="Vanilla"/> is checked in because most machines running this suite have no
-        /// Space Engineers install. That makes it a transcription, and a transcription nobody
-        /// checks drifts silently through a game update — so on a machine that *does* have the
-        /// content, it gets checked. Same arrangement as <c>CensusFidelityTests</c>.
-        /// </summary>
         [Fact]
+/// <summary>TheVanillaReferenceStillMatchesTheInstalledGame operation.</summary>
         public void TheVanillaReferenceStillMatchesTheInstalledGame()
         {
             string content = GameBlocks.ContentPath();
@@ -67,12 +46,6 @@ namespace Thermodynamics.Tests
                     entry.Key + " mass is " + actual + " in game, " + entry.Value + " in Vanilla.cs");
             }
 
-            // **Keyed on type and subtype together, because a subtype is not a name.** Thirteen
-            // of the game's definitions carry no `SubtypeId` at all — the vanilla oxygen generator
-            // among them — so a dictionary keyed on subtype alone gives every one of them the same
-            // key, and the first file read wins. This test resolved that block to a door and
-            // checked the door's mass against the generator's, which is the shape of failure the
-            // whole page exists to make loud rather than quiet.
             Dictionary<string, XElement> blocks = new Dictionary<string, XElement>();
             foreach (string file in Directory.GetFiles(Path.Combine(content, "CubeBlocks"), "*.sbc"))
             {
@@ -89,6 +62,7 @@ namespace Thermodynamics.Tests
                     string type = (string)id.Element("TypeId");
                     if (subtype == null || type == null) continue;
 
+/// <summary>Key operation.</summary>
                     string key = Key(type, subtype);
                     if (!blocks.ContainsKey(key)) blocks[key] = definition;
                 }
@@ -117,11 +91,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The identity of a definition, as the pair the game actually keys on. `MyObjectBuilder_`
-        /// is stripped so a `TypeId` read from a definition file and one transcribed into
-        /// <see cref="Vanilla"/> compare equal.
-        /// </summary>
+/// <summary>Key operation.</summary>
         private static string Key(string typeId, string subtypeId)
         {
             string type = typeId ?? "";
@@ -129,32 +99,24 @@ namespace Thermodynamics.Tests
             return type + "/" + (subtypeId ?? "");
         }
 
-        /// <summary>What to call a reference row in a failure message, since a subtype can be empty.</summary>
+/// <summary>Name operation.</summary>
         private static string Name(Vanilla.Block block)
         {
             return block.Subtype.Length > 0 ? block.Subtype : block.TypeId + " (no subtype)";
         }
 
-        // ---- the loader ----------------------------------------------------------------------
 
-        /// <summary>
-        /// The transcribed build costs still match the installed game.
-        ///
-        /// These matter more than the masses beside them now: a block's thermal properties are
-        /// derived from its components, so a component list that has drifted does not merely make
-        /// a mass wrong, it makes the block a different material.
-        /// </summary>
         [Fact]
+/// <summary>TheVanillaComponentListsStillMatchTheInstalledGame operation.</summary>
         public void TheVanillaComponentListsStillMatchTheInstalledGame()
         {
             if (!GameBlocks.IsInstalled) return;
 
+/// <summary>List operation.</summary>
             List<string> wrong = new List<string>();
 
             foreach (Vanilla.Block reference in Vanilla.Reference)
             {
-                // Type and subtype together, for the reason the test above states: an empty
-                // subtype is thirteen different blocks.
                 GameBlocks.Definition installed = null;
                 foreach (GameBlocks.Definition block in GameBlocks.All())
                 {
@@ -185,6 +147,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EveryShippedBlockIsPricedAndWeighsSomething operation.</summary>
         public void EveryShippedBlockIsPricedAndWeighsSomething()
         {
             foreach (string subtype in ShippedBlocks.Subtypes())
@@ -203,15 +166,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Every shipped block resolves to its own thermal entry rather than falling through to a
-        /// default.
-        ///
-        /// This is the failure <c>ShippedDefinitionTests</c> was written for, approached from the
-        /// other end: that suite checks the XML is addressed correctly, this one checks the
-        /// properties actually arrive at the block the balance figures are quoted for.
-        /// </summary>
         [Fact]
+/// <summary>EveryShippedBlockGetsItsOwnThermalProperties operation.</summary>
         public void EveryShippedBlockGetsItsOwnThermalProperties()
         {
             foreach (string subtype in ShippedBlocks.Subtypes())
@@ -221,14 +177,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The coolant blocks carry plumbing and the others do not.
-        ///
-        /// A pipe whose subtype is not in the shape table becomes an ordinary block with no ports:
-        /// it builds, it looks right, and no ring through it ever becomes a loop. Adding a variant
-        /// and forgetting the table is the single easiest mistake to make in this mod.
-        /// </summary>
         [Fact]
+/// <summary>EveryCoolantBlockHasPlumbingAndNothingElseDoes operation.</summary>
         public void EveryCoolantBlockHasPlumbingAndNothingElseDoes()
         {
             foreach (string subtype in ShippedBlocks.Subtypes())
@@ -243,18 +193,10 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The retired property names are still honoured.
-        ///
-        /// Definition Extensions matches on the name string, so the rename would otherwise revert
-        /// every third-party definition written before it to the shipped defaults — no error, no
-        /// log line, just a mod whose blocks stop being what they say they are. The game reads both
-        /// in <c>ThermalCellDefinition</c>; this asserts the harness's own parser agrees, which is
-        /// what every figure in the balance report is read through.
-        /// </summary>
         [Theory]
         [InlineData("SurfaceAreaScaler", "ExposedSurfaceMultiplier")]
         [InlineData("CriticalTemperatureScaler", "OverheatDamagePerKelvin")]
+/// <summary>TheRetiredPropertyNamesAreStillRead operation.</summary>
         public void TheRetiredPropertyNamesAreStillRead(string legacy, string current)
         {
             string cubes = File.ReadAllText(Path.Combine(ShippedBlocks.DataRoot(), "Cubes.xml"));
@@ -262,25 +204,14 @@ namespace Thermodynamics.Tests
             Assert.Contains(current, cubes);
             Assert.DoesNotContain(legacy + "\"", cubes);
 
-            // Both spellings must land on the same field. Reading the shipped file back with the
-            // names swapped is the only check that actually exercises the alias.
             BlockThermalProperties viaCurrent = ShippedBlocks.Get("Gauge_LG_Radiator").Thermal;
             Assert.True(viaCurrent.ExposedSurfaceMultiplier > 1f,
                 "the radiator lost its surface multiplier, so the rename dropped a value");
         }
 
-        // ---- the conclusions -------------------------------------------------------------------
 
-        /// <summary>
-        /// The radiator earns its place: on the same load, in the same position, it beats a slab of
-        /// ordinary armour of the same shape by a wide margin per tonne.
-        ///
-        /// If this inverts, the block has become a decoration — a player would do better bolting on
-        /// more hull, and the mod would be shipping a block whose only distinction is its icon. The
-        /// margin is asserted loosely because the exact figure moves with any tuning change; the
-        /// direction is what must not.
-        /// </summary>
         [Fact]
+/// <summary>TheRadiatorBeatsTheArmourItDisplaces operation.</summary>
         public void TheRadiatorBeatsTheArmourItDisplaces()
         {
             List<BalanceLab.DeliveredRow> rows = BalanceLab.Delivered();
@@ -299,32 +230,8 @@ namespace Thermodynamics.Tests
                 + "x better per tonne than plain armour");
         }
 
-        /// <summary>
-        /// **Plumbing a panel is worth more than any single surface dial a definition author would
-        /// reach for first, and it takes four times the area to beat it.**
-        ///
-        /// <para>
-        /// **This claim was stronger and `C24` weakened it, measurably.** A sink face carries about
-        /// 1,000 W/K whatever the conduction pace is, because it is a fluid against a wall; a bolt
-        /// joint is solid conduction and scales with `ConductionScale`, so at the pace that now
-        /// ships it carries **1,168 W/K** where it used to carry a fraction of the sink's. The
-        /// asserted margin was *twice the best surface dial*: measured then, plumbing beat
-        /// everything the definitions could do to the panel's surface. Measured now, plumbing is
-        /// worth 73.5 K, doubling the area 48.7 K and lifting emissivity to 0.8 57.7 K — but
-        /// quadrupling the area is worth 94.1 K and eight times is worth 135.3 K, so the sweep's
-        /// top rungs have passed it. `ASinkFaceConductsSeveralTimesHarderThanABoltJoint` pins the mechanism.
-        /// </para>
-        ///
-        /// <para>
-        /// **What this does not say is that bolting has caught up with plumbing.** The shipped row
-        /// this table is read against *is* a bolted panel, and plumbing the same panel on the same
-        /// load is worth 73.5 K over it: a joint carries heat one block and a loop carries it
-        /// wherever the ring goes. What has changed is a *tuning* answer — "the radiator is not
-        /// shedding enough" can now be answered with area as well as with plumbing — and the
-        /// player-facing guidance in blocks.md is unmoved.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>PlumbingAPanelBeatsEveryDialButAMultipliedArea operation.</summary>
         public void PlumbingAPanelBeatsEveryDialButAMultipliedArea()
         {
             List<BalanceLab.SensitivityRow> rows = BalanceLab.Sensitivity();
@@ -341,8 +248,6 @@ namespace Thermodynamics.Tests
                 "a coolant sink bought " + coolant.KelvinVersusShipped + " K against emissivity's "
                 + emissivity + " K");
 
-            // The area sweep's rungs, in order. Plumbing has to beat the first of them and is
-            // allowed to lose to a multiplied area — which is the part C24 moved.
             List<BalanceLab.SensitivityRow> area = rows
                 .Where(r => r.Dial == "ExposedSurfaceMultiplier")
                 .OrderBy(r => r.KelvinVersusShipped)
@@ -358,35 +263,8 @@ namespace Thermodynamics.Tests
                 "a sink face now couples at only " + coolant.JointWattsPerKelvin + " W/K");
         }
 
-        /// <summary>
-        /// **A sink face carries about five times a bolt joint, which is the design statement this
-        /// mod's guidance rests on — restored, after two changes took it away and gave it back.**
-        ///
-        /// <para>
-        /// The sink face is a fluid against a wall: a convection coefficient times an area, which no
-        /// clock or conduction pace touches. A bolt joint is solid conduction, multiplied by
-        /// `ConductionScale`. The mod's own statement — a sink face at 1,000 W/K against a bolt
-        /// joint's 167 — was written where that ratio was **six to one**.
-        /// </para>
-        ///
-        /// <para>
-        /// `C24` took `ConductionScale` to 9.6 and the bolt joint to 1,168 W/K, which made the two
-        /// **equal** and cost the guidance its rate argument; `C25` kept the pace anyway, on the
-        /// grounds that pacing a fluid with solid conduction would put a coefficient no fluid has
-        /// into the model, and rested the guidance on *reach* instead — a joint carries heat one
-        /// block and a ring carries it wherever the ring goes.
-        /// </para>
-        ///
-        /// <para>
-        /// **`C42` gave the ratio back, and not by pacing the fluid.** The pumped coefficient went
-        /// to 1,000 W/(m²·K) because a pumped water-glycol ring is forced convection and 160 was the
-        /// stagnant end of the range — a fidelity argument, decided by the pickup being the only
-        /// thing that says whether a big block can be cooled at all. A sink face is now 6,250 W/K
-        /// against the bolt joint's 1,168: **5.4 to one**, which is where the statement started.
-        /// The guidance still rests on reach, and now the rate agrees with it.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ASinkFaceConductsSeveralTimesHarderThanABoltJoint operation.</summary>
         public void ASinkFaceConductsSeveralTimesHarderThanABoltJoint()
         {
             List<BalanceLab.SensitivityRow> rows = BalanceLab.Sensitivity();
@@ -394,25 +272,15 @@ namespace Thermodynamics.Tests
             BalanceLab.SensitivityRow bolted = rows.First(r => r.Dial == "(shipped)");
             BalanceLab.SensitivityRow coolant = rows.First(r => r.Dial == "coolant sink");
 
-            // Measured 2026-08-26: 6,250 W/K plumbed against 1,168 W/K bolted.
             Assert.InRange(coolant.JointWattsPerKelvin / bolted.JointWattsPerKelvin, 3f, 8f);
 
-            // And the joint is solid conduction, which is why: it is the pace that moved it, not
-            // the block. At the 2.4 the conversion calibrated to it carried a quarter of this.
             Assert.InRange(
                 bolted.JointWattsPerKelvin * (2.4f / ThermalConstants.ConductionScale),
                 200f, 400f);
         }
 
-        /// <summary>
-        /// Surface area and emissivity both still do something, and neither is close to free.
-        ///
-        /// Quadrupling the area scaler is worth a couple of dozen kelvin, not a couple of hundred:
-        /// the panel simply runs colder and radiation falls away as the fourth power. Pinning the
-        /// *shape* of that curve is what stops a future tuning pass from reaching for a large
-        /// multiplier expecting a large effect.
-        /// </summary>
         [Fact]
+/// <summary>SurfaceDialsGiveDiminishingReturns operation.</summary>
         public void SurfaceDialsGiveDiminishingReturns()
         {
             List<BalanceLab.SensitivityRow> rows = BalanceLab.Sensitivity()
@@ -422,7 +290,6 @@ namespace Thermodynamics.Tests
 
             Assert.True(rows.Count >= 3, "the area sweep lost its rows");
 
-            // Each doubling buys less than the one before it.
             for (int i = 1; i < rows.Count; i++)
             {
                 float previous = rows[i - 1].KelvinVersusShipped;
@@ -434,16 +301,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// A longer ring couples harder, and the block it cools ends up colder for it.
-        ///
-        /// **The only thing that asserts this**, and blocks.md's build advice is written from it.
-        /// It used to say it restated a second test, which stopped existing at some point and took
-        /// its half of the claim with it — the coupling column is checked here, as the ordering, and
-        /// nowhere else. That name also carried a claim that is no longer true: it said a longer
-        /// ring carries the same fluid, and the charge has been per *pipe* since.
-        /// </summary>
         [Fact]
+/// <summary>LongerRingsDeliverColderBlocks operation.</summary>
         public void LongerRingsDeliverColderBlocks()
         {
             List<BalanceLab.LoopRow> rows = BalanceLab.Loops();
@@ -460,20 +319,15 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The heat pump's binding limit moves through all three regimes across an ordinary range
-        /// of gaps, and the coefficient never exceeds its cap.
-        ///
-        /// A pump that is rating-bound everywhere is a constant, and a pump that is Carnot-bound
-        /// everywhere is a tax. It is only interesting because which limit binds changes with how
-        /// it is installed, so that it does is worth asserting.
-        /// </summary>
         [Fact]
+/// <summary>TheHeatPumpPassesThroughAllThreeOfItsLimits operation.</summary>
         public void TheHeatPumpPassesThroughAllThreeOfItsLimits()
         {
             List<BalanceLab.PumpRow> rows = BalanceLab.Pump();
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
 
+/// <summary>HashSet operation.</summary>
             HashSet<string> seen = new HashSet<string>();
             foreach (BalanceLab.PumpRow row in rows)
             {
@@ -489,14 +343,8 @@ namespace Thermodynamics.Tests
             Assert.Contains("carnot", seen);
         }
 
-        /// <summary>
-        /// A shipped block's exposed area is its geometry times its area scaler, and the radiator
-        /// is the only block that claims more surface than it has.
-        ///
-        /// Cheap to assert and it catches a scaler pasted onto the wrong definition, which no
-        /// temperature reading would make obvious.
-        /// </summary>
         [Fact]
+/// <summary>OnlyTheRadiatorClaimsExtraSurface operation.</summary>
         public void OnlyTheRadiatorClaimsExtraSurface()
         {
             foreach (BalanceLab.BlockRow row in BalanceLab.Blocks())

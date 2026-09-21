@@ -5,33 +5,18 @@ using Xunit.Abstractions;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **The mod's design thesis, which had never been measured.**
-    ///
-    /// <para>
-    /// `C40` bounded every path that moves heat *inside* a grid at about 9 % of the peak, and closed
-    /// the transport line for retrofits with it. What it could not settle is the claim
-    /// document-of-intent.md actually makes — *cooling designed
-    /// in* — because every rig this repository owned had an **exposed** source. A panel bolted to an
-    /// exposed source radiates wherever it is put, so no rig could see the difference between
-    /// reaching the sky and not reaching it.
-    /// </para>
-    ///
-    /// <para>
-    /// <see cref="DesignedHullLab"/> buries the source in solid armour, which is how one is
-    /// installed, and the difference appears: a bolted panel is buried too.
-    /// </para>
-    /// </summary>
     [Trait("speed", "slow")]
     public class DesignedHullTests
     {
         private readonly ITestOutputHelper output;
 
+/// <summary>DesignedHullTests operation.</summary>
         public DesignedHullTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
+/// <summary>Find operation.</summary>
         private static DesignedHullLab.Row Find(List<DesignedHullLab.Row> rows, string fit)
         {
             for (int i = 0; i < rows.Count; i++)
@@ -43,22 +28,17 @@ namespace Thermodynamics.Tests
             return null;
         }
 
-        /// <summary>
-        /// **A loop to the skin beats a bolt joint on a buried source, carrying the same panels.**
-        ///
-        /// <para>
-        /// Direction and reach rather than a figure, so it survives every retune: the sizes belong
-        /// to balance.md and will move. What must not move is the sign, because the whole mod is
-        /// built on it.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>PlumbingToTheSkinBeatsBoltingIntoTheHull operation.</summary>
         public void PlumbingToTheSkinBeatsBoltingIntoTheHull()
         {
             List<DesignedHullLab.Row> rows = DesignedHullLab.Run(200000f, 4);
 
+/// <summary>Find operation.</summary>
             DesignedHullLab.Row bare = Find(rows, "buried, bare");
+/// <summary>Find operation.</summary>
             DesignedHullLab.Row bolted = Find(rows, "bolted, buried");
+/// <summary>Find operation.</summary>
             DesignedHullLab.Row plumbed = Find(rows, "plumbed, to the skin");
 
             foreach (DesignedHullLab.Row row in rows)
@@ -71,14 +51,11 @@ namespace Thermodynamics.Tests
                 "the buried source settled at " + bare.SourceKelvin.ToString("n1")
                 + " K, which is not a cooling problem, so nothing below is being measured");
 
-            // **The arms must carry the same radiators**, or the comparison is about how much panel
-            // each got rather than where it went.
             Assert.Equal(bolted.Radiators, plumbed.Radiators);
             Assert.True(bolted.Radiators > 0,
                 "no panels were fitted in either arm, so this test would pass on a lab that measured"
                 + " nothing — which is exactly how the first run of it behaved");
 
-            // And they must differ in the one way the claim is about.
             Assert.Equal(0, bolted.RadiatorsOnTheSkin);
             Assert.True(plumbed.RadiatorsOnTheSkin > 0,
                 "the plumbed arm put no panel on the skin, so it is not testing the claim");
@@ -90,15 +67,12 @@ namespace Thermodynamics.Tests
                 + " thesis is wrong and document-of-intent.md needs rewriting");
         }
 
-        /// <summary>
-        /// **A panel bolted to a buried source is worse than no panel at all**, which is the sharp
-        /// half of the finding. It displaces armour that was conducting heat away and puts in its
-        /// place a block whose one talent — radiating — it cannot use, having no face on the sky.
-        /// </summary>
         [Fact]
+/// <summary>BoltingAPanelIntoASolidHullIsWorseThanFittingNothing operation.</summary>
         public void BoltingAPanelIntoASolidHullIsWorseThanFittingNothing()
         {
             List<DesignedHullLab.Row> rows = DesignedHullLab.Run(200000f, 4);
+/// <summary>Find operation.</summary>
             DesignedHullLab.Row bolted = Find(rows, "bolted, buried");
 
             Assert.True(bolted.Radiators > 0, "no panels were fitted, so nothing is being measured");
@@ -110,35 +84,18 @@ namespace Thermodynamics.Tests
                 + " conducts was expected to cost rather than pay");
         }
 
-        /// <summary>
-        /// **The pickup a 6.4 MW block gets is not a starved one, which is what `C42` bought.**
-        ///
-        /// <para>
-        /// Watts over the sink conductance is the gradient a buried source is forced to sit at
-        /// whatever is hung off the far end. At the coefficient this mod shipped until `C42` that
-        /// was 6,400 K on a block rated 689 K, so no radiator count could help and the ladder
-        /// saturated at the first panel: **a block with no answer at any radiator count is a
-        /// permanent runaway**, which is the thing the mod exists to avoid. The coefficient is the
-        /// only dial on the pickup, since the sink-face count is fixed by design, so it moved.
-        /// </para>
-        ///
-        /// <para>
-        /// This asserted the starvation while it was true and now asserts it is gone — and it is
-        /// the same measurement either way, which is why it is worth keeping rather than deleting.
-        /// It failed on the retune with *the shipped pickup forced only 1,024 K, so this test is no
-        /// longer describing a starved pickup*, which is a test reporting a fixed defect rather
-        /// than a broken one (`E11`).
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheShippedPickupIsNotStarvedOnABlockThisLarge operation.</summary>
         public void TheShippedPickupIsNotStarvedOnABlockThisLarge()
         {
+/// <summary>List operation.</summary>
             List<DesignedHullLab.Row> rows = new List<DesignedHullLab.Row>();
             float bare = 0f;
 
             for (int panels = 1; panels <= 4; panels++)
             {
                 List<DesignedHullLab.Row> run = DesignedHullLab.Run(6400000f, panels);
+/// <summary>Find operation.</summary>
                 DesignedHullLab.Row plumbed = Find(run, "plumbed, to the skin");
 
                 if (bare == 0f) bare = Find(run, "buried, bare").SourceKelvin;
@@ -152,9 +109,6 @@ namespace Thermodynamics.Tests
             Assert.True(rows[0].SinkWattsPerKelvin > 0f,
                 "the ring had no sink onto the source, so nothing here is being measured");
 
-            // **Under the rating with room to spare, on a single sink face.** Not under the block's
-            // own settled temperature — the drive is not saved, and balance.md says so — but under
-            // the gradient that would make saving it impossible in principle.
             float forced = 6400000f / rows[0].SinkWattsPerKelvin;
 
             Assert.True(forced < 2000f,
@@ -163,8 +117,6 @@ namespace Thermodynamics.Tests
                 + " block no radiator count can cool, which is what C42 moved the coefficient to"
                 + " prevent");
 
-            // And the ladder pays rather than saturating at the first rung, which is what a pickup
-            // that is no longer binding looks like from the other end.
             float first = bare - rows[0].SourceKelvin;
             float rest = rows[0].SourceKelvin - rows[rows.Count - 1].SourceKelvin;
 

@@ -6,21 +6,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The wind map that stands in for the one the game does not have.
-    ///
-    /// What the game gives is a planet-wide ceiling — its definition's maximum wind scaled by air
-    /// density — which on an earthlike world reads 80 m/s at sea level everywhere. Treated as a
-    /// wind it puts every parked ship in a permanent hurricane, over the friction threshold and at
-    /// double the still-air convection. These pin the field that replaces it: bands like Earth's,
-    /// a speed that is a fraction of the ceiling, and nothing that varies from one moment to the
-    /// next.
-    /// </summary>
     public class WindFieldTests
     {
+/// <summary>Vector3 operation.</summary>
         private static readonly Vector3 Axis = new Vector3(0f, 1f, 0f);
 
-        /// <summary>A point at this latitude, on a sphere whose north is +Y.</summary>
+/// <summary>Up operation.</summary>
         private static Vector3 Up(double latitudeDegrees, double longitudeDegrees = 0d)
         {
             double lat = latitudeDegrees * Math.PI / 180d;
@@ -32,25 +23,20 @@ namespace Thermodynamics.Tests
                 (float)(Math.Cos(lat) * Math.Sin(lon))));
         }
 
-        /// <summary>How far east the wind blows here: +1 due east, −1 due west.</summary>
+/// <summary>Eastward operation.</summary>
         private static float Eastward(double latitude)
         {
+/// <summary>Up operation.</summary>
             Vector3 up = Up(latitude);
             Vector3 east = Vector3.Normalize(Vector3.Cross(Axis, up));
 
             return Vector3.Dot(WindField.Direction(up, Axis), east);
         }
 
-        /// <summary>
-        /// How far toward the nearer pole the wind blows here: +1 poleward, −1 equatorward.
-        ///
-        /// **The half of the direction nothing measured.** `WindField.Direction` has two
-        /// components and every test in this class read only the first, which is how a meridional
-        /// term that was poleward on both sides of the equator — where Earth's trades converge —
-        /// survived as long as it did. backlog.md `B14`.
-        /// </summary>
+/// <summary>Poleward operation.</summary>
         private static float Poleward(double latitude)
         {
+/// <summary>Up operation.</summary>
             Vector3 up = Up(latitude);
             Vector3 east = Vector3.Normalize(Vector3.Cross(Axis, up));
             Vector3 north = Vector3.Normalize(Vector3.Cross(up, east));
@@ -58,27 +44,27 @@ namespace Thermodynamics.Tests
             return Vector3.Dot(WindField.Direction(up, Axis), latitude < 0d ? -north : north);
         }
 
-        /// <summary>The wind as a velocity: direction times the strength of its own band.</summary>
+/// <summary>Velocity operation.</summary>
         private static Vector3 Velocity(double latitude)
         {
+/// <summary>Up operation.</summary>
             Vector3 up = Up(latitude);
             return WindField.Direction(up, Axis) * WindField.BandStrength(up, Axis);
         }
 
         [Fact]
+/// <summary>WindBlowsAlongTheGroundAndNotThroughIt operation.</summary>
         public void WindBlowsAlongTheGroundAndNotThroughIt()
         {
-            // The one thing that would be nonsense: air moving into or out of the planet.
             for (int latitude = -85; latitude <= 85; latitude += 5)
             {
+/// <summary>Up operation.</summary>
                 Vector3 up = Up(latitude);
                 Vector3 wind = WindField.Direction(up, Axis);
 
                 Assert.True(Math.Abs(Vector3.Dot(wind, up)) < 1e-4f,
                     "wind at " + latitude + " should be tangent to the surface");
 
-                // A unit direction, or none at all where the band has no strength to give one:
-                // the equator and the two band edges are calms, and a calm has no bearing.
                 float strength = WindField.BandStrength(up, Axis);
                 if (strength < 1e-3f)
                 {
@@ -91,16 +77,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheBandsRunEasterlyWesterlyEasterlyOutFromTheEquator operation.</summary>
         public void TheBandsRunEasterlyWesterlyEasterlyOutFromTheEquator()
         {
-            // Earth's pattern, and the reason to have a map at all: trades, westerlies, polar
-            // easterlies. Anyone who has looked at a globe recognises it.
             Assert.True(Eastward(10) < -0.5f, "trades near the equator should blow west");
             Assert.True(Eastward(45) > 0.5f, "mid latitudes should blow east");
             Assert.True(Eastward(75) < -0.5f, "polar latitudes should blow west");
         }
 
         [Fact]
+/// <summary>TheSouthernHemisphereMirrorsTheNorthern operation.</summary>
         public void TheSouthernHemisphereMirrorsTheNorthern()
         {
             for (int latitude = 5; latitude <= 85; latitude += 10)
@@ -109,25 +95,16 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Between bands the wind passes through a calm rather than a step: a line on the map where
-        /// it flips end for end would be visible from a cockpit as a wall.
-        ///
-        /// <para>
-        /// **Measured on the velocity, not on the bearing.** The old form read the east component
-        /// of the unit direction, which is not the wind — and it passed for as long as the wind
-        /// reversed at full strength across the equator, because the east component happened to be
-        /// zero on both sides of that reversal. What has to be continuous is the vector a ship is
-        /// standing in.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheWindSwingsThroughTheCalmsRatherThanReversingAcrossALine operation.</summary>
         public void TheWindSwingsThroughTheCalmsRatherThanReversingAcrossALine()
         {
+/// <summary>Velocity operation.</summary>
             Vector3 previous = Velocity(-89);
 
             for (int latitude = -88; latitude <= 89; latitude++)
             {
+/// <summary>Velocity operation.</summary>
                 Vector3 current = Velocity(latitude);
                 Assert.True((current - previous).Length() < 0.25f,
                     "wind turned too sharply between " + (latitude - 1) + " and " + latitude
@@ -136,20 +113,15 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The sideways component follows the band rather than the hemisphere: equatorward in the
-        /// trades and the polar easterlies, poleward in the westerlies.
-        ///
-        /// **This is `B14`.** It used to be poleward everywhere, so air diverged from the equator
-        /// where Earth's trades converge, and it was the largest known fault in the pattern.
-        /// </summary>
         [Fact]
+/// <summary>TheSidewaysComponentFollowsTheBand operation.</summary>
         public void TheSidewaysComponentFollowsTheBand()
         {
             foreach (int latitude in new[] { 15, -15, 75, -75 })
             {
                 Assert.True(Poleward(latitude) < -0.1f,
                     "the trades and the polar easterlies blow toward the equator, not away from it;"
+/// <summary>Poleward operation.</summary>
                     + " at " + latitude + " the poleward component is " + Poleward(latitude));
             }
 
@@ -157,16 +129,13 @@ namespace Thermodynamics.Tests
             {
                 Assert.True(Poleward(latitude) > 0.1f,
                     "the westerlies blow toward the pole; at " + latitude
+/// <summary>Poleward operation.</summary>
                     + " the poleward component is " + Poleward(latitude));
             }
         }
 
-        /// <summary>
-        /// The equator is a calm, not a seam. Two ships either side of it are not in opposite
-        /// hurricanes, which is what a meridional component that stepped across latitude 0 gave
-        /// them.
-        /// </summary>
         [Fact]
+/// <summary>TheEquatorIsACalmRatherThanAReversal operation.</summary>
         public void TheEquatorIsACalmRatherThanAReversal()
         {
             Assert.True(Velocity(0).Length() < 0.02f,
@@ -176,11 +145,8 @@ namespace Thermodynamics.Tests
                 "half a degree either side of the equator should be nearly the same wind");
         }
 
-        /// <summary>
-        /// The band edges are calms too, and the strongest wind is in the middle of a band. The
-        /// pattern a reader of a globe expects, and the one a pilot would learn.
-        /// </summary>
         [Fact]
+/// <summary>ABandIsStrongestInItsMiddleAndCalmAtItsEdges operation.</summary>
         public void ABandIsStrongestInItsMiddleAndCalmAtItsEdges()
         {
             foreach (int latitude in new[] { 0, 30, 60, 90 })
@@ -195,7 +161,6 @@ namespace Thermodynamics.Tests
                     latitude + " is the middle of a band and should be its windiest");
             }
 
-            // Symmetric, like the bands themselves.
             for (int latitude = 5; latitude <= 85; latitude += 10)
             {
                 Assert.Equal(WindField.BandStrength(Up(latitude), Axis),
@@ -204,24 +169,23 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>APoleHasNoOneDirectionAndSaysSo operation.</summary>
         public void APoleHasNoOneDirectionAndSaysSo()
         {
-            // Every direction from a pole is south; there is no east to blow along, and a
-            // normalised rounding error would be a lie.
             Assert.Equal(Vector3.Zero, WindField.Direction(Axis, Axis));
         }
 
         [Fact]
+/// <summary>OrdinaryWeatherIsABreezeRatherThanTheCeiling operation.</summary>
         public void OrdinaryWeatherIsABreezeRatherThanTheCeiling()
         {
-            // 80 m/s is the earthlike ceiling. What a calm day gets out of it has to be something
-            // a ship can sit in without heating up.
             float calm = WindField.Speed(80f, 0f, 0.5f);
 
             Assert.InRange(calm, 4f, 20f);
         }
 
         [Fact]
+/// <summary>WeatherRaisesTheWindWithoutReachingTheCeiling operation.</summary>
         public void WeatherRaisesTheWindWithoutReachingTheCeiling()
         {
             float calm = WindField.Speed(80f, 0f, 0.5f);
@@ -232,12 +196,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NoAtmosphereIsNoWind operation.</summary>
         public void NoAtmosphereIsNoWind()
         {
             Assert.Equal(0f, WindField.Speed(0f, 1f, 1f), 5);
         }
 
         [Fact]
+/// <summary>TwoPlacesInTheSameWeatherDoNotHaveTheSameWind operation.</summary>
         public void TwoPlacesInTheSameWeatherDoNotHaveTheSameWind()
         {
             float here = WindField.Speed(80f, 0.2f, WindField.Variation(new Vector3D(0, 0, 0)));
@@ -247,10 +213,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheSamePlaceAlwaysHasTheSameWind operation.</summary>
         public void TheSamePlaceAlwaysHasTheSameWind()
         {
-            // Steady, because a wind that changed every time it was asked would be a heat source
-            // that flickered: the sample is taken every few steps and the answer feeds convection.
+/// <summary>Vector3D operation.</summary>
             Vector3D place = new Vector3D(1234.5, -678.9, 4321.0);
 
             Assert.Equal(WindField.Variation(place), WindField.Variation(place), 6);
@@ -260,12 +226,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>VariationStaysInsideItsRange operation.</summary>
         public void VariationStaysInsideItsRange()
         {
+/// <summary>Random operation.</summary>
             Random random = new Random(11);
 
             for (int i = 0; i < 500; i++)
             {
+/// <summary>Vector3D operation.</summary>
                 Vector3D place = new Vector3D(
                     random.NextDouble() * 120000d - 60000d,
                     random.NextDouble() * 120000d - 60000d,
@@ -277,13 +246,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AParkedShipIsNotFlying operation.</summary>
         public void AParkedShipIsNotFlying()
         {
-            // The defect this exists to fix, stated as a test: on an earthlike world at sea level,
-            // the wind a stationary grid stands in must be under the speed at which friction
-            // heating becomes material. The bound is the harness's constant now — friction is
-            // live at every speed and merely negligible below this one — but the claim on the
-            // wind field is unchanged: fair-weather wind must not heat a parked ship noticeably.
             for (int latitude = -85; latitude <= 85; latitude += 5)
             {
                 float speed = WindField.Speed(80f, 0f, WindField.Variation(new Vector3D(latitude * 700, 0, 0)));

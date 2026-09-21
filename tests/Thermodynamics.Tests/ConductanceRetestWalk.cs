@@ -9,38 +9,6 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **The retest set, run in the world before real conductances and in the world after it**, so
-    /// backlog `C2` is answered with a measurement rather than an argument.
-    ///
-    /// <para>
-    /// The standing panel is the wrong instrument for this question. It picks extremes because a
-    /// dial sweep needs the largest lever it can find; a regression asks whether a change broke the
-    /// ships people fly, which is what <c>tools/corpus/typical.csv</c> is for — forty hulls carrying
-    /// thrust, power, an airtight room and 100 kW of load, nearest the population median on the four
-    /// quantities the census found decide an outcome.
-    /// </para>
-    ///
-    /// <code>
-    ///     THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=out/retest \
-    ///         dotnet test --filter ConductanceRetestWalk
-    /// </code>
-    ///
-    /// <para>
-    /// **The worlds run in sequence, and that is not a tuning choice.** A material override is a
-    /// process-wide static that empties the shared model cache, so two worlds in flight at once
-    /// would build ships out of each other's materials. The parallelism is inside a world, across
-    /// the set, which is where it was anyway.
-    /// </para>
-    ///
-    /// <para>
-    /// **Reach is measured before anything is run and written to its own file.** An arm that reaches
-    /// no block on this set reports "no change" in exactly the shape of an arm that reached every
-    /// block and changed nothing, and the corpus filters admit vanilla hulls only — so the arm for
-    /// the mod's own blocks is expected to reach zero here, and has to say so rather than read as a
-    /// finding (`E8`).
-    /// </para>
-    /// </summary>
     [Collection("alone")]
     public class ConductanceRetestWalk
     {
@@ -54,17 +22,6 @@ namespace Thermodynamics.Tests
         public const string ReachHeader =
             "world,ship,workshop_id,blocks,retuned_blocks,retuned_share,subtypes,retuned_subtypes";
 
-        /// <summary>
-        /// The scenarios this retest runs, and why each is here.
-        ///
-        /// <para>
-        /// The first five are the ones membership of the retest set already required an outcome
-        /// for, so a ship that is in the set is a ship all five could be read from. The two flight
-        /// cases are the half of `C2` that was named as unmeasured: the conversion left friction
-        /// heating the leading face where it used to be computed and discarded, and a conductance
-        /// change decides whether that face keeps the heat or spreads it.
-        /// </para>
-        /// </summary>
         private static readonly string[] Wanted =
         {
             "idle", "full-electrical", "burn-forward", "vacuum-sunlit", "recovery",
@@ -74,6 +31,7 @@ namespace Thermodynamics.Tests
         private static int rowsWritten;
 
         [Fact]
+/// <summary>EveryArmOfTheConversionGetsAMeasuredEffect operation.</summary>
         public void EveryArmOfTheConversionGetsAMeasuredEffect()
         {
             if (CorpusFixture.Files().Count == 0) return;
@@ -98,8 +56,6 @@ namespace Thermodynamics.Tests
 
             List<ConductanceRetest.World> worlds = ConductanceRetest.All();
 
-            // Exactly one control, or the comparison has no baseline — or two, in which case one of
-            // the arms is silently being read against itself.
             int controls = 0;
             foreach (ConductanceRetest.World world in worlds)
             {
@@ -108,6 +64,7 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(1, controls);
 
+/// <summary>Reach operation.</summary>
             Dictionary<string, int> reach = Reach(worlds, ships);
 
             foreach (ConductanceRetest.World world in worlds)
@@ -119,28 +76,19 @@ namespace Thermodynamics.Tests
                 "the retest produced no rows and had nothing recorded as already finished");
         }
 
-        // ---- reach -----------------------------------------------------------------------------
 
-        /// <summary>
-        /// How many blocks each world actually retunes, counted by building every ship in every
-        /// world and comparing each block's conductance against the shipped one for the same
-        /// subtype.
-        ///
-        /// <para>
-        /// Building is a small fraction of settling, so this costs little and buys the one thing the
-        /// result columns cannot say on their own: whether an arm that moved nothing had anything to
-        /// move.
-        /// </para>
-        /// </summary>
+/// <summary>Reach operation.</summary>
         private static Dictionary<string, int> Reach(List<ConductanceRetest.World> worlds,
             List<Blueprints.Ship> ships)
         {
             Dictionary<string, int> totals = new Dictionary<string, int>(StringComparer.Ordinal);
+/// <summary>List operation.</summary>
             List<string> rows = new List<string>();
 
             Dictionary<string, float> shippedBySubtype =
                 new Dictionary<string, float>(StringComparer.Ordinal);
 
+/// <summary>object operation.</summary>
             object gate = new object();
 
             System.Threading.Tasks.ParallelOptions options =
@@ -167,9 +115,6 @@ namespace Thermodynamics.Tests
 
                 foreach (ConductanceRetest.World world in worlds)
                 {
-                    // **Installed once per world, outside the fan-out.** The override is a
-                    // process-wide static that empties the model cache, so setting it from a worker
-                    // would clear the cache under the ships already in flight.
                     Blueprints.MaterialOverride = world.Material();
 
                     int total = 0;
@@ -179,6 +124,7 @@ namespace Thermodynamics.Tests
                     {
                         Dictionary<string, float> mine =
                             new Dictionary<string, float>(StringComparer.Ordinal);
+/// <summary>Conductances operation.</summary>
                         Dictionary<string, int> counts = Conductances(ship, mine);
 
                         int retunedBlocks = 0;
@@ -198,6 +144,7 @@ namespace Thermodynamics.Tests
                             retunedBlocks += counts[pair.Key];
                         }
 
+/// <summary>StringBuilder operation.</summary>
                         StringBuilder row = new StringBuilder();
                         row.Append(CorpusRecord.Text(current.Name)).Append(',');
                         row.Append(CorpusRecord.Text(ship.Name)).Append(',');
@@ -227,13 +174,6 @@ namespace Thermodynamics.Tests
 
             if (CorpusRecord.On && rows.Count > 0) CorpusRecord.Write("reach", ReachHeader, rows);
 
-            // **The composite has to have reached something, and it has to be the union of the
-            // arms.** It is deliberately not asserted to reach every block: armour is where the
-            // conversion was calibrated to land exactly, and on a typical hull most blocks derive
-            // as steel and therefore conduct at 120 either side of the change. What must hold is
-            // that the composite retunes at least as much as any single arm, because it is the same
-            // rewrite with a wider reach — an arm that beat it would mean the arms are not subsets
-            // and nothing below can be attributed.
             int composite;
             Assert.True(totals.TryGetValue("pre-units", out composite) && composite > 0,
                 "the composite arm retuned no block at all, so nothing below is a comparison");
@@ -248,21 +188,12 @@ namespace Thermodynamics.Tests
             return totals;
         }
 
-        /// <summary>
-        /// Every distinct subtype on a ship, its conductance in the installed world, and how many
-        /// blocks carry it. Read off the built simulation rather than the definitions, because the
-        /// override applies as the model is built and that is the value the solver will use.
-        /// </summary>
+/// <summary>Conductances operation.</summary>
         private static Dictionary<string, int> Conductances(Blueprints.Ship ship,
             Dictionary<string, float> into)
         {
             Dictionary<string, int> counts = new Dictionary<string, int>(StringComparer.Ordinal);
 
-            // **Re-read, because a ship resolves its models as it is parsed.** A blueprint read
-            // before an override was installed carries the models it resolved then, and the model
-            // cache being cleared behind it changes nothing — so counting off the ship as loaded
-            // reported that every arm retuned nothing at all. This is the same reason the run below
-            // reloads per world rather than reusing the parsed ship.
             ShipAssembly assembly = ship.Reload().Build();
 
             for (int s = 0; s < assembly.Simulations.Count; s++)
@@ -284,17 +215,12 @@ namespace Thermodynamics.Tests
             return counts;
         }
 
-        // ---- the run ---------------------------------------------------------------------------
 
-        /// <summary>
-        /// One world: install it, run the set through every scenario, take it down again.
-        ///
-        /// The override is cleared in a finally, because leaving one installed contaminates every
-        /// world after it and the contamination reads as a result rather than as an error.
-        /// </summary>
+/// <summary>Run operation.</summary>
         private static void Run(ConductanceRetest.World world, Dictionary<string, int> reach,
             List<Blueprints.Ship> ships, Dictionary<string, Battery.Scenario> scenarios)
         {
+/// <summary>object operation.</summary>
             object gate = new object();
             int written = 0;
             int skipped = 0;
@@ -314,10 +240,6 @@ namespace Thermodynamics.Tests
 
                 Each(ships, options, source =>
                 {
-                    // **A ship's rows are written the moment its ship is finished, and the ship is
-                    // recorded as done.** Five worlds over forty hulls is hours, and a pass that
-                    // flushed at the end of a world lost every row it had when it was killed
-                    // (`O3`). Relaunching resumes; deleting done-retest.txt starts over.
                     string mark = world.Name + "|" + source.Name + "|" + source.WorkshopId;
                     if (done.Contains(mark))
                     {
@@ -325,12 +247,9 @@ namespace Thermodynamics.Tests
                         return;
                     }
 
+/// <summary>List operation.</summary>
                     List<string> mine = new List<string>();
 
-                    // Each worker owns its own copy, exactly as the survey does: block instances
-                    // carry the applied load, so two scenarios sharing one instance would write
-                    // over each other. It is also what re-reads the ship under this world's
-                    // override, since a blueprint resolves its models as it is parsed.
                     Blueprints.Ship ship = source.Reload();
 
                     for (int s = 0; s < Wanted.Length; s++)
@@ -345,7 +264,6 @@ namespace Thermodynamics.Tests
                         }
                         catch
                         {
-                            // A ship this world cannot run must not lose the walk.
                         }
                     }
 
@@ -371,9 +289,11 @@ namespace Thermodynamics.Tests
                 + "resumed past " + skipped + " ships");
         }
 
+/// <summary>Row operation.</summary>
         private static string Row(ConductanceRetest.World world, int retuned,
             Blueprints.Ship ship, ScenarioOutcome o)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder row = new StringBuilder();
             row.Append(CorpusRecord.Text(world.Name)).Append(',');
             row.Append(CorpusRecord.Text(o.Scenario)).Append(',');
@@ -405,17 +325,10 @@ namespace Thermodynamics.Tests
             return row.ToString();
         }
 
-        // ---- the set and the resume record -----------------------------------------------
 
-        /// <summary>The resume record for this walk. One per walk, beside its data.</summary>
         private static readonly ShipSet.Resume Record = new ShipSet.Resume("retest");
 
-        /// <summary>
-        /// Runs <paramref name="work"/> over every ship, one ship per chunk. The default range
-        /// partitioner assumes items cost about the same and these do not — the largest hull on the
-        /// set is over a hundred times the smallest — so a worker dealt a run of big ones finishes
-        /// long after the rest.
-        /// </summary>
+/// <summary>Each operation.</summary>
         private static void Each(List<Blueprints.Ship> ships,
             System.Threading.Tasks.ParallelOptions options, Action<Blueprints.Ship> work)
         {
@@ -428,6 +341,7 @@ namespace Thermodynamics.Tests
                 });
         }
 
+/// <summary>Progress operation.</summary>
         private static void Progress(string line)
         {
             ShipSet.Progress("retest", line);

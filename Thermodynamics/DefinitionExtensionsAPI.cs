@@ -22,15 +22,11 @@ namespace Draygo.BlockExtensionsAPI
 
 	public class DefinitionExtensionsAPI
 	{
-		//create this class object asap in your mod before loaddata executes. 
 		public const long MODID = 2756894170;
 		IReadOnlyDictionary<Type, Delegate> _methods;
 		Action m_callback = null;
 		bool m_init = false;
 
-		/// <summary>
-		/// Indicates if the API has successfully init, inits during SessionComponent::LoadData
-		/// </summary>
 		public bool Init
 		{
 			get
@@ -39,10 +35,7 @@ namespace Draygo.BlockExtensionsAPI
 			}
 		}
 
-		/// <summary>
-		/// Init in your constructor of a session component, BlockExtensions is initialized in LoadData and will call the callback when initialized. Note, make sure to call UnloadData when session completes. 
-		/// </summary>
-		/// <param name="callback">Callback action when init</param>
+/// <summary>DefinitionExtensionsAPI operation.</summary>
 		public DefinitionExtensionsAPI(Action callback)
 		{
 			if (MyAPIGateway.Utilities == null)
@@ -53,9 +46,7 @@ namespace Draygo.BlockExtensionsAPI
 			MyAPIGateway.Utilities.RegisterMessageHandler(MODID, recieveModHandlers);
 		}
 
-		/// <summary>
-		/// Call when your mod is unloaded
-		/// </summary>
+/// <summary>UnloadData operation.</summary>
 		public void UnloadData()
 		{
 			MyAPIGateway.Utilities.UnregisterMessageHandler(MODID, recieveModHandlers);
@@ -74,6 +65,7 @@ namespace Draygo.BlockExtensionsAPI
 			GetAllIndexedIds = 8
 		}
 
+/// <summary>recieveModHandlers operation.</summary>
 		private void recieveModHandlers(object obj)
 		{
 			if (Init)
@@ -118,13 +110,16 @@ namespace Draygo.BlockExtensionsAPI
 			}
 		}
 
+/// <summary>Assign operation.</summary>
 		private void Assign<T>(Type valuetype, ref T method) where T : class
 		{
 			method = _methods[valuetype] as T;
 		}
 
+/// <summary>Assign operation.</summary>
 		private void Assign<T>(AdditionalMethods mt, ref T method) where T : class
 		{
+/// <summary> getDelegate operation.</summary>
 			method = _getDelegate((int)mt) as T;
 		}
 
@@ -149,78 +144,44 @@ namespace Draygo.BlockExtensionsAPI
 		private Action<MyDefinitionId, List<MyStringId>> _GetGroups;
 		private Action<MyDefinitionId, MyStringId, List<MyTuple<MyStringId, Type>>> _GetProperties;
 		private Action<HashSet<MyDefinitionId>> _GetAllIndexedIds;
-		/// <summary>
-		/// Checks if definition has any defined groups
-		/// </summary>
-		/// <param name="definition">Definition to check</param>
-		/// <returns>result</returns>
+/// <summary>DefinitionIdExists operation.</summary>
 		public bool DefinitionIdExists(MyDefinitionId definition)
 		{
 			return _DefIDExists?.Invoke(definition) ?? false;
 		}
 
 
-		/// <summary>
-		/// Returns a hashset of all MyDefinitionId's that have been indexed by Definition Extensions
-		/// </summary>
-		/// <param name="obj">Hashset of MyDefinitionIds, please init with MyDefinitionId.Comparar to prevent allocations. HashSet will be cleared. If HashSet is null a new HashSet will be allocated.</param>
+/// <summary>Returns the allindexedids.</summary>
 		public void GetAllIndexedIds(HashSet<MyDefinitionId> obj)
 		{
 			_GetAllIndexedIds?.Invoke(obj);
 		}
 
-		/// <summary>
-		/// Gets all groups assigned to a specific definition id
-		/// </summary>
-		/// <param name="definition">DefinitionId to fetch groups</param>
-		/// <param name="grouplist">List groups will be added to. Not cleared internally. Will not allocate a new list if null.</param>
+/// <summary>Returns the groups.</summary>
 		public void GetGroups(MyDefinitionId definition, List<MyStringId> grouplist)
 		{
 			_GetGroups?.Invoke(definition, grouplist);
 		}
 
-		/// <summary>
-		/// Gets all properties assigned to a block and group
-		/// </summary>
-		/// <param name="definition">Definition ID to fetch properties</param>
-		/// <param name="group">Group to fetch properties</param>
-		/// <param name="properties">List of properties and type. Not cleared internally. Will not allocate a new list if null.</param>
+/// <summary>Returns the properties.</summary>
 		public void GetProperties(MyDefinitionId definition, MyStringId groupid, List<MyTuple<MyStringId, Type>> properties)
 		{
 			_GetProperties?.Invoke(definition, groupid, properties);
 		}
 
 
-		/// <summary>
-		/// Must be called in the scripts constructor. 
-		/// </summary>
-		/// <param name="script">pass in the calling script (this)</param>
-		/// <param name="surface">IMyTextSurface the script belongs to</param>
-		/// <param name="block">Block the surface blongs to</param>
-		/// <param name="controlgetter">Custom Control Getter</param>
+/// <summary>Registers the API and message handler.</summary>
 		public void RegisterTSS(MyTSSCommon script, IMyTextSurface surface, IMyTerminalBlock block, Action<MyTSSCommon, IMyTerminalBlock, List<IMyTerminalControl>> controlgetter)
 		{
 			_RegisterTSS?.Invoke(script, surface, block, controlgetter);
 		}
 
-		/// <summary>
-		/// Must be called in the scripts Dispose method
-		/// </summary>
-		/// <param name="script">pass in the calling script (this)</param>
-		/// <param name="surface">IMyTextSurface the script belongs to</param>
-		/// <param name="block">block the surface belongs to</param>
+/// <summary>UnRegisterTSS operation.</summary>
 		public void UnRegisterTSS(MyTSSCommon script, IMyTextSurface surface, IMyTerminalBlock block)
 		{
 			_UnregisterTSS?.Invoke(script, surface, block);
 		}
 
-		/// <summary>
-		/// Automatically creates and registers a MyEntityComponentBase when TSS Script is registered.
-		/// </summary>
-		/// <typeparam name="T">TSS Script</typeparam>
-		/// <typeparam name="U">Entity Component to automatically load when TSS script registers</typeparam>
-		/// <param name="modContext">Pass in ModContext from your session component</param>
-		/// <param name="customFactory">Optional, must return your MyEntityComponentBase, for example if you want to create an object pool instead of creating a new object</param>
 		public void RegisterTSSDataComponent<T, U>(IMyModContext modContext, Func<U> customFactory = null) where U : MyEntityComponentBase, new()
 			where T : MyTSSCommon
 		{
@@ -230,23 +191,13 @@ namespace Draygo.BlockExtensionsAPI
 			_RegisterTSSDataComponent?.Invoke(typeof(T), typeof(U), modContext, customFactory);
 		}
 
-		/// <summary>
-		/// Grabs the registered TSS Data Component for the block, alternatively you can just fetch it directly via block.Components.Get<>
-		/// </summary>
-		/// <typeparam name="T">TSS Script requesting its data component</typeparam>
-		/// <param name="block"></param>
-		/// <returns></returns>
+/// <summary>Returns the tssdatacomponent.</summary>
 		public MyEntityComponentBase GetTSSDataComponent<T>(IMyTerminalBlock block) where T : MyTSSCommon
 		{
 			return _GetTSSDataComponent(typeof(T), block);
 		}
 
-		/// Registers a GameLogic class in ModExtensions, will be applied to all blocks that define the component tag in definition. Note: ModContext is null for GameLogic inited in this way
-		/// </summary>
-		/// <typeparam name="T">Your GameLogicComponent</typeparam>
-		/// <param name="componentName">name of the component in the SBC file to attach to</param>
-		/// <param name="mod">pass your mod context</param>
-		/// <param name="customFactory">Optional, custom factory delegate must return your gamelogic component</param>
+/// <summary>Registers and opens communication.</summary>
 		public void RegisterGameLogic<T>(MyStringId componentName, IMyModContext mod, Func<T> customFactory = null) where T : MyGameLogicComponent, new()
 		{
 			if(customFactory == null)
@@ -255,14 +206,7 @@ namespace Draygo.BlockExtensionsAPI
 			_setGameLogic?.Invoke(componentName, mod, customFactory);
 		}
 
-		/// <summary>
-		/// Gets text block property
-		/// </summary>
-		/// <param name="definition">MyDefinitionId that is being extended</param>
-		/// <param name="group">ModExtensions Group</param>
-		/// <param name="propertyname">Name of the property</param>
-		/// <param name="value">Value of the property</param>
-		/// <returns>Success value, false indicates property does not exist</returns>
+/// <summary>TryGetText operation.</summary>
 		public bool TryGetText(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out string value)
 		{
 			var retval = _textMethod.Invoke(definition, group, propertyname);
@@ -270,27 +214,14 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-		/// <summary>
-		/// Alias for TryGetText
-		/// </summary>
-		/// <param name="definition">MyDefinitionId that is being extended</param>
-		/// <param name="group">ModExtensions Group</param>
-		/// <param name="propertyname">Name of the property</param>
-		/// <param name="value">Value of the property</param>
-		/// <returns>Success value, false indicates property does not exist</returns>
+/// <summary>TryGetString operation.</summary>
 		public bool TryGetString(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out string value)
 		{
+/// <summary>TryGetText operation.</summary>
 			return TryGetText(definition, group, propertyname, out value);
 		}
 
-		/// <summary>
-		/// Gets integer block property, note integer value is stored as a long and is cast to int. 
-		/// </summary>
-		/// <param name="definition">MyDefinitionId that is being extended</param>
-		/// <param name="group">ModExtensions Group</param>
-		/// <param name="propertyname">Name of the property</param>
-		/// <param name="value">Value of the property</param>
-		/// <returns>Success value, false indicates property does not exist</returns>
+/// <summary>TryGetInt operation.</summary>
 		public bool TryGetInt(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out int value)
 		{
 			var retval = _intMethod.Invoke(definition, group, propertyname);
@@ -298,14 +229,7 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-		/// <summary>
-		/// Gets integer block property.
-		/// </summary>
-		/// <param name="definition">MyDefinitionId that is being extended</param>
-		/// <param name="group">ModExtensions Group</param>
-		/// <param name="propertyname">Name of the property</param>
-		/// <param name="value">Value of the property</param>
-		/// <returns>Success value, false indicates property does not exist</returns>
+/// <summary>TryGetLong operation.</summary>
 		public bool TryGetLong(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out long value)
 		{
 			var retval = _longMethod.Invoke(definition, group, propertyname);
@@ -313,14 +237,7 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-		/// <summary>
-		/// Gets floating precision block property. Note, backend value is stored as a double and cast to float.
-		/// </summary>
-		/// <param name="definition">MyDefinitionId that is being extended</param>
-		/// <param name="group">ModExtensions Group</param>
-		/// <param name="propertyname">Name of the property</param>
-		/// <param name="value">Value of the property</param>
-		/// <returns>Success value, false indicates property does not exist</returns>
+/// <summary>TryGetFloat operation.</summary>
 		public bool TryGetFloat(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out float value)
 		{
 			var retval = _floatMethod.Invoke(definition, group, propertyname);
@@ -328,14 +245,7 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-		/// <summary>
-		/// Gets double floating precision block property.
-		/// </summary>
-		/// <param name="definition">MyDefinitionId that is being extended</param>
-		/// <param name="group">ModExtensions Group</param>
-		/// <param name="propertyname">Name of the property</param>
-		/// <param name="value">Value of the property</param>
-		/// <returns>Success value, false indicates property does not exist</returns>
+/// <summary>TryGetDouble operation.</summary>
 		public bool TryGetDouble(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out double value)
 		{
 			var retval = _doubleMethod.Invoke(definition, group, propertyname);
@@ -343,14 +253,7 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-		/// <summary>
-		/// Gets boolean block property.
-		/// </summary>
-		/// <param name="definition">MyDefinitionId that is being extended</param>
-		/// <param name="group">ModExtensions Group</param>
-		/// <param name="propertyname">Name of the property</param>
-		/// <param name="value">Value of the property</param>
-		/// <returns>Success value, false indicates property does not exist</returns>
+/// <summary>TryGetBool operation.</summary>
 		public bool TryGetBool(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out bool value)
 		{
 			var retval = _booleanMethod.Invoke(definition, group, propertyname);
@@ -358,14 +261,7 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-		/// <summary>
-		/// Gets color block property.
-		/// </summary>
-		/// <param name="definition">MyDefinitionId that is being extended</param>
-		/// <param name="group">ModExtensions Group</param>
-		/// <param name="propertyname">Name of the property</param>
-		/// <param name="value">Value of the property</param>
-		/// <returns>Success value, false indicates property does not exist</returns>
+/// <summary>TryGetColor operation.</summary>
 		public bool TryGetColor(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out Color value)
 		{
 			var retval = _colorMethod.Invoke(definition, group, propertyname);
@@ -373,14 +269,7 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-		/// <summary>
-		/// Gets Vector2I (integer) block property.
-		/// </summary>
-		/// <param name="definition">MyDefinitionId that is being extended</param>
-		/// <param name="group">ModExtensions Group</param>
-		/// <param name="propertyname">Name of the property</param>
-		/// <param name="value">Value of the property</param>
-		/// <returns>Success value, false indicates property does not exist</returns>
+/// <summary>TryGetVector2I operation.</summary>
 		public bool TryGetVector2I(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out Vector2I value)
 		{
 			var retval = _vector2IMethod.Invoke(definition, group, propertyname);
@@ -388,14 +277,7 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-		/// <summary>
-		/// Gets Vector2D (double) block property.
-		/// </summary>
-		/// <param name="definition">MyDefinitionId that is being extended</param>
-		/// <param name="group">ModExtensions Group</param>
-		/// <param name="propertyname">Name of the property</param>
-		/// <param name="value">Value of the property</param>
-		/// <returns>Success value, false indicates property does not exist</returns>
+/// <summary>TryGetVector2D operation.</summary>
 		public bool TryGetVector2D(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out Vector2D value)
 		{
 			var retval = _vector2DMethod.Invoke(definition, group, propertyname);
@@ -403,14 +285,7 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-		/// <summary>
-		/// Gets Vector3I (integer) block property.
-		/// </summary>
-		/// <param name="definition">MyDefinitionId that is being extended</param>
-		/// <param name="group">ModExtensions Group</param>
-		/// <param name="propertyname">Name of the property</param>
-		/// <param name="value">Value of the property</param>
-		/// <returns>Success value, false indicates property does not exist</returns>
+/// <summary>TryGetVector3I operation.</summary>
 		public bool TryGetVector3I(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out Vector3I value)
 		{
 			var retval = _vector3IMethod.Invoke(definition, group, propertyname);
@@ -418,14 +293,7 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-		/// <summary>
-		/// Gets Vector3D (double) block property.
-		/// </summary>
-		/// <param name="definition">MyDefinitionId that is being extended</param>
-		/// <param name="group">ModExtensions Group</param>
-		/// <param name="propertyname">Name of the property</param>
-		/// <param name="value">Value of the property</param>
-		/// <returns>Success value, false indicates property does not exist</returns>
+/// <summary>TryGetVector3D operation.</summary>
 		public bool TryGetVector3D(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out Vector3D value)
 		{
 			var retval = _vector3DMethod.Invoke(definition, group, propertyname);
@@ -433,18 +301,12 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-		/// <summary>
-		/// Generic to expand supported variables in the future can also be used for existing types. 
-		/// </summary>
-		/// <param name="definition">MyDefinitionId that is being extended</param>
-		/// <param name="group">ModExtensions Group</param>
-		/// <param name="propertyname">Name of the property</param>
-		/// <param name="value">Value of the property</param>
-		/// <returns>Success value, false indicates property does not exist</returns>
+/// <summary>TryGet operation.</summary>
 		public bool TryGet<T>(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out T value)
 		{
 			if(!_methods?.ContainsKey(typeof(T)) ?? false)
 			{
+/// <summary>default operation.</summary>
 				value = default(T);
 				return false;
 			}

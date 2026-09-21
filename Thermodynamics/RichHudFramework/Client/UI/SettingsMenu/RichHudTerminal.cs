@@ -25,28 +25,15 @@ namespace RichHudFramework
 			Func<int, ControlMembers> // GetNewModPage
 		>;
 
-		/// <summary>
-		/// The central windowed settings menu shared by all mods using the framework.
-		/// </summary>
 		public sealed partial class RichHudTerminal : RichHudClient.ApiModule
 		{
-			/// <summary>
-			/// The root container for this specific client/mod. Add your pages and categories here.
-			/// </summary>
 			public static IModControlRoot Root => Instance.menuRoot;
 
-			/// <summary>
-			/// Indicates whether the terminal window is currently visible.
-			/// </summary>
 			public static bool Open => (bool)Instance.GetOrSetMembersFunc(null, (int)TerminalAccessors.GetMenuOpen);
 
-			/// <summary>
-			/// The internal singleton instance of the Terminal.
-			/// <para>Initialization is handled automatically.</para>
-			/// </summary>
-			/// <exclude/>
 			public static RichHudTerminal Instance
 			{
+/// <summary>Init operation.</summary>
 				get { Init(); return _instance; }
 				set { _instance = value; }
 			}
@@ -59,6 +46,7 @@ namespace RichHudFramework
 			private readonly Func<int, ControlMembers> GetNewPageFunc;
 			private readonly Func<ControlContainerMembers> GetNewPageCategoryFunc;
 
+/// <summary>RichHudTerminal operation.</summary>
 			private RichHudTerminal() : base(ApiModuleTypes.SettingsMenu, false, true)
 			{
 				var data = (SettingsMenuMembers)GetApiData();
@@ -71,24 +59,21 @@ namespace RichHudFramework
 				GetNewPageCategoryFunc =
 					GetOrSetMembersFunc(null, (int)TerminalAccessors.GetNewPageCategoryFunc) as Func<ControlContainerMembers>;
 
+/// <summary>ModControlRoot operation.</summary>
 				menuRoot = new ModControlRoot(data.Item2);
 			}
 
-			/// <summary>
-			/// Initializes the RHF terminal singleton. 
-			/// </summary>
-			/// <exclude/>
+/// <summary>Init operation.</summary>
 			private static void Init()
 			{
 				if (_instance == null)
 				{
+/// <summary>RichHudTerminal operation.</summary>
 					_instance = new RichHudTerminal();
 				}
 			}
 
-			/// <summary>
-			/// Toggles the visibility of the terminal window.
-			/// </summary>
+/// <summary>ToggleMenu operation.</summary>
 			public static void ToggleMenu()
 			{
 				if (_instance == null)
@@ -97,9 +82,7 @@ namespace RichHudFramework
 				_instance.GetOrSetMembersFunc(null, (int)TerminalAccessors.ToggleMenu);
 			}
 
-			/// <summary>
-			/// Opens the terminal window.
-			/// </summary>
+/// <summary>OpenMenu operation.</summary>
 			public static void OpenMenu()
 			{
 				if (_instance == null)
@@ -108,9 +91,7 @@ namespace RichHudFramework
 				_instance.GetOrSetMembersFunc(null, (int)TerminalAccessors.OpenMenu);
 			}
 
-			/// <summary>
-			/// Closes the terminal window.
-			/// </summary>
+/// <summary>CloseMenu operation.</summary>
 			public static void CloseMenu()
 			{
 				if (_instance == null)
@@ -119,63 +100,41 @@ namespace RichHudFramework
 				_instance.GetOrSetMembersFunc(null, (int)TerminalAccessors.CloseMenu);
 			}
 
-			/// <summary>
-			/// Opens the terminal window (if closed) and navigates directly to the specified page.
-			/// </summary>
+/// <summary>OpenToPage operation.</summary>
 			public static void OpenToPage(TerminalPageBase newPage)
 			{
 				_instance.GetOrSetMembersFunc(new MyTuple<object, object>(_instance.menuRoot.ID, newPage.ID), (int)TerminalAccessors.OpenToPage);
 			}
 
-			/// <summary>
-			/// Sets the active page in the terminal without forcing the window to open.
-			/// </summary>
+/// <summary>Sets the page.</summary>
 			public static void SetPage(TerminalPageBase newPage)
 			{
 				_instance.GetOrSetMembersFunc(new MyTuple<object, object>(_instance.menuRoot.ID, newPage.ID), (int)TerminalAccessors.SetPage);
 			}
 
-			/// <summary>
-			/// Clears the singleton instance.
-			/// </summary>
-			/// <exclude/>
+/// <summary>Close operation.</summary>
 			public override void Close()
 			{
 				_instance = null;
 			}
 
-			/// <summary>
-			/// Internal method for creating and returning API accessors to a new control
-			/// </summary>
-			/// <exclude/>
+/// <summary>Returns the newmenucontrol.</summary>
 			public ControlMembers GetNewMenuControl(MenuControls controlEnum) =>
 				Instance.GetNewControlFunc((int)controlEnum);
 
-			/// <summary>
-			/// Internal method for creating and returning API accessors for a new control tile
-			/// </summary>
-			/// <exclude/>
+/// <summary>Returns the newmenutile.</summary>
 			public ControlContainerMembers GetNewMenuTile() =>
 				Instance.GetNewContainerFunc((int)ControlContainers.Tile);
 
-			/// <summary>
-			/// Internal method for creating and returning API accessors to a new control category
-			/// </summary>
-			/// <exclude/>
+/// <summary>Returns the newmenucategory.</summary>
 			public ControlContainerMembers GetNewMenuCategory() =>
 				Instance.GetNewContainerFunc((int)ControlContainers.Category);
 
-			/// <summary>
-			/// Internal method for creating and returning API accessors to a new page of a given type
-			/// </summary>
-			/// <exclude/>
+/// <summary>Returns the newmenupage.</summary>
 			public ControlMembers GetNewMenuPage(ModPages pageEnum) =>
 				Instance.GetNewPageFunc((int)pageEnum);
 
-			/// <summary>
-			/// Internal method for creating and returning API accessors to a new page category
-			/// </summary>
-			/// <exclude/>
+/// <summary>Returns the newpagecategory.</summary>
 			public ControlContainerMembers GetNewPageCategory() =>
 				Instance.GetNewPageCategoryFunc();
 		}

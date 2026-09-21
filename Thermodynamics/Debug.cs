@@ -4,15 +4,9 @@ using VRageMath;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// The crosshair readout: everything the simulation knows about the block being looked at.
-    ///
-    /// Client only, and behind <see cref="Settings.DebugTextOnScreen"/>. Reads state that already
-    /// exists on the node, so enabling it costs a raycast and string building and changes nothing
-    /// about the simulation.
-    /// </summary>
     public static class Debug
     {
+/// <summary>ShowDebugInfo operation.</summary>
         public static void ShowDebugInfo()
         {
             if (MyAPIGateway.Utilities.IsDedicated) return;
@@ -73,41 +67,30 @@ namespace Thermodynamics
             MyAPIGateway.Utilities.ShowNotification(
                 "[Surface] " + CellSurface.Describe(simulation.Surfaces.GetState(cell)), 1, "White");
 
-            // How the room mapper classified this cell, and the space on the other side of each of
-            // its faces. A hull block reading external is a cell the flood fill walked into, which is
-            // what causes a sealed room to map as no room.
             RoomMap map = simulation.Rooms.Map;
             MyAPIGateway.Utilities.ShowNotification(
+/// <summary>Classify operation.</summary>
                 "[Room] cell: " + Classify(map, cell) +
                 " sealed by state: " + (node.Block.IsSealedByDoorState ? "yes" : "no (door open)") +
+/// <summary>Neighbours operation.</summary>
                 " neighbours: " + Neighbours(map, simulation.Surfaces, cell), 1,
                 map.IsExternal(cell) ? "Red" : "White");
 
             MyAPIGateway.Utilities.ShowNotification(
+/// <summary>Exposure operation.</summary>
                 "[Faces] " + Exposure(simulation, node.Block), 1, "White");
 
             MyAPIGateway.Utilities.ShowNotification("[Aero] " + Aero(solver, node, state), 1, "White");
         }
 
-        /// <summary>
-        /// This block's share of the aerodynamic force: its friction watts, the one blended
-        /// surface normal the shape term reconstructed for it, and the pressure push those two
-        /// make together, grid-local along `−n̂`.
-        ///
-        /// <para>
-        /// **Per node and per normal, not per face — because that is the design.** The drag
-        /// weighting is per face (the windward projection the [Faces] line describes), but lift is
-        /// taken from one reconstructed normal per block, so a per-face lift figure does not exist
-        /// to display. A zero normal names its own reason: the shape term off, or its budgeted
-        /// pass not yet at this block.
-        /// </para>
-        /// </summary>
+/// <summary>Aero operation.</summary>
         private static string Aero(ThermalSolver solver, ThermalNode node, EnvironmentState state)
         {
             Vector3 normal = solver.NodeShapeNormal(node.Index);
             float watts = node.LastFrictionWatts;
 
             string text = "friction: " + watts.ToString("n1") + "W"
+/// <summary>wind operation.</summary>
                 + "  wind(local): " + Compact(state.WindDirectionLocal * state.WindSpeed) + "m/s";
 
             if (normal == Vector3.Zero)
@@ -115,24 +98,17 @@ namespace Thermodynamics
                 return text + "  normal: none (shape term off, or its pass has not reached this block)";
             }
 
-            // The node's contribution to LastPressureWatts: its friction watts pointed inward
-            // along the reconstructed normal. What LiftForce keeps of the grid's sum is the part
-            // of these, summed, that lies across the flow.
             Vector3 push = watts > 0f ? -normal * watts : Vector3.Zero;
             return text + "  normal: " + Compact(normal) + "  pressure push: " + Compact(push) + "W";
         }
 
+/// <summary>Compact operation.</summary>
         private static string Compact(Vector3 v)
         {
             return "(" + v.X.ToString("n1") + " " + v.Y.ToString("n1") + " " + v.Z.ToString("n1") + ")";
         }
 
-        /// <summary>
-        /// Why each of this block's faces counts as exposed, or does not.
-        ///
-        /// The model carries only a total, from which the three rules that can reject a cell face are
-        /// indistinguishable. Each is named here.
-        /// </summary>
+/// <summary>Exposure operation.</summary>
         private static string Exposure(ThermalSimulation simulation, BlockInstance block)
         {
             SurfaceAudit.Explain(simulation.Surfaces, block, simulation.Rooms.Map, ExposureScratch);
@@ -155,10 +131,9 @@ namespace Thermodynamics
             return text;
         }
 
-        /// <summary>Reused so the readout allocates one string rather than an array per frame.</summary>
         private static readonly FaceExposure[] ExposureScratch = new FaceExposure[Face.Count];
 
-        /// <summary>How the room map classifies one cell.</summary>
+/// <summary>Classify operation.</summary>
         private static string Classify(RoomMap map, Vector3I cell)
         {
             if (map.IsSolid(cell)) return "structure";
@@ -169,10 +144,7 @@ namespace Thermodynamics
             return "external";
         }
 
-        /// <summary>
-        /// The six neighbours, each as face name, classification, and whether the face between them
-        /// seals. An unsealed face out of a hull block identifies a leak.
-        /// </summary>
+/// <summary>Neighbours operation.</summary>
         private static string Neighbours(RoomMap map, SurfaceMap surfaces, Vector3I cell)
         {
             string text = "";

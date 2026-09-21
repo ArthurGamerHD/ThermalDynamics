@@ -8,6 +8,7 @@ from continuous_surface import mesh, render, fixture, W, H
 from corpus_render import font
 
 
+# interpolate operation.
 def interpolate(points, lo, hi, axes, temperatures):
     u=(points[:,axes[0]]-lo[axes[0]])/(hi[axes[0]]-lo[axes[0]])
     v=(points[:,axes[1]]-lo[axes[1]])/(hi[axes[1]]-lo[axes[1]])
@@ -15,8 +16,8 @@ def interpolate(points, lo, hi, axes, temperatures):
     return np.where(u>=v,a*(1-u)+b*(u-v)+c*v,a*(1-v)+c*u+d*(v-u))
 
 
+# optimize operation.
 def optimize(triangles,tolerance=2., reverse_axes=False):
-    # Reassemble original rectangular faces (two triangles or four-triangle fans).
     groups={}
     for xyz,temp,truth in triangles:
         axis=int(np.argmin(np.ptp(xyz,axis=0)))
@@ -24,12 +25,9 @@ def optimize(triangles,tolerance=2., reverse_axes=False):
     output=[]
     for (axis,plane),items in groups.items():
         axes=[a for a in range(3) if a!=axis]
-        # Start with triangles grouped by their original face bounding rectangle.
         patches={}
         for xyz,temp,truth in items:
             lo=xyz.min(0);hi=xyz.max(0)
-            # Fan triangles do not have the full face bounding rectangle. Retain them
-            # unchanged: they were introduced specifically to protect local extrema.
             key=(tuple(lo),tuple(hi))
             patches.setdefault(key,[]).append((xyz,temp,truth))
         active=[]
@@ -60,9 +58,6 @@ def optimize(triangles,tolerance=2., reverse_axes=False):
                             for u,v in ((0,0),(1,0),(1,1),(0,1)):
                                 q=lo.copy();q[axes[0]]=upper[axes[0]] if u else lo[axes[0]];q[axes[1]]=upper[axes[1]] if v else lo[axes[1]];corners.append(q)
                             ts=np.array([t[np.flatnonzero(np.all(np.isclose(p,q,atol=1e-9,rtol=0),axis=1))[0]] for q in corners])
-                            # Include original edges' crossing with the new diagonal.
-                            # Both fields are piecewise linear; extrema of their error
-                            # lie at original vertices or these diagonal intersections.
                             checks=[p];truths=[t]
                             allparts=parts+nxt[4]
                             for xyz,temps,_ in allparts:
@@ -85,6 +80,7 @@ def optimize(triangles,tolerance=2., reverse_axes=False):
     return output
 
 
+# optimize best order operation.
 def optimize_best_order(triangles,tolerance=20.):
     """Choose the smaller partition per plane, retaining original error bounds."""
     groups={}
@@ -99,6 +95,7 @@ def optimize_best_order(triangles,tolerance=20.):
     return result
 
 
+# Removes the buried_faces.
 def remove_buried_faces(triangles,nodes):
     """Cull only faces whose whole bounding rectangle has solid cells outside it.
 
@@ -126,6 +123,7 @@ def remove_buried_faces(triangles,nodes):
     return retained
 
 
+# cull occluded triangles operation.
 def cull_occluded_triangles(triangles,eye_direction=(1.,.7,1.2)):
     """Conservative fixed-view occlusion: one nearer triangle must cover all of another.
 
@@ -154,6 +152,7 @@ def cull_occluded_triangles(triangles,eye_direction=(1.,.7,1.2)):
     return retained
 
 
+# main operation.
 def main(data,out,tolerance=2.,best_order=False,remove_buried=False,occlusion=False):
     out.mkdir(parents=True,exist_ok=True)
     import re

@@ -5,33 +5,12 @@ using Thermodynamics.Core;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// What <see cref="BlockThermalDerivation"/> makes of every block in the game.
-    ///
-    /// The per-type rows are the interesting half: they are what a *modded* block of that type
-    /// falls back to, and what a reader should look at to judge whether a category is sensible.
-    ///
-    /// The deviation rows beneath each are documentation rather than a work list. Every block is
-    /// derived from its own build cost at run time, so a window already gets window properties
-    /// without anyone naming it — these rows say which blocks the type average describes worst,
-    /// which is worth knowing when reading the type row above and when deciding whether a category
-    /// is too broad to mean anything.
-    /// </summary>
     public static class BlockCatalogLab
     {
-        /// <summary>
-        /// How far a subtype has to sit from its type before the report calls it out.
-        ///
-        /// Set so a window against an armour block is far past the line and two armour blocks of
-        /// different thickness are nowhere near it. Emissivity is compared absolutely rather than
-        /// relatively: it is a 0..1 figure, so 0.15 against 0.20 is a third in relative terms and
-        /// nothing at all in practice.
-        /// </summary>
         public const float ConductivityThreshold = 0.5f;
         public const float SpecificHeatThreshold = 0.35f;
         public const float EmissivityThreshold = 0.25f;
 
-        /// <summary>Kelvin of critical-temperature difference worth calling out.</summary>
         public const float KelvinThreshold = 150f;
 
         public class TypeRow
@@ -40,10 +19,9 @@ namespace Thermodynamics.Harness
             public int Subtypes;
             public BlockThermalProperties Properties;
 
-            /// <summary>Subtypes this type's average describes worst.</summary>
+/// <summary>List operation.</summary>
             public List<OverrideRow> Overrides = new List<OverrideRow>();
 
-            /// <summary>The heaviest components of the type, as a readable share string.</summary>
             public string Composition;
         }
 
@@ -54,12 +32,10 @@ namespace Thermodynamics.Harness
             public string Reason;
         }
 
-        /// <summary>
-        /// Every type in the installed game with its derived fallback, and the subtypes under it
-        /// that deviate. Empty when the game is not installed.
-        /// </summary>
+/// <summary>Catalog operation.</summary>
         public static List<TypeRow> Catalog()
         {
+/// <summary>List operation.</summary>
             List<TypeRow> rows = new List<TypeRow>();
 
             foreach (KeyValuePair<string, List<GameBlocks.Definition>> type in GameBlocks.ByType())
@@ -71,6 +47,7 @@ namespace Thermodynamics.Harness
                     TypeId = type.Key,
                     Subtypes = type.Value.Count,
                     Properties = ShippedBlocks.DeriveWithFunction(components, type.Key),
+/// <summary>Composition operation.</summary>
                     Composition = Composition(components),
                 };
 
@@ -79,6 +56,7 @@ namespace Thermodynamics.Harness
                     if (block.Components.Count == 0) continue;
 
                     BlockThermalProperties own = ShippedBlocks.DeriveWithFunction(block.Components, type.Key);
+/// <summary>Deviation operation.</summary>
                     string reason = Deviation(row.Properties, own);
                     if (reason == null) continue;
 
@@ -97,15 +75,10 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        /// <summary>
-        /// Why a subtype differs from its type, or null when it does not differ enough to matter.
-        ///
-        /// Only the *material* half is compared. The functional half comes from the type table and
-        /// is identical by construction for every subtype of a type, so comparing it would report
-        /// nothing and hide the comparison that counts.
-        /// </summary>
+/// <summary>Deviation operation.</summary>
         private static string Deviation(BlockThermalProperties type, BlockThermalProperties own)
         {
+/// <summary>List operation.</summary>
             List<string> reasons = new List<string>();
 
             if (Differs(type.Conductivity, own.Conductivity, ConductivityThreshold)) reasons.Add("conductivity");
@@ -118,21 +91,25 @@ namespace Thermodynamics.Harness
             return reasons.Count == 0 ? null : string.Join(", ", reasons.ToArray());
         }
 
+/// <summary>Differs operation.</summary>
         private static bool Differs(float type, float own, float threshold)
         {
             float reference = Math.Max(Math.Abs(type), 1e-6f);
             return Math.Abs(own - type) / reference >= threshold;
         }
 
+/// <summary>Composition operation.</summary>
         private static string Composition(IList<BlockComponent> components)
         {
             float total = 0f;
             for (int i = 0; i < components.Count; i++) total += components[i].Mass;
             if (total <= 0f) return "(no priced components)";
 
+/// <summary>List operation.</summary>
             List<BlockComponent> sorted = new List<BlockComponent>(components);
             sorted.Sort(delegate (BlockComponent a, BlockComponent b) { return b.Mass.CompareTo(a.Mass); });
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             int take = sorted.Count < 3 ? sorted.Count : 3;
             for (int i = 0; i < take; i++)
@@ -144,8 +121,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>Report operation.</summary>
         public static string Report()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             if (!GameBlocks.IsInstalled)
@@ -155,6 +134,7 @@ namespace Thermodynamics.Harness
                 return sb.ToString();
             }
 
+/// <summary>Catalog operation.</summary>
             List<TypeRow> rows = Catalog();
             int overrides = 0;
             foreach (TypeRow row in rows) overrides += row.Overrides.Count;

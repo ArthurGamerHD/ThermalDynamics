@@ -6,31 +6,13 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Overheat damage: the one output of this simulation that destroys a player's ship, and the
-    /// one that two field sessions failed to exercise at all.
-    ///
-    /// <para>
-    /// Both dumps reported <c>critical damage events 0</c> and <c>total heat damage 0.0</c>. Not
-    /// because nothing got hot — a thruster reached 939 K — but because the equilibrium it
-    /// reached sat under its 1,050 K rating. So the whole damage path shipped untested against
-    /// anything but unit tests on a single block, and the balance question ("what should a block
-    /// survive") and the correctness question ("does the threshold fire when it should") were
-    /// indistinguishable from outside.
-    /// </para>
-    ///
-    /// <para>
-    /// These separate them. Every test here drives a hull to a temperature the block census says
-    /// is fatal, and asserts what the simulation does about it. What temperature a real ship
-    /// reaches is a balance question and belongs in a dump; whether the model acts on it when it
-    /// does is a correctness question and belongs here.
-    /// </para>
-    /// </summary>
     [Trait("speed", "slow")]
     public class CriticalTemperatureTests
     {
+/// <summary>Sets the tings.</summary>
         private static ThermalSettings Settings(int cap = 0)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubstepsPerBlock = cap;
             settings.MaxSubsteps = 4096;
@@ -39,13 +21,7 @@ namespace Thermodynamics.Tests
             return settings.Derive();
         }
 
-        /// <summary>
-        /// A census hull with its heat producers running hard enough to cook itself.
-        ///
-        /// <paramref name="watts"/> is per producer. The census figure of 111 kW settles a ship
-        /// below its rating, which is what the field measured; multiplying it is how a test gets
-        /// to the other side of the threshold without changing anything else about the ship.
-        /// </summary>
+/// <summary>Driven operation.</summary>
         private static ThermalSimulation Driven(ThermalSettings settings, int blocks, float watts)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -69,9 +45,10 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-        /// <summary>Steps a simulation and collects every overheat event it raises.</summary>
+/// <summary>RunCollecting operation.</summary>
         private static List<OverheatEvent> RunCollecting(ThermalSimulation simulation, int steps)
         {
+/// <summary>List operation.</summary>
             List<OverheatEvent> events = new List<OverheatEvent>();
             EnvironmentSample sample = Worlds.Shadow();
 
@@ -86,6 +63,7 @@ namespace Thermodynamics.Tests
             return events;
         }
 
+/// <summary>Hottest operation.</summary>
         private static float Hottest(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -97,19 +75,16 @@ namespace Thermodynamics.Tests
             return peak;
         }
 
-        /// <summary>
-        /// The census ship as the field measured it settles below its rating and takes no damage.
-        ///
-        /// This is the calibration test: it pins that the harness reproduces what the field dumps
-        /// actually showed, so that when a later change makes ships start burning, the change is
-        /// visible here rather than only in someone's world.
-        /// </summary>
         [Fact]
+/// <summary>ACensusShipAtMeasuredPowerSettlesBelowItsRating operation.</summary>
         public void ACensusShipAtMeasuredPowerSettlesBelowItsRating()
         {
+/// <summary>Driven operation.</summary>
             ThermalSimulation simulation = Driven(Settings(), 2000, Census.ProducerWatts);
+/// <summary>RunCollecting operation.</summary>
             List<OverheatEvent> events = RunCollecting(simulation, 400);
 
+/// <summary>Hottest operation.</summary>
             float peak = Hottest(simulation);
 
             Assert.True(peak > 400f, "the hull never warmed at all, peak " + peak + " K");
@@ -122,9 +97,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>APastCriticalBlockRaisesDamageProportionalToHowFarPast operation.</summary>
         public void APastCriticalBlockRaisesDamageProportionalToHowFarPast()
         {
+/// <summary>Driven operation.</summary>
             ThermalSimulation simulation = Driven(Settings(), 2000, Census.ProducerWatts * 12f);
+/// <summary>RunCollecting operation.</summary>
             List<OverheatEvent> events = RunCollecting(simulation, 400);
 
             Assert.NotEmpty(events);
@@ -140,13 +118,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Damage per second must not depend on how the second was divided into steps. With
-        /// <c>DamageIsPerSecond</c> off it deliberately does — that is the original behaviour and
-        /// the setting exists to choose between them — so this pins the half that is meant to be
-        /// invariant.
-        /// </summary>
         [Fact]
+/// <summary>DamagePerSecondDoesNotDependOnTheStepLength operation.</summary>
         public void DamagePerSecondDoesNotDependOnTheStepLength()
         {
             float[] totals = new float[2];
@@ -154,21 +127,18 @@ namespace Thermodynamics.Tests
 
             for (int f = 0; f < frequencies.Length; f++)
             {
+/// <summary>Sets the tings.</summary>
                 ThermalSettings settings = Settings();
                 settings.Frequency = frequencies[f];
                 settings.DamageIsPerSecond = true;
                 settings.Derive();
 
+/// <summary>Driven operation.</summary>
                 ThermalSimulation simulation = Driven(settings, 2000, Census.ProducerWatts * 12f);
 
-                // **Warmed until it is burning, then measured.** The hull starts spread across
-                // 250-750 K and has to reach a rating before there is any damage to compare, and
-                // at the clock `C24` ships four seconds from cold reaches none — which reads as
-                // two frequencies agreeing on zero (`E8`). The warm-up is the same simulated time
-                // on both sides, which is what the comparison needs (`M1`).
                 simulation.StepExact(frequencies[f] * LabClock.Steps(60), Worlds.Shadow());
 
-                // The same simulated time either way: four seconds of it.
+/// <summary>RunCollecting operation.</summary>
                 List<OverheatEvent> events = RunCollecting(simulation, frequencies[f] * 4);
 
                 float total = 0f;
@@ -185,63 +155,48 @@ namespace Thermodynamics.Tests
                 + totals[1] + " at Frequency 8; per-second damage must not scale with the step");
         }
 
-        /// <summary>
-        /// The question <c>MaxSubstepsPerBlock</c> left open, and the reason this file exists.
-        ///
-        /// The cap raises the heat capacity of the lightest blocks on a grid, so those blocks
-        /// climb towards their critical temperature more slowly than they should. Overheat damage
-        /// is a per-node threshold crossing. The argument that this is harmless is that a block
-        /// too light to hold heat for the length of a step is a reading off its neighbour rather
-        /// than an independent temperature — but an argument is not a measurement, and the thing
-        /// at stake is whether a player's ship survives.
-        ///
-        /// What must hold is that the cap does not change <em>whether</em> a hull burns, because
-        /// where something settles is decided by the watts cancelling and heat capacity is not in
-        /// that equation. When it burns may move; that it burns may not.
-        /// </summary>
         [Fact]
+/// <summary>TheSubstepCapDoesNotChangeWhetherAHullBurns operation.</summary>
         public void TheSubstepCapDoesNotChangeWhetherAHullBurns()
         {
-            // A length of thermal time: where a hull settles is the claim, and at the clock `C24`
-            // ships six hundred steps leave the capped and uncapped runs both still climbing —
-            // 5.4 K apart on the hottest block, which is the lag rather than the settled
-            // difference this is about. See LabClock.
             int Steps = LabClock.Steps(600);
 
+/// <summary>Driven operation.</summary>
             ThermalSimulation uncapped = Driven(Settings(0), 2000, Census.ProducerWatts * 12f);
+/// <summary>RunCollecting operation.</summary>
             List<OverheatEvent> uncappedEvents = RunCollecting(uncapped, Steps);
 
             Assert.NotEmpty(uncappedEvents);
 
             foreach (int cap in new int[] { 8, 4, 1 })
             {
+/// <summary>Driven operation.</summary>
                 ThermalSimulation capped = Driven(Settings(cap), 2000, Census.ProducerWatts * 12f);
+/// <summary>RunCollecting operation.</summary>
                 List<OverheatEvent> cappedEvents = RunCollecting(capped, Steps);
 
                 Assert.True(cappedEvents.Count > 0,
                     "cap " + cap + " stopped the hull burning at all, which the equilibrium"
                     + " argument says it cannot do");
 
-                // The temperature it settles at is the claim being tested; damage totals follow
-                // from it but also from the path taken, which the cap is allowed to change.
                 float difference = Math.Abs(Hottest(capped) - Hottest(uncapped));
                 Assert.True(difference < 5f,
+/// <summary>Hottest operation.</summary>
                     "cap " + cap + " left the hottest block at " + Hottest(capped)
+/// <summary>Hottest operation.</summary>
                     + " K against " + Hottest(uncapped) + " K uncapped");
             }
         }
 
-        /// <summary>
-        /// A block below its rating must never be damaged, whatever the cap does to its capacity.
-        /// The failure this guards against is the opposite of the one above: not a ship that
-        /// survives when it should burn, but structure that burns when it should not.
-        /// </summary>
         [Fact]
+/// <summary>NothingBelowItsRatingIsEverDamaged operation.</summary>
         public void NothingBelowItsRatingIsEverDamaged()
         {
             foreach (int cap in new int[] { 0, 4, 1 })
             {
+/// <summary>Driven operation.</summary>
                 ThermalSimulation simulation = Driven(Settings(cap), 2000, Census.ProducerWatts * 12f);
+/// <summary>RunCollecting operation.</summary>
                 List<OverheatEvent> events = RunCollecting(simulation, 400);
 
                 for (int i = 0; i < events.Count; i++)
@@ -254,17 +209,18 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Damage stops when the setting says so. Cheap, and the kind of switch that rots.
-        /// </summary>
         [Fact]
+/// <summary>DamageDisabledRaisesNothing operation.</summary>
         public void DamageDisabledRaisesNothing()
         {
+/// <summary>Sets the tings.</summary>
             ThermalSettings settings = Settings();
             settings.EnableDamage = false;
             settings.Derive();
 
+/// <summary>Driven operation.</summary>
             ThermalSimulation simulation = Driven(settings, 2000, Census.ProducerWatts * 12f);
+/// <summary>RunCollecting operation.</summary>
             List<OverheatEvent> events = RunCollecting(simulation, 400);
 
             Assert.Empty(events);

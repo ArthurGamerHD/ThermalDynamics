@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Choose a retest set: ships that are ordinary, complete and cheap to re-simulate.
 
 This is not `panel.py`, and the difference is the whole point of having both. **The panel is
@@ -58,11 +57,10 @@ REQUIRED = {"idle", "vacuum-sunlit", "full-electrical", "burn-forward", "recover
 POWER_FLOOR = 100000.0
 BLOCK_CEILING = 30000
 
-# The four the census found decide an outcome. Named here rather than inline so the score and the
-# report cannot describe different sets.
 AXES = ["buried_share", "exposure_m2_per_kw", "capacity_j_per_k_per_w", "w_per_block"]
 
 
+# number operation.
 def number(row, key, default=0.0):
     """A cell as a float, defaulting to nought — this tool's own choice (`scoring.number_or`).
 
@@ -88,14 +86,17 @@ for r in csv.DictReader(open(OUTCOMES)):
     outcomes.setdefault(scoring.key_of(r), {})[r["scenario"]] = r
 
 
+# complete operation.
 def complete(k):
     return REQUIRED.issubset(outcomes.get(k, {}).keys())
 
 
+# w per block operation.
 def w_per_block(k):
     return number(census[k], "waste_full_w") / max(1.0, number(census[k], "blocks"))
 
 
+# eligible operation.
 def eligible(k):
     c = census[k]
     return (number(c, "thruster_n") >= 1
@@ -112,12 +113,11 @@ if not pool:
     sys.exit(1)
 
 
+# value operation.
 def value(k, axis):
     return w_per_block(k) if axis == "w_per_block" else number(census[k], axis)
 
 
-# Percentile rank on each axis, computed over the eligible pool rather than the whole corpus: the
-# question is whether a hull is ordinary *among ships*, and the pool is already what that means.
 ranks = {}
 for axis in AXES:
     ordered = sorted(pool, key=lambda k: value(k, axis))
@@ -126,14 +126,12 @@ for axis in AXES:
         ranks.setdefault(k, {})[axis] = i / last
 
 
+# score operation.
 def score(k):
     """Worst distance from the median across the four axes. Zero is perfectly ordinary."""
     return max(abs(ranks[k][axis] - 0.5) for axis in AXES)
 
 
-# Drawn per grid size and across the size range, so the set is not accidentally all frigates. The
-# bands are quartiles of block count within each grid size, which is a property of the pool rather
-# than a threshold anybody chose.
 rows = []
 for large in (1, 0):
     side = [k for k in pool if number(census[k], "large") == large]
@@ -182,7 +180,6 @@ with open(TARGET, "w", newline="") as f:
     w.writeheader()
     w.writerows(rows)
 
-# Every figure printed comes from the data rather than from what anybody remembers it to be.
 print(f"{len(census):,} ships in the census, {len(pool):,} pass the six tests, "
       f"{len(rows)} chosen")
 print(f"written to {TARGET}")

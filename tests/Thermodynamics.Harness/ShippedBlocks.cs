@@ -9,24 +9,8 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// The mod's own blocks, read from the shipped XML at run time and turned into
-    /// <see cref="BlockModel"/>s the simulation can be built from.
-    ///
-    /// <see cref="Catalog"/> holds hand-written stand-ins, and says so: its masses and properties
-    /// are approximations that exist so scenarios behave plausibly. That is the right thing for a
-    /// scenario asking a qualitative question. It is the wrong thing for a balance pass, where the
-    /// entire point is what the numbers *are*. This class closes the gap: mass comes from the
-    /// block's component list priced through <see cref="Vanilla.ComponentMasses"/>, size and mount
-    /// faces from its <c>.sbc</c>, thermal properties from <c>Thermodynamics/Content/Data/Cubes.xml</c>, and coolant and
-    /// heat-pump geometry from the same two tables the game adapter uses.
-    ///
-    /// Nothing here is transcribed. Change a definition and the next run measures the change,
-    /// which is what makes a balance figure worth quoting.
-    /// </summary>
     public static class ShippedBlocks
     {
-        /// <summary>Everything the definitions say about one shipped block.</summary>
         public class Definition
         {
             public string Subtype;
@@ -34,25 +18,18 @@ namespace Thermodynamics.Harness
             public bool Large;
             public Vector3I Size;
 
-            /// <summary>Kilograms, summed from the component list.</summary>
             public float Mass;
 
-            /// <summary>Build components, in definition order.</summary>
             public readonly List<KeyValuePair<string, int>> Components = new List<KeyValuePair<string, int>>();
 
-            /// <summary>Declared PCU, or 0 when the definition does not say.</summary>
             public int Pcu;
 
-            /// <summary>Declared build time in seconds, or 0 when the definition does not say.</summary>
             public float BuildSeconds;
 
-            /// <summary>Which of the six faces carry at least one mount point.</summary>
             public readonly bool[] MountFaces = new bool[Face.Count];
 
-            /// <summary>Thermal properties resolved from Cubes.xml, falling back as the game does.</summary>
             public BlockThermalProperties Thermal;
 
-            /// <summary>True when this block's properties came from its own entry rather than the fallback.</summary>
             public bool HasOwnThermalEntry;
 
             public int CellCount
@@ -65,53 +42,51 @@ namespace Thermodynamics.Harness
                 get { return Large ? Catalog.LargeGridSize : Catalog.SmallGridSize; }
             }
 
-            /// <summary>Heat capacity in J/K at the given thermal clock — what a kelvin costs.</summary>
+/// <summary>CapacityJoulesPerKelvin operation.</summary>
             public float CapacityJoulesPerKelvin(float heatTimeScale)
             {
                 float scale = heatTimeScale > 0f ? heatTimeScale : 1f;
                 return Mass * Thermal.SpecificHeat / scale;
             }
 
+/// <summary>ToString operation.</summary>
             public override string ToString()
             {
                 return Subtype;
             }
         }
 
+/// <summary>object operation.</summary>
         private static readonly object Gate = new object();
         private static Dictionary<string, Definition> cache;
         private static Dictionary<string, BlockThermalProperties> byTypeCache;
         private static BlockThermalProperties fallbackCache;
         private static string repoRoot;
 
-        /// <summary>
-        /// Walks up from the running assembly for the solution file, rather than assuming
-        /// a fixed depth, so this survives a change of target framework or output layout.
-        /// </summary>
+/// <summary>RepoRoot operation.</summary>
         public static string RepoRoot()
         {
             lock (Gate)
             {
                 if (repoRoot != null) return repoRoot;
 
-                // From the assembly first, which is where it is when the build output sits inside
-                // the repository, and from this file's own compiled-in path second, which is where
-                // it is when the output has been sent elsewhere — as it now is, so that build
-                // artifacts do not end up in the published mod. See Directory.Build.props.
+/// <summary>Above operation.</summary>
                 repoRoot = Above(AppContext.BaseDirectory) ?? Above(SourceDirectory());
                 if (repoRoot != null) return repoRoot;
 
                 throw new InvalidOperationException(
                     "Could not find the repository root from " + AppContext.BaseDirectory
+/// <summary>SourceDirectory operation.</summary>
                     + " or from " + SourceDirectory());
             }
         }
 
-        /// <summary>The first directory at or above <paramref name="start"/> holding the solution.</summary>
+/// <summary>Above operation.</summary>
         private static string Above(string start)
         {
             if (string.IsNullOrEmpty(start)) return null;
 
+/// <summary>DirectoryInfo operation.</summary>
             DirectoryInfo directory = new DirectoryInfo(start);
             while (directory != null)
             {
@@ -124,46 +99,43 @@ namespace Thermodynamics.Harness
             return null;
         }
 
-        /// <summary>
-        /// The directory this source file was compiled from.
-        ///
-        /// Baked in at build time, so it survives the output assembly being written anywhere at
-        /// all — which it now is, because build artifacts inside the mod folder are build artifacts
-        /// inside whatever gets published.
-        /// </summary>
+/// <summary>SourceDirectory operation.</summary>
         private static string SourceDirectory([CallerFilePath] string file = "")
         {
             return string.IsNullOrEmpty(file) ? null : Path.GetDirectoryName(file);
         }
 
-        /// <summary>Path to the mod's data after the MDK2 content-layout migration.</summary>
+/// <summary>DataRoot operation.</summary>
         public static string DataRoot()
         {
             return Path.Combine(ContentRoot(), "Data");
         }
         
-        /// <summary>Path to the mod's data after the MDK2 content-layout migration.</summary>
+/// <summary>ContentRoot operation.</summary>
         public static string ContentRoot()
         {
             return Path.Combine(ModRoot(), "Content");
         }
         
+/// <summary>ModRoot operation.</summary>
         public static string ModRoot()
         {
             return Path.Combine(RepoRoot(), "Thermodynamics");
         }
 
-        /// <summary>Every block the mod ships, keyed by subtype.</summary>
+/// <summary>All operation.</summary>
         public static Dictionary<string, Definition> All()
         {
             lock (Gate)
             {
                 if (cache != null) return cache;
+/// <summary>Load operation.</summary>
                 cache = Load();
                 return cache;
             }
         }
 
+/// <summary>Returns the .</summary>
         public static Definition Get(string subtype)
         {
             Definition definition;
@@ -174,28 +146,20 @@ namespace Thermodynamics.Harness
             return definition;
         }
 
-        /// <summary>Subtypes of every shipped block, in a stable order so reports are diffable.</summary>
+/// <summary>Subtypes operation.</summary>
         public static List<string> Subtypes()
         {
+/// <summary>List operation.</summary>
             List<string> names = new List<string>(All().Keys);
             names.Sort(StringComparer.Ordinal);
             return names;
         }
 
-        // ---- building a model ----------------------------------------------------------------
 
-        /// <summary>
-        /// A <see cref="BlockModel"/> carrying this block's real mass, thermal properties, mount
-        /// faces and — where it has them — coolant ports or heat-pump hardware.
-        ///
-        /// Mount faces matter more than they look. Conduction only crosses a joint where *both*
-        /// blocks carry a mount surface, so a radiator that mounts on two faces conducts on two
-        /// faces however large the panel is. Copying that from the definition rather than assuming
-        /// a solid block is the difference between measuring the shipped radiator and measuring a
-        /// cube of aluminium.
-        /// </summary>
+/// <summary>Model operation.</summary>
         public static BlockModel Model(string subtype)
         {
+/// <summary>Returns the .</summary>
             Definition definition = Get(subtype);
             BlockModel model = BlockModel.Solid(subtype, definition.Size, definition.Mass, definition.Thermal);
 
@@ -227,8 +191,8 @@ namespace Thermodynamics.Harness
             return model;
         }
 
-        // ---- parsing -------------------------------------------------------------------------
 
+/// <summary>Load operation.</summary>
         private static Dictionary<string, Definition> Load()
         {
             Dictionary<string, Definition> blocks = new Dictionary<string, Definition>(StringComparer.Ordinal);
@@ -239,6 +203,7 @@ namespace Thermodynamics.Harness
                 XDocument document = XDocument.Load(file);
                 foreach (XElement element in document.Descendants("Definition"))
                 {
+/// <summary>ParseBlock operation.</summary>
                     Definition definition = ParseBlock(element);
                     if (definition != null) blocks[definition.Subtype] = definition;
                 }
@@ -248,6 +213,7 @@ namespace Thermodynamics.Harness
             return blocks;
         }
 
+/// <summary>ParseBlock operation.</summary>
         private static Definition ParseBlock(XElement element)
         {
             XElement id = element.Element("Id");
@@ -262,8 +228,11 @@ namespace Thermodynamics.Harness
                 Subtype = subtype.Value.Trim(),
                 TypeId = type.Value.Trim(),
                 Large = (string)element.Element("CubeSize") == "Large",
+/// <summary>ParseSize operation.</summary>
                 Size = ParseSize(element.Element("Size")),
+/// <summary>ParseInt operation.</summary>
                 Pcu = ParseInt(element.Element("PCU")),
+/// <summary>ParseFloat operation.</summary>
                 BuildSeconds = ParseFloat(element.Element("BuildTimeSeconds")),
             };
 
@@ -273,6 +242,7 @@ namespace Thermodynamics.Harness
                 foreach (XElement component in components.Elements("Component"))
                 {
                     string name = (string)component.Attribute("Subtype");
+/// <summary>ParseInt operation.</summary>
                     int count = ParseInt(component.Attribute("Count"));
                     if (name != null && count > 0)
                     {
@@ -287,6 +257,7 @@ namespace Thermodynamics.Harness
             {
                 foreach (XElement mount in mounts.Elements("MountPoint"))
                 {
+/// <summary>FaceOf operation.</summary>
                     int face = FaceOf((string)mount.Attribute("Side"));
                     if (face >= 0) definition.MountFaces[face] = true;
                 }
@@ -295,7 +266,6 @@ namespace Thermodynamics.Harness
             return definition;
         }
 
-        /// <summary>What a block type does with power, from its Cubes.xml type entry.</summary>
         public struct Function
         {
             public float ProducerWasteEnergy;
@@ -304,7 +274,6 @@ namespace Thermodynamics.Harness
             public float OverheatDamagePerKelvin;
         }
 
-        /// <summary>The function of a type with no entry: an ordinary block that trickles.</summary>
         public static readonly Function Ordinary = new Function
         {
             ProducerWasteEnergy = 0.05f,
@@ -315,13 +284,7 @@ namespace Thermodynamics.Harness
 
         private static Dictionary<string, Function> functionCache;
 
-        /// <summary>
-        /// The function of a block type, or <see cref="Ordinary"/> when Cubes.xml names none.
-        ///
-        /// This is the harness's half of what Definition Extensions does in the game: the values
-        /// used to be a table in <c>BlockThermalDerivation</c> and are now data, so both sides read
-        /// the same file and a player can override either.
-        /// </summary>
+/// <summary>FunctionOf operation.</summary>
         public static Function FunctionOf(string typeId)
         {
             All();
@@ -330,35 +293,27 @@ namespace Thermodynamics.Harness
                 ? function : Ordinary;
         }
 
-        /// <summary>Every type Cubes.xml gives a function to.</summary>
+/// <summary>FunctionTypes operation.</summary>
         public static ICollection<string> FunctionTypes()
         {
             All();
             return functionCache.Keys;
         }
 
-        /// <summary>A block's material properties with its type's function laid over them.</summary>
+/// <summary>DeriveWithFunction operation.</summary>
         public static BlockThermalProperties DeriveWithFunction(IList<BlockComponent> components,
             string typeId)
         {
+/// <summary>DeriveWithFunction operation.</summary>
             return DeriveWithFunction(components, typeId, 0f);
         }
 
-        /// <summary>
-        /// The same, for a block whose own definition states what it does with the power it draws.
-        ///
-        /// **The stated efficiency beats the type entry, because it describes the block and the
-        /// entry describes a family.** The jump drive is the only family in the game that states
-        /// one — 0.8 on the vanilla drive and its reskin, 0.9 on the two prototech ones — and a
-        /// type entry cannot say both. Zero means the definition is silent, which is every other
-        /// block; the rule itself is <see cref="BlockThermalDerivation.WasteFromEfficiency"/>, in
-        /// `Core`, because the mod reads the same efficiency off a live definition and two readers
-        /// of one rule cannot answer differently (`P5`).
-        /// </summary>
+/// <summary>DeriveWithFunction operation.</summary>
         public static BlockThermalProperties DeriveWithFunction(IList<BlockComponent> components,
             string typeId, float statedEfficiency)
         {
             BlockThermalProperties properties = BlockThermalDerivation.Derive(components);
+/// <summary>FunctionOf operation.</summary>
             Function function = FunctionOf(typeId);
             properties.ProducerWasteEnergy = function.ProducerWasteEnergy;
             properties.ConsumerWasteEnergy = function.ConsumerWasteEnergy;
@@ -371,11 +326,7 @@ namespace Thermodynamics.Harness
             return properties.Clamp();
         }
 
-        /// <summary>
-        /// Attaches thermal properties from Cubes.xml, resolving as the game's Definition
-        /// Extensions do: a block's own entry if it has one, otherwise the entry for its object
-        /// builder type, otherwise <c>DefaultThermodynamics</c>.
-        /// </summary>
+/// <summary>Applies the thermal.</summary>
         private static void ApplyThermal(Dictionary<string, Definition> blocks)
         {
             Dictionary<string, BlockThermalProperties> bySubtype =
@@ -394,6 +345,7 @@ namespace Thermodynamics.Harness
 
                 string type = ((string)id.Element("TypeId") ?? "").Trim();
                 string subtype = ((string)id.Element("SubtypeId") ?? "").Trim();
+/// <summary>ParseThermal operation.</summary>
                 BlockThermalProperties properties = ParseThermal(element);
                 if (properties == null) continue;
 
@@ -442,12 +394,14 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>The offline parser, for a test that checks it knows a property.</summary>
+/// <summary>ParseThermalForTest operation.</summary>
         public static BlockThermalProperties ParseThermalForTest(XElement definition)
         {
+/// <summary>ParseThermal operation.</summary>
             return ParseThermal(definition);
         }
 
+/// <summary>ParseThermal operation.</summary>
         private static BlockThermalProperties ParseThermal(XElement definition)
         {
             XElement group = null;
@@ -464,11 +418,6 @@ namespace Thermodynamics.Harness
                 string raw = (string)value.Attribute("Value");
                 if (name == null || raw == null) continue;
 
-                // Not a number, and the one property that decides whether a block is simulated at
-                // all. The in-game reader has always read it; this one never did, so a type
-                // excluded in Cubes.xml would have been simulated by every measurement in this
-                // repository and by nothing in a world. No shipped entry excludes anything today,
-                // which is why it cost nothing so far.
                 if (name == "ExcludeFromSimulation" || name == "IgnoreThermals")
                 {
                     bool excluded;
@@ -479,8 +428,6 @@ namespace Thermodynamics.Harness
                 float number;
                 if (!float.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out number)) continue;
 
-                // The legacy spellings are accepted here for the same reason the game accepts
-                // them: a definition written before the rename must still mean what it said.
                 switch (name)
                 {
                     case "Conductivity": properties.Conductivity = number; break;
@@ -500,8 +447,8 @@ namespace Thermodynamics.Harness
             return properties;
         }
 
-        // ---- small helpers -------------------------------------------------------------------
 
+/// <summary>ParseSize operation.</summary>
         private static Vector3I ParseSize(XElement size)
         {
             if (size == null) return Vector3I.One;
@@ -511,6 +458,7 @@ namespace Thermodynamics.Harness
                 Math.Max(1, ParseInt(size.Attribute("z"))));
         }
 
+/// <summary>ParseInt operation.</summary>
         private static int ParseInt(XAttribute attribute)
         {
             int value;
@@ -519,6 +467,7 @@ namespace Thermodynamics.Harness
                 ? value : 0;
         }
 
+/// <summary>ParseInt operation.</summary>
         private static int ParseInt(XElement element)
         {
             int value;
@@ -527,6 +476,7 @@ namespace Thermodynamics.Harness
                 ? value : 0;
         }
 
+/// <summary>ParseFloat operation.</summary>
         private static float ParseFloat(XElement element)
         {
             float value;
@@ -535,14 +485,7 @@ namespace Thermodynamics.Harness
                 ? value : 0f;
         }
 
-        /// <summary>
-        /// Maps a definition's mount-point side name onto a simulation face.
-        ///
-        /// Space Engineers names a block's sides from the outside looking in, and the simulation
-        /// names directions from the block outward, so <c>Front</c> is the face pointing
-        /// <c>Forward</c> and so on. The two agree on all six; the mapping is written out because
-        /// "obviously they line up" is how a silent off-by-one gets in.
-        /// </summary>
+/// <summary>FaceOf operation.</summary>
         private static int FaceOf(string side)
         {
             switch (side)

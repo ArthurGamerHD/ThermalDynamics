@@ -7,19 +7,10 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The twenty-four rotations a block can be built in, as a permutation of the six faces.
-    ///
-    /// <para>
-    /// Orientation is where a geometry fault hides longest, because a wrongly rotated block is still a
-    /// block and still conducts — it conducts through the wrong faces. These check the group
-    /// properties directly: that rotate and unrotate are inverses, that opposite pairs stay opposite,
-    /// and that there are exactly twenty-four distinct ones.
-    /// </para>
-    /// </summary>
     public class BlockOrientationTests
     {
         [Fact]
+/// <summary>IdentityLeavesDirectionsAlone operation.</summary>
         public void IdentityLeavesDirectionsAlone()
         {
             BlockOrientation identity = BlockOrientation.Identity;
@@ -31,6 +22,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RotateAndUnrotateAreInverses operation.</summary>
         public void RotateAndUnrotateAreInverses()
         {
             foreach (BlockOrientation orientation in PipeFitter.AllOrientations())
@@ -44,10 +36,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EveryOrientationPermutesTheSixFaces operation.</summary>
         public void EveryOrientationPermutesTheSixFaces()
         {
             foreach (BlockOrientation orientation in PipeFitter.AllOrientations())
             {
+/// <summary>HashSet operation.</summary>
                 HashSet<int> mapped = new HashSet<int>();
                 for (int face = 0; face < Face.Count; face++)
                 {
@@ -59,6 +53,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RotationPreservesOppositePairs operation.</summary>
         public void RotationPreservesOppositePairs()
         {
             foreach (BlockOrientation orientation in PipeFitter.AllOrientations())
@@ -73,6 +68,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ThereAreExactlyTwentyFourOrientations operation.</summary>
         public void ThereAreExactlyTwentyFourOrientations()
         {
             int count = 0;
@@ -81,20 +77,13 @@ namespace Thermodynamics.Tests
         }
     }
 
-    /// <summary>
-    /// One placed block: the cells it occupies, and the surface bits it carries into them.
-    ///
-    /// <para>
-    /// The door cases are the subtle ones. A door's structural surfaces must not move when it opens,
-    /// because rooms are built from structure so that cycling a door costs a walk over the doors
-    /// rather than a remap of the grid.
-    /// </para>
-    /// </summary>
     public class BlockInstanceTests
     {
         [Fact]
+/// <summary>SingleCellBlockOccupiesOneCell operation.</summary>
         public void SingleCellBlockOccupiesOneCell()
         {
+/// <summary>BlockInstance operation.</summary>
             BlockInstance block = new BlockInstance(Catalog.LightArmor(), new Vector3I(3, 4, 5), BlockOrientation.Identity);
 
             Assert.Single(block.Cells);
@@ -104,13 +93,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>MultiCellBlockOccupiesEveryCellExactlyOnce operation.</summary>
         public void MultiCellBlockOccupiesEveryCellExactlyOnce()
         {
             BlockModel model = BlockModel.Solid("Slab", new Vector3I(1, 5, 2), 900f, Catalog.DefaultThermal());
+/// <summary>BlockInstance operation.</summary>
             BlockInstance block = new BlockInstance(model, Vector3I.Zero, BlockOrientation.Identity);
 
             Assert.Equal(10, block.CellCount);
 
+/// <summary>HashSet operation.</summary>
             HashSet<Vector3I> seen = new HashSet<Vector3I>(Vector3I.Comparer);
             foreach (Vector3I cell in block.Cells)
             {
@@ -120,12 +112,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RotatedBlockStillStartsAtItsMinimumCorner operation.</summary>
         public void RotatedBlockStillStartsAtItsMinimumCorner()
         {
             BlockModel model = BlockModel.Solid("Slab", new Vector3I(1, 5, 2), 900f, Catalog.DefaultThermal());
 
             foreach (BlockOrientation orientation in PipeFitter.AllOrientations())
             {
+/// <summary>BlockInstance operation.</summary>
                 BlockInstance block = new BlockInstance(model, new Vector3I(10, 20, 30), orientation);
 
                 Assert.Equal(10, block.CellCount);
@@ -141,15 +135,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RotationCarriesSurfaceBitsWithIt operation.</summary>
         public void RotationCarriesSurfaceBitsWithIt()
         {
-            // A model that only mounts on its local Up face.
             BlockModel model = BlockModel.Solid("Capped", Vector3I.One, 100f, Catalog.DefaultThermal());
             model.SetLocalSurface(Vector3I.Zero, CellSurface.WithSelfMount(0, Face.Up, true));
 
+/// <summary>BlockOrientation operation.</summary>
             BlockOrientation upsideDown = new BlockOrientation(
                 Base6Directions.Direction.Forward, Base6Directions.Direction.Down);
 
+/// <summary>BlockInstance operation.</summary>
             BlockInstance block = new BlockInstance(model, Vector3I.Zero, upsideDown);
 
             Assert.False(CellSurface.SelfMount(block.SelfSurfaces[0], Face.Up));
@@ -157,8 +153,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>OpenModelsSealNothing operation.</summary>
         public void OpenModelsSealNothing()
         {
+/// <summary>BlockInstance operation.</summary>
             BlockInstance grating = new BlockInstance(Catalog.Grating(), Vector3I.Zero, BlockOrientation.Identity);
 
             for (int face = 0; face < Face.Count; face++)
@@ -169,8 +167,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>OpeningADoorClearsItsSeal operation.</summary>
         public void OpeningADoorClearsItsSeal()
         {
+/// <summary>BlockInstance operation.</summary>
             BlockInstance door = new BlockInstance(Catalog.AirtightDoor(), Vector3I.Zero, BlockOrientation.Identity);
             Assert.True(CellSurface.SelfAirtight(door.SelfSurfaces[0], Face.Up));
 
@@ -184,13 +184,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Whatever a door does when it opens, what it is <em>built</em> like does not change.
-        /// The room mapper walks these, and that is what lets a door cycle cost nothing.
-        /// </summary>
         [Fact]
+/// <summary>StructuralSurfacesDoNotMoveWhenADoorOpens operation.</summary>
         public void StructuralSurfacesDoNotMoveWhenADoorOpens()
         {
+/// <summary>BlockInstance operation.</summary>
             BlockInstance door = new BlockInstance(Catalog.AirtightDoor(), Vector3I.Zero, BlockOrientation.Identity);
             int shut = door.StructuralSurfaces[0];
 
@@ -202,19 +200,13 @@ namespace Thermodynamics.Tests
         }
     }
 
-    /// <summary>
-    /// The grid's own bookkeeping: what occupies a cell, what neighbours what, and what a removal leaves behind.
-    ///
-    /// <para>
-    /// This is the layer the game adapter mirrors a real grid into, so an error here is invisible to
-    /// the physics and fatal to it: the solver would be stepping a ship of a different shape.
-    /// </para>
-    /// </summary>
     public class GridModelTests
     {
         [Fact]
+/// <summary>BlocksAreFoundByAnyOfTheirCells operation.</summary>
         public void BlocksAreFoundByAnyOfTheirCells()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(2.5f);
             BlockModel model = BlockModel.Solid("Slab", new Vector3I(1, 3, 1), 300f, Catalog.DefaultThermal());
             BlockInstance block = grid.Add(model, Vector3I.Zero);
@@ -224,22 +216,11 @@ namespace Thermodynamics.Tests
             Assert.Null(grid.GetAtCell(new Vector3I(0, 3, 0)));
         }
 
-        /// <summary>
-        /// The key index survives the slot shuffling a removal does.
-        ///
-        /// <para>
-        /// A grid used to carry two dictionaries on the same key: one from key to block, and one
-        /// from key to the block's slot in the flat list, added later so a removal did not have to
-        /// scan for it. The first was redundant — a slot is a block — and cost a whole
-        /// <c>Dictionary&lt;long, BlockInstance&gt;</c> per grid. Removing it puts the lookup
-        /// behind the slot map, and the slot map is the structure a removal rewrites: taking a
-        /// block out moves the list's last entry into the hole. This walks a removal from the
-        /// middle and asks the surviving blocks for themselves.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>LookupByKeySurvivesARemovalFromTheMiddle operation.</summary>
         public void LookupByKeySurvivesARemovalFromTheMiddle()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(2.5f);
 
             BlockInstance[] placed = new BlockInstance[5];
@@ -252,7 +233,6 @@ namespace Thermodynamics.Tests
             Assert.True(grid.Remove(placed[1]));
             Assert.Null(grid.GetByKey(placed[1].Key));
 
-            // Including the block that was moved into the hole, which is the last one placed.
             Assert.Same(placed[0], grid.GetByKey(placed[0].Key));
             Assert.Same(placed[2], grid.GetByKey(placed[2].Key));
             Assert.Same(placed[3], grid.GetByKey(placed[3].Key));
@@ -263,8 +243,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>OverlappingPlacementIsRejected operation.</summary>
         public void OverlappingPlacementIsRejected()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(2.5f);
             grid.Add(Catalog.LightArmor(), Vector3I.Zero);
 
@@ -272,8 +254,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RemovingFreesEveryCell operation.</summary>
         public void RemovingFreesEveryCell()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(2.5f);
             BlockModel model = BlockModel.Solid("Slab", new Vector3I(1, 3, 1), 300f, Catalog.DefaultThermal());
             BlockInstance block = grid.Add(model, Vector3I.Zero);
@@ -282,13 +266,14 @@ namespace Thermodynamics.Tests
             Assert.False(grid.IsOccupied(new Vector3I(0, 1, 0)));
             Assert.Equal(0, grid.BlockCount);
 
-            // the cells are free again
             grid.Add(Catalog.LightArmor(), new Vector3I(0, 1, 0));
         }
 
         [Fact]
+/// <summary>NeighboursAreDistinctEvenWhenTheyTouchOnManyFaces operation.</summary>
         public void NeighboursAreDistinctEvenWhenTheyTouchOnManyFaces()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(2.5f);
             BlockModel wall = BlockModel.Solid("Wall", new Vector3I(1, 3, 1), 300f, Catalog.DefaultThermal());
 
@@ -302,8 +287,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>Retrieves a thermal object; returns null if none.</summary>
         public void BoundsCoverEveryOccupiedCell()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(2.5f);
             grid.Add(Catalog.LightArmor(), new Vector3I(-3, 0, 2));
             grid.Add(Catalog.LightArmor(), new Vector3I(5, 4, -1));
@@ -312,15 +299,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(new Vector3I(5, 4, 2), grid.Max);
         }
 
-        /// <summary>
-        /// A block carries the slot its grid holds it at, which is a hint rather than an authority:
-        /// the grid checks the slot really holds that block before using it. Held over a placement,
-        /// a swap-remove that moves another block into the freed slot, and a block that never
-        /// belonged to the grid at all.
-        /// </summary>
         [Fact]
+/// <summary>ABlockCarriesItsSlotAndTheGridChecksItBeforeBelievingIt operation.</summary>
         public void ABlockCarriesItsSlotAndTheGridChecksItBeforeBelievingIt()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(2.5f);
             BlockModel armour = Catalog.LightArmor();
             BlockInstance[] placed = new BlockInstance[5];
@@ -330,7 +313,6 @@ namespace Thermodynamics.Tests
                 Assert.Equal(i, placed[i].GridSlot);
             }
 
-            // Removing from the middle moves the last block into the freed slot.
             BlockInstance last = placed[4];
             Assert.True(grid.Remove(placed[1]));
             Assert.Equal(-1, placed[1].GridSlot);
@@ -339,8 +321,7 @@ namespace Thermodynamics.Tests
             Assert.Same(last, grid.GetByKey(last.Key));
             Assert.Null(grid.GetByKey(placed[1].Key));
 
-            // A block this grid never held claims slot -1 and is refused; one carrying a stale slot
-            // from another grid is refused because that slot holds something else.
+/// <summary>BlockInstance operation.</summary>
             BlockInstance stranger = new BlockInstance(armour, new Vector3I(99, 0, 0), BlockOrientation.Identity);
             Assert.False(grid.Remove(stranger));
             stranger.GridSlot = 0;

@@ -8,23 +8,6 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// **What the three passes of a substep would cost if they did no arithmetic at all.**
-    ///
-    /// <para>
-    /// `backlog.md` `D1` asks whether what is left of a step is near the memory-bandwidth floor, and
-    /// records it as an open question — the last time it was claimed, two passes were reaching
-    /// through the node objects instead. This answers it by measurement: the same arrays, at the
-    /// same sizes, walked in the same pattern, doing the least arithmetic that still forces every
-    /// load and store to happen.
-    /// </para>
-    ///
-    /// <para>
-    /// **The link indices are a real grid's**, not a synthetic pattern, because the whole question
-    /// for the conduction pass is where its gathers land — and a made-up index stream would answer
-    /// about itself rather than about this model. See performance.md, Pass 5, Iteration 4.
-    /// </para>
-    /// </summary>
     public static class StepFloorLab
     {
         public class Row
@@ -34,13 +17,13 @@ namespace Thermodynamics.Harness
             public double FloorNs;
             public double BytesPerElement;
 
-            /// <summary>Bytes a second the floor loop moved, which is the figure to compare against a machine's own.</summary>
             public double GigabytesPerSecond
             {
                 get { return FloorNs <= 0d ? 0d : BytesPerElement / FloorNs; }
             }
         }
 
+/// <summary>Run operation.</summary>
         public static List<Row> Run(string shape, int blocks, int repeats = 15)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -53,20 +36,27 @@ namespace Thermodynamics.Harness
             int[] linkB;
             LinkIndices(simulation, out linkA, out linkB);
 
-            // The rows a substep touches, at the sizes it touches them.
+/// <summary>Filled operation.</summary>
             float[] temperature = Filled(nodes, 293.15f);
+/// <summary>Filled operation.</summary>
             float[] watts = Filled(nodes, 1f);
+/// <summary>Filled operation.</summary>
             float[] mass = Filled(nodes, 2f);
+/// <summary>Filled operation.</summary>
             float[] critical = Filled(nodes, 1400f);
+/// <summary>Filled operation.</summary>
             float[] source = Filled(nodes, 3f);
+/// <summary>Filled operation.</summary>
             float[] radiation = Filled(nodes, 0.5f);
+/// <summary>Filled operation.</summary>
             float[] convection = Filled(nodes, 0.25f);
+/// <summary>Filled operation.</summary>
             float[] conductance = Filled(linkA.Length, 0.1f);
 
+/// <summary>List operation.</summary>
             List<Row> rows = new List<Row>();
             rows.Add(Measure("environment", nodes, 24, repeats, delegate
             {
-                // Four rows in, one out: the shape of the environment read.
                 for (int i = 0; i < temperature.Length; i++)
                 {
                     watts[i] = source[i] + radiation[i] + convection[i] + temperature[i];
@@ -75,7 +65,6 @@ namespace Thermodynamics.Harness
 
             rows.Add(Measure("conduction", linkA.Length, 24, repeats, delegate
             {
-                // Two index rows and a conductance row in; two scattered read-modify-writes out.
                 for (int i = 0; i < linkA.Length; i++)
                 {
                     int a = linkA[i];
@@ -98,20 +87,21 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-        /// <summary>Bytes each pass moves per element, counted from the rows above.</summary>
+/// <summary>BytesOf operation.</summary>
         private static double BytesOf(string pass)
         {
             switch (pass)
             {
                 case "environment": return 4 * 5;          // four in, one out
+/// <summary>return operation.</summary>
                 case "conduction": return (4 * 3) + (4 * 4); // two indices and a conductance in, two gathers and two scatters
                 default: return 4 * 5;                     // temperature in and out, watts, mass, critical
             }
         }
 
+/// <summary>Measure operation.</summary>
         private static Row Measure(string pass, long elements, int substeps, int repeats, Action body)
         {
-            // Warm, then the fastest of N, as every other lab here does.
             body();
 
             double best = double.MaxValue;
@@ -125,14 +115,17 @@ namespace Thermodynamics.Harness
                 if (ns < best) best = ns;
             }
 
+/// <summary>Row operation.</summary>
             Row row = new Row();
             row.Pass = pass;
             row.Elements = elements;
             row.FloorNs = best;
+/// <summary>BytesOf operation.</summary>
             row.BytesPerElement = BytesOf(pass);
             return row;
         }
 
+/// <summary>Filled operation.</summary>
         private static float[] Filled(int count, float value)
         {
             float[] row = new float[count];
@@ -140,11 +133,14 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-        /// <summary>The grid's own link ends, in the order the solver builds them.</summary>
+/// <summary>LinkIndices operation.</summary>
         private static void LinkIndices(ThermalSimulation simulation, out int[] a, out int[] b)
         {
+/// <summary>List operation.</summary>
             List<int> ends = new List<int>();
+/// <summary>List operation.</summary>
             List<int> others = new List<int>();
+/// <summary>List operation.</summary>
             List<BlockInstance> scratch = new List<BlockInstance>();
 
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -167,8 +163,10 @@ namespace Thermodynamics.Harness
             b = others.ToArray();
         }
 
+/// <summary>Table operation.</summary>
         public static string Table(IList<Row> rows, IList<StageLab.Row> measured)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
             text.AppendLine("  pass          elements     floor ns/el    step ns/el   over floor      floor GB/s");
 

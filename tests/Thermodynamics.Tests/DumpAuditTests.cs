@@ -6,22 +6,14 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The auditor that reads a field dump.
-    ///
-    /// <para>Every check in it exists because a document claims something about a real world, and
-    /// the auditor is what turns that claim into a count. So each test here builds the smallest CSV
-    /// that could break one check, and asserts that the check breaks — a check that cannot fail is
-    /// worse than no check, because it reads as evidence.</para>
-    ///
-    /// <para>A dump this repository can no longer produce is still audited, since the checks skip
-    /// the columns a dump does not carry. That is tested too: a skip must never read as a pass.</para>
-    /// </summary>
     public class DumpAuditTests : IDisposable
     {
+/// <summary>List operation.</summary>
         private readonly List<string> written = new List<string>();
+/// <summary>List operation.</summary>
         private readonly List<string> folders = new List<string>();
 
+/// <summary>Dispose operation.</summary>
         public void Dispose()
         {
             foreach (string path in written)
@@ -37,7 +29,6 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>Every column a full dump carries, in the order the mod writes them.</summary>
         private const string Header =
             "time_s,grid,grid_id,planet,altitude_surface_m,altitude_sealevel_m,latitude_deg," +
             "sun_elevation_deg,air_density,atmosphere_factor,ambient_k,ambient_c,underground," +
@@ -47,11 +38,7 @@ namespace Thermodynamics.Tests
             "game_comfort,surface_material,grid_mean_k,grid_peak_k";
 
 
-        /// <summary>
-        /// One plausible row, by column name. A test names only what it is about and inherits a
-        /// consistent world for everything else, so a check firing is attributable to the one field
-        /// the test moved.
-        /// </summary>
+/// <summary>Row operation.</summary>
         private static Dictionary<string, string> Row()
         {
             Dictionary<string, string> row = new Dictionary<string, string>();
@@ -82,13 +69,13 @@ namespace Thermodynamics.Tests
             return row;
         }
 
-        /// <summary>Columns of the grid CSV the checks read, and one plausible grid.</summary>
         private const string GridHeader =
             "entity_id,name,grid_size,peak_cells,mean_cells,simulation_steps,clamped_steps," +
             "ambient_min,ambient_mean,ambient_max,mean_hottest,sim_ms_total,sim_ms_max," +
             "topology_ms_total,mapping_ms_total,exposure_ms_total,solver_ms_total,solver_ms_max," +
             "loop_w_absorbed,loop_w_rejected,pump_lift_w,pump_draw_w,pump_cop";
 
+/// <summary>Grid operation.</summary>
         private static Dictionary<string, string> Grid()
         {
             Dictionary<string, string> row = new Dictionary<string, string>();
@@ -115,13 +102,13 @@ namespace Thermodynamics.Tests
             return row;
         }
 
-        /// <summary>Columns of the block-type CSV the checks read, and one plausible type.</summary>
         private const string TypeHeader =
             "subtype,type,placed,removed,live,conductivity,specific_heat,emissivity," +
             "critical_temperature,mass_mean,thermal_mass_mean,exposed_area_mean," +
             "temp_min,temp_mean,temp_max,peak_temp," +
             "substep_demand_mean,substep_demand_max,substep_demand_peak";
 
+/// <summary>Type operation.</summary>
         private static Dictionary<string, string> Type()
         {
             Dictionary<string, string> row = new Dictionary<string, string>();
@@ -149,10 +136,7 @@ namespace Thermodynamics.Tests
             return row;
         }
 
-        /// <summary>
-        /// A whole dump: the three CSVs under the names the mod writes, in one folder, so the
-        /// auditor resolves the siblings the way it does in a world's storage.
-        /// </summary>
+/// <summary>WriteDump operation.</summary>
         private string WriteDump(
             Dictionary<string, string>[] rows,
             Dictionary<string, string>[] grids = null,
@@ -168,18 +152,23 @@ namespace Thermodynamics.Tests
 
             Write(environment, Header, rows);
             Write(Path.Combine(folder, "Thermodynamics_Grids_" + stamp + ".csv"),
+/// <summary>Grid operation.</summary>
                 GridHeader, grids ?? new[] { Grid() });
             Write(Path.Combine(folder, "Thermodynamics_BlockTypes_" + stamp + ".csv"),
+/// <summary>Type operation.</summary>
                 TypeHeader, types ?? new[] { Type() });
 
             return environment;
         }
 
+/// <summary>Write operation.</summary>
         private string Write(params Dictionary<string, string>[] rows)
         {
+/// <summary>Write operation.</summary>
             return Write(Header, rows);
         }
 
+/// <summary>Write operation.</summary>
         private string Write(string header, params Dictionary<string, string>[] rows)
         {
             string path = Path.Combine(Path.GetTempPath(),
@@ -190,6 +179,7 @@ namespace Thermodynamics.Tests
             return path;
         }
 
+/// <summary>Write operation.</summary>
         private static void Write(string path, string header, Dictionary<string, string>[] rows)
         {
             string[] columns = header.Split(',');
@@ -210,6 +200,7 @@ namespace Thermodynamics.Tests
             }
         }
 
+/// <summary>Check operation.</summary>
         private static DumpAudit.CheckResult Check(DumpAudit.Result result, string name)
         {
             foreach (DumpAudit.CheckResult check in result.Checks)
@@ -221,6 +212,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>APlausibleDumpPassesEveryCheck operation.</summary>
         public void APlausibleDumpPassesEveryCheck()
         {
             DumpAudit.Result result = DumpAudit.Run(WriteDump(new[] { Row(), Row() }));
@@ -237,14 +229,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// A grid's stages fit inside its update. The one-off build ran the same three stages from
-        /// outside any tick and recorded them into the same rows, so the stages of a grid that had
-        /// just loaded exceeded the update they are printed underneath.
-        /// </summary>
         [Fact]
+/// <summary>StagesLargerThanTheUpdateTheyNestInAreADefect operation.</summary>
         public void StagesLargerThanTheUpdateTheyNestInAreADefect()
         {
+/// <summary>Grid operation.</summary>
             Dictionary<string, string> grid = Grid();
             grid["sim_ms_total"] = "11.93";
             grid["topology_ms_total"] = "21.75";
@@ -255,19 +244,18 @@ namespace Thermodynamics.Tests
             DumpAudit.Result result = DumpAudit.Run(
                 WriteDump(new[] { Row() }, new[] { grid }));
 
+/// <summary>Check operation.</summary>
             DumpAudit.CheckResult check = Check(result, "a grid's stages fit");
             Assert.Equal(1, check.Hits);
             Assert.True(check.Failed);
             Assert.Contains("11.93", check.Worst);
         }
 
-        /// <summary>
-        /// Slack the other way is expected and must not fail: what an update costs beyond its
-        /// stages is the environment sample, the after-step observation and pacing.
-        /// </summary>
         [Fact]
+/// <summary>AnUpdateLargerThanItsStagesIsNotADefect operation.</summary>
         public void AnUpdateLargerThanItsStagesIsNotADefect()
         {
+/// <summary>Grid operation.</summary>
             Dictionary<string, string> grid = Grid();
             grid["sim_ms_total"] = "100";
             grid["solver_ms_total"] = "40";
@@ -276,8 +264,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ASolverCallLongerThanTheUpdateAroundItIsADefect operation.</summary>
         public void ASolverCallLongerThanTheUpdateAroundItIsADefect()
         {
+/// <summary>Grid operation.</summary>
             Dictionary<string, string> grid = Grid();
             grid["solver_ms_max"] = "5";
             grid["sim_ms_max"] = "2";
@@ -287,8 +277,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>MoreClampedStepsThanStepsIsADefect operation.</summary>
         public void MoreClampedStepsThanStepsIsADefect()
         {
+/// <summary>Grid operation.</summary>
             Dictionary<string, string> grid = Grid();
             grid["clamped_steps"] = "1300";
 
@@ -297,8 +289,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AMeanOutsideItsOwnRangeIsADefect operation.</summary>
         public void AMeanOutsideItsOwnRangeIsADefect()
         {
+/// <summary>Grid operation.</summary>
             Dictionary<string, string> grid = Grid();
             grid["ambient_mean"] = "300";
 
@@ -307,8 +301,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>LiveBlocksThatDoNotFollowFromPlacedAndRemovedAreADefect operation.</summary>
         public void LiveBlocksThatDoNotFollowFromPlacedAndRemovedAreADefect()
         {
+/// <summary>Type operation.</summary>
             Dictionary<string, string> type = Type();
             type["live"] = "500";
 
@@ -316,17 +312,16 @@ namespace Thermodynamics.Tests
                 "live blocks").Hits);
         }
 
-        /// <summary>
-        /// The peak is fed by one pass and the range by two, so a type the sampler never reached
-        /// reported a maximum above its own peak — 327 of 815 types in the fleet dump.
-        /// </summary>
         [Fact]
+/// <summary>APeakBelowTheMaximumItBoundsIsADefect operation.</summary>
         public void APeakBelowTheMaximumItBoundsIsADefect()
         {
+/// <summary>Type operation.</summary>
             Dictionary<string, string> type = Type();
             type["peak_temp"] = "282.23";
             type["temp_max"] = "293.15";
 
+/// <summary>Check operation.</summary>
             DumpAudit.CheckResult check = Check(
                 DumpAudit.Run(WriteDump(new[] { Row() }, null, new[] { type })),
                 "a block type's temperatures");
@@ -335,13 +330,11 @@ namespace Thermodynamics.Tests
             Assert.Contains("temp_max", check.Worst);
         }
 
-        /// <summary>
-        /// A type nothing sampled carries zeros, which order trivially and say nothing. Counting
-        /// those would bury a real one.
-        /// </summary>
         [Fact]
+/// <summary>ATypeNothingSampledIsNotJudgedOnItsZeroes operation.</summary>
         public void ATypeNothingSampledIsNotJudgedOnItsZeroes()
         {
+/// <summary>Type operation.</summary>
             Dictionary<string, string> type = Type();
             type["temp_min"] = "0";
             type["temp_mean"] = "0";
@@ -355,14 +348,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>APropertyTheSolverCannotDivideByIsADefect operation.</summary>
         public void APropertyTheSolverCannotDivideByIsADefect()
         {
+/// <summary>Type operation.</summary>
             Dictionary<string, string> zeroHeat = Type();
             zeroHeat["specific_heat"] = "0";
 
             Assert.Equal(1, Check(DumpAudit.Run(WriteDump(new[] { Row() }, null, new[] { zeroHeat })),
                 "every block type has properties").Hits);
 
+/// <summary>Type operation.</summary>
             Dictionary<string, string> superBlack = Type();
             superBlack["emissivity"] = "1.4";
 
@@ -370,15 +366,11 @@ namespace Thermodynamics.Tests
                 "every block type has properties").Hits);
         }
 
-        /// <summary>
-        /// The narrowest claim the pump columns support. They are session means, and a mean of a
-        /// ratio is not the ratio of the means, so a coefficient cannot be checked against a lift
-        /// and a draw unless the throttle never moved. A mean of exactly zero is the one case where
-        /// every step must have been zero.
-        /// </summary>
         [Fact]
+/// <summary>APumpThatDrewNothingAndStillLiftedIsADefect operation.</summary>
         public void APumpThatDrewNothingAndStillLiftedIsADefect()
         {
+/// <summary>Grid operation.</summary>
             Dictionary<string, string> idle = Grid();
             idle["pump_draw_w"] = "0";
             idle["pump_lift_w"] = "4258";
@@ -386,8 +378,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, Check(DumpAudit.Run(WriteDump(new[] { Row() }, new[] { idle })),
                 "a pump that drew nothing").Hits);
 
-            // A pump below unity is not a fault: lifting across a wide gap costs more per watt than
-            // it moves, which is what the Carnot relation says and what the model implements.
+/// <summary>Grid operation.</summary>
             Dictionary<string, string> poor = Grid();
             poor["pump_draw_w"] = "20000";
             poor["pump_lift_w"] = "4258";
@@ -397,43 +388,43 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ANonsenseReadingIsCaughtInEveryTableNotJustTheClimate operation.</summary>
         public void ANonsenseReadingIsCaughtInEveryTableNotJustTheClimate()
         {
+/// <summary>Grid operation.</summary>
             Dictionary<string, string> grid = Grid();
             grid["solver_ms_total"] = "-70";
 
+/// <summary>Check operation.</summary>
             DumpAudit.CheckResult inGrids = Check(
                 DumpAudit.Run(WriteDump(new[] { Row() }, new[] { grid })), "no grid reading");
             Assert.Equal(1, inGrids.Hits);
             Assert.Contains("Test Grid", inGrids.Worst);
 
+/// <summary>Type operation.</summary>
             Dictionary<string, string> type = Type();
             type["thermal_mass_mean"] = "NaN";
 
+/// <summary>Check operation.</summary>
             DumpAudit.CheckResult inTypes = Check(
                 DumpAudit.Run(WriteDump(new[] { Row() }, null, new[] { type })), "no block type reading");
             Assert.Equal(1, inTypes.Hits);
             Assert.Contains("LargeBlockArmorBlock", inTypes.Worst);
         }
 
-        /// <summary>
-        /// A signed column in the grid table is not an impossible negative either: a Celsius
-        /// ambient, a bearing, a latitude.
-        /// </summary>
         [Fact]
+/// <summary>AGridsSignedColumnsAreLeftAlone operation.</summary>
         public void AGridsSignedColumnsAreLeftAlone()
         {
+/// <summary>Grid operation.</summary>
             Dictionary<string, string> grid = Grid();
             grid["mean_hottest"] = "-40";
 
             Assert.True(DumpAudit.Run(WriteDump(new[] { Row() }, new[] { grid })).Passed);
         }
 
-        /// <summary>
-        /// A dump with no grid or block-type CSV beside it still audits its climate, and says so
-        /// about the rest rather than passing them.
-        /// </summary>
         [Fact]
+/// <summary>AnEnvironmentCsvOnItsOwnSkipsTheChecksItCannotReach operation.</summary>
         public void AnEnvironmentCsvOnItsOwnSkipsTheChecksItCannotReach()
         {
             DumpAudit.Result result = DumpAudit.Run(Write(Row()));
@@ -441,7 +432,7 @@ namespace Thermodynamics.Tests
             Assert.True(Check(result, "a grid's stages fit").Skipped);
             Assert.True(Check(result, "live blocks").Skipped);
 
-            // The whole-table check names the file it wanted rather than a column.
+/// <summary>Check operation.</summary>
             DumpAudit.CheckResult grids = Check(result, "no grid reading");
             Assert.True(grids.Skipped);
             Assert.Contains("grid CSV", grids.Missing);
@@ -450,17 +441,16 @@ namespace Thermodynamics.Tests
             Assert.True(result.Passed);
         }
 
-        /// <summary>
-        /// A wind slower than its own factors means a factor acted and was not reported, which is
-        /// the fault that makes a dump unarguable rather than merely wrong.
-        /// </summary>
         [Fact]
+/// <summary>AWindSlowerThanItsFactorsIsADefect operation.</summary>
         public void AWindSlowerThanItsFactorsIsADefect()
         {
+/// <summary>Row operation.</summary>
             Dictionary<string, string> row = Row();
             row["wind_speed"] = "10";
 
             DumpAudit.Result result = DumpAudit.Run(Write(row));
+/// <summary>Check operation.</summary>
             DumpAudit.CheckResult check = Check(result, "wind decomposes");
 
             Assert.Equal(1, check.Hits);
@@ -469,31 +459,28 @@ namespace Thermodynamics.Tests
             Assert.Contains("10.00", check.Worst);
         }
 
-        /// <summary>
-        /// The same shortfall on a moving grid is not a defect: the speed column is the relative
-        /// wind, and a ship flying downwind legitimately reads below the ambient product.
-        /// </summary>
         [Fact]
+/// <summary>AMovingGridMayReadBelowItsFactors operation.</summary>
         public void AMovingGridMayReadBelowItsFactors()
         {
+/// <summary>Row operation.</summary>
             Dictionary<string, string> row = Row();
             row["wind_speed"] = "10";
             row["grid_speed"] = "45";
 
             DumpAudit.Result result = DumpAudit.Run(Write(row));
+/// <summary>Check operation.</summary>
             DumpAudit.CheckResult check = Check(result, "wind decomposes");
 
             Assert.Equal(0, check.Hits);
             Assert.True(result.Passed);
         }
 
-        /// <summary>
-        /// Faster is the slope term, which is added as a velocity after the factors are applied. It
-        /// is counted rather than failed, and it does not also count as a shortfall.
-        /// </summary>
         [Fact]
+/// <summary>AWindFasterThanItsFactorsIsCountedAsSlopeWind operation.</summary>
         public void AWindFasterThanItsFactorsIsCountedAsSlopeWind()
         {
+/// <summary>Row operation.</summary>
             Dictionary<string, string> row = Row();
             row["wind_speed"] = "24";
 
@@ -504,13 +491,11 @@ namespace Thermodynamics.Tests
             Assert.True(result.Passed);
         }
 
-        /// <summary>
-        /// The dump writes floats at fixed precision, so a check that demanded equality would fail
-        /// on rounding alone.
-        /// </summary>
         [Fact]
+/// <summary>RoundingInTheDumpIsNotADefect operation.</summary>
         public void RoundingInTheDumpIsNotADefect()
         {
+/// <summary>Row operation.</summary>
             Dictionary<string, string> row = Row();
             row["wind_speed"] = "20.9994";
 
@@ -518,13 +503,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AWindOverTheEnginesCeilingIsObservedRatherThanFailed operation.</summary>
         public void AWindOverTheEnginesCeilingIsObservedRatherThanFailed()
         {
+/// <summary>Row operation.</summary>
             Dictionary<string, string> row = Row();
             row["wind_profile"] = "6";
             row["wind_speed"] = "84";
 
             DumpAudit.Result result = DumpAudit.Run(Write(row));
+/// <summary>Check operation.</summary>
             DumpAudit.CheckResult check = Check(result, "wind stays under");
 
             Assert.Equal(1, check.Hits);
@@ -533,10 +521,11 @@ namespace Thermodynamics.Tests
             Assert.True(result.Passed);
         }
 
-        /// <summary>Both halves: air with no convection, and convection with no air.</summary>
         [Fact]
+/// <summary>ConvectionAndAirMustAgreeInBothDirections operation.</summary>
         public void ConvectionAndAirMustAgreeInBothDirections()
         {
+/// <summary>Row operation.</summary>
             Dictionary<string, string> vacuum = Row();
             vacuum["air_density"] = "0";
             vacuum["wind_ceiling"] = "0";
@@ -544,16 +533,18 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(1, Check(DumpAudit.Run(Write(vacuum)), "convection is reported").Hits);
 
+/// <summary>Row operation.</summary>
             Dictionary<string, string> still = Row();
             still["convection_coeff"] = "0";
 
             Assert.Equal(1, Check(DumpAudit.Run(Write(still)), "convection is reported").Hits);
         }
 
-        /// <summary>The A15 fault as the audit sees it: buried whole, still blowing.</summary>
         [Fact]
+/// <summary>WindOnAWhollyBuriedGridFails operation.</summary>
         public void WindOnAWhollyBuriedGridFails()
         {
+/// <summary>Row operation.</summary>
             Dictionary<string, string> row = Row();
             row["depth_m"] = "12";
             row["underground"] = "1";
@@ -567,19 +558,23 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>OnlyAPositiveDepthOnAnUnburiedGridIsADefect operation.</summary>
         public void OnlyAPositiveDepthOnAnUnburiedGridIsADefect()
         {
+/// <summary>Row operation.</summary>
             Dictionary<string, string> flying = Row();
             flying["depth_m"] = "-120";
 
             Assert.True(DumpAudit.Run(Write(flying)).Passed);
 
+/// <summary>Row operation.</summary>
             Dictionary<string, string> buried = Row();
             buried["depth_m"] = "46";
             buried["underground"] = "1";
 
             Assert.True(DumpAudit.Run(Write(buried)).Passed);
 
+/// <summary>Row operation.</summary>
             Dictionary<string, string> confused = Row();
             confused["depth_m"] = "46";
 
@@ -587,13 +582,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AWeatherOffsetThatDoesNotScaleWithItsIntensityIsADefect operation.</summary>
         public void AWeatherOffsetThatDoesNotScaleWithItsIntensityIsADefect()
         {
+/// <summary>Row operation.</summary>
             Dictionary<string, string> half = Row();
             half["weather"] = "RainLight";
             half["weather_intensity"] = "0.5";
             half["weather_ambient_k"] = "-0.9";
 
+/// <summary>Row operation.</summary>
             Dictionary<string, string> full = Row();
             full["weather"] = "RainLight";
             full["weather_intensity"] = "1";
@@ -601,6 +599,7 @@ namespace Thermodynamics.Tests
 
             Assert.True(DumpAudit.Run(Write(half, full)).Passed);
 
+/// <summary>Row operation.</summary>
             Dictionary<string, string> stuck = Row();
             stuck["weather"] = "RainLight";
             stuck["weather_intensity"] = "1";
@@ -609,18 +608,17 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, Check(DumpAudit.Run(Write(half, stuck)), "a weather's offset").Hits);
         }
 
-        /// <summary>
-        /// Two kinds of weather in one dump are two tables, so the ratios are compared within a kind
-        /// rather than across the dump.
-        /// </summary>
         [Fact]
+/// <summary>TwoWeathersDoNotHaveToAgreeWithEachOther operation.</summary>
         public void TwoWeathersDoNotHaveToAgreeWithEachOther()
         {
+/// <summary>Row operation.</summary>
             Dictionary<string, string> rain = Row();
             rain["weather"] = "RainLight";
             rain["weather_intensity"] = "1";
             rain["weather_ambient_k"] = "-1.8";
 
+/// <summary>Row operation.</summary>
             Dictionary<string, string> storm = Row();
             storm["weather"] = "ThunderstormHeavy";
             storm["weather_intensity"] = "1";
@@ -630,28 +628,30 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ANaNAndAnImpossibleNegativeAreBothCaught operation.</summary>
         public void ANaNAndAnImpossibleNegativeAreBothCaught()
         {
+/// <summary>Row operation.</summary>
             Dictionary<string, string> nan = Row();
             nan["grid_peak_k"] = "NaN";
 
+/// <summary>Check operation.</summary>
             DumpAudit.CheckResult check = Check(DumpAudit.Run(Write(nan)), "no climate reading");
             Assert.Equal(1, check.Hits);
             Assert.Contains("grid_peak_k", check.Worst);
 
+/// <summary>Row operation.</summary>
             Dictionary<string, string> negative = Row();
             negative["air_density"] = "-0.5";
 
             Assert.Equal(1, Check(DumpAudit.Run(Write(negative)), "no climate reading").Hits);
         }
 
-        /// <summary>
-        /// Latitude and bearing are signed by construction, so the negative half of the check has to
-        /// know which quantities cannot be.
-        /// </summary>
         [Fact]
+/// <summary>ASignedColumnIsNotAnImpossibleNegative operation.</summary>
         public void ASignedColumnIsNotAnImpossibleNegative()
         {
+/// <summary>Row operation.</summary>
             Dictionary<string, string> row = Row();
             row["latitude_deg"] = "-41";
             row["wind_bearing_deg"] = "-160";
@@ -661,20 +661,19 @@ namespace Thermodynamics.Tests
             Assert.True(DumpAudit.Run(Write(row)).Passed);
         }
 
-        /// <summary>
-        /// A dump taken before the wind was written out decomposed cannot answer the decomposition
-        /// checks. It must say so rather than report a clean bill of health for them.
-        /// </summary>
         [Fact]
+/// <summary>AnOlderDumpSkipsWhatItCannotAnswerAndAuditsTheRest operation.</summary>
         public void AnOlderDumpSkipsWhatItCannotAnswerAndAuditsTheRest()
         {
             string header = "time_s,grid,planet,air_density,ambient_k,convection_coeff,"
                 + "wind_speed,wind_ceiling,underground,depth_m,weather,weather_intensity,"
                 + "weather_ambient_k,grid_mean_k,grid_peak_k";
 
+/// <summary>Row operation.</summary>
             Dictionary<string, string> row = Row();
             DumpAudit.Result result = DumpAudit.Run(Write(header, row));
 
+/// <summary>Check operation.</summary>
             DumpAudit.CheckResult decomposition = Check(result, "wind decomposes");
             Assert.True(decomposition.Skipped);
             Assert.False(decomposition.Failed);
@@ -686,6 +685,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnEmptyDumpIsReadWithoutCrashingAndClaimsNothing operation.</summary>
         public void AnEmptyDumpIsReadWithoutCrashingAndClaimsNothing()
         {
             DumpAudit.Result result = DumpAudit.Run(Write(Header));
@@ -696,13 +696,15 @@ namespace Thermodynamics.Tests
             foreach (DumpAudit.CheckResult check in result.Checks) Assert.Equal(0, check.Rows);
         }
 
-        /// <summary>The report names the file, the verdict, and every check either way.</summary>
         [Fact]
+/// <summary>TheReportNamesWhatItRead operation.</summary>
         public void TheReportNamesWhatItRead()
         {
+/// <summary>Row operation.</summary>
             Dictionary<string, string> row = Row();
             row["wind_speed"] = "10";
 
+/// <summary>Write operation.</summary>
             string path = Write(row);
             string report = DumpAudit.Report(DumpAudit.Run(path));
 
@@ -712,6 +714,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheNewestDumpUnderAFolderIsTheOneAudited operation.</summary>
         public void TheNewestDumpUnderAFolderIsTheOneAudited()
         {
             string folder = Path.Combine(Path.GetTempPath(),
@@ -731,8 +734,6 @@ namespace Thermodynamics.Tests
 
                 Assert.Equal(newer, DumpAudit.Newest(folder));
 
-                // A file named directly is taken as it stands, so one dump out of a folder of them
-                // can still be audited.
                 Assert.Equal(older, DumpAudit.Newest(older));
             }
             finally
@@ -742,6 +743,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>APathWithNoDumpInItAnswersNothingRatherThanThrowing operation.</summary>
         public void APathWithNoDumpInItAnswersNothingRatherThanThrowing()
         {
             Assert.Null(DumpAudit.Newest(null));

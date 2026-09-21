@@ -12,15 +12,16 @@ namespace Thermodynamics
     {
         private static bool smoothFleet;
         private static int regionCapTriangles;
-        // Stress test: no thermal billboard submission quota. Field preparation retains
-        // its separate bounded partition; the engine still enforces its shared buffer limit.
+/// <summary>Dictionary operation.</summary>
         private static Dictionary<Region,ThermalVisionSurfaceField> smoothCorners = new Dictionary<Region,ThermalVisionSurfaceField>();
 
+/// <summary>FleetUv operation.</summary>
         private static Vector2 FleetUv(float kelvin)
         {
             float t = MathHelper.Clamp((kelvin-lowKelvin)/System.Math.Max(1,highKelvin-lowKelvin),0,1);
             return new Vector2((.5f+255*t)/256,.5f);
         }
+/// <summary>SmoothPatch operation.</summary>
         private static void SmoothPatch(ThermalVisionSurfaceField.Patch patch,Vector3D offset,Vector3 normal,bool reverse,BoundingFrustumD frustum)
         {
             if(frustum!=null && frustum.Contains(ThermalVisionGeometry.PatchBounds(patch.A,patch.C))==ContainmentType.Disjoint)
@@ -43,10 +44,10 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>SubmitGradientTriangle operation.</summary>
         private static void SubmitGradientTriangle(Vector3D a,Vector3D b,Vector3D c,Vector3 normal,
             Vector2 ua,Vector2 ub,Vector2 uc,bool reverse)
         {
-            // Keen marks this overload "Only for modders"; this is the mod API.
 #pragma warning disable CS0618
             MyTransparentGeometry.AddTriangleBillboard(a,reverse?c:b,reverse?b:c,normal,normal,normal,
                 ua,reverse?uc:ub,reverse?ub:uc,
@@ -56,6 +57,7 @@ namespace Thermodynamics
             regionBillboards++; drawn++; examined++;
         }
 
+/// <summary>SmoothTriangle operation.</summary>
         private static void SmoothTriangle(Region region, Vector3D a, Vector3D b, Vector3D c, Vector3D eye, bool bias)
         {
             ThermalVisionSurfaceField corners;
@@ -71,7 +73,9 @@ namespace Thermodynamics
             }
         }
         private static readonly List<ThermalVisionSurfaceField.TemperatureTriangle> capTriangles=
+/// <summary>List operation.</summary>
             new List<ThermalVisionSurfaceField.TemperatureTriangle>(64);
+/// <summary>DrawCapTriangle operation.</summary>
         private static void DrawCapTriangle(Vector3D a,Vector3D b,Vector3D c,Vector3 temperatures,Vector3D eye,bool bias)
         {
             Vector2 ua=FleetUv(temperatures.X),ub=FleetUv(temperatures.Y),uc=FleetUv(temperatures.Z);

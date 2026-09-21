@@ -24,9 +24,12 @@ namespace Thermodynamics
         private static double surveyQueryMs, surveyMaxQueryMs, surveyCapturedAt;
         private static string surveyStatus;
         private static MatrixD surveyView, surveyProjection;
+/// <summary>Stopwatch operation.</summary>
         private static readonly Stopwatch SurveyClock = new Stopwatch();
+/// <summary>Stopwatch operation.</summary>
         private static readonly Stopwatch SurveyBudget = new Stopwatch();
         private static ThermalVisionRayScan<SurveySample> SurveyScan =
+/// <summary>ThermalVisionRayScan operation.</summary>
             new ThermalVisionRayScan<SurveySample>(SurveyWidth * SurveyHeight, 1, 128);
         private static SurveyImage surveyImage;
 
@@ -37,31 +40,39 @@ namespace Thermodynamics
             public float Facing;
         }
 
-        /// <summary>One pooled HUD element; equal-colour horizontal runs share rectangles.</summary>
         private sealed class SurveyImage : HudElementBase
         {
             public readonly Color[] Pixels = new Color[128 * 72];
             public bool Ready;
             public float Aspect = 16f / 9f;
+/// <summary>MatBoard operation.</summary>
             private readonly MatBoard board = new MatBoard();
+/// <summary>SurveyImage operation.</summary>
             public SurveyImage() : base(HudMain.HighDpiRoot) { Visible = false; }
 
+/// <summary>Draw operation.</summary>
             protected override void Draw()
             {
-                // Reserve the surrounding native HUD and scale down on small viewports.
                 var box = new CroppedBox { mask = MaskingBox };
+/// <summary>BoundingBox2 operation.</summary>
                 box.bounds = new BoundingBox2(Position - Size * .5f - new Vector2(5), Position + Size * .5f + new Vector2(5));
+/// <summary>Color operation.</summary>
                 board.Color = new Color(60, 81, 96);
                 board.Draw(ref box, HudSpace.PlaneToWorldRef);
+/// <summary>Vector2 operation.</summary>
                 Vector2 corner = Position + new Vector2(-Size.X, Size.Y) * .5f;
+/// <summary>Vector2 operation.</summary>
                 Vector2 cell = new Vector2(Size.X / SurveyWidth, Size.Y / SurveyHeight);
                 for (int y = 0; y < SurveyHeight; y++)
                     for (int x = 0; x < SurveyWidth;)
                     {
+/// <summary>Color operation.</summary>
                         Color colour = Ready ? Pixels[y * SurveyWidth + x] : new Color(12, 19, 26);
                         int end = x + 1;
                         while (end < SurveyWidth && (!Ready || Pixels[y * SurveyWidth + end] == colour)) end++;
+/// <summary>BoundingBox2 operation.</summary>
                         box.bounds = new BoundingBox2(corner + new Vector2(x * cell.X, -(y + 1) * cell.Y),
+/// <summary>Vector2 operation.</summary>
                             corner + new Vector2(end * cell.X, -y * cell.Y));
                         board.Color = colour;
                         board.Draw(ref box, HudSpace.PlaneToWorldRef);
@@ -70,12 +81,14 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>StartSurvey operation.</summary>
         private static void StartSurvey()
         {
             if (surveyImage == null) surveyImage = new SurveyImage();
             surveyImage.Ready = false;
             surveyImage.Visible = true;
             panel.ParentAlignment = ParentAlignments.Top | ParentAlignments.Right | ParentAlignments.InnerV | ParentAlignments.InnerH;
+/// <summary>Vector2 operation.</summary>
             panel.Offset = new Vector2(-24, -28);
             frames = 0;
             SurveyScan.Begin();
@@ -102,6 +115,7 @@ namespace Thermodynamics
                 + ", 150m, 128 queries/draw, soft 2ms/draw, " + SurveyDeadline + "s deadline");
         }
 
+/// <summary>StopSurvey operation.</summary>
         private static void StopSurvey()
         {
             SurveyScan.Invalidate();
@@ -111,6 +125,7 @@ namespace Thermodynamics
             if (surveyImage != null) { surveyImage.Ready = false; surveyImage.Visible = false; }
         }
 
+/// <summary>DrawSurvey operation.</summary>
         private static void DrawSurvey()
         {
             if (surveyImage == null) StartSurvey();
@@ -143,9 +158,9 @@ namespace Thermodynamics
                     RecordEvent("survey timeout: queries=" + surveyQueries + " queryMs=" + surveyQueryMs.ToString("0.00")
                         + " maxQueryMs=" + surveyMaxQueryMs.ToString("0.00"));
                 }
+/// <summary>if operation.</summary>
                 else if (moved)
                 {
-                    // Never combine sample positions from distinct camera projections.
                     SurveyScan.Begin();
                     surveyView = view;
                     surveyProjection = projection;
@@ -164,6 +179,7 @@ namespace Thermodynamics
                         try
                         {
                             Vector3D ray = ThermalVisionSensorOptics.Ray(x, y, SurveyWidth, SurveyHeight, surveyProjection, surveyView);
+/// <summary>QuerySurvey operation.</summary>
                             sample = QuerySurvey(ray);
                         }
                         catch
@@ -197,6 +213,7 @@ namespace Thermodynamics
             panel.Visible = true;
         }
 
+/// <summary>QuerySurvey operation.</summary>
         private static SurveySample QuerySurvey(Vector3D ray)
         {
             IHitInfo hit;
@@ -207,7 +224,6 @@ namespace Thermodynamics
             var grid = hit.HitEntity as MyCubeGrid;
             var thermal = grid == null || grid.GameLogic == null ? null : grid.GameLogic.GetAs<ThermalGrid>();
             if (thermal == null || thermal.Simulation == null) return sample;
-            // Nudge inward along the surface normal; a grazing view ray can cross into a neighbour.
             var block = thermal.GetAtCell(grid.WorldToGridInteger(hit.Position - hit.Normal * .005f));
             if (block != null && block.Node != null)
             {
@@ -218,8 +234,10 @@ namespace Thermodynamics
             return sample;
         }
 
+/// <summary>Publishes the API table to other mods.</summary>
         private static void PublishSurvey()
         {
+/// <summary>ThermalVisionAutoRange operation.</summary>
             var range = new ThermalVisionAutoRange();
             SurveySample sample;
             if (automaticRange)

@@ -7,30 +7,25 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The harness itself, because a ring built wrong is a scenario that tests nothing and says it
-    /// passed. `PipeFitter` exists to stop that happening by hand, and it had the failure it was
-    /// written to prevent: a pump carries no sink ports, every rectangle's first straight run is
-    /// index 1, `BuildRing` put the pump there by default, and a sink requested on index 1 was
-    /// dropped without a word. Every scenario and test in the repository asked for exactly that.
-    /// </summary>
     public class PipeFitterTests
     {
+/// <summary>Isolated operation.</summary>
         private static ThermalSettings Isolated()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableDamage = false;
             return settings.Derive();
         }
 
-        /// <summary>The collision is not hypothetical: it is where the pump goes on every rectangle.</summary>
         [Theory]
         [InlineData(3, 3)]
         [InlineData(4, 3)]
         [InlineData(5, 5)]
         [InlineData(9, 9)]
         [InlineData(20, 20)]
+/// <summary>TheFirstStraightRunOfEveryRectangleIsIndexOne operation.</summary>
         public void TheFirstStraightRunOfEveryRectangleIsIndexOne(int width, int depth)
         {
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, width, depth);
@@ -38,6 +33,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ASinkAskedForOnThePumpsCellIsHonouredByMovingThePump operation.</summary>
         public void ASinkAskedForOnThePumpsCellIsHonouredByMovingThePump()
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -47,10 +43,8 @@ namespace Thermodynamics.Tests
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 4, 3);
             List<BlockInstance> ring = PipeFitter.BuildRing(builder, cells, -1, sinks);
 
-            // The sink exists where it was asked for...
             Assert.Single(ring[1].CoolantSinkPorts());
 
-            // ...and the pump went somewhere else, so the ring is still a loop.
             Assert.NotEqual("CoolantPump", ring[1].Model.Name);
 
             ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
@@ -59,6 +53,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EveryRequestedSinkBecomesALoopLink operation.</summary>
         public void EveryRequestedSinkBecomesALoopLink()
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -69,7 +64,6 @@ namespace Thermodynamics.Tests
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 5, 5);
             PipeFitter.BuildRing(builder, cells, -1, sinks);
 
-            // Something for each sink to face, or the link has no node to attach to.
             builder.Place(Catalog.HeavyArmor(), cells[1] + Vector3I.Down);
             builder.Place(Catalog.HeavyArmor(), cells[5] + Vector3I.Up);
 
@@ -79,11 +73,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(loop.PipeCount + 2, loop.Links.Count);
         }
 
-        /// <summary>
-        /// A caller who names the pump index *and* asks for a sink there is told, rather than quietly
-        /// given a ring that cannot do what the scenario claims.
-        /// </summary>
         [Fact]
+/// <summary>AnExplicitPumpIndexThatCollidesWithASinkIsAnError operation.</summary>
         public void AnExplicitPumpIndexThatCollidesWithASinkIsAnError()
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -98,8 +89,8 @@ namespace Thermodynamics.Tests
             Assert.Contains("test nothing", error.Message);
         }
 
-        /// <summary>A ring with a sink on every straight run has nowhere left for a pump, and says so.</summary>
         [Fact]
+/// <summary>ARingWithNoRoomLeftForAPumpSaysSo operation.</summary>
         public void ARingWithNoRoomLeftForAPumpSaysSo()
         {
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3);

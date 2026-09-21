@@ -3,107 +3,47 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// What the shape of the ground does to the wind blowing over it: speed-up, sheltering and
-    /// channelling. All three are read off one ring of sixteen height samples around the site — its
-    /// mean is exposure, its upwind arc is shelter, its second harmonic is the valley axis. Not a
-    /// flow solver, and nothing here conserves mass. See environment.md, Terrain.
-    /// </summary>
     public static class WindTerrain
     {
-        /// <summary>Bearings sampled around a site. Eight is a compass rose.</summary>
         public const int Bearings = 8;
 
-        /// <summary>Radii sampled along each bearing: one close in, one further out.</summary>
         public const int Radii = 2;
 
-        /// <summary>Heights a full sample holds.</summary>
         public const int SampleCount = Bearings * Radii;
 
-        /// <summary>
-        /// The most a rise may add, as a fraction. Wind loading codes cap what they will credit to
-        /// topography for the same reason this does: the linear theory the figure comes from stops
-        /// being true on exactly the steep ground that produces the largest numbers.
-        /// </summary>
         public const float MaximumSpeedUp = 0.6f;
 
-        /// <summary>The most a hollow may take away, as a fraction.</summary>
         public const float MaximumSlowDown = 0.45f;
 
-        /// <summary>Speed-up per unit of slope, from the <c>2H/L</c> of linearised flow theory.</summary>
         public const float SpeedUpPerSlope = 2f;
 
-        /// <summary>The most sheltering may take away, as a fraction, in a complete wind shadow.</summary>
         public const float MaximumShelter = 0.75f;
 
-        /// <summary>
-        /// Upwind horizon angle at which sheltering is complete, in degrees. A wall at 40° above the
-        /// horizon upwind is, for these purposes, all of the sky the wind was coming from.
-        /// </summary>
         public const float FullShelterDegrees = 40f;
 
-        /// <summary>
-        /// Cross-valley slope at which channelling is total — the wind ends up along the valley
-        /// whatever it was doing. A one-in-three side is a valley in anyone's terms.
-        /// </summary>
         public const float FullChannelSlope = 0.33f;
 
-        /// <summary>
-        /// The bearing of a ring sample, as a unit vector in the local tangent plane.
-        ///
-        /// Index 0 is north and they run clockwise — east at 2, south at 4 — so a sample's index is
-        /// its compass point. Both vectors must be tangent to the surface and perpendicular.
-        /// </summary>
+/// <summary>BearingDirection operation.</summary>
         public static Vector3 BearingDirection(int bearing, Vector3 north, Vector3 east)
         {
             double angle = (bearing % Bearings) * (2d * Math.PI / Bearings);
             return (north * (float)Math.Cos(angle)) + (east * (float)Math.Sin(angle));
         }
 
-        /// <summary>Index into a sample array. Rings are stored one radius at a time.</summary>
+/// <summary>Index operation.</summary>
         public static int Index(int radius, int bearing)
         {
             return (radius * Bearings) + (bearing % Bearings);
         }
 
-        /// <summary>
-        /// A linear response bent smoothly onto its own bound.
-        ///
-        /// <para>
-        /// **The caps were doing the modelling rather than bounding it.** Every terrain factor here
-        /// is a linear law from the wind-engineering literature followed by a clip, and that
-        /// literature is written for Earth: its hills reach 0.14 % of the planet's radius where SE's
-        /// reach 12 %, about eighty times steeper. So on every shipped world at every size the
-        /// linear term ran past the clip and *every* site read exactly the cap — speed-up 1.60,
-        /// shelter 0.250, channelling at its limit — which means terrain stopped telling one place
-        /// from another, which is the only thing it was there to do.
-        /// </para>
-        ///
-        /// <para>
-        /// Saturating instead of clipping keeps both ends and restores the middle: the gradient at
-        /// zero is the literature's own <c>2H/L</c>, so gentle ground is unchanged to within a per
-        /// cent, and the bound is the same figure it always was, so nothing that relied on it moves.
-        /// What changes is that a ridge twice as steep as another is no longer the same ridge.
-        /// Saturation is also what the flow does — a steep enough crest separates, and the speed-up
-        /// stops growing rather than stopping suddenly.
-        /// </para>
-        /// </summary>
+/// <summary>Saturate operation.</summary>
         public static float Saturate(float value, float bound)
         {
             if (bound <= 0f) return 0f;
             return bound * (float)Math.Tanh(value / bound);
         }
 
-        /// <summary>
-        /// How much this site stands above the land around it, as a slope. Positive on a rise,
-        /// negative in a hollow, near zero on a plain — and on an even hillside, which is not
-        /// sheltered by being one.
-        /// </summary>
-        /// <param name="heights">
-        /// Ground height at each sample relative to the site's own ground, m.
-        /// <see cref="SampleCount"/> of them.
-        /// </param>
-        /// <param name="radius">Radius of the outer ring, m.</param>
+/// <summary>Relief operation.</summary>
         public static float Relief(float[] heights, float radius)
         {
             if (heights == null || heights.Length < SampleCount || radius <= 0f) return 0f;
@@ -114,37 +54,23 @@ namespace Thermodynamics.Core
                 total += heights[Index(Radii - 1, bearing)];
             }
 
-            // Negated: the ring lying *below* the site is the site standing above the ring.
             return -(total / Bearings) / radius;
         }
 
-        /// <summary>
-        /// The speed multiplier a site's exposure earns it. One on flat ground, more on a rise, less
-        /// in a hollow.
-        /// </summary>
+/// <summary>SpeedUp operation.</summary>
         public static float SpeedUp(float relief)
         {
             float change = SpeedUpPerSlope * relief;
 
-            // Saturated rather than clipped: SE ground is steep enough that the clip bound every
-            // site at the cap and terrain stopped differentiating places. See Saturate.
             change = change >= 0f
+/// <summary>Saturate operation.</summary>
                 ? Saturate(change, MaximumSpeedUp)
                 : -Saturate(-change, MaximumSlowDown);
 
             return 1f + change;
         }
 
-        /// <summary>
-        /// The speed multiplier left after whatever stands upwind, 0..1: the largest upward angle over
-        /// both radii, which is why a near obstruction shelters more than a far one of the same height.
-        /// </summary>
-        /// <param name="heights">Relative heights, as for <see cref="Relief"/>.</param>
-        /// <param name="innerRadius">Radius of the inner ring, m.</param>
-        /// <param name="outerRadius">Radius of the outer ring, m.</param>
-        /// <param name="wind">Where the wind blows, tangent to the surface. Length ignored.</param>
-        /// <param name="north">Local north, unit, tangent.</param>
-        /// <param name="east">Local east, unit, tangent.</param>
+/// <summary>Shelter operation.</summary>
         public static float Shelter(
             float[] heights, float innerRadius, float outerRadius,
             Vector3 wind, Vector3 north, Vector3 east)
@@ -153,14 +79,15 @@ namespace Thermodynamics.Core
             if (innerRadius <= 0f || outerRadius <= 0f) return 1f;
             if (wind.LengthSquared() < 1e-8f) return 1f;
 
-            // Upwind: the direction the wind is arriving from.
             Vector3 upwind = -Vector3.Normalize(wind);
 
+/// <summary>Bearing operation.</summary>
             double bearing = Bearing(upwind, north, east);
             float steepest = 0f;
 
             for (int radius = 0; radius < Radii; radius++)
             {
+/// <summary>Interpolate operation.</summary>
                 float height = Interpolate(heights, radius, bearing);
                 if (height <= 0f) continue;
 
@@ -172,28 +99,13 @@ namespace Thermodynamics.Core
 
             if (steepest <= 0f) return 1f;
 
-            // Saturated rather than clipped, for the reason Saturate gives: on SE ground every
-            // upwind horizon cleared the full-shelter angle and every sheltered site read the same
-            // number.
+/// <summary>Saturate operation.</summary>
             float share = Saturate(steepest / FullShelterDegrees, 1f);
 
             return 1f - (MaximumShelter * share);
         }
 
-        /// <summary>
-        /// The direction the wind actually takes here, from the ring's second harmonic
-        /// <c>h(θ) ≈ mean + A·cos(2(θ − φ))</c> — the shape a valley or a ridge makes. A harmonic
-        /// rather than the lowest of four opposite pairs, which would quantise the answer to 45°.
-        /// The rule is <b>turn toward the lowest ground</b>, which gives a valley an along-floor wind
-        /// and a ridge crest a crossing one. See environment.md, Terrain.
-        /// </summary>
-        /// <param name="strength">
-        /// How much of the effect to apply, 0..1, for a caller that wants to turn it down.
-        /// </param>
-        /// <returns>
-        /// A unit vector, or the input direction where there is nothing to channel it. Zero if the
-        /// input was zero.
-        /// </returns>
+/// <summary>Channel operation.</summary>
         public static Vector3 Channel(
             float[] heights, float radius, Vector3 wind, Vector3 north, Vector3 east, float strength)
         {
@@ -203,7 +115,6 @@ namespace Thermodynamics.Core
             if (heights == null || heights.Length < SampleCount) return direction;
             if (radius <= 0f || strength <= 0f) return direction;
 
-            // Fit the second harmonic over the outer ring.
             double cosine = 0d;
             double sine = 0d;
 
@@ -222,13 +133,12 @@ namespace Thermodynamics.Core
             double amplitude = Math.Sqrt((cosine * cosine) + (sine * sine));
             if (amplitude < 1e-4d) return direction;
 
-            // Saturated rather than clipped, as the other two are. See Saturate.
+/// <summary>Saturate operation.</summary>
             float confinement = Saturate((float)(amplitude / radius) / FullChannelSlope, 1f);
             confinement *= strength > 1f ? 1f : strength;
 
             if (confinement <= 0f) return direction;
 
-            // φ is where the ring stands highest; the valley runs across it.
             double high = 0.5d * Math.Atan2(sine, cosine);
             double along = high + (Math.PI * 0.5d);
 
@@ -242,17 +152,7 @@ namespace Thermodynamics.Core
             return turned.LengthSquared() < 1e-8f ? direction : Vector3.Normalize(turned);
         }
 
-        /// <summary>
-        /// Which way the ground falls away from here, and how steeply: the ring's <b>first</b>
-        /// harmonic, which a valley has none of where <see cref="Channel"/>'s second has none on a
-        /// hillside. Costs eight multiply-adds over heights already in memory.
-        /// See environment.md, Slope winds.
-        /// </summary>
-        /// <param name="slope">
-        /// How steeply it falls, as a gradient: the harmonic's amplitude over the ring radius. Zero
-        /// on ground with no consistent fall line.
-        /// </param>
-        /// <returns>A unit vector pointing downhill, or zero where the ground has no fall line.</returns>
+/// <summary>Downhill operation.</summary>
         public static Vector3 Downhill(
             float[] heights, float radius, Vector3 north, Vector3 east, out float slope)
         {
@@ -281,7 +181,6 @@ namespace Thermodynamics.Core
 
             slope = (float)(amplitude / radius);
 
-            // φ points at the high side; the ground falls the other way.
             double high = Math.Atan2(sine, cosine);
             double down = high + Math.PI;
 
@@ -289,7 +188,7 @@ namespace Thermodynamics.Core
             return direction.LengthSquared() < 1e-8f ? Vector3.Zero : Vector3.Normalize(direction);
         }
 
-        /// <summary>A direction's bearing in radians clockwise from north, 0..2π.</summary>
+/// <summary>Bearing operation.</summary>
         private static double Bearing(Vector3 direction, Vector3 north, Vector3 east)
         {
             double angle = Math.Atan2(Vector3.Dot(direction, east), Vector3.Dot(direction, north));
@@ -297,7 +196,7 @@ namespace Thermodynamics.Core
             return angle;
         }
 
-        /// <summary>The ring's height at an arbitrary bearing, between its two nearest samples.</summary>
+/// <summary>Interpolate operation.</summary>
         private static float Interpolate(float[] heights, int radius, double bearing)
         {
             double step = 2d * Math.PI / Bearings;

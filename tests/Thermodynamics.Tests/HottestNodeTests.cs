@@ -4,20 +4,9 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The hottest-block readout, which is now a by-product of the step rather than a pass of its
-    /// own.
-    ///
-    /// It feeds the cockpit summary, the crosshair readout and the telemetry report, and it was
-    /// being recomputed on a cadence by walking every node — for every client, on every grid. The
-    /// step's write-back already has every temperature in its hands, so the answer costs one
-    /// comparison per node instead of a second pass.
-    ///
-    /// What that buys has to be paid for in care: a cached index is only as good as the list it
-    /// indexes, and the list changes under it.
-    /// </summary>
     public class HottestNodeTests
     {
+/// <summary>Builds the API method table.</summary>
         private static ThermalSimulation Build()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -25,6 +14,7 @@ namespace Thermodynamics.Tests
             return builder.BuildSimulation(new ThermalSettings(), 293.15f);
         }
 
+/// <summary>HottestByWalking operation.</summary>
         private static ThermalNode HottestByWalking(ThermalSimulation simulation)
         {
             ThermalNode found = null;
@@ -37,8 +27,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ItIsTheHottestBlockAfterAStep operation.</summary>
         public void ItIsTheHottestBlockAfterAStep()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = Build();
 
             simulation.Solver.GetNodeAt(new Vector3I(2, 2, 2)).Temperature = 900f;
@@ -47,26 +39,22 @@ namespace Thermodynamics.Tests
             Assert.Equal(HottestByWalking(simulation), simulation.Solver.HottestNode());
         }
 
-        /// <summary>
-        /// Before anything has stepped there is no cached answer, and the readout must still be
-        /// right rather than null or arbitrary — a grid is asked for it as soon as it loads.
-        /// </summary>
         [Fact]
+/// <summary>ItIsRightBeforeAnythingHasStepped operation.</summary>
         public void ItIsRightBeforeAnythingHasStepped()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = Build();
             simulation.Solver.GetNodeAt(new Vector3I(1, 0, 3)).Temperature = 750f;
 
             Assert.Equal(HottestByWalking(simulation), simulation.Solver.HottestNode());
         }
 
-        /// <summary>
-        /// A removal moves another node into the removed one's slot, so a cached index no longer
-        /// means what it did. The readout must not silently name the wrong block.
-        /// </summary>
         [Fact]
+/// <summary>ItSurvivesTheHottestBlockBeingDestroyed operation.</summary>
         public void ItSurvivesTheHottestBlockBeingDestroyed()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = Build();
 
             BlockInstance doomed = simulation.Grid.GetAtCell(new Vector3I(2, 2, 2));
@@ -84,13 +72,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(HottestByWalking(simulation), hottest);
         }
 
-        /// <summary>
-        /// And it must keep up as the answer moves from block to block over a run, rather than
-        /// latching onto whichever block was hottest first.
-        /// </summary>
         [Fact]
+/// <summary>ItFollowsTheHeatAsItMoves operation.</summary>
         public void ItFollowsTheHeatAsItMoves()
         {
+/// <summary>Builds the method table.</summary>
             ThermalSimulation simulation = Build();
 
             BlockInstance reactor = simulation.Grid.GetAtCell(new Vector3I(0, 0, 0));

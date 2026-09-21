@@ -4,41 +4,27 @@ using VRage;
 
 namespace RichHudFramework
 {
-	/// <summary>
-	/// Defines the creation and reset behavior for objects managed by an <see cref="ObjectPool{T}"/>.
-	/// </summary>
 	public interface IPooledObjectPolicy<T>
 	{
-		/// <summary>
-		/// Creates a fresh instance of <typeparamref name="T"/>.
-		/// </summary>
+/// <summary>Returns the newobject.</summary>
 		T GetNewObject();
 
-		/// <summary>
-		/// Prepares a used object for reuse (e.g. clears state, unsubscribes events).
-		/// Called immediately before the object is returned to the pool.
-		/// </summary>
+/// <summary>ResetObject operation.</summary>
 		void ResetObject(T obj);
 
-		/// <summary>
-		/// Resets a contiguous range of pooled objects in a list.
-		/// </summary>
+/// <summary>ResetRange operation.</summary>
 		void ResetRange(IReadOnlyList<T> objects, int index, int count);
 
-		/// <summary>
-		/// Resets the contiguous range of pooled objects in a list of tuples.
-		/// </summary>
+/// <summary>ResetRange operation.</summary>
 		void ResetRange<T2>(IReadOnlyList<MyTuple<T, T2>> objects, int index, int count);
 	}
 
-	/// <summary>
-	/// Delegate-based implementation of <see cref="IPooledObjectPolicy{T}"/>.
-	/// </summary>
 	public class PooledObjectPolicy<T> : IPooledObjectPolicy<T>
 	{
 		private readonly Func<T> getNewObjectFunc;
 		private readonly Action<T> resetObjectAction;
 
+/// <summary>PooledObjectPolicy operation.</summary>
 		public PooledObjectPolicy(Func<T> getNewObjectFunc, Action<T> resetObjectAction)
 		{
 			if (getNewObjectFunc == null || resetObjectAction == null)
@@ -48,9 +34,12 @@ namespace RichHudFramework
 			this.resetObjectAction = resetObjectAction;
 		}
 
+/// <summary>Returns the newobject.</summary>
 		public T GetNewObject() => getNewObjectFunc();
+/// <summary>ResetObject operation.</summary>
 		public void ResetObject(T obj) => resetObjectAction(obj);
 
+/// <summary>ResetRange operation.</summary>
 		public void ResetRange(IReadOnlyList<T> objects, int index, int count)
 		{
 			int end = Math.Min(index + count, objects.Count);
@@ -58,6 +47,7 @@ namespace RichHudFramework
 				resetObjectAction(objects[i]);
 		}
 
+/// <summary>ResetRange operation.</summary>
 		public void ResetRange<T2>(IReadOnlyList<MyTuple<T, T2>> objects, int index, int count)
 		{
 			int end = Math.Min(index + count, objects.Count);
@@ -66,44 +56,32 @@ namespace RichHudFramework
 		}
 	}
 
-	/// <summary>
-	/// Simple, non-thread-safe object pool backed by a <see cref="List{T}"/>.
-	/// Reduces allocations for frequently created/disposed reference types.
-	/// </summary>
 	public class ObjectPool<T> where T : class
 	{
-		/// <summary>
-		/// Number of objects currently stored in the pool
-		/// </summary>
 		public int Count => pooledObjects.Count;
 
-		/// <summary>
-		/// Internal pool capacity
-		/// </summary>
 		public int Capacity => pooledObjects.Capacity;
 
-		/// <exclude/>
 		protected readonly List<T> pooledObjects;
-		/// <exclude/>
 		protected readonly IPooledObjectPolicy<T> policy;
 
+/// <summary>ObjectPool operation.</summary>
 		public ObjectPool(IPooledObjectPolicy<T> policy)
 		{
 			if (policy == null)
 				throw new Exception("Pooled object policy cannot be null.");
 
+/// <summary>List operation.</summary>
 			pooledObjects = new List<T>();
 			this.policy = policy;
 		}
 
+/// <summary>ObjectPool operation.</summary>
 		public ObjectPool(Func<T> getNewFunc, Action<T> resetFunc)
 			: this(new PooledObjectPolicy<T>(getNewFunc, resetFunc))
 		{ }
 
-		/// <summary>
-		/// Retrieves an object from the pool. Returns a recycled instance if available;
-		/// otherwise creates a new one using the policy.
-		/// </summary>
+/// <summary>Returns the .</summary>
 		public T Get()
 		{
 			if (pooledObjects.Count > 0)
@@ -117,18 +95,14 @@ namespace RichHudFramework
 			return policy.GetNewObject();
 		}
 
-		/// <summary>
-		/// Returns a single object to the pool after resetting it.
-		/// </summary>
+/// <summary>Return operation.</summary>
 		public void Return(T obj)
 		{
 			policy.ResetObject(obj);
 			pooledObjects.Add(obj);
 		}
 
-		/// <summary>
-		/// Returns a range of objects to the pool
-		/// </summary>
+/// <summary>ReturnRange operation.</summary>
 		public void ReturnRange(IReadOnlyList<T> objects, int index = 0, int count = -1)
 		{
 			if (count == -1) count = objects.Count - index;
@@ -141,9 +115,7 @@ namespace RichHudFramework
 				pooledObjects.Add(objects[end - i]);
 		}
 
-		/// <summary>
-		/// Returns a range of objects to the pool from a tuple list
-		/// </summary>
+/// <summary>ReturnRange operation.</summary>
 		public void ReturnRange<T2>(IReadOnlyList<MyTuple<T, T2>> objects, int index = 0, int count = -1)
 		{
 			if (count == -1) count = objects.Count - index;
@@ -156,7 +128,9 @@ namespace RichHudFramework
 				pooledObjects.Add(objects[end - i].Item1);
 		}
 
+/// <summary>TrimExcess operation.</summary>
 		public void TrimExcess() => pooledObjects.TrimExcess();
+/// <summary>Clear operation.</summary>
 		public void Clear() => pooledObjects.Clear();
 	}
 }

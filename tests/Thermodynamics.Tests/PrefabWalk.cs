@@ -5,44 +5,18 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// `G7`, the compatibility floor: a ship the game spawns survives arriving.
-    ///
-    /// <para>
-    /// Every other criterion is measured on ships players chose to upload. These are the 705 the
-    /// game puts in front of a player whether they want them or not — cargo ships, drones,
-    /// encounters, unknown signals, respawn pods — and a mod that destroys them as they arrive is
-    /// broken however good its physics is. The criterion is stated in
-    /// balance-lab.md and was written before any of this ran (`E11`).
-    /// </para>
-    ///
-    /// <para>
-    /// **The second case is what makes the first mean anything.** A floor that can only ever pass
-    /// has not been tested, so the same prefabs are run again under full load, where they are
-    /// expected to fail — 616 of 705 do. Without it, `G7 HOLDS` would be indistinguishable from a
-    /// walk that measured nothing (`E8`).
-    /// </para>
-    ///
-    /// <para>
-    /// Needs the game installed, and stands down without it like everything else that reads the
-    /// install.
-    /// </para>
-    /// </summary>
     [Trait("speed", "slow")]
     public class PrefabWalk
     {
-        /// <summary>
-        /// How many prefabs the suite walks. The whole set is 705 and `-- prefabs` runs all of
-        /// them; a stride across the sorted list is what fits in a test run, and it takes every
-        /// category with it because the sort is by path.
-        /// </summary>
         private const int Sample = 140;
 
+/// <summary>Spread operation.</summary>
         private static List<string> Spread(int count)
         {
             List<string> all = Blueprints.PrefabFiles();
             if (all.Count <= count) return all;
 
+/// <summary>List operation.</summary>
             List<string> spread = new List<string>();
             int stride = all.Count / count;
             if (stride < 1) stride = 1;
@@ -51,10 +25,7 @@ namespace Thermodynamics.Tests
             return spread;
         }
 
-        /// <summary>
-        /// The sample, measured. Fanned out because the suite is serialised across classes and a
-        /// prefab shares nothing with another prefab, so this is the one place the cores are free.
-        /// </summary>
+/// <summary>Walk operation.</summary>
         private static List<PrefabLab.Outcome> Walk(ShipLoad.State load)
         {
             return LabRun.Map(Spread(Sample), path => PrefabLab.Measure(path, null, load),
@@ -62,14 +33,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NoShipTheGameSpawnsLosesABlockOnArrival operation.</summary>
         public void NoShipTheGameSpawnsLosesABlockOnArrival()
         {
             if (Blueprints.PrefabPath() == null) return;
 
+/// <summary>Walk operation.</summary>
             List<PrefabLab.Outcome> outcomes = Walk(ShipLoad.State.Idle);
 
             int measured = 0;
             long blocks = 0;
+/// <summary>List operation.</summary>
             List<string> lost = new List<string>();
 
             foreach (PrefabLab.Outcome outcome in outcomes)
@@ -86,6 +60,7 @@ namespace Thermodynamics.Tests
             }
 
             Assert.True(measured > 100,
+/// <summary>nothing operation.</summary>
                 "only " + measured + " prefabs were measured, so this walk judged nothing (`E8`)");
             Assert.True(blocks > 20000,
                 "only " + blocks + " blocks were simulated, so the prefabs are being read as empty");
@@ -96,16 +71,13 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", lost.ToArray()));
         }
 
-        /// <summary>
-        /// The control. The same prefabs, flown hard rather than arriving, lose blocks in numbers —
-        /// so the criterion above is a measurement rather than a formality, and the distance
-        /// between the two is what the mod is for.
-        /// </summary>
         [Fact]
+/// <summary>TheSameShipsFlownHardDoLoseBlocks operation.</summary>
         public void TheSameShipsFlownHardDoLoseBlocks()
         {
             if (Blueprints.PrefabPath() == null) return;
 
+/// <summary>Walk operation.</summary>
             List<PrefabLab.Outcome> outcomes = Walk(ShipLoad.State.Everything);
 
             int measured = 0;
@@ -125,14 +97,8 @@ namespace Thermodynamics.Tests
                 + measured + " did, which makes the idle case above unfalsifiable");
         }
 
-        /// <summary>
-        /// Every prefab the game ships is readable, including the compressed one.
-        ///
-        /// The game writes some of its own content gzipped and reads it back transparently. A
-        /// loader that handles only text silently drops those files, and one of the 705 is
-        /// compressed — which is one ship the compatibility floor was not measured on.
-        /// </summary>
         [Fact]
+/// <summary>EveryPrefabTheGameShipsCanBeRead operation.</summary>
         public void EveryPrefabTheGameShipsCanBeRead()
         {
             if (Blueprints.PrefabPath() == null) return;
@@ -141,6 +107,7 @@ namespace Thermodynamics.Tests
             Assert.True(files.Count > 500,
                 "only " + files.Count + " prefab files were found, so this is reading the wrong place");
 
+/// <summary>List operation.</summary>
             List<string> unreadable = new List<string>();
             foreach (string path in files)
             {

@@ -6,21 +6,19 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Point heat sources: the sun's maths applied to something a mod owns. What a source is
-    /// bound to, where it is and whether anything is in the way are all the host's business; by
-    /// the time the simulation sees one it is a direction and an irradiance.
-    /// </summary>
     public class HeatSourceTests
     {
+/// <summary>WithSource operation.</summary>
         private static EnvironmentSample WithSource(Vector3 direction, float irradiance)
         {
             EnvironmentSample sample = Worlds.Shadow();
+/// <summary>HeatSourceState operation.</summary>
             sample.HeatSources = new HeatSourceState[] { new HeatSourceState(direction, irradiance) };
             sample.HeatSourceCount = 1;
             return sample;
         }
 
+/// <summary>OneBlock operation.</summary>
         private static ThermalSimulation OneBlock(ThermalSettings settings)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -29,8 +27,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ASourceHeatsAnExposedBlock operation.</summary>
         public void ASourceHeatsAnExposedBlock()
         {
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation simulation = OneBlock(new ThermalSettings());
             simulation.StepExact(20, WithSource(Vector3.Right, 5000f));
 
@@ -38,11 +38,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NoSourceMeansNoGain operation.</summary>
         public void NoSourceMeansNoGain()
         {
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation lit = OneBlock(new ThermalSettings());
             lit.StepExact(20, WithSource(Vector3.Right, 5000f));
 
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation dark = OneBlock(new ThermalSettings());
             dark.StepExact(20, Worlds.Shadow());
 
@@ -50,15 +53,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheSwitchTurnsThemOff operation.</summary>
         public void TheSwitchTurnsThemOff()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableHeatSources = false;
             settings.Derive();
 
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation off = OneBlock(settings);
             off.StepExact(20, WithSource(Vector3.Right, 5000f));
 
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation none = OneBlock(new ThermalSettings());
             none.StepExact(20, Worlds.Shadow());
 
@@ -66,11 +73,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>BrighterSourcesDeliverMore operation.</summary>
         public void BrighterSourcesDeliverMore()
         {
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation dim = OneBlock(new ThermalSettings());
             dim.StepExact(20, WithSource(Vector3.Right, 1000f));
 
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation bright = OneBlock(new ThermalSettings());
             bright.StepExact(20, WithSource(Vector3.Right, 8000f));
 
@@ -78,19 +88,24 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SourcesAddToOneAnother operation.</summary>
         public void SourcesAddToOneAnother()
         {
             EnvironmentSample two = Worlds.Shadow();
             two.HeatSources = new HeatSourceState[]
             {
+/// <summary>HeatSourceState operation.</summary>
                 new HeatSourceState(Vector3.Right, 4000f),
+/// <summary>HeatSourceState operation.</summary>
                 new HeatSourceState(Vector3.Left, 4000f),
             };
             two.HeatSourceCount = 2;
 
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation pair = OneBlock(new ThermalSettings());
             pair.StepExact(20, two);
 
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation single = OneBlock(new ThermalSettings());
             single.StepExact(20, WithSource(Vector3.Right, 4000f));
 
@@ -98,19 +113,24 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>CountBoundsTheBufferSoAHostCanReuseIt operation.</summary>
         public void CountBoundsTheBufferSoAHostCanReuseIt()
         {
             EnvironmentSample sample = Worlds.Shadow();
             sample.HeatSources = new HeatSourceState[]
             {
+/// <summary>HeatSourceState operation.</summary>
                 new HeatSourceState(Vector3.Right, 4000f),
+/// <summary>HeatSourceState operation.</summary>
                 new HeatSourceState(Vector3.Left, 100000f),   // stale entry, must be ignored
             };
             sample.HeatSourceCount = 1;
 
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation bounded = OneBlock(new ThermalSettings());
             bounded.StepExact(20, sample);
 
+/// <summary>OneBlock operation.</summary>
             ThermalSimulation reference = OneBlock(new ThermalSettings());
             reference.StepExact(20, WithSource(Vector3.Right, 4000f));
 
@@ -118,6 +138,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ABuriedBlockWithNoExposedFaceGainsNothing operation.</summary>
         public void ABuriedBlockWithNoExposedFaceGainsNothing()
         {
             GridBuilder builder = GridBuilder.Large();

@@ -8,199 +8,98 @@ namespace RichHudFramework.UI
 	using Rendering;
 	using System.Collections;
 
-	/// <summary>
-	/// Collapsable list box. Designed to mimic the appearance of the dropdown in the SE terminal.
-	/// <para>
-	/// Alias of <see cref="Dropdown{TContainer, TElement, TValue}"/> using 
-	/// <see cref="ListBoxEntry{TValue}"/> and <see cref="Label"/> as the container and element, respectively.
-	/// </para>
-	/// </summary>
-	/// <typeparam name="TValue">Value paired with the list entry</typeparam>
 	public class Dropdown<TValue> : Dropdown<ListBoxEntry<TValue>, Label, TValue>
 	{
+/// <summary>Dropdown operation.</summary>
 		public Dropdown(HudParentBase parent) : base(parent)
 		{ }
 
+/// <summary>Dropdown operation.</summary>
 		public Dropdown() : base(null)
 		{ }
 	}
 
-	/// <summary>
-	/// Collapsable list box. Designed to mimic the appearance of the dropdown in the SE terminal.
-	/// <para>
-	/// Alias of <see cref="Dropdown{TContainer, TElement, TValue}"/> using 
-	/// <see cref="ListBoxEntry{TValue, TValue}"/> as the container.
-	/// </para>
-	/// </summary>
-	/// <typeparam name="TElement">UI element in the list</typeparam>
-	/// <typeparam name="TValue">Value paired with the list entry</typeparam>
 	public class Dropdown<TElement, TValue> : Dropdown<ListBoxEntry<TElement, TValue>, TElement, TValue>
+/// <summary>new operation.</summary>
 		where TElement : HudElementBase, IMinLabelElement, new()
 	{
+/// <summary>Dropdown operation.</summary>
 		public Dropdown(HudParentBase parent) : base(parent)
 		{ }
 
+/// <summary>Dropdown operation.</summary>
 		public Dropdown() : base(null)
 		{ }
 	}
 
-	/// <summary>
-	/// Generic collapsable list box. Allows use of custom entry element types.
-	/// Designed to mimic the appearance of the dropdown in the SE terminal.
-	/// </summary>
-	/// <typeparam name="TContainer">Container element type wrapping the UI element</typeparam>
-	/// <typeparam name="TElement">UI element in the list</typeparam>
-	/// <typeparam name="TValue">Value paired with the list entry</typeparam>
 	public class Dropdown<TContainer, TElement, TValue>
 		: HudElementBase, IClickableElement, IEntryBox<TContainer, TElement>
+/// <summary>new operation.</summary>
 		where TContainer : class, IListBoxEntry<TElement, TValue>, new()
 		where TElement : HudElementBase, IMinLabelElement
 	{
-		/// <summary>
-		/// Invoked when a member of the list is selected.
-		/// </summary>
 		public event EventHandler ValueChanged
 		{
 			add { listBox.ValueChanged += value; }
 			remove { listBox.ValueChanged -= value; }
 		}
 
-		/// <summary>
-		/// Event initializer utility for SelectionChanged
-		/// </summary>
 		public EventHandler UpdateValueCallback { set { listBox.ValueChanged += value; } }
 
-		/// <summary>
-		/// List of entries in the dropdown.
-		/// </summary>
 		public IReadOnlyList<TContainer> EntryList => listBox.EntryList;
 
-		/// <summary>
-		/// Read-only collection of list entries.
-		/// </summary>
 		public IReadOnlyHudCollection<TContainer, TElement> HudCollection => listBox.EntryChain;
 
-		/// <summary>
-		/// Used to allow the addition of list entries using collection-initializer syntax in
-		/// conjunction with normal initializers.
-		/// </summary>
 		public Dropdown<TContainer, TElement, TValue> ListContainer => this;
 
-		/// <summary>
-		/// Height of the dropdown list
-		/// </summary>
 		public float DropdownHeight { get { return listBox.Height; } set { listBox.Height = value; } }
 
-		/// <summary>
-		/// Padding applied to list members.
-		/// </summary>
 		public Vector2 MemberPadding { get { return listBox.MemberPadding; } set { listBox.MemberPadding = value; } }
 
-		/// <summary>
-		/// Height of entries in the dropdown.
-		/// </summary>
 		public float LineHeight { get { return listBox.LineHeight; } set { listBox.LineHeight = value; } }
 
-		/// <summary>
-		/// Default format for member text;
-		/// </summary>
 		public GlyphFormat Format { get { return listBox.Format; } set { listBox.Format = value; display.Format = value; } }
 
-		/// <summary>
-		/// Background color of the dropdown list
-		/// </summary>
 		public Color Color { get { return listBox.Color; } set { listBox.Color = value; } }
 
-		/// <summary>
-		/// Color of the slider bar
-		/// </summary>
 		public Color BarColor { get { return listBox.BarColor; } set { listBox.BarColor = value; } }
 
-		/// <summary>
-		/// Bar color when moused over
-		/// </summary>
 		public Color BarHighlight { get { return listBox.BarHighlight; } set { listBox.BarHighlight = value; } }
 
-		/// <summary>
-		/// Color of the slider box when not moused over
-		/// </summary>
 		public Color SliderColor { get { return listBox.SliderColor; } set { listBox.SliderColor = value; } }
 
-		/// <summary>
-		/// Color of the slider button when moused over
-		/// </summary>
 		public Color SliderHighlight { get { return listBox.SliderHighlight; } set { listBox.SliderHighlight = value; } }
 
-		/// <summary>
-		/// Background color of the highlight box
-		/// </summary>
 		public Color HighlightColor { get { return listBox.HighlightColor; } set { listBox.HighlightColor = value; } }
 
-		/// <summary>
-		/// Color of the highlight box's tab
-		/// </summary>
 		public Color TabColor { get { return listBox.TabColor; } set { listBox.TabColor = value; } }
 
-		/// <summary>
-		/// Padding applied to the highlight box.
-		/// </summary>
 		public Vector2 HighlightPadding { get { return listBox.HighlightPadding; } set { listBox.HighlightPadding = value; } }
 
-		/// <summary>
-		/// Minimum number of elements visible in the list at any given time.
-		/// </summary>
 		public int MinVisibleCount { get { return listBox.MinVisibleCount; } set { listBox.MinVisibleCount = value; } }
 
-		/// <summary>
-		/// Current selection. Null if empty.
-		/// </summary>
 		public TContainer Value => listBox.Value;
 
-		/// <summary>
-		/// Index of the current selection. -1 if empty.
-		/// </summary>
 		public int SelectionIndex => listBox.SelectionIndex;
 
-		/// <summary>
-		/// Interface used to manage the element's input focus state
-		/// </summary>
 		public IFocusHandler FocusHandler => display.FocusHandler;
 
-		/// <summary>
-		/// Mouse input for the dropdown display.
-		/// </summary>
 		public IMouseInput MouseInput => display.MouseInput;
 
-		/// <summary>
-		/// Indicates whether or not the dropdown is moused over.
-		/// </summary>
 		public override bool IsMousedOver => display.IsMousedOver || listBox.IsMousedOver;
 
-		/// <summary>
-		/// Indicates whether or not the list is open.
-		/// </summary>
 		public bool Open => listBox.Visible;
 
-		/// <summary>
-		/// Selection box attached to the dropdown button
-		/// </summary>
-		/// <exclude/>
 		protected readonly ListBox<TContainer, TElement, TValue> listBox;
 
-		/// <summary>
-		/// Dropdown display/button
-		/// </summary>
-		/// <exclude/>
 		protected readonly DropdownDisplay display;
 
-		/// <summary>
-		/// Flag to grab input focus on next input update
-		/// </summary>
-		/// <exclude/>
 		protected bool getDispFocus;
 
+/// <summary>Dropdown operation.</summary>
 		public Dropdown(HudParentBase parent) : base(parent)
 		{
+/// <summary>DropdownDisplay operation.</summary>
 			display = new DropdownDisplay(this)
 			{
 				DimAlignment = DimAlignments.UnpaddedSize,
@@ -214,10 +113,12 @@ namespace RichHudFramework.UI
 				ZOffset = 3,
 				DimAlignment = DimAlignments.Width,
 				ParentAlignment = ParentAlignments.Bottom,
+/// <summary>Color operation.</summary>
 				TabColor = new Color(0, 0, 0, 0),
 			};
 			listBox.FocusHandler.InputOwner = this;
 
+/// <summary>Vector2 operation.</summary>
 			Size = new Vector2(300f, 43f);
 			DropdownHeight = 100f;
 
@@ -225,13 +126,11 @@ namespace RichHudFramework.UI
 			ValueChanged += UpdateDisplay;
 		}
 
+/// <summary>Dropdown operation.</summary>
 		public Dropdown() : this(null)
 		{ }
 
-		/// <summary>
-		/// Updates mouse input and display focus
-		/// </summary>
-		/// <exclude/>
+/// <summary>HandleInput operation.</summary>
 		protected override void HandleInput(Vector2 cursorPos)
 		{
 			if (SharedBinds.LeftButton.IsNewPressed && !(display.IsMousedOver || listBox.IsMousedOver))
@@ -244,10 +143,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Updates display formatting and value to match the current selection
-		/// </summary>
-		/// <exclude/>
+/// <summary>UpdateDisplay operation.</summary>
 		protected virtual void UpdateDisplay(object sender, EventArgs args)
 		{
 			if (Value != null)
@@ -258,9 +154,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Handles dropdown display click callback
-		/// </summary>
+/// <summary>ClickDisplay operation.</summary>
 		protected virtual void ClickDisplay(object sender, EventArgs args)
 		{
 			if (!listBox.Visible)
@@ -269,9 +163,7 @@ namespace RichHudFramework.UI
 				CloseList();
 		}
 
-		/// <summary>
-		/// Expands the dropdown list and captures input focus
-		/// </summary>
+/// <summary>OpenList operation.</summary>
 		public void OpenList()
 		{
 			if (!listBox.Visible)
@@ -281,9 +173,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Collapses the dropdown list and returns focus to the display button
-		/// </summary>
+/// <summary>CloseList operation.</summary>
 		public void CloseList()
 		{
 			if (listBox.Visible)
@@ -293,93 +183,60 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Adds a new entry to the dropdown with the given name, associated value, and enabled state.
-		/// </summary>
-		/// <param name="name">Text to display for this entry</param>
-		/// <param name="assocMember">Value associated with this entry</param>
-		/// <param name="enabled">Determines if the entry is selectable and visible</param>
+/// <summary>Adds a .</summary>
 		public TContainer Add(RichText name, TValue assocMember, bool enabled = true) =>
 			listBox.Add(name, assocMember, enabled);
 
-		/// <summary>
-		/// Adds a range of entries to the dropdown from a list of tuples.
-		/// </summary>
+/// <summary>Adds a range.</summary>
 		public void AddRange(IReadOnlyList<MyTuple<RichText, TValue, bool>> entries) =>
 			listBox.AddRange(entries);
 
-		/// <summary>
-		/// Inserts a new entry at the specified index.
-		/// </summary>
-		/// <param name="index">Index at which to insert the entry</param>
-		/// <param name="name">Text to display for this entry</param>
-		/// <param name="assocMember">Value associated with this entry</param>
-		/// <param name="enabled">Determines if the entry is selectable and visible</param>
+/// <summary>Insert operation.</summary>
 		public void Insert(int index, RichText name, TValue assocMember, bool enabled = true) =>
 			listBox.Insert(index, name, assocMember, enabled);
 
-		/// <summary>
-		/// Removes the entry at the specified index.
-		/// </summary>
+/// <summary>Removes the at.</summary>
 		public void RemoveAt(int index) =>
 			listBox.RemoveAt(index);
 
-		/// <summary>
-		/// Removes the specified container entry from the dropdown.
-		/// </summary>
-		/// <returns>True if the entry was successfully removed</returns>
+/// <summary>Removes the .</summary>
 		public bool Remove(TContainer entry) =>
 			listBox.Remove(entry);
 
-		/// <summary>
-		/// Removes a range of entries starting from the specified index.
-		/// </summary>
+/// <summary>Removes the range.</summary>
 		public void RemoveRange(int index, int count) =>
 			listBox.RemoveRange(index, count);
 
-		/// <summary>
-		/// Removes all entries from the dropdown.
-		/// </summary>
+/// <summary>ClearEntries operation.</summary>
 		public void ClearEntries() =>
 			listBox.ClearEntries();
 
-		/// <summary>
-		/// Sets the selection to the entry at the specified index.
-		/// </summary>
+/// <summary>Sets the selectionat.</summary>
 		public void SetSelectionAt(int index) =>
 			listBox.SetSelectionAt(index);
 
-		/// <summary>
-		/// Sets the selection to the first entry associated with the given value.
-		/// </summary>
+/// <summary>Sets the selection.</summary>
 		public void SetSelection(TValue assocMember) =>
 			listBox.SetSelection(assocMember);
 
-		/// <summary>
-		/// Sets the selection to the specified container object.
-		/// </summary>
+/// <summary>Sets the selection.</summary>
 		public void SetSelection(TContainer member) =>
 			listBox.SetSelection(member);
 
-		/// <summary>
-		/// Internal API interop method
-		/// </summary>
-		/// <exclude/>
+/// <summary>Returns the orsetmember.</summary>
 		public object GetOrSetMember(object data, int memberEnum) =>
 		 listBox.GetOrSetMember(data, memberEnum);
 
+/// <summary>Returns the enumerator.</summary>
 		public IEnumerator<TContainer> GetEnumerator() =>
 			listBox.EntryList.GetEnumerator();
 
 		IEnumerator IEnumerable.GetEnumerator() =>
 			GetEnumerator();
 
-		/// <summary>
-		/// Custom button used for dropdown label
-		/// </summary>
-		/// <exclude/>
 		protected class DropdownDisplay : Button
 		{
+/// <summary>Material operation.</summary>
 			private static readonly Material arrowMat = new Material("RichHudDownArrow", new Vector2(64f, 64f));
 
 			public RichText Text { get { return name.Text; } set { name.Text = value; } }
@@ -390,29 +247,14 @@ namespace RichHudFramework.UI
 				set { name.Format = value; }
 			}
 
-			/// <summary>
-			/// Color of the border surrounding the button
-			/// </summary>
 			public Color BorderColor { get { return border.Color; } set { border.Color = value; } }
 
-			/// <summary>
-			/// Thickness of the border surrounding the button
-			/// </summary>
 			public float BorderThickness { get { return border.Thickness; } set { border.Thickness = value; } }
 
-			/// <summary>
-			/// Text color used when the control gains focus.
-			/// </summary>
 			public Color FocusTextColor { get; set; }
 
-			/// <summary>
-			/// Background color used when the control gains focus.
-			/// </summary>
 			public Color FocusColor { get; set; }
 
-			/// <summary>
-			/// If true, then the button will change formatting when it takes focus.
-			/// </summary>
 			public bool UseFocusFormatting { get; set; }
 
 			public readonly Label name;
@@ -421,27 +263,35 @@ namespace RichHudFramework.UI
 			private readonly BorderBox border;
 			private Color lastTextColor;
 
+/// <summary>DropdownDisplay operation.</summary>
 			public DropdownDisplay(HudParentBase parent = null) : base(parent)
 			{
+/// <summary>BorderBox operation.</summary>
 				border = new BorderBox(this)
 				{
 					Thickness = 1f,
 					DimAlignment = DimAlignments.UnpaddedSize,
 				};
 
+/// <summary>Label operation.</summary>
 				name = new Label()
 				{
 					AutoResize = false,
+/// <summary>Vector2 operation.</summary>
 					Padding = new Vector2(10f, 0f)
 				};
 
+/// <summary>TexturedBox operation.</summary>
 				divider = new TexturedBox()
 				{
+/// <summary>Vector2 operation.</summary>
 					Padding = new Vector2(4f, 17f),
 					Width = 2f,
+/// <summary>Color operation.</summary>
 					Color = new Color(104, 113, 120),
 				};
 
+/// <summary>TexturedBox operation.</summary>
 				arrow = new TexturedBox()
 				{
 					Width = 38f,
@@ -449,6 +299,7 @@ namespace RichHudFramework.UI
 					Material = arrowMat,
 				};
 
+/// <summary>HudChain operation.</summary>
 				var layout = new HudChain(false, this)
 				{
 					SizingMode = HudChainSizingModes.FitMembersOffAxis,
@@ -471,6 +322,7 @@ namespace RichHudFramework.UI
 				FocusHandler.LostInputFocus += LoseFocus;
 			}
 
+/// <summary>HandleInput operation.</summary>
 			protected override void HandleInput(Vector2 cursorPos)
 			{
 				if (FocusHandler.HasFocus)
@@ -480,6 +332,7 @@ namespace RichHudFramework.UI
 						_mouseInput.LeftClick();
 					}
 				}
+/// <summary>if operation.</summary>
 				else if (!MouseInput.IsMousedOver)
 				{
 					lastBackgroundColor = Color;
@@ -487,6 +340,7 @@ namespace RichHudFramework.UI
 				}
 			}
 
+/// <summary>CursorEnter operation.</summary>
 			protected override void CursorEnter(object sender, EventArgs args)
 			{
 				if (HighlightEnabled)
@@ -508,6 +362,7 @@ namespace RichHudFramework.UI
 				}
 			}
 
+/// <summary>CursorExit operation.</summary>
 			protected override void CursorExit(object sender, EventArgs args)
 			{
 				if (HighlightEnabled)
@@ -533,6 +388,7 @@ namespace RichHudFramework.UI
 				}
 			}
 
+/// <summary>GainFocus operation.</summary>
 			private void GainFocus(object sender, EventArgs args)
 			{
 				if (UseFocusFormatting)
@@ -551,6 +407,7 @@ namespace RichHudFramework.UI
 				}
 			}
 
+/// <summary>LoseFocus operation.</summary>
 			private void LoseFocus(object sender, EventArgs args)
 			{
 				if (UseFocusFormatting)

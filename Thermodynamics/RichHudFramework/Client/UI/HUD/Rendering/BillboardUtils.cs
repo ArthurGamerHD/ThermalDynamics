@@ -32,7 +32,6 @@ namespace RichHudFramework
 
 		namespace Rendering
 		{
-			// Returned in IReadOnlyList<BbUtilData> of length-1
 			using BbUtilData = MyTuple<
 				ApiMemberAccessor, // GetOrSetMember - 1
 				List<MyTriangleBillboard>[], // triPoolBack - 2
@@ -46,22 +45,14 @@ namespace RichHudFramework
 				>
 			>;
 
-			/// <summary>
-			/// Internal client-side interface to custom billboard pool and rendering utilities
-			/// </summary>
-			/// <exclude/>
 			public sealed partial class BillBoardUtils : RichHudClient.ApiModule
 			{
 				private static BillBoardUtils instance;
 
-				// Shared data
-				// Billboard pools - parallel with corresponding triangle lists
 				private readonly List<MyTriangleBillboard>[] triPoolBack;
 				private readonly List<MyTriangleBillboard>[] flatTriPoolBack;
-				// BB batch copy/scratch buffer
 				private readonly List<MyTriangleBillboard> bbBuf;
 
-				// Intermediate billboard data
 				private readonly List<TriangleBillboardData> triangleList;
 				private readonly List<FlatTriangleBillboardData> flatTriangleList;
 				private readonly List<MatrixD> matrixBuf;
@@ -69,6 +60,7 @@ namespace RichHudFramework
 
 				private readonly ApiMemberAccessor GetOrSetMember;
 
+/// <summary>BillBoardUtils operation.</summary>
 				private BillBoardUtils() : base(ApiModuleTypes.BillBoardUtils, false, true)
 				{
 					if (instance != null)
@@ -85,14 +77,17 @@ namespace RichHudFramework
 					bbBuf = data[0].Item6.Item3;
 				}
 
+/// <summary>Init operation.</summary>
 				public static void Init()
 				{
 					if (instance == null)
 					{
+/// <summary>BillBoardUtils operation.</summary>
 						instance = new BillBoardUtils();
 					}
 				}
 
+/// <summary>Close operation.</summary>
 				public override void Close()
 				{
 					if (ExceptionHandler.Unloading)

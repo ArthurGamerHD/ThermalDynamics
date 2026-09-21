@@ -2,7 +2,6 @@ using VRageMath;
 
 namespace Thermodynamics.Presentation
 {
-    /// <summary>Conservative model-space backface rejection for ordinary affine transforms.</summary>
     public enum ThermalVisionProjection { Visible, Backface, Degenerate }
 
     public struct ThermalVisionWorldTriangle
@@ -13,16 +12,15 @@ namespace Thermodynamics.Presentation
 
     public static class ThermalVisionGeometry
     {
-        /// <summary>Conservative local bounds for an axis-aligned rectangular thermal patch.
-        /// Padding includes the renderer's 1 mm camera-facing displacement.</summary>
+/// <summary>PatchBounds operation.</summary>
         public static BoundingBoxD PatchBounds(Vector3D a,Vector3D c)
         {
+/// <summary>Vector3D operation.</summary>
             var padding=new Vector3D(.004);
             return new BoundingBoxD(Vector3D.Min(a,c)-padding,Vector3D.Max(a,c)+padding);
         }
 
-        /// <summary>One facing normal shared by all positive-area patches on a planar face.
-        /// Untranslated tangents avoid subtracting large world coordinates.</summary>
+/// <summary>FaceNormal operation.</summary>
         public static bool FaceNormal(Vector3D worldU,Vector3D worldV,Vector3D eyeFromFace,
             out Vector3 normal,out bool reverse)
         {
@@ -35,9 +33,11 @@ namespace Thermodynamics.Presentation
             return true;
         }
 
+/// <summary>Project operation.</summary>
         public static ThermalVisionProjection Project(ThermalVisionTriangle triangle, MatrixD world,
             Vector3D eye, bool localCull, Vector3D localEye, out ThermalVisionWorldTriangle result)
         {
+/// <summary>ThermalVisionWorldTriangle operation.</summary>
             result = new ThermalVisionWorldTriangle();
             if (localCull && IsBackFacing(triangle.LocalNormal, triangle.A, localEye))
                 return ThermalVisionProjection.Backface;
@@ -52,18 +52,18 @@ namespace Thermodynamics.Presentation
             return ThermalVisionProjection.Visible;
         }
 
+/// <summary>TryGetLocalEye operation.</summary>
         public static bool TryGetLocalEye(MatrixD world, Vector3D eye, out Vector3D localEye)
         {
             localEye = Vector3D.Zero;
-            // Mirrored or singular transforms must use the world-space winding check instead.
             if (!(world.Determinant() > 1e-12)) return false;
             localEye = Vector3D.Transform(eye, MatrixD.Invert(world));
             return true;
         }
 
+/// <summary>IsBackFacing operation.</summary>
         public static bool IsBackFacing(Vector3 normal, Vector3 vertex, Vector3D localEye)
         {
-            // Degenerate triangles are left to the world-space degeneracy accounting.
             return normal.LengthSquared() > 1e-20f && Vector3D.Dot(normal, localEye - vertex) <= 0;
         }
     }

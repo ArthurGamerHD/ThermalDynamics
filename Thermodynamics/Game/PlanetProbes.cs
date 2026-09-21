@@ -10,29 +10,12 @@ using VRageMath;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// Regular wind and climate readings from fixed points all over a planet, taken whether or not
-    /// anything is standing there — the field is a pure function of position, weather and hour, so
-    /// there is no reason the only places it is measured are the ones somebody parked in. Each probe
-    /// runs the same <see cref="WindSolver.Solve"/> the grids do and writes the same columns the
-    /// offline lab does. Server side, off unless <see cref="Settings.TelemetryPlanetProbes"/> is set.
-    /// See environment.md, Measuring it.
-    /// </summary>
     public static class PlanetProbes
     {
-        /// <summary>Heights above ground each probe reads, m.</summary>
         private static readonly float[] Heights = { 2f, 10f, 100f, 400f, 1200f };
 
-        /// <summary>
-        /// Longitudes per latitude ring. Eight is enough to see the field vary along a band without
-        /// making the sweep expensive; the interesting variation is with latitude and height.
-        /// </summary>
         private const int Longitudes = 8;
 
-        /// <summary>
-        /// Latitude rings, from pole to pole. Nine gives ±80° in twenty degree steps plus the
-        /// equator — which the circulation bands sit between, and where the field's known fault is.
-        /// </summary>
         private const int Latitudes = 9;
 
         public struct Row
@@ -55,18 +38,14 @@ namespace Thermodynamics
             public float Speed;
             public float BearingDegrees;
 
-            // The climate at the same point, from the same functions the grids use. A probe sweep is
-            // the only way to see a planet's thermals across every latitude and a whole day without
-            // parking a fleet, and the wind and the climate share every input, so they share a row.
             public float AmbientKelvin;
             public float AmbientTargetKelvin;
             public float AirDensity;
         }
 
-        /// <summary>Everything collected this session. Read by the report writer.</summary>
+/// <summary>List operation.</summary>
         public static readonly List<Row> Rows = new List<Row>();
 
-        /// <summary>One probe's lasting state: where it is, what the ground round it looks like.</summary>
         private class Probe
         {
             public float Latitude;
@@ -75,18 +54,18 @@ namespace Thermodynamics
             public double GroundRadius;
             public float[] Terrain;
 
-            /// <summary>Its own lagged heating, since the hour differs with longitude.</summary>
             public float Heating = -1f;
 
-            /// <summary>Lagged ambient per height, K. Zero until the first sample.</summary>
             public float[] Ambient = new float[Heights.Length];
         }
 
+/// <summary>List operation.</summary>
         private static readonly List<Probe> Sites = new List<Probe>();
 
         private static long planetId = -1;
         private static int stepsSince;
 
+/// <summary>Reset operation.</summary>
         public static void Reset()
         {
             Rows.Clear();
@@ -95,13 +74,7 @@ namespace Thermodynamics
             stepsSince = 0;
         }
 
-        /// <summary>
-        /// Advances the sweep. Called once per solver step from the session, not per grid.
-        ///
-        /// The lattice is built once per planet — sixteen surface lookups per probe, and then never
-        /// again, because a probe does not move and the ground under it does not change. What
-        /// repeats is the arithmetic, which is free.
-        /// </summary>
+/// <summary>Step operation.</summary>
         public static void Step(float seconds)
         {
             int interval = Settings.Instance.TelemetryPlanetProbes;
@@ -117,6 +90,7 @@ namespace Thermodynamics
             float elapsed = stepsSince * seconds;
             stepsSince = 0;
 
+/// <summary>Anchor operation.</summary>
             PlanetManager.Planet planet = Anchor();
             if (planet == null || planet.Entity == null)
             {
@@ -134,10 +108,7 @@ namespace Thermodynamics
             Sample(planet, elapsed);
         }
 
-        /// <summary>
-        /// The planet to probe: the one the first simulated grid is nearest. A world with no grids
-        /// on a planet has nothing to compare probes against, so there is nothing to sweep.
-        /// </summary>
+/// <summary>Anchor operation.</summary>
         private static PlanetManager.Planet Anchor()
         {
             IList<ThermalGrid> grids = ThermalGrid.LiveGrids;
@@ -156,6 +127,7 @@ namespace Thermodynamics
             return null;
         }
 
+/// <summary>Builds the API method table.</summary>
         private static void Build(PlanetManager.Planet planet)
         {
             Sites.Clear();
@@ -170,8 +142,6 @@ namespace Thermodynamics
 
             for (int i = 0; i < Latitudes; i++)
             {
-                // −80 to +80 inclusive, with the equator in the middle. The poles themselves are
-                // skipped: the circulation has no direction there and the field says so.
                 float latitude = -80f + (i * (160f / (Latitudes - 1)));
                 double lat = latitude * Math.PI / 180d;
 
@@ -188,11 +158,13 @@ namespace Thermodynamics
                     Vector3D at = centre + (up * entity.MaximumRadius);
                     Vector3D surface = entity.GetClosestSurfacePointGlobal(ref at);
 
+/// <summary>Probe operation.</summary>
                     Probe probe = new Probe();
                     probe.Latitude = latitude;
                     probe.Longitude = longitude;
                     probe.Up = up;
                     probe.GroundRadius = (surface - centre).Length();
+/// <summary>ReadTerrain operation.</summary>
                     probe.Terrain = ReadTerrain(entity, ref centre, ref axis, probe, radius);
 
                     Sites.Add(probe);
@@ -200,7 +172,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>The ring of ground heights around a probe, as <see cref="WindTerrain"/> wants it.</summary>
+/// <summary>ReadTerrain operation.</summary>
         private static float[] ReadTerrain(
             MyPlanet entity, ref Vector3D centre, ref Vector3D axis, Probe probe, float radius)
         {
@@ -240,6 +212,7 @@ namespace Thermodynamics
             return ring;
         }
 
+/// <summary>Sample operation.</summary>
         private static void Sample(PlanetManager.Planet planet, float elapsed)
         {
             MyPlanet entity = planet.Entity;
@@ -252,8 +225,6 @@ namespace Thermodynamics
             Settings settings = Settings.Instance;
             float seconds = (float)Math.Round(Telemetry.SessionSeconds);
 
-            // The planet's own thermal properties, which Data/Planets.xml now supplies per world
-            // rather than one earthlike entry standing in for all eight.
             PlanetThermalProperties properties =
                 ThermalBlockCatalog.ToPlanetProperties(planet.Definition());
 
@@ -265,6 +236,7 @@ namespace Thermodynamics
                 float sunSine = Vector3.Dot(up, sun);
 
                 probe.Heating = WindProfile.Heating(
+/// <summary>Simulation operation.</summary>
                     probe.Heating, sunSine, elapsed, Simulation(planet));
 
                 Vector3 east = Vector3.Cross(axis, up);
@@ -272,7 +244,6 @@ namespace Thermodynamics
                 if (hasEast) east = Vector3.Normalize(east);
                 Vector3 north = hasEast ? Vector3.Normalize(Vector3.Cross(up, east)) : Vector3.Zero;
 
-                // The weather over the probe, which is a lookup per probe rather than per height.
                 Vector3D at = centre + (probe.Up * probe.GroundRadius);
                 float intensity = MyVisualScriptLogicProvider.GetWeatherIntensity(at);
                 float weatherWind = 1f;
@@ -297,8 +268,6 @@ namespace Thermodynamics
 
                     WindSolver.Inputs inputs = new WindSolver.Inputs();
 
-                    // The same gate the live path takes, so this reports the wind a world has
-                    // rather than the wind it would have had (`C7`).
                     inputs.Ceiling = settings.EnableWind ? entity.GetWindSpeed(position) : 0f;
                     inputs.Up = up;
                     inputs.Axis = axis;
@@ -308,7 +277,6 @@ namespace Thermodynamics
                     inputs.HeightAboveGround = height;
                     inputs.Heating = probe.Heating;
                     inputs.Roughness = settings.WindRoughnessLength;
-                    // Capped by the air over this probe's own ground. See backlog B20.
                     inputs.GradientHeight = WindProfile.GradientHeightIn(
                         settings.WindGradientHeight,
                         entity.HasAtmosphere
@@ -324,6 +292,7 @@ namespace Thermodynamics
 
                     WindSolver.Result wind = WindSolver.Solve(ref inputs);
 
+/// <summary>Row operation.</summary>
                     Row row = new Row();
                     row.Seconds = seconds;
                     row.Planet = entity.StorageName;
@@ -349,10 +318,6 @@ namespace Thermodynamics
                             Vector3.Dot(wind.Direction, north)) * 180d / Math.PI)
                         : 0f;
 
-                    // The climate here, through the same chain a grid's ambient goes through: the
-                    // day-night target at this latitude, cooled for altitude, thinned by the air,
-                    // then lagged. The lag is kept per probe and per height, since the two heights
-                    // of one probe are different air.
                     float latitudeSine = Vector3.Dot(up, Vector3.Normalize(axis));
                     float target = ClimateModel.Target(properties, latitudeSine, sunSine, 0f);
 
@@ -376,16 +341,17 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>The climate lag the heating curve shares, from whichever grid has the planet.</summary>
+/// <summary>Simulation operation.</summary>
         private static float Simulation(PlanetManager.Planet planet)
         {
             return Settings.Instance.PlanetAmbientLagSeconds > 0f
                 ? Settings.Instance.PlanetAmbientLagSeconds : 45f;
         }
 
-        /// <summary>The sweep as CSV, in the same column layout the offline model writes.</summary>
+/// <summary>Csv operation.</summary>
         public static string Csv()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append("time_s,planet,latitude_deg,longitude_deg,ground_elev_m,sun_elevation_deg,")
               .Append("wind_agl_m,wind_ceiling,wind_band_share,wind_profile,wind_heating,")
@@ -411,6 +377,7 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
+/// <summary>N operation.</summary>
         private static string N(float value)
         {
             return value.ToString("0.####", CultureInfo.InvariantCulture);

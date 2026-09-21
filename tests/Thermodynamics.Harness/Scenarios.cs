@@ -15,10 +15,6 @@ namespace Thermodynamics.Harness
         public string Csv;
     }
 
-    /// <summary>
-    /// The scenario library. Each one is a self-contained experiment that answers a question
-    /// about the model, and each is cheap enough to run from a test.
-    /// </summary>
     public static class Scenarios
     {
         public static readonly string[] Names = new string[]
@@ -59,75 +55,99 @@ namespace Thermodynamics.Harness
             "station",
         };
 
+/// <summary>Run operation.</summary>
         public static ScenarioResult Run(string name)
         {
             switch (name)
             {
+/// <summary>VacuumSoak operation.</summary>
                 case "vacuum-soak": return VacuumSoak();
+/// <summary>Reactor operation.</summary>
                 case "reactor": return Reactor();
+/// <summary>Atmosphere operation.</summary>
                 case "atmosphere": return Atmosphere();
+/// <summary>DayNight operation.</summary>
                 case "daynight": return DayNight();
+/// <summary>Reentry operation.</summary>
                 case "reentry": return Reentry();
+/// <summary>Coolant operation.</summary>
                 case "coolant": return Coolant();
+/// <summary>SealedRoom operation.</summary>
                 case "sealed-room": return SealedRoom();
+/// <summary>Meltdown operation.</summary>
                 case "meltdown": return Meltdown();
+/// <summary>Radiator operation.</summary>
                 case "radiator": return Radiator();
+/// <summary>Airlock operation.</summary>
                 case "airlock": return Airlock();
+/// <summary>CoolantFailure operation.</summary>
                 case "coolant-failure": return CoolantFailure();
+/// <summary>Welding operation.</summary>
                 case "welding": return Welding();
+/// <summary>FirstRoom operation.</summary>
                 case "first-room": return FirstRoom();
+/// <summary>Stiff operation.</summary>
                 case "stiff": return Stiff();
+/// <summary>Units operation.</summary>
                 case "units": return Units();
+/// <summary>Performance operation.</summary>
                 case "perf": return Performance();
+/// <summary>Capital operation.</summary>
                 case "capital": return Capital();
+/// <summary>Fleet operation.</summary>
                 case "fleet": return Fleet();
+/// <summary>Interior operation.</summary>
                 case "interior": return Interior();
+/// <summary>Solver operation.</summary>
                 case "solver": return Solver();
+/// <summary>SelfShadow operation.</summary>
                 case "self-shadow": return SelfShadow();
+/// <summary>ShadowCost operation.</summary>
                 case "shadow-cost": return ShadowCost();
+/// <summary>Weather operation.</summary>
                 case "weather": return Weather();
+/// <summary>Underground operation.</summary>
                 case "underground": return Underground();
+/// <summary>CoolingPlant operation.</summary>
                 case "cooling-plant": return CoolingPlant();
+/// <summary>LoopFaults operation.</summary>
                 case "loop-faults": return LoopFaults();
+/// <summary>LoopDry operation.</summary>
                 case "loop-dry": return LoopDry();
+/// <summary>HeatPumpBackwards operation.</summary>
                 case "heatpump-backwards": return HeatPumpBackwards();
+/// <summary>HeatPumpLimits operation.</summary>
                 case "heatpump-limits": return HeatPumpLimits();
+/// <summary>CoolingRunaway operation.</summary>
                 case "cooling-runaway": return CoolingRunaway();
+/// <summary>LoopStiffness operation.</summary>
                 case "loop-stiffness": return LoopStiffness();
+/// <summary>LoopLayout operation.</summary>
                 case "loop-layout": return LoopLayout();
+/// <summary>AirConditioning operation.</summary>
                 case "air-conditioning": return AirConditioning();
+/// <summary>Station operation.</summary>
                 case "station": return Station();
                 default:
                     throw new ArgumentException("Unknown scenario: " + name);
             }
         }
 
-        /// <summary>
-        /// A slab in full sunlight, of the shape that showed the model up: four cells thick, seven
-        /// tall, four deep, with a recess cut into one face.
-        ///
-        /// It answers the question the pictures kept raising — which faces of a solid hull are lit,
-        /// and by how much — three ways at once. The sunward face should be lit whole. The two
-        /// flanks should be lit whole and dimmer, because they are square-on to nothing but still
-        /// out in the open, and a model that treats shadow as a property of a block instead of a
-        /// face lights only the outermost row of them. The recess should be dark, because the wall
-        /// beside it is in the way.
-        ///
-        /// It also states the cost of the two models against each other, since that is what the
-        /// setting is for.
-        /// </summary>
+/// <summary>SelfShadow operation.</summary>
         public static ScenarioResult SelfShadow()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.SolarSelfShadowing = true;
 
+/// <summary>Slab operation.</summary>
             GridBuilder builder = Slab();
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
             simulation.Solver.CollectDiagnostics = true;
 
-            // Sun over the +X flank and a little above, the angle the test world was standing in.
             EnvironmentSample sun = Worlds.Space(new Vector3(0.9004f, 0.1619f, -0.4038f));
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => sun;
             runner.Track("sunward-face", simulation.Solver.GetNodeAt(new Vector3I(3, 3, 1)).Block);
@@ -137,42 +157,44 @@ namespace Thermodynamics.Harness
 
             SunShadowMap shadow = simulation.Solver.SunShadow;
 
+/// <summary>LitShare operation.</summary>
             float sunward = LitShare(simulation, shadow, Face.Right);
+/// <summary>LitShare operation.</summary>
             float top = LitShare(simulation, shadow, Face.Up);
+/// <summary>LitShare operation.</summary>
             float flank = LitShare(simulation, shadow, Face.Forward);
 
-            // The same grid with self-shadowing off, for the comparison the setting exists to let
-            // people make.
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings cheap = new ThermalSettings();
             cheap.SolarSelfShadowing = false;
 
+/// <summary>Slab operation.</summary>
             ThermalSimulation plain = Slab().BuildSimulation(cheap, 293.15f);
             plain.Solver.CollectDiagnostics = true;
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner cheapRunner = new ScenarioRunner(plain);
             cheapRunner.Environment = t => sun;
             cheapRunner.Run(1800f, 300f);
 
             return Result("self-shadow", runner,
                 "Solid slab in sunlight, sun over the +X flank. Exposed faces lit: sunward "
+/// <summary>Pct operation.</summary>
                 + Pct(sunward) + ", top " + Pct(top) + ", flank " + Pct(flank)
+/// <summary>Pct operation.</summary>
                 + ", recess floor " + Pct(RecessShare(simulation, shadow))
                 + ". Shadowed air cells: " + shadow.ShadowedCount
+/// <summary>W operation.</summary>
                 + ". Grid solar with self-shadowing " + W(TotalSolar(simulation))
+/// <summary>W operation.</summary>
                 + " against " + W(TotalSolar(plain)) + " without. Hottest "
+/// <summary>C operation.</summary>
                 + C(runner.Final.HottestTemperature) + " against "
+/// <summary>C operation.</summary>
                 + C(cheapRunner.Final.HottestTemperature) + ".");
         }
 
-        /// <summary>
-        /// What self-shadowing costs against the model it replaces.
-        ///
-        /// The two are not the same kind of work, so both halves have to be reported. The cheap
-        /// model costs a dot product per face on every step, forever. This one costs that plus a
-        /// walk over the hull's air cells — but only when the sun has moved, which on a planet is
-        /// seconds of play apart, and the walk is spread over ticks besides. A per-step average
-        /// alone would flatter it; a pass cost alone would damn it.
-        /// </summary>
+/// <summary>ShadowCost operation.</summary>
         public static ScenarioResult ShadowCost()
         {
             const int side = 20;
@@ -183,16 +205,16 @@ namespace Thermodynamics.Harness
             Vector3 sun = Vector3.Normalize(new Vector3(0.9004f, 0.1619f, -0.4038f));
             EnvironmentSample sample = Worlds.Space(sun);
 
+/// <summary>StepCost operation.</summary>
             double cheap = StepCost(builder, false, sample);
+/// <summary>StepCost operation.</summary>
             double shadowed = StepCost(builder, true, sample);
 
             ThermalSimulation solid = builder.BuildSimulation(Shadowing(true), 293.15f);
             solid.Update(1f / 60f, sample);
+/// <summary>MeasurePass operation.</summary>
             PassCost solidPass = MeasurePass(solid, sun);
 
-            // A hull with rooms in it is the harder case, and the realistic one: every interior
-            // cell borders a block, so it is walked too, and its walk ends against the hull rather
-            // than in open space.
             GridBuilder hull = GridBuilder.Large();
             hull.Shell(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(30, 20, 20));
             for (int y = 4; y < 20; y += 6)
@@ -202,17 +224,22 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation ship = hull.BuildSimulation(Shadowing(true), 293.15f);
             ship.Update(1f / 60f, sample);
+/// <summary>MeasurePass operation.</summary>
             PassCost shipPass = MeasurePass(ship, sun);
 
             int budget = solid.Solver.SunShadowBudget;
 
             return Result("shadow-cost", new ScenarioRunner(solid),
                 side + "^3 solid grid, " + solid.Solver.Nodes.Count + " blocks: step with "
+/// <summary>Ms operation.</summary>
                 + "self-shadowing off " + Ms(cheap) + ", on " + Ms(shadowed)
                 + " (" + Overhead(cheap, shadowed) + "). One full pass " + solidPass.Cells
+/// <summary>Ms operation.</summary>
                 + " air cells in " + Ms(solidPass.Milliseconds) + ", "
+/// <summary>Slices operation.</summary>
                 + Slices(solidPass, budget) + ". A 30x20x20 hull with decks, "
                 + ship.Solver.Nodes.Count + " blocks: pass " + shipPass.Cells + " air cells in "
+/// <summary>Ms operation.</summary>
                 + Ms(shipPass.Milliseconds) + ", " + Slices(shipPass, budget)
                 + ". A pass runs when the sun moves 2 degrees, and never between.");
         }
@@ -223,11 +250,12 @@ namespace Thermodynamics.Harness
             public double Milliseconds;
         }
 
-        /// <summary>Best of three whole passes, so a stray scheduling hiccup is not the headline.</summary>
+/// <summary>MeasurePass operation.</summary>
         private static PassCost MeasurePass(ThermalSimulation simulation, Vector3 sun)
         {
             SunShadowMap map = simulation.Solver.SunShadow;
 
+/// <summary>PassCost operation.</summary>
             PassCost best = new PassCost();
             best.Milliseconds = double.MaxValue;
 
@@ -249,24 +277,23 @@ namespace Thermodynamics.Harness
             return best;
         }
 
+/// <summary>Slices operation.</summary>
         private static string Slices(PassCost pass, int budget)
         {
             int slices = Math.Max(1, (pass.Cells + budget - 1) / budget);
             return slices + " slices of " + budget + " at " + Ms(pass.Milliseconds / slices) + " each";
         }
 
+/// <summary>Shadowing operation.</summary>
         private static ThermalSettings Shadowing(bool on)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.SolarSelfShadowing = on;
             return settings;
         }
 
-        /// <summary>
-        /// Milliseconds per tick in the steady state — the sun standing still, so no pass is
-        /// running. Best of three runs, because this is a small difference between large numbers
-        /// and a single sample of it is mostly scheduler noise.
-        /// </summary>
+/// <summary>StepCost operation.</summary>
         private static double StepCost(GridBuilder builder, bool shadowing, EnvironmentSample sample)
         {
             double best = double.MaxValue;
@@ -275,7 +302,6 @@ namespace Thermodynamics.Harness
             {
                 ThermalSimulation simulation = builder.BuildSimulation(Shadowing(shadowing), 293.15f);
 
-                // Let any pass finish first: this is the steady state, not the first tick.
                 for (int i = 0; i < 60; i++) simulation.Update(1f / 60f, sample);
 
                 const int measured = 400;
@@ -290,11 +316,13 @@ namespace Thermodynamics.Harness
             return best;
         }
 
+/// <summary>Ms operation.</summary>
         private static string Ms(double milliseconds)
         {
             return milliseconds.ToString("n3") + " ms";
         }
 
+/// <summary>Overhead operation.</summary>
         private static string Overhead(double baseline, double measured)
         {
             if (baseline <= 0) return "n/a";
@@ -303,14 +331,12 @@ namespace Thermodynamics.Harness
             return (percent >= 0 ? "+" : "") + percent.ToString("n1") + "%";
         }
 
-        /// <summary>The slab: a four-thick wall with a two-cell recess cut into its shaded side.</summary>
+/// <summary>Slab operation.</summary>
         private static GridBuilder Slab()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 7, 4));
 
-            // A doorway-sized bite out of the -X face, so some faces are open to the sky and
-            // cannot see the sun.
             for (int y = 2; y < 5; y++)
             {
                 for (int z = 1; z < 3; z++)
@@ -323,7 +349,7 @@ namespace Thermodynamics.Harness
             return builder;
         }
 
-        /// <summary>Share of one direction's exposed cell faces that the sun reaches, 0..1.</summary>
+/// <summary>LitShare operation.</summary>
         private static float LitShare(ThermalSimulation simulation, SunShadowMap shadow, int face)
         {
             int exposed = 0;
@@ -342,7 +368,7 @@ namespace Thermodynamics.Harness
             return exposed == 0 ? 0f : lit / exposed;
         }
 
-        /// <summary>Share of the recess's inward-looking faces the sun reaches.</summary>
+/// <summary>RecessShare operation.</summary>
         private static float RecessShare(ThermalSimulation simulation, SunShadowMap shadow)
         {
             int cells = 0;
@@ -363,6 +389,7 @@ namespace Thermodynamics.Harness
             return cells == 0 ? 0f : lit / cells;
         }
 
+/// <summary>TotalSolar operation.</summary>
         private static float TotalSolar(ThermalSimulation simulation)
         {
             float total = 0f;
@@ -371,11 +398,13 @@ namespace Thermodynamics.Harness
             return total;
         }
 
+/// <summary>Pct operation.</summary>
         private static string Pct(float fraction)
         {
             return (fraction * 100f).ToString("n0") + "%";
         }
 
+/// <summary>W operation.</summary>
         private static string W(float watts)
         {
             return watts >= 1000f
@@ -383,7 +412,7 @@ namespace Thermodynamics.Harness
                 : watts.ToString("n0") + " W";
         }
 
-        /// <summary>A single hot block radiating into empty space.</summary>
+/// <summary>VacuumSoak operation.</summary>
         public static ScenarioResult VacuumSoak()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -391,6 +420,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 800f);
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("block", builder.Placed[0]);
@@ -398,16 +428,16 @@ namespace Thermodynamics.Harness
 
             return Result("vacuum-soak", runner,
                 "One heavy armour block at 800 K radiating into shadow. Ends at "
+/// <summary>C operation.</summary>
                 + C(runner.Final.HottestTemperature) + " after one hour.");
         }
 
-        /// <summary>A reactor buried in armour, with and without a path to the surface.</summary>
+/// <summary>Reactor operation.</summary>
         public static ScenarioResult Reactor()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), new Vector3I(-2, -2, -2), new Vector3I(3, 3, 3));
 
-            // swap the centre block for a reactor
             BlockInstance centre = builder.Grid.GetAtCell(Vector3I.Zero);
             builder.Grid.Remove(centre);
             builder.Placed.Remove(centre);
@@ -415,6 +445,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", builder.Last);
@@ -423,11 +454,13 @@ namespace Thermodynamics.Harness
 
             return Result("reactor", runner,
                 "15 MW reactor at the centre of a 5x5x5 light armour cube in shadow. Reactor reaches "
+/// <summary>C operation.</summary>
                 + C(runner.Final.Tracked["reactor"]) + ", hull "
+/// <summary>C operation.</summary>
                 + C(runner.Final.Tracked["hull"]) + ".");
         }
 
-        /// <summary>The same reactor cube, on a planet surface, where convection dominates.</summary>
+/// <summary>Atmosphere operation.</summary>
         public static ScenarioResult Atmosphere()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -440,6 +473,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.PlanetSurface(1f, 0.25f);
             runner.Track("reactor", builder.Last);
@@ -448,11 +482,13 @@ namespace Thermodynamics.Harness
 
             return Result("atmosphere", runner,
                 "The same reactor cube at sea level. Reactor settles at "
+/// <summary>C operation.</summary>
                 + C(runner.Final.Tracked["reactor"]) + " against "
+/// <summary>C operation.</summary>
                 + C(runner.Final.AmbientTemperature) + " ambient.");
         }
 
-        /// <summary>Bare hull through a full day, tracking the solar swing.</summary>
+/// <summary>DayNight operation.</summary>
         public static ScenarioResult DayNight()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -460,6 +496,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 250f);
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             float dayLength = 7200f;
             runner.Environment = t => Worlds.PlanetSurface(0f, (t / dayLength) % 1f);
@@ -477,10 +514,11 @@ namespace Thermodynamics.Harness
 
             return Result("daynight", runner,
                 "Airless 3x1x3 plate over two rotations. Swings between "
+/// <summary>C operation.</summary>
                 + C(min) + " and " + C(max) + ".");
         }
 
-        /// <summary>Atmospheric entry: fast, dense air, leading face into the flow.</summary>
+/// <summary>Reentry operation.</summary>
         public static ScenarioResult Reentry()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -488,6 +526,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Flight(0.8f, 300f);
             runner.Track("nose", builder.Placed[0]);
@@ -496,18 +535,15 @@ namespace Thermodynamics.Harness
             return Result("reentry",
                 runner,
                 "3x3 heavy armour face into 300 m/s of 0.8 density air. Nose reaches "
+/// <summary>C operation.</summary>
                 + C(runner.Final.Tracked["nose"]) + ".");
         }
 
-        /// <summary>
-        /// A reactor bolted to a coolant ring that also runs past a radiator: the loop should
-        /// move heat out of the reactor and into a block that can shed it.
-        /// </summary>
+/// <summary>Coolant operation.</summary>
         public static ScenarioResult Coolant()
         {
             GridBuilder builder = GridBuilder.Large();
 
-            // A 4x2 ring in the XZ plane, pumped, with sinks on the two long straights.
             List<Vector3I> ring = PipeFitter.RectangleXZ(Vector3I.Zero, 4, 2);
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
             sinks[1] = Vector3I.Down;   // toward the reactor
@@ -524,6 +560,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", reactor);
@@ -537,24 +574,23 @@ namespace Thermodynamics.Harness
             string found = simulation.Solver.Loops.Count > 0
                 ? simulation.Solver.Loops.Count + " loop of " + simulation.Solver.Loops[0].PipeCount + " pipes, "
                   + simulation.Solver.Loops[0].Links.Count + " links"
+/// <summary>LOOP operation.</summary>
                 : "NO CLOSED LOOP (" + pipes.Count + " pipes placed)";
 
             return Result("coolant", runner,
                 "Pumped coolant ring between a 1.25 MW source and a plain armour block: " + found
+/// <summary>C operation.</summary>
                 + ". Reactor " + C(runner.Final.Tracked["reactor"])
                 + ", coolant " + (runner.Final.Tracked.ContainsKey("coolant") ? C(runner.Final.Tracked["coolant"]) : "n/a")
+/// <summary>C operation.</summary>
                 + ", sink block " + C(runner.Final.Tracked["sink-block"]) + ".");
         }
 
-        /// <summary>
-        /// A reactor sealed inside a shell it is bolted to. The reactor must have no exposed
-        /// faces, so its only way out is conduction through the hull.
-        /// </summary>
+/// <summary>SealedRoom operation.</summary>
         public static ScenarioResult SealedRoom()
         {
             GridBuilder builder = GridBuilder.Large();
 
-            // 3x3x3 shell with a single hollow cell at the centre.
             builder.Shell(Catalog.LightArmor(), new Vector3I(-1, -1, -1), new Vector3I(2, 2, 2));
             builder.Place(Catalog.Reactor(), Vector3I.Zero).Wasting(500000f);
             BlockInstance reactor = builder.Last;
@@ -564,6 +600,7 @@ namespace Thermodynamics.Harness
             ThermalNode interior = simulation.Solver.GetNode(reactor);
             ThermalNode shell = simulation.Solver.GetNodeAt(new Vector3I(1, 0, 0));
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("interior-reactor", reactor);
@@ -575,11 +612,13 @@ namespace Thermodynamics.Harness
                 + interior.TotalExposedFaces + " (expected 0), conduction links: "
                 + interior.LinkCount + ", shell exposed faces: "
                 + shell.TotalExposedFaces + ". Reactor "
+/// <summary>C operation.</summary>
                 + C(runner.Final.Tracked["interior-reactor"]) + ", shell "
+/// <summary>C operation.</summary>
                 + C(runner.Final.Tracked["shell"]) + ".");
         }
 
-        /// <summary>An overpowered reactor with nowhere to dump heat, to exercise damage.</summary>
+/// <summary>Meltdown operation.</summary>
         public static ScenarioResult Meltdown()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -590,6 +629,7 @@ namespace Thermodynamics.Harness
             float totalDamage = 0f;
             float timeToCritical = -1f;
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", builder.Placed[0]);
@@ -609,12 +649,13 @@ namespace Thermodynamics.Harness
 
             return Result("meltdown", runner,
                 "300 MW into a single unshielded reactor for 10 minutes: "
+/// <summary>C operation.</summary>
                 + C(simulation.Solver.HottestNode().Temperature) + ", critical after "
                 + (timeToCritical < 0f ? "never" : timeToCritical.ToString("n1") + " s")
                 + ", cumulative damage " + totalDamage.ToString("n0") + ".");
         }
 
-        /// <summary>Throughput on a grid large enough to matter.</summary>
+/// <summary>Performance operation.</summary>
         public static ScenarioResult Performance()
         {
             const int side = 20;
@@ -631,7 +672,6 @@ namespace Thermodynamics.Harness
             EnvironmentSample environment = Worlds.Shadow();
             EnvironmentState state = EnvironmentSolver.Solve(simulation.Settings, simulation.Planet, environment);
 
-            // warm up, then measure
             for (int i = 0; i < 10; i++) simulation.Solver.Step(simulation.Settings.StepSeconds, state);
 
             Stopwatch run = Stopwatch.StartNew();
@@ -644,12 +684,12 @@ namespace Thermodynamics.Harness
 
             double perStepMs = run.Elapsed.TotalMilliseconds / measured;
 
-            // How much the coalesced room mapping saves during construction. The original
-            // restarted the whole flood fill on every single block add or remove.
             const int weldCount = 400;
 
             Stopwatch coalesced = Stopwatch.StartNew();
+/// <summary>GridModel operation.</summary>
             GridModel coalescedGrid = new GridModel(Catalog.LargeGridSize);
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation coalescedSim = new ThermalSimulation(new ThermalSettings(), coalescedGrid);
             for (int i = 0; i < weldCount; i++)
             {
@@ -660,7 +700,9 @@ namespace Thermodynamics.Harness
             coalesced.Stop();
 
             Stopwatch perBlock = Stopwatch.StartNew();
+/// <summary>GridModel operation.</summary>
             GridModel eagerGrid = new GridModel(Catalog.LargeGridSize);
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation eagerSim = new ThermalSimulation(new ThermalSettings(), eagerGrid);
             for (int i = 0; i < weldCount; i++)
             {
@@ -670,6 +712,7 @@ namespace Thermodynamics.Harness
             }
             perBlock.Stop();
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append(blocks.ToString("n0")).Append(" blocks, ")
               .Append(links.ToString("n0")).Append(" conduction links. Build+map ")
@@ -681,6 +724,7 @@ namespace Thermodynamics.Harness
               .Append(" ms coalesced vs ").Append(perBlock.ElapsedMilliseconds)
               .Append(" ms remapping per block.");
 
+/// <summary>ScenarioResult operation.</summary>
             ScenarioResult result = new ScenarioResult();
             result.Name = "perf";
             result.Summary = sb.ToString();
@@ -688,37 +732,39 @@ namespace Thermodynamics.Harness
             return result;
         }
 
-        /// <summary>Packs a sequential index into a compact 10x10 footprint.</summary>
+/// <summary>CellFor operation.</summary>
         private static Vector3I CellFor(int index)
         {
             return new Vector3I(index % 10, (index / 10) % 10, index / 100);
         }
 
 
-        /// <summary>
-        /// Do radiators earn their place? The same hull and the same waste heat, with and
-        /// without panels standing clear of it.
-        ///
-        /// Clearance is the point: a panel bolted flat against the hull covers as much radiating
-        /// area as it adds, which is a real build mistake and one this scenario can show.
-        /// </summary>
+/// <summary>Radiator operation.</summary>
         public static ScenarioResult Radiator()
         {
+/// <summary>ReactorHull operation.</summary>
             float bare = ReactorHull(RadiatorPlacement.None);
+/// <summary>ReactorHull operation.</summary>
             float flush = ReactorHull(RadiatorPlacement.Flush);
+/// <summary>ReactorHull operation.</summary>
             float clear = ReactorHull(RadiatorPlacement.Clear);
 
+/// <summary>HullBuilder operation.</summary>
             GridBuilder builder = HullBuilder(RadiatorPlacement.Clear);
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", simulation.Grid.GetAtCell(new Vector3I(1, 1, 1)));
             runner.Run(3600f, 300f);
 
             return Result("radiator", runner,
+/// <summary>C operation.</summary>
                 "500 kW into a 3x3x3 hull in shadow. The source settles at " + C(bare)
+/// <summary>C operation.</summary>
                 + " bare, " + C(flush) + " with panels bolted flat against the hull, and "
+/// <summary>C operation.</summary>
                 + C(clear) + " with panels standing clear on booms.");
         }
 
@@ -729,6 +775,7 @@ namespace Thermodynamics.Harness
             Clear
         }
 
+/// <summary>HullBuilder operation.</summary>
         private static GridBuilder HullBuilder(RadiatorPlacement placement)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -742,13 +789,12 @@ namespace Thermodynamics.Harness
 
             if (placement == RadiatorPlacement.Flush)
             {
-                // Bolted straight onto the hull's faces.
                 builder.Place(Catalog.Radiator(), new Vector3I(-1, 0, 0));
                 builder.Place(Catalog.Radiator(), new Vector3I(3, 0, 0));
             }
+/// <summary>if operation.</summary>
             else if (placement == RadiatorPlacement.Clear)
             {
-                // Held off the hull by a single armour block, so both sides of the panel see space.
                 builder.Place(Catalog.LightArmor(), new Vector3I(-1, 1, 1));
                 builder.Place(Catalog.Radiator(), new Vector3I(-2, 0, 0));
                 builder.Place(Catalog.LightArmor(), new Vector3I(3, 1, 1));
@@ -758,11 +804,14 @@ namespace Thermodynamics.Harness
             return builder;
         }
 
+/// <summary>ReactorHull operation.</summary>
         private static float ReactorHull(RadiatorPlacement placement)
         {
+/// <summary>HullBuilder operation.</summary>
             GridBuilder builder = HullBuilder(placement);
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Run(7200f, 3600f);
@@ -770,19 +819,12 @@ namespace Thermodynamics.Harness
             return simulation.Solver.GetNodeAt(new Vector3I(1, 1, 1)).Temperature;
         }
 
-        /// <summary>
-        /// A sealed room with a door in it. The door opens; the interior should stop being
-        /// interior and start radiating.
-        ///
-        /// This is the path a busy airlock takes hundreds of times an hour, and the one that
-        /// used to force a full topology rebuild per cycle.
-        /// </summary>
+/// <summary>Airlock operation.</summary>
         public static ScenarioResult Airlock()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Shell(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(5, 5, 5));
 
-            // Replace one shell block with a door that starts closed.
             BlockInstance wall = builder.Grid.GetAtCell(new Vector3I(2, 2, 0));
             builder.Grid.Remove(wall);
             builder.Placed.Remove(wall);
@@ -790,15 +832,13 @@ namespace Thermodynamics.Harness
             builder.Place(Catalog.AirtightDoor(), new Vector3I(2, 2, 0));
             BlockInstance door = builder.Last;
 
-            // Standing on the floor of the room, not floating in the middle of it: a block with
-            // neither neighbours nor exposure has no way at all to shed heat, and no such block
-            // can exist on a real grid.
             builder.Place(Catalog.Reactor(), new Vector3I(2, 1, 2))
                    .Wasting(250000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
             ThermalNode interior = simulation.Solver.GetNodeAt(new Vector3I(2, 1, 2));
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("interior", simulation.Grid.GetAtCell(new Vector3I(2, 1, 2)));
@@ -815,15 +855,14 @@ namespace Thermodynamics.Harness
             runner.Run(900f, 300f);
 
             return Result("airlock", runner,
+/// <summary>C operation.</summary>
                 "A 250 kW source inside a sealed 5x5x5 shell reaches " + C(sealedTemperature)
                 + " with " + sealedFaces + " exposed faces. Opening the door leaves it with "
+/// <summary>C operation.</summary>
                 + interior.TotalExposedFaces + " and it ends at " + C(interior.Temperature) + ".");
         }
 
-        /// <summary>
-        /// A cooled reactor, then the pump is destroyed. The ring stops being a loop and the
-        /// reactor is on its own — the failure mode a coolant system exists to have.
-        /// </summary>
+/// <summary>CoolantFailure operation.</summary>
         public static ScenarioResult CoolantFailure()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -840,6 +879,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", reactor);
@@ -848,7 +888,6 @@ namespace Thermodynamics.Harness
             float cooled = simulation.Solver.GetNode(reactor).Temperature;
             int loopsBefore = simulation.Solver.Loops.Count;
 
-            // Take out the pump: whichever ring block declares itself one.
             BlockInstance pump = null;
             for (int i = 0; i < ring.Count; i++)
             {
@@ -860,30 +899,21 @@ namespace Thermodynamics.Harness
             runner.Run(1800f, 300f);
 
             return Result("coolant-failure", runner,
+/// <summary>C operation.</summary>
                 "A 1.25 MW source on a pumped ring holds at " + C(cooled) + " (" + loopsBefore
                 + " loop). With the pump destroyed the ring stops circulating — "
                 + simulation.Solver.Loops.Count + " loops — and the reactor ends at "
+/// <summary>C operation.</summary>
                 + C(simulation.Solver.GetNode(reactor).Temperature) + ".");
         }
 
-        /// <summary>
-        /// A block welded up from a skeleton. Thermal mass tracks build progress, so the same
-        /// heat into a tenth-welded block moves it ten times as far.
-        ///
-        /// Mass is the one input the game raises no event for, so the adapter sweeps it — this
-        /// is what that sweep is protecting.
-        /// </summary>
+/// <summary>Welding operation.</summary>
         public static ScenarioResult Welding()
         {
-            // Short windows on purpose: both masses reach the same equilibrium inside the run, and
-            // it is the approach that differs rather than the destination.
-            //
-            // **A length of thermal time, so it moves with the clock.** At 225 a minute was enough
-            // for the welded block to arrive; at the 90 `C24` ships it is still climbing at the end
-            // of one, and the last window of the heavy block then rises as fast as the first window
-            // of the light one — which reads as the claim inverting. See LabClock.
             float window = LabClock.Seconds(5f);
+/// <summary>WeldedRise operation.</summary>
             float skeleton = WeldedRise(0.1f, window);
+/// <summary>WeldedRise operation.</summary>
             float finished = WeldedRise(1f, window);
 
             GridBuilder builder = GridBuilder.Large();
@@ -895,35 +925,32 @@ namespace Thermodynamics.Harness
             node.Block.Mass *= 0.1f;
             node.RefreshThermalMass();
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("skeleton", builder.Placed[0]);
             runner.Run(window, LabClock.Seconds(1f));
 
-            // Finish welding it mid-run: the same block, ten times the thermal mass.
             node.Block.Mass *= 10f;
             node.RefreshThermalMass();
             runner.Run(LabClock.Seconds(55f), LabClock.Seconds(5f));
 
             return Result("welding", runner,
                 "Five seconds of a 250 kW source next to one heavy armour block. At a tenth of its "
+/// <summary>C operation.</summary>
                 + "mass the block reaches " + C(skeleton) + "; fully welded it is still at "
+/// <summary>C operation.</summary>
                 + C(finished) + ". The tracked run welds it up after those five seconds and "
+/// <summary>C operation.</summary>
                 + "settles at " + C(runner.Final.Tracked["skeleton"]) + ".");
         }
 
-        /// <summary>
-        /// The shape a player actually builds a first room in: a 3x3x3 armour shell with a door
-        /// in one wall and a reactor bolted to the outside, welded one block at a time rather
-        /// than loaded whole.
-        ///
-        /// It exists because a field report had exactly this grid mapping as zero sealed rooms.
-        /// It runs the audit at the end, so the answer is the classification of every cell rather
-        /// than a room count with nothing behind it.
-        /// </summary>
+/// <summary>FirstRoom operation.</summary>
         public static ScenarioResult FirstRoom()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(Catalog.LargeGridSize);
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
 
             BlockModel armour = Catalog.LightArmor();
@@ -938,21 +965,24 @@ namespace Thermodynamics.Harness
                     {
                         if (x == 0 && y == 0 && z == 0) continue;
 
+/// <summary>Vector3I operation.</summary>
                         Vector3I cell = new Vector3I(x, y, z);
+/// <summary>Vector3I operation.</summary>
                         bool isDoor = cell == new Vector3I(0, 0, -1);
 
+/// <summary>BlockInstance operation.</summary>
                         BlockInstance block = new BlockInstance(
                             isDoor ? doorModel : armour, cell, BlockOrientation.Identity);
                         if (isDoor) door = block;
 
                         simulation.AddBlock(block);
 
-                        // one welded block per ten-frame tick, as the adapter polls
                         simulation.Update(10f / 60f, Worlds.Shadow());
                     }
                 }
             }
 
+/// <summary>BlockInstance operation.</summary>
             BlockInstance reactor = new BlockInstance(Catalog.Reactor(), new Vector3I(0, 0, 2), BlockOrientation.Identity);
             simulation.AddBlock(reactor);
             reactor.PowerProducedWatts = 0.3f * ThermalConstants.MegawattsToWatts;
@@ -971,6 +1001,7 @@ namespace Thermodynamics.Harness
             simulation.Rooms.RunToCompletion();
             simulation.Solver.RefreshExposure(simulation.Rooms.Map);
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", reactor);
@@ -978,14 +1009,17 @@ namespace Thermodynamics.Harness
 
             return Result("first-room", runner,
                 "A 3x3x3 shell with a door, welded a block at a time, maps as "
+/// <summary>cells operation.</summary>
                 + closed.RoomCount + " sealed room over " + closed.SearchVolume + " search cells ("
                 + closed.ExternalCells + " external, " + closed.SolidCells + " structure, "
                 + closed.RoomCells + " room, " + closed.OpenBlockCells + " block cells outdoors). "
                 + "Opening the door leaves " + opened.RoomCount + " rooms and puts "
                 + opened.OpenBlockCells + " block cells outdoors. The reactor bolted to the outside ends at "
+/// <summary>C operation.</summary>
                 + C(reactor.PowerProducedWatts > 0 ? runner.Final.Tracked["reactor"] : 0f) + ".");
         }
 
+/// <summary>WeldedRise operation.</summary>
         private static float WeldedRise(float massFraction, float seconds)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -998,6 +1032,7 @@ namespace Thermodynamics.Harness
             node.Block.Mass *= massFraction;
             node.RefreshThermalMass();
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Run(seconds, seconds);
@@ -1005,19 +1040,17 @@ namespace Thermodynamics.Harness
             return node.Temperature;
         }
 
-        /// <summary>
-        /// The stiff case: a very light block bolted to a very heavy one. Coupling per unit
-        /// capacity is what forces the solver to substep, and this is the shape that maximises
-        /// it — the measurement behind whether an implicit solver is ever needed.
-        /// </summary>
+/// <summary>Stiff operation.</summary>
         public static ScenarioResult Stiff()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder report = new StringBuilder();
             ScenarioRunner last = null;
 
             int[] frequencies = new int[] { 1, 4, 16 };
             for (int f = 0; f < frequencies.Length; f++)
             {
+/// <summary>ThermalSettings operation.</summary>
                 ThermalSettings settings = new ThermalSettings();
                 settings.Frequency = frequencies[f];
                 settings.Derive();
@@ -1031,6 +1064,7 @@ namespace Thermodynamics.Harness
 
                 ThermalSimulation simulation = builder.BuildSimulation(settings, 900f);
 
+/// <summary>ScenarioRunner operation.</summary>
                 ScenarioRunner runner = new ScenarioRunner(simulation);
                 runner.Environment = t => Worlds.Shadow();
                 runner.Track("feather", builder.Last);
@@ -1057,18 +1091,17 @@ namespace Thermodynamics.Harness
                 "A 20 kg block bolted to a 3x3x3 heavy armour cube at 900 K. " + report);
         }
 
-        /// <summary>
-        /// Specific heat is stated in real J/(kg K) and the pace comes from HeatTimeScale. This
-        /// shows what that trade actually buys: the same curve, sampled at different clocks.
-        /// </summary>
+/// <summary>Units operation.</summary>
         public static ScenarioResult Units()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder report = new StringBuilder();
             ScenarioRunner last = null;
 
             float[] scales = new float[] { 1f, 25f, 225f };
             for (int i = 0; i < scales.Length; i++)
             {
+/// <summary>ThermalSettings operation.</summary>
                 ThermalSettings settings = new ThermalSettings();
                 settings.HeatTimeScale = scales[i];
                 settings.Derive();
@@ -1077,6 +1110,7 @@ namespace Thermodynamics.Harness
                 builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
 
                 ThermalSimulation simulation = builder.BuildSimulation(settings, 800f);
+/// <summary>ScenarioRunner operation.</summary>
                 ScenarioRunner runner = new ScenarioRunner(simulation);
                 runner.Environment = t => Worlds.Shadow();
                 runner.Track("block", builder.Placed[0]);
@@ -1094,17 +1128,7 @@ namespace Thermodynamics.Harness
                 + "clocks. Real steel is 450 J/(kg K); HeatTimeScale divides it. " + report);
         }
 
-        /// <summary>
-        /// A capital ship at the scale the block-count stress test actually ran: tens of
-        /// thousands of cells, hollow, bulkheaded into sealed compartments.
-        ///
-        /// The <see cref="Performance"/> scenario measures a solid cube, which is the cheapest
-        /// possible shape for everything except the solver — no interior surface, one room, no
-        /// exterior to flood fill. The field reports say the expensive stages on a real ship are
-        /// the one-shot ones: a 44,632 cell grid spent 152 ms in a single room-mapping call and
-        /// 151 ms in a single topology rebuild, against 23 ms for a solver step. This is the
-        /// shape that shows that, and the number to watch is the worst single call, not the mean.
-        /// </summary>
+/// <summary>Capital operation.</summary>
         public static ScenarioResult Capital()
         {
             Stopwatch build = Stopwatch.StartNew();
@@ -1113,7 +1137,9 @@ namespace Thermodynamics.Harness
             builder.PlaceAll(Catalog.HeavyArmor(),
                 GridShapes.Ship(fuselageLength: 180, fuselageWidth: 21, bulkheadSpacing: 6));
 
+/// <summary>StageTimings operation.</summary>
             StageTimings timings = new StageTimings();
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), builder.Grid);
             simulation.Profiler = timings;
 
@@ -1135,8 +1161,6 @@ namespace Thermodynamics.Harness
                 + timings.WorstMs(SimulationPhase.RoomMapping)
                 + timings.WorstMs(SimulationPhase.Exposure);
 
-            // StepExact deliberately skips the profiler, so the solver is timed by hand — the
-            // same way the perf scenario does it.
             EnvironmentState state = EnvironmentSolver.Solve(
                 simulation.Settings, simulation.Planet, Worlds.Space(new Vector3(0f, 1f, 0f)));
 
@@ -1149,6 +1173,7 @@ namespace Thermodynamics.Harness
 
             double solverPerStep = solve.Elapsed.TotalMilliseconds / measured;
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Space(new Vector3(0f, 1f, 0f));
             runner.Track("skin", builder.Placed[0]);
@@ -1164,20 +1189,16 @@ namespace Thermodynamics.Harness
                 + timings.Describe(SimulationPhase.Exposure) + ".");
         }
 
-        /// <summary>
-        /// Twenty ships in one world, stepped together, which is what the stress test did.
-        ///
-        /// Each grid carries its own solver, its own room map and its own environment sample,
-        /// and nothing shares a frame budget between them. This measures the thing that costs a
-        /// server: the whole fleet's cost in one simulated frame, against one ship's.
-        /// </summary>
+/// <summary>Fleet operation.</summary>
         public static ScenarioResult Fleet()
         {
             const int fleetSize = 20;
 
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.Derive();
 
+/// <summary>List operation.</summary>
             List<ThermalSimulation> fleet = new List<ThermalSimulation>();
             ScenarioRunner first = null;
             int cellsEach = 0;
@@ -1188,7 +1209,7 @@ namespace Thermodynamics.Harness
                 builder.PlaceAll(Catalog.HeavyArmor(),
                     GridShapes.Ship(fuselageLength: 40, fuselageWidth: 9, bulkheadSpacing: 6));
 
-                // One hot appliance per ship, so no grid is a trivially uniform solve.
+/// <summary>Vector3I operation.</summary>
                 Vector3I engineRoom = new Vector3I(4, 4, 6);
                 BlockInstance occupant = builder.Grid.GetAtCell(engineRoom);
                 if (occupant != null)
@@ -1207,6 +1228,7 @@ namespace Thermodynamics.Harness
 
                 if (i == 0)
                 {
+/// <summary>ScenarioRunner operation.</summary>
                     first = new ScenarioRunner(simulation);
                     first.Environment = t => Worlds.Shadow();
                     first.Track("reactor", builder.Last);
@@ -1215,9 +1237,6 @@ namespace Thermodynamics.Harness
 
             EnvironmentState state = EnvironmentSolver.Solve(settings, fleet[0].Planet, Worlds.Shadow());
 
-            // Warm up, then run the same number of solver steps twice: all of them on one ship,
-            // and then spread across the fleet. Equal work either way, so what the comparison
-            // isolates is per-grid overhead rather than per-cell cost.
             const int frames = 100;
             int steps = frames * fleetSize;
             for (int i = 0; i < fleet.Count; i++) fleet[i].Solver.Step(settings.StepSeconds, state);
@@ -1250,35 +1269,25 @@ namespace Thermodynamics.Harness
                 + " ms of every simulated second.");
         }
 
-        /// <summary>
-        /// A hot appliance with no exposed face at all, against the same appliance on the skin.
-        ///
-        /// The stress test found whole block types — 5,399 hydrogen thrusters, 1,600 lights —
-        /// reporting a mean exposed area of exactly zero across every instance, which means they
-        /// radiate nothing and see no sun. That is legitimate for a buried block, and this is
-        /// what legitimate looks like: the heat has to leave sideways through conduction, and the
-        /// block has to settle rather than run away.
-        /// </summary>
+/// <summary>Interior operation.</summary>
         public static ScenarioResult Interior()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.HeavyArmor(), new Vector3I(-3, -3, -3), new Vector3I(4, 4, 4));
 
-            // Swap the centre for the appliance: a 200 kW consumer, which is what a large radio
-            // antenna at full range draws, and the block the field report named as the hottest.
             BlockInstance centre = builder.Grid.GetAtCell(Vector3I.Zero);
             builder.Grid.Remove(centre);
             builder.Placed.Remove(centre);
             builder.Place(Catalog.Battery(), Vector3I.Zero).Consuming(200000f);
             BlockInstance buried = builder.Last;
 
-            // The same appliance bolted onto the skin, where it can radiate.
             builder.Place(Catalog.Battery(), new Vector3I(0, 4, 0)).Consuming(200000f);
             BlockInstance exposed = builder.Last;
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
             while (simulation.HasPendingWork) simulation.Update(1f / 60f, Worlds.Shadow());
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("buried", buried);
@@ -1290,37 +1299,23 @@ namespace Thermodynamics.Harness
             int exposedFaces = simulation.Solver.GetNode(exposed).TotalExposedFaces;
 
             return Result("interior", runner,
+/// <summary>armour operation.</summary>
                 "A 200 kW consumer at 5% waste heat, buried in heavy armour ("
+/// <summary>skin operation.</summary>
                 + buriedFaces + " exposed faces) and bolted to the skin (" + exposedFaces
+/// <summary>C operation.</summary>
                 + "). Buried ends at " + C(runner.Final.Tracked["buried"]) + ", on the skin "
+/// <summary>C operation.</summary>
                 + C(runner.Final.Tracked["skin"]) + ", the hull above it "
+/// <summary>C operation.</summary>
                 + C(runner.Final.Tracked["hull"]) + ".");
         }
 
-        /// <summary>
-        /// What one solver step actually costs, on a grid shaped and loaded like the one the
-        /// stress test ran.
-        ///
-        /// <see cref="Performance"/> does not measure this, and it is worth being explicit about
-        /// why: it steps a solid cube of one block type that has been left to settle, so nearly
-        /// every link joins two cells at the same temperature. The conduction loop's first act is
-        /// to skip a link whose ends agree, which means the headline "ms/step" is largely the
-        /// cost of *not* conducting. The field run's ships were 44,632 cells with reactors and
-        /// thrusters in them and needed six substeps; almost every link there carries a gradient.
-        ///
-        /// So this seeds a real spread of temperatures and reports the number that can be
-        /// compared across grid sizes and substep counts: nanoseconds per link visit.
-        /// </summary>
+/// <summary>Solver operation.</summary>
         public static ScenarioResult Solver()
         {
             GridBuilder builder = GridBuilder.Large();
 
-            // Not one block type. Substeps are set by the stiffest node — the largest ratio of
-            // conductance to thermal mass on the grid — so a ship built entirely of one heavy
-            // block solves in a single substep and never exercises the loop that dominates the
-            // field run. A real ship is armour with light fittings bolted through it, and the
-            // light fitting is the stiff node: grating is a sixteenth of heavy armour's mass at
-            // the same conductivity.
             BlockModel armour = Catalog.HeavyArmor();
             BlockModel fitting = Catalog.Grating();
 
@@ -1337,9 +1332,6 @@ namespace Thermodynamics.Harness
             int cells = simulation.Solver.Nodes.Count;
             int links = simulation.Solver.Links.Count;
 
-            // How much of the grid the environment pass has anything to do for. A hollow ship is
-            // mostly skin; a solid station is mostly interior, and the two cost very differently
-            // per cell for the same cell count.
             int exposed = 0;
             for (int i = 0; i < cells; i++)
             {
@@ -1348,13 +1340,12 @@ namespace Thermodynamics.Harness
 
             float step = simulation.Settings.StepSeconds;
 
-            // Measured twice: at the configured step length, which this grid solves in one
-            // substep, and at a step six times longer, which it does not. Substepping is where
-            // the cost lives — the field run's ships spent every step at six — and the two
-            // figures separate the per-step overhead from the per-substep work.
+/// <summary>MeasureSolver operation.</summary>
             SolverCost single = MeasureSolver(simulation, step, links);
+/// <summary>MeasureSolver operation.</summary>
             SolverCost stiff = MeasureSolver(simulation, step * 6f, links);
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Space(new Vector3(0f, 1f, 0f));
             runner.Track("skin", builder.Placed[0]);
@@ -1368,15 +1359,7 @@ namespace Thermodynamics.Harness
                 + stiff.Describe(simulation.Settings.StepsPerSecond / 6f));
         }
 
-        /// <summary>
-        /// Spreads the grid's temperatures across 250-750 K, deterministically.
-        ///
-        /// Both the spread and its repeatability matter: a link whose ends agree is skipped by
-        /// the conduction loop, so a settled grid measures the wrong thing, and a benchmark that
-        /// starts from a different state each run cannot be compared against its own past. The
-        /// generator is written out rather than taken from <c>Random</c> so the sequence is the
-        /// same on any runtime.
-        /// </summary>
+/// <summary>SeedSpread operation.</summary>
         private static void SeedSpread(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -1391,13 +1374,13 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>One solver benchmark window.</summary>
         private struct SolverCost
         {
             public double PerStepMs;
             public double PerVisitNs;
             public double MeanSubsteps;
 
+/// <summary>Describe operation.</summary>
             public string Describe(float stepsPerSecond)
             {
                 return PerStepMs.ToString("n4") + " ms per step at " + MeanSubsteps.ToString("n2")
@@ -1406,6 +1389,7 @@ namespace Thermodynamics.Harness
             }
         }
 
+/// <summary>MeasureSolver operation.</summary>
         private static SolverCost MeasureSolver(ThermalSimulation simulation, float step, int links)
         {
             EnvironmentState environment = EnvironmentSolver.Solve(
@@ -1414,8 +1398,6 @@ namespace Thermodynamics.Harness
             SeedSpread(simulation);
             for (int i = 0; i < 5; i++) simulation.Solver.Step(step, environment);
 
-            // Substeps fall as the grid equalises, so the count is read from the measured window
-            // rather than assumed, and the per-visit figure is derived from it.
             long visits = 0;
             const int measured = 50;
 
@@ -1427,6 +1409,7 @@ namespace Thermodynamics.Harness
             }
             run.Stop();
 
+/// <summary>SolverCost operation.</summary>
             SolverCost cost = new SolverCost();
             cost.PerStepMs = run.Elapsed.TotalMilliseconds / measured;
             cost.PerVisitNs = visits <= 0 ? 0d : (run.Elapsed.TotalMilliseconds * 1e6) / visits;
@@ -1435,16 +1418,7 @@ namespace Thermodynamics.Harness
         }
 
 
-        /// <summary>
-        /// A storm rolling over a parked plate, and off again.
-        ///
-        /// The question it answers is whether the weather reaches the temperature model at all.
-        /// Before this round it did not: the game's weather was read, used to pick a point on a
-        /// calm-to-storm scale for the wind, and thrown away, so a blizzard and a clear noon were
-        /// the same climate. Three of the four things a storm does are visible here — the air
-        /// drops, the sun goes out, and the coefficient that strips heat off the hull more than
-        /// doubles — and the fourth, the wind, is the one that already worked.
-        /// </summary>
+/// <summary>Weather operation.</summary>
         public static ScenarioResult Weather()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -1452,14 +1426,15 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
-            // Noon, sea level, clear air. The storm arrives at 300 s, peaks, and has gone by 900.
             WeatherResponse.Weather storm = WeatherResponse.For("SnowHeavy");
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t =>
             {
                 EnvironmentSample sample = Worlds.PlanetSurface(1f, 0.5f);
                 sample.Weather = storm;
+/// <summary>Intensity operation.</summary>
                 sample.WeatherIntensity = Intensity(t, 300f, 600f, 900f);
                 return sample;
             };
@@ -1470,8 +1445,6 @@ namespace Thermodynamics.Harness
             float worst = float.MaxValue;
             float coldest = float.MaxValue;
 
-            // From 1: the first sample is recorded before any step has run, so its ambient is the
-            // vacuum the solver was seeded with rather than a climate.
             for (int i = 1; i < runner.Samples.Count; i++)
             {
                 float ambient = runner.Samples[i].AmbientTemperature;
@@ -1482,12 +1455,15 @@ namespace Thermodynamics.Harness
             }
 
             EnvironmentState peak = EnvironmentSolver.Solve(
+/// <summary>StormAt operation.</summary>
                 simulation.Settings, simulation.Planet, StormAt(storm, 1f));
             EnvironmentState calm = EnvironmentSolver.Solve(
+/// <summary>StormAt operation.</summary>
                 simulation.Settings, simulation.Planet, StormAt(storm, 0f));
 
             return Result("weather", runner,
                 "3x1x3 plate at noon, heavy snowstorm arriving at 300 s and gone by 900 s. Ambient "
+/// <summary>C operation.</summary>
                 + C(clear) + " falling to " + C(worst) + ", plate down to " + C(coldest)
                 + ". At the peak the sun delivers " + peak.SolarEnergy.ToString("n0")
                 + " W/m2 against " + calm.SolarEnergy.ToString("n0")
@@ -1495,7 +1471,7 @@ namespace Thermodynamics.Harness
                 + " against " + calm.ConvectionCoefficient.ToString("n1") + " W/(m2 K).");
         }
 
-        /// <summary>The same place under a storm of a given strength, for the two-figure comparison.</summary>
+/// <summary>StormAt operation.</summary>
         private static EnvironmentSample StormAt(WeatherResponse.Weather storm, float intensity)
         {
             EnvironmentSample sample = Worlds.PlanetSurface(1f, 0.5f);
@@ -1504,7 +1480,7 @@ namespace Thermodynamics.Harness
             return sample;
         }
 
-        /// <summary>A weather that fades in, peaks and fades out again over a window.</summary>
+/// <summary>Intensity operation.</summary>
         private static float Intensity(float t, float start, float peak, float end)
         {
             if (t <= start || t >= end) return 0f;
@@ -1512,18 +1488,10 @@ namespace Thermodynamics.Harness
             return 1f - ((t - peak) / (end - peak));
         }
 
-        /// <summary>
-        /// The same plate at five depths, over a full day.
-        ///
-        /// Underground used to be one number at any depth on any planet. What should happen is two
-        /// things at very different scales: the day damps out over tens of metres of rock, and then
-        /// the rock itself warms toward the core below the sea-level deadzone. Both are visible in
-        /// one table, and so is the reason the deadzone is measured from sea level — the mountain
-        /// row is a kilometre inside the rock and still cold, because it is four kilometres above
-        /// the level where the heat starts.
-        /// </summary>
+/// <summary>Underground operation.</summary>
         public static ScenarioResult Underground()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder summary = new StringBuilder();
             summary.Append("3x1x3 plate over one day at five depths. ");
 
@@ -1541,6 +1509,7 @@ namespace Thermodynamics.Harness
 
                 ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
+/// <summary>ScenarioRunner operation.</summary>
                 ScenarioRunner runner = new ScenarioRunner(simulation);
                 float dayLength = 7200f;
                 runner.Environment = t =>
@@ -1573,7 +1542,6 @@ namespace Thermodynamics.Harness
                 last = runner;
             }
 
-            // A kilometre into a peak standing 5 km above sea level: deep rock, still above the heat.
             GridBuilder peak = GridBuilder.Large();
             peak.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(3, 1, 3));
             ThermalSimulation mountain = peak.BuildSimulation(new ThermalSettings(), 293.15f);
@@ -1593,31 +1561,14 @@ namespace Thermodynamics.Harness
             return Result("underground", last, summary.ToString());
         }
 
-        // ---- the cooling plant, whole and broken ---------------------------------------------
-        //
-        // Everything below was written against a field telemetry dump: a 1,355 cell ship carrying
-        // 288 coolant pipe blocks, 4 pumps, 8 radiators and 4 heat pumps, peaking at 886 K on a
-        // hydrogen thruster, granted 3 substeps against the 21 its lightest block demanded. Nothing
-        // in the suite exercised those four systems together, and the dump could not say whether
-        // any of them worked.
 
-        /// <summary>
-        /// The general case: a whole cooling plant, on the shape the field ship is.
-        ///
-        /// Generation on the inside — a reactor and a bank of hydrogen thrusters, which is what the
-        /// dump found running hottest — a pumped ring with sink faces against both, heat pumps
-        /// lifting out of the ring, and radiators on the skin taking their reject heat. That is the
-        /// full chain the mod exists to make possible, and it is the one arrangement no scenario
-        /// tested end to end.
-        ///
-        /// Reported against the same ship with the plumbing left out, because the number that means
-        /// anything is the difference the plant makes rather than the temperature it settles at.
-        /// </summary>
+/// <summary>CoolingPlant operation.</summary>
         public static ScenarioResult CoolingPlant()
         {
             float withPlant, withoutPlant, loopDrawn, loopShed, pumpLift;
             float ignoredDrawn, ignoredShed, ignoredLift;
 
+/// <summary>Builds the method table.</summary>
             ScenarioRunner plant = BuildCoolingPlant(true, out withPlant,
                 out loopDrawn, out loopShed, out pumpLift);
             BuildCoolingPlant(false, out withoutPlant,
@@ -1625,33 +1576,34 @@ namespace Thermodynamics.Harness
 
             return Result("cooling-plant", plant,
                 "A reactor and eight hard-drawing batteries behind a pumped ring, heat pumps and "
+/// <summary>C operation.</summary>
                 + "eight radiators. Hottest block " + C(withPlant) + " with the plant, "
+/// <summary>C operation.</summary>
                 + C(withoutPlant) + " without it. The loop draws "
                 + loopDrawn.ToString("n0") + " W and sheds " + loopShed.ToString("n0")
                 + " W; the pumps lift " + pumpLift.ToString("n0") + " W.");
         }
 
+/// <summary>Builds the method table.</summary>
         private static ScenarioRunner BuildCoolingPlant(bool plumbing, out float hottest,
             out float loopDrawn, out float loopShed, out float pumpLift)
         {
             GridBuilder builder = GridBuilder.Large();
 
-            // A deck, with the machinery standing on it and the plumbing running over the machinery.
             builder.Fill(Catalog.LightArmor(), new Vector3I(0, 0, 0), new Vector3I(13, 2, 6));
 
+/// <summary>List operation.</summary>
             List<Vector3I> machinery = new List<Vector3I>();
 
+/// <summary>Vector3I operation.</summary>
             Vector3I reactorCell = new Vector3I(1, 2, 1);
             builder.Place(Catalog.Reactor(), reactorCell)
                    .Wasting(750000f);
             machinery.Add(reactorCell);
 
-            // Eight consumers drawing hard. Batteries rather than the thrusters the dump found
-            // running hottest, because a large thruster is 3x3x4 cells: a row of them would need
-            // four-cell spacing and the ring above could only reach one face of each. One cell per
-            // heat source is what makes this a test of the plumbing rather than of the geometry.
             for (int i = 0; i < 8; i++)
             {
+/// <summary>Vector3I operation.</summary>
                 Vector3I cell = new Vector3I(3 + i, 2, 1);
                 builder.Place(Catalog.Battery(), cell)
                        .Consuming(1f * ThermalConstants.MegawattsToWatts);
@@ -1662,8 +1614,6 @@ namespace Thermodynamics.Harness
             {
                 List<Vector3I> cells = PipeFitter.RectangleXZ(new Vector3I(1, 3, 1), 11, 4);
 
-                // Sinks are derived from where the machinery actually is rather than from guessed
-                // ring indices, so the plant cannot quietly end up plumbed past its own heat.
                 Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
                 for (int i = 0; i < cells.Count; i++)
                 {
@@ -1672,7 +1622,6 @@ namespace Thermodynamics.Harness
 
                 PipeFitter.BuildRing(builder, cells, -1, sinks);
 
-                // Pumps lift out of the ring's far side into radiators standing clear of the hull.
                 for (int i = 0; i < cells.Count; i++)
                 {
                     if (sinks.ContainsKey(i)) continue;
@@ -1681,6 +1630,7 @@ namespace Thermodynamics.Harness
 
                     Vector3I pump = cells[i] + Vector3I.Up;
                     builder.Place(Catalog.HeatPump(), pump,
+/// <summary>BlockOrientation operation.</summary>
                         new BlockOrientation(Base6Directions.Direction.Down, Base6Directions.Direction.Forward));
                     builder.Place(Catalog.Radiator(), pump + Vector3I.Up);
                 }
@@ -1688,7 +1638,6 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
-            // The host owns a pump's switch and its power; nothing in the harness plays that part.
             IList<HeatPumpDevice> pumps = simulation.Solver.HeatPumps;
             for (int i = 0; i < pumps.Count; i++)
             {
@@ -1696,6 +1645,7 @@ namespace Thermodynamics.Harness
                 pumps[i].PowerAvailable = 1f;
             }
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", simulation.Grid.GetAtCell(reactorCell));
@@ -1718,31 +1668,22 @@ namespace Thermodynamics.Harness
             return runner;
         }
 
-        /// <summary>
-        /// Every way a ring fails to become a loop, on one grid, each reported with its reason.
-        ///
-        /// The player-facing failure this covers is "I built a ring and nothing happened", which is
-        /// invisible in the loop list by construction: the symptom is that the loop is absent. The
-        /// field dump had six copies of one ship, four with a loop and two without, and no way to
-        /// tell what differed.
-        /// </summary>
+/// <summary>LoopFaults operation.</summary>
         public static ScenarioResult LoopFaults()
         {
             GridBuilder builder = GridBuilder.Large();
 
-            // A ring that works.
             PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
 
-            // A closed ring with no pump in it.
             List<Vector3I> pumpless = PipeFitter.RectangleXZ(new Vector3I(0, 10, 0), 3, 3);
             PipeFitter.BuildPumplessRing(builder, pumpless);
 
-            // A pump with nothing on either end.
             builder.Place(Catalog.CoolantPump(), new Vector3I(0, 20, 0),
+/// <summary>BlockOrientation operation.</summary>
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
 
-            // A run walking into ordinary armour.
             builder.Place(Catalog.CoolantPump(), new Vector3I(0, 25, 0),
+/// <summary>BlockOrientation operation.</summary>
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
             builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 25, 1));
             builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 25, -1));
@@ -1750,10 +1691,12 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
             CoolantLoopDiagnostics diagnosis = simulation.DiagnoseLoops();
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Run(60f, 30f);
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder faults = new StringBuilder();
             for (int i = 1; i < diagnosis.Counts.Length; i++)
             {
@@ -1768,16 +1711,12 @@ namespace Thermodynamics.Harness
                 + diagnosis.PipesAdrift + " pipes adrift: " + faults + ".");
         }
 
-        /// <summary>
-        /// A loop that formed correctly and cools nothing, because no sink face touches anything.
-        ///
-        /// The worst kind of failure to diagnose from a readout: the ring is closed, the pump is
-        /// there, the loop count is 1, and the coolant sits at hull temperature forever. Every
-        /// figure looks healthy. Only the watts moved give it away, which is why they are collected.
-        /// </summary>
+/// <summary>LoopDry operation.</summary>
         public static ScenarioResult LoopDry()
         {
+/// <summary>RingAgainstReactor operation.</summary>
             float plumbedOnly = RingAgainstReactor(false);
+/// <summary>RingAgainstReactor operation.</summary>
             float withSink = RingAgainstReactor(true);
 
             GridBuilder builder = GridBuilder.Large();
@@ -1787,6 +1726,7 @@ namespace Thermodynamics.Harness
                    .Wasting(500000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", simulation.Grid.GetAtCell(new Vector3I(1, -1, 0)));
@@ -1797,11 +1737,14 @@ namespace Thermodynamics.Harness
 
             return Result("loop-dry", runner,
                 "A closed pumped ring with no sink face against the reactor: 1 loop, coolant at "
+/// <summary>C operation.</summary>
                 + C(loop.Temperature) + ", drawing " + loop.LastWattsAbsorbed.ToString("n0")
+/// <summary>C operation.</summary>
                 + " W. Reactor " + C(plumbedOnly) + " with plumbing only against " + C(withSink)
                 + " with one sink face turned to meet it.");
         }
 
+/// <summary>RingAgainstReactor operation.</summary>
         private static float RingAgainstReactor(bool sink)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -1815,6 +1758,7 @@ namespace Thermodynamics.Harness
             BlockInstance reactor = builder.Last;
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Run(3600f, 1800f);
@@ -1822,50 +1766,48 @@ namespace Thermodynamics.Harness
             return simulation.Solver.GetNode(reactor).Temperature;
         }
 
-        /// <summary>
-        /// A heat pump installed the wrong way round: cold face on the radiator, hot face on the
-        /// reactor.
-        ///
-        /// The worst realistic build error, because it is a rotation rather than a mistake anyone
-        /// would notice, and because it does not merely fail — it pumps the radiator's cold into the
-        /// reactor and charges electricity for making the ship hotter. The model must punish it, and
-        /// the terminal must be able to say so.
-        /// </summary>
+/// <summary>HeatPumpBackwards operation.</summary>
         public static ScenarioResult HeatPumpBackwards()
         {
+/// <summary>PumpBetweenReactorAndRadiator operation.</summary>
             float correct = PumpBetweenReactorAndRadiator(true);
+/// <summary>PumpBetweenReactorAndRadiator operation.</summary>
             float backwards = PumpBetweenReactorAndRadiator(false);
 
             GridBuilder builder = GridBuilder.Large();
+/// <summary>PumpRunner operation.</summary>
             ScenarioRunner runner = PumpRunner(false, builder);
 
             return Result("heatpump-backwards", runner,
+/// <summary>C operation.</summary>
                 "A pump between a 125 kW source and a radiator. The source " + C(correct)
+/// <summary>C operation.</summary>
                 + " with the cold face against it, " + C(backwards)
                 + " with the pump turned around — the wrong way costs "
                 + (backwards - correct).ToString("n1") + " K and the same electricity.");
         }
 
+/// <summary>PumpBetweenReactorAndRadiator operation.</summary>
         private static float PumpBetweenReactorAndRadiator(bool correctWayRound)
         {
             GridBuilder builder = GridBuilder.Large();
+/// <summary>PumpRunner operation.</summary>
             ScenarioRunner runner = PumpRunner(correctWayRound, builder);
             return runner.Final.Tracked["reactor"];
         }
 
+/// <summary>PumpRunner operation.</summary>
         private static ScenarioRunner PumpRunner(bool correctWayRound, GridBuilder builder)
         {
             builder.Place(Catalog.Reactor(), Vector3I.Zero).Wasting(125000f);
             BlockInstance reactor = builder.Last;
 
-            // The cold face is the block's local Forward, and orientation Forward is the world
-            // direction that points. The reactor is at -Z of the pump, so cooling it means looking
-            // Forward; turning the pump round points the cold face at the radiator instead.
             Base6Directions.Direction forward = correctWayRound
                 ? Base6Directions.Direction.Forward
                 : Base6Directions.Direction.Backward;
 
             builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
+/// <summary>BlockOrientation operation.</summary>
                 new BlockOrientation(forward, Base6Directions.Direction.Up));
             builder.Place(Catalog.Radiator(), new Vector3I(0, 0, 2));
 
@@ -1878,6 +1820,7 @@ namespace Thermodynamics.Harness
                 pumps[i].PowerAvailable = 1f;
             }
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", reactor);
@@ -1885,17 +1828,10 @@ namespace Thermodynamics.Harness
             return runner;
         }
 
-        /// <summary>
-        /// One pump, swept across the gap it has to lift over, reporting which of its three limits
-        /// binds at each width and what the coefficient costs.
-        ///
-        /// The docs call which limit binds the block's whole character: cheap and rating-bound over a
-        /// small gap, ruinous and Carnot-bound over a large one. That is a claim about numbers and it
-        /// had none behind it. The last row also settles the documented promise that nothing clamps
-        /// the cold side — the electrical rating stops it long before the temperature does.
-        /// </summary>
+/// <summary>HeatPumpLimits operation.</summary>
         public static ScenarioResult HeatPumpLimits()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder report = new StringBuilder();
             ScenarioRunner last = null;
             float[] hotSides = new float[] { 300f, 350f, 500f, 1200f };
@@ -1905,15 +1841,13 @@ namespace Thermodynamics.Harness
                 GridBuilder builder = GridBuilder.Large();
                 builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
                 BlockInstance cold = builder.Last;
-                // A block's orientation Forward is the world direction its local Forward points, and
-                // the cold face is local Forward. The cold block is at -Z of the pump, so the cold
-                // face looks Forward. Getting this backwards is silent: the pump runs, and every
-                // figure it reports is for the other pair of faces.
                 builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
+/// <summary>BlockOrientation operation.</summary>
                     new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
                 builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
                 BlockInstance hot = builder.Last;
 
+/// <summary>ThermalSettings operation.</summary>
                 ThermalSettings settings = new ThermalSettings();
                 settings.EnableEnvironment = false;
                 settings.EnableDamage = false;
@@ -1923,20 +1857,15 @@ namespace Thermodynamics.Harness
                 pump.Enabled = true;
                 pump.PowerAvailable = 1f;
 
-                // Checked rather than assumed: an inverted pump reports a full coefficient at every
-                // gap, because a hot side below the cold side saturates the cap.
                 if (pump.ColdNodeIndex != simulation.Solver.GetNode(cold).Index)
                 {
                     throw new InvalidOperationException("the pump's cold face is not on the cold block");
                 }
 
-                // Both sides are pinned by an external hand after every step, so the sweep measures
-                // the pump at a fixed gap rather than watching the gap close. Without the cold side
-                // pinned it drifts upward: with no environment, the work the pump spends has nowhere
-                // to go but back through the block it was lifting from.
                 const float coldSide = 290f;
                 float hotSide = hotSides[i];
 
+/// <summary>ScenarioRunner operation.</summary>
                 ScenarioRunner runner = new ScenarioRunner(simulation);
                 runner.Environment = t => Worlds.Shadow();
                 runner.AfterStep = sim =>
@@ -1961,22 +1890,12 @@ namespace Thermodynamics.Harness
                 "One 60 kW pump against four gap widths. " + report + ".");
         }
 
-        /// <summary>
-        /// More heat than the radiators can shed, which is where a real ship ends up.
-        ///
-        /// A cooling plant does not fail gradually: while it has headroom it holds temperature almost
-        /// flat, and past that everything it touches rises together, because the loop ties them into
-        /// one mass. This measures where that knee is and confirms the model reaches damage rather
-        /// than running away to a number.
-        /// </summary>
+/// <summary>CoolingRunaway operation.</summary>
         public static ScenarioResult CoolingRunaway()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder report = new StringBuilder();
             ScenarioRunner last = null;
-            // **The knee moves with the plant, so the ladder has to reach past wherever it is.**
-            // 8 MW was past it until `C42` multiplied the pumped coupling by 6.25 and the heaviest
-            // rung started holding at 450 C with nothing over critical - a scenario quietly
-            // demonstrating the opposite of its own claim. 32 MW is past the knee the plant has now.
             float[] megawatts = new float[] { 0.5f, 2f, 32f };
 
             for (int i = 0; i < megawatts.Length; i++)
@@ -1996,6 +1915,7 @@ namespace Thermodynamics.Harness
                 builder.Place(Catalog.Radiator(), cells[5] + Vector3I.Up);
 
                 ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
+/// <summary>ScenarioRunner operation.</summary>
                 ScenarioRunner runner = new ScenarioRunner(simulation);
                 runner.Environment = t => Worlds.Shadow();
                 runner.Track("reactor", reactor);
@@ -2015,17 +1935,10 @@ namespace Thermodynamics.Harness
                 "One radiator against three heat loads. " + report + ".");
         }
 
-        /// <summary>
-        /// A very long ring, which is the stiffest thing a player can build cheaply.
-        ///
-        /// Each pipe couples to the fluid at full strength and the fluid mass is a flat figure per
-        /// loop, so coupling grows with length while capacity does not: a 76 pipe ring reaches a
-        /// time constant shorter than the step that integrates it. The substep estimate has to see
-        /// that — a stiff element the estimator cannot see is how an integrator goes unstable — so
-        /// this reports the demand, what was granted, and whether energy survived.
-        /// </summary>
+/// <summary>LoopStiffness operation.</summary>
         public static ScenarioResult LoopStiffness()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder report = new StringBuilder();
             ScenarioRunner last = null;
             int[] sides = new int[] { 3, 9, 20 };
@@ -2042,6 +1955,7 @@ namespace Thermodynamics.Harness
                 builder.Place(Catalog.HeavyArmor(), cells[1] + Vector3I.Down);
                 BlockInstance hot = builder.Last;
 
+/// <summary>ThermalSettings operation.</summary>
                 ThermalSettings settings = new ThermalSettings();
                 settings.EnableEnvironment = false;
                 settings.EnableDamage = false;
@@ -2055,6 +1969,7 @@ namespace Thermodynamics.Harness
 
                 float before = simulation.Solver.TotalEnergy;
 
+/// <summary>ScenarioRunner operation.</summary>
                 ScenarioRunner runner = new ScenarioRunner(simulation);
                 runner.Environment = t => Worlds.Shadow();
                 runner.Track("sink", hot);
@@ -2080,45 +1995,41 @@ namespace Thermodynamics.Harness
                 + " s. " + report + ".");
         }
 
-        /// <summary>
-        /// How to lay a loop out: one ring or several, and where to put the sinks.
-        ///
-        /// The intuition this was written to test was that several small rings should beat one large
-        /// one, because flow rises only with the square root of combined pumping while the distance
-        /// heat must travel rises linearly with ring size — so splitting a ring in four ought to make
-        /// transport twice as fast for the same pumps.
-        ///
-        /// It is wrong, and the first measurement looked like it was right: four small rings came out
-        /// 40 K ahead of one big one. All of that was where the sources sat. Spread the same four
-        /// reactors evenly around the big ring instead of bunching them at one end and it matches the
-        /// four small rings to within 2 K. What saturates a loop is several sources dumping into one
-        /// short stretch of pipe, not the length of the ring they sit on.
-        /// </summary>
+/// <summary>LoopLayout operation.</summary>
         public static ScenarioResult LoopLayout()
         {
+/// <summary>LoopLayoutPlant operation.</summary>
             float bunched = LoopLayoutPlant(1, 4, false);
+/// <summary>LoopLayoutPlant operation.</summary>
             float spread = LoopLayoutPlant(1, 4, true);
             ScenarioRunner runner;
+/// <summary>LoopLayoutPlant operation.</summary>
             float small = LoopLayoutPlant(4, 1, false, out runner);
 
             return Result("loop-layout", runner,
                 "Four 62.5 kW sources and four radiators, 32 pipes and 4 pumps, arranged three ways. "
+/// <summary>C operation.</summary>
                 + "One ring with the sources bunched: " + C(bunched) + ". One ring with them spread "
+/// <summary>C operation.</summary>
                 + "evenly: " + C(spread) + ". Four separate rings: " + C(small)
                 + ". Splitting the ring buys nothing; spreading the sources buys "
                 + (bunched - spread).ToString("n0") + " K.");
         }
 
+/// <summary>LoopLayoutPlant operation.</summary>
         private static float LoopLayoutPlant(int rings, int pumpsPerRing, bool spreadSources)
         {
             ScenarioRunner ignored;
+/// <summary>LoopLayoutPlant operation.</summary>
             return LoopLayoutPlant(rings, pumpsPerRing, spreadSources, out ignored);
         }
 
+/// <summary>LoopLayoutPlant operation.</summary>
         private static float LoopLayoutPlant(int rings, int pumpsPerRing, bool spreadSources,
             out ScenarioRunner runner)
         {
             GridBuilder builder = GridBuilder.Large();
+/// <summary>List operation.</summary>
             List<BlockInstance> reactors = new List<BlockInstance>();
 
             int reactorsPerRing = rings == 1 ? 4 : 1;
@@ -2159,6 +2070,7 @@ namespace Thermodynamics.Harness
                 }
             }
 
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableSolarHeat = false;
             settings.EnableFriction = false;
@@ -2171,6 +2083,7 @@ namespace Thermodynamics.Harness
             {
                 while (loops[l].Pumps.Count < pumpsPerRing)
                 {
+/// <summary>CoolantPump operation.</summary>
                     CoolantPump extra = new CoolantPump();
                     extra.MaxPowerWatts = 20000f;
                     loops[l].Pumps.Add(extra);
@@ -2178,6 +2091,7 @@ namespace Thermodynamics.Harness
                 loops[l].RefreshFlow();
             }
 
+/// <summary>ScenarioRunner operation.</summary>
             runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", reactors[0]);
@@ -2192,29 +2106,24 @@ namespace Thermodynamics.Harness
             return hottest;
         }
 
-        /// <summary>
-        /// Can a heat pump air-condition a room?
-        ///
-        /// Not directly: a heat pump binds to two *blocks*, and a room's air is not a block. It has to
-        /// work through a wall — put the cold face on a block that bounds the compartment and the wall
-        /// goes cold, the air in contact with it gives up its heat, and the room follows. The hot face
-        /// goes outside, into a radiator.
-        ///
-        /// Which means it only works on a **pressurised** room. With no air there is nothing coupling
-        /// the compartment to its walls, and the pump is just chilling a piece of hull.
-        /// </summary>
+/// <summary>AirConditioning operation.</summary>
         public static ScenarioResult AirConditioning()
         {
             ScenarioRunner runner;
+/// <summary>ConditionedCabin operation.</summary>
             float without = ConditionedCabin(false, out runner);
+/// <summary>ConditionedCabin operation.</summary>
             float with = ConditionedCabin(true, out runner);
 
             return Result("air-conditioning", runner,
                 "A sealed cabin with a 15 kW source in it, and a heat pump on one wall rejecting into "
+/// <summary>C operation.</summary>
                 + "a radiator outside. Room air settles at " + C(without) + " with the pump off and "
+/// <summary>C operation.</summary>
                 + C(with) + " with it on, a difference of " + (without - with).ToString("n0") + " K.");
         }
 
+/// <summary>ConditionedCabin operation.</summary>
         private static float ConditionedCabin(bool pumpRunning, out ScenarioRunner runner)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -2222,11 +2131,12 @@ namespace Thermodynamics.Harness
 
             builder.Place(Catalog.Reactor(), new Vector3I(1, 1, 1)).Wasting(15000f);
 
-            // Cold face on the cabin wall, hot face away from it, radiator beyond that.
             builder.Place(Catalog.HeatPump(), new Vector3I(1, 1, -2),
+/// <summary>BlockOrientation operation.</summary>
                 new BlockOrientation(Base6Directions.Direction.Backward, Base6Directions.Direction.Up));
             builder.Place(Catalog.Radiator(), new Vector3I(1, 1, -4));
 
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableSolarHeat = false;
             settings.EnableFriction = false;
@@ -2235,6 +2145,7 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = builder.BuildSimulation(settings.Derive(), 320f);
             simulation.RebuildAll();
 
+/// <summary>Vector3I operation.</summary>
             Vector3I inside = new Vector3I(2, 1, 1);
             simulation.SetRoomPressure(inside, 1f);
             RoomAirNode air = simulation.Solver.GetRoomAir(simulation.Rooms.Map, inside);
@@ -2246,6 +2157,7 @@ namespace Thermodynamics.Harness
                 pumps[i].PowerAvailable = 1f;
             }
 
+/// <summary>ScenarioRunner operation.</summary>
             runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Run(5000f, 1000f);
@@ -2253,40 +2165,20 @@ namespace Thermodynamics.Harness
             return air == null ? 0f : air.Temperature;
         }
 
-        // ---- the station -----------------------------------------------------------------------
-        //
-        // Every other scenario in this file is a ship, a rig or a component, and the corpus is
-        // published blueprints, which are overwhelmingly ships. `F27` is that gap: the intent says a
-        // base heats, has to be managed, and in exchange gets the room to run cooling properly, and
-        // nothing measured either half.
 
-        /// <summary>
-        /// A station against a ship of the same block count, which is the half of the intent's
-        /// claim that is a measurement rather than an assertion.
-        ///
-        /// <para>
-        /// **The pair matches to one cell.** `GridShapes.Ship(40, 9, 12)` is 3,550 cells and
-        /// `GridShapes.Station((17, 15, 19), (3, 3, 3))` is 3,549, so nothing has to be normalised
-        /// and the only thing that differs is where the blocks are. The station carries exactly
-        /// **half** the ship's external face count, measured from the geometry before any of this
-        /// was simulated — which is the whole subject, and why the same watts must land differently.
-        /// </para>
-        ///
-        /// <para>
-        /// Run in vacuum and on a planet surface, because the two shed by different mechanisms and
-        /// the geometry predicts different exponents: radiation carries `T⁴`, so halving the area
-        /// should raise the absolute temperature by `2^0.25`, while convection is linear in `ΔT`,
-        /// so halving it should roughly double the rise above ambient. What is expected, and what
-        /// falsifies it, is in balance-lab.md and was written before this ran.
-        /// </para>
-        /// </summary>
+/// <summary>Station operation.</summary>
         public static ScenarioResult Station()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder summary = new StringBuilder();
 
+/// <summary>RunHull operation.</summary>
             StationCase shipVacuum = RunHull(false, false, 0);
+/// <summary>RunHull operation.</summary>
             StationCase stationVacuum = RunHull(true, false, 0);
+/// <summary>RunHull operation.</summary>
             StationCase shipAir = RunHull(false, true, 0);
+/// <summary>RunHull operation.</summary>
             StationCase stationAir = RunHull(true, true, 0);
 
             summary.Append(stationVacuum.Blocks.ToString("n0")).Append(" cells of station in ")
@@ -2299,11 +2191,6 @@ namespace Thermodynamics.Harness
                    .Append("x), carrying the same ")
                    .Append((StationWatts / 1000f).ToString("n0")).Append(" kW. ");
 
-            // **The whole-grid mean, not the hottest block.** The first draft of this scenario read
-            // the hottest block and reported the station *cooler*, which was true and measured the
-            // wrong thing: the hottest block is a source, and what sets a source's temperature is
-            // how much structure it is bolted to rather than how much skin the grid has. Shedding
-            // area is a property of the whole grid, so the statistic has to be one too.
             float shipVacuumRise = shipVacuum.Mean - shipVacuum.Ambient;
             float stationVacuumRise = stationVacuum.Mean - stationVacuum.Ambient;
 
@@ -2327,6 +2214,7 @@ namespace Thermodynamics.Harness
                    .Append(" K, which is ").Append(Ratio(stationAirRise, shipAirRise))
                    .Append("x on the rise against the 2x a halved convecting area predicts. ");
 
+/// <summary>RunHull operation.</summary>
             StationCase stationNoAir = RunHull(true, false, 0, roomAir: false);
             float noAirRise = stationNoAir.Mean - stationNoAir.Ambient;
             summary.Append("With room air off the station's mean sits ").Append(noAirRise.ToString("n1"))
@@ -2336,10 +2224,9 @@ namespace Thermodynamics.Harness
                    .Append(" than with it on across ").Append(stationVacuum.PressurisedRooms)
                    .Append(" compartments. ");
 
-            // The air arms above settle within a few kelvin of ambient, so the ratio of two rises is
-            // a ratio of two small numbers and the convective exponent is not really under test
-            // there (`P2`). Repeated at ten times the load, where it is.
+/// <summary>RunHull operation.</summary>
             StationCase shipHot = RunHull(false, true, 0, watts: StationWatts * 10f);
+/// <summary>RunHull operation.</summary>
             StationCase stationHot = RunHull(true, true, 0, watts: StationWatts * 10f);
             float shipHotRise = shipHot.Mean - shipHot.Ambient;
             float stationHotRise = stationHot.Mean - stationHot.Ambient;
@@ -2351,7 +2238,6 @@ namespace Thermodynamics.Harness
                    .Append("x — the same ratio at a tenth of the load, so it is not two small "
                            + "numbers being divided. ");
 
-            // Where the gap sits: on the skin, or between the skin and the middle.
             summary.Append("Skin against interior, station then ship: in vacuum ")
                    .Append(Gap(stationVacuum)).Append(" and ").Append(Gap(shipVacuum))
                    .Append("; in air at ten times the load ")
@@ -2368,6 +2254,7 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < ladder.Length; i++)
             {
+/// <summary>RunHull operation.</summary>
                 StationCase priced = RunHull(true, false, ladder[i]);
                 if (priced.Radiators == lastCount) continue;
                 lastCount = priced.Radiators;
@@ -2398,7 +2285,6 @@ namespace Thermodynamics.Harness
             return Result("station", stationVacuum.Runner, summary.ToString());
         }
 
-        /// <summary>Watts every arm of the station scenario carries, so only the shape differs.</summary>
         private const float StationWatts = 600000f;
 
         private class StationCase
@@ -2418,7 +2304,7 @@ namespace Thermodynamics.Harness
             public float SettleDrift;
         }
 
-        /// <summary>Skin mean, interior mean and the drop between them, for one arm.</summary>
+/// <summary>Gap operation.</summary>
         private static string Gap(StationCase c)
         {
             if (c.InsideCount == 0) return "no interior";
@@ -2426,28 +2312,23 @@ namespace Thermodynamics.Harness
                 + (c.InsideMean - c.SkinMean).ToString("n1") + " K over " + c.InsideCount + " blocks)";
         }
 
+/// <summary>Ratio operation.</summary>
         private static string Ratio(float a, float b)
         {
             return b == 0f ? "n/a" : (a / b).ToString("n3");
         }
 
-        /// <summary>
-        /// One arm: a station or a ship, in vacuum or on a planet, with a given number of its skin
-        /// blocks replaced by radiators. Everything but those three things is identical between
-        /// arms (`P6`), including the block count, because the radiators are a substitution rather
-        /// than an addition.
-        /// </summary>
+/// <summary>RunHull operation.</summary>
         private static StationCase RunHull(bool station, bool planet, int radiators,
             bool roomAir = true, float watts = StationWatts)
         {
             GridBuilder builder = GridBuilder.Large();
 
+/// <summary>List operation.</summary>
             List<Vector3I> cells = new List<Vector3I>(station
                 ? GridShapes.Station(new Vector3I(17, 15, 19), new Vector3I(3, 3, 3))
                 : GridShapes.Ship(40, 9, 12));
 
-            // Sorted so the arms place blocks in the same order whatever the hash set's iteration
-            // does, which is what makes two runs of one arm identical.
             cells.Sort(CellOrder);
 
             Vector3I min = cells[0];
@@ -2458,38 +2339,24 @@ namespace Thermodynamics.Harness
                 max = Vector3I.Max(max, cells[i]);
             }
 
+/// <summary>Vector3 operation.</summary>
             Vector3 centre = new Vector3(
                 (min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f, (min.Z + max.Z) * 0.5f);
 
             BlockModel armour = Catalog.LightArmor();
             foreach (Vector3I cell in cells) builder.Place(armour, cell);
 
-            // **Radiators are bolted to the outside of one face, not substituted into the skin.**
-            // A radiator is a 1x5x2 block, so it cannot take a skin cell's place; and a radiating
-            // area that is not conducted to is not a cooling system, which is the point the pricing
-            // arm exists to make. They tile the `+X` face flush against it, so each is in contact
-            // with the hull and heat has to reach it the way it would on a real base.
-            //
-            // These are *added* blocks. The pricing arm is asking what extra plant a station needs,
-            // so the added count is the answer rather than a confound — the two unaided arms both
-            // carry none, which is where the shapes are compared.
-            // **They stand on the roof, because a radiator only mounts on its top and bottom
-            // faces.** Bolted to a side face it touches the hull and conducts nothing — the first
-            // draft did exactly that, and the ladder read *hotter with every radiator added*: the
-            // blocks were shading the skin they covered and taking no heat off it. The 1x5x2 model
-            // stands 5 cells tall on a 1x2 footprint, so the roof takes them the right way up.
             int placedRadiators = 0;
             if (radiators > 0)
             {
                 BlockModel radiator = Catalog.Radiator();
+/// <summary>HashSet operation.</summary>
                 HashSet<Vector3I> occupied = new HashSet<Vector3I>(cells, Vector3I.Comparer);
 
                 for (int z = min.Z; z + 1 <= max.Z && placedRadiators < radiators; z += 2)
                 {
                     for (int x = min.X; x <= max.X && placedRadiators < radiators; x += 1)
                     {
-                        // Only where the hull is there to bolt to, so a radiator never floats over
-                        // a compartment the shape left open.
                         bool backed = true;
                         for (int dz = 0; dz < 2 && backed; dz++)
                             backed = occupied.Contains(new Vector3I(x, max.Y, z + dz));
@@ -2502,6 +2369,7 @@ namespace Thermodynamics.Harness
                 }
             }
 
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableRoomAir = roomAir;
             settings.EnableFriction = false;
@@ -2511,9 +2379,6 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = builder.BuildSimulation(settings.Derive(), 293.15f);
             while (simulation.HasPendingWork) simulation.Update(1f / 60f, Worlds.Shadow());
 
-            // **Every compartment is pressurised, or the room air switch reaches nothing.** The
-            // first draft of this scenario left them at zero and reported the two arms agreeing to
-            // 0.0 K, which is what a switch wired to nothing looks like from the outside.
             int pressurised = 0;
             if (roomAir)
             {
@@ -2525,9 +2390,7 @@ namespace Thermodynamics.Harness
                 }
             }
 
-            // The load is spread over the blocks nearest the centre of the bounding box, which is
-            // where a station's refineries and a ship's reactors both sit, and is the placement
-            // that does not favour either shape.
+/// <summary>List operation.</summary>
             List<ThermalNode> nodes = new List<ThermalNode>();
             for (int i = 0; i < simulation.Solver.Nodes.Count; i++) nodes.Add(simulation.Solver.Nodes[i]);
 
@@ -2554,24 +2417,16 @@ namespace Thermodynamics.Harness
                 externalFaces += simulation.Solver.Nodes[i].TotalExposedFaces;
             }
 
+/// <summary>ScenarioRunner operation.</summary>
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = planet
                 ? (Func<float, EnvironmentSample>)(t => Worlds.PlanetSurface(1f, 0.25f))
                 : (t => Worlds.Shadow());
-            // **10,000 s, not the 20,000 the first run used.** Every arm was flat to 0.0000 K over
-            // its last two samples there and the CSV shows them stopping by 6,000, so the second
-            // half was buying nothing and this scenario is the most expensive in the library. The
-            // drift figure below is what makes the shortening safe rather than hopeful: it is
-            // reported in the summary, so a run that stopped early says so.
             runner.Run(10000f, 1000f);
 
             float ambient = runner.Final.AmbientTemperature;
             float heat = 0f;
 
-            // **Split by whether a block can see out.** A simple area argument says the rise scales
-            // with 1/area whatever the medium; if that holds in vacuum and fails in air, the extra
-            // must be the path from the middle to the skin rather than the skin itself, and these
-            // two means are what says so.
             double skinTotal = 0d, insideTotal = 0d;
             int skinCount = 0, insideCount = 0;
 
@@ -2584,8 +2439,6 @@ namespace Thermodynamics.Harness
                 else { insideTotal += node.Temperature; insideCount++; }
             }
 
-            // **A settling figure that was still climbing is not a settling figure** (`P2`). The
-            // movement over the last two samples is reported beside every reading that uses it.
             int last = runner.Samples.Count - 1;
             float drift = last > 0
                 ? Math.Abs(runner.Samples[last].MeanTemperature - runner.Samples[last - 1].MeanTemperature)
@@ -2609,6 +2462,7 @@ namespace Thermodynamics.Harness
             };
         }
 
+/// <summary>CellOrder operation.</summary>
         private static int CellOrder(Vector3I a, Vector3I b)
         {
             if (a.Z != b.Z) return a.Z.CompareTo(b.Z);
@@ -2617,8 +2471,10 @@ namespace Thermodynamics.Harness
         }
 
 
+/// <summary>Result operation.</summary>
         private static ScenarioResult Result(string name, ScenarioRunner runner, string summary)
         {
+/// <summary>ScenarioResult operation.</summary>
             ScenarioResult result = new ScenarioResult();
             result.Name = name;
             result.Runner = runner;
@@ -2627,6 +2483,7 @@ namespace Thermodynamics.Harness
             return result;
         }
 
+/// <summary>C operation.</summary>
         private static string C(float kelvin)
         {
             return ThermalConstants.KelvinToCelsius(kelvin).ToString("n1") + " C";

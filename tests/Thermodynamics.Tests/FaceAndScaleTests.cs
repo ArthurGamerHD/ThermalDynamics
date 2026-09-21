@@ -5,18 +5,10 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The six-face index every other structure in the model is laid out against.
-    ///
-    /// <para>
-    /// Offsets, normals, opposites and axes have to agree with each other exactly, because a surface
-    /// word, a node's exposure array and a solar weight are all six-element arrays keyed on this one
-    /// numbering. A disagreement here would read as a physics fault everywhere else.
-    /// </para>
-    /// </summary>
     public class FaceTests
     {
         [Fact]
+/// <summary>OppositeIsAnInvolutionAndReversesTheOffset operation.</summary>
         public void OppositeIsAnInvolutionAndReversesTheOffset()
         {
             for (int face = 0; face < Face.Count; face++)
@@ -29,6 +21,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>IndexOfInvertsOffsets operation.</summary>
         public void IndexOfInvertsOffsets()
         {
             for (int face = 0; face < Face.Count; face++)
@@ -41,6 +34,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NormalsMatchOffsets operation.</summary>
         public void NormalsMatchOffsets()
         {
             for (int face = 0; face < Face.Count; face++)
@@ -51,6 +45,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>OppositeFacesShareAnAxis operation.</summary>
         public void OppositeFacesShareAnAxis()
         {
             for (int face = 0; face < Face.Count; face++)
@@ -64,18 +59,10 @@ namespace Thermodynamics.Tests
         }
     }
 
-    /// <summary>
-    /// The temperature-to-colour ramp shared by the HUD, the terminal and every overlay, and the unit conversions beside it.
-    ///
-    /// <para>
-    /// A ramp is presentation and cannot make a ship wrong, which is why it went untested for so long
-    /// in the copy that had the callers. What it can do is produce a colour that is not a colour: the
-    /// last two cases here are the degenerate anchors an overlay actually asks for.
-    /// </para>
-    /// </summary>
     public class TemperatureScaleTests
     {
         [Fact]
+/// <summary>ConversionsRoundTrip operation.</summary>
         public void ConversionsRoundTrip()
         {
             Assert.Equal(0f, ThermalConstants.KelvinToCelsius(273.15f), 3);
@@ -85,6 +72,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RampIsBlackAtZeroAndBlueAtTheLowAnchor operation.</summary>
         public void RampIsBlackAtZeroAndBlueAtTheLowAnchor()
         {
             Vector3 cold = TemperatureScale.ToHsv(0f);
@@ -95,6 +83,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>HueSweepsDownFromBlueToRedBetweenTheAnchors operation.</summary>
         public void HueSweepsDownFromBlueToRedBetweenTheAnchors()
         {
             float previousHue = float.MaxValue;
@@ -109,6 +98,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AboveTheHighAnchorSaturationFallsTowardWhite operation.</summary>
         public void AboveTheHighAnchorSaturationFallsTowardWhite()
         {
             float atHigh = TemperatureScale.ToHsv(TemperatureScale.DefaultHigh).Y;
@@ -119,6 +109,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ValuesAreClampedRatherThanExtrapolated operation.</summary>
         public void ValuesAreClampedRatherThanExtrapolated()
         {
             Vector3 beyond = TemperatureScale.ToHsv(999999f);
@@ -130,6 +121,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>DegenerateAnchorsDoNotProduceInfinities operation.</summary>
         public void DegenerateAnchorsDoNotProduceInfinities()
         {
             Vector3 colour = TemperatureScale.ToHsv(100f, 0f, 0f, 0f);
@@ -138,23 +130,12 @@ namespace Thermodynamics.Tests
             Assert.False(float.IsNaN(colour.Z) || float.IsInfinity(colour.Z));
         }
 
-        /// <summary>
-        /// The ramp the overlays used before it moved into the core produced the same colour
-        /// wherever it produced a colour at all.
-        ///
-        /// <para>
-        /// Two implementations of one ramp lived side by side: <c>Tools.GetTemperatureColor</c>
-        /// in the game layer and <see cref="TemperatureScale.ToHsv"/> in the core, identical line
-        /// for line except that the core one clamps its anchors first. Only the game-layer copy
-        /// had callers, and only the core one had tests. This walks the four ramps the overlays
-        /// actually ask for and asserts the two agree on every sample.
-        /// </para>
-        /// </summary>
         [Theory]
         [InlineData(1000f, 267f, 500f)]      // the default ramp: a block's temperature
         [InlineData(1400f, 1f, 1000f)]       // solar irradiance on a face
         [InlineData(20000f, 100f, 5000f)]    // solar and friction watts
         [InlineData(100f, 5f, 90f)]          // room air, whose span is fitted per frame
+/// <summary>TheCoreRampReproducesTheOneTheOverlaysUsedToCarry operation.</summary>
         public void TheCoreRampReproducesTheOneTheOverlaysUsedToCarry(float max, float low, float high)
         {
             for (float t = -50f; t <= max * 1.2f; t += max / 200f)
@@ -168,19 +149,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The one place the two ramps disagree, and the reason the move was worth making.
-        ///
-        /// <para>
-        /// The exposed-faces overlay asks for <c>(value, max: 6, low: 0, high: 6)</c>, so a block
-        /// with all six faces exposed lands on <c>t == high == max</c> and the legacy ramp
-        /// evaluates <c>1 - 2 * (0 / 0)</c>. Saturation came back NaN, and the blocks the overlay
-        /// exists to find — the most exposed ones on the hull — were the ones it could not colour.
-        /// The core ramp separates a degenerate <c>max</c> from <c>high</c> before dividing, and
-        /// returns full saturation.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>AFullyExposedBlockUsedToColourToNaN operation.</summary>
         public void AFullyExposedBlockUsedToColourToNaN()
         {
             Vector3 legacy = LegacyFormulas.TemperatureColor(6f, 6f, 0f, 6f);
@@ -193,18 +163,10 @@ namespace Thermodynamics.Tests
         }
     }
 
-    /// <summary>
-    /// Whether a planet stands between a grid and the sun, worked out analytically rather than by casting a ray across millions of metres.
-    ///
-    /// <para>
-    /// Three regimes, because the fitted horizon curve behaves differently in each: just above the
-    /// surface, where most of the sky is below ground; far away, where the terminator is sharp; and
-    /// the plain case of the sun behind the body.
-    /// </para>
-    /// </summary>
     public class OcclusionMathTests
     {
         [Fact]
+/// <summary>VisualSizeShrinksWithDistance operation.</summary>
         public void VisualSizeShrinksWithDistance()
         {
             double near = OcclusionMath.VisualSize(1000d, 60000d);
@@ -213,36 +175,42 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SunBehindThePlanetIsOccluded operation.</summary>
         public void SunBehindThePlanetIsOccluded()
         {
             Vector3D planet = Vector3D.Zero;
             double radius = 60000d;
+/// <summary>Vector3D operation.</summary>
             Vector3D observer = new Vector3D(0d, 0d, radius + 1000d);
 
-            // sun on the far side of the planet from the observer
+/// <summary>Vector3 operation.</summary>
             Vector3 sunBehind = new Vector3(0f, 0f, -1f);
             Assert.True(OcclusionMath.IsOccludedBySphere(observer, planet, radius, sunBehind));
         }
 
         [Fact]
+/// <summary>SunOverheadIsNotOccluded operation.</summary>
         public void SunOverheadIsNotOccluded()
         {
             Vector3D planet = Vector3D.Zero;
             double radius = 60000d;
+/// <summary>Vector3D operation.</summary>
             Vector3D observer = new Vector3D(0d, 0d, radius + 1000d);
 
+/// <summary>Vector3 operation.</summary>
             Vector3 sunAbove = new Vector3(0f, 0f, 1f);
             Assert.False(OcclusionMath.IsOccludedBySphere(observer, planet, radius, sunAbove));
         }
 
         [Fact]
+/// <summary>FarFromThePlanetTheTerminatorIsSharp operation.</summary>
         public void FarFromThePlanetTheTerminatorIsSharp()
         {
             Vector3D planet = Vector3D.Zero;
             double radius = 60000d;
+/// <summary>Vector3D operation.</summary>
             Vector3D observer = new Vector3D(0d, 0d, 100000000d);
 
-            // A tiny distant planet occludes only when almost exactly in line.
             Vector3 sideways = Vector3.Normalize(new Vector3(1f, 0f, -0.01f));
             Assert.False(OcclusionMath.IsOccludedBySphere(observer, planet, radius, sideways));
         }

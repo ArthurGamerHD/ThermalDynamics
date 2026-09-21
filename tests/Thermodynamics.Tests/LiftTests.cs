@@ -6,24 +6,15 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **Lift: the transverse half of the pressure sum, and the two halves of `K23`'s criterion a
-    /// rig can answer.**
-    ///
-    /// <para>
-    /// Registered before any of this was measured: a hull symmetric about the flow must make *no*
-    /// lift, or the sum is reading an artefact rather than a shape; and lift on a ramp must point
-    /// **away from the sloped face**, or the sign is wrong and every ship flies into the ground.
-    /// The other two halves are population figures and belong to the corpus.
-    /// </para>
-    /// </summary>
     public class LiftTests
     {
         private const float ThickAir = 1f;
         private const float Speed = 200f;
 
+/// <summary>Sets the tings.</summary>
         private static ThermalSettings Settings(bool lift, bool shape = true)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -34,6 +25,7 @@ namespace Thermodynamics.Tests
             return settings;
         }
 
+/// <summary>Built operation.</summary>
         private static ThermalSimulation Built(GridBuilder builder, bool lift, bool shape = true)
         {
             ThermalSimulation simulation = builder.BuildSimulation(Settings(lift, shape), 293.15f);
@@ -42,18 +34,16 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-        /// <summary>A solid cube: symmetric about the flow in both transverse axes.</summary>
+/// <summary>Cube operation.</summary>
         private static ThermalSimulation Cube(bool lift)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.HeavyArmor(), Vector3I.Zero, new Vector3I(6, 6, 6));
+/// <summary>Built operation.</summary>
             return Built(builder, lift);
         }
 
-        /// <summary>
-        /// A ramp whose slope faces the flow and rises in +Y, so its surface normal leans +Y and the
-        /// pressure on it — acting along `−n̂` — pushes the hull in −Y.
-        /// </summary>
+/// <summary>Ramp operation.</summary>
         private static ThermalSimulation Ramp(bool lift)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -68,29 +58,28 @@ namespace Thermodynamics.Tests
                 }
             }
 
+/// <summary>Built operation.</summary>
             return Built(builder, lift);
         }
 
-        /// <summary>The wind as the force code sees it: along the ship's own +Z motion.</summary>
+/// <summary>Wind operation.</summary>
         private static Vector3 Wind()
         {
             return Vector3.Backward * Speed;
         }
 
+/// <summary>Lift operation.</summary>
         private static Vector3 Lift(ThermalSimulation simulation)
         {
             return LiftForce.Vector(simulation.Solver.LastPressureWatts, Wind(),
                 simulation.Solver.Settings);
         }
 
-        /// <summary>
-        /// **Criterion 1: a hull symmetric about the flow makes no lift.** Every windward face of a
-        /// cube has an opposite that cancels it, so the transverse remainder is nought — and if it
-        /// is not, the sum is describing how the hull was drawn rather than what shape it is.
-        /// </summary>
         [Fact]
+/// <summary>ASymmetricHullMakesNoLift operation.</summary>
         public void ASymmetricHullMakesNoLift()
         {
+/// <summary>Lift operation.</summary>
             Vector3 lift = Lift(Cube(true));
 
             Assert.True(lift.Length() < 1f,
@@ -98,14 +87,11 @@ namespace Thermodynamics.Tests
                     + " N of lift, so the transverse sum is reading an artefact");
         }
 
-        /// <summary>
-        /// **Criterion 2: the sign is right.** The ramp's sloped surface faces +Y, Newtonian
-        /// pressure acts along `−n̂`, so the air pushes the hull toward −Y. A wedge with its slope
-        /// underneath is pushed up; this one has it on top and is pushed down.
-        /// </summary>
         [Fact]
+/// <summary>ARampIsPushedAwayFromItsSlopedFace operation.</summary>
         public void ARampIsPushedAwayFromItsSlopedFace()
         {
+/// <summary>Lift operation.</summary>
             Vector3 lift = Lift(Ramp(true));
 
             Assert.True(lift.Length() > 1f,
@@ -115,13 +101,11 @@ namespace Thermodynamics.Tests
                     + lift.Y);
         }
 
-        /// <summary>
-        /// **Lift is perpendicular to the flow by construction**, which is what stops it quietly
-        /// adding to or subtracting from drag on an asymmetric hull.
-        /// </summary>
         [Fact]
+/// <summary>LiftCarriesNoComponentAlongTheFlow operation.</summary>
         public void LiftCarriesNoComponentAlongTheFlow()
         {
+/// <summary>Lift operation.</summary>
             Vector3 lift = Lift(Ramp(true));
             Vector3 flow = Vector3.Normalize(Wind());
 
@@ -129,40 +113,38 @@ namespace Thermodynamics.Tests
                 "lift has a component along the flow, so switching it on changes drag");
         }
 
-        /// <summary>
-        /// **Switching lift on leaves drag bit-identical**, which is the promise that a world can
-        /// take lift without re-tuning the handling it already had.
-        /// </summary>
         [Fact]
+/// <summary>LiftDoesNotChangeDrag operation.</summary>
         public void LiftDoesNotChangeDrag()
         {
+/// <summary>Ramp operation.</summary>
             float without = Ramp(false).Solver.LastFrictionWatts;
+/// <summary>Ramp operation.</summary>
             float with = Ramp(true).Solver.LastFrictionWatts;
 
             Assert.Equal(without, with, 4);
         }
 
-        /// <summary>
-        /// **Lift needs the shape term.** Without a reconstructed normal every surface is one of six
-        /// axis planes, and a transverse sum over those describes the axes the hull was drawn on
-        /// rather than its shape — so it is refused rather than approximated.
-        /// </summary>
         [Fact]
+/// <summary>LiftIsRefusedWithoutTheShapeTerm operation.</summary>
         public void LiftIsRefusedWithoutTheShapeTerm()
         {
+/// <summary>Built operation.</summary>
             ThermalSimulation ramp = Built(RampBuilder(), true, false);
 
             Assert.Equal(Vector3.Zero, ramp.Solver.LastPressureWatts);
             Assert.Equal(Vector3.Zero, Lift(ramp));
         }
 
-        /// <summary>The coefficient scales what is applied and nothing else.</summary>
         [Fact]
+/// <summary>TheCoefficientScalesTheForce operation.</summary>
         public void TheCoefficientScalesTheForce()
         {
+/// <summary>Ramp operation.</summary>
             ThermalSimulation ramp = Ramp(true);
 
             ThermalSettings half = ramp.Solver.Settings;
+/// <summary>Lift operation.</summary>
             float full = Lift(ramp).Length();
 
             half.LiftCoefficient = 0.5f;
@@ -174,6 +156,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(Vector3.Zero, LiftForce.Vector(ramp.Solver.LastPressureWatts, Wind(), half));
         }
 
+/// <summary>RampBuilder operation.</summary>
         private static GridBuilder RampBuilder()
         {
             GridBuilder builder = GridBuilder.Large();

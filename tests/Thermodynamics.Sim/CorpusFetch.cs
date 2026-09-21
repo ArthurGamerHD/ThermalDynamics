@@ -13,42 +13,14 @@ using Thermodynamics.Harness;
 
 namespace Thermodynamics.Sim
 {
-    /// <summary>
-    /// Builds a blueprint corpus out of the Steam Workshop.
-    ///
-    /// <para>
-    /// Two halves, because they have entirely different constraints. **Listing** is a public Web
-    /// API call needing only a free key, and it is what decides *which* ten thousand ships — the
-    /// corpus is meant to be a population of the designs people actually build, so it is ranked by
-    /// subscriptions rather than taken at random. **Fetching** needs SteamCMD and an account that
-    /// owns the game, because a paid title's workshop is not anonymously downloadable.
-    /// </para>
-    ///
-    /// <para>
-    /// **No credential is ever read, stored or logged by this tool.** SteamCMD is invoked with a
-    /// user name and no password, which works once that account's credentials are cached by a
-    /// single interactive <c>steamcmd +login &lt;user&gt;</c> run by hand. Anything else would mean
-    /// this program handling a password, and it has no business doing that.
-    /// </para>
-    ///
-    /// <para>
-    /// Resumable and rate-limited throughout: a run that stops halfway is re-run, and anything
-    /// already on disk is skipped. The listing pauses between pages and the fetch works in batches,
-    /// because ten thousand items is a lot to ask of someone else's servers and there is no hurry.
-    /// </para>
-    /// </summary>
     public static class CorpusFetch
     {
-        /// <summary>Space Engineers.</summary>
         private const int AppId = 244850;
 
-        /// <summary>Items per API page. The endpoint's own maximum.</summary>
         private const int PageSize = 100;
 
-        /// <summary>Workshop ids per SteamCMD invocation.</summary>
         private const int BatchSize = 100;
 
-        /// <summary>Courtesy pause between API pages and between fetch batches.</summary>
         private static readonly TimeSpan PagePause = TimeSpan.FromMilliseconds(500);
         private static readonly TimeSpan BatchPause = TimeSpan.FromSeconds(2);
 
@@ -57,29 +29,33 @@ namespace Thermodynamics.Sim
             public long Id;
             public string Title;
             public long Subscriptions;
+/// <summary>List operation.</summary>
             public List<string> Tags = new List<string>();
         }
 
+/// <summary>Run operation.</summary>
         public static int Run(string[] args)
         {
+/// <summary>Value operation.</summary>
             string key = Value(args, "--key") ?? Environment.GetEnvironmentVariable("STEAM_WEB_API_KEY");
-            // Anonymous works for this workshop, tested against a real item, so no credential is
-            // needed at all — which is the best possible answer to a tool that would otherwise want
-            // one. --user is kept for the case where an item turns out to need ownership.
+/// <summary>Value operation.</summary>
             string user = Value(args, "--user") ?? "anonymous";
+/// <summary>Value operation.</summary>
             string output = Value(args, "--out") ?? Thermodynamics.Harness.Blueprints.CorpusPath();
+/// <summary>Value operation.</summary>
             string steamcmd = Value(args, "--steamcmd") ?? "steamcmd";
+/// <summary>Int operation.</summary>
             int target = Int(Value(args, "--top"), 10000);
+/// <summary>Has operation.</summary>
             bool listOnly = Has(args, "--list-only");
 
             Directory.CreateDirectory(output);
             string manifest = Path.Combine(output, "manifest.csv");
 
+/// <summary>Load operation.</summary>
             List<Item> items = Load(manifest);
             if (items.Count >= target)
             {
-                // The key buys the listing and nothing else, so a corpus with a manifest already
-                // long enough can be fetched without one.
                 Console.WriteLine("Manifest already holds " + items.Count.ToString("n0") + " items; not re-listing.");
             }
             else if (string.IsNullOrEmpty(key))
@@ -94,6 +70,7 @@ namespace Thermodynamics.Sim
             }
             else
             {
+/// <summary>List operation.</summary>
                 items = List(key, target).GetAwaiter().GetResult();
                 Save(manifest, items);
                 Console.WriteLine("Listed " + items.Count.ToString("n0") + " blueprints to " + manifest);
@@ -102,22 +79,17 @@ namespace Thermodynamics.Sim
             if (listOnly) return 0;
 
             if (items.Count > target) items = items.GetRange(0, target);
+/// <summary>Fetch operation.</summary>
             return Fetch(items, user, steamcmd, output);
         }
 
-        // ---- listing ---------------------------------------------------------------------------
 
-        /// <summary>
-        /// The most-subscribed blueprints, newest cursor first.
-        ///
-        /// Ranked by total unique subscriptions rather than by votes or recency: the corpus is
-        /// supposed to represent what people build and fly, and a subscription is the closest
-        /// signal the workshop has to that. Ranking by vote would over-weight the spectacular, and
-        /// by date the untested.
-        /// </summary>
+/// <summary>List operation.</summary>
         private static async Task<List<Item>> List(string key, int target)
         {
+/// <summary>List operation.</summary>
             List<Item> items = new List<Item>();
+/// <summary>HashSet operation.</summary>
             HashSet<long> seen = new HashSet<long>();
             string cursor = "*";
 
@@ -146,19 +118,16 @@ namespace Thermodynamics.Sim
                     }
                     catch (Exception e)
                     {
-                        // Redacted, because the key is in the query string and some transports put
-                        // the whole URI in the message. A secret that reaches a log or a pasted
-                        // error report has escaped as surely as one committed to a file.
                         Console.Error.WriteLine("Listing stopped: " + Redact(e.Message, key));
                         break;
                     }
 
                     int before = items.Count;
+/// <summary>ReadPage operation.</summary>
                     string next = ReadPage(body, items, seen, target);
 
                     Console.WriteLine("  listed " + items.Count.ToString("n0") + " of " + target.ToString("n0"));
 
-                    // No cursor movement and no new items means the workshop has no more to give.
                     if (next == null || next == cursor || items.Count == before) break;
 
                     cursor = next;
@@ -169,14 +138,14 @@ namespace Thermodynamics.Sim
             return items;
         }
 
-        /// <summary>Removes a secret from anything about to be printed.</summary>
+/// <summary>Redact operation.</summary>
         private static string Redact(string text, string secret)
         {
             if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(secret)) return text;
             return text.Replace(secret, "<key>");
         }
 
-        /// <summary>Reads one API page, returning the cursor for the next.</summary>
+/// <summary>ReadPage operation.</summary>
         private static string ReadPage(string body, List<Item> items, HashSet<long> seen, int target)
         {
             using (JsonDocument document = JsonDocument.Parse(body))
@@ -195,12 +164,10 @@ namespace Thermodynamics.Sim
                 {
                     if (items.Count >= target) break;
 
+/// <summary>ReadItem operation.</summary>
                     Item item = ReadItem(element);
                     if (item == null || !seen.Add(item.Id)) continue;
 
-                    // A workshop item tagged both Blueprint and Mod is a mod that ships a
-                    // blueprint, and its ship is built out of its own blocks. Not a measurement of
-                    // vanilla balance, and cheaper to drop here than to download and reject.
                     if (item.Tags.Contains("Mod")) continue;
 
                     items.Add(item);
@@ -210,6 +177,7 @@ namespace Thermodynamics.Sim
             }
         }
 
+/// <summary>ReadItem operation.</summary>
         private static Item ReadItem(JsonElement element)
         {
             JsonElement id;
@@ -246,17 +214,11 @@ namespace Thermodynamics.Sim
             return item;
         }
 
-        // ---- fetching --------------------------------------------------------------------------
 
-        /// <summary>
-        /// Downloads whatever is not already on disk, in batches, through SteamCMD.
-        ///
-        /// SteamCMD unpacks into its own <c>steamapps/workshop/content/244850/&lt;id&gt;</c>, which
-        /// is the layout <c>Blueprints</c> already reads, so nothing is copied or rewritten: the
-        /// corpus directory is pointed at rather than assembled.
-        /// </summary>
+/// <summary>Fetch operation.</summary>
         private static int Fetch(List<Item> items, string user, string steamcmd, string output)
         {
+/// <summary>List operation.</summary>
             List<long> wanted = new List<long>();
             foreach (Item item in items)
             {
@@ -272,6 +234,7 @@ namespace Thermodynamics.Sim
             int done = 0;
             for (int i = 0; i < wanted.Count; i += BatchSize)
             {
+/// <summary>StringBuilder operation.</summary>
                 StringBuilder arguments = new StringBuilder();
                 arguments.Append("+force_install_dir ").Append(Quote(Path.GetFullPath(output)));
                 arguments.Append(" +login ").Append(user);
@@ -291,6 +254,7 @@ namespace Thermodynamics.Sim
                 if (end < wanted.Count) Thread.Sleep(BatchPause);
             }
 
+/// <summary>Unpack operation.</summary>
             int unpacked = Unpack(output);
 
             Console.WriteLine();
@@ -300,13 +264,7 @@ namespace Thermodynamics.Sim
             return 0;
         }
 
-        /// <summary>
-        /// Where SteamCMD unpacks one workshop item.
-        ///
-        /// The <c>workshop</c> segment is not optional and leaving it out is not harmless: the
-        /// resume check then never finds anything already on disk, and a re-run downloads all ten
-        /// thousand items again rather than none of them.
-        /// </summary>
+/// <summary>ItemPath operation.</summary>
         private static string ItemPath(string output, long id)
         {
             return Path.Combine(output, "steamapps", "workshop", "content", "244850",
@@ -315,14 +273,7 @@ namespace Thermodynamics.Sim
 
 
 
-        /// <summary>
-        /// Unpacks the legacy workshop format.
-        ///
-        /// An item published before Steam's current UGC system arrives as a single
-        /// <c>*_legacy.bin</c>, which is a zip holding the <c>bp.sbc</c> and a thumbnail rather than
-        /// the unpacked folder a newer item gives. Both shapes end up in the corpus, so the reader
-        /// finds a blueprint either way and never has to know which era an item came from.
-        /// </summary>
+/// <summary>Unpack operation.</summary>
         private static int Unpack(string output)
         {
             string root = Path.Combine(output, "steamapps", "workshop", "content", "244850");
@@ -351,18 +302,18 @@ namespace Thermodynamics.Sim
                 }
                 catch (Exception)
                 {
-                    // A corpus of ten thousand will contain a truncated or unreadable archive. It
-                    // is one ship, and the yield reports it rather than the pass failing.
                 }
             }
 
             return unpacked;
         }
 
+/// <summary>RunSteamCmd operation.</summary>
         private static bool RunSteamCmd(string steamcmd, string arguments)
         {
             try
             {
+/// <summary>ProcessStartInfo operation.</summary>
                 ProcessStartInfo start = new ProcessStartInfo(steamcmd, arguments)
                 {
                     UseShellExecute = false,
@@ -372,9 +323,6 @@ namespace Thermodynamics.Sim
                 {
                     process.WaitForExit();
 
-                    // SteamCMD reports a nonzero code for a batch in which any single item failed,
-                    // which on a corpus this size is routine — an item is deleted or made private
-                    // between listing and fetching. The corpus reader ignores what is not there.
                     return true;
                 }
             }
@@ -386,15 +334,8 @@ namespace Thermodynamics.Sim
             }
         }
 
-        // ---- the manifest ----------------------------------------------------------------------
 
-        /// <summary>
-        /// The listing, checked in beside the corpus.
-        ///
-        /// It is what makes a corpus reproducible and what lets a later pass weight a ship by how
-        /// many people actually use it — a design with fifty thousand subscribers is worth more to
-        /// a balance decision than one with fifty.
-        /// </summary>
+/// <summary>Save operation.</summary>
         private static void Save(string path, List<Item> items)
         {
             using (StreamWriter writer = new StreamWriter(path))
@@ -411,8 +352,10 @@ namespace Thermodynamics.Sim
             }
         }
 
+/// <summary>Load operation.</summary>
         private static List<Item> Load(string path)
         {
+/// <summary>List operation.</summary>
             List<Item> items = new List<Item>();
             if (!File.Exists(path)) return items;
 
@@ -440,6 +383,7 @@ namespace Thermodynamics.Sim
             return items;
         }
 
+/// <summary>Csv operation.</summary>
         private static string Csv(string text)
         {
             if (string.IsNullOrEmpty(text)) return "";
@@ -449,21 +393,25 @@ namespace Thermodynamics.Sim
                 : "\"" + text.Replace("\"", "\"\"") + "\"";
         }
 
+/// <summary>Quote operation.</summary>
         private static string Quote(string path)
         {
             return path.IndexOf(' ') < 0 ? path : "\"" + path + "\"";
         }
 
+/// <summary>Value operation.</summary>
         private static string Value(string[] args, string name)
         {
             return Cli.Value(args, name);
         }
 
+/// <summary>Has operation.</summary>
         private static bool Has(string[] args, string name)
         {
             return Cli.Has(args, name);
         }
 
+/// <summary>Int operation.</summary>
         private static int Int(string text, int fallback)
         {
             int value;

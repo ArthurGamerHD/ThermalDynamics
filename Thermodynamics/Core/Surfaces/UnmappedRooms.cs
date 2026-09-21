@@ -4,28 +4,16 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// Rooms the game holds and this map does not: every cell the map calls external is offered to the
-    /// game, and each connected airtight region is a compartment the model lost. Diagnostic only —
-    /// the fix belongs in the surface bits. See thermal-model.md, Diagnostics.
-    /// </summary>
     public static class UnmappedRooms
     {
-        /// <summary>One compartment the game seals and the map does not.</summary>
         public class Region
         {
-            /// <summary>
-            /// Lexicographically smallest cell, matching <see cref="RoomAirNode.Anchor"/>. Regions are
-            /// ordered by it, so a region keeps the same index across two dumps of an unchanged grid.
-            /// </summary>
             public Vector3I Anchor;
 
+/// <summary>HashSet operation.</summary>
             public readonly HashSet<Vector3I> Cells = new HashSet<Vector3I>(Vector3I.Comparer);
 
-            /// <summary>
-            /// Boundary faces leading out of the region that this model does not seal. These are the
-            /// faces the game seals and this does not, so the blocks across them are the ones to fix.
-            /// </summary>
+/// <summary>List operation.</summary>
             public readonly List<Leak> Leaks = new List<Leak>();
 
             public int CellCount
@@ -34,17 +22,15 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>One face where the game seals and this model does not.</summary>
         public struct Leak
         {
-            /// <summary>The region cell the face belongs to, and which of its six faces.</summary>
             public Vector3I Cell;
 
             public int Face;
 
-            /// <summary>The cell on the other side. The block failing to seal is in one of the two.</summary>
             public Vector3I Neighbour;
 
+/// <summary>Leak operation.</summary>
             public Leak(Vector3I cell, int face, Vector3I neighbour)
             {
                 Cell = cell;
@@ -53,18 +39,7 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>Finds every compartment the game seals and <paramref name="map"/> does not.</summary>
-        /// <param name="map">The published room map, whose external cells are the candidates.</param>
-        /// <param name="surfaces">The surface bits, used to decide where this model lets air flow.</param>
-        /// <param name="airtightHere">
-        /// The game's verdict at a cell. Called once per external cell, so this runs on a dump or
-        /// when the room overlay is up, never during a step.
-        /// </param>
-        /// <param name="results">Cleared and filled, ordered by anchor.</param>
-        /// <param name="cellLimit">
-        /// Ceiling on cells examined, bounding the cost on a large grid. The method returns false
-        /// when the limit was reached, so a partial result is reported as partial.
-        /// </param>
+/// <summary>Find operation.</summary>
         public static bool Find(
             RoomMap map,
             SurfaceMap surfaces,
@@ -78,8 +53,7 @@ namespace Thermodynamics.Core
             if (map == null || surfaces == null || airtightHere == null) return true;
             if (map.IsEmpty) return true;
 
-            // Sorted, so the grouping below is deterministic and region indices are stable between
-            // two runs over the same grid.
+/// <summary>List operation.</summary>
             List<Vector3I> candidates = new List<Vector3I>();
             IEnumerable<Vector3I> external = map.ExternalCells;
 
@@ -102,8 +76,11 @@ namespace Thermodynamics.Core
 
             candidates.Sort(CompareCells);
 
+/// <summary>HashSet operation.</summary>
             HashSet<Vector3I> pool = new HashSet<Vector3I>(candidates, Vector3I.Comparer);
+/// <summary>HashSet operation.</summary>
             HashSet<Vector3I> taken = new HashSet<Vector3I>(Vector3I.Comparer);
+/// <summary>Queue operation.</summary>
             Queue<Vector3I> frontier = new Queue<Vector3I>();
 
             for (int i = 0; i < candidates.Count; i++)
@@ -111,6 +88,7 @@ namespace Thermodynamics.Core
                 Vector3I start = candidates[i];
                 if (taken.Contains(start)) continue;
 
+/// <summary>Region operation.</summary>
                 Region region = new Region();
                 region.Anchor = start;
 
@@ -138,18 +116,11 @@ namespace Thermodynamics.Core
                 results.Add(region);
             }
 
-            // Ordered by anchor, so region 0 is the same region on the next run.
             results.Sort(CompareRegions);
             return complete;
         }
 
-        /// <summary>
-        /// The faces where this region ends and the model does not seal.
-        ///
-        /// A face leaving the region that this model calls sealed is not a leak: both models agree
-        /// and the region ends there. A face leaving it that this model leaves open is the
-        /// disagreement being measured.
-        /// </summary>
+/// <summary>CollectLeaks operation.</summary>
         private static void CollectLeaks(Region region, SurfaceMap surfaces)
         {
             foreach (Vector3I cell in region.Cells)
@@ -165,14 +136,16 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>Cells examined before a scan gives up, roughly a large grid's bounding box.</summary>
         public const int DefaultCellLimit = 200000;
 
+/// <summary>CompareRegions operation.</summary>
         private static int CompareRegions(Region a, Region b)
         {
+/// <summary>CompareCells operation.</summary>
             return CompareCells(a.Anchor, b.Anchor);
         }
 
+/// <summary>CompareCells operation.</summary>
         private static int CompareCells(Vector3I a, Vector3I b)
         {
             if (a.X != b.X) return a.X < b.X ? -1 : 1;

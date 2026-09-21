@@ -6,30 +6,15 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **Walking the external air a run at a time classifies the same cells as walking it a cell at
-    /// a time.**
-    ///
-    /// <para>
-    /// Most of a room-mapping pass is the open space around the hull: 5.1 million of the 7.2 million
-    /// cells visited on a 505,566-block hull, in runs averaging 84 cells. The run walk takes a whole
-    /// run of them per dequeue (performance.md, Pass 4, Iteration 7). It is a different algorithm,
-    /// not a tuning of the old one — a scanline fill against a breadth-first one — so what says it
-    /// is right is that it produces the same map, on hulls with real compartments, doors and hollows.
-    /// </para>
-    ///
-    /// <para>
-    /// The cell walk stays as `SpanFlood = false` for exactly this reason: it is the simpler
-    /// statement of what a flood is, and it is the oracle here (`E7`, `D3`).
-    /// </para>
-    /// </summary>
     public class RoomSpanFloodTests
     {
+/// <summary>Census operation.</summary>
         private static ThermalSimulation Census(bool spans, int blocks)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", blocks));
 
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             simulation.Rooms.SpanFlood = spans;
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
@@ -37,10 +22,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-        /// <summary>
-        /// Two shells with a gap, one of them with a doorway, so the pass has an enclosed room, an
-        /// open one and a hollow that opens sideways rather than along the run axis.
-        /// </summary>
+/// <summary>Compartments operation.</summary>
         private static ThermalSimulation Compartments(bool spans)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -49,10 +31,9 @@ namespace Thermodynamics.Tests
             builder.Shell(armour, new Vector3I(0, 0, 0), new Vector3I(5, 5, 5));
             builder.Shell(armour, new Vector3I(7, 0, 0), new Vector3I(14, 4, 4));
 
-            // A hole in the second shell's +Y wall: air reaches its interior from outside, and it
-            // does so across a face the run walk handles laterally rather than by extending.
             builder.Remove(new Vector3I(9, 3, 2));
 
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             simulation.Rooms.SpanFlood = spans;
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
@@ -60,6 +41,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>AssertSameClassification operation.</summary>
         private static void AssertSameClassification(ThermalSimulation cells, ThermalSimulation spans, string what)
         {
             RoomMap a = cells.Rooms.Map;
@@ -75,8 +57,6 @@ namespace Thermodynamics.Tests
             Assert.Equal(a.RoomCellCount, b.RoomCellCount);
             Assert.Equal(a.RoomCount, b.RoomCount);
 
-            // Cell for cell, not only count for count: two walks could miscount in opposite
-            // directions and agree on the total.
             int judged = 0;
             for (int r = 0; r < a.RoomCount; r++)
             {
@@ -97,29 +77,31 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheRunWalkAndTheCellWalkAgreeOnCompartments operation.</summary>
         public void TheRunWalkAndTheCellWalkAgreeOnCompartments()
         {
             AssertSameClassification(Compartments(false), Compartments(true), "compartments");
         }
 
         [Fact]
+/// <summary>TheRunWalkAndTheCellWalkAgreeOnACensusHull operation.</summary>
         public void TheRunWalkAndTheCellWalkAgreeOnACensusHull()
         {
             AssertSameClassification(Census(false, 8000), Census(true, 8000), "census hull");
         }
 
-        /// <summary>
-        /// And every cell of the box is classified the same way by both — external, solid or a
-        /// room — which is the statement the two counts above are only a summary of.
-        /// </summary>
         [Fact]
+/// <summary>EveryCellOfTheBoxIsClassifiedTheSameWay operation.</summary>
         public void EveryCellOfTheBoxIsClassifiedTheSameWay()
         {
+/// <summary>Compartments operation.</summary>
             ThermalSimulation cells = Compartments(false);
+/// <summary>Compartments operation.</summary>
             ThermalSimulation spans = Compartments(true);
 
             GridModel grid = cells.Grid;
             Vector3I min = grid.Min - Vector3I.One;
+/// <summary>Vector3I operation.</summary>
             Vector3I maxExclusive = grid.Max + new Vector3I(2, 2, 2);
 
             RoomMap a = cells.Rooms.Map;
@@ -135,6 +117,7 @@ namespace Thermodynamics.Tests
                 {
                     for (int x = min.X; x < maxExclusive.X; x++)
                     {
+/// <summary>Vector3I operation.</summary>
                         Vector3I cell = new Vector3I(x, y, z);
 
                         Assert.True(a.IsSolid(cell) == b.IsSolid(cell), "solid disagreement at " + cell);

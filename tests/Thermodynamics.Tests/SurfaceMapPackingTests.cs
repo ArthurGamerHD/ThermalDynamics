@@ -6,31 +6,12 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// `SurfaceMap` holds its live and structural layers in one dictionary, packed, and is held
-    /// against the two-dictionary map it replaced — kept verbatim below — over every cell and every
-    /// neighbouring cell of a census hull and of a shell with a door, after a rebuild and after
-    /// blocks are added and removed one at a time (`D8`).
-    ///
-    /// <para>
-    /// The map answers four questions — a cell's live state, its structural state, whether a face
-    /// seals in either layer — and every reader of it (the flood fill, exposure, room contacts) is
-    /// downstream of those four, so agreement on them is agreement everywhere. The reference is
-    /// the old code and not a re-derivation, because the old code is the only oracle for *did this
-    /// change anything* (`P4`).
-    /// </para>
-    /// </summary>
     public class SurfaceMapPackingTests
     {
     public class TwoDictionarySurfaceMap
         {
         private readonly Dictionary<Vector3I, int> states = new Dictionary<Vector3I, int>(Vector3I.Comparer);
 
-        /// <summary>
-        /// The same cells as <see cref="states"/> with every door read as shut, because exposure asks
-        /// what is sealing now and the room mapper asks how the grid is built. Written from the same
-        /// block in the same call, never independently. See thermal-model.md, Two layers.
-        /// </summary>
         private readonly Dictionary<Vector3I, int> structure = new Dictionary<Vector3I, int>(Vector3I.Comparer);
 
         public int CellCount
@@ -43,19 +24,20 @@ namespace Thermodynamics.Tests
             get { return states.Keys; }
         }
 
-        /// <summary>Surface state of a cell, or 0 when the cell is empty.</summary>
+/// <summary>Returns the state.</summary>
         public int GetState(Vector3I cell)
         {
             int state;
             return states.TryGetValue(cell, out state) ? state : 0;
         }
 
+/// <summary>HasCell operation.</summary>
         public bool HasCell(Vector3I cell)
         {
             return states.ContainsKey(cell);
         }
 
-        /// <summary>Writes a block's cells into the map and refreshes the affected neighbours.</summary>
+/// <summary>Adds a block.</summary>
         public void AddBlock(BlockInstance block)
         {
             if (block == null) return;
@@ -78,7 +60,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>Removes a block's cells and refreshes what was touching them.</summary>
+/// <summary>Removes the block.</summary>
         public void RemoveBlock(BlockInstance block)
         {
             if (block == null) return;
@@ -96,10 +78,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Rebuilds the whole map from a grid. Cheaper and more predictable than a long chain of
-        /// incremental edits when many blocks change at once.
-        /// </summary>
+/// <summary>Rebuild operation.</summary>
         public void Rebuild(GridModel grid)
         {
             states.Clear();
@@ -120,6 +99,7 @@ namespace Thermodynamics.Tests
                 }
             }
 
+/// <summary>List operation.</summary>
             List<Vector3I> keys = new List<Vector3I>(states.Keys);
             for (int i = 0; i < keys.Count; i++)
             {
@@ -127,13 +107,14 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>Recomputes the derived neighbour half of one cell.</summary>
+/// <summary>RefreshCell operation.</summary>
         public void RefreshCell(Vector3I cell)
         {
             Refresh(states, cell);
             Refresh(structure, cell);
         }
 
+/// <summary>Refresh operation.</summary>
         private static void Refresh(Dictionary<Vector3I, int> layer, Vector3I cell)
         {
             int state;
@@ -151,6 +132,7 @@ namespace Thermodynamics.Tests
             layer[cell] = state;
         }
 
+/// <summary>RefreshNeighboursOf operation.</summary>
         private void RefreshNeighboursOf(Vector3I cell)
         {
             for (int face = 0; face < Face.Count; face++)
@@ -159,55 +141,50 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// True when nothing can pass between two adjacent cells. Either side sealing is sufficient.
-        /// </summary>
+/// <summary>IsFaceSealed operation.</summary>
         public bool IsFaceSealed(Vector3I cell, int face)
         {
+/// <summary>Returns the state.</summary>
             int state = GetState(cell);
             if (CellSurface.SelfAirtight(state, face)) return true;
 
+/// <summary>Returns the state.</summary>
             int neighbourState = GetState(cell + Face.Offsets[face]);
             return CellSurface.SelfAirtight(neighbourState, Face.Opposite(face));
         }
 
-        /// <summary>True when every face of the cell seals, meaning solid structure rather than a gap.</summary>
+/// <summary>IsFullySealed operation.</summary>
         public bool IsFullySealed(Vector3I cell)
         {
             return CellSurface.IsFullySealed(GetState(cell));
         }
 
-        /// <summary>Structural state of a cell, with every door read as shut, or 0 when empty.</summary>
+/// <summary>Returns the structuralstate.</summary>
         public int GetStructuralState(Vector3I cell)
         {
             int state;
             return structure.TryGetValue(cell, out state) ? state : 0;
         }
 
-        /// <summary>
-        /// <see cref="IsFaceSealed"/> against the structure layer. This is the connectivity rule the
-        /// room mapper walks, so the rooms it finds depend on how the grid is built rather than on
-        /// which doors are open.
-        /// </summary>
+/// <summary>IsFaceSealedStructurally operation.</summary>
         public bool IsFaceSealedStructurally(Vector3I cell, int face)
         {
+/// <summary>Returns the structuralstate.</summary>
             int state = GetStructuralState(cell);
             if (CellSurface.SelfAirtight(state, face)) return true;
 
+/// <summary>Returns the structuralstate.</summary>
             int neighbourState = GetStructuralState(cell + Face.Offsets[face]);
             return CellSurface.SelfAirtight(neighbourState, Face.Opposite(face));
         }
 
+/// <summary>IsFullySealedStructurally operation.</summary>
         public bool IsFullySealedStructurally(Vector3I cell)
         {
             return CellSurface.IsFullySealed(GetStructuralState(cell));
         }
 
-        /// <summary>
-        /// Counts, per face direction, how many of a block's cell faces are open to the outside: on the
-        /// boundary, external beyond, and not sealed against. A mount joint is deliberately not a
-        /// rejection. See thermal-model.md, Exposure.
-        /// </summary>
+/// <summary>Returns the exposedfaces.</summary>
         public void GetExposedFaces(BlockInstance block, RoomMap rooms, int[] resultsByFace)
         {
             if (resultsByFace == null || resultsByFace.Length < Face.Count)
@@ -221,9 +198,6 @@ namespace Thermodynamics.Tests
             Vector3I min = block.Min;
             Vector3I maxExclusive = block.MaxExclusive;
 
-            // Only the block's boundary is walked. A radiating face must be on the outside, so the
-            // interior cells of a multi-cell block cannot contribute one; walking the volume would
-            // cost the cube of block size rather than the square.
             for (int face = 0; face < Face.Count; face++)
             {
                 Vector3I offset = Face.Offsets[face];
@@ -247,15 +221,12 @@ namespace Thermodynamics.Tests
                         cell = BoxGeometry.WithComponent(cell, u, a);
                         cell = BoxGeometry.WithComponent(cell, v, b);
 
+/// <summary>Returns the state.</summary>
                         int state = GetState(cell);
                         Vector3I neighbour = cell + offset;
 
-                        // Something on the other side seals this face off.
                         if (CellSurface.NeighbourAirtight(state, face)) continue;
 
-                        // The space beyond must reach the outside. A mount joint is deliberately not
-                        // tested: the sealing test above already took every joint that buries a face,
-                        // so a mount test could only reach a hull panel under a catwalk.
                         if (rooms != null && !rooms.IsExternal(neighbour)) continue;
 
                         count++;
@@ -266,11 +237,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Counts, per room, how many of a block's cell faces look into that room's air — a different
-        /// test from <see cref="GetExposedFaces"/>, since a bulkhead's inner skin both seals the
-        /// compartment and warms it. The caller owns and clears <paramref name="results"/>.
-        /// </summary>
+/// <summary>Returns the roomcontacts.</summary>
         public void GetRoomContacts(BlockInstance block, RoomMap rooms, List<RoomContact> results)
         {
             if (results == null || block == null || rooms == null) return;
@@ -301,7 +268,6 @@ namespace Thermodynamics.Tests
 
                         Vector3I neighbour = cell + offset;
 
-                        // Another block on the far side is a conduction joint, not air.
                         if (HasCell(neighbour)) continue;
 
                         int room = rooms.RoomIndexOf(neighbour);
@@ -313,18 +279,20 @@ namespace Thermodynamics.Tests
             }
         }
 
+/// <summary>Accumulate operation.</summary>
         private static void Accumulate(List<RoomContact> results, int room)
         {
             for (int i = 0; i < results.Count; i++)
             {
                 if (results[i].RoomIndex != room) continue;
+/// <summary>RoomContact operation.</summary>
                 results[i] = new RoomContact(room, results[i].Faces + 1);
                 return;
             }
             results.Add(new RoomContact(room, 1));
         }
 
-        /// <summary>Convenience wrapper allocating the result array.</summary>
+/// <summary>Returns the exposedfaces.</summary>
         public int[] GetExposedFaces(BlockInstance block, RoomMap rooms)
         {
             int[] result = new int[Face.Count];
@@ -332,6 +300,7 @@ namespace Thermodynamics.Tests
             return result;
         }
 
+/// <summary>Clear operation.</summary>
         public void Clear()
         {
             states.Clear();
@@ -339,11 +308,13 @@ namespace Thermodynamics.Tests
         }
     }
 
+/// <summary>Shell operation.</summary>
         private static GridBuilder Shell()
         {
             return RoomFixtures.DooredShell();
         }
 
+/// <summary>Census operation.</summary>
         private static GridBuilder Census()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -351,6 +322,7 @@ namespace Thermodynamics.Tests
             return builder;
         }
 
+/// <summary>AssertSame operation.</summary>
         private static void AssertSame(TwoDictionarySurfaceMap expected, SurfaceMap actual, bool layersDiffer, string what)
         {
             Assert.True(expected.CellCount > 0, what + ": the reference map is empty, so agreement proves nothing");
@@ -381,8 +353,6 @@ namespace Thermodynamics.Tests
             }
 
             Assert.True(probed > 100, what + ": only " + probed + " cells probed");
-            // A shut door seals exactly as structure does, so the two layers differ only once a
-            // door stands open — and then they must, or the packing's high half was never exercised.
             if (layersDiffer)
             {
                 Assert.True(nonTrivial > 0, what + ": no cell's two layers differ, so the open door made no difference and the packing's high half is untested");
@@ -392,10 +362,14 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData("shell")]
         [InlineData("census")]
+/// <summary>ARebuiltMapAnswersEveryQuestionAsTheTwoDictionariesDid operation.</summary>
         public void ARebuiltMapAnswersEveryQuestionAsTheTwoDictionariesDid(string which)
         {
+/// <summary>Shell operation.</summary>
             GridBuilder builder = which == "shell" ? Shell() : Census();
+/// <summary>TwoDictionarySurfaceMap operation.</summary>
             TwoDictionarySurfaceMap expected = new TwoDictionarySurfaceMap();
+/// <summary>SurfaceMap operation.</summary>
             SurfaceMap actual = new SurfaceMap();
             expected.Rebuild(builder.Grid);
             actual.Rebuild(builder.Grid);
@@ -405,10 +379,14 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData("shell")]
         [InlineData("census")]
+/// <summary>AMapBuiltAndThenEditedBlockByBlockAnswersAsTheTwoDictionariesDid operation.</summary>
         public void AMapBuiltAndThenEditedBlockByBlockAnswersAsTheTwoDictionariesDid(string which)
         {
+/// <summary>Shell operation.</summary>
             GridBuilder builder = which == "shell" ? Shell() : Census();
+/// <summary>TwoDictionarySurfaceMap operation.</summary>
             TwoDictionarySurfaceMap expected = new TwoDictionarySurfaceMap();
+/// <summary>SurfaceMap operation.</summary>
             SurfaceMap actual = new SurfaceMap();
 
             IList<BlockInstance> placed = builder.Placed;
@@ -419,7 +397,6 @@ namespace Thermodynamics.Tests
             }
             AssertSame(expected, actual, false, which + ", added one at a time");
 
-            // Every seventh block ground off, including the door on the shell.
             for (int i = 0; i < placed.Count; i += 7)
             {
                 expected.RemoveBlock(placed[i]);
@@ -427,7 +404,6 @@ namespace Thermodynamics.Tests
             }
             AssertSame(expected, actual, false, which + ", with blocks removed");
 
-            // And a door cycled: the live layer moves, the structural one must not.
             for (int i = 0; i < placed.Count; i++)
             {
                 if (!placed[i].HasStateDependentSealing) continue;

@@ -6,34 +6,17 @@ using Xunit.Abstractions;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Trading simulation speed against heat transfer, and what it actually buys.
-    ///
-    /// <para>
-    /// The tempting tuning is to halve <c>SimulationSpeed</c> and double <c>HeatTimeScale</c>: half
-    /// as many steps a second, heat moving twice as fast in each, so the ship still cools at the
-    /// same rate against a wall clock for half the cost. The first half of that is true and worth
-    /// pinning — it is what makes the knob usable at all.
-    /// </para>
-    ///
-    /// <para>
-    /// The second half mostly is not, and the tests below say so rather than leaving it to be
-    /// discovered. A step's cost is its substep count, and the substep count a grid needs is
-    /// proportional to the step length times the stiffness — which is what <c>HeatTimeScale</c>
-    /// is. Halving the steps and doubling the stiffness leaves the substeps where they were. What
-    /// saving there is comes from somewhere else entirely: fewer, longer steps amortise the passes
-    /// that run once per step whatever its length.
-    /// </para>
-    /// </summary>
     public class PaceEquivalenceTests
     {
         private readonly ITestOutputHelper output;
 
+/// <summary>PaceEquivalenceTests operation.</summary>
         public PaceEquivalenceTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
+/// <summary>Builds the API method table.</summary>
         private static ThermalSimulation Build(float speed, float heatTimeScale, int frequency)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -44,12 +27,12 @@ namespace Thermodynamics.Tests
                 builder.Place((index++ % 8) == 0 ? Catalog.Grating() : Catalog.HeavyArmor(), cell);
             }
 
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.SimulationSpeed = speed;
             settings.HeatTimeScale = heatTimeScale;
             settings.Frequency = frequency;
 
-            // The work budget would shorten steps on its own and hide what is being measured.
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
@@ -64,6 +47,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>RunForRealSeconds operation.</summary>
         private static float RunForRealSeconds(ThermalSimulation simulation, float realSeconds)
         {
             EnvironmentSample sample = Worlds.Shadow();
@@ -82,24 +66,18 @@ namespace Thermodynamics.Tests
             return total / simulation.Solver.Nodes.Count;
         }
 
-        /// <summary>
-        /// Heat must keep the same pace against the wall clock whenever
-        /// <c>SimulationSpeed x HeatTimeScale</c> is held constant.
-        ///
-        /// This is the property the tuning rests on. <c>HeatTimeScale</c> divides every heat
-        /// capacity, which is exactly equivalent to running the clock faster, so halving the clock
-        /// and halving the capacities leaves a ship cooling at the same rate a player watching it
-        /// would see.
-        /// </summary>
         [Theory]
         [InlineData(0.5f, 450f)]
         [InlineData(0.25f, 900f)]
         [InlineData(2f, 112.5f)]
+/// <summary>ConstantSpeedTimesHeatScaleKeepsTheSameThermalPace operation.</summary>
         public void ConstantSpeedTimesHeatScaleKeepsTheSameThermalPace(float speed, float scale)
         {
             const float seconds = 6f;
 
+/// <summary>RunForRealSeconds operation.</summary>
             float reference = RunForRealSeconds(Build(1f, 225f, 4), seconds);
+/// <summary>RunForRealSeconds operation.</summary>
             float traded = RunForRealSeconds(Build(speed, scale, 4), seconds);
 
             float referenceDrop = 800f - reference;
@@ -115,20 +93,15 @@ namespace Thermodynamics.Tests
                 + "cooled " + tradedDrop + " K against " + referenceDrop + " K");
         }
 
-        /// <summary>
-        /// But the substep count — which is what a step costs — barely moves, because the trade
-        /// buys stiffness with one hand and pays for it with the other.
-        ///
-        /// This is the test that stops the tuning being sold as a saving it is not. Quartering the
-        /// speed and quadrupling the transfer leaves the total substeps within a small fraction of
-        /// where they started, so the arithmetic the solver does per real second is much the same.
-        /// </summary>
         [Fact]
+/// <summary>TradingSpeedForTransferDoesNotBuyBackTheSubsteps operation.</summary>
         public void TradingSpeedForTransferDoesNotBuyBackTheSubsteps()
         {
             const float seconds = 6f;
 
+/// <summary>Builds the method table.</summary>
             ThermalSimulation reference = Build(1f, 225f, 4);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation traded = Build(0.25f, 900f, 4);
 
             reference.Work.Reset();
@@ -150,20 +123,15 @@ namespace Thermodynamics.Tests
                 + "test is out of date and the tuning advice in configuration.md should say so");
         }
 
-        /// <summary>
-        /// And lowering <c>Frequency</c> on its own reaches the same place, without moving the
-        /// world's clock or the heat capacities at all.
-        ///
-        /// Fewer, longer steps: the same substeps in total, spread over fewer of the passes that
-        /// run once per step whatever its length. It is the simpler knob, and it leaves
-        /// <c>SimulationSpeed</c> meaning what a player expects it to mean.
-        /// </summary>
         [Fact]
+/// <summary>LoweringFrequencyReachesTheSamePlaceWithoutTouchingTheClock operation.</summary>
         public void LoweringFrequencyReachesTheSamePlaceWithoutTouchingTheClock()
         {
             const float seconds = 6f;
 
+/// <summary>RunForRealSeconds operation.</summary>
             float fast = RunForRealSeconds(Build(1f, 225f, 4), seconds);
+/// <summary>RunForRealSeconds operation.</summary>
             float slow = RunForRealSeconds(Build(1f, 225f, 1), seconds);
 
             float difference = Math.Abs(slow - fast) / Math.Max(1f, 800f - fast);

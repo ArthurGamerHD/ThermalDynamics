@@ -4,25 +4,13 @@ using VRageMath;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// Everything observed about one block definition across the whole session, on every grid.
-    ///
-    /// The balance-facing half of the telemetry: what temperature a definition settles at, how
-    /// often it reaches its critical temperature, and what effect its declared properties have.
-    /// </summary>
     public class BlockTypeTelemetry
     {
         public readonly MyDefinitionId DefinitionId;
         public readonly string Name;
 
-        /// <summary>
-        /// The thermal properties in force for this block type, captured from the first block created.
-        /// Written into the report so a run's figures can be read against the values that produced
-        /// them.
-        /// </summary>
         public BlockThermalProperties Definition;
 
-        /// <summary>Size in cells, from the block definition.</summary>
         public Vector3ITriple Size;
 
         public long Placed;
@@ -30,60 +18,61 @@ namespace Thermodynamics
         public long Live;
         public long PeakLive;
 
-        /// <summary>Node observations that fed the sampled stats below. Strided.</summary>
         public long SampledUpdates;
 
-        /// <summary>Every node observation, whether it fed the wide stats or not.</summary>
         public long TotalUpdates;
 
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat Temperature = new RunningStat();
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat DeltaTemperature = new RunningStat();
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat ConductionWatts = new RunningStat();
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat RadiationWatts = new RunningStat();
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat ConvectionWatts = new RunningStat();
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat SolarWatts = new RunningStat();
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat FrictionWatts = new RunningStat();
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat HeatGeneration = new RunningStat();
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat EnergyProduction = new RunningStat();
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat EnergyConsumption = new RunningStat();
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat ThrustConsumption = new RunningStat();
 
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat Mass = new RunningStat();
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat ThermalMass = new RunningStat();
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat ExposedSurfaces = new RunningStat();
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat ExposedSurfaceArea = new RunningStat();
 
-        /// <summary>Final temperature of every live block of this type, in one pass at shutdown.</summary>
+/// <summary>Histogram operation.</summary>
         public readonly Histogram FinalTemperatures = new Histogram(Histogram.TemperatureEdges());
+/// <summary>Histogram operation.</summary>
         public readonly Histogram SampledTemperatures = new Histogram(Histogram.TemperatureEdges());
 
         public float PeakTemperature = float.MinValue;
         public long PeakTemperatureGrid;
 
-        /// <summary>
-        /// Substeps one block of this type would need for a full step on its own. Recorded as a
-        /// distribution rather than a figure, since demand depends on what the block is mounted to and
-        /// whether it is exposed; the maximum is what sets the grid. See stiffness.md.
-        /// </summary>
+/// <summary>RunningStat operation.</summary>
         public readonly RunningStat SubstepDemand = new RunningStat();
 
         public float PeakSubstepDemand;
         public long PeakSubstepDemandGrid;
         public string PeakSubstepDemandPosition = "";
 
-        /// <summary>
-        /// How much of each of the definition's six faces seals, read once from the block model.
-        ///
-        /// This is what the room mapper walks, and so the first figure to check when a hull that is
-        /// airtight in game maps as open space: a definition whose pressurisation could not be read
-        /// appears here as zeroes.
-        /// </summary>
         public float[] SealFractionByFace;
 
-        /// <summary>The same, for mount surfaces, which is what conduction walks.</summary>
         public float[] MountFractionByFace;
 
-        /// <summary>Observations where the block's own state suppressed its sealing, such as an open door.</summary>
         public long UnsealedByDoorState;
 
         public bool HasSurfaceProfile
@@ -91,7 +80,6 @@ namespace Thermodynamics
             get { return SealFractionByFace != null; }
         }
 
-        /// <summary>Faces of the definition that seal completely.</summary>
         public int FullySealingFaces
         {
             get
@@ -106,7 +94,6 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Faces of the definition carrying any mount surface.</summary>
         public int MountingFaces
         {
             get
@@ -121,10 +108,10 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Overheat events, i.e. observations that dealt heat damage.</summary>
         public long CriticalUpdates;
         public double TotalDamage;
 
+/// <summary>BlockTypeTelemetry operation.</summary>
         public BlockTypeTelemetry(MyDefinitionId id)
         {
             DefinitionId = id;
@@ -132,11 +119,7 @@ namespace Thermodynamics
             if (string.IsNullOrEmpty(Name)) Name = id.TypeId.ToString();
         }
 
-        /// <summary>
-        /// Records a placement. The four counters that must reconcile are interlocked, because the game
-        /// places blocks on worker threads and a plain increment lost one in fourteen thousand. The
-        /// peak is a race-tolerant max, where a stale read can only under-record.
-        /// </summary>
+/// <summary>OnPlaced operation.</summary>
         public void OnPlaced(ThermalBlock block)
         {
             System.Threading.Interlocked.Increment(ref Placed);
@@ -154,6 +137,7 @@ namespace Thermodynamics
             {
                 Definition = block.Instance.Thermal;
                 Vector3I size = block.Instance.Model.Size;
+/// <summary>Vector3ITriple operation.</summary>
                 Size = new Vector3ITriple(size.X, size.Y, size.Z);
                 CaptureSurfaceProfile(block.Instance.Model);
             }
@@ -161,34 +145,25 @@ namespace Thermodynamics
             Mass.Add(block.Instance.Mass);
         }
 
+/// <summary>OnRemoved operation.</summary>
         public void OnRemoved()
         {
             System.Threading.Interlocked.Increment(ref Removed);
 
-            // Floored at zero without a lock: a decrement that raced below zero is undone. The
-            // floor exists for a block whose removal is seen without its placement, at session
-            // start.
             if (System.Threading.Interlocked.Decrement(ref Live) < 0)
             {
                 System.Threading.Interlocked.Increment(ref Live);
             }
         }
 
-        /// <summary>
-        /// The cheap per-observation path: a compare and two increments. The full statistics are in
-        /// <see cref="Sample"/>.
-        /// </summary>
+/// <summary>OnUpdate operation.</summary>
         public void OnUpdate(ThermalNode node, long gridId)
         {
             TotalUpdates++;
             NotePeak(node.Temperature, gridId);
         }
 
-        /// <summary>
-        /// The hottest this type has been, without counting an update. Fed by the strided sampler *and*
-        /// by the end-of-session sweep, since a type only the sweep reaches would otherwise report a
-        /// temperature range above its own peak.
-        /// </summary>
+/// <summary>NotePeak operation.</summary>
         public void NotePeak(float temperature, long gridId)
         {
             if (temperature <= PeakTemperature) return;
@@ -197,12 +172,7 @@ namespace Thermodynamics
             PeakTemperatureGrid = gridId;
         }
 
-        /// <summary>
-        /// Records what one block of this type demanded of its grid's step.
-        ///
-        /// Separate from <see cref="Sample"/> because it reads the solver rather than the node: the
-        /// coupling that makes a block stiff lives in the conduction graph.
-        /// </summary>
+/// <summary>SampleSubstepDemand operation.</summary>
         public void SampleSubstepDemand(float demand, ThermalNode node, long gridId)
         {
             if (demand <= 0f) return;
@@ -218,6 +188,7 @@ namespace Thermodynamics
                 : node.Block.Position.ToString();
         }
 
+/// <summary>Sample operation.</summary>
         public void Sample(ThermalNode node)
         {
             SampledUpdates++;
@@ -245,11 +216,7 @@ namespace Thermodynamics
             if (!block.IsSealedByDoorState) UnsealedByDoorState++;
         }
 
-        /// <summary>
-        /// Reads the definition's per-face sealing and mounting from the shared block model. Once per
-        /// type, from the first block placed; the model is immutable, so a second read would return
-        /// the same values.
-        /// </summary>
+/// <summary>CaptureSurfaceProfile operation.</summary>
         private void CaptureSurfaceProfile(BlockModel model)
         {
             if (model == null) return;
@@ -266,28 +233,27 @@ namespace Thermodynamics
             SealFractionByFace = seal;
         }
 
+/// <summary>OnCriticalDamage operation.</summary>
         public void OnCriticalDamage(float damage)
         {
             CriticalUpdates++;
             TotalDamage += damage;
         }
 
+/// <summary>OnFinalTemperature operation.</summary>
         public void OnFinalTemperature(float temperature)
         {
             FinalTemperatures.Add(temperature);
         }
     }
 
-    /// <summary>
-    /// A block size, held without a dependency on VRageMath so the report formatting stays in the
-    /// game-free half of the module.
-    /// </summary>
     public struct Vector3ITriple
     {
         public int X;
         public int Y;
         public int Z;
 
+/// <summary>Vector3ITriple operation.</summary>
         public Vector3ITriple(int x, int y, int z)
         {
             X = x;
@@ -295,6 +261,7 @@ namespace Thermodynamics
             Z = z;
         }
 
+/// <summary>ToString operation.</summary>
         public override string ToString()
         {
             return X + "x" + Y + "x" + Z;

@@ -7,26 +7,17 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The analytic block geometry that replaced per-cell enumeration.
-    ///
-    /// The cases that matter most are the ones with <em>unequal</em> block sizes. Space Engineers
-    /// 1 has two block sizes and never mixes them on one grid, so every joint is between equals
-    /// and a great many wrong formulas give the right answer. Space Engineers 2 ships eight block
-    /// sizes on a shared lattice, so a joint between a small block and one twenty times its
-    /// width is ordinary. These tests pin the behaviour for that case now, while it is still
-    /// cheap to get right.
-    /// </summary>
     public class BoxGeometryTests
     {
+/// <summary>V operation.</summary>
         private static Vector3I V(int x, int y, int z)
         {
             return new Vector3I(x, y, z);
         }
 
-        // ---- intervals and touching --------------------------------------------------------
 
         [Fact]
+/// <summary>OverlapIsTheSharedLengthOfTwoHalfOpenIntervals operation.</summary>
         public void OverlapIsTheSharedLengthOfTwoHalfOpenIntervals()
         {
             Assert.Equal(2, BoxGeometry.Overlap(0, 4, 2, 6));
@@ -36,38 +27,33 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TwoUnitBlocksSideBySideTouchOnTheExpectedFace operation.</summary>
         public void TwoUnitBlocksSideBySideTouchOnTheExpectedFace()
         {
-            // b sits at +X of a
             int face = BoxGeometry.TouchingFace(V(0, 0, 0), V(1, 1, 1), V(1, 0, 0), V(2, 1, 1));
             Assert.Equal(Face.Right, face);
 
-            // and the relation is mirrored from b's point of view
             int mirrored = BoxGeometry.TouchingFace(V(1, 0, 0), V(2, 1, 1), V(0, 0, 0), V(1, 1, 1));
             Assert.Equal(Face.Left, mirrored);
             Assert.Equal(Face.Opposite(face), mirrored);
         }
 
         [Fact]
+/// <summary>BlocksMeetingOnlyAtAnEdgeOrCornerDoNotTouch operation.</summary>
         public void BlocksMeetingOnlyAtAnEdgeOrCornerDoNotTouch()
         {
-            // share an edge: abut on X, abut on Y, so the shared area is zero
             Assert.Equal(-1, BoxGeometry.TouchingFace(V(0, 0, 0), V(1, 1, 1), V(1, 1, 0), V(2, 2, 1)));
 
-            // share a single corner
             Assert.Equal(-1, BoxGeometry.TouchingFace(V(0, 0, 0), V(1, 1, 1), V(1, 1, 1), V(2, 2, 2)));
 
-            // fully separated
             Assert.Equal(-1, BoxGeometry.TouchingFace(V(0, 0, 0), V(1, 1, 1), V(5, 0, 0), V(6, 1, 1)));
         }
 
-        // ---- contact area ------------------------------------------------------------------
 
         [Fact]
+/// <summary>ContactAreaIsTheOverlapOfTheTwoFacesNotTheLargerOne operation.</summary>
         public void ContactAreaIsTheOverlapOfTheTwoFacesNotTheLargerOne()
         {
-            // a 1x1x1 block against the face of a 3x3x1 slab: they share exactly one cell face,
-            // not the slab's whole nine.
             int cells = BoxGeometry.ContactCells(
                 V(0, 0, 0), V(3, 3, 1),
                 V(1, 1, 1), V(2, 2, 2));
@@ -76,9 +62,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ContactAreaOfAFullyCoveredFaceIsThatWholeFace operation.</summary>
         public void ContactAreaOfAFullyCoveredFaceIsThatWholeFace()
         {
-            // two 3x3x1 slabs stacked: the whole 3x3 face is in contact
             int cells = BoxGeometry.ContactCells(
                 V(0, 0, 0), V(3, 3, 1),
                 V(0, 0, 1), V(3, 3, 2));
@@ -87,9 +73,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ContactAreaCountsOnlyThePartThatActuallyOverlaps operation.</summary>
         public void ContactAreaCountsOnlyThePartThatActuallyOverlaps()
         {
-            // a 2x2 block half hanging off the edge of another
             int cells = BoxGeometry.ContactCells(
                 V(0, 0, 0), V(2, 2, 1),
                 V(1, 1, 1), V(3, 3, 2));
@@ -98,6 +84,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ContactAreaIsSymmetric operation.</summary>
         public void ContactAreaIsSymmetric()
         {
             int forward = BoxGeometry.ContactCells(V(0, 0, 0), V(4, 4, 4), V(1, 1, 4), V(3, 3, 6));
@@ -107,11 +94,12 @@ namespace Thermodynamics.Tests
             Assert.Equal(forward, backward);
         }
 
-        // ---- face areas --------------------------------------------------------------------
 
         [Fact]
+/// <summary>FaceAreaIsTheProductOfThePerpendicularExtents operation.</summary>
         public void FaceAreaIsTheProductOfThePerpendicularExtents()
         {
+/// <summary>V operation.</summary>
             Vector3I extents = V(2, 3, 5);
 
             Assert.Equal(15, BoxGeometry.FaceAreaCells(extents, Face.Right));     // Y * Z
@@ -121,8 +109,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SurfaceAreaMatchesTheSumOfTheSixFaces operation.</summary>
         public void SurfaceAreaMatchesTheSumOfTheSixFaces()
         {
+/// <summary>V operation.</summary>
             Vector3I extents = V(2, 3, 5);
 
             int summed = 0;
@@ -136,8 +126,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EnumeratingAFaceVisitsItsAreaAndStaysOnTheBoundary operation.</summary>
         public void EnumeratingAFaceVisitsItsAreaAndStaysOnTheBoundary()
         {
+/// <summary>List operation.</summary>
             List<Vector3I> visited = new List<Vector3I>();
             BoxGeometry.ForEachFaceCell(V(0, 0, 0), V(2, 3, 4), Face.Right, visited.Add);
 
@@ -148,14 +140,15 @@ namespace Thermodynamics.Tests
             }
         }
 
-        // ---- conduction with unequal sizes --------------------------------------------------
 
+/// <summary>Sized operation.</summary>
         private static BlockModel Sized(string name, Vector3I size, float mass)
         {
             return BlockModel.Solid(name, size, mass, Catalog.DefaultThermal());
         }
 
         [Fact]
+/// <summary>ASmallBlockOnALargeOneContactsOnlyItsOwnFaceArea operation.</summary>
         public void ASmallBlockOnALargeOneContactsOnlyItsOwnFaceArea()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -169,14 +162,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ConductanceIsIdenticalWhicheverWayRoundTheJointIsBuilt operation.</summary>
         public void ConductanceIsIdenticalWhicheverWayRoundTheJointIsBuilt()
         {
+/// <summary>JointConductance operation.</summary>
             float forward = JointConductance(V(4, 4, 4), 4000f, V(1, 1, 1), 100f);
+/// <summary>JointConductance operation.</summary>
             float backward = JointConductance(V(1, 1, 1), 100f, V(4, 4, 4), 4000f);
 
             Assert.Equal(forward, backward, 4);
         }
 
+/// <summary>JointConductance operation.</summary>
         private static float JointConductance(Vector3I sizeA, float massA, Vector3I sizeB, float massB)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -189,12 +186,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ADeeperBlockConductsMoreSlowlyThroughTheSameContactArea operation.</summary>
         public void ADeeperBlockConductsMoreSlowlyThroughTheSameContactArea()
         {
-            // Same 1x1 contact face, but the second block is four cells deep instead of one.
-            // Heat has further to travel, so the joint must be less conductive. The previous
-            // model divided by a "largest face" heuristic and had no notion of depth at all.
+/// <summary>JointConductance operation.</summary>
             float shallow = JointConductance(V(1, 1, 1), 100f, V(1, 1, 1), 100f);
+/// <summary>JointConductance operation.</summary>
             float deep = JointConductance(V(1, 1, 1), 100f, V(1, 1, 4), 400f);
 
             Assert.True(deep < shallow,
@@ -202,11 +199,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EnergyIsConservedAcrossAJointBetweenVeryDifferentBlockSizes operation.</summary>
         public void EnergyIsConservedAcrossAJointBetweenVeryDifferentBlockSizes()
         {
-            // This is the asymmetric-joint defect (M2) in its worst form: the size ratio that
-            // Space Engineers 2 makes ordinary. One conductance shared by both ends means what
-            // leaves one block is exactly what enters the other, whatever their sizes.
             ThermalSettings settings = new ThermalSettings
             {
                 EnableEnvironment = false,
@@ -231,11 +226,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ALargeBlockFindsEveryNeighbourAlongItsFace operation.</summary>
         public void ALargeBlockFindsEveryNeighbourAlongItsFace()
         {
-            // Nine unit blocks tiled across one face of a 3x3x1 slab. The neighbour query walks
-            // only the slab's boundary, so this checks that walking the boundary does not miss
-            // anything the old volume walk would have found.
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Sized("slab", V(3, 3, 1), 900f), V(0, 0, 0));
 
@@ -254,6 +247,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnInteriorBlockOfALargeSolidIsNeverItsOwnNeighbour operation.</summary>
         public void AnInteriorBlockOfALargeSolidIsNeverItsOwnNeighbour()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -265,9 +259,9 @@ namespace Thermodynamics.Tests
             Assert.Empty(simulation.Solver.Links);
         }
 
-        // ---- exposure --------------------------------------------------------------------
 
         [Fact]
+/// <summary>ALargeBlockAloneIsExposedOverItsWholeSurface operation.</summary>
         public void ALargeBlockAloneIsExposedOverItsWholeSurface()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -280,6 +274,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>CoveringOneFaceOfALargeBlockRemovesExactlyThatMuchExposure operation.</summary>
         public void CoveringOneFaceOfALargeBlockRemovesExactlyThatMuchExposure()
         {
             GridBuilder bare = GridBuilder.Large();
@@ -293,7 +288,6 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = covered.BuildSimulation(new ThermalSettings());
             ThermalNode slab = simulation.Solver.GetNodeAt(V(0, 0, 0));
 
-            // the 3x3 face against the lid stops radiating
             Assert.Equal(exposedAlone - 9, slab.TotalExposedFaces);
         }
     }

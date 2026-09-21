@@ -3,26 +3,22 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// One bit per cell of a box, standing in for a hash set of cells.
-    ///
-    /// It replaces the room mapper's visited set, which by the end of a pass holds every cell of
-    /// the bounding box — so its failure modes are quiet ones. A cell wrongly reported as visited
-    /// stops a flood fill early and a compartment silently stops existing; a cell wrongly reported
-    /// as unvisited makes the fill revisit it forever. Neither throws.
-    /// </summary>
     public class CellBitsetTests
     {
+/// <summary>Over operation.</summary>
         private static CellBitset Over(Vector3I min, Vector3I maxExclusive)
         {
+/// <summary>CellBitset operation.</summary>
             CellBitset set = new CellBitset();
             set.Reset(min, maxExclusive);
             return set;
         }
 
         [Fact]
+/// <summary>AFreshSetHoldsNothing operation.</summary>
         public void AFreshSetHoldsNothing()
         {
+/// <summary>Over operation.</summary>
             CellBitset set = Over(Vector3I.Zero, new Vector3I(4, 4, 4));
 
             Assert.Equal(0, set.Count);
@@ -32,8 +28,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>Adds a ingreportswhetheritwasnew.</summary>
         public void AddingReportsWhetherItWasNew()
         {
+/// <summary>Over operation.</summary>
             CellBitset set = Over(Vector3I.Zero, new Vector3I(4, 4, 4));
 
             Assert.True(set.Add(new Vector3I(1, 2, 3)));
@@ -42,16 +40,15 @@ namespace Thermodynamics.Tests
             Assert.True(set.Contains(new Vector3I(1, 2, 3)));
         }
 
-        /// <summary>
-        /// Every cell of a box must be distinguishable from every other. An indexing mistake shows
-        /// up as two cells sharing a bit, which reads as one of them having been visited when it
-        /// has not — so this walks the whole box rather than sampling it.
-        /// </summary>
         [Fact]
+/// <summary>EveryCellOfTheBoxIsItsOwnBit operation.</summary>
         public void EveryCellOfTheBoxIsItsOwnBit()
         {
+/// <summary>Vector3I operation.</summary>
             Vector3I min = new Vector3I(-3, 5, -11);
+/// <summary>Vector3I operation.</summary>
             Vector3I max = new Vector3I(4, 12, -2);
+/// <summary>Over operation.</summary>
             CellBitset set = Over(min, max);
 
             int expected = 0;
@@ -59,6 +56,7 @@ namespace Thermodynamics.Tests
                 for (int y = min.Y; y < max.Y; y++)
                     for (int x = min.X; x < max.X; x++)
                     {
+/// <summary>Vector3I operation.</summary>
                         Vector3I cell = new Vector3I(x, y, z);
                         Assert.False(set.Contains(cell), cell + " was set before it was added");
                         Assert.True(set.Add(cell));
@@ -76,22 +74,23 @@ namespace Thermodynamics.Tests
                     }
         }
 
-        /// <summary>
-        /// Cells outside the box are not members and adding them changes nothing. The mapper
-        /// bounds-checks before asking, but a set that silently wrapped an out-of-range cell onto
-        /// an in-range bit would corrupt the map rather than refuse.
-        /// </summary>
         [Fact]
+/// <summary>CellsOutsideTheBoxAreNotMembersAndCannotBeAdded operation.</summary>
         public void CellsOutsideTheBoxAreNotMembersAndCannotBeAdded()
         {
             Vector3I min = Vector3I.Zero;
+/// <summary>Vector3I operation.</summary>
             Vector3I max = new Vector3I(4, 4, 4);
+/// <summary>Over operation.</summary>
             CellBitset set = Over(min, max);
 
             Vector3I[] outside =
             {
+/// <summary>Vector3I operation.</summary>
                 new Vector3I(-1, 0, 0), new Vector3I(0, -1, 0), new Vector3I(0, 0, -1),
+/// <summary>Vector3I operation.</summary>
                 new Vector3I(4, 0, 0), new Vector3I(0, 4, 0), new Vector3I(0, 0, 4),
+/// <summary>Vector3I operation.</summary>
                 new Vector3I(100, 100, 100),
             };
 
@@ -104,18 +103,15 @@ namespace Thermodynamics.Tests
             Assert.Equal(0, set.Count);
         }
 
-        /// <summary>
-        /// A pass restarts every time a block is placed, so resetting must forget everything —
-        /// including when the backing array is being reused rather than reallocated.
-        /// </summary>
         [Fact]
+/// <summary>ResettingForgetsEverythingEvenWhenTheArrayIsReused operation.</summary>
         public void ResettingForgetsEverythingEvenWhenTheArrayIsReused()
         {
+/// <summary>Over operation.</summary>
             CellBitset set = Over(Vector3I.Zero, new Vector3I(8, 8, 8));
             for (int i = 0; i < 8; i++) set.Add(new Vector3I(i, i, i));
             Assert.Equal(8, set.Count);
 
-            // Smaller box, so the array is kept and cleared rather than replaced.
             set.Reset(Vector3I.Zero, new Vector3I(4, 4, 4));
 
             Assert.Equal(0, set.Count);
@@ -126,8 +122,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>MovingTheBoxMovesWhatTheBitsMean operation.</summary>
         public void MovingTheBoxMovesWhatTheBitsMean()
         {
+/// <summary>Over operation.</summary>
             CellBitset set = Over(Vector3I.Zero, new Vector3I(4, 4, 4));
             set.Add(new Vector3I(1, 1, 1));
 
@@ -138,10 +136,11 @@ namespace Thermodynamics.Tests
             Assert.True(set.Contains(new Vector3I(11, 11, 11)));
         }
 
-        /// <summary>A degenerate box holds nothing and refuses everything, rather than throwing.</summary>
         [Fact]
+/// <summary>AnEmptyBoxIsHarmless operation.</summary>
         public void AnEmptyBoxIsHarmless()
         {
+/// <summary>Over operation.</summary>
             CellBitset set = Over(new Vector3I(5, 5, 5), new Vector3I(5, 5, 5));
 
             Assert.Equal(0, set.Capacity);
@@ -150,21 +149,13 @@ namespace Thermodynamics.Tests
             Assert.Equal(0, set.Count);
         }
 
-        /// <summary>
-        /// **A member's rank is its position among the members, in index order** — which is what
-        /// lets a caller hold one value per member in a flat array instead of a key per member in
-        /// a sorted one.
-        ///
-        /// Checked against counting, which is not how ranking is implemented (`E7`): the rank of
-        /// the nth member found by walking the box in order must be n, for every member, on a box
-        /// wide enough that ranks cross word boundaries in both directions.
-        /// </summary>
         [Fact]
+/// <summary>ARanksMemberIsItsPositionAmongTheMembers operation.</summary>
         public void ARanksMemberIsItsPositionAmongTheMembers()
         {
+/// <summary>Over operation.</summary>
             CellBitset set = Over(new Vector3I(-3, -3, -3), new Vector3I(14, 12, 9));
 
-            // A scatter with runs and gaps, so words come out full, empty and partial.
             uint state = 0x9E3779B9u;
             for (int z = -3; z < 9; z++)
             {
@@ -191,6 +182,7 @@ namespace Thermodynamics.Tests
                 {
                     for (int x = -3; x < 14; x++)
                     {
+/// <summary>Vector3I operation.</summary>
                         Vector3I cell = new Vector3I(x, y, z);
                         if (!set.Contains(cell)) continue;
 
@@ -205,14 +197,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(set.Count, expected);
         }
 
-        /// <summary>
-        /// The ranks are put away by any change to the set, and a rank read from a set that has
-        /// moved on answers −1 rather than a stale position. A stale rank is the worst failure this
-        /// structure can have: it is a plausible number, and it indexes the wrong thing.
-        /// </summary>
         [Fact]
+/// <summary>AChangeToTheSetPutsTheRanksAway operation.</summary>
         public void AChangeToTheSetPutsTheRanksAway()
         {
+/// <summary>Over operation.</summary>
             CellBitset set = Over(new Vector3I(0, 0, 0), new Vector3I(8, 8, 8));
             set.Add(new Vector3I(1, 1, 1));
             set.Add(new Vector3I(2, 2, 2));
@@ -222,7 +211,6 @@ namespace Thermodynamics.Tests
             Assert.Equal(0, set.RankOfIndex(set.IndexOf(new Vector3I(1, 1, 1))));
             Assert.Equal(1, set.RankOfIndex(set.IndexOf(new Vector3I(2, 2, 2))));
 
-            // A cell that sorts before both of them, so every rank after it would shift.
             Assert.True(set.Add(new Vector3I(0, 0, 0)));
             Assert.False(set.IsRanked);
             Assert.Equal(-1, set.RankOfIndex(set.IndexOf(new Vector3I(2, 2, 2))));
@@ -231,18 +219,15 @@ namespace Thermodynamics.Tests
             Assert.Equal(0, set.RankOfIndex(set.IndexOf(new Vector3I(0, 0, 0))));
             Assert.Equal(2, set.RankOfIndex(set.IndexOf(new Vector3I(2, 2, 2))));
 
-            // And a reset takes them away too, even though it leaves the array in place.
             set.Reset(new Vector3I(0, 0, 0), new Vector3I(8, 8, 8));
             Assert.False(set.IsRanked);
         }
 
-        /// <summary>
-        /// Ranking a set with a full word in it, which is the case the popcount has to get right at
-        /// both ends: bit 0 and bit 63 of the same word.
-        /// </summary>
         [Fact]
+/// <summary>AFullWordRanksAtBothEnds operation.</summary>
         public void AFullWordRanksAtBothEnds()
         {
+/// <summary>Over operation.</summary>
             CellBitset set = Over(new Vector3I(0, 0, 0), new Vector3I(128, 1, 1));
             for (int x = 0; x < 128; x++) set.Add(new Vector3I(x, 0, 0));
 

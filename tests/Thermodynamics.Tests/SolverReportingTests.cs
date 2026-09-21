@@ -6,20 +6,9 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// What a step reports about itself, as opposed to what it computes.
-    ///
-    /// Nothing in the simulation reads these figures, which is exactly why they can drift: they
-    /// only ever surface in the cockpit readout, the debug overlay and the telemetry report, and
-    /// all three of those are believed. A rate of change that is quietly a sixth of the truth is
-    /// worse than none, because it reads like a measurement.
-    /// </summary>
     public class SolverReportingTests
     {
-        /// <summary>
-        /// A grid stiff enough to substep, so the reported delta and the last substep's delta
-        /// are different numbers.
-        /// </summary>
+/// <summary>StiffGrid operation.</summary>
         private static ThermalSimulation StiffGrid(float hot = 900f)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -31,8 +20,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheReportedChangeSpansTheWholeStepAndNotItsLastSubstep operation.</summary>
         public void TheReportedChangeSpansTheWholeStepAndNotItsLastSubstep()
         {
+/// <summary>StiffGrid operation.</summary>
             ThermalSimulation simulation = StiffGrid();
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
 
@@ -51,13 +42,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The same step, taken whole and taken as its own substeps, has to report the same
-        /// total movement. This is what the HUD multiplies by the step rate to get a rate.
-        /// </summary>
         [Fact]
+/// <summary>TheReportedChangeIsTheSumOfWhatTheSubstepsDid operation.</summary>
         public void TheReportedChangeIsTheSumOfWhatTheSubstepsDid()
         {
+/// <summary>StiffGrid operation.</summary>
             ThermalSimulation simulation = StiffGrid();
             ThermalNode hottest = simulation.Solver.GetNodeAt(Vector3I.Zero);
 
@@ -72,13 +61,12 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(moved, reported, 3);
 
-            // And the whole point: it is not the final substep's share of that movement, which
-            // for a decaying exchange is a fraction of it.
             Assert.True(reported > moved / substeps * 1.5f,
                 "reported " + reported + " K looks like one substep of " + moved + " K");
         }
 
         [Fact]
+/// <summary>ASettledGridReportsNoChange operation.</summary>
         public void ASettledGridReportsNoChange()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -95,14 +83,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// A host reads a node's temperature back out and writes a new one in — a load, a split,
-        /// a rotor bridging two grids. The next step's reported change has to be measured from
-        /// what the host wrote, not from what the solver last left there.
-        /// </summary>
         [Fact]
+/// <summary>AHostWriteIsTheBaselineForTheNextStepsChange operation.</summary>
         public void AHostWriteIsTheBaselineForTheNextStepsChange()
         {
+/// <summary>StiffGrid operation.</summary>
             ThermalSimulation simulation = StiffGrid();
             simulation.StepExact(1, Worlds.Shadow());
 
@@ -114,16 +99,12 @@ namespace Thermodynamics.Tests
             Assert.Equal(node.Temperature - 400f, node.LastDeltaTemperature, 3);
         }
 
-        // ---- substep accounting ---------------------------------------------------------------
 
-        /// <summary>
-        /// The estimate is now taken once and used for both the substep count and the clamp
-        /// flag. They have to stay consistent with each other: clamped means the grid asked for
-        /// more substeps than it was allowed, and nothing else.
-        /// </summary>
         [Fact]
+/// <summary>ClampingIsReportedExactlyWhenTheCapBinds operation.</summary>
         public void ClampingIsReportedExactlyWhenTheCapBinds()
         {
+/// <summary>StiffGrid operation.</summary>
             ThermalSimulation simulation = StiffGrid();
             simulation.Settings.MaxSubsteps = 1;
             simulation.Settings.Derive();
@@ -136,11 +117,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AGridInsideTheCapIsNotReportedAsClamped operation.</summary>
         public void AGridInsideTheCapIsNotReportedAsClamped()
         {
+/// <summary>StiffGrid operation.</summary>
             ThermalSimulation simulation = StiffGrid();
 
-            // Raised clear of what this fixture asks for, so the cap is present but never binds.
             float required = simulation.Solver.RequiredSubsteps(simulation.Settings.StepSeconds);
             simulation.Settings.MaxSubsteps = (int)Math.Ceiling(required) + 8;
             simulation.Settings.Derive();
@@ -153,8 +135,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheSubstepCountCoversWhatTheEstimateAskedFor operation.</summary>
         public void TheSubstepCountCoversWhatTheEstimateAskedFor()
         {
+/// <summary>StiffGrid operation.</summary>
             ThermalSimulation simulation = StiffGrid();
 
             float required = simulation.Solver.RequiredSubsteps(simulation.Settings.StepSeconds);

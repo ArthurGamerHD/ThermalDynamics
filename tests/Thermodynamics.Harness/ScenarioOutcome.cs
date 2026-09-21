@@ -5,23 +5,6 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Everything one ship in one state is worth recording.
-    ///
-    /// <para>
-    /// A single final temperature is not enough to judge balance by, and the reason is spatial. Two
-    /// ships settling at the same peak are different ships if one is uniformly warm and the other
-    /// is cold everywhere except a 900 K knot around its thrusters — the first has a cooling
-    /// problem and the second has a *layout* problem, and only one of them is fixed by adding
-    /// radiators. So this records the distribution and where its top end is, not just its top end.
-    /// </para>
-    ///
-    /// <para>
-    /// It also records what got the heat there. The per-mechanism shares say whether a hot ship is
-    /// hot from its own reactors, from the sun, or from flying too fast through air, and those
-    /// three have nothing to do with one another.
-    /// </para>
-    /// </summary>
     public class ScenarioOutcome
     {
         public string Ship;
@@ -29,43 +12,31 @@ namespace Thermodynamics.Harness
         public long WorkshopId;
         public int Blocks;
 
-        /// <summary>Grids in the blueprint, and the mechanical joints linking them.</summary>
         public int Grids;
         public int Joints;
 
-        // ---- where it ended up -----------------------------------------------------------------
 
-        /// <summary>Kelvin, across every block, at the end of the run.</summary>
         public float PeakKelvin;
         public float MeanKelvin;
         public float MedianKelvin;
         public float P95Kelvin;
         public float MinKelvin;
 
-        /// <summary>Peak minus min: how unevenly the heat is spread.</summary>
         public float GradientKelvin
         {
             get { return PeakKelvin - MinKelvin; }
         }
 
-        /// <summary>
-        /// Peak minus mean. The hot-spot measure: a ship that is uniformly warm has a small one
-        /// however hot it is, and a ship with a knot around its thrusters has a large one however
-        /// cool its average.
-        /// </summary>
         public float HotSpotKelvin
         {
             get { return PeakKelvin - MeanKelvin; }
         }
 
-        /// <summary>Which block reached <see cref="PeakKelvin"/>, and where it sits.</summary>
         public string HottestBlock;
         public Vector3I HottestCell;
 
-        /// <summary>Blocks within 50 K of the peak: whether the hot spot is one block or a region.</summary>
         public int HotSpotBlocks;
 
-        // ---- whether it survived ---------------------------------------------------------------
 
         public int BlocksOverCritical;
 
@@ -74,145 +45,53 @@ namespace Thermodynamics.Harness
             get { return Blocks == 0 ? 0f : BlocksOverCritical / (float)Blocks; }
         }
 
-        /// <summary>Kelvin the peak block sits below its own critical temperature. Negative is damage.</summary>
         public float MarginKelvin;
 
-        /// <summary>Simulated seconds before the first block went critical, or -1.</summary>
         public float SecondsToCritical = -1f;
 
-        /// <summary>
-        /// Simulated seconds before the first block ran out of hit points, or -1.
-        ///
-        /// The crossing above is when damage *starts*, at a rate of zero; this is when a player
-        /// loses something. See <see cref="AssemblyRunner.SecondsToFirstLoss"/> for why only the
-        /// first loss is measured.
-        /// </summary>
         public float SecondsToFirstLoss = -1f;
 
-        // ---- how it got there ------------------------------------------------------------------
 
-        /// <summary>Simulated seconds to come within 5 K of the final peak. Thermal inertia.</summary>
         public float SecondsToSettle = -1f;
 
-        /// <summary>Fastest rate of change seen at the peak block, K/s.</summary>
         public float PeakRateKelvinPerSecond;
 
-        /// <summary>
-        /// What it takes to raise the whole assembly by a degree, J/K — every node's thermal mass
-        /// added up. The conversion between a drifting bulk temperature and the watts that drift
-        /// represents.
-        /// </summary>
         public float ThermalMass;
 
-        /// <summary>
-        /// How fast the ship as a whole was still moving over the last stretch of the run, K/s.
-        /// Negative is cooling. Near zero means the whole hull has stopped, not just its hottest
-        /// block. NaN when the run was too short to have a last stretch.
-        ///
-        /// <para>
-        /// <see cref="SecondsToSettle"/> watches one block, so it says a ship has settled while
-        /// thousands of tonnes of armour are still cooling off. Anything that reads the end of a
-        /// run as an equilibrium needs this to be small before it can believe it.
-        /// </para>
-        /// </summary>
         public float BulkDriftKelvinPerSecond = float.NaN;
 
-        /// <summary>
-        /// The same drift as watts: <see cref="ThermalMass"/> times
-        /// <see cref="BulkDriftKelvinPerSecond"/>, which is the rate the hull is putting heat into
-        /// store or taking it back out. Negative is a hull still giving heat up.
-        ///
-        /// <para>
-        /// Kelvin alone cannot say whether a ship has settled, because the same hundredth of a
-        /// degree a minute is nothing on a capital hull and most of the budget on an interceptor.
-        /// Watts can: this is the term that has to be small next to what the ship makes before
-        /// made and vented can be expected to agree, and it is measured from the stored heat rather
-        /// than from the same ledger those two come from.
-        /// </para>
-        /// </summary>
         public float BulkDriftWatts = float.NaN;
 
-        /// <summary>Watts the grid was making and shedding when the run ended.</summary>
         public float MadeWatts;
         public float VentedWatts;
 
-        /// <summary>
-        /// Watts by mechanism at the end of the run, summed over the grid. Positive is heat in.
-        ///
-        /// These are what distinguish the *kind* of trouble a ship is in. A hull hot from solar
-        /// gain wants shading or a lower absorptivity; one hot from friction wants to slow down;
-        /// one hot from its own reactors wants radiators. The temperature alone says none of that.
-        /// </summary>
         public float RadiationWatts;
         public float ConvectionWatts;
         public float SolarWatts;
         public float FrictionWatts;
         public float GenerationWatts;
 
-        // ---- what it cost ----------------------------------------------------------------------
 
         public float SubstepsDemanded;
         public int SubstepsGranted;
 
-        /// <summary>
-        /// Thermal links across the whole assembly — block touching block.
-        ///
-        /// **The column `G6`'s cost half needed and did not have.** A substep runs a conduction
-        /// pass that is per link and an environment pass that is per node, and the allowance is
-        /// denominated in `links + 4 x nodes`; the corpus carried `Joints`, which is the mechanical
-        /// joints *between grids* and is nought on most blueprints, so every step-work figure this
-        /// repository published was the node half alone.
-        /// </summary>
         public int Links;
 
-        /// <summary>
-        /// Simulated seconds the run actually advanced, which is not the scenario's clock: almost
-        /// every battery run stops at equilibrium first.
-        ///
-        /// **A comparison holds the stopping point equal** (`M1`), and until this column existed a
-        /// dataset could not say where a run stopped — so two runs of the same ship under two
-        /// configurations were comparable only by assumption. It is what a paired arm is handed
-        /// through <see cref="Battery.RunForSeconds"/>.
-        /// </summary>
         public float RunSeconds;
 
-        /// <summary>
-        /// `MaxSubstepsPerBlock` in force for this run, and 0 for the off it ships as.
-        ///
-        /// **The column that makes a paired dataset readable.** Two arms of the same ship in the
-        /// same scenario are two rows that differ in nothing a reader can see without it, and a
-        /// dataset whose arms cannot be told apart is a dataset with twice as many rows and no
-        /// experiment in it.
-        /// </summary>
         public int SubstepsPerBlockCap;
 
-        /// <summary>
-        /// Nodes the cap is holding above their real heat capacity at the end of the run — its
-        /// *reach*, which is the statistic a cap's value is chosen from rather than its error.
-        /// </summary>
         public int FlooredNodes;
 
-        /// <summary>
-        /// What one substep costs the assembly's most expensive grid, in element visits — the unit
-        /// `MaxElementVisitsPerStep` is spent in, and per grid because the bound is per grid.
-        ///
-        /// Read from <see cref="ThermalSimulation.SubstepCost"/> rather than recomputed here, so
-        /// the corpus is scored in the mod's own arithmetic instead of in a copy of it (`P5`).
-        /// </summary>
         public long SubstepCost;
 
+/// <summary>ToString operation.</summary>
         public override string ToString()
         {
             return Ship + " / " + Scenario + ": " + PeakKelvin.ToString("n0") + " K peak";
         }
 
-        /// <summary>
-        /// Reads a finished run into an outcome.
-        ///
-        /// Every figure comes from the solver's own state rather than from the sample history, so
-        /// nothing here depends on how often the run was sampled — except the two that are about
-        /// time, which are handed in.
-        /// </summary>
+/// <summary>Read operation.</summary>
         public static ScenarioOutcome Read(ShipAssembly assembly, string ship, string scenario)
         {
             ScenarioOutcome outcome = new ScenarioOutcome
@@ -234,6 +113,7 @@ namespace Thermodynamics.Harness
 
             if (outcome.Blocks == 0) return outcome;
 
+/// <summary>List operation.</summary>
             List<float> temperatures = new List<float>(outcome.Blocks);
             float total = 0f;
             float margin = float.MaxValue;
@@ -272,8 +152,6 @@ namespace Thermodynamics.Harness
             outcome.MedianKelvin = temperatures[temperatures.Count / 2];
             outcome.P95Kelvin = temperatures[(int)(0.95f * (temperatures.Count - 1))];
 
-            // A hot spot that is one block is a definition problem; one that is fifty blocks is a
-            // layout problem. The distinction is only visible if the region is counted.
             float near = outcome.PeakKelvin - 50f;
             for (int i = 0; i < temperatures.Count; i++)
             {

@@ -4,11 +4,6 @@ using VRageMath;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// The heat-pump hardware of the blocks this mod ships, keyed by subtype: the two ratings and the
-    /// face geometry, which a definition cannot express. Efficiency is Carnot's and is tuned once for
-    /// the whole mod in <see cref="ThermalSettings.HeatPumpCarnotFraction"/>.
-    /// </summary>
     public static class ThermalHeatPumpShapes
     {
         private class Rating
@@ -17,11 +12,6 @@ namespace Thermodynamics
             public float Power;
         }
 
-        /// <summary>
-        /// Large grid moves 60 kW for at most 20 kW drawn; small grid a fifth of both. The small block
-        /// is an eighth of the volume but is sized to cool a small grid's single reactor, so it is
-        /// not scaled by volume.
-        /// </summary>
         private static readonly Dictionary<string, Rating> Ratings = new Dictionary<string, Rating>
         {
             { "Gauge_LG_HeatPump", new Rating { Watts = 60000f, Power = 20000f } },
@@ -30,23 +20,10 @@ namespace Thermodynamics
 
         private static readonly Dictionary<string, HeatPumpShape> Cache = new Dictionary<string, HeatPumpShape>();
 
-        /// <summary>
-        /// Guards <see cref="Cache"/>. See the note on <c>ThermalCoolantShapes.CacheLock</c>: this
-        /// dictionary is written from <c>ThermalBlockCatalog.Build</c>, which runs outside the
-        /// catalogue's own lock and so concurrently with itself on the game's worker threads.
-        /// </summary>
+/// <summary>object operation.</summary>
         private static readonly object CacheLock = new object();
 
-        /// <summary>
-        /// The heat-pump hardware for a subtype, or null when the block does not pump heat.
-        ///
-        /// The cold face is the block's forward and the hot face its backward, along the same axis
-        /// the coolant blocks run, so both families orient identically when placed identically.
-        /// </summary>
-        /// <param name="size">
-        /// Block size in cells. The small-grid pump is three by three, so its faces sit at the centre
-        /// of its end caps rather than at a corner.
-        /// </param>
+/// <summary>Returns the .</summary>
         public static HeatPumpShape Get(string subtype, Vector3I size)
         {
             if (string.IsNullOrEmpty(subtype)) return null;
@@ -66,13 +43,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Most electricity a subtype's pump can draw, W, or zero when it is not a pump.
-        ///
-        /// Read from the table rather than from a shape: a shape depends on the block's size, so a
-        /// caller holding only a subtype name would cache a one-cell shape under the name of a block
-        /// three cells across.
-        /// </summary>
+/// <summary>MaxPowerWatts operation.</summary>
         public static float MaxPowerWatts(string subtype)
         {
             Rating rating;
@@ -80,12 +51,13 @@ namespace Thermodynamics
             return rating.Power;
         }
 
-        /// <summary>True when a subtype is one of the heat pumps.</summary>
+/// <summary>IsHeatPump operation.</summary>
         public static bool IsHeatPump(string subtype)
         {
             return !string.IsNullOrEmpty(subtype) && Ratings.ContainsKey(subtype);
         }
 
+/// <summary>Clear operation.</summary>
         public static void Clear()
         {
             lock (CacheLock)

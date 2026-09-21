@@ -7,19 +7,10 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The simulation driven the way a host drives it: build, edit, step, save, load.
-    ///
-    /// <para>
-    /// Everything else in this project tests one mechanism against a fixture built for it. This tests
-    /// that the mechanisms compose — that a block added at runtime joins the graph, that removing one
-    /// opens its neighbours to space, and that a save round-trips every temperature and is taken
-    /// without disturbing the run it was taken from.
-    /// </para>
-    /// </summary>
     public class SimulationIntegrationTests
     {
         [Fact]
+/// <summary>ABuiltSimulationHasNodesLinksAndExposure operation.</summary>
         public void ABuiltSimulationHasNodesLinksAndExposure()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -38,6 +29,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>BlocksMarkedIgnoreThermalsNeverBecomeNodes operation.</summary>
         public void BlocksMarkedIgnoreThermalsNeverBecomeNodes()
         {
             BlockThermalProperties ignored = Catalog.DefaultThermal();
@@ -54,6 +46,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>Adds a ingablockatruntimejoinstheconductiongraph.</summary>
         public void AddingABlockAtRuntimeJoinsTheConductionGraph()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -70,6 +63,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RemovingABlockLeavesTheRestConsistent operation.</summary>
         public void RemovingABlockLeavesTheRestConsistent()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -91,6 +85,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RemovingABlockOpensUpItsNeighboursToSpace operation.</summary>
         public void RemovingABlockOpensUpItsNeighboursToSpace()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -108,13 +103,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>UpdateDrivesTheSchedulerAndTheRoomMapper operation.</summary>
         public void UpdateDrivesTheSchedulerAndTheRoomMapper()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 4, 4));
 
-            // Four a second, pinned: the assertion below counts steps, so the rate is the
-            // subject of the test rather than something to inherit from the shipped default.
             ThermalSettings settings = new ThermalSettings { Frequency = 4 };
             settings.Derive();
 
@@ -126,16 +120,12 @@ namespace Thermodynamics.Tests
                 simulation.Update(1f / 60f, Worlds.Shadow());
             }
 
-            // Exactly the configured rate: sixty frames of a sixtieth of a second is one second,
-            // and Frequency 4 with SimulationSpeed 1 is four steps a second. The step is spread
-            // across the fifteen frames of its window, so this also pins that the spreading
-            // neither loses nor invents work — an under-estimate of a step's cost would show up
-            // here as three.
             Assert.Equal(before + 4, simulation.Solver.StepCount);
             Assert.False(simulation.Rooms.HasWorkPending);
         }
 
         [Fact]
+/// <summary>SaveAndLoadRestoresEveryTemperature operation.</summary>
         public void SaveAndLoadRestoresEveryTemperature()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -146,7 +136,6 @@ namespace Thermodynamics.Tests
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 300f);
 
-            // give every node a distinct temperature
             for (int i = 0; i < simulation.Solver.Nodes.Count; i++)
             {
                 simulation.Solver.Nodes[i].Temperature = 300f + (i * 7.25f);
@@ -170,6 +159,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>LoadingIgnoresBlocksThatAreNoLongerThere operation.</summary>
         public void LoadingIgnoresBlocksThatAreNoLongerThere()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -193,6 +183,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SavingDoesNotDisturbTheRunningSimulation operation.</summary>
         public void SavingDoesNotDisturbTheRunningSimulation()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -207,6 +198,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AGridWithNoEnvironmentReachesAUniformTemperature operation.</summary>
         public void AGridWithNoEnvironmentReachesAUniformTemperature()
         {
             ThermalSettings settings = Fixture.ConductionOnly();
@@ -232,14 +224,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ReplayingTheSameScenarioGivesIdenticalResults operation.</summary>
         public void ReplayingTheSameScenarioGivesIdenticalResults()
         {
+/// <summary>RunSmallScenario operation.</summary>
             float first = RunSmallScenario();
+/// <summary>RunSmallScenario operation.</summary>
             float second = RunSmallScenario();
 
             Assert.Equal(first, second, 6);
         }
 
+/// <summary>RunSmallScenario operation.</summary>
         private static float RunSmallScenario()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -258,15 +254,6 @@ namespace Thermodynamics.Tests
         }
     }
 
-    /// <summary>
-    /// Every scenario runs, finishes and produces finite numbers.
-    ///
-    /// <para>
-    /// The scenarios are this repository's worked examples and its documentation quotes their figures,
-    /// so a scenario that silently stopped exercising what it names would take a page of prose down
-    /// with it. ScenarioClaimTests checks the conclusions; this checks they were reached at all.
-    /// </para>
-    /// </summary>
     [Trait("speed", "slow")]
     public class ScenarioTests
     {
@@ -285,6 +272,7 @@ namespace Thermodynamics.Tests
         [InlineData("welding")]
         [InlineData("stiff")]
         [InlineData("units")]
+/// <summary>EveryScenarioRunsAndProducesFiniteResults operation.</summary>
         public void EveryScenarioRunsAndProducesFiniteResults(string name)
         {
             ScenarioResult result = Scenarios.Run(name);
@@ -302,6 +290,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheCoolantScenarioActuallyFormsALoop operation.</summary>
         public void TheCoolantScenarioActuallyFormsALoop()
         {
             ScenarioResult result = Scenarios.Run("coolant");
@@ -310,36 +299,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheSealedRoomScenarioKeepsItsInteriorSealed operation.</summary>
         public void TheSealedRoomScenarioKeepsItsInteriorSealed()
         {
             ScenarioResult result = Scenarios.Run("sealed-room");
             Assert.Contains("Its exposed faces: 0", result.Summary);
         }
 
-        /// <summary>
-        /// **The threshold is 2 K and it was 10 K until 2026-09-09, and the reason is the fixture
-        /// rather than the model.**
-        ///
-        /// <para>
-        /// `EnableShapeDrag` ships on now, and this scenario's hull is a **3×3×1 plate** — the one
-        /// geometry the shape term reads worst. `ShapeNormal` reconstructs a normal from the
-        /// occupancy gradient over a 3×3×3 neighbourhood, and a plate one cell thick is symmetric
-        /// across its own thin axis, so the gradient along the flow cancels and only the in-plane
-        /// edge components survive. Measured: this hull's friction falls from 1,215 kW to 135 kW, a
-        /// factor of **0.111**, where the physics says a flat plate square to the flow is the one
-        /// case Newtonian and projected area agree on exactly — a factor of 1.
-        /// </para>
-        ///
-        /// <para>
-        /// **It is a fixture artefact and not a population one.** Solid hulls read 0.583 at 4³,
-        /// 0.771 at 8³ and 0.843 at 12³, and the corpus median over 8,142 ships is 0.325; a hull
-        /// skin one block thick is not this case either, because the ship behind it breaks the
-        /// symmetry. What is degenerate is a *bare* plate with nothing behind it. The threshold is
-        /// re-based rather than the fixture replaced, because a shared fixture is not changed to
-        /// make a number come out (`E10`), and the limitation is recorded in backlog.md `K24`.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ReentryHeatsTheLeadingFace operation.</summary>
         public void ReentryHeatsTheLeadingFace()
         {
             ScenarioResult result = Scenarios.Run("reentry");
@@ -351,6 +319,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>DayNightProducesAnOscillation operation.</summary>
         public void DayNightProducesAnOscillation()
         {
             ScenarioResult result = Scenarios.Run("daynight");
@@ -368,6 +337,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>CsvOutputHasOneRowPerSamplePlusAHeader operation.</summary>
         public void CsvOutputHasOneRowPerSamplePlusAHeader()
         {
             ScenarioResult result = Scenarios.Run("vacuum-soak");

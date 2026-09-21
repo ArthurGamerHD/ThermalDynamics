@@ -5,23 +5,6 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Structural measurements of a built simulation.
-    ///
-    /// These are the numbers that separate one grid shape from another, and each one drives a
-    /// specific cost in the simulation:
-    ///
-    /// <list type="bullet">
-    /// <item><see cref="BoundingFillRatio"/> — the room mapper floods the bounding volume, so a
-    /// sparse shape pays many times more per block than a solid one.</item>
-    /// <item><see cref="ExposedFraction"/> — how much of the grid the environment pass does real
-    /// work for, and how much of it responds to a change in ambient conditions.</item>
-    /// <item><see cref="LinksPerNode"/> — the conduction pass cost per block.</item>
-    /// <item><see cref="Diameter"/> — conduction hops across the grid, which sets how long a
-    /// transient takes to settle and therefore how long any activity-based scheduler must keep
-    /// working.</item>
-    /// </list>
-    /// </summary>
     public class GridMetrics
     {
         public int NodeCount;
@@ -32,13 +15,11 @@ namespace Thermodynamics.Harness
         public int ComponentCount;
         public int Diameter;
 
-        /// <summary>Occupied cells as a fraction of the bounding box. 1.0 for a solid box.</summary>
         public float BoundingFillRatio
         {
             get { return BoundingVolume == 0 ? 0f : NodeCount / (float)BoundingVolume; }
         }
 
-        /// <summary>Fraction of nodes with at least one exposed face.</summary>
         public float ExposedFraction
         {
             get { return NodeCount == 0 ? 0f : ExposedNodeCount / (float)NodeCount; }
@@ -49,10 +30,12 @@ namespace Thermodynamics.Harness
             get { return NodeCount == 0 ? 0f : LinkCount / (float)NodeCount; }
         }
 
+/// <summary>Measure operation.</summary>
         public static GridMetrics Measure(ThermalSimulation simulation)
         {
             if (simulation == null) throw new ArgumentNullException("simulation");
 
+/// <summary>GridMetrics operation.</summary>
             GridMetrics m = new GridMetrics();
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             IList<ThermalLink> links = simulation.Solver.Links;
@@ -70,6 +53,7 @@ namespace Thermodynamics.Harness
                 if (nodes[i].TotalExposedFaces > 0) m.ExposedNodeCount++;
             }
 
+/// <summary>Builds the method table.</summary>
             List<int>[] adjacency = BuildAdjacency(nodes.Count, links);
 
             for (int i = 0; i < adjacency.Length; i++)
@@ -77,11 +61,14 @@ namespace Thermodynamics.Harness
                 if (adjacency[i].Count == 0) m.IsolatedNodeCount++;
             }
 
+/// <summary>CountComponents operation.</summary>
             m.ComponentCount = CountComponents(adjacency);
+/// <summary>ApproximateDiameter operation.</summary>
             m.Diameter = ApproximateDiameter(adjacency);
             return m;
         }
 
+/// <summary>Builds the API method table.</summary>
         private static List<int>[] BuildAdjacency(int nodeCount, IList<ThermalLink> links)
         {
             List<int>[] adjacency = new List<int>[nodeCount];
@@ -96,6 +83,7 @@ namespace Thermodynamics.Harness
             return adjacency;
         }
 
+/// <summary>CountComponents operation.</summary>
         private static int CountComponents(List<int>[] adjacency)
         {
             bool[] seen = new bool[adjacency.Length];
@@ -110,8 +98,10 @@ namespace Thermodynamics.Harness
             return components;
         }
 
+/// <summary>Flood operation.</summary>
         private static void Flood(List<int>[] adjacency, int start, bool[] seen)
         {
+/// <summary>Queue operation.</summary>
             Queue<int> queue = new Queue<int>();
             seen[start] = true;
             queue.Enqueue(start);
@@ -129,11 +119,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// Double-sweep estimate: BFS from an arbitrary node to find a far one, then BFS from
-        /// there. Exact for trees and a tight lower bound in practice, at O(n) instead of the
-        /// O(n^2) an exact diameter would cost.
-        /// </summary>
+/// <summary>ApproximateDiameter operation.</summary>
         private static int ApproximateDiameter(List<int>[] adjacency)
         {
             int best = 0;
@@ -143,6 +129,7 @@ namespace Thermodynamics.Harness
             {
                 if (seen[start]) continue;
 
+/// <summary>FurthestFrom operation.</summary>
                 int far = FurthestFrom(adjacency, start, seen, true);
                 int distance = 0;
                 FurthestFrom(adjacency, far, null, false, out distance);
@@ -151,19 +138,23 @@ namespace Thermodynamics.Harness
             return best;
         }
 
+/// <summary>FurthestFrom operation.</summary>
         private static int FurthestFrom(List<int>[] adjacency, int start, bool[] mark, bool recordMark)
         {
             int distance;
+/// <summary>FurthestFrom operation.</summary>
             int furthest = FurthestFrom(adjacency, start, mark, recordMark, out distance);
             return furthest;
         }
 
+/// <summary>FurthestFrom operation.</summary>
         private static int FurthestFrom(
             List<int>[] adjacency, int start, bool[] mark, bool recordMark, out int furthestDistance)
         {
             int[] depth = new int[adjacency.Length];
             for (int i = 0; i < depth.Length; i++) depth[i] = -1;
 
+/// <summary>Queue operation.</summary>
             Queue<int> queue = new Queue<int>();
             depth[start] = 0;
             queue.Enqueue(start);
@@ -196,9 +187,11 @@ namespace Thermodynamics.Harness
             return furthest;
         }
 
+/// <summary>ToString operation.</summary>
         public override string ToString()
         {
             return string.Format(
+/// <summary>links operation.</summary>
                 "{0} nodes, {1} links ({2:F2}/node), bbox {3} ({4:P1} full), {5:P1} exposed, diameter {6}, {7} component(s)",
                 NodeCount, LinkCount, LinksPerNode, BoundingVolume, BoundingFillRatio,
                 ExposedFraction, Diameter, ComponentCount);

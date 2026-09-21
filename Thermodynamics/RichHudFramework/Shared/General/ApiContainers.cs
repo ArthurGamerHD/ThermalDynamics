@@ -5,21 +5,13 @@ using VRage;
 
 namespace RichHudFramework
 {
-	/// <summary>
-	/// Read-only collection that lazily caches API wrappers on-demand while exposing an up-to-date count.
-	/// </summary>
-	/// <typeparam name="TValue">Type of the API wrapper</typeparam>
-	/// <exclude/>
 	public class ReadOnlyApiCollection<TValue> : IReadOnlyList<TValue>, IIndexedCollection<TValue>
 	{
-		/// <summary>
-		/// Retrieves the wrapper at the specified index. Creates and caches new wrappers as needed.
-		/// </summary>
-		/// <exception cref="Exception">Thrown if the index is negative or >= <see cref="Count"/>.</exception>
 		public virtual TValue this[int index]
 		{
 			get
 			{
+/// <summary>Returns the countfunc.</summary>
 				int count = GetCountFunc();
 
 				if (index >= count)
@@ -41,9 +33,7 @@ namespace RichHudFramework
 			}
 		}
 
-		/// <summary>
-		/// Number of elements currently in the underlying collection.
-		/// </summary>
+/// <summary>Returns the countfunc.</summary>
 		public virtual int Count => GetCountFunc();
 
 		protected readonly Func<int, TValue> GetNewWrapperFunc;
@@ -51,58 +41,55 @@ namespace RichHudFramework
 		protected readonly List<TValue> wrapperList;
 		protected readonly CollectionDataEnumerator<TValue> enumerator;
 
-		/// <summary>
-		/// Constructs a new lazily-cached read-only collection using the provided factory delegates.
-		/// </summary>
+/// <summary>ReadOnlyApiCollection operation.</summary>
 		public ReadOnlyApiCollection(Func<int, TValue> getNewWrapper, Func<int> getCount)
 		{
 			this.GetNewWrapperFunc = getNewWrapper;
 			this.GetCountFunc = getCount;
 
+/// <summary>List operation.</summary>
 			wrapperList = new List<TValue>();
+/// <summary>CollectionDataEnumerator operation.</summary>
 			enumerator = new CollectionDataEnumerator<TValue>(i => this[i], getCount);
 		}
 
+/// <summary>ReadOnlyApiCollection operation.</summary>
 		public ReadOnlyApiCollection(MyTuple<Func<int, TValue>, Func<int>> tuple)
 			: this(tuple.Item1, tuple.Item2)
 		{ }
 
+/// <summary>Returns the enumerator.</summary>
 		public virtual IEnumerator<TValue> GetEnumerator() => enumerator;
 		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 	}
 
-	/// <summary>
-	/// Lightweight read-only collection backed entirely by delegates. No internal caching.
-	/// </summary>
-	/// <typeparam name="TValue">Type of element returned by the collection</typeparam>
-	/// <exclude/>
 	public class ReadOnlyCollectionData<TValue> : IReadOnlyList<TValue>, IIndexedCollection<TValue>
 	{
-		/// <summary>
-		/// Retrieves the element at the specified index via the getter delegate.
-		/// </summary>
+/// <summary>Returns the ter.</summary>
 		public virtual TValue this[int index] => Getter(index);
 
-		/// <summary>
-		/// Current number of elements reported by the underlying source.
-		/// </summary>
+/// <summary>Returns the countfunc.</summary>
 		public virtual int Count => GetCountFunc();
 
 		protected readonly Func<int, TValue> Getter;
 		protected readonly Func<int> GetCountFunc;
 		protected readonly CollectionDataEnumerator<TValue> enumerator;
 
+/// <summary>ReadOnlyCollectionData operation.</summary>
 		public ReadOnlyCollectionData(Func<int, TValue> getter, Func<int> getCount)
 		{
 			this.Getter = getter;
 			this.GetCountFunc = getCount;
+/// <summary>CollectionDataEnumerator operation.</summary>
 			enumerator = new CollectionDataEnumerator<TValue>(i => this[i], getCount);
 		}
 
+/// <summary>ReadOnlyCollectionData operation.</summary>
 		public ReadOnlyCollectionData(MyTuple<Func<int, TValue>, Func<int>> tuple)
 			: this(tuple.Item1, tuple.Item2)
 		{ }
 
+/// <summary>Returns the enumerator.</summary>
 		public virtual IEnumerator<TValue> GetEnumerator() => enumerator;
 		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 	}

@@ -5,25 +5,29 @@ using Region = Thermodynamics.Presentation.ThermalVisionRegionPartition.Region;
 
 namespace Thermodynamics.Presentation
 {
-    /// <summary>Bounded close-block refinement over complete coarse coverage, shared by the native adapter and corpus evaluation.</summary>
     public sealed class ThermalVisionBlockDetail
     {
         private readonly int budget, focusLimit;
         private readonly Vector3D eye;
+/// <summary>List operation.</summary>
         private readonly List<Region> exact = new List<Region>();
+/// <summary>List operation.</summary>
         private readonly List<Region> focus = new List<Region>();
+/// <summary>List operation.</summary>
         private readonly List<double> distances = new List<double>();
         private bool overflow;
         public int RefinedBlocks { get; private set; }
         public bool AllExact { get; private set; }
         public int CoarseCapacity { get { return Math.Max(1, budget / 4); } }
 
+/// <summary>ThermalVisionBlockDetail operation.</summary>
         public ThermalVisionBlockDetail(int budget, Vector3D localEye)
         {
             if (budget < 1) throw new ArgumentException("Positive detail budget required");
             this.budget = budget; eye = localEye; focusLimit = budget / 12;
         }
 
+/// <summary>Observe operation.</summary>
         public void Observe(Region block, bool visible)
         {
             if (!overflow)
@@ -41,6 +45,7 @@ namespace Thermodynamics.Presentation
             if (focus.Count > focusLimit) { focus.RemoveAt(focusLimit); distances.RemoveAt(focusLimit); }
         }
 
+/// <summary>Builds the API method table.</summary>
         public List<Region> Build(ThermalVisionRegionScan coarse, bool refine)
         {
             AllExact = false; RefinedBlocks = 0;
@@ -48,8 +53,8 @@ namespace Thermodynamics.Presentation
                 throw new ArgumentException("A complete coarse field is required");
             ThermalVisionRegionOrder order;
             if (refine && !overflow && ThermalVisionRegionOrder.TryBuild(exact, budget, out order))
+/// <summary>List operation.</summary>
             { AllExact = true; RefinedBlocks = exact.Count; return new List<Region>(exact); }
-            // Reserve ordering headroom. A failed refinement never damages coarse coverage.
             for (int take = refine ? focus.Count : 0; take > 0; take /= 2)
             {
                 var field = ThermalVisionRegionPartition.FromScan(coarse, Math.Max(1, budget / 2));
@@ -59,12 +64,14 @@ namespace Thermodynamics.Presentation
                     if (field.TryOverwrite(focus[i])) RefinedBlocks++;
                 if (ThermalVisionRegionOrder.TryBuild(field, budget, out order))
                 {
+/// <summary>List operation.</summary>
                     var result = new List<Region>();
                     for (int i = 0; i < field.Count; i++) result.Add(field[i]);
                     return result;
                 }
             }
             RefinedBlocks = 0;
+/// <summary>List operation.</summary>
             var fallback = new List<Region>();
             for (int i = 0; i < coarse.Count; i++) fallback.Add(coarse[i]);
             return fallback;

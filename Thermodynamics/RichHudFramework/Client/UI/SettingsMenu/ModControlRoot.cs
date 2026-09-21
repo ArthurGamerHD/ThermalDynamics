@@ -15,38 +15,37 @@ namespace RichHudFramework
 	{
 		public sealed partial class RichHudTerminal
 		{
-			/// <summary>
-			/// Represents the root category for the client's settings. 
-			/// <para>This is the entry point where pages and subcategories are added.</para>
-			/// </summary>
 			private class ModControlRoot : TerminalPageCategoryBase, IModControlRoot
 			{
 				public IReadOnlyList<TerminalPageCategoryBase> Subcategories { get; }
 
-				/// <summary>
-				/// Invoked when the selected page within this root changes.
-				/// </summary>
 				public event EventHandler SelectionChanged;
 
+/// <summary>ModControlRoot operation.</summary>
 				public ModControlRoot(ControlContainerMembers data) : base(data)
 				{
 					GetOrSetMemberFunc(new Action(ModRootCallback), (int)ModControlRootAccessors.GetOrSetCallback);
 
+/// <summary>Returns the orsetmemberfunc.</summary>
 					var GetCategoryDataFunc = GetOrSetMemberFunc(null, (int)ModControlRootAccessors.GetCategoryAccessors)
 						as Func<int, ControlContainerMembers>;
 
 					Func<int, TerminalPageCategoryBase> GetPageFunc = (x => new TerminalPageCategoryWrapper(GetCategoryDataFunc(x)));
+/// <summary>ReadOnlyApiCollection operation.</summary>
 					Subcategories = new ReadOnlyApiCollection<TerminalPageCategoryBase>(GetPageFunc, data.Item2.Item2);
 				}
 
+/// <summary>ModRootCallback operation.</summary>
 				protected void ModRootCallback()
 				{
 					SelectionChanged?.Invoke(this, EventArgs.Empty);
 				}
 
+/// <summary>Adds a .</summary>
 				public void Add(TerminalPageCategoryBase subcategory) =>
 					GetOrSetMemberFunc(subcategory.ID, (int)ModControlRootAccessors.AddSubcategory);
 
+/// <summary>Adds a range.</summary>
 				public void AddRange(IReadOnlyList<IModRootMember> members)
 				{
 					foreach (IModRootMember member in members)
@@ -60,6 +59,7 @@ namespace RichHudFramework
 
 				private class TerminalPageCategoryWrapper : TerminalPageCategoryBase
 				{
+/// <summary>TerminalPageCategoryWrapper operation.</summary>
 					public TerminalPageCategoryWrapper(ControlContainerMembers data) : base(data)
 					{ }
 				}

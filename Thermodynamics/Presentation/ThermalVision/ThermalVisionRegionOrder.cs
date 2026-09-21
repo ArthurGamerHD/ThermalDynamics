@@ -5,10 +5,6 @@ using Region = Thermodynamics.Presentation.ThermalVisionRegionPartition.Region;
 
 namespace Thermodynamics.Presentation
 {
-    /// <summary>
-    /// A bounded spatial partition for near-to-far region submission. Splits crossing boxes
-    /// instead of relying on centre-distance sorting. Build once per field, traverse per view.
-    /// </summary>
     public sealed class ThermalVisionRegionOrder
     {
         private sealed class Node
@@ -23,13 +19,15 @@ namespace Thermodynamics.Presentation
         public int LeafCount { get; private set; }
         public int NodeCount { get; private set; }
 
-        /// <summary>Returns no tree if fragmentation or recursion exceeds the preparation budget.</summary>
+/// <summary>TryBuild operation.</summary>
         public static bool TryBuild(ThermalVisionRegionPartition field, int leafLimit, out ThermalVisionRegionOrder order)
         {
             if (field == null || leafLimit < 1 || leafLimit > 65536) throw new ArgumentException("Invalid region order budget");
             order = null;
             if (field.Count > leafLimit) return false;
+/// <summary>ThermalVisionRegionOrder operation.</summary>
             var working = new ThermalVisionRegionOrder();
+/// <summary>List operation.</summary>
             var regions = new List<Region>(field.Count);
             for (int i = 0; i < field.Count; i++) regions.Add(field[i]);
             if (!working.Build(regions, leafLimit, 0, out working.root)) return false;
@@ -37,33 +35,37 @@ namespace Thermodynamics.Presentation
             return true;
         }
 
-        /// <summary>Build from a completed disjoint-cell scan without quadratic overlap repartitioning.</summary>
+/// <summary>TryBuild operation.</summary>
         public static bool TryBuild(ThermalVisionRegionScan scan, int leafLimit, out ThermalVisionRegionOrder order)
         {
             if (scan == null || leafLimit < 1 || leafLimit > 65536) throw new ArgumentException("Invalid scan order budget");
             order = null;
             if (scan.Count > leafLimit) return false;
+/// <summary>List operation.</summary>
             var regions = new List<Region>(scan.Count);
             for (int i = 0; i < scan.Count; i++) regions.Add(scan[i]);
+/// <summary>ThermalVisionRegionOrder operation.</summary>
             var working = new ThermalVisionRegionOrder();
             if (!working.Build(regions, leafLimit, 0, out working.root)) return false;
             order = working;
             return true;
         }
 
-        /// <summary>Order caller-owned disjoint grid-local block bounds without temperature aggregation.</summary>
+/// <summary>TryBuild operation.</summary>
         public static bool TryBuild(IList<Region> disjointRegions, int leafLimit, out ThermalVisionRegionOrder order)
         {
             if (disjointRegions == null || leafLimit < 1 || leafLimit > 65536)
                 throw new ArgumentException("Invalid block order budget");
             order = null;
             if (disjointRegions.Count > leafLimit) return false;
+/// <summary>ThermalVisionRegionOrder operation.</summary>
             var working = new ThermalVisionRegionOrder();
             if (!working.Build(new List<Region>(disjointRegions), leafLimit, 0, out working.root)) return false;
             order = working;
             return true;
         }
 
+/// <summary>Builds the API method table.</summary>
         private bool Build(List<Region> regions, int limit, int depth, out Node node)
         {
             node = null;
@@ -73,14 +75,17 @@ namespace Thermodynamics.Presentation
             if (regions.Count == 1)
             {
                 if (++LeafCount > limit) return false;
+/// <summary>BoundingBoxD operation.</summary>
                 node = new Node { Value = regions[0], Bounds=new BoundingBoxD(regions[0].Min,regions[0].Max) };
                 return true;
             }
+/// <summary>Centre operation.</summary>
             Vector3D lo = Centre(regions[0]), hi = lo;
             foreach (Region region in regions)
             { lo = Vector3D.Min(lo, Centre(region)); hi = Vector3D.Max(hi, Centre(region)); }
             Vector3D spread = hi - lo;
             int axis = spread.X >= spread.Y && spread.X >= spread.Z ? 0 : spread.Y >= spread.Z ? 1 : 2;
+/// <summary>Coordinate operation.</summary>
             double target = Coordinate(lo, axis) * .5 + Coordinate(hi, axis) * .5;
             double minimum = double.PositiveInfinity, maximum = double.NegativeInfinity;
             foreach (Region region in regions)
@@ -88,19 +93,20 @@ namespace Thermodynamics.Presentation
                 minimum = Math.Min(minimum, Coordinate(region.Min, axis));
                 maximum = Math.Max(maximum, Coordinate(region.Max, axis));
             }
-            // Use an existing boundary: repeated centre midpoints can converge on a touching
-            // boundary without ever separating its boxes, exhausting the fragmentation budget.
             double plane = double.NaN, best = double.PositiveInfinity;
             foreach (Region region in regions)
                 for (int side = 0; side < 2; side++)
                 {
+/// <summary>Coordinate operation.</summary>
                     double candidate = Coordinate(side == 0 ? region.Min : region.Max, axis);
                     double distance = Math.Abs(candidate - target);
                     if (candidate > minimum && candidate < maximum && distance < best)
                     { plane = candidate; best = distance; }
                 }
             if (double.IsNaN(plane)) return false;
+/// <summary>List operation.</summary>
             var low = new List<Region>();
+/// <summary>List operation.</summary>
             var high = new List<Region>();
             foreach (Region region in regions)
             {
@@ -109,7 +115,9 @@ namespace Thermodynamics.Presentation
                 else
                 {
                     Region a = region, b = region;
+/// <summary>Replace operation.</summary>
                     a.Max = Replace(a.Max, axis, plane);
+/// <summary>Replace operation.</summary>
                     b.Min = Replace(b.Min, axis, plane);
                     low.Add(a); high.Add(b);
                 }
@@ -117,15 +125,14 @@ namespace Thermodynamics.Presentation
             }
             Vector3D boundsMin=regions[0].Min,boundsMax=regions[0].Max;
             foreach(var region in regions) { boundsMin=Vector3D.Min(boundsMin,region.Min); boundsMax=Vector3D.Max(boundsMax,region.Max); }
+/// <summary>BoundingBoxD operation.</summary>
             node = new Node { Axis = axis, Plane = plane, Bounds=new BoundingBoxD(boundsMin,boundsMax) };
+/// <summary>Builds the API method table.</summary>
             return Build(low, limit, depth + 1, out node.Low)
                 && Build(high, limit, depth + 1, out node.High);
         }
 
-        /// <summary>
-        /// Writes every fragment once in ray-consistent order. Within each convex fragment,
-        /// submit its near cap, then entering faces, then exiting faces. No centre-depth sort.
-        /// </summary>
+/// <summary>WriteNearToFar operation.</summary>
         public void WriteNearToFar(Vector3D eye, List<Region> result)
         {
             if (result == null || double.IsNaN(eye.X + eye.Y + eye.Z) || double.IsInfinity(eye.X + eye.Y + eye.Z))
@@ -134,20 +141,21 @@ namespace Thermodynamics.Presentation
             Visit(root, eye, result);
         }
 
-        /// <summary>Prunes whole off-screen subtrees without changing surviving leaf order.
-        /// The supplied frustum must be in the same grid-local coordinates as the tree.</summary>
+/// <summary>WriteVisibleNearToFar operation.</summary>
         public void WriteVisibleNearToFar(Vector3D eye,List<Region> result,BoundingFrustumD frustum)
         {
             if(result==null || frustum==null) throw new ArgumentException("Output and local frustum required");
+/// <summary>WriteVisibleNearToFar operation.</summary>
             int hidden; WriteVisibleNearToFar(eye,result,frustum,null,out hidden);
         }
-        /// <summary>Prune fully hidden subtrees using revalidated, solid grid-local blockers.</summary>
+/// <summary>WriteVisibleNearToFar operation.</summary>
         public void WriteVisibleNearToFar(Vector3D eye,List<Region> result,BoundingFrustumD frustum,
             IList<BoundingBoxD> blockers,out int hiddenSubtrees)
         {
             if(result==null || frustum==null)throw new ArgumentException("Output and local frustum required");
             hiddenSubtrees=0;result.Clear();VisitVisible(root,eye,result,frustum,false,blockers,ref hiddenSubtrees);
         }
+/// <summary>VisitVisible operation.</summary>
         private static void VisitVisible(Node node,Vector3D eye,List<Region> result,BoundingFrustumD frustum,bool inside,
             IList<BoundingBoxD> blockers,ref int hiddenSubtrees)
         {
@@ -167,9 +175,10 @@ namespace Thermodynamics.Presentation
             VisitVisible(lowFirst?node.High:node.Low,eye,result,frustum,inside,blockers,ref hiddenSubtrees);
         }
 
-        /// <summary>Finds the first containing leaf in the same fixed-origin order used at publication.</summary>
+/// <summary>TryFind operation.</summary>
         public bool TryFind(Vector3D point,out Region region)
         { return Find(root,point,out region); }
+/// <summary>Find operation.</summary>
         private static bool Find(Node node,Vector3D point,out Region region)
         {
             region=default(Region);
@@ -184,22 +193,27 @@ namespace Thermodynamics.Presentation
             double coordinate=Coordinate(point,node.Axis);
             if(coordinate<node.Plane) return Find(node.Low,point,out region);
             if(coordinate>node.Plane) return Find(node.High,point,out region);
-            // On a shared boundary retain the previous linear scan's fixed-origin tie order.
             bool lowFirst=0<=node.Plane;
+/// <summary>Find operation.</summary>
             return Find(lowFirst?node.Low:node.High,point,out region)
                 || Find(lowFirst?node.High:node.Low,point,out region);
         }
 
+/// <summary>Visit operation.</summary>
         private static void Visit(Node node, Vector3D eye, List<Region> result)
         {
             if (node == null) return;
             if (node.Low == null && node.High == null) { result.Add(node.Value); return; }
+/// <summary>Coordinate operation.</summary>
             bool lowFirst = Coordinate(eye, node.Axis) <= node.Plane;
             Visit(lowFirst ? node.Low : node.High, eye, result);
             Visit(lowFirst ? node.High : node.Low, eye, result);
         }
+/// <summary>Centre operation.</summary>
         private static Vector3D Centre(Region region) { return region.Min * .5 + region.Max * .5; }
+/// <summary>Coordinate operation.</summary>
         private static double Coordinate(Vector3D v, int axis) { return axis == 0 ? v.X : axis == 1 ? v.Y : v.Z; }
+/// <summary>Replace operation.</summary>
         private static Vector3D Replace(Vector3D v, int axis, double value)
         { if (axis == 0) v.X = value; else if (axis == 1) v.Y = value; else v.Z = value; return v; }
     }

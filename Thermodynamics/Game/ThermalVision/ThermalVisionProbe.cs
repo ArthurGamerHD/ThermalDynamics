@@ -20,11 +20,6 @@ using Triangle = Thermodynamics.Presentation.ThermalVisionTriangle;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// Opt-in rendering experiment on the aimed-at block, not a full-scene thermal camera.
-    /// Uses actual opaque model triangles and live subpart transforms, never box substitutes.
-    /// See thermal-vision-design.md for the in-game tests still required.
-    /// </summary>
     public static partial class ThermalVisionProbe
     {
         private const int MaxModelTriangles = ThermalVisionMeshBuild.ModelLimit;
@@ -33,8 +28,11 @@ namespace Thermodynamics
         private const int MaxCachedModels = 128;
         private const int MaxParts = 32;
         private static readonly MyStringId Material = MyStringId.GetOrCompute("GaugeThermalVisionProbe");
+/// <summary>ThermalVisionState operation.</summary>
         private static readonly ThermalVisionState State = new ThermalVisionState();
+/// <summary>ThermalVisionMeshCache operation.</summary>
         private static readonly ThermalVisionMeshCache<IMyModel> Geometry = new ThermalVisionMeshCache<IMyModel>(MaxCachedModels, MaxCachedTriangles);
+/// <summary>ThermalVisionMesh operation.</summary>
         private static readonly ThermalVisionMesh Empty = new ThermalVisionMesh(new Triangle[0], new ThermalVisionMeshBatch[0]);
         private static readonly int[] VisibleBatches = new int[(MaxModelTriangles + 63) / 64];
         private static int batchRejectedTriangles, batchesTested;
@@ -52,6 +50,7 @@ namespace Thermodynamics
         private static int parts;
         private static bool incomplete;
         private static int frames;
+/// <summary>Stopwatch operation.</summary>
         private static readonly Stopwatch ProbeClock = new Stopwatch();
         private static bool capture, cacheMiss;
         private static bool compositeMode;
@@ -60,11 +59,13 @@ namespace Thermodynamics
         private static float sampleKelvin;
         private static string rowIdentity, lastOutcome, rowKey;
 
+/// <summary>RecordEvent operation.</summary>
         private static void RecordEvent(string message, bool important = true)
         {
             if (Telemetry.Enabled) Telemetry.Vision.Event(Telemetry.SessionSeconds, message, important);
         }
 
+/// <summary>Outcome operation.</summary>
         private static void Outcome(string value)
         {
             if (!capture) return;
@@ -78,10 +79,13 @@ namespace Thermodynamics
         private sealed class ModelSource : IThermalVisionMeshSource
         {
             private readonly IMyModel model;
+/// <summary>ModelSource operation.</summary>
             public ModelSource(IMyModel model) { this.model = model; }
             public int TriangleCount { get { return model.GetTrianglesCount(); } }
+/// <summary>TryRead operation.</summary>
             public bool TryRead(int index, out Triangle triangle)
             {
+/// <summary>Triangle operation.</summary>
                 triangle = new Triangle();
                 if (model.GetDrawTechnique(index) != MyMeshDrawTechnique.MESH) return false;
                 var indices = model.GetTriangle(index);
@@ -95,19 +99,24 @@ namespace Thermodynamics
         private static int visionUiFlags = -1;
         private static bool renderFailureReported;
 
-        /// <summary>Creates the prototype status display after Rich HUD registers.</summary>
+/// <summary>Builds the API method table.</summary>
         public static void Build()
         {
             if (panel != null) return;
+/// <summary>LabelBox operation.</summary>
             panel = new LabelBox(HudMain.HighDpiRoot)
             {
                 ParentAlignment = ParentAlignments.Top | ParentAlignments.Left
                     | ParentAlignments.InnerV | ParentAlignments.InnerH,
+/// <summary>Vector2 operation.</summary>
                 Offset = new Vector2(24f, -130f),
                 AutoResize = true,
                 BuilderMode = TextBuilderModes.Lined,
+/// <summary>Vector2 operation.</summary>
                 TextPadding = new Vector2(14f, 10f),
+/// <summary>Color operation.</summary>
                 Color = new Color(16, 25, 34, 235),
+/// <summary>GlyphFormat operation.</summary>
                 Format = new GlyphFormat(new Color(220, 235, 242), TextAlignment.Left, 0.85f),
                 Visible = false,
                 UseCursor = false,
@@ -116,7 +125,7 @@ namespace Thermodynamics
             BuildVisionLegend();
         }
 
-        /// <summary>Release HUD references without changing the requested optics or prepared fields.</summary>
+/// <summary>ResetHud operation.</summary>
         public static void ResetHud()
         {
             if(panel!=null) panel.Visible=false;
@@ -126,7 +135,7 @@ namespace Thermodynamics
             surveyImage=null;
         }
 
-        /// <summary>Clears client-only resources on world unload.</summary>
+/// <summary>Reset operation.</summary>
         public static void Reset()
         {
             RecordEvent("HUD/world reset");
@@ -140,10 +149,12 @@ namespace Thermodynamics
             regionMode = false; compositeMode = false; sceneMode = false; surveyMode = false; depthMode = false; automaticRange = true; SceneRange.Reset();
         }
 
+/// <summary>Stop operation.</summary>
         private static void Stop()
         {
             HideVisionLegend();
             PauseIndependentFleet();
+/// <summary>Dictionary operation.</summary>
             gradientLab = false; smoothFleet = false; smoothCorners = new Dictionary<ThermalVisionRegionPartition.Region,ThermalVisionSurfaceField>(); gradientUvs.Clear(); gradientPositions.Clear(); gradientTemperatures.Clear(); gradientSeen.Clear();
             StopSurvey();
             StopRegions();
@@ -154,6 +165,7 @@ namespace Thermodynamics
                 panel.Visible = false;
                 HideVisionLegend();
                 panel.ParentAlignment = ParentAlignments.Top | ParentAlignments.Left | ParentAlignments.InnerV | ParentAlignments.InnerH;
+/// <summary>Vector2 operation.</summary>
                 panel.Offset = new Vector2(24f, -130f);
             }
             Geometry.Clear();
@@ -166,7 +178,7 @@ namespace Thermodynamics
             rowIdentity = lastOutcome = rowKey = null;
         }
 
-        /// <summary>Handles /thermal vision colour, grey, or off, without changing the world.</summary>
+/// <summary>Run operation.</summary>
         public static string Run(string argument)
         {
             if (argument != null && argument.Trim().StartsWith("bind ", StringComparison.OrdinalIgnoreCase)) return BindVisionKey(argument.Trim().Substring(5));
@@ -181,6 +193,7 @@ namespace Thermodynamics
                 SurveyScan.Invalidate();
                 SurveyWidth = lowered == "detail" ? 128 : 64;
                 SurveyHeight = SurveyWidth * 9 / 16;
+/// <summary>ThermalVisionRayScan operation.</summary>
                 SurveyScan = new ThermalVisionRayScan<SurveySample>(SurveyWidth * SurveyHeight, 1, 128);
                 StartSurvey();
                 return "survey " + SurveyWidth + "x" + SurveyHeight + " acquiring; hold steady";
@@ -239,7 +252,6 @@ namespace Thermodynamics
                 }
                 return "surface probe range locked: " + low + " to " + high + " C";
             }
-            // Explicit lab namespace; preserve old commands for existing test protocols.
             if (lowered.StartsWith("lab ")) lowered = lowered.Substring(4).Trim();
             bool blockPrefix = lowered.StartsWith("blocks ");
             bool requestedGradient = lowered.StartsWith("gradient ");
@@ -278,6 +290,7 @@ namespace Thermodynamics
                 RecordEvent("activation rejected: Rich HUD unavailable");
                 return "surface probe needs Rich HUD to show coverage and range limits";
             }
+/// <summary>EligibleViewpoint operation.</summary>
             long view = EligibleViewpoint();
             if (!State.Enable(mode, view))
             {
@@ -300,9 +313,9 @@ namespace Thermodynamics
             return sceneMode ? "scene probe ON: simulated grids within 100 m; bounded coverage, terrain/characters unsupported" : "surface probe ON: aim at a modelled block within 15 m; scenery is not temperature-mapped";
         }
 
+/// <summary>EligibleViewpoint operation.</summary>
         private static long EligibleViewpoint()
         {
-            // Do not query client view objects on dedicated servers or during session teardown.
             if (MyAPIGateway.Utilities == null || MyAPIGateway.Utilities.IsDedicated
                 || MyAPIGateway.Session == null) return 0;
             var session = MyAPIGateway.Session;
@@ -330,10 +343,11 @@ namespace Thermodynamics
             }.EligibleEntityId;
         }
 
-        /// <summary>Checks eligibility every frame, then submits depth-tested world-space triangles.</summary>
+/// <summary>Draw operation.</summary>
         public static void Draw()
         {
             if (State.Current == ThermalVisionState.Mode.Off) return;
+/// <summary>EligibleViewpoint operation.</summary>
             long view = EligibleViewpoint();
             if (!State.Validate(view))
             {
@@ -345,7 +359,6 @@ namespace Thermodynamics
             if (panel == null) return; // HUD registration will rebuild it; keep the selected mode.
             var gui = MyAPIGateway.Gui;
             bool gameChat = gui != null && gui.ChatEntryVisible;
-            // Rich HUD observes the configured chat bind before the standard GUI flag updates.
             bool frameworkChat = BindManager.IsChatOpen;
             bool cursor = gui != null && gui.IsCursorVisible;
             int uiFlags = (gameChat ? 1 : 0) | (frameworkChat ? 2 : 0) | (cursor ? 4 : 0) | (gui == null ? 8 : 0);
@@ -382,6 +395,7 @@ namespace Thermodynamics
             try
             {
                 if (regionMode) DrawRegions();
+/// <summary>if operation.</summary>
                 else if (compositeMode) { DrawCompositeContext(); DrawScene(); }
                 else if (depthMode) DrawDepthLayers(); else if (surveyMode) DrawSurvey(); else if (sceneMode) DrawScene(); else DrawTarget();
                 UpdateVisionLegend();
@@ -396,7 +410,6 @@ namespace Thermodynamics
                     Outcome("render-error");
                     if(!renderFailureReported) RecordEvent("render-error: " + exception.Message);
                 }
-                // Preserve this frame's identity until the finally block records it.
                 panel.Visible = false;
                 HideVisionLegend();
                 if(!renderFailureReported)
@@ -418,6 +431,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>DrawTarget operation.</summary>
         private static void DrawTarget()
         {
             Crosshair.Target target;
@@ -460,6 +474,7 @@ namespace Thermodynamics
                     if (entity != null)
                         DrawEntity(entity, new Vector4(linear, 1f), target.Camera.Translation, 0);
                     string geometryStatus = entity == null
+/// <summary>DrawArmour operation.</summary>
                         ? DrawArmour(target, new Vector4(linear, 1f)) : null;
                     Outcome(geometryStatus ?? (drawn == 0 ? "zero-submitted"
                         : incomplete ? "partial" : "submitted"));
@@ -479,6 +494,7 @@ namespace Thermodynamics
             if (publish)
             {
                 string palette = State.Current == ThermalVisionState.Mode.Cividis ? "CIVIDIS" : "WHITE HOT";
+/// <summary>RichText operation.</summary>
                 panel.Text = new RichText((gradientLab ? "GRADIENT LAB / " : "SURFACE PROBE 3 / ") + palette + " / " + (lowKelvin - 273.15f).ToString("0.##")
                     + "–" + (highKelvin - 273.15f).ToString("0.##") + " C LOCK\n"
                     + status + "\nAimed block only; scenery is not temperature-mapped");
@@ -486,6 +502,7 @@ namespace Thermodynamics
             panel.Visible = true;
         }
 
+/// <summary>DrawEntity operation.</summary>
         private static void DrawEntity(MyEntity entity, Vector4 colour, Vector3D eye, int depth)
         {
             if (entity == null || entity.MarkedForClose || !((VRage.ModAPI.IMyEntity)entity).Visible) return;
@@ -504,8 +521,7 @@ namespace Thermodynamics
             }
         }
 
-        // Grid-owned parts are the actual armour tiles, including slope/corner topology.
-        // Their instance matrices are grid-local; never reconstruct an enclosing cube.
+/// <summary>DrawArmour operation.</summary>
         private static string DrawArmour(Crosshair.Target target, Vector4 colour)
         {
             if (target.Block.Block.HasDeformation)
@@ -528,10 +544,12 @@ namespace Thermodynamics
             return drawn == 0 ? "armour-zero-submitted" : incomplete ? "armour-partial" : "armour-submitted";
         }
 
+/// <summary>DrawModel operation.</summary>
         private static void DrawModel(IMyModel model, MatrixD matrix, Vector4 colour, Vector3D eye)
         {
             double started = capture ? ProbeClock.Elapsed.TotalMilliseconds : 0;
             int before = drawn;
+/// <summary>DrawModelCore operation.</summary>
             try { DrawModelCore(model, matrix, colour, eye); }
             finally
             {
@@ -544,6 +562,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>DrawModelCore operation.</summary>
         private static void DrawModelCore(IMyModel model, MatrixD matrix, Vector4 colour, Vector3D eye)
         {
             if (sceneMode && (ProbeClock.Elapsed.TotalMilliseconds >= sceneDeadline || examined >= sceneTriangleLimit))
@@ -552,10 +571,9 @@ namespace Thermodynamics
                     : examined >= sceneTriangleLimit ? ThermalVisionSceneLimit.Triangles : ThermalVisionSceneLimit.Time;
                 incomplete = true; return;
             }
+/// <summary>Returns the geometry.</summary>
             ThermalVisionMesh mesh = GetGeometry(model);
             Triangle[] triangles = mesh.Triangles;
-            // Reject backfaces in model space before doing three world-space vertex transforms.
-            // Mirrored/singular transforms retain the original world-space path.
             Vector3D localEye;
             bool localCull = ThermalVisionGeometry.TryGetLocalEye(matrix, eye, out localEye);
             int visibleBatchCount = 0, candidateTriangles = 0;
@@ -592,7 +610,6 @@ namespace Thermodynamics
                     if (projection == ThermalVisionProjection.Degenerate) { degenerate++; continue; }
                     Vector3 n = projected.Normal;
                     if (gradientLab) { DrawGradient(projected); drawn++; continue; }
-            // Keen marks this overload "Only for modders"; this is the mod API.
 #pragma warning disable CS0618
                     MyTransparentGeometry.AddTriangleBillboard(projected.A, projected.B, projected.C,
                         n, n, n, Vector2.Zero, Vector2.UnitX, Vector2.UnitY, compositeMode ? CompositeSurfaceMaterial : Material, 0,
@@ -603,6 +620,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>AdvanceGeometryBuild operation.</summary>
         private static void AdvanceGeometryBuild()
         {
             if (pendingGeometry == null) return;
@@ -619,7 +637,6 @@ namespace Thermodynamics
                 sceneLimits |= ThermalVisionSceneLimit.ModelBuild;
                 return;
             }
-            // Publish only a finished model; retain other warm models when capacity is reached.
             ThermalVisionMesh triangles = job.Build.Mesh;
             Geometry.Add(job.Model, triangles, job.Build.Unsupported > 0);
             RecordEvent("progressive model complete " + job.Model.AssetName + " source=" + job.Build.Total
@@ -627,6 +644,7 @@ namespace Thermodynamics
             pendingGeometry = null;
         }
 
+/// <summary>Returns the geometry.</summary>
         private static ThermalVisionMesh GetGeometry(IMyModel model)
         {
             ThermalVisionMesh triangles;
@@ -640,8 +658,8 @@ namespace Thermodynamics
             if (sceneMode && count <= MaxModelTriangles)
             {
                 if (pendingGeometry == null)
+/// <summary>ThermalVisionMeshBuild operation.</summary>
                     pendingGeometry = new PendingGeometry { Model = model, Build = new ThermalVisionMeshBuild(new ModelSource(model)) };
-                // One bounded job is retained. Others retry after it publishes a complete cache entry.
                 incomplete = true;
                 sceneLimits |= ThermalVisionSceneLimit.ModelBuild;
                 return Empty;
@@ -654,6 +672,7 @@ namespace Thermodynamics
                 if (capture) RecordEvent("model budget rejected: " + model.AssetName + " triangles=" + count, false);
                 return Empty;
             }
+/// <summary>ThermalVisionMeshBuild operation.</summary>
             var build = new ThermalVisionMeshBuild(new ModelSource(model));
             build.Advance(MaxModelTriangles);
             int unsupported = build.Unsupported;

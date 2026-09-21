@@ -3,31 +3,13 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// Whether planetary terrain stands between a point and the sun — everything the smooth-sphere
-    /// planet test ignores, such as the canyon a base sits in. A horizon walk out along the sun ray,
-    /// reading only ground heights and never physics, sampled geometrically because nearby terrain is
-    /// almost all of the real shadowing. See configuration.md, External shadow.
-    /// </summary>
     public static class TerrainHorizon
     {
-        /// <summary>Where the walk starts, in metres. Anything closer is the grid's own hull.</summary>
         public const double NearDistance = 50d;
 
-        /// <summary>
-        /// How far above the ray's own height terrain must stand before it counts as blocking, in
-        /// metres. Absorbs the metre or two of disagreement between the height field and the
-        /// rendered voxels, without which flat ground shadows itself.
-        /// </summary>
         public const double Tolerance = 2d;
 
-        /// <summary>
-        /// True when terrain stands between <paramref name="origin"/> and the sun.
-        ///
-        /// <paramref name="surfaceRadius"/> gives the distance from the planet's centre to the ground
-        /// under a point. It is the only world input, which is what allows the walk to be tested
-        /// against synthetic terrain.
-        /// </summary>
+/// <summary>Occluded operation.</summary>
         public static bool Occluded(
             Vector3D origin,
             Vector3D sunDirection,

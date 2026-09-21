@@ -5,19 +5,14 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// `GridModel.GetNeighbours` answers a one-cell block with six probes and no deduplication, and
-    /// is held to the boundary-walking query it short-cuts — the same neighbours in the same order,
-    /// for every block of a census hull and of a grid that mixes one-cell blocks with bars and cubes
-    /// (`D8`). Order matters here beyond correctness: the link list is built in this order, and the
-    /// conduction sum accumulates in link order, so a permutation would move the last bit of a
-    /// temperature.
-    /// </summary>
     public class GridModelAdjacencyTests
     {
+/// <summary>AssertSame operation.</summary>
         private static void AssertSame(GridModel grid, string what)
         {
+/// <summary>List operation.</summary>
             List<BlockInstance> fast = new List<BlockInstance>();
+/// <summary>List operation.</summary>
             List<BlockInstance> walked = new List<BlockInstance>();
             int answers = 0;
             int oneCell = 0;
@@ -44,14 +39,8 @@ namespace Thermodynamics.Tests
             Assert.True(oneCell > 0, what + ": no one-cell block, so the short path never ran");
         }
 
-        /// <summary>
-        /// The face the walk reports for a neighbour is the face `ConductionBuilder.ContactFace`
-        /// works out from the two boxes — which is what lets the link builder take the walk's
-        /// answer instead of asking. A box touches another on at most one face, so there is one
-        /// right answer; this holds them equal for every neighbour of every block of a census hull
-        /// and of the mixed grid, on both the one-cell path and the boundary walk.
-        /// </summary>
         [Fact]
+/// <summary>TheWalkReportsTheFaceContactFaceWouldFind operation.</summary>
         public void TheWalkReportsTheFaceContactFaceWouldFind()
         {
             int compared = 0;
@@ -59,7 +48,9 @@ namespace Thermodynamics.Tests
 
             foreach (GridModel grid in new[] { CensusGrid(), MixedGrid() })
             {
+/// <summary>List operation.</summary>
                 List<BlockInstance> neighbours = new List<BlockInstance>();
+/// <summary>List operation.</summary>
                 List<int> faces = new List<int>();
 
                 for (int b = 0; b < grid.Blocks.Count; b++)
@@ -85,6 +76,7 @@ namespace Thermodynamics.Tests
             Assert.True(multiCell > 0, "no multi-cell block across either fixture, so the boundary walk's face was never checked");
         }
 
+/// <summary>CensusGrid operation.</summary>
         private static GridModel CensusGrid()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -93,22 +85,21 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ACensusHullAnswersTheSameNeighboursByBothPaths operation.</summary>
         public void ACensusHullAnswersTheSameNeighboursByBothPaths()
         {
             AssertSame(CensusGrid(), "census hull");
         }
 
-        /// <summary>
-        /// Bars and a cube beside unit blocks, so a one-cell block has multi-cell neighbours on
-        /// several faces and a multi-cell block has many one-cell neighbours on one face — both of
-        /// the shapes the deduplication exists for, on the side of the query that skips it.
-        /// </summary>
+/// <summary>MixedGrid operation.</summary>
         private static GridModel MixedGrid()
         {
+/// <summary>MixedBuilder operation.</summary>
             GridBuilder builder = MixedBuilder();
             return builder.Grid;
         }
 
+/// <summary>MixedBuilder operation.</summary>
         private static GridBuilder MixedBuilder()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -131,8 +122,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AMixedGridAnswersTheSameNeighboursByBothPaths operation.</summary>
         public void AMixedGridAnswersTheSameNeighboursByBothPaths()
         {
+/// <summary>MixedBuilder operation.</summary>
             GridBuilder builder = MixedBuilder();
 
             int multi = 0;
@@ -142,23 +135,21 @@ namespace Thermodynamics.Tests
             AssertSame(builder.Grid, "mixed grid");
         }
 
-        /// <summary>
-        /// **The bit in front of the block table hides no neighbour.** The link build consults the
-        /// occupancy set before probing, because three of a block's six candidate cells in eight
-        /// hold nothing — so the walk must return the same blocks across the same faces in the same
-        /// order whether it is given the set or not. A filter that dropped a real neighbour would
-        /// remove a conduction link, which nothing else in the model would report.
-        /// </summary>
         [Fact]
+/// <summary>TheOccupancyFilteredWalkFindsExactlyWhatThePlainWalkFinds operation.</summary>
         public void TheOccupancyFilteredWalkFindsExactlyWhatThePlainWalkFinds()
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(), 4000);
             GridModel grid = simulation.Grid;
             CellBitset occupied = grid.Occupancy();
 
+/// <summary>List operation.</summary>
             List<BlockInstance> plain = new List<BlockInstance>();
+/// <summary>List operation.</summary>
             List<int> plainFaces = new List<int>();
+/// <summary>List operation.</summary>
             List<BlockInstance> filtered = new List<BlockInstance>();
+/// <summary>List operation.</summary>
             List<int> filteredFaces = new List<int>();
 
             IList<BlockInstance> blocks = grid.Blocks;
@@ -193,18 +184,8 @@ namespace Thermodynamics.Tests
             Assert.True(neighbours > judged * 2, "the hull averages fewer than two neighbours a block");
         }
 
-        /// <summary>
-        /// **`GetAtKey` is `GetAtCell` without the conversion; `GetByKey` is a different question.**
-        ///
-        /// <para>
-        /// Both take a key, and one of them answers only for a block's *lowest* cell. A caller
-        /// walking a cell's six neighbours by key arithmetic — which is why `GetAtKey` exists —
-        /// that reached for `GetByKey` instead would find every one-cell block and miss every
-        /// multi-cell one except where its lowest corner happened to be, which is a hole nothing
-        /// else in the model would report.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>Returns the atkeyanswersforeverycellofablockandgetbykeyonlyforitslowest.</summary>
         public void GetAtKeyAnswersForEveryCellOfABlockAndGetByKeyOnlyForItsLowest()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -220,16 +201,15 @@ namespace Thermodynamics.Tests
                 {
                     for (int x = 0; x < 3; x++)
                     {
+/// <summary>Vector3I operation.</summary>
                         Vector3I cell = new Vector3I(x, y, z);
                         long key = GridMath.Key(cell);
 
-                        // The cell answers the same way however the caller spells the question.
                         Assert.Same(grid.GetAtCell(cell), grid.GetAtKey(key));
                         Assert.NotNull(grid.GetAtKey(key));
 
                         if (x == 0 && y == 0 && z == 0) continue;
 
-                        // ...and the lowest-cell question says no to all but one of them.
                         Assert.Null(grid.GetByKey(key));
                         interior++;
                     }
@@ -239,7 +219,6 @@ namespace Thermodynamics.Tests
             Assert.Equal(26, interior);
             Assert.NotNull(grid.GetByKey(GridMath.Key(new Vector3I(0, 0, 0))));
 
-            // An empty cell is empty by every spelling.
             Assert.Null(grid.GetAtKey(GridMath.Key(new Vector3I(4, 0, 0))));
             Assert.Null(grid.GetAtCell(new Vector3I(4, 0, 0)));
         }

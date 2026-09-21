@@ -22,86 +22,61 @@ namespace Thermodynamics
 	{
         public const ushort ModID = 30323;
 
-        /// <summary>
-        /// The running session component, for the few things that need the mod's own context —
-        /// reading a file out of the mod folder needs the mod's entry in the world's mod list, and
-        /// only a component knows its own.
-        /// </summary>
         public static Session Instance;
         public static DefinitionExtensionsAPI Definitions;
 
-        /// <summary>Chat command that writes a telemetry report without closing the world.</summary>
         private const string DumpCommand = "/thermaldump";
 
-        /// <summary>
-        /// Runtime control: <c>/thermal status</c>, <c>/thermal telemetry on|off</c>,
-        /// <c>/thermal stride n</c>, <c>/thermal dump</c>.
-        /// </summary>
         private const string Command = "/thermal";
 
         private bool _commandRegistered;
         private long _frame;
 
+/// <summary>Session operation.</summary>
         public Session()
         {
             MyLog.Default.Info($"[{Settings.Name}] Setup Definition Extention API");
+/// <summary>DefinitionExtensionsAPI operation.</summary>
             Definitions = new DefinitionExtensionsAPI(Done);
         }
 
+/// <summary>Done operation.</summary>
         private void Done()
         {
             MyLog.Default.Info($"[{Settings.Name}] Definition Extention API - Done");
         }
 
+/// <summary>Init operation.</summary>
         public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
             Instance = this;
 
-            // Before the settings load below, because that load derives and validates them: a
-            // problem found before the writer is installed is still recorded, but nobody sees it.
             Core.ThermalValidation.Writer = WriteValidationProblem;
 
             NetworkAPI.Init(ModID, Settings.Name);
             NetworkAPI.LogNetworkTraffic = true;
 
-            // The config file controls whether telemetry collects. Grids may have initialised before
-            // this ran, so the load is not performed here: whichever caller touches the settings
-            // first performs it.
             Settings.EnsureLoaded();
 
-            // After the load, so the property is seeded with real settings rather than null — a
-            // null value is never transmitted, and a client's fetch would get nothing back.
-            // Session-scoped properties are addressed by the order they are constructed in, so
-            // this stays first among them and stays on both sides.
             SettingsSync.Register(this);
 
             Telemetry.Start();
 
             ThermalTerminal.Register();
 
-            // Its own channel and the engine's verified sender, because the shared one cannot say
-            // who really sent a packet — see SettingsRequests.
             SettingsRequests.Register();
 
-            // The same reasoning one channel further along: a client must not be able to write
-            // temperatures onto another client's simulation, and the server must not serve a hull
-            // to a player id somebody else named — see ThermalGridSync.
             ThermalGridSync.Register();
 
-            // Published from Init so a mod loading after this one still finds it: a late consumer
-            // requests the table and it is re-sent.
             ThermalApi.Register();
 
-            // The overlay is client state rather than grid state: the config supplies only the view
-            // a session opens on, and the keybind changes it from there.
             ThermalDebugView.Current = (ThermalDebugView.Mode)Settings.Instance.DebugBlockOverlay;
             WindOverlay.Current = (WindOverlay.Mode)Settings.Instance.DebugWindOverlay;
 
-            // Registration with Rich HUD Master is asynchronous and may never complete, so this only
-            // requests it; the menu builds itself when the framework responds.
             ThermalSettingsMenu.Initialize();
         }
 
+/// <summary>UnloadData operation.</summary>
         protected override void UnloadData()
         {
             SessionCleanup.Run(new Action[]
@@ -128,11 +103,13 @@ namespace Thermodynamics
             }, ReportUnloadFailure);
         }
 
+/// <summary>ReportUnloadFailure operation.</summary>
         private static void ReportUnloadFailure(int stage, Exception error)
         {
             MyLog.Default.Error("[Thermodynamics] unload stage " + stage + " failed: " + error);
         }
 
+/// <summary>Unregisters the API and cleans resources.</summary>
         private void UnregisterCommands()
         {
             if (_commandRegistered && MyAPIGateway.Utilities != null)
@@ -140,22 +117,15 @@ namespace Thermodynamics
             _commandRegistered = false;
         }
 
-        /// <summary>Frames between deferred config writes; one second at 60 fps.</summary>
         private const int SaveFlushFrames = 60;
 
-        /// <summary>
-        /// Frames between suit passes — one real second. The suit is eighty kilograms of mostly
-        /// water and nothing it does resolves faster than that, so a finer cadence would cost more
-        /// and say the same.
-        /// </summary>
         private const int SuitFrames = 60;
 
         private int framesSinceSaveCheck;
 
+/// <summary>Simulate operation.</summary>
         public override void Simulate()
         {
-            // Settings save themselves as they change. The write is deferred to here so that
-            // dragging a slider across its range is one file write rather than one per step of it.
             if (++framesSinceSaveCheck >= SaveFlushFrames)
             {
                 framesSinceSaveCheck = 0;
@@ -178,27 +148,17 @@ namespace Thermodynamics
             Telemetry.SessionFrameTime.End();
         }
 
-        /// <summary>
-        /// The session's own per-frame work. Cross-grid conduction runs on the ten-frame cadence its
-        /// exchange is scaled to.
-        /// </summary>
+/// <summary>Tick operation.</summary>
         private void Tick()
         {
             RegisterCommand();
             PollKeys();
 
-            // Every grid every frame, each doing its share of the step it is part way through.
             ThermalGridScheduler.Tick();
 
-            // **After the step, because it reads what the step published.** The drag force is
-            // derived from `Simulation.FrictionWatts`, which the environment pass fills; applying
-            // it before would apply the previous frame's air to this frame's motion. Returns
-            // immediately unless `EnableDrag` is on and this is the server.
             ThermalGridDrag.Tick();
             ThermalGridTopSpeed.Tick();
 
-            // The planet-wide wind sweep. Once per frame at most, never per grid, and it returns
-            // immediately unless telemetry and the probe interval are both on.
             PlanetProbes.Step(ThermalGrid.TickSeconds);
             ThermalHeatSourceDebug.Update(ThermalGrid.TickSeconds);
 
@@ -208,25 +168,19 @@ namespace Thermodynamics
                 ThermalTerminal.Update();
             }
 
-            // Temperatures to the clients that are owed them. Its own cadence, and it returns
-            // immediately in single player.
             ThermalGridSync.Tick();
 
-            // The suit, on its own cadence: a player's thermal mass is large enough that a second
-            // is fine resolution, and the pass costs a bounding-box test per live grid per player.
             if (_frame % SuitFrames == 0)
             {
                 ThermalCharacters.Step(SuitFrames / 60f);
             }
 
-            // The statistics page is read off the running grids, so it has to be re-read rather
-            // than written once when the menu was built. Returns immediately unless the terminal
-            // is open, and on every dedicated server, where the menu is never registered.
             ThermalSettingsMenu.Tick();
 
             Debug.ShowDebugInfo();
         }
 
+/// <summary>Draw operation.</summary>
         public override void Draw()
         {
             ThermalHud.Draw();
@@ -238,11 +192,7 @@ namespace Thermodynamics
             ThermalDebugPanel.Update();
         }
 
-        /// <summary>
-        /// Ctrl+Shift+= cycles the block overlay, Ctrl+Shift+W the wind map, Ctrl+Shift+S the settings
-        /// menu. Hard-coded rather than rebindable, because a mod cannot add an entry to the game's
-        /// binding list; the typing checks keep the chords out of text a player is entering.
-        /// </summary>
+/// <summary>PollKeys operation.</summary>
         private void PollKeys()
         {
             ThermalVisionProbe.PollVisionKey();
@@ -264,18 +214,12 @@ namespace Thermodynamics
                 return;
             }
 
-            // The wind map, on its own key rather than as another view of the block overlay: it
-            // draws the world rather than a grid, and it is the one a player wants up *while*
-            // flying through what it describes.
             if (MyAPIGateway.Input.IsNewKeyPressed(MyKeys.W))
             {
                 WindOverlay.Cycle();
                 return;
             }
 
-            // The performance panel. A key rather than a chat command because it is something a
-            // player flicks on to check a suspicion and off again, and because it has to be
-            // reachable while flying.
             if (MyAPIGateway.Input.IsNewKeyPressed(MyKeys.M))
             {
                 bool shown = ThermalHud.TogglePerformancePanel();
@@ -284,10 +228,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Attaches the chat hook. <c>MyAPIGateway.Utilities</c> is not reliably available from Init,
-        /// so this runs on the first simulated frame.
-        /// </summary>
+/// <summary>Registers the API and message handler.</summary>
         private void RegisterCommand()
         {
             if (_commandRegistered || MyAPIGateway.Utilities == null) return;
@@ -296,6 +237,7 @@ namespace Thermodynamics
             _commandRegistered = true;
         }
 
+/// <summary>OnMessageEntered operation.</summary>
         private void OnMessageEntered(string messageText, ref bool sendToOthers)
         {
             if (messageText == null) return;
@@ -316,10 +258,7 @@ namespace Thermodynamics
             RunCommand(argument);
         }
 
-        /// <summary>
-        /// Runtime telemetry control: turn collection on or off and take a report at any point,
-        /// without reloading the world.
-        /// </summary>
+/// <summary>RunCommand operation.</summary>
         private void RunCommand(string argument)
         {
             string lowered = argument.ToLower();
@@ -448,8 +387,6 @@ namespace Thermodynamics
                 return;
             }
 
-            // A count in the status line is what makes anyone ask; this is the answer. The problems
-            // are already in the log, and a mod author reading a chat window is not reading a log.
             if (lowered == "problems")
             {
                 List<string> found = Core.ThermalValidation.Problems;
@@ -475,23 +412,7 @@ namespace Thermodynamics
         }
 
 
-        /// <summary>
-        /// Heats the block under the crosshair to a temperature, so the presentation channels can
-        /// be seen without building a ship that overheats.
-        ///
-        /// <para>
-        /// **This exists because two channels went a long time unverified.** The glow and the
-        /// warning cue only appear in the last hundred kelvin before a block fails, which is a state
-        /// no ordinary session reaches on demand — so the only way anyone found out whether they
-        /// worked at all was to build something that cooks itself. It sets a temperature and
-        /// nothing else: the solver takes it from there and cools it back down, which is also what
-        /// makes it safe to leave in.
-        /// </para>
-        ///
-        /// <para>
-        /// Server side, because a temperature a client invents is one the next step overwrites.
-        /// </para>
-        /// </summary>
+/// <summary>RunHeat operation.</summary>
         private static void RunHeat(string argument)
         {
             if (MyAPIGateway.Session == null || !MyAPIGateway.Session.IsServer)
@@ -513,8 +434,6 @@ namespace Thermodynamics
 
             if (argument.Length == 0)
             {
-                // No number given, so the useful one: hot enough to glow at full and be in the last
-                // moments before it fails, which is the state both channels are about.
                 kelvin = critical > 0f ? critical : 1200f;
             }
             else if (!float.TryParse(argument, NumberStyles.Float, CultureInfo.InvariantCulture,
@@ -530,7 +449,7 @@ namespace Thermodynamics
                 + kelvin.ToString("n0") + " K, rated " + critical.ToString("n0") + " K");
         }
 
-        /// <summary>The block under the crosshair, and the grid simulating it.</summary>
+/// <summary>Aimed operation.</summary>
         private static bool Aimed(out ThermalGrid thermals, out ThermalBlock block)
         {
             thermals = null;
@@ -540,6 +459,7 @@ namespace Thermodynamics
             if (player == null || player.Character == null) return false;
 
             MatrixD head = player.Character.GetHeadMatrix(true);
+/// <summary>LineD operation.</summary>
             LineD ray = new LineD(head.Translation, head.Translation + (head.Forward * 150));
 
             List<MyLineSegmentOverlapResult<MyEntity>> hits =
@@ -570,23 +490,13 @@ namespace Thermodynamics
             return false;
         }
 
-        /// <summary>
-        /// The log line a validator's finding becomes. Warning rather than Info: every one of them
-        /// is an authored value the mod is about to work around, and an author grepping a log for
-        /// their own mod's name is who it is for.
-        /// </summary>
+/// <summary>WriteValidationProblem operation.</summary>
         private static void WriteValidationProblem(string line)
         {
             MyLog.Default.Warning("[" + Settings.Name + "] " + line);
         }
 
-        /// <summary>
-        /// Changes one setting for the running session.
-        ///
-        /// Every setting is live: the value is written into the settings object every grid already
-        /// holds and is picked up on the next step. Nothing is written to disk unless
-        /// <c>/thermal save</c> is issued.
-        /// </summary>
+/// <summary>RunSet operation.</summary>
         private void RunSet(string argument)
         {
             int space = argument.IndexOf(' ');
@@ -596,6 +506,7 @@ namespace Thermodynamics
                 return;
             }
 
+/// <summary>Resolve operation.</summary>
             string name = Resolve(argument.Substring(0, space).Trim());
             string text = argument.Substring(space + 1).Trim().ToLower();
 
@@ -614,9 +525,6 @@ namespace Thermodynamics
                 return;
             }
 
-            // A client owns its own presentation switches and sets them locally; everything else
-            // is world state and goes to the server as a request, which answers whether it was
-            // allowed. The server's own path is unchanged.
             if (SettingsRequests.MustAsk && !Settings.ClientOwned.Contains(name))
             {
                 SettingsRequests.Send(name, value);
@@ -630,7 +538,7 @@ namespace Thermodynamics
             Reply(name + " = " + Format(name, Settings.Instance.GetValue(name)) + " (unsaved)");
         }
 
-        /// <summary>Matches a setting name case-insensitively, for chat entry.</summary>
+/// <summary>Resolve operation.</summary>
         private static string Resolve(string name)
         {
             List<string> names = Settings.Names();
@@ -641,9 +549,11 @@ namespace Thermodynamics
             return null;
         }
 
+/// <summary>ListSettings operation.</summary>
         private void ListSettings()
         {
             List<string> names = Settings.Names();
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
 
             for (int i = 0; i < names.Count; i++)
@@ -657,12 +567,14 @@ namespace Thermodynamics
                 Settings.Name, "Settings", "", text.ToString(), null, "Close");
         }
 
+/// <summary>Format operation.</summary>
         private static string Format(string name, float value)
         {
             if (Settings.IsFlag(name)) return value != 0f ? "on" : "off";
             return value.ToString("0.####");
         }
 
+/// <summary>Dump operation.</summary>
         private void Dump()
         {
             if (!Telemetry.Enabled)
@@ -675,13 +587,7 @@ namespace Thermodynamics
             Reply("telemetry report written to world storage");
         }
 
-        /// <summary>
-        /// Reports whether this machine's settings match the server's, as a digest to compare by
-        /// eye with the same command run on the other side.
-        ///
-        /// Replication is host code and cannot be tested outside a live session, so this is how it
-        /// gets checked: run it on the server, run it on a client, compare one string.
-        /// </summary>
+/// <summary>ReportSync operation.</summary>
         private static void ReportSync()
         {
             bool server = MyAPIGateway.Session != null && MyAPIGateway.Session.IsServer;
@@ -691,22 +597,18 @@ namespace Thermodynamics
                 + " over " + SettingsSync.ReplicatedCount() + " values"
                 + (SettingsSync.Ready ? "" : " | NOT SYNCED: nothing to send or receive"));
 
-            // The few figures most likely to differ, so a mismatch says which way it went without
-            // needing the config file open.
             Reply("  Frequency " + Settings.Instance.Frequency
                 + " | HeatTimeScale " + Settings.Instance.HeatTimeScale.ToString("n0")
                 + " | MaxSubsteps " + Settings.Instance.MaxSubsteps
                 + " | MaxSubstepsPerBlock " + Settings.Instance.MaxSubstepsPerBlock
                 + " | MaxElementVisits " + Settings.Instance.MaxElementVisitsPerStep.ToString("n0"));
 
-            // Temperatures replicate on their own channel and their own schedule, so a settings
-            // digest that agrees says nothing about them. Both sides print their counters and the
-            // pair says which half is not moving.
             Reply("  " + ThermalGridSync.Report());
 
             if (!server) Reply("  digests differ? run /thermal sync fetch, then this again");
         }
 
+/// <summary>Reply operation.</summary>
         private static void Reply(string message)
         {
             MyAPIGateway.Utilities.ShowMessage(Settings.Name, message);

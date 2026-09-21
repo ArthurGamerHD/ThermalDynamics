@@ -22,63 +22,38 @@ namespace RichHudFramework
 			{
 				private class FontData : IFontMin
 				{
-					/// <summary>
-					/// Font name
-					/// </summary>
 					public string Name { get; }
 
-					/// <summary>
-					/// Index of the font in the font manager
-					/// </summary>
 					public int Index { get; }
 
-					/// <summary>
-					/// Font size at which the textures were created.
-					/// </summary>
 					public float PtSize { get; }
 
-					/// <summary>
-					/// Default scaling applied to font. Used to normalize font size.
-					/// </summary>
 					public float BaseScale { get; }
 
-					/// <summary>
-					/// Returns the index for this font using regular styling
-					/// </summary>
+/// <summary>Vector2I operation.</summary>
 					public Vector2I Regular => new Vector2I(Index, 0);
 
-					/// <summary>
-					/// Returns the index for the bolded version of this font
-					/// </summary>
+/// <summary>Vector2I operation.</summary>
 					public Vector2I Bold => new Vector2I(Index, (int)FontStyles.Bold);
 
-					/// <summary>
-					/// Returns the index for the italicised version of this font
-					/// </summary>
+/// <summary>Vector2I operation.</summary>
 					public Vector2I Italic => new Vector2I(Index, (int)FontStyles.Italic);
 
-					/// <summary>
-					/// Returns the index for the italicised version of this font
-					/// </summary>
+/// <summary>Vector2I operation.</summary>
 					public Vector2I Underline => new Vector2I(Index, (int)FontStyles.Underline);
 
-					/// <summary>
-					/// Returns the index for the bold italic version of this font
-					/// </summary>
+/// <summary>Vector2I operation.</summary>
 					public Vector2I BoldItalic => new Vector2I(Index, (int)FontStyles.BoldItalic);
 
-					/// <summary>
-					/// Returns the index for the bold underlined version of this font
-					/// </summary>
+/// <summary>Vector2I operation.</summary>
 					public Vector2I BoldUnderline => new Vector2I(Index, (int)(FontStyles.Bold | FontStyles.Underline));
 
-					/// <summary>
-					/// Returns the index for the bold italic underline version of this font
-					/// </summary>
+/// <summary>Vector2I operation.</summary>
 					public Vector2I BoldItalicUnderline => new Vector2I(Index, (int)(FontStyles.BoldItalic | FontStyles.Underline));
 
 					private readonly Func<int, bool> IsFontDefinedFunc;
 
+/// <summary>FontData operation.</summary>
 					public FontData(FontMembers members)
 					{
 						Name = members.Item1;
@@ -88,35 +63,31 @@ namespace RichHudFramework
 						IsFontDefinedFunc = members.Item5;
 					}
 
-					/// <summary>
-					/// Returns true if the font is defined for the given style.
-					/// </summary>
+/// <summary>IsStyleDefined operation.</summary>
 					public bool IsStyleDefined(FontStyles styleEnum) =>
 						IsFontDefinedFunc((int)styleEnum);
 
-					/// <summary>
-					/// Returns true if the font is defined for the given style.
-					/// </summary>
+/// <summary>IsStyleDefined operation.</summary>
 					public bool IsStyleDefined(int style) =>
 						IsFontDefinedFunc(style);
 
-					/// <summary>
-					/// Retrieves the full index of the font style
-					/// </summary>
+/// <summary>Returns the styleindex.</summary>
 					public Vector2I GetStyleIndex(int style) =>
+/// <summary>Vector2I operation.</summary>
 						new Vector2I(Index, style);
 
-					/// <summary>
-					/// Retrieves the full index of the font style
-					/// </summary>
+/// <summary>Returns the styleindex.</summary>
 					public Vector2I GetStyleIndex(FontStyles style) =>
+/// <summary>Vector2I operation.</summary>
 						new Vector2I(Index, (int)style);
 
+/// <summary>Returns the hashcode.</summary>
 					public override int GetHashCode()
 					{
 						return Index.GetHashCode();
 					}
 
+/// <summary>Equals operation.</summary>
 					public override bool Equals(object obj)
 					{
 						var font = obj as FontData;

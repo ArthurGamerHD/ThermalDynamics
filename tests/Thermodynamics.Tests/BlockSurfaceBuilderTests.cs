@@ -4,33 +4,36 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The bridge a host crosses to describe a block type: airtightness and mount rectangles in,
-    /// surface bits out. Everything the game adapter reads from a block definition ends up here,
-    /// so these are the tests that pin down what the adapter is allowed to produce.
-    /// </summary>
     public class BlockSurfaceBuilderTests
     {
+/// <summary>FullFace operation.</summary>
         private static MountRect FullFace(int face)
         {
-            // The game's own mount rectangles for a full flat face of a 1x1x1 block.
             Vector3I normal = Face.Offsets[face];
             switch (face)
             {
+/// <summary>MountRect operation.</summary>
                 case Face.Forward: return new MountRect(normal, new Vector3(0, 0, 0), new Vector3(1, 1, 0));
+/// <summary>MountRect operation.</summary>
                 case Face.Backward: return new MountRect(normal, new Vector3(0, 0, 1), new Vector3(1, 1, 1));
+/// <summary>MountRect operation.</summary>
                 case Face.Left: return new MountRect(normal, new Vector3(0, 0, 0), new Vector3(0, 1, 1));
+/// <summary>MountRect operation.</summary>
                 case Face.Right: return new MountRect(normal, new Vector3(1, 0, 0), new Vector3(1, 1, 1));
+/// <summary>MountRect operation.</summary>
                 case Face.Down: return new MountRect(normal, new Vector3(0, 0, 0), new Vector3(1, 0, 1));
+/// <summary>MountRect operation.</summary>
                 default: return new MountRect(normal, new Vector3(0, 1, 0), new Vector3(1, 1, 1));
             }
         }
 
         [Fact]
+/// <summary>FullFaceMountCoversItsOwnFaceOnly operation.</summary>
         public void FullFaceMountCoversItsOwnFaceOnly()
         {
             for (int face = 0; face < Face.Count; face++)
             {
+/// <summary>FullFace operation.</summary>
                 MountRect mount = FullFace(face);
                 for (int probe = 0; probe < Face.Count; probe++)
                 {
@@ -41,8 +44,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>DisabledMountCoversNothing operation.</summary>
         public void DisabledMountCoversNothing()
         {
+/// <summary>FullFace operation.</summary>
             MountRect mount = FullFace(Face.Up);
             mount.Enabled = false;
 
@@ -50,9 +55,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>MountOnAFarCellDoesNotCoverTheNearOne operation.</summary>
         public void MountOnAFarCellDoesNotCoverTheNearOne()
         {
-            // A mount on the +X face of a 3-wide block sits at x = 3, which belongs to cell 2.
+/// <summary>MountRect operation.</summary>
             MountRect mount = new MountRect(Vector3I.Right, new Vector3(3, 0, 0), new Vector3(3, 1, 1));
 
             Assert.True(BlockSurfaceBuilder.MountCovers(ref mount, new Vector3I(2, 0, 0), Face.Right));
@@ -61,6 +67,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AirtightBlockSealsEveryFaceOfEveryCell operation.</summary>
         public void AirtightBlockSealsEveryFaceOfEveryCell()
         {
             int[] states = BlockSurfaceBuilder.BuildSurfaces(new Vector3I(2, 1, 3), true, null, null);
@@ -73,9 +80,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SealTestDrivesSealingPerCellAndFace operation.</summary>
         public void SealTestDrivesSealingPerCellAndFace()
         {
-            // Only the top of the upper cell seals.
+/// <summary>delegate operation.</summary>
             SealTest seals = delegate (Vector3I cell, int face)
             {
                 return cell.Y == 1 && face == Face.Up;
@@ -89,6 +97,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>MountsBecomeSelfMountBits operation.</summary>
         public void MountsBecomeSelfMountBits()
         {
             List<MountRect> mounts = new List<MountRect>
@@ -106,10 +115,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SurfacesAreIndexedTheWayBlockModelIndexesThem operation.</summary>
         public void SurfacesAreIndexedTheWayBlockModelIndexesThem()
         {
+/// <summary>Vector3I operation.</summary>
             Vector3I size = new Vector3I(2, 3, 4);
 
+/// <summary>delegate operation.</summary>
             SealTest seals = delegate (Vector3I cell, int face)
             {
                 return cell == new Vector3I(1, 2, 3) && face == Face.Right;
@@ -117,6 +129,7 @@ namespace Thermodynamics.Tests
 
             int[] states = BlockSurfaceBuilder.BuildSurfaces(size, false, seals, null);
 
+/// <summary>BlockModel operation.</summary>
             BlockModel model = new BlockModel();
             model.Size = size;
             model.LocalSurfaces = states;
@@ -127,6 +140,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>FallbackSurfacesMountEverywhereAndSealOnlyWhenAsked operation.</summary>
         public void FallbackSurfacesMountEverywhereAndSealOnlyWhenAsked()
         {
             int[] open = BlockSurfaceBuilder.BuildFallbackSurfaces(new Vector3I(1, 1, 2), false);
@@ -141,15 +155,14 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// A block model built this way has to produce the same per-face mount fractions the
-        /// conduction maths reads, or contact area silently goes to zero.
-        /// </summary>
         [Fact]
+/// <summary>MountFractionsFollowFromTheBuiltSurfaces operation.</summary>
         public void MountFractionsFollowFromTheBuiltSurfaces()
         {
+/// <summary>FullFace operation.</summary>
             List<MountRect> mounts = new List<MountRect> { FullFace(Face.Up) };
 
+/// <summary>BlockModel operation.</summary>
             BlockModel model = new BlockModel();
             model.Size = Vector3I.One;
             model.LocalSurfaces = BlockSurfaceBuilder.BuildSurfaces(Vector3I.One, true, null, mounts);

@@ -6,87 +6,32 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// What raising <c>SolarOcclusionSamples</c> actually buys, in joules into the hull.
-    ///
-    /// <para>
-    /// **The question backlog.md `A9` asks is whether the shipped default is
-    /// the cheap rung of a ladder, and it is** — one sample is a single ray from the grid's centre,
-    /// so a ship is lit or dark all at once and flips the moment its middle crosses. What no page
-    /// had was the size of that error, and without it *fidelity is the default* is an argument
-    /// rather than a decision.
-    /// </para>
-    ///
-    /// <para>
-    /// **Two things bound the answer and only one of them is the sample count.** A grid is re-tested
-    /// every <c>SolarOcclusionInterval</c> steps, so a ship that crosses the terminator entirely
-    /// between two tests is fully lit at one and fully dark at the next whatever the sample count
-    /// is — the extra samples have nowhere to land. The lab therefore sweeps grid length against
-    /// sample count at the shipped cadence, and reports the length below which the ladder is inert.
-    /// </para>
-    ///
-    /// <para>
-    /// It calls <see cref="SolarOcclusionSampler.Points"/> and
-    /// <see cref="OcclusionMath.IsOccludedBySphere"/> — the mod's own two functions — so it measures
-    /// the code rather than a description of it.
-    /// </para>
-    /// </summary>
     public static class OcclusionLadderLab
     {
-        /// <summary>An Earthlike's radius in Space Engineers, metres.</summary>
         public const double PlanetRadius = 60000d;
 
-        /// <summary>
-        /// Metres above the surface the crossing is flown at. Low orbit: high enough to be in
-        /// sunlight above the terrain and low enough that the planet still subtends most of the sky,
-        /// which is where the occlusion threshold is steepest and the ladder has most to do.
-        /// </summary>
         public const double Altitude = 5000d;
 
-        /// <summary>The grid's speed across the terminator, m/s. The game's own limit.</summary>
         public const double Speed = 100d;
 
         public class Rung
         {
-            /// <summary>The grid's length along its travel, metres.</summary>
             public double LengthMetres;
 
             public int Samples;
 
-            /// <summary>
-            /// Seconds of sunlight the grid was told it got that it did not, over one crossing.
-            ///
-            /// **Stated in seconds rather than as a share, because a share depends on how much
-            /// flight either side of the terminator you choose to integrate** — the same error over
-            /// a longer flight is a smaller percentage of it, which would make the figure a
-            /// property of the lab. Seconds of surplus sunlight is a property of the crossing.
-            /// </summary>
             public double SurplusSeconds;
 
-            /// <summary>
-            /// How wrong the reported lit fraction gets at the worst moment of a crossing, averaged
-            /// over where the test schedule falls.
-            ///
-            /// **This is what a player sees**: 1 means the ship was reported fully lit while it was
-            /// fully dark, or the reverse. Averaged over phase for the same reason the energy is —
-            /// a single phase is a coin toss.
-            /// </summary>
             public double WorstError;
 
-            /// <summary>
-            /// Tests over one crossing that reported a partial shadow, averaged over phase. Zero
-            /// means the ladder never had anywhere to land.
-            /// </summary>
             public double PartialTests;
         }
 
-        /// <summary>
-        /// Flies a grid of each length through the terminator at each sample count and reads the
-        /// error against the same crossing resolved finely in time.
-        /// </summary>
+/// <summary>Sweep operation.</summary>
         public static List<Rung> Sweep(double[] lengths, int[] samples,
             int occlusionInterval, float frequency)
         {
+/// <summary>List operation.</summary>
             List<Rung> rungs = new List<Rung>();
 
             double testSeconds = occlusionInterval / (double)frequency;
@@ -96,8 +41,7 @@ namespace Thermodynamics.Harness
                 double ignoredError;
                 int ignoredPartial;
 
-                // The reference: the same crossing, the same span, tested every tick. What a ladder
-                // with no cost limit at all would tell the grid.
+/// <summary>Energy operation.</summary>
                 double truth = Energy(length, SolarOcclusionSampler.MaxSamples, Tick, testSeconds,
                     0d, out ignoredError, out ignoredPartial);
 
@@ -109,11 +53,6 @@ namespace Thermodynamics.Harness
                         Samples = count,
                     };
 
-                    // **Averaged over where the test schedule happens to fall**, because a single
-                    // phase is a lottery: the same ship crossing the same terminator reports a
-                    // different total depending on whether a test landed just before the crossing
-                    // or just after, and the swing is a whole cadence wide. What a player meets is
-                    // the average over phases, not any one of them.
                     double total = 0d;
 
                     for (int p = 0; p < Phases; p++)
@@ -122,6 +61,7 @@ namespace Thermodynamics.Harness
 
                         double worst;
                         int partial;
+/// <summary>Energy operation.</summary>
                         total += Energy(length, count, testSeconds, testSeconds, phase,
                             out worst, out partial);
 
@@ -141,24 +81,11 @@ namespace Thermodynamics.Harness
             return rungs;
         }
 
-        /// <summary>Seconds the integral advances by. Fine against a three-second test cadence.</summary>
         private const double Tick = 0.05d;
 
-        /// <summary>
-        /// Offsets of the test schedule the crossing is flown at, spread over one cadence.
-        ///
-        /// A ship does not choose when the occlusion test falls relative to its own crossing, so a
-        /// figure taken at one phase is a coin toss rather than a measurement.
-        /// </summary>
         private const int Phases = 24;
 
-        /// <summary>
-        /// Solar energy per unit area the grid is told it received while crossing the terminator,
-        /// with the reported fraction held between tests exactly as the mod holds it.
-        ///
-        /// <paramref name="spanSeconds"/> sets how far either side of the crossing the flight runs,
-        /// and is passed separately from the test cadence so every rung integrates the same journey.
-        /// </summary>
+/// <summary>Energy operation.</summary>
         private static double Energy(double length, int samples, double testSeconds,
             double spanSeconds, double phase, out double worstError, out int partialTests)
         {
@@ -168,19 +95,14 @@ namespace Thermodynamics.Harness
             double radius = PlanetRadius + Altitude;
             double omega = Speed / radius;                      // radians a second
 
-            // The terminator this occluder actually has: the angle at which its own fitted
-            // threshold flips, rather than the geometric ninety degrees.
+/// <summary>Terminator operation.</summary>
             double terminator = Terminator(radius);
 
-            // Far enough either side that both ends of the crossing are unambiguous: the grid's own
-            // length plus six test cadences of travel.
             double halfSpan = ((length / radius) * 0.5d) + (omega * spanSeconds * 6d);
 
             double energy = 0d;
             double reported = double.NaN;
 
-            // Where in the test cadence the flight starts. The first test still happens at once,
-            // because a grid is tested on its first step whatever the phase.
             double sinceTest = double.PositiveInfinity;
             bool first = true;
 
@@ -189,17 +111,21 @@ namespace Thermodynamics.Harness
                 if (first)
                 {
                     first = false;
+/// <summary>OccludedShare operation.</summary>
                     reported = 1d - OccludedShare(angle, length, samples);
                     sinceTest = phase;
                     if (reported > 0d && reported < 1d) partialTests++;
                 }
+/// <summary>if operation.</summary>
                 else if (sinceTest >= testSeconds)
                 {
+/// <summary>OccludedShare operation.</summary>
                     reported = 1d - OccludedShare(angle, length, samples);
                     sinceTest = 0d;
                     if (reported > 0d && reported < 1d) partialTests++;
                 }
 
+/// <summary>OccludedShare operation.</summary>
                 double actual = 1d - OccludedShare(angle, length, SolarOcclusionSampler.MaxSamples);
                 double error = Math.Abs(reported - actual);
                 if (error > worstError) worstError = error;
@@ -211,14 +137,7 @@ namespace Thermodynamics.Harness
             return energy;
         }
 
-        /// <summary>
-        /// The angle from the sub-solar point at which this occluder says the sun has set, radians.
-        ///
-        /// **Not ninety degrees**, because `OcclusionThreshold` is a fitted curve by its own
-        /// admission: at low orbit around an Earthlike it puts sunset well past the geometric
-        /// terminator. Found rather than assumed, so the lab flies through the crossing the code
-        /// actually has.
-        /// </summary>
+/// <summary>Terminator operation.</summary>
         public static double Terminator(double radius)
         {
             double lo = 0d;
@@ -233,30 +152,27 @@ namespace Thermodynamics.Harness
             return 0.5d * (lo + hi);
         }
 
+/// <summary>IsOccluded operation.</summary>
         private static bool IsOccluded(double angle, double radius)
         {
+/// <summary>Vector3D operation.</summary>
             Vector3D point = new Vector3D(Math.Cos(angle) * radius, 0d, Math.Sin(angle) * radius);
             return OcclusionMath.IsOccludedBySphere(point, Vector3D.Zero, PlanetRadius,
+/// <summary>Vector3 operation.</summary>
                 new Vector3(1f, 0f, 0f));
         }
 
-        /// <summary>
-        /// The share of a grid's sample points that cannot see the sun, with the grid's centre at
-        /// <paramref name="angle"/> radians from the sub-solar point.
-        ///
-        /// The grid lies along its own track, so its two ends sit at slightly different angles —
-        /// which is the whole reason more than one sample can say anything. The box handed to the
-        /// sampler is the one containing both ends, which is what the mod reads off the grid.
-        /// </summary>
+/// <summary>OccludedShare operation.</summary>
         private static double OccludedShare(double angle, double length, int samples)
         {
             double radius = PlanetRadius + Altitude;
             double halfAngle = (length / radius) * 0.5d;
 
+/// <summary>Point operation.</summary>
             Vector3D lead = Point(angle - halfAngle, radius);
+/// <summary>Point operation.</summary>
             Vector3D tail = Point(angle + halfAngle, radius);
 
-            // A thin ship: the cross-section is a tenth of the length, as the box sweep assumes.
             double girth = length * 0.05d;
 
             BoundingBoxD bounds = BoundingBoxD.CreateInvalid();
@@ -265,9 +181,11 @@ namespace Thermodynamics.Harness
             bounds.Include(tail - new Vector3D(0d, girth, 0d));
             bounds.Include(tail + new Vector3D(0d, girth, 0d));
 
+/// <summary>List operation.</summary>
             List<Vector3D> points = new List<Vector3D>();
             SolarOcclusionSampler.Points(bounds, samples, points);
 
+/// <summary>Vector3 operation.</summary>
             Vector3 sun = new Vector3(1f, 0f, 0f);
 
             int occluded = 0;
@@ -282,27 +200,22 @@ namespace Thermodynamics.Harness
             return points.Count == 0 ? 0d : occluded / (double)points.Count;
         }
 
+/// <summary>Point operation.</summary>
         private static Vector3D Point(double angle, double radius)
         {
             return new Vector3D(Math.Cos(angle) * radius, 0d, Math.Sin(angle) * radius);
         }
 
-        /// <summary>The lengths and sample counts the report sweeps.</summary>
         public static readonly double[] Lengths = { 25d, 75d, 150d, 300d, 600d, 1200d, 2500d };
 
         public static readonly int[] Samples = { 1, 3, 5, 9 };
 
-        /// <summary>Intervals the second table sweeps, in solver steps.</summary>
         public static readonly int[] Intervals = { 1, 2, 4, 8, 12, 24, 48 };
 
-        /// <summary>
-        /// The dial that does move the energy: how often the test runs at all.
-        ///
-        /// Swept at nine samples, so the sample count is not what is being varied, and on a mid-size
-        /// hull where the ladder had most to say.
-        /// </summary>
+/// <summary>IntervalReport operation.</summary>
         public static string IntervalReport(float frequency)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             const double Length = 600d;
@@ -316,6 +229,7 @@ namespace Thermodynamics.Harness
 
             foreach (int interval in Intervals)
             {
+/// <summary>Sweep operation.</summary>
                 List<Rung> one = Sweep(new[] { Length },
                     new[] { SolarOcclusionSampler.MaxSamples }, interval, frequency);
 
@@ -336,50 +250,24 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        /// <summary>
-        /// What the whole-grid answer costs the blocks at the ends of a hull, which is the only
-        /// thing the unbuilt top rung of `A9` would fix.
-        ///
-        /// <para>
-        /// The grid-wide share is applied uniformly, so during a crossing every block is told the
-        /// same thing while the leading end is already dark and the trailing end still lit. **The
-        /// energy cancels over the hull and does not cancel over a block**: the two ends are wrong
-        /// in opposite directions, which is why the surplus column above reads near zero while the
-        /// blocks at the ends are each out by seconds of sunlight. Resolving the planet's shadow per
-        /// face is what would remove it, and this is what removing it is worth.
-        /// </para>
-        /// </summary>
         public class Extremity
         {
             public double LengthMetres;
 
-            /// <summary>Seconds of sunlight the worst-placed block was told it had and did not.</summary>
             public double SurplusSeconds;
 
-            /// <summary>And the seconds it was denied, which is the other end of the same hull.</summary>
             public double DeficitSeconds;
 
-            /// <summary>The surplus as a temperature on one sunward face of a standard armour block.</summary>
             public double SurplusKelvin;
             public double DeficitKelvin;
         }
 
-        /// <summary>
-        /// Kelvin one lit cell face gains per second of sunlight, on a standard light armour block
-        /// at the shipped clock.
-        ///
-        /// 1,000 W/m² over a 2.5 m face at the block's own absorptivity, over 500 kg of steel whose
-        /// capacity `HeatTimeScale` divides by 225. **Stated as a rate so the conversion is visible**:
-        /// every figure below it is seconds of sunlight times this.
-        /// </summary>
+/// <summary>KelvinPerLitSecond operation.</summary>
         public static double KelvinPerLitSecond(ThermalSettings settings)
         {
             const double LargeGridCell = 2.5d;
             const double ArmourKilograms = 500d;
 
-            // The block is stated as a material rather than taken from a catalog: 500 kg of steel
-            // plate at the figures `BlockMaterials` prices it with, so the conversion cannot drift
-            // with a harness stand-in and cannot be read as a claim about one subtype.
             BlockMaterial steel = BlockMaterials.Steel;
 
             double face = LargeGridCell * LargeGridCell;
@@ -389,15 +277,11 @@ namespace Thermodynamics.Harness
                 : settings.SolarEnergy * face * steel.Emissivity / capacity;
         }
 
-        /// <summary>
-        /// The worst-placed block on a hull of each length, averaged over test phases.
-        ///
-        /// Positions are walked along the hull rather than sampled from the box, because the
-        /// question is what one block meets rather than what the grid reports.
-        /// </summary>
+/// <summary>Extremities operation.</summary>
         public static List<Extremity> Extremities(double[] lengths, int samples,
             int occlusionInterval, float frequency, double kelvinPerSecond)
         {
+/// <summary>List operation.</summary>
             List<Extremity> found = new List<Extremity>();
             double testSeconds = occlusionInterval / (double)frequency;
 
@@ -416,6 +300,7 @@ namespace Thermodynamics.Harness
                     deficit += low;
                 }
 
+/// <summary>Extremity operation.</summary>
                 Extremity row = new Extremity();
                 row.LengthMetres = length;
                 row.SurplusSeconds = surplus / Phases;
@@ -428,10 +313,7 @@ namespace Thermodynamics.Harness
             return found;
         }
 
-        /// <summary>
-        /// Seconds of sunlight the most over-told and most under-told point on the hull differ by,
-        /// over one crossing at one phase.
-        /// </summary>
+/// <summary>BlockError operation.</summary>
         private static void BlockError(double length, int samples, double testSeconds, double phase,
             out double worstSurplus, out double worstDeficit)
         {
@@ -439,6 +321,7 @@ namespace Thermodynamics.Harness
 
             double radius = PlanetRadius + Altitude;
             double omega = Speed / radius;
+/// <summary>Terminator operation.</summary>
             double terminator = Terminator(radius);
             double halfSpan = ((length / radius) * 0.5d) + (omega * testSeconds * 6d);
 
@@ -454,19 +337,22 @@ namespace Thermodynamics.Harness
                 if (first)
                 {
                     first = false;
+/// <summary>OccludedShare operation.</summary>
                     reported = 1d - OccludedShare(angle, length, samples);
                     sinceTest = phase;
                 }
+/// <summary>if operation.</summary>
                 else if (sinceTest >= testSeconds)
                 {
+/// <summary>OccludedShare operation.</summary>
                     reported = 1d - OccludedShare(angle, length, samples);
                     sinceTest = 0d;
                 }
 
                 for (int i = 0; i < Positions; i++)
                 {
-                    // Along the hull from leading end to trailing end.
                     double offset = ((i / (double)(Positions - 1)) - 0.5d) * (length / radius);
+/// <summary>IsOccluded operation.</summary>
                     double lit = IsOccluded(angle + offset, radius) ? 0d : 1d;
 
                     told[i] += reported * Tick;
@@ -489,13 +375,17 @@ namespace Thermodynamics.Harness
             worstDeficit = -worstDeficit;
         }
 
+/// <summary>ExtremityReport operation.</summary>
         public static string ExtremityReport(int occlusionInterval, float frequency)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.Derive();
 
+/// <summary>KelvinPerLitSecond operation.</summary>
             double perSecond = KelvinPerLitSecond(settings);
 
             sb.AppendLine("  WHAT THE WHOLE-GRID ANSWER COSTS ONE BLOCK, WHICH IS THE TOP RUNG");
@@ -507,6 +397,7 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
             sb.AppendLine("  grid        told and did not get   told and was denied      worst block");
 
+/// <summary>Extremities operation.</summary>
             List<Extremity> rows = Extremities(Lengths, SolarOcclusionSampler.MaxSamples,
                 occlusionInterval, frequency, perSecond);
 
@@ -526,6 +417,7 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
             sb.AppendLine("  grid        told and did not get   told and was denied      worst block");
 
+/// <summary>Extremities operation.</summary>
             List<Extremity> tight = Extremities(Lengths, SolarOcclusionSampler.MaxSamples,
                 1, frequency, perSecond);
 
@@ -553,8 +445,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>Report operation.</summary>
         public static string Report(int occlusionInterval = 12, float frequency = 4f)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("SOLAR OCCLUSION LADDER");
@@ -571,6 +465,7 @@ namespace Thermodynamics.Harness
               .AppendLine(" degrees from the sub-solar point, not 90: OcclusionThreshold is a fitted curve");
             sb.AppendLine();
 
+/// <summary>Sweep operation.</summary>
             List<Rung> rungs = Sweep(Lengths, Samples, occlusionInterval, frequency);
 
             sb.AppendLine("  grid        samples   surplus sunlight   worst error   partial tests");

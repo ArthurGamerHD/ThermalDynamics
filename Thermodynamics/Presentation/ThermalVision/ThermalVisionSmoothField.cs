@@ -5,15 +5,15 @@ using Region = Thermodynamics.Presentation.ThermalVisionRegionPartition.Region;
 
 namespace Thermodynamics.Presentation
 {
-    /// <summary>Grid-local scalar interpolation; created once per published field, never mixes grids.</summary>
     public sealed class ThermalVisionSmoothField
     {
         private readonly List<Region> samples;
+/// <summary>ThermalVisionSmoothField operation.</summary>
         public ThermalVisionSmoothField(IList<Region> source) { samples = new List<Region>(source); }
+/// <summary>Sample operation.</summary>
         public float Sample(Vector3D point, float fallback)
         {
             double total = 0, sum = 0;
-            // Compact-support weights prevent remote hot groups washing out local cooling.
             foreach (Region sample in samples)
             {
                 Vector3D centre = (sample.Min + sample.Max) * .5;
@@ -25,12 +25,14 @@ namespace Thermodynamics.Presentation
             }
             return total > 1e-12 ? (float)(sum / total) : fallback;
         }
+/// <summary>Corner operation.</summary>
         public static Vector3D Corner(Region region, int index)
         {
             return new Vector3D((index & 1) == 0 ? region.Min.X : region.Max.X,
                 (index & 2) == 0 ? region.Min.Y : region.Max.Y,
                 (index & 4) == 0 ? region.Min.Z : region.Max.Z);
         }
+/// <summary>Interpolate operation.</summary>
         public static float Interpolate(Region region, float[] corners, Vector3D point)
         {
             Vector3D t = (point - region.Min) / (region.Max - region.Min);

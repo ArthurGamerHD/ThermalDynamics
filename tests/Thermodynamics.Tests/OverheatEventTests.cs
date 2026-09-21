@@ -4,25 +4,12 @@ using Thermodynamics.Harness;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// One overheating block produces <b>one</b> overheat event a step, not one per substep — because
-    /// three consumers read the list's length as a count of blocks rather than summing it, and the
-    /// harness's batched path keeps every step's events for a whole run.
-    ///
-    /// <para>
-    /// The first test here is the one that matters: **total damage over a run must not change**, since
-    /// that is what the accumulation could have broken (`D8`).
-    /// See benchmarks.md, One overheat event per block per step.
-    /// </para>
-    /// </summary>
     public class OverheatEventTests
     {
-        /// <summary>
-        /// A hull hot enough that blocks are past their rating, taking enough substeps that a
-        /// per-substep event would be plainly distinguishable from a per-step one.
-        /// </summary>
+/// <summary>Cooking operation.</summary>
         private static ThermalSimulation Cooking(int blocks = 800)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubsteps = 4096;
             settings.MaxSubstepsPerBlock = 0;
@@ -38,19 +25,20 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>DistinctBlocks operation.</summary>
         private static int DistinctBlocks(IList<OverheatEvent> events)
         {
+/// <summary>HashSet operation.</summary>
             HashSet<VRageMath.Vector3I> seen = new HashSet<VRageMath.Vector3I>();
             for (int i = 0; i < events.Count; i++) seen.Add(events[i].Block.Position);
             return seen.Count;
         }
 
-        /// <summary>
-        /// The headline claim, and the one the consumers rely on: the list is a list of blocks.
-        /// </summary>
         [Fact]
+/// <summary>AStepFilesOneEventPerOverheatingBlock operation.</summary>
         public void AStepFilesOneEventPerOverheatingBlock()
         {
+/// <summary>Cooking operation.</summary>
             ThermalSimulation simulation = Cooking();
             simulation.StepExact(1, Worlds.Shadow());
 
@@ -59,25 +47,18 @@ namespace Thermodynamics.Tests
             Assert.True(events.Count > 0,
                 "no block overheated, so this asserts nothing — the fixture is not cooking");
             Assert.True(simulation.Solver.LastSubsteps > 1,
+/// <summary>substep operation.</summary>
                 "the hull took " + simulation.Solver.LastSubsteps + " substep(s), so a per-substep"
                 + " list and a per-step list would be the same length and the test is blind");
 
             Assert.Equal(DistinctBlocks(events), events.Count);
         }
 
-        /// <summary>
-        /// The constraint the fix has to respect. Damage is applied per substep and summed by
-        /// every consumer, so coalescing must preserve the sum — a block must take exactly as much
-        /// heat damage as it did when each substep filed separately.
-        ///
-        /// The tolerance is a relative one rather than bit-equality: summing per node and then
-        /// across nodes adds the same terms in a different order, and float addition is not
-        /// associative. A part in a hundred thousand is far below anything a block's integrity
-        /// can notice and far above the reordering.
-        /// </summary>
         [Fact]
+/// <summary>CoalescingPreservesTheDamageABlockTakes operation.</summary>
         public void CoalescingPreservesTheDamageABlockTakes()
         {
+/// <summary>Cooking operation.</summary>
             ThermalSimulation simulation = Cooking();
             simulation.StepExact(30, Worlds.Shadow());
 
@@ -87,9 +68,7 @@ namespace Thermodynamics.Tests
 
             Assert.True(total > 0d, "nothing took damage over thirty steps");
 
-            // The per-substep sum, recomputed from the same run driven substep by substep. A step
-            // of one substep files one event per block either way, so this is the same arithmetic
-            // the old path did — and it is the number the new path has to reproduce.
+/// <summary>Cooking operation.</summary>
             ThermalSimulation reference = Cooking();
             float step = reference.Settings.StepSeconds;
             EnvironmentState state = EnvironmentSolver.Solve(
@@ -112,14 +91,11 @@ namespace Thermodynamics.Tests
                 + " of " + relative.ToString("g3") + ", which is more than reordering a sum");
         }
 
-        /// <summary>
-        /// The temperature an event carries is the hottest the block reached while over its
-        /// rating, not whichever substep happened to file last. A coalesced event has to choose,
-        /// and the peak is the one a player would recognise and the one a report should show.
-        /// </summary>
         [Fact]
+/// <summary>AnEventCarriesTheHottestTemperatureTheBlockReached operation.</summary>
         public void AnEventCarriesTheHottestTemperatureTheBlockReached()
         {
+/// <summary>Cooking operation.</summary>
             ThermalSimulation simulation = Cooking();
             simulation.StepExact(1, Worlds.Shadow());
 
@@ -136,9 +112,6 @@ namespace Thermodynamics.Tests
                 OverheatEvent overheat = events[i];
                 float final = ended[overheat.Block.Position];
 
-                // A cooling block passes through hotter temperatures than it ends on, so the peak
-                // is at or above where it finished. A block that only ever heated ends on its own
-                // peak and the two agree.
                 Assert.True(overheat.Temperature >= final - 1e-3f,
                     overheat.Block.Position + " filed " + overheat.Temperature.ToString("n2")
                     + " K against a final " + final.ToString("n2")
@@ -146,13 +119,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The list is rebuilt each step rather than appended to, which is what lets a grid burn
-        /// indefinitely without the solver's own list growing.
-        /// </summary>
         [Fact]
+/// <summary>TheListDoesNotGrowAcrossSteps operation.</summary>
         public void TheListDoesNotGrowAcrossSteps()
         {
+/// <summary>Cooking operation.</summary>
             ThermalSimulation simulation = Cooking();
             simulation.StepExact(1, Worlds.Shadow());
             int first = simulation.Solver.Overheats.Count;
@@ -162,33 +133,17 @@ namespace Thermodynamics.Tests
             simulation.StepExact(20, Worlds.Shadow());
             int later = simulation.Solver.Overheats.Count;
 
-            // Not equality: blocks cool below their rating as the hull evens out, so the count may
-            // fall. What it must not do is climb with the number of steps taken.
             Assert.True(later <= first, "the solver reported " + later + " overheat events after"
                 + " twenty-one steps against " + first + " after one, so the list is accumulating"
                 + " across steps rather than describing the step just taken");
         }
 
-        /// <summary>
-        /// **The apply pass skips the critical row below the grid's lowest critical temperature**,
-        /// so that bound must never be above any node's own — or a node would sail past its
-        /// critical without accruing damage, and nothing else in the model would report it.
-        ///
-        /// <para>
-        /// It is a *bound* rather than the minimum: it only falls, except on a full resync, so a
-        /// grid that loses its most fragile block keeps the old figure until then. Low is safe —
-        /// it skips fewer nodes. High is the failure, and this is what refuses it.
-        /// See performance.md, Pass 5, Iteration 8.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheLowestCriticalTemperatureIsNeverAboveANodesOwn operation.</summary>
         public void TheLowestCriticalTemperatureIsNeverAboveANodesOwn()
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(), 3000);
 
-            // The bound settles when the node rows are mirrored, and since the `D4` prologue
-            // hoist that is the rebuild tick itself: a built hull arrives with the bound already
-            // finite, and the step below has to keep it right rather than establish it.
             Assert.True(!float.IsInfinity(simulation.Solver.LowestCriticalTemperature),
                 "the bound was still infinite after a rebuild, so the prologue no longer settles"
                 + " it on the rebuild tick");

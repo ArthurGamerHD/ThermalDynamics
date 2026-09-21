@@ -3,49 +3,30 @@ using VRage;
 
 namespace RichHudFramework.UI
 {
-	/// <summary>
-	/// Indented, collapsable list. Designed to fit in with SE UI elements.
-	/// <para>
-	/// Alias of <see cref="TreeList{TContainer, TElement, TValue}"/> using 
-	/// <see cref="ListBoxEntry{TValue}"/> and <see cref="Label"/> as the container and element, respectively.
-	/// </para>
-	/// </summary>
-	/// <typeparam name="TValue">Value paired with the list entry</typeparam>
 	public class TreeList<TValue> : TreeList<ListBoxEntry<TValue>, Label, TValue>
 	{
+/// <summary>TreeList operation.</summary>
 		public TreeList(HudParentBase parent) : base(parent)
 		{ }
 
+/// <summary>TreeList operation.</summary>
 		public TreeList() : base(null)
 		{ }
 	}
 
-	/// <summary>
-	/// Indented, collapsable list. Designed to fit in with SE UI elements.
-	/// <para>
-	/// Alias of <see cref="TreeList{TContainer, TElement, TValue}"/> using 
-	/// <see cref="ListBoxEntry{TElement, TValue}"/> as the container.
-	/// </para>
-	/// </summary>
-	/// <typeparam name="TElement">UI element in the list</typeparam>
-	/// <typeparam name="TValue">Value paired with the list entry</typeparam>
 	public class TreeList<TElement, TValue> : TreeList<ListBoxEntry<TElement, TValue>, TElement, TValue>
+/// <summary>new operation.</summary>
 		where TElement : HudElementBase, IMinLabelElement, new()
 	{
+/// <summary>TreeList operation.</summary>
 		public TreeList(HudParentBase parent) : base(parent)
 		{ }
 
+/// <summary>TreeList operation.</summary>
 		public TreeList() : base(null)
 		{ }
 	}
 
-	/// <summary>
-	/// Generic indented collapsable list of pooled, uniformly-sized entries. Allows use of custom entry element types. 
-	/// Designed to fit in with SE UI elements.
-	/// </summary>
-	/// <typeparam name="TContainer">Container element type wrapping the UI element</typeparam>
-	/// <typeparam name="TElement">UI element in the list</typeparam>
-	/// <typeparam name="TValue">Value paired with the list entry</typeparam>
 	public class TreeList<TContainer, TElement, TValue>
 		: TreeBoxBase<
 			ChainSelectionBox<TContainer, TElement, TValue>,
@@ -53,68 +34,50 @@ namespace RichHudFramework.UI
 			TContainer,
 			TElement
 		>
+/// <summary>new operation.</summary>
 		where TContainer : class, IListBoxEntry<TElement, TValue>, new()
 		where TElement : HudElementBase, IMinLabelElement
 	{
-		/// <summary>
-		/// Uniform height applied to list entries
-		/// </summary>
 		public float LineHeight { get { return selectionBox.LineHeight; } set { selectionBox.LineHeight = value; } }
 
-		/// <summary>
-		/// Enables collection-initializer syntax (e.g., new TreeList { ListContainer = { entry1, entry2 } })
-		/// </summary>
 		public new TreeList<TContainer, TElement, TValue> ListContainer => this;
 
+/// <summary>TreeList operation.</summary>
 		public TreeList(HudParentBase parent) : base(parent)
 		{
 			selectionBox.border.Visible = false;
 			selectionBox.EntryChain.SizingMode = HudChainSizingModes.FitMembersOffAxis;
 		}
 
+/// <summary>TreeList operation.</summary>
 		public TreeList() : this(null)
 		{ }
 
-		/// <summary>
-		/// Adds a new member to the tree box with the given name and associated
-		/// object.
-		/// </summary>
+/// <summary>Adds a .</summary>
 		public TContainer Add(RichText name, TValue assocMember, bool enabled = true) =>
 			selectionBox.Add(name, assocMember, enabled);
 
-		/// <summary>
-		/// Adds the given range of entries to the tree box.
-		/// </summary>
+/// <summary>Adds a range.</summary>
 		public void AddRange(IReadOnlyList<MyTuple<RichText, TValue, bool>> entries) =>
 			selectionBox.AddRange(entries);
 
-		/// <summary>
-		/// Inserts an entry at the given index.
-		/// </summary>
+/// <summary>Insert operation.</summary>
 		public void Insert(int index, RichText name, TValue assocMember, bool enabled = true) =>
 			selectionBox.Insert(index, name, assocMember, enabled);
 
-		/// <summary>
-		/// Removes the member at the given index from the tree box.
-		/// </summary>
+/// <summary>Removes the at.</summary>
 		public void RemoveAt(int index) =>
 			selectionBox.RemoveAt(index);
 
-		/// <summary>
-		/// Removes the specified range of indices from the tree box.
-		/// </summary>
+/// <summary>Removes the range.</summary>
 		public void RemoveRange(int index, int count) =>
 			selectionBox.RemoveRange(index, count);
 
-		/// <summary>
-		/// Clears the current selection
-		/// </summary>
+/// <summary>ClearEntries operation.</summary>
 		public void ClearEntries() =>
 			selectionBox.ClearEntries();
 
-		/// <summary>
-		/// Sets the selection to the member associated with the given object.
-		/// </summary>
+/// <summary>Sets the selection.</summary>
 		public void SetSelection(TValue assocMember)
 		{
 			int index = selectionBox.EntryChain.FindIndex(x => assocMember.Equals(x.AssocMember));

@@ -24,59 +24,39 @@ namespace RichHudFramework
 
 		namespace Rendering.Client
 		{
-			/// <summary>
-			/// Client-side interface to UI element text formatter implementing <see cref="ITextBuilder"/>
-			/// </summary>
-			/// <exclude/>
 			public abstract class TextBuilder : ITextBuilder
 			{
-				/// <summary>
-				/// Returns the character at the index specified.
-				/// </summary>
 				public IRichChar this[Vector2I index] => lines[index.X][index.Y];
 
-				/// <summary>
-				/// Returns the line at the index given.
-				/// </summary>
 				public ILine this[int index] => lines[index];
 
-				/// <summary>
-				/// Returns the current number of lines.
-				/// </summary>
+/// <summary>Returns the linecountfunc.</summary>
 				public int Count => GetLineCountFunc();
 
-				/// <summary>
-				/// Default text format. Applied to strings added without any other formatting specified.
-				/// </summary>
 				public GlyphFormat Format
 				{
+/// <summary>GlyphFormat operation.</summary>
 					get { return new GlyphFormat((GlyphFormatMembers)GetOrSetMemberFunc(null, (int)TextBuilderAccessors.Format)); }
+/// <summary>Returns the orsetmemberfunc.</summary>
 					set { GetOrSetMemberFunc(value.Data, (int)TextBuilderAccessors.Format); }
 				}
 
-				/// <summary>
-				/// Gets or sets the maximum line width before text will wrap to the next line. Word wrapping must be enabled for
-				/// this to apply.
-				/// </summary>
 				public float LineWrapWidth
 				{
+/// <summary>return operation.</summary>
 					get { return (float)GetOrSetMemberFunc(null, (int)TextBuilderAccessors.LineWrapWidth); }
+/// <summary>Returns the orsetmemberfunc.</summary>
 					set { GetOrSetMemberFunc(value, (int)TextBuilderAccessors.LineWrapWidth); }
 				}
 
-				/// <summary>
-				/// Determines the formatting mode of the text.
-				/// </summary>
 				public TextBuilderModes BuilderMode
 				{
+/// <summary>return operation.</summary>
 					get { return (TextBuilderModes)GetOrSetMemberFunc(null, (int)TextBuilderAccessors.BuilderMode); }
+/// <summary>Returns the orsetmemberfunc.</summary>
 					set { GetOrSetMemberFunc(value, (int)TextBuilderAccessors.BuilderMode); }
 				}
 
-				/// <summary>
-				/// Internal API access delegate
-				/// </summary>
-				/// <exclude/>
 				protected readonly Func<object, int, object> GetOrSetMemberFunc;
 				private readonly Func<int, int, object> GetLineMemberFunc;
 				private readonly Func<int> GetLineCountFunc;
@@ -88,10 +68,7 @@ namespace RichHudFramework
 				private readonly ReadOnlyApiCollection<ILine> lines;
 				private RichText lastText;
 
-				/// <summary>
-				/// Initializes formatter interface from API tuple
-				/// </summary>
-				/// <exclude/>
+/// <summary>TextBuilder operation.</summary>
 				public TextBuilder(TextBuilderMembers data)
 				{
 					GetLineMemberFunc = data.Item1.Item1;
@@ -103,24 +80,22 @@ namespace RichHudFramework
 					SetTextAction = data.Item5;
 					ClearAction = data.Item6;
 
+/// <summary>ReadOnlyApiCollection operation.</summary>
 					lines = new ReadOnlyApiCollection<ILine>(x => new LineData(this, x), GetLineCountFunc);
 				}
 
-				/// <summary>
-				/// Replaces the current text with the <see cref="RichText"/> given
-				/// </summary>
+/// <summary>Sets the text.</summary>
 				public void SetText(RichText text)
 				{
 					SetTextAction(text.apiData);
 					lastText = text;
 				}
 
-				/// <summary>
-				/// Clears current text and appends a copy of the <see cref="StringBuilder"/> given.
-				/// </summary>
+/// <summary>Sets the text.</summary>
 				public void SetText(StringBuilder text, GlyphFormat? format = null)
 				{
 					if (lastText == null)
+/// <summary>RichText operation.</summary>
 						lastText = new RichText();
 
 					lastText.Clear();
@@ -128,12 +103,11 @@ namespace RichHudFramework
 					SetTextAction(lastText.apiData);
 				}
 
-				/// <summary>
-				/// Clears current text and appends a copy of the <see cref="string"/> given.
-				/// </summary>
+/// <summary>Sets the text.</summary>
 				public void SetText(string text, GlyphFormat? format = null)
 				{
 					if (lastText == null)
+/// <summary>RichText operation.</summary>
 						lastText = new RichText();
 
 					lastText.Clear();
@@ -141,20 +115,17 @@ namespace RichHudFramework
 					SetTextAction(lastText.apiData);
 				}
 
-				/// <summary>
-				/// Appends the given <see cref="RichText"/>
-				/// </summary>
+/// <summary>Append operation.</summary>
 				public void Append(RichText text)
 				{
 					InsertTextAction(text.apiData, GetLastIndex());
 				}
 
-				/// <summary>
-				/// Appends a copy of the text in the <see cref="StringBuilder"/>
-				/// </summary>
+/// <summary>Append operation.</summary>
 				public void Append(StringBuilder text, GlyphFormat? format = null)
 				{
 					if (lastText == null)
+/// <summary>RichText operation.</summary>
 						lastText = new RichText();
 
 					lastText.Clear();
@@ -162,12 +133,11 @@ namespace RichHudFramework
 					InsertTextAction(lastText.apiData, GetLastIndex());
 				}
 
-				/// <summary>
-				/// Appends a copy of the <see cref="string"/>
-				/// </summary>
+/// <summary>Append operation.</summary>
 				public void Append(string text, GlyphFormat? format = null)
 				{
 					if (lastText == null)
+/// <summary>RichText operation.</summary>
 						lastText = new RichText();
 
 					lastText.Clear();
@@ -175,12 +145,11 @@ namespace RichHudFramework
 					InsertTextAction(lastText.apiData, GetLastIndex());
 				}
 
-				/// <summary>
-				/// Appends the given <see cref="char"/>
-				/// </summary>
+/// <summary>Append operation.</summary>
 				public void Append(char ch, GlyphFormat? format = null)
 				{
 					if (lastText == null)
+/// <summary>RichText operation.</summary>
 						lastText = new RichText();
 
 					lastText.Clear();
@@ -188,21 +157,17 @@ namespace RichHudFramework
 					InsertTextAction(lastText.apiData, GetLastIndex());
 				}
 
-				/// <summary>
-				/// Inserts the given text to the end of the text at the specified starting index using 
-				/// the <see cref="GlyphFormat"/>ting specified in the <see cref="RichText"/>.
-				/// </summary>
+/// <summary>Insert operation.</summary>
 				public void Insert(RichText text, Vector2I start)
 				{
 					InsertTextAction(text.apiData, start);
 				}
 
-				/// <summary>
-				/// Inserts a copy of the given <see cref="StringBuilder"/> starting at the specified starting index
-				/// </summary>
+/// <summary>Insert operation.</summary>
 				public void Insert(StringBuilder text, Vector2I start, GlyphFormat? format = null)
 				{
 					if (lastText == null)
+/// <summary>RichText operation.</summary>
 						lastText = new RichText();
 
 					lastText.Clear();
@@ -210,12 +175,11 @@ namespace RichHudFramework
 					InsertTextAction(lastText.apiData, start);
 				}
 
-				/// <summary>
-				/// Inserts a copy of the given <see cref="string"/> starting at the specified starting index
-				/// </summary>
+/// <summary>Insert operation.</summary>
 				public void Insert(string text, Vector2I start, GlyphFormat? format = null)
 				{
 					if (lastText == null)
+/// <summary>RichText operation.</summary>
 						lastText = new RichText();
 
 					lastText.Clear();
@@ -223,12 +187,11 @@ namespace RichHudFramework
 					InsertTextAction(lastText.apiData, start);
 				}
 
-				/// <summary>
-				/// Inserts the given <see cref="char"/> starting at the specified starting index
-				/// </summary>
+/// <summary>Insert operation.</summary>
 				public void Insert(char ch, Vector2I start, GlyphFormat? format = null)
 				{
 					if (lastText == null)
+/// <summary>RichText operation.</summary>
 						lastText = new RichText();
 
 					lastText.Clear();
@@ -236,67 +199,56 @@ namespace RichHudFramework
 					InsertTextAction(lastText.apiData, start);
 				}
 
-				/// <summary>
-				/// Returns the contents of the text as <see cref="RichText"/>.
-				/// </summary>
+/// <summary>Returns the text.</summary>
 				public RichText GetText() =>
 					GetTextRange(Vector2I.Zero, GetLastIndex() - new Vector2I(0, 1));
 
-				/// <summary>
-				/// Returns the specified range of characters from the text as <see cref="RichText"/>.
-				/// </summary>
+/// <summary>Returns the textrange.</summary>
 				public RichText GetTextRange(Vector2I start, Vector2I end)
 				{
+/// <summary>Returns the orsetmemberfunc.</summary>
 					var textData = GetOrSetMemberFunc(new RangeData(start, end), (int)TextBuilderAccessors.GetRange) as List<RichStringMembers>;
 
 					if (lastText == null || lastText.apiData != textData)
+/// <summary>RichText operation.</summary>
 						lastText = new RichText(textData);
 
 					return lastText;
 				}
 
-				/// <summary>
-				/// Changes the formatting for the whole text to the given format.
-				/// </summary>
+/// <summary>Sets the formatting.</summary>
 				public void SetFormatting(GlyphFormat format)
 				{
 					GetOrSetMemberFunc(format.Data, (int)TextBuilderAccessors.Format);
 					GetOrSetMemberFunc(new RangeFormatData(Vector2I.Zero, GetLastIndex() - new Vector2I(0, 1), format.Data), (int)TextBuilderAccessors.SetFormatting);
 				}
 
-				/// <summary>
-				/// Changes the formatting for the text within the given range to the given format.
-				/// </summary>
+/// <summary>Sets the formatting.</summary>
 				public void SetFormatting(Vector2I start, Vector2I end, GlyphFormat format) =>
 					GetOrSetMemberFunc(new RangeFormatData(start, end, format.Data), (int)TextBuilderAccessors.SetFormatting);
 
-				/// <summary>
-				/// Removes the character at the specified index.
-				/// </summary>
+/// <summary>Removes the at.</summary>
 				public void RemoveAt(Vector2I index) =>
 					GetOrSetMemberFunc(new RangeData(index, index), (int)TextBuilderAccessors.RemoveRange);
 
-				/// <summary>
-				/// Removes all text within the specified range.
-				/// </summary>
+/// <summary>Removes the range.</summary>
 				public void RemoveRange(Vector2I start, Vector2I end) =>
 					GetOrSetMemberFunc(new RangeData(start, end), (int)TextBuilderAccessors.RemoveRange);
 
-				/// <summary>
-				/// Clears all existing text.
-				/// </summary>
+/// <summary>Clear operation.</summary>
 				public void Clear() =>
 					ClearAction();
 
-				/// <summary>
-				/// Returns the contents of the <see cref="ITextBuilder"/> as an unformatted string.
-				/// </summary>
+/// <summary>ToString operation.</summary>
 				public override string ToString() =>
 					GetOrSetMemberFunc(null, (int)TextBuilderAccessors.ToString) as string;
 
+/// <summary>Returns the lastindex.</summary>
 				protected Vector2I GetLastIndex()
 				{
+/// <summary>Returns the linecountfunc.</summary>
 					int lineCount = GetLineCountFunc();
+/// <summary>Vector2I operation.</summary>
 					Vector2I start = new Vector2I(Math.Max(0, lineCount - 1), 0);
 
 					if (lineCount > 0)
@@ -305,10 +257,6 @@ namespace RichHudFramework
 					return start;
 				}
 
-				/// <summary>
-				/// Internal wrapper for accessing information for individual lines
-				/// </summary>
-				/// <exclude/>
 				protected class LineData : ILine
 				{
 					public IRichChar this[int ch] => characters[ch];
@@ -320,6 +268,7 @@ namespace RichHudFramework
 					private readonly int index;
 					private readonly ReadOnlyApiCollection<IRichChar> characters;
 
+/// <summary>LineData operation.</summary>
 					public LineData(TextBuilder parent, int index)
 					{
 						this.parent = parent;
@@ -327,19 +276,17 @@ namespace RichHudFramework
 
 						characters = new ReadOnlyApiCollection<IRichChar>
 						(
+/// <summary>RichCharData operation.</summary>
 							x => new RichCharData(parent, new Vector2I(index, x)),
 							() => (int)parent.GetLineMemberFunc(index, (int)LineAccessors.Count)
 						);
 					}
 				}
 
-				/// <summary>
-				/// Internal wrapper for accessing information for individual characters
-				/// </summary>
-				/// <exclude/>
 				protected class RichCharData : IRichChar
 				{
 					public char Ch => (char)parent.GetCharMemberFunc(index, (int)RichCharAccessors.Ch);
+/// <summary>GlyphFormat operation.</summary>
 					public GlyphFormat Format => new GlyphFormat((GlyphFormatMembers)parent.GetCharMemberFunc(index, (int)RichCharAccessors.Format));
 					public Vector2 Size => (Vector2)parent.GetCharMemberFunc(index, (int)RichCharAccessors.Size);
 					public Vector2 Offset => (Vector2)parent.GetCharMemberFunc(index, (int)RichCharAccessors.Offset);
@@ -347,6 +294,7 @@ namespace RichHudFramework
 					private readonly TextBuilder parent;
 					private readonly Vector2I index;
 
+/// <summary>RichCharData operation.</summary>
 					public RichCharData(TextBuilder parent, Vector2I index)
 					{
 						this.parent = parent;

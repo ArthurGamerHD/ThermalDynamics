@@ -7,25 +7,12 @@ namespace RichHudFramework.UI
 	using Client;
 	using Server;
 
-	/// <summary>
-	/// Base class for a standard window element featuring a header, body, and border. 
-	/// Includes built-in support for mouse dragging, edge resizing, and focus management.
-	/// </summary>
 	public abstract class WindowBase : HudElementBase, IClickableElement
 	{
-		/// <summary>
-		/// Gets or sets the text displayed in the window's header.
-		/// </summary>
 		public RichText HeaderText { get { return HeaderBuilder.GetText(); } set { HeaderBuilder.SetText(value); } }
 
-		/// <summary>
-		/// Exposes the <see cref="ITextBuilder"/> used to format and manipulate the header text.
-		/// </summary>
 		public ITextBuilder HeaderBuilder => header.TextBoard;
 
-		/// <summary>
-		/// Gets or sets the color of both the window border and the header background.
-		/// </summary>
 		public virtual Color BorderColor
 		{
 			get { return header.Color; }
@@ -36,77 +23,39 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Gets or sets the background color of the window's body area.
-		/// </summary>
 		public virtual Color BodyColor { get { return windowBg.Color; } set { windowBg.Color = value; } }
 
-		/// <summary>
-		/// Gets or sets the minimum allowable dimensions for the window during resizing.
-		/// </summary>
 		public Vector2 MinimumSize { get; set; }
 
-		/// <summary>
-		/// Determines if the user can resize the window by dragging its edges.
-		/// </summary>
 		public bool AllowResizing { get; set; }
 
-		/// <summary>
-		/// Determines if the user can reposition the window by clicking and dragging the header.
-		/// </summary>
 		public bool CanDrag { get; set; }
 
-		/// <summary>
-		/// Indicates whether the window is currently active.
-		/// </summary>
 		public bool WindowActive { get; protected set; }
 
-		/// <summary>
-		/// Indicates whether the mouse cursor is currently hovering over the window or its resize padding.
-		/// </summary>
 		public override bool IsMousedOver => resizeInput.IsMousedOver;
 
-		/// <summary>
-		/// The generic mouse input handler for the window
-		/// </summary>
 		public IMouseInput MouseInput { get; }
 
-		/// <summary>
-		/// Handles the element's input focus state and registration.
-		/// </summary>
 		public IFocusHandler FocusHandler { get; }
 
-		/// <summary>
-		/// The UI element representing the window's header bar.
-		/// </summary>
 		public readonly LabelBoxButton header;
 
-		/// <summary>
-		/// The container element for the window's main content area.
-		/// </summary>
 		public readonly HudElementBase body;
 
-		/// <summary>
-		/// The element responsible for rendering the window's border outline.
-		/// </summary>
 		public readonly BorderBox border;
 
 		protected readonly MouseInputElement inputInner, resizeInput;
 		protected readonly TexturedBox windowBg;
 
-		/// <summary>
-		/// The distance from the corner within which a mouse drag triggers diagonal resizing.
-		/// </summary>
 		protected float cornerSize = 16f;
 		protected bool canMoveWindow;
 		protected Vector2 resizeDir, cursorOffset;
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="WindowBase"/> class.
-		/// </summary>
-		/// <param name="parent">The parent HUD element.</param>
+/// <summary>WindowBase operation.</summary>
 		public WindowBase(HudParentBase parent) : base(parent)
 		{
+/// <summary>LabelBoxButton operation.</summary>
 			header = new LabelBoxButton(this)
 			{
 				DimAlignment = DimAlignments.Width,
@@ -118,17 +67,20 @@ namespace RichHudFramework.UI
 				AutoResize = false,
 			};
 
+/// <summary>EmptyHudElement operation.</summary>
 			body = new EmptyHudElement(this)
 			{
 				ParentAlignment = ParentAlignments.InnerBottom,
 			};
 
+/// <summary>TexturedBox operation.</summary>
 			windowBg = new TexturedBox(this)
 			{
 				DimAlignment = DimAlignments.Size,
 				ZOffset = -2,
 			};
 
+/// <summary>BorderBox operation.</summary>
 			border = new BorderBox(this)
 			{
 				ZOffset = 1,
@@ -136,14 +88,18 @@ namespace RichHudFramework.UI
 				DimAlignment = DimAlignments.Size,
 			};
 
+/// <summary>InputFocusHandler operation.</summary>
 			FocusHandler = new InputFocusHandler(this);
+/// <summary>MouseInputElement operation.</summary>
 			resizeInput = new MouseInputElement(this)
 			{
 				ZOffset = sbyte.MaxValue,
+/// <summary>Vector2 operation.</summary>
 				Padding = new Vector2(16f),
 				DimAlignment = DimAlignments.Size,
 				CanIgnoreMasking = true
 			};
+/// <summary>MouseInputElement operation.</summary>
 			inputInner = new MouseInputElement(resizeInput)
 			{
 				DimAlignment = DimAlignments.UnpaddedSize,
@@ -155,25 +111,21 @@ namespace RichHudFramework.UI
 			UseCursor = true;
 			ShareCursor = false;
 			IsMasking = true;
+/// <summary>Vector2 operation.</summary>
 			MinimumSize = new Vector2(200f, 200f);
 			MouseInput = resizeInput;
 
 			GetWindowFocus();
 		}
 
-		/// <summary>
-		/// Updates the layout of the window's body relative to the header size.
-		/// </summary>
+/// <summary>Layout operation.</summary>
 		protected override void Layout()
 		{
 			body.Height = UnpaddedSize.Y - header.Height;
 			body.Width = UnpaddedSize.X;
 		}
 
-		/// <summary>
-		/// Calculates and applies the new window size and position based on the drag delta and resize direction.
-		/// </summary>
-		/// <param name="cursorPos">The current position of the cursor.</param>
+/// <summary>Resize operation.</summary>
 		protected void Resize(Vector2 cursorPos)
 		{
 			Vector2 pos = Origin + Offset,
@@ -198,10 +150,7 @@ namespace RichHudFramework.UI
 			Offset = pos - Origin;
 		}
 
-		/// <summary>
-		/// Handles mouse input for resizing, dragging, and focus acquisition.
-		/// </summary>
-		/// <param name="cursorPos">The current cursor position.</param>
+/// <summary>HandleInput operation.</summary>
 		protected override void HandleInput(Vector2 cursorPos)
 		{
 			if (IsMousedOver)
@@ -223,6 +172,7 @@ namespace RichHudFramework.UI
 				if (Height - (2f * Math.Abs(delta.Y)) <= cornerSize)
 					resizeDir.Y = (delta.Y >= 0f) ? 1f : -1f;
 			}
+/// <summary>if operation.</summary>
 			else if (CanDrag && header.MouseInput.IsNewLeftClicked)
 			{
 				canMoveWindow = true;
@@ -251,21 +201,14 @@ namespace RichHudFramework.UI
 				Resize(cursorPos);
 		}
 
-		/// <summary>
-		/// Brings the window to the foreground (top Z-layer) and captures input focus. 
-		/// Overriding methods must call the base implementation.
-		/// </summary>
+/// <summary>Returns the windowfocus.</summary>
 		public virtual void GetWindowFocus()
 		{
 			OverlayOffset = HudMain.GetFocusOffset(LoseWindowFocus);
 			WindowActive = true;
 		}
 
-		/// <summary>
-		/// Callback triggered when the window loses focus to another element. 
-		/// Overriding methods must call the base implementation.
-		/// </summary>
-		/// <param name="newLayer">The new Z-offset layer assigned to this window.</param>
+/// <summary>LoseWindowFocus operation.</summary>
 		protected virtual void LoseWindowFocus(byte newLayer)
 		{
 			OverlayOffset = newLayer;

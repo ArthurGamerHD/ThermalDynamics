@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """**Which grid size is actually the harder one to cool, read off a census rather than off a cell
 face.**
 
@@ -24,15 +23,8 @@ census row carries, which is the flag the walk assigned from the blueprint's own
 import csv
 import sys
 
-# A column this computes rather than reads. The hull path has to be read **per watt**: a small
-# grid's hottest block has 0.77x the conductance a large one's has and makes a tenth of the heat,
-# so the raw column says "behind" about a term the ship is comfortably ahead on. Reading a ratio of
-# two things that scale differently as though it were one of them is the error this whole page is
-# correcting, so it is not repeated here.
 DERIVED_CONDUCTANCE = "hottest_conductance_w_per_k_per_kw"
 
-# The columns that bear on the question, and which direction is better for the ship. A column with
-# no direction is reported and not judged.
 COLUMNS = [
     ("blocks", None, "blocks", "{:,.0f}"),
     ("waste_full_w", None, "full-load waste, W", "{:,.0f}"),
@@ -48,6 +40,7 @@ COLUMNS = [
 POINTS = [("p10", 0.10), ("p50", 0.50), ("p90", 0.90), ("p99", 0.99)]
 
 
+# percentile operation.
 def percentile(values, point):
     """Linear interpolation between order statistics, as `scoring.py` does it."""
     if not values:
@@ -61,6 +54,7 @@ def percentile(values, point):
     return ordered[low] + (ordered[high] - ordered[low]) * (index - low)
 
 
+# read operation.
 def read(path):
     """The census split in two, small first, dropping rows the walk left a column empty on."""
     small, large = [], []
@@ -70,6 +64,7 @@ def read(path):
     return small, large
 
 
+# column operation.
 def column(rows, name):
     """One column as floats, computing the derived one. **A row that carries no value is left out rather than read as zero**,
     which is the difference between a missing measurement and a measured zero (`P2`)."""
@@ -88,6 +83,7 @@ def column(rows, name):
     return values
 
 
+# derived conductance operation.
 def derived_conductance(rows):
     """The hottest block's conductance into its hull, per kilowatt the ship wastes. Ships that
     waste nothing have no hottest block to speak of and are left out rather than divided by."""
@@ -104,6 +100,7 @@ def derived_conductance(rows):
     return values
 
 
+# compare operation.
 def compare(small, large, name):
     """The p50 of a column at both sizes, and small over large."""
     s = percentile(column(small, name), 0.5)
@@ -112,6 +109,7 @@ def compare(small, large, name):
     return s, l, ratio
 
 
+# verdict operation.
 def verdict(name, direction, ratio):
     """Which size the column favours, in words, or None where the column is not a judgement."""
     if direction is None or ratio != ratio:
@@ -120,6 +118,7 @@ def verdict(name, direction, ratio):
     return "small grids ahead" if better_small else "small grids behind"
 
 
+# main operation.
 def main(argv):
     if len(argv) != 2:
         print(__doc__)

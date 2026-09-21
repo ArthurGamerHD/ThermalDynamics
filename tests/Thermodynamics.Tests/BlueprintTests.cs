@@ -8,20 +8,9 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Reading a real ship out of a blueprint file.
-    ///
-    /// This is the foundation of the balance lab, and the thing most able to be quietly wrong. A
-    /// blueprint that half-parses does not throw: it yields a ship with some of its blocks, which
-    /// simulates perfectly well and answers a different question from the one being asked. Every
-    /// test here is about the *yield* rather than about the physics.
-    ///
-    /// Every test here is synthetic, and deliberately: the end of the chain — a real subscribed
-    /// blueprint building a simulation that steps — is `CorpusSurvey`, which builds every ship in
-    /// the corpus, probes that it steps and counts joints, rooms and small grids in one pass.
-    /// </summary>
     public class BlueprintTests
     {
+/// <summary>WriteBlueprint operation.</summary>
         private static string WriteBlueprint(string blocks, bool large = true)
         {
             string path = Path.Combine(Path.GetTempPath(),
@@ -48,7 +37,7 @@ namespace Thermodynamics.Tests
             return file;
         }
 
-        /// <summary>The same blueprint `WriteBlueprint` writes, for tests that choose their own path.</summary>
+/// <summary>BlueprintText operation.</summary>
         private static string BlueprintText(string blocks)
         {
             return "<?xml version=\"1.0\"?>\n" +
@@ -68,6 +57,7 @@ namespace Thermodynamics.Tests
                 "</Definitions>\n";
         }
 
+/// <summary>Block operation.</summary>
         private static string Block(string subtype, int x, int y, int z, string orientation = null)
         {
             return "<MyObjectBuilder_CubeBlock xsi:type=\"MyObjectBuilder_CubeBlock\">" +
@@ -78,10 +68,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AShipIsReadWithItsNameAndItsBlocks operation.</summary>
         public void AShipIsReadWithItsNameAndItsBlocks()
         {
             if (!GameBlocks.IsInstalled) return;
 
+/// <summary>WriteBlueprint operation.</summary>
             string file = WriteBlueprint(
                 Block("LargeBlockArmorBlock", 0, 0, 0) +
                 Block("LargeBlockArmorBlock", 1, 0, 0) +
@@ -91,17 +83,13 @@ namespace Thermodynamics.Tests
 
             Assert.Single(ships);
 
-            // The blueprint's own name, not the hull grid's: a ship is the whole blueprint now.
             Assert.Equal("TestShip", ships[0].Name);
             Assert.Equal(3, ships[0].Blocks);
             Assert.Single(ships[0].Grids);
             Assert.True(ships[0].IsVanilla);
         }
 
-        /// <summary>
-        /// One block element with a stated <c>xsi:type</c>, which is how a blueprint spells
-        /// anything that is not a plain cube.
-        /// </summary>
+/// <summary>Typed operation.</summary>
         private static string Typed(string typeId, string subtype, int x, int y, int z)
         {
             return "<MyObjectBuilder_CubeBlock xsi:type=\"MyObjectBuilder_" + typeId + "\">" +
@@ -110,30 +98,13 @@ namespace Thermodynamics.Tests
                 "</MyObjectBuilder_CubeBlock>";
         }
 
-        /// <summary>
-        /// **An empty <c>SubtypeName</c> on something that is not armour is that type's base
-        /// variant, not an armour cube.** This is the defect the whole corpus was measured under
-        /// until 2026-08-25.
-        ///
-        /// <para>
-        /// The game leaves <c>SubtypeId</c> empty on thirteen definitions and eleven of them are
-        /// not armour — the vanilla oxygen generator, air vent, oxygen tank, both gravity
-        /// generators, the door, the hangar door, the passage, the ladder and the two large
-        /// turrets. Every one of them in every corpus blueprint was built as a 500 kg armour cube
-        /// with no power draw, so it made no heat, and nothing about the result looked wrong: the
-        /// ship parsed, the block count was right, and `IsVanilla` stayed true.
-        /// </para>
-        ///
-        /// <para>
-        /// The check is mass rather than a name, because mass is what the wrong answer got wrong:
-        /// a large-grid oxygen generator weighs 2,587 kg against light armour's 500.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ABlockWithNoSubtypeNameIsItsOwnTypesBaseVariantRatherThanArmour operation.</summary>
         public void ABlockWithNoSubtypeNameIsItsOwnTypesBaseVariantRatherThanArmour()
         {
             if (!GameBlocks.IsInstalled) return;
 
+/// <summary>WriteBlueprint operation.</summary>
             string file = WriteBlueprint(Typed("OxygenGenerator", null, 0, 0, 0));
             Blueprints.Ship ship = Blueprints.Read(file)[0];
 
@@ -147,32 +118,15 @@ namespace Thermodynamics.Tests
                 + " resolving to armour again");
         }
 
-        /// <summary>
-        /// **A subtype is not an identity either, and one collision is a block players build.**
-        ///
-        /// <para>
-        /// Three of the game's subtypes are claimed by two types each. `LargePistonBase` belongs to
-        /// both `PistonBase` and `ExtendedPistonBase` — identical components, power and thermal
-        /// entry, and sizes **1x2x1 against 1x3x1** — so a reader keyed on the subtype built every
-        /// extended piston a cell short, with the exposed area and links of a block a third
-        /// smaller. In a sixty-blueprint sample every piston base in the corpus was an
-        /// `ExtendedPistonBase`, so the entry that lost is the one players use.
-        /// </para>
-        ///
-        /// <para>
-        /// The check is size, because size is the whole of the difference — and reading both in
-        /// one process is the point rather than an accident. The shared `BlockModel` cache was
-        /// keyed on the model's *name*, which these two also share, so the first one read decided
-        /// what the second one was. A 1x3x1 handed out for a 1x2x1 puts a block in an occupied
-        /// cell, and the grid that loses the collision loses its blocks silently.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ASubtypeClaimedByTwoTypesResolvesByTheTypeTheBlueprintStates operation.</summary>
         public void ASubtypeClaimedByTwoTypesResolvesByTheTypeTheBlueprintStates()
         {
             if (!GameBlocks.IsInstalled) return;
 
+/// <summary>WriteBlueprint operation.</summary>
             string extended = WriteBlueprint(Typed("ExtendedPistonBase", "LargePistonBase", 0, 0, 0));
+/// <summary>WriteBlueprint operation.</summary>
             string plain = WriteBlueprint(Typed("PistonBase", "LargePistonBase", 0, 0, 0));
 
             BlockModel extendedModel = Blueprints.Read(extended)[0].Grids[0].Builder.Placed[0].Model;
@@ -182,25 +136,14 @@ namespace Thermodynamics.Tests
             Assert.Equal(2, plainModel.Size.Y);
         }
 
-        /// <summary>
-        /// **No base variant's type id is also some other block's subtype**, which is the one
-        /// assumption <c>GameBlocks.ByModelName</c> rests on and the one the game could break
-        /// without telling anyone.
-        ///
-        /// <para>
-        /// A placed block carries its subtype as its name, or its type where the game states no
-        /// subtype, and a dozen lookups resolve a block from that name. A real subtype wins a
-        /// collision, so if the game ever shipped a block whose subtype is `OxygenGenerator` the
-        /// vanilla generator would stop resolving and would silently take that block's power,
-        /// mass and material. There are none today. This is what says so tomorrow.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>NoBaseVariantsTypeIdIsAlsoSomeOtherBlocksSubtype operation.</summary>
         public void NoBaseVariantsTypeIdIsAlsoSomeOtherBlocksSubtype()
         {
             if (!GameBlocks.IsInstalled) return;
 
             Dictionary<string, GameBlocks.Definition> bySubtype = GameBlocks.BySubtype();
+/// <summary>List operation.</summary>
             List<string> collided = new List<string>();
 
             foreach (GameBlocks.Definition variant in GameBlocks.BaseVariants().Values)
@@ -219,18 +162,13 @@ namespace Thermodynamics.Tests
             Assert.True(collided.Count == 0, string.Join("\n  ", collided.ToArray()));
         }
 
-        /// <summary>
-        /// The small-grid half of the same rule. Two of the thirteen base variants are small-grid
-        /// blocks, so a resolver keyed on type alone would build a small-grid gun onto a large
-        /// hull — which is the failure the named-subtype path already refuses.
-        /// </summary>
         [Fact]
+/// <summary>ABaseVariantOfTheWrongGridSizeIsNotBuilt operation.</summary>
         public void ABaseVariantOfTheWrongGridSizeIsNotBuilt()
         {
             if (!GameBlocks.IsInstalled) return;
 
-            // SmallGatlingGun is small-grid only, so a large-grid blueprint naming it resolves to
-            // nothing rather than to whatever else shares its type.
+/// <summary>WriteBlueprint operation.</summary>
             string file = WriteBlueprint(
                 Block("LargeBlockArmorBlock", 0, 0, 0) + Typed("SmallGatlingGun", null, 1, 0, 0));
             Blueprints.Ship ship = Blueprints.Read(file)[0];
@@ -240,19 +178,13 @@ namespace Thermodynamics.Tests
             Assert.False(ship.IsVanilla);
         }
 
-        /// <summary>
-        /// The other half of the rule, and the reason the wrong version of it survived so long:
-        /// **for a `CubeBlock` an empty <c>SubtypeName</c> really is the plain armour cube**, and
-        /// armour is most of most hulls, so the guess looked right everywhere anyone checked.
-        ///
-        /// It is resolved as its own case rather than as a fallback, so that a type nobody has
-        /// thought about resolves to nothing and is counted instead of quietly becoming armour.
-        /// </summary>
         [Fact]
+/// <summary>ABlockWithNoSubtypeNameIsTheBaseArmourCube operation.</summary>
         public void ABlockWithNoSubtypeNameIsTheBaseArmourCube()
         {
             if (!GameBlocks.IsInstalled) return;
 
+/// <summary>WriteBlueprint operation.</summary>
             string file = WriteBlueprint(Block(null, 0, 0, 0) + Block(null, 1, 0, 0));
             Blueprints.Ship ship = Blueprints.Read(file)[0];
 
@@ -260,16 +192,13 @@ namespace Thermodynamics.Tests
             Assert.Equal(0, ship.UnknownBlocks);
         }
 
-        /// <summary>
-        /// One unresolved block disqualifies the whole ship. There is no way to tell whether the
-        /// block that failed was a decorative panel or the reactor, and a modded ship measured as
-        /// though it were vanilla is worse than a ship not measured at all.
-        /// </summary>
         [Fact]
+/// <summary>OneModdedBlockDisqualifiesTheShip operation.</summary>
         public void OneModdedBlockDisqualifiesTheShip()
         {
             if (!GameBlocks.IsInstalled) return;
 
+/// <summary>WriteBlueprint operation.</summary>
             string file = WriteBlueprint(
                 Block("LargeBlockArmorBlock", 0, 0, 0) +
                 Block("SomeoneElsesRailgunMkIV", 1, 0, 0));
@@ -281,17 +210,13 @@ namespace Thermodynamics.Tests
             Assert.Contains("SomeoneElsesRailgunMkIV", ship.UnknownSubtypes);
         }
 
-        /// <summary>
-        /// A subtype that exists on the other grid size is not a match. Sharing a name across the
-        /// two is common, and building a small-grid ship out of large-grid blocks would multiply
-        /// every mass on it by roughly a hundred.
-        /// </summary>
         [Fact]
+/// <summary>ALargeGridBlockIsNotAcceptedOnASmallGridShip operation.</summary>
         public void ALargeGridBlockIsNotAcceptedOnASmallGridShip()
         {
             if (!GameBlocks.IsInstalled) return;
 
-            // One block of the right size so the ship exists at all, and one of the wrong size.
+/// <summary>WriteBlueprint operation.</summary>
             string file = WriteBlueprint(
                 Block("SmallBlockArmorBlock", 0, 0, 0) +
                 Block("LargeBlockArmorBlock", 1, 0, 0), false);
@@ -304,10 +229,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnOrientedBlockKeepsItsOrientation operation.</summary>
         public void AnOrientedBlockKeepsItsOrientation()
         {
             if (!GameBlocks.IsInstalled) return;
 
+/// <summary>WriteBlueprint operation.</summary>
             string file = WriteBlueprint(Block("LargeBlockArmorBlock", 0, 0, 0,
                 "<BlockOrientation Forward=\"Right\" Up=\"Up\" />"));
 
@@ -318,8 +245,8 @@ namespace Thermodynamics.Tests
                 ship.Grids[0].Builder.Grid.Blocks[0].Orientation.Forward);
         }
 
-        /// <summary>A file that is not a blueprint, or not XML, must yield nothing rather than throw.</summary>
         [Fact]
+/// <summary>AnUnreadableFileYieldsNoShips operation.</summary>
         public void AnUnreadableFileYieldsNoShips()
         {
             string path = Path.Combine(Path.GetTempPath(),
@@ -332,24 +259,13 @@ namespace Thermodynamics.Tests
             Assert.Empty(Blueprints.Read(file));
         }
 
-        /// <summary>
-        /// **Two blocks in one cell is a file to skip, not a corpus to abandon.**
-        ///
-        /// The reader promises never to throw, because a corpus of ten thousand files will contain
-        /// some that no parser should die on — but the guard sat on the XML load alone, and
-        /// everything after it ran bare. A real workshop blueprint puts two armour blocks in the
-        /// same cell; <c>GridModel</c> refuses the second, and the exception came up through the
-        /// parse and took down the scan of the whole corpus. Every corpus test failed on it, none
-        /// of them anywhere near their own subject.
-        ///
-        /// A file that cannot be read yields no ships and is recorded as unreadable, so the skip
-        /// is visible in the corpus report rather than being a silent hole in the population.
-        /// </summary>
         [Fact]
+/// <summary>ABlueprintWithTwoBlocksInOneCellIsSkippedRatherThanThrown operation.</summary>
         public void ABlueprintWithTwoBlocksInOneCellIsSkippedRatherThanThrown()
         {
             if (!GameBlocks.IsInstalled) return;
 
+/// <summary>WriteBlueprint operation.</summary>
             string file = WriteBlueprint(
                 Block("LargeBlockArmorBlock", 0, 0, 0) +
                 Block("LargeHeavyBlockArmorBlock", 0, 0, 0));
@@ -358,22 +274,11 @@ namespace Thermodynamics.Tests
             Assert.True(Blueprints.Unreadable().ContainsKey(file),
                 "the file should have been recorded as unreadable");
         }
-        /// <summary>
-        /// A blueprint's workshop id survives a **collection**, where the ship sits one level
-        /// deeper than an ordinary item.
-        ///
-        /// <para>
-        /// The failure this pins is quiet and it had happened: reading the immediate parent folder
-        /// gets the *ship's name* out of a collection, which parses to nothing and fell back to 0.
-        /// Zero is a workshop id like any other to every reader downstream, so on the 2026-08-28
-        /// air walk **fourteen distinct ships shared it** and anything keyed by workshop id — the
-        /// core corpus's selection, the census, the standing panel — counted the fourteen as one.
-        /// </para>
-        /// </summary>
         [Theory]
         [InlineData("244850/1415550344", 1415550344L)]
         [InlineData("244850/1415550344/T.N.F. Orbital Station 'Charlie'", 1415550344L)]
         [InlineData("244850/413269248/T.N.F. Strike Carrier Class 'Tigershark' Mk.II", 413269248L)]
+/// <summary>AWorkshopIdIsReadThroughACollectionFolder operation.</summary>
         public void AWorkshopIdIsReadThroughACollectionFolder(string under, long expected)
         {
             string root = Path.Combine(Path.GetTempPath(),
@@ -396,8 +301,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>A blueprint outside the corpus root reports no id rather than a wrong one.</summary>
         [Fact]
+/// <summary>ABlueprintOutsideTheWorkshopHasNoId operation.</summary>
         public void ABlueprintOutsideTheWorkshopHasNoId()
         {
             string root = Path.Combine(Path.GetTempPath(),

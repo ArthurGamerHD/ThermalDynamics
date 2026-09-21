@@ -5,19 +5,12 @@ namespace RichHudFramework
 {
 	public static partial class Utils
 	{
-		/// <summary>
-		/// Utilities for parsing and formatting <see cref="VRageMath.Color"/> values from/to strings.
-		/// Supports common formats such as "255,255,255", " 100,  50, 0 ", or "128,64,32,255".
-		/// </summary>
 		public static class Color
 		{
+/// <summary>Regex operation.</summary>
 			private static readonly Regex colorParser = new Regex(@"(\s*,?(\d{1,3})\s*,?){3,4}");
 
-			/// <summary>
-			/// Determines whether the given string can be successfully parsed as a color (3–4 byte components).
-			/// </summary>
-			/// <param name="colorData">The string to test.</param>
-			/// <returns>True if the string contains 3 or 4 valid byte values; otherwise false.</returns>
+/// <summary>CanParseColor operation.</summary>
 			public static bool CanParseColor(string colorData)
 			{
 				if (string.IsNullOrEmpty(colorData))
@@ -40,17 +33,12 @@ namespace RichHudFramework
 				return true;
 			}
 
-			/// <summary>
-			/// Attempts to parse a string into a <see cref="VRageMath.Color"/>. Returns true on success.
-			/// </summary>
-			/// <param name="colorData">String containing 3–4 numeric components.</param>
-			/// <param name="value">Receives the parsed color on success; white on failure.</param>
-			/// <param name="ignoreAlpha">If true and only 3 components are provided, the alpha is defaulted to 255.</param>
-			/// <returns>True if parsing succeeded.</returns>
+/// <summary>TryParseColor operation.</summary>
 			public static bool TryParseColor(string colorData, out VRageMath.Color value, bool ignoreAlpha = false)
 			{
 				try
 				{
+/// <summary>ParseColor operation.</summary>
 					value = ParseColor(colorData, ignoreAlpha);
 					return true;
 				}
@@ -61,13 +49,7 @@ namespace RichHudFramework
 				}
 			}
 
-			/// <summary>
-			/// Parses a string into a <see cref="VRageMath.Color"/>. Throws on invalid input.
-			/// </summary>
-			/// <param name="colorData">String containing 3–4 numeric components separated by commas.</param>
-			/// <param name="ignoreAlpha">If true and only 3 components are provided, the alpha is defaulted to 255.</param>
-			/// <returns>The parsed color.</returns>
-			/// <exception cref="Exception">Thrown when the string is malformed or contains invalid values.</exception>
+/// <summary>ParseColor operation.</summary>
 			public static VRageMath.Color ParseColor(string colorData, bool ignoreAlpha = false)
 			{
 				if (string.IsNullOrEmpty(colorData))
@@ -88,18 +70,14 @@ namespace RichHudFramework
 
 				if (captures.Count > 3)
 					value.A = byte.Parse(captures[3].Value);
+/// <summary>if operation.</summary>
 				else if (!ignoreAlpha)
 					value.A = 255; // default opaque when alpha omitted
 
 				return value;
 			}
 
-			/// <summary>
-			/// Converts a <see cref="VRageMath.Color"/> to a simple comma-separated string.
-			/// </summary>
-			/// <param name="color">The color to format.</param>
-			/// <param name="includeAlpha">If false, the alpha component is omitted.</param>
-			/// <returns>A string like "255,255,255" or "255,255,255,128".</returns>
+/// <summary>Returns the colorstring.</summary>
 			public static string GetColorString(VRageMath.Color color, bool includeAlpha = true)
 			{
 				return includeAlpha

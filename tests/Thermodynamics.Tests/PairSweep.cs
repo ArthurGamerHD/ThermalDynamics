@@ -8,47 +8,6 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **Conduction and the clock, moved together**, which is the one thing every sweep so far has
-    /// not done and the whole of `G8`'s open question.
-    ///
-    /// <para>
-    /// The projected route to the significance window — conductivity ×4 with `HeatTimeScale` ≈ 15,
-    /// for a ~200 s crossing at ~0.7 substeps — was arrived at by multiplying two single-dial
-    /// curves together. Substep demand goes as conductivity × clock, so the projection is at least
-    /// dimensionally sound; whether a *crossing time* composes the same way is an extrapolation
-    /// across an interaction nothing has run. This runs the grid.
-    /// </para>
-    ///
-    /// <code>
-    ///     THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=out/pairs \
-    ///         dotnet test --filter "FullyQualifiedName~PairSweep"
-    /// </code>
-    ///
-    /// <para>
-    /// **On the retest set, not the standing panel, and that is a choice with a cost.** `G8` is a
-    /// criterion about the event *a player meets*, and the retest set is the forty hulls chosen to
-    /// be the ones people fly; the panel is chosen for spread, so its median is the median of a
-    /// deliberately extreme sample. The cost is comparability: every published knob curve was taken
-    /// on the panel, so **the edges of this grid are the same dials on a different population and
-    /// are not the published rows re-derived**. What is compared here is the interior against the
-    /// edges *within this dataset*, which is what the interaction question needs and which is
-    /// `M1`-clean because every cell shares a population, a clock rule and a stop criterion.
-    /// </para>
-    ///
-    /// <para>
-    /// The panel would have been the other choice and was priced: 656,516 blocks against the retest
-    /// set's 177,822, which is eleven hours against three for the same sixteen cells. Point
-    /// <c>THERMAL_PANEL</c> at <c>tools/corpus/panel.csv</c> to run it there instead — the walk
-    /// reads whatever file it is given and names the count it resolved.
-    /// </para>
-    ///
-    /// <para>
-    /// **The cells run in sequence**: a material override is a process-wide static that empties the
-    /// shared model cache, so two cells in flight would build ships out of each other's world. The
-    /// parallelism is inside a cell, across the panel.
-    /// </para>
-    /// </summary>
     [Collection("alone")]
     public class PairSweep
     {
@@ -59,6 +18,7 @@ namespace Thermodynamics.Tests
             + "made_w,vented_w,substeps_demanded,hottest_block";
 
         [Fact]
+/// <summary>EveryPairOfConductionAndClockGetsAMeasuredCell operation.</summary>
         public void EveryPairOfConductionAndClockGetsAMeasuredCell()
         {
             List<Blueprints.Ship> ships;
@@ -68,22 +28,8 @@ namespace Thermodynamics.Tests
             Sweep(Pairs, PairLab.All(), PairLab.Scenarios, ships, scenarios);
         }
 
-        /// <summary>
-        /// **What the four candidate cells cost in air**, which is the column `G8`'s answer was
-        /// left without and the one `G6` is decided in.
-        ///
-        /// <para>
-        /// The main grid is three vacuum scenarios, where substeps are cheap — corpus p99 6.02
-        /// against 64 granted — so its cost column cannot say whether a retune is affordable. Air
-        /// is where the budget is spent: the panel measures p95 36.71 under reentry at shipped
-        /// settings, and about 41 is projected at 300 m/s. A cell that doubles that does not fit.
-        /// </para>
-        ///
-        /// <code>
-        ///     THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=out/air         ///         dotnet test --filter "FullyQualifiedName~EveryCandidateCellIsPricedInAir"
-        /// </code>
-        /// </summary>
         [Fact]
+/// <summary>EveryCandidateCellIsPricedInAir operation.</summary>
         public void EveryCandidateCellIsPricedInAir()
         {
             List<Blueprints.Ship> ships;
@@ -93,22 +39,8 @@ namespace Thermodynamics.Tests
             Sweep(Air, PairLab.Decision(), PairLab.AirScenarios, ships, scenarios);
         }
 
-        /// <summary>
-        /// **The load against the clock**: whether a dial that is not transport reaches the
-        /// significance window.
-        ///
-        /// <para>
-        /// Conduction reaches it and costs three of the mod's levers doing so, measured in
-        /// balance.md. This grid moves how much heat a ship makes instead
-        /// of how it travels, against the clock, and scores the same criteria.
-        /// </para>
-        ///
-        /// <code>
-        ///     THERMAL_CORPUS_TESTS=1 THERMAL_CORPUS_DATA=out/load \
-        ///         dotnet test --filter "FullyQualifiedName~EveryLoadAndClockPairGetsAMeasuredCell"
-        /// </code>
-        /// </summary>
         [Fact]
+/// <summary>EveryLoadAndClockPairGetsAMeasuredCell operation.</summary>
         public void EveryLoadAndClockPairGetsAMeasuredCell()
         {
             List<Blueprints.Ship> ships;
@@ -118,13 +50,7 @@ namespace Thermodynamics.Tests
             Sweep(LoadDial, PairLab.Load(), PairLab.LoadScenarios, ships, scenarios);
         }
 
-        /// <summary>
-        /// The prologue every grid shares: the opt-in guard, the ship set and the battery index.
-        /// False means the corpus is not opted in and the test is a quiet skip, which is the
-        /// fixture's own convention. Three copies of this had already drifted — two checked their
-        /// scenario names against the battery and the third did not — so the check lives in
-        /// <see cref="Sweep"/> now, where no pass can be written without it.
-        /// </summary>
+/// <summary>Prologue operation.</summary>
         private static bool Prologue(
             out List<Blueprints.Ship> ships, out Dictionary<string, Battery.Scenario> scenarios)
         {
@@ -145,29 +71,16 @@ namespace Thermodynamics.Tests
             return true;
         }
 
-        /// <summary>
-        /// One pass over a cell list: check its control, then run every cell through every scenario
-        /// the pass names.
-        ///
-        /// Shared by both passes rather than copied, because the two differ only in which cells and
-        /// which scenarios — and a second copy of this loop is a second place the resume record, the
-        /// stop rule and the override teardown can drift.
-        /// </summary>
+/// <summary>Sweep operation.</summary>
         private static void Sweep(Pass pass, List<PairLab.Cell> cells, string[] scenarioNames,
             List<Blueprints.Ship> ships, Dictionary<string, Battery.Scenario> scenarios)
         {
-            // Every scenario the pass names must exist, checked here so no pass can be written
-            // without the check: Run skips an unknown name silently, so a misspelled scenario
-            // would otherwise thin the dataset without an error — and the load grid shipped
-            // without this check for as long as it was a per-test copy.
             foreach (string name in scenarioNames)
             {
                 Assert.True(scenarios.ContainsKey(name),
                     pass.Dataset + " asks for scenario '" + name + "' and the battery has no such case");
             }
 
-            // Exactly one control, and it runs first, so a grid killed early still carries the row
-            // every other row is read against.
             int controls = 0;
             foreach (PairLab.Cell cell in cells)
             {
@@ -183,16 +96,11 @@ namespace Thermodynamics.Tests
                 "the grid produced no rows and had nothing recorded as already finished");
         }
 
-        /// <summary>
-        /// One cell: install its world, run the panel through the three scenarios at a clock-matched
-        /// ceiling, take it down again.
-        ///
-        /// The override is cleared in a finally, because leaving one installed contaminates every
-        /// cell after it and the contamination reads as a smooth surface rather than as an error.
-        /// </summary>
+/// <summary>Run operation.</summary>
         private static void Run(Pass pass, PairLab.Cell cell, string[] scenarioNames,
             List<Blueprints.Ship> ships, Dictionary<string, Battery.Scenario> scenarios)
         {
+/// <summary>object operation.</summary>
             object gate = new object();
             int written = 0;
             int skipped = 0;
@@ -216,8 +124,6 @@ namespace Thermodynamics.Tests
                         {
                             Blueprints.Ship source = ships[i];
 
-                            // A cell is hours and will be killed (`O3`), so a ship's rows are
-                            // written the moment it is finished and the ship is recorded as done.
                             string mark = cell.Name + "|" + source.Name + "|" + source.WorkshopId;
                             if (done.Contains(mark))
                             {
@@ -225,11 +131,9 @@ namespace Thermodynamics.Tests
                                 continue;
                             }
 
+/// <summary>List operation.</summary>
                             List<string> mine = new List<string>();
 
-                            // Re-read under this cell's override: a blueprint resolves its models as
-                            // it is parsed, and block instances carry the applied load, so two
-                            // scenarios sharing one instance would write over each other.
                             Blueprints.Ship ship = source.Reload();
 
                             for (int s = 0; s < scenarioNames.Length; s++)
@@ -247,7 +151,6 @@ namespace Thermodynamics.Tests
                                 }
                                 catch
                                 {
-                                    // A ship this cell cannot run must not lose the grid.
                                 }
                             }
 
@@ -275,9 +178,11 @@ namespace Thermodynamics.Tests
                 + ") wrote " + written + " rows, resumed past " + skipped + " ships");
         }
 
+/// <summary>Row operation.</summary>
         private static string Row(PairLab.Cell cell, Battery.Scenario scenario,
             Blueprints.Ship ship, ScenarioOutcome o)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder row = new StringBuilder();
             row.Append(CorpusRecord.Text(cell.Name)).Append(',');
             row.Append(CorpusRecord.Num(cell.Conductivity)).Append(',');
@@ -306,16 +211,7 @@ namespace Thermodynamics.Tests
             return row.ToString();
         }
 
-        // ---- the set and the resume record -----------------------------------------------
 
-        /// <summary>
-        /// One pass: which file it writes, and the resume record beside it.
-        ///
-        /// **A record per pass, not one shared.** The two passes run the same ships through the
-        /// same cells under different scenarios, so a shared record would mark a ship done for the
-        /// air pass because the vacuum pass had finished it — a silent skip that reads as a
-        /// completed run. See <see cref="ShipSet.Resume"/>.
-        /// </summary>
         private class Pass
         {
             public string Dataset;
@@ -332,6 +228,7 @@ namespace Thermodynamics.Tests
         private static readonly Pass LoadDial =
             new Pass { Dataset = "load", Record = new ShipSet.Resume("load") };
 
+/// <summary>Progress operation.</summary>
         private static void Progress(string line)
         {
             ShipSet.Progress("pairs", line);

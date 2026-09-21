@@ -15,9 +15,7 @@ namespace Thermodynamics
         private static readonly MyStringId CompositeSurfaceMaterial = MyStringId.GetOrCompute("GaugeThermalCompositeSurface");
         private static readonly MyStringId DepthMaterial = MyStringId.GetOrCompute("GaugeThermalDepthLayer");
 
-        // Two ordered planes replace scene colour without assigning heat from distance.
-        // Native depth rejects the far black plane wherever nearer opaque geometry exists.
-        // Measured model triangles follow these planes in the same unsorted PostPP bucket.
+/// <summary>DrawCompositeContext operation.</summary>
         private static void DrawCompositeContext()
         {
             var camera = MyAPIGateway.Session.Camera;
@@ -32,6 +30,7 @@ namespace Thermodynamics
                 ThermalVisionDepthLayers.Plane(i == 0 ? camera.NearPlaneDistance * 1.05 : ThermalVisionDepthLayers.Reach,
                     camera.ProjectionMatrix, camera.WorldMatrix, out centre, out width, out height);
                 MyTransparentGeometry.AddBillboardOriented(DepthMaterial,
+/// <summary>Vector4 operation.</summary>
                     i == 0 ? new Vector4(.035f, .035f, .035f, 1) : new Vector4(0, 0, 0, 1), centre,
                     (Vector3)camera.WorldMatrix.Right, (Vector3)camera.WorldMatrix.Up,
                     width * 1.25f, height * 1.25f, Vector2.Zero, MyBillboard.BlendTypeEnum.PostPP);
@@ -39,6 +38,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>DrawDepthLayers operation.</summary>
         private static void DrawDepthLayers()
         {
             var camera = MyAPIGateway.Session.Camera;
@@ -49,8 +49,6 @@ namespace Thermodynamics
                     + " m, far=5000 m; NOT TEMPERATURE; CPU submission timing excludes GPU cost"
                     + "; viewport=" + camera.ViewportSize + "; offset=" + camera.ViewportOffset
                     + "; projection=" + projection.M11 + "," + projection.M22 + "," + projection.M31 + "," + projection.M32);
-            // PostPP preserves submission order in the installed renderer (unlike Standard).
-            // No plane writes depth: the farthest visible plane replaces earlier colours.
             for (int i = 0; i < ThermalVisionDepthLayers.Count; i++)
             {
                 Vector3D centre;
@@ -68,6 +66,7 @@ namespace Thermodynamics
             Outcome("depth-diagnostic-48-layers-5000m");
             panel.Visible = true;
             if (frames++ % 6 == 0)
+/// <summary>RichText operation.</summary>
                 panel.Text = new RichText("DEPTH DIAGNOSTIC / NOT TEMPERATURE\nLIVE / 48 layers / 5 km / near bright, far dark\n/thermal vision off");
         }
     }

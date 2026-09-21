@@ -5,25 +5,9 @@ using System.Text.RegularExpressions;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Every command the harness answers to is one a reader can find.
-    ///
-    /// <para>
-    /// The front end had grown thirty-nine commands and six of them appeared in no usage text:
-    /// the wind day, the planet climate table and its file generator, the sealed-block scan, and
-    /// three benchmarks. Each of those is a measurement somebody built and then had no way of
-    /// discovering again, which is how `CoolingLadder` ended up written, wired to nothing and
-    /// unread for the life of the repository.
-    /// </para>
-    ///
-    /// <para>
-    /// Read from the source rather than by running the program, because the point is the dispatch
-    /// table and the help text agreeing, and both are text. It cannot check that a description is
-    /// *accurate* — only that a command cannot be added silently.
-    /// </para>
-    /// </summary>
     public class SimCommandTests
     {
+/// <summary>Source operation.</summary>
         private static string Source()
         {
             return File.ReadAllText(Path.Combine(
@@ -31,9 +15,7 @@ namespace Thermodynamics.Tests
                 "tests", "Thermodynamics.Sim", "Program.cs"));
         }
 
-        /// <summary>
-        /// The cases of one switch statement, found by matching braces from its opening one.
-        /// </summary>
+/// <summary>CasesOf operation.</summary>
         private static List<string> CasesOf(string source, string switchHeader)
         {
             int start = source.IndexOf(switchHeader, StringComparison.Ordinal);
@@ -47,6 +29,7 @@ namespace Thermodynamics.Tests
             while (i < source.Length)
             {
                 if (source[i] == '{') depth++;
+/// <summary>if operation.</summary>
                 else if (source[i] == '}')
                 {
                     depth--;
@@ -55,6 +38,7 @@ namespace Thermodynamics.Tests
                 i++;
             }
 
+/// <summary>List operation.</summary>
             List<string> cases = new List<string>();
             foreach (Match match in Regex.Matches(source.Substring(open, i - open),
                 "case \"([a-z0-9\\-]+)\":"))
@@ -66,15 +50,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EveryTopLevelCommandIsInTheUsageText operation.</summary>
         public void EveryTopLevelCommandIsInTheUsageText()
         {
+/// <summary>Source operation.</summary>
             string source = Source();
             string usage = source.Substring(source.IndexOf("private static void PrintUsage", StringComparison.Ordinal));
 
+/// <summary>CasesOf operation.</summary>
             List<string> commands = CasesOf(source, "switch (args[0])");
             Assert.True(commands.Count > 15,
                 "only " + commands.Count + " commands were found, so the dispatch has changed shape");
 
+/// <summary>List operation.</summary>
             List<string> hidden = new List<string>();
             foreach (string command in commands)
             {
@@ -88,15 +76,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EveryBenchmarkIsInTheUsageText operation.</summary>
         public void EveryBenchmarkIsInTheUsageText()
         {
+/// <summary>Source operation.</summary>
             string source = Source();
             string usage = source.Substring(source.IndexOf("private static void PrintUsage", StringComparison.Ordinal));
 
+/// <summary>CasesOf operation.</summary>
             List<string> benchmarks = CasesOf(source, "private static int BenchCommand");
             Assert.True(benchmarks.Count > 10,
                 "only " + benchmarks.Count + " benchmarks were found, so the dispatch has changed shape");
 
+/// <summary>List operation.</summary>
             List<string> hidden = new List<string>();
             foreach (string benchmark in benchmarks)
             {
@@ -109,27 +101,12 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", hidden.ToArray()));
         }
 
-        /// <summary>
-        /// Every tool under `tools/` is named by the README beside it.
-        ///
-        /// <para>
-        /// The corpus tooling had four entry points and its README described two. The two it left
-        /// out were the standing panel the whole dial sweep runs on, and the balance bench — 1,300
-        /// lines of page assembling every corpus dataset into one document, mentioned nowhere in
-        /// the repository except as five words in the iteration log.
-        /// </para>
-        ///
-        /// <para>
-        /// A script is not a command with a help text, so the README is the only place its
-        /// existence is recorded. Fragments a script includes rather than a reader runs — the HTML
-        /// parts the shell scripts concatenate — are named by the prose that describes what
-        /// assembles them, so they are covered by the same check.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>EveryToolIsNamedByItsReadme operation.</summary>
         public void EveryToolIsNamedByItsReadme()
         {
             string tools = Path.Combine(Harness.ShippedBlocks.RepoRoot(), "tools");
+/// <summary>List operation.</summary>
             List<string> orphans = new List<string>();
             int seen = 0;
 
@@ -147,7 +124,6 @@ namespace Thermodynamics.Tests
                     string name = Path.GetFileName(file);
                     if (name == "README.md") continue;
 
-                    // Data the tools read and write rather than something a reader runs.
                     if (name.EndsWith(".csv", StringComparison.Ordinal)) continue;
 
                     seen++;
@@ -164,17 +140,14 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", orphans.ToArray()));
         }
 
-        /// <summary>
-        /// Every lab that produces a report is reachable. A lab nobody can run is a measurement
-        /// nobody takes, and the repository had one — 297 lines answering an open balance
-        /// criterion, wired to nothing.
-        /// </summary>
         [Fact]
+/// <summary>EveryLabThatProducesAReportIsReachable operation.</summary>
         public void EveryLabThatProducesAReportIsReachable()
         {
             string harness = Path.Combine(Thermodynamics.Harness.ShippedBlocks.RepoRoot(),
                 "tests", "Thermodynamics.Harness");
 
+/// <summary>Source operation.</summary>
             string front = Source();
             string tests = "";
             foreach (string file in Directory.GetFiles(Path.Combine(
@@ -183,6 +156,7 @@ namespace Thermodynamics.Tests
                 tests += File.ReadAllText(file);
             }
 
+/// <summary>List operation.</summary>
             List<string> orphans = new List<string>();
             int labs = 0;
 
@@ -190,8 +164,6 @@ namespace Thermodynamics.Tests
             {
                 string source = File.ReadAllText(file);
 
-                // A lab is a class with a public, argument-light Report() — the shape every
-                // command in the front end calls.
                 Match declaration = Regex.Match(source,
                     @"(?m)^[ \t]*public\s+static\s+class\s+(\w+)");
                 if (!declaration.Success) continue;

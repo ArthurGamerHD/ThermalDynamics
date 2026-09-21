@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Does the drag a coefficient implies leave a ship able to fly? The drag milestone's criterion, scored.
 
 **The criterion that decided `DragCoefficient` had no scorer.** It was computed once by hand when
@@ -30,27 +29,23 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cruise
 import scoring
 
-#: Surface gravity, m/s^2. A hull lifts itself when its thrust exceeds its weight here.
 GRAVITY = 9.81
 
-#: The speed the criterion is asked at: the engine's own large-grid cap, so *drag exceeds thrust at
-#: 100 m/s* is exactly *this mod took away a speed the game gave you*.
 CRITERION_SPEED = 100.0
 
-#: No more than this share of self-lifting hulls may have drag beating thrust at CRITERION_SPEED.
 MAX_OVERPOWERED_SHARE = 5.0
 
-#: The p1 hull must still reach at least this, m/s — two thirds of the engine cap, which is where a
-#: player notices they are slow rather than notices they are stuck.
 MIN_P1_CEILING = 60.0
 
 
+# drag newtons operation.
 def drag_newtons(area, coefficient, density, speed, shape):
     """`1/2 C_d rho A v^2` on the frontal projection, with the hull's shape factor applied."""
     return (0.5 * coefficient * density
             * area * cruise.PROJECTED_SHARE * shape * speed * speed)
 
 
+# score operation.
 def score(rows, coefficient, density, shaped):
     """`(share overpowered, p1 ceiling, population)` over the hulls that can lift themselves."""
     overpowered = 0
@@ -66,8 +61,6 @@ def score(rows, coefficient, density, shaped):
         if thrust <= 0 or area <= 0 or mass <= 0:
             continue
 
-        # Can it lift itself? Anything below one gravity never flew, and its ceiling describes a
-        # station rather than a ship drag broke.
         if thrust / (mass * GRAVITY) < 1.0:
             continue
 
@@ -89,11 +82,13 @@ def score(rows, coefficient, density, shaped):
             len(ceilings))
 
 
+# verdict operation.
 def verdict(share, p1):
     """Whether both halves of the registered criterion hold."""
     return share <= MAX_OVERPOWERED_SHARE and p1 >= MIN_P1_CEILING
 
 
+# main operation.
 def main():
     args = scoring.positionals(("--cd", "--rho", "--csv"))
 

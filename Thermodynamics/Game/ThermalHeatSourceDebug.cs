@@ -6,36 +6,22 @@ using VRageMath;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// Placing and dialling point heat sources from chat, so the mechanism can be seen without writing
-    /// a second mod against it. Drives the same <see cref="ThermalHeatSources"/> entry points the API
-    /// does, which is what makes it a debug tool rather than a second implementation; the command
-    /// parsing is in <see cref="HeatSourceCommand"/>, which has no game reference.
-    /// See api.md, Heat sources.
-    /// </summary>
     public static class ThermalHeatSourceDebug
     {
-        /// <summary>Metres in front of the camera a placed source lands.</summary>
         private const float PlaceDistance = 10f;
 
-        /// <summary>
-        /// Sources placed from chat, and when a transient one should be removed. Kept apart from
-        /// the registry's own list so a pulse cannot expire a source another mod registered.
-        /// </summary>
         private class Placed
         {
             public int Id;
             public double ExpiresAt;     // seconds since session start; 0 means never
         }
 
+/// <summary>List operation.</summary>
         private static readonly List<Placed> Ours = new List<Placed>();
 
         private static double elapsed;
 
-        /// <summary>
-        /// Expires any pulse whose time is up. Called once per session tick; costs a walk of the
-        /// chat-placed list, which is empty in every world where nobody typed the command.
-        /// </summary>
+/// <summary>Update operation.</summary>
         public static void Update(float seconds)
         {
             elapsed += seconds;
@@ -50,7 +36,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Runs a <c>heat</c> subcommand and returns what to tell the player.</summary>
+/// <summary>Run operation.</summary>
         public static string Run(string argument)
         {
             HeatSourceCommand.Parsed command = HeatSourceCommand.Parse(argument);
@@ -58,9 +44,11 @@ namespace Thermodynamics
             switch (command.Verb)
             {
                 case HeatSourceCommand.Verb.List:
+/// <summary>List operation.</summary>
                     return List();
 
                 case HeatSourceCommand.Verb.Clear:
+/// <summary>Clear operation.</summary>
                     return Clear();
 
                 case HeatSourceCommand.Verb.Remove:
@@ -75,20 +63,18 @@ namespace Thermodynamics
                         : "no heat source with id " + command.Id;
 
                 case HeatSourceCommand.Verb.Place:
+/// <summary>Place operation.</summary>
                     return Place(command.Watts, command.Range, 0f);
 
                 case HeatSourceCommand.Verb.Pulse:
+/// <summary>Place operation.</summary>
                     return Place(command.Watts, command.Range, command.Seconds);
             }
 
             return command.Error ?? HeatSourceCommand.Help();
         }
 
-        /// <summary>
-        /// Puts a source just in front of the player's camera, which is where someone typing this
-        /// is looking. Fixed in the world rather than attached to the player, so it can be flown
-        /// away from and observed from a ship rather than following the observer around.
-        /// </summary>
+/// <summary>Place operation.</summary>
         private static string Place(float watts, float range, float lifetime)
         {
             MatrixD camera = MyAPIGateway.Session != null && MyAPIGateway.Session.Camera != null
@@ -114,10 +100,12 @@ namespace Thermodynamics
                 + range.ToString("n0", CultureInfo.InvariantCulture) + " m" + note;
         }
 
+/// <summary>List operation.</summary>
         private static string List()
         {
             if (ThermalHeatSources.Count == 0) return "no heat sources registered";
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append(ThermalHeatSources.Count).AppendLine(" heat sources:");
 
@@ -135,6 +123,7 @@ namespace Thermodynamics
             return sb.ToString().TrimEnd();
         }
 
+/// <summary>Clear operation.</summary>
         private static string Clear()
         {
             int count = ThermalHeatSources.Count;
@@ -143,7 +132,7 @@ namespace Thermodynamics
             return "removed " + count + " heat sources";
         }
 
-        /// <summary>Forgets chat-placed bookkeeping. For a session teardown, and for tests.</summary>
+/// <summary>Reset operation.</summary>
         public static void Reset()
         {
             Ours.Clear();

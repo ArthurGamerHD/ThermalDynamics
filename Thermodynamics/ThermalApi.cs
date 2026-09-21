@@ -10,9 +10,7 @@ using VRageMath;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// Provides the public API for other mods to interact with the Thermal Dynamics system.
-    /// </summary>
+     /// <summary>Provides public API for other mods to interact with Thermal Dynamics.</summary>
     public static class ThermalApi
     {
         /// <summary>

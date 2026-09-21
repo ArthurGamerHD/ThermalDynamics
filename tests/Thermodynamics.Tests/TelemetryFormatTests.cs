@@ -5,22 +5,15 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Formatting of the report and the CSVs.
-    ///
-    /// The culture tests are the point of this file. Space Engineers runs on whatever locale the
-    /// player has, and a German or French client formats 1.5 as "1,5" — which in a comma
-    /// separated file is not a decimal point but a new column. A CSV that parses on one machine
-    /// and silently shifts every column on another is worse than no CSV at all.
-    /// </summary>
     public class TelemetryFormatTests
     {
-        /// <summary>Runs an assertion with the thread pinned to a comma-decimal locale.</summary>
+/// <summary>InGermanLocale operation.</summary>
         private static void InGermanLocale(System.Action body)
         {
             CultureInfo original = Thread.CurrentThread.CurrentCulture;
             try
             {
+/// <summary>CultureInfo operation.</summary>
                 Thread.CurrentThread.CurrentCulture = new CultureInfo("de-DE");
                 body();
             }
@@ -31,6 +24,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NumbersUseAPointRegardlessOfTheClientLocale operation.</summary>
         public void NumbersUseAPointRegardlessOfTheClientLocale()
         {
             InGermanLocale(() =>
@@ -42,23 +36,24 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NumbersCarryNoThousandsSeparator operation.</summary>
         public void NumbersCarryNoThousandsSeparator()
         {
-            // A separator would break the column just as surely as a comma decimal point.
             Assert.Equal("1234567", TelemetryFormat.Number(1234567));
             Assert.DoesNotContain(",", TelemetryFormat.Number(9876543.21));
         }
 
         [Fact]
+/// <summary>NonFiniteNumbersBecomeBlankRatherThanText operation.</summary>
         public void NonFiniteNumbersBecomeBlankRatherThanText()
         {
-            // "NaN" and "Infinity" are not numbers to any spreadsheet, and "-∞" is not even ASCII.
             Assert.Equal("", TelemetryFormat.Number(double.NaN));
             Assert.Equal("", TelemetryFormat.Number(double.PositiveInfinity));
             Assert.Equal("", TelemetryFormat.Number(double.NegativeInfinity));
         }
 
         [Fact]
+/// <summary>WholeNumbersDoNotGrowATrailingDecimalPart operation.</summary>
         public void WholeNumbersDoNotGrowATrailingDecimalPart()
         {
             Assert.Equal("0", TelemetryFormat.Number(0));
@@ -66,6 +61,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>IntegersAreInvariantToo operation.</summary>
         public void IntegersAreInvariantToo()
         {
             InGermanLocale(() =>
@@ -76,16 +72,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>QuotingWrapsAValueAndDoublesAnyEmbeddedQuote operation.</summary>
         public void QuotingWrapsAValueAndDoublesAnyEmbeddedQuote()
         {
-            // Grid names are player supplied. A ship called  Foo, "Bar"  must not become three
-            // columns.
             Assert.Equal("\"Rusty Miner\"", TelemetryFormat.Quote("Rusty Miner"));
             Assert.Equal("\"a,b\"", TelemetryFormat.Quote("a,b"));
             Assert.Equal("\"say \"\"hi\"\"\"", TelemetryFormat.Quote("say \"hi\""));
         }
 
         [Fact]
+/// <summary>QuotingAnEmptyOrNullValueProducesAnEmptyField operation.</summary>
         public void QuotingAnEmptyOrNullValueProducesAnEmptyField()
         {
             Assert.Equal("", TelemetryFormat.Quote(null));
@@ -93,6 +89,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TruncationNeverExceedsTheColumnWidth operation.</summary>
         public void TruncationNeverExceedsTheColumnWidth()
         {
             for (int width = 1; width <= 12; width++)
@@ -104,12 +101,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TruncationMarksTheClipSoAShortenedNameIsNeverMistakenForAWholeOne operation.</summary>
         public void TruncationMarksTheClipSoAShortenedNameIsNeverMistakenForAWholeOne()
         {
             Assert.Equal("Gaug~", TelemetryFormat.Truncate("Gauge_LG_CoolantPump", 5));
         }
 
         [Fact]
+/// <summary>AValueThatFitsIsLeftExactlyAsItIs operation.</summary>
         public void AValueThatFitsIsLeftExactlyAsItIs()
         {
             Assert.Equal("Reactor", TelemetryFormat.Truncate("Reactor", 7));
@@ -117,6 +116,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnAbsentValueTruncatesToADash operation.</summary>
         public void AnAbsentValueTruncatesToADash()
         {
             Assert.Equal("-", TelemetryFormat.Truncate(null, 10));
@@ -124,14 +124,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>APeakThatWasNeverSetReadsAsAbsentRatherThanAsTheFloatFloor operation.</summary>
         public void APeakThatWasNeverSetReadsAsAbsentRatherThanAsTheFloatFloor()
         {
-            // Peaks seed at float.MinValue so the first sample always wins. Printing that seed
-            // would put -340282346638528860000000000000000000000 in the report.
             Assert.Equal("-", TelemetryFormat.Peak(float.MinValue));
         }
 
         [Fact]
+/// <summary>APeakThatWasSetIsPrinted operation.</summary>
         public void APeakThatWasSetIsPrinted()
         {
             Assert.Contains("1", TelemetryFormat.Peak(1234.5f));
@@ -139,6 +139,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>BucketLabelsCoverTheWholeLineWithoutAGap operation.</summary>
         public void BucketLabelsCoverTheWholeLineWithoutAGap()
         {
             float[] edges = { 10f, 20f, 30f };
@@ -150,9 +151,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>BucketLabelsKeepAFractionalEdgeReadable operation.</summary>
         public void BucketLabelsKeepAFractionalEdgeReadable()
         {
-            // The lowest temperature edge is 2.8 K, which "n0" would have rendered as "3".
             float[] edges = { 2.8f, 50f };
 
             Assert.Equal("< 2.8K", TelemetryFormat.BucketLabel(edges, 0, "K"));
@@ -160,6 +161,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>BucketLabelsAreInvariantToo operation.</summary>
         public void BucketLabelsAreInvariantToo()
         {
             InGermanLocale(() =>
@@ -169,6 +171,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ABucketLabelWithoutEdgesDoesNotThrow operation.</summary>
         public void ABucketLabelWithoutEdgesDoesNotThrow()
         {
             Assert.Equal("all", TelemetryFormat.BucketLabel(null, 0, "K"));
@@ -176,8 +179,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>CsvFieldsAreCommaSeparatedAndTheLastEndsTheLine operation.</summary>
         public void CsvFieldsAreCommaSeparatedAndTheLastEndsTheLine()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             TelemetryFormat.AppendCsv(sb, "Rusty Miner");
@@ -189,9 +194,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ARowHasAsManyFieldsAsItsHeaderEvenWhenValuesAreMissing operation.</summary>
         public void ARowHasAsManyFieldsAsItsHeaderEvenWhenValuesAreMissing()
         {
-            // Every gap is an empty field, never a dropped one, or every column after it shifts.
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             TelemetryFormat.AppendCsv(sb, (string)null);
@@ -201,16 +207,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(3, sb.ToString().TrimEnd('\n').Split(',').Length);
         }
 
-        /// <summary>
-        /// What the shipped telemetry writer quotes, the harness's one CSV reader parses back.
-        ///
-        /// The mod cannot reference the harness, so this writer is necessarily its own copy of
-        /// the escape rather than a call into <c>CsvLine.Text</c> — the exemption
-        /// `ConsolidationTests` carries — and a pair that cannot be one definition is held
-        /// together by a round trip instead (`D3`): the field dumps this writer produces are
-        /// exactly what the harness's readers consume.
-        /// </summary>
         [Fact]
+/// <summary>WhatTheShippedWriterQuotesTheHarnessReaderParsesBack operation.</summary>
         public void WhatTheShippedWriterQuotesTheHarnessReaderParsesBack()
         {
             string name = "The \"Iron\" Maiden, Mk II";

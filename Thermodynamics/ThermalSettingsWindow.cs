@@ -8,61 +8,50 @@ using VRageMath;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// The settings window, drawn by this mod rather than by the Rich HUD terminal.
-    ///
-    /// <para>
-    /// **The terminal draws a panel around every control and this mod cannot reach it.** A page
-    /// there is page, category, tile, control, and the tile is a fixed 300x250 box with a border
-    /// and a scroll bar of its own, created and drawn inside Rich HUD Master — the client API
-    /// offers `AddControl` and `Enabled` and nothing else, so neither the box nor the line under it
-    /// can be turned off, and a control cannot be attached anywhere but inside one. The framework's
-    /// HUD element library is a different matter: it compiles into this mod and draws from here,
-    /// which is what the crosshair readout and the debug panel are already made of. So the window
-    /// is built from those, and a setting sits on the page itself.
-    /// </para>
-    ///
-    /// <para>
-    /// It still needs Rich HUD Master installed — the HUD tree is rooted in it — but what the
-    /// window looks like is this file's decision.
-    /// </para>
-    /// </summary>
     public sealed class ThermalSettingsWindow : WindowBase
     {
-        /// <summary>Width of the page rail down the left.</summary>
         private const float NavWidth = 232f;
 
-        /// <summary>Height of one setting's row, and of one entry in the rail.</summary>
         private const float RowHeight = 32f, NavRowHeight = 26f;
 
-        /// <summary>Width of the control column, and of the value column right of it.</summary>
         private const float ControlWidth = 250f, ValueWidth = 86f;
 
         private const float Gap = 10f;
 
+/// <summary>Color operation.</summary>
         private static readonly Color Body = new Color(24, 30, 36, 240);
+/// <summary>Color operation.</summary>
         private static readonly Color Edge = new Color(72, 86, 98);
+/// <summary>Color operation.</summary>
         private static readonly Color Selected = new Color(51, 66, 76);
+/// <summary>Color operation.</summary>
         private static readonly Color Clear = new Color(0, 0, 0, 0);
 
         private static readonly GlyphFormat TitleFormat =
+/// <summary>GlyphFormat operation.</summary>
             new GlyphFormat(new Color(238, 244, 248), TextAlignment.Left, 1.2f);
         private static readonly GlyphFormat NoteFormat =
+/// <summary>GlyphFormat operation.</summary>
             new GlyphFormat(new Color(140, 156, 168), TextAlignment.Left, 0.95f);
         private static readonly GlyphFormat NameFormat =
+/// <summary>GlyphFormat operation.</summary>
             new GlyphFormat(new Color(210, 224, 232), TextAlignment.Left, 1.02f);
         private static readonly GlyphFormat DimFormat =
+/// <summary>GlyphFormat operation.</summary>
             new GlyphFormat(new Color(126, 138, 148), TextAlignment.Left, 1.02f);
         private static readonly GlyphFormat ValueFormat =
+/// <summary>GlyphFormat operation.</summary>
             new GlyphFormat(new Color(178, 196, 208), TextAlignment.Right, 1.02f);
         private static readonly GlyphFormat FolderFormat =
+/// <summary>GlyphFormat operation.</summary>
             new GlyphFormat(new Color(132, 148, 160), TextAlignment.Left, 0.95f);
         private static readonly GlyphFormat NavFormat =
+/// <summary>GlyphFormat operation.</summary>
             new GlyphFormat(new Color(206, 220, 230), TextAlignment.Left, 1.02f);
         private static readonly GlyphFormat StatFormat =
+/// <summary>GlyphFormat operation.</summary>
             new GlyphFormat(new Color(198, 214, 224), TextAlignment.Left, 0.98f);
 
-        /// <summary>One page: what the rail calls it, and what it holds.</summary>
         private sealed class Page
         {
             public string Name;
@@ -76,53 +65,49 @@ namespace Thermodynamics
         private readonly TexturedBox divider;
         private readonly BorderedButton close;
 
+/// <summary>List operation.</summary>
         private readonly List<Page> pages = new List<Page>();
         private Page current;
 
-        /// <summary>
-        /// What each control does to bring itself back in step with the settings. A change made
-        /// anywhere — another control, the Defaults button, the server pushing new values — is
-        /// reflected in all of them rather than only in the one that was touched.
-        /// </summary>
+/// <summary>List operation.</summary>
         private readonly List<Action> refreshers = new List<Action>();
 
-        /// <summary>
-        /// True while <see cref="Refresh"/> is writing values into controls, so a control's own
-        /// change handler does not read that as the player moving it and write it back.
-        /// </summary>
         private bool refreshing;
 
-        /// <summary>
-        /// What each slider does every frame: watch for the Ctrl that offers it a field, and for the
-        /// Enter, the Escape or the lost focus that closes one. Per control rather than per window,
-        /// because the state belongs to the control.
-        /// </summary>
+/// <summary>List operation.</summary>
         private readonly List<Action> polls = new List<Action>();
 
-        /// <summary>Whether Ctrl is down this frame, read once for every slider on the page.</summary>
         private bool CtrlHeld;
 
-        /// <summary>The statistics page's lines, one label each, so the page scrolls.</summary>
+/// <summary>List operation.</summary>
         private readonly List<Label> statisticsLines = new List<Label>();
         private ScrollBox statisticsBox;
 
+/// <summary>ThermalSettingsWindow operation.</summary>
         public ThermalSettingsWindow(HudParentBase parent) : base(parent)
         {
             HeaderText = "Thermodynamics";
+/// <summary>GlyphFormat operation.</summary>
             HeaderBuilder.Format = new GlyphFormat(new Color(232, 240, 246), TextAlignment.Center, 1.1f);
 
             BodyColor = Body;
             BorderColor = Edge;
 
+/// <summary>Vector2 operation.</summary>
             Size = new Vector2(1080f, 680f);
+/// <summary>Vector2 operation.</summary>
             MinimumSize = new Vector2(720f, 400f);
 
+/// <summary>BorderedButton operation.</summary>
             close = new BorderedButton(header)
             {
                 Text = "close",
+/// <summary>Vector2 operation.</summary>
                 Size = new Vector2(72f, 22f),
                 ParentAlignment = ParentAlignments.InnerRight | ParentAlignments.InnerV,
+/// <summary>Vector2 operation.</summary>
                 Offset = new Vector2(-8f, 0f),
+/// <summary>GlyphFormat operation.</summary>
                 Format = new GlyphFormat(new Color(214, 226, 234), TextAlignment.Center, 0.9f),
                 Color = Clear,
                 BorderColor = Edge,
@@ -130,6 +115,7 @@ namespace Thermodynamics
             };
             close.MouseInput.LeftClicked += (sender, args) => Hide();
 
+/// <summary>ScrollBox operation.</summary>
             nav = new ScrollBox(true, body)
             {
                 ParentAlignment = ParentAlignments.InnerTopLeft,
@@ -140,13 +126,16 @@ namespace Thermodynamics
                 Spacing = 2f,
             };
 
+/// <summary>TexturedBox operation.</summary>
             divider = new TexturedBox(body)
             {
                 ParentAlignment = ParentAlignments.InnerTopLeft,
+/// <summary>Color operation.</summary>
                 Color = new Color(56, 68, 78),
                 Width = 1f,
             };
 
+/// <summary>Label operation.</summary>
             title = new Label(body)
             {
                 ParentAlignment = ParentAlignments.InnerTopLeft,
@@ -156,6 +145,7 @@ namespace Thermodynamics
                 Height = 30f,
             };
 
+/// <summary>Label operation.</summary>
             note = new Label(body)
             {
                 ParentAlignment = ParentAlignments.InnerTopLeft,
@@ -168,10 +158,7 @@ namespace Thermodynamics
             Visible = false;
         }
 
-        /// <summary>
-        /// Sizes the rail, the heading and whichever page is showing to the window as it stands,
-        /// which is what lets the window be dragged larger and the pages grow with it.
-        /// </summary>
+/// <summary>Layout operation.</summary>
         protected override void Layout()
         {
             base.Layout();
@@ -180,18 +167,22 @@ namespace Thermodynamics
 
             nav.Width = NavWidth;
             nav.Height = Math.Max(height - 2f * Gap, 1f);
+/// <summary>Vector2 operation.</summary>
             nav.Offset = new Vector2(Gap, -Gap);
 
             divider.Height = Math.Max(height - 2f * Gap, 1f);
+/// <summary>Vector2 operation.</summary>
             divider.Offset = new Vector2(NavWidth + 1.5f * Gap, -Gap);
 
             float left = NavWidth + 2f * Gap;
             float contentWidth = Math.Max(width - left - Gap, 1f);
 
             title.Width = contentWidth;
+/// <summary>Vector2 operation.</summary>
             title.Offset = new Vector2(left, -Gap);
 
             note.Width = contentWidth;
+/// <summary>Vector2 operation.</summary>
             note.Offset = new Vector2(left, -(Gap + title.Height));
 
             float top = Gap + title.Height + note.Height + Gap;
@@ -203,20 +194,19 @@ namespace Thermodynamics
 
                 box.Width = contentWidth;
                 box.Height = Math.Max(height - top - Gap, 1f);
+/// <summary>Vector2 operation.</summary>
                 box.Offset = new Vector2(left, -top);
             }
         }
 
-        /// <summary>Escape closes the window, as it does every other menu in the game.</summary>
+/// <summary>HandleInput operation.</summary>
         protected override void HandleInput(Vector2 cursorPos)
         {
             base.HandleInput(cursorPos);
 
             CtrlHeld = MyAPIGateway.Input != null && MyAPIGateway.Input.IsAnyCtrlKeyPressed();
 
-            // Asked before the polls run, because a poll is what consumes an Escape pressed into an
-            // open field — and without this the same keystroke would close the field and then the
-            // window behind it.
+/// <summary>TypingSomewhere operation.</summary>
             bool typing = TypingSomewhere();
 
             for (int i = 0; i < polls.Count; i++) polls[i]();
@@ -224,7 +214,7 @@ namespace Thermodynamics
             if (SharedBinds.Escape.IsNewPressed && !typing) Hide();
         }
 
-        /// <summary>Whether a slider on the page has been turned into a field that is open.</summary>
+/// <summary>TypingSomewhere operation.</summary>
         private bool TypingSomewhere()
         {
             for (int i = 0; i < typingCells.Count; i++)
@@ -235,10 +225,11 @@ namespace Thermodynamics
             return false;
         }
 
-        /// <summary>One per slider: whether that slider is showing its field.</summary>
         private readonly List<Func<bool>> typingCells = new List<Func<bool>>();
+/// <summary>List operation.</summary>
         private readonly List<Action> closeTextInputs = new List<Action>();
 
+/// <summary>Show operation.</summary>
         public void Show()
         {
             Visible = true;
@@ -246,10 +237,9 @@ namespace Thermodynamics
             GetWindowFocus();
         }
 
+/// <summary>Hide operation.</summary>
         public void Hide()
         {
-            // Hiding a parent does not clear a TextBox's explicit OpenInput state or focus.
-            // Release only our own editors; never override another mod's input blacklist.
             foreach (Action close in closeTextInputs) close();
             Visible = false;
             HudMain.EnableCursor = false;
@@ -257,11 +247,8 @@ namespace Thermodynamics
 
         public bool IsOpen => Visible;
 
-        // ---------------------------------------------------------------------------------------
-        // Building
-        // ---------------------------------------------------------------------------------------
 
-        /// <summary>A heading in the rail, naming the group of pages under it.</summary>
+/// <summary>Adds a folder.</summary>
         public void AddFolder(string name)
         {
             nav.Add(new Label
@@ -270,17 +257,17 @@ namespace Thermodynamics
                 VertCenterText = true,
                 Format = FolderFormat,
                 Height = NavRowHeight,
+/// <summary>Vector2 operation.</summary>
                 Padding = new Vector2(10f, 0f),
                 Text = name.ToUpper(),
             });
         }
 
-        /// <summary>
-        /// A page of settings: one control to a row, on the window's own background.
-        /// </summary>
+/// <summary>Adds a page.</summary>
         public void AddPage(string name, string subheader, IList<string> settings,
             IList<string> advanced, bool editable, string trailing, bool indented)
         {
+/// <summary>NewPage operation.</summary>
             Page page = NewPage(name, subheader, indented);
 
             for (int i = 0; i < settings.Count; i++)
@@ -288,8 +275,6 @@ namespace Thermodynamics
                 page.Box.Add(BuildRow(settings[i], editable));
             }
 
-            // The line, and only when there is something below it: a page whose every setting is
-            // ordinary should not look as though it is hiding one.
             if (advanced != null && advanced.Count > 0)
             {
                 page.Box.Add(Spacer());
@@ -308,9 +293,10 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>The one bulk action, on a page of its own.</summary>
+/// <summary>Adds a defaultspage.</summary>
         public void AddDefaultsPage(bool local, Action restore)
         {
+/// <summary>NewPage operation.</summary>
             Page page = NewPage("Defaults", local
                 ? "Returns every world setting to the value a fresh install ships"
                 : "Applied by the server; ask an administrator", false);
@@ -324,7 +310,9 @@ namespace Thermodynamics
             BorderedButton button = new BorderedButton
             {
                 Text = "Restore every world setting",
+/// <summary>Vector2 operation.</summary>
                 Size = new Vector2(300f, 30f),
+/// <summary>GlyphFormat operation.</summary>
                 Format = new GlyphFormat(new Color(226, 236, 242), TextAlignment.Center, 1.02f),
                 Color = Clear,
                 BorderColor = Edge,
@@ -333,6 +321,7 @@ namespace Thermodynamics
             if (local) button.MouseInput.LeftClicked += (sender, args) => restore();
             else button.UseCursor = false;
 
+/// <summary>HudChain operation.</summary>
             HudChain row = new HudChain(false)
             {
                 Height = 34f,
@@ -344,18 +333,15 @@ namespace Thermodynamics
             page.Box.Add(row);
         }
 
-        /// <summary>
-        /// The statistics page: the one page that holds sentences rather than controls. A label to
-        /// the line, so that it scrolls — a scroll box moves its members, and a single tall member
-        /// has nothing to move.
-        /// </summary>
+/// <summary>Adds a statisticspage.</summary>
         public void AddStatisticsPage()
         {
+/// <summary>NewPage operation.</summary>
             Page page = NewPage("Statistics", "What this world is set to, and what it is doing", false);
             statisticsBox = page.Box;
         }
 
-        /// <summary>Writes the statistics text into the page, a label to the line.</summary>
+/// <summary>Sets the statistics.</summary>
         public void SetStatistics(string text)
         {
             if (statisticsBox == null) return;
@@ -388,14 +374,16 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Opens the window on the page it was last on, or on the first one built.</summary>
+/// <summary>OpenToFirst operation.</summary>
         public void OpenToFirst()
         {
             if (current == null && pages.Count > 0) Select(pages[0]);
         }
 
+/// <summary>NewPage operation.</summary>
         private Page NewPage(string name, string subheader, bool indented)
         {
+/// <summary>ScrollBox operation.</summary>
             ScrollBox box = new ScrollBox(true, body)
             {
                 SizingMode = HudChainSizingModes.FitMembersOffAxis
@@ -412,10 +400,12 @@ namespace Thermodynamics
                 VertCenterText = true,
                 Format = NavFormat,
                 Height = NavRowHeight,
+/// <summary>Vector2 operation.</summary>
                 TextPadding = new Vector2(indented ? 26f : 12f, 0f),
                 Text = name,
                 Color = Clear,
                 HighlightEnabled = true,
+/// <summary>Color operation.</summary>
                 HighlightColor = new Color(44, 56, 66),
             };
 
@@ -430,6 +420,7 @@ namespace Thermodynamics
             return page;
         }
 
+/// <summary>Select operation.</summary>
         private void Select(Page page)
         {
             for (int i = 0; i < pages.Count; i++)
@@ -445,11 +436,7 @@ namespace Thermodynamics
             note.Text = page.Note;
         }
 
-        /// <summary>
-        /// A heading across the page with a rule beside it, for the tier below the fold: the
-        /// settings a world tunes once or never, on the page that owns them rather than moved
-        /// somewhere a reader has to go looking.
-        /// </summary>
+/// <summary>Divider operation.</summary>
         private static HudElementBase Divider(string text)
         {
             Label label = new Label
@@ -461,8 +448,10 @@ namespace Thermodynamics
                 Width = 90f,
             };
 
+/// <summary>Color operation.</summary>
             TexturedBox rule = new TexturedBox { Color = new Color(56, 68, 78), Height = 1f };
 
+/// <summary>HudChain operation.</summary>
             HudChain row = new HudChain(false)
             {
                 Height = 24f,
@@ -476,13 +465,13 @@ namespace Thermodynamics
             return row;
         }
 
-        /// <summary>Blank vertical space between one thing and the next.</summary>
+/// <summary>Spacer operation.</summary>
         private static HudElementBase Spacer()
         {
             return new EmptyHudElement { Height = 10f, Width = 10f };
         }
 
-        /// <summary>A line of prose across the page, wrapped to whatever width the window is.</summary>
+/// <summary>TextLine operation.</summary>
         private static HudElementBase TextLine(string text, GlyphFormat format)
         {
             return new Label
@@ -495,11 +484,7 @@ namespace Thermodynamics
             };
         }
 
-        /// <summary>
-        /// One setting's row: its name across the left, its control in a column of one width, and
-        /// the value it is at on the right. Three columns rather than each control carrying its own
-        /// label, because a column that lines up is what makes a page of forty dials readable.
-        /// </summary>
+/// <summary>Builds the API method table.</summary>
         private HudElementBase BuildRow(string name, bool editable)
         {
             ThermalSettingsMenu.Entry entry = ThermalSettingsMenu.EntryFor(name);
@@ -522,8 +507,10 @@ namespace Thermodynamics
                 Text = "",
             };
 
+/// <summary>Builds the method table.</summary>
             HudElementBase control = BuildControl(name, entry, enabled, label, value);
 
+/// <summary>HudChain operation.</summary>
             HudChain row = new HudChain(false)
             {
                 Height = RowHeight,
@@ -538,11 +525,7 @@ namespace Thermodynamics
             return row;
         }
 
-        /// <summary>
-        /// The control a setting gets: a switch for a flag, a named choice where the values are
-        /// distinct behaviours, a typed field where a slider cannot divide the range, and a slider
-        /// otherwise. The same four the terminal menu offered, which is where these rules come from.
-        /// </summary>
+/// <summary>Builds the method table.</summary>
         private HudElementBase BuildControl(string name, ThermalSettingsMenu.Entry entry,
             bool enabled, Label label, Label value)
         {
@@ -552,30 +535,32 @@ namespace Thermodynamics
 
             if (name == "DebugBlockOverlay")
             {
-                // Read from the view rather than from the setting: Ctrl+Shift+= cycles the overlay
-                // without writing one, so the setting is what it was last set to and the view is
-                // what is actually on screen.
                 return Choice(name, enabled, label, tip, ThermalSettingsMenu.OverlayNames(),
                     () => (int)ThermalDebugView.Current);
             }
 
             if (name == "ShadowDetail")
             {
+/// <summary>Choice operation.</summary>
                 return Choice(name, enabled, label, tip, ThermalSettingsMenu.ShadowDetailNames, null);
             }
 
             if (ThermalSettingsMenu.NeedsTyping(entry))
             {
+/// <summary>Field operation.</summary>
                 return Field(name, entry, enabled, label, tip);
             }
 
+/// <summary>Slider operation.</summary>
             return Slider(name, entry, enabled, label, value, tip);
         }
 
+/// <summary>Switch operation.</summary>
         private HudElementBase Switch(string name, bool enabled, Label label, ToolTip tip)
         {
             BorderedCheckBox box = new BorderedCheckBox
             {
+/// <summary>Vector2 operation.</summary>
                 Size = new Vector2(26f, 26f),
                 BorderColor = Edge,
                 Value = Settings.Instance.GetValue(name) > 0.5f,
@@ -596,6 +581,7 @@ namespace Thermodynamics
                 Mark(label, name);
             });
 
+/// <summary>HudChain operation.</summary>
             HudChain holder = new HudChain(false)
             {
                 Width = ControlWidth,
@@ -606,6 +592,7 @@ namespace Thermodynamics
             return holder;
         }
 
+/// <summary>Choice operation.</summary>
         private HudElementBase Choice(string name, bool enabled, Label label, ToolTip tip,
             string[] labels, Func<int> live)
         {
@@ -615,6 +602,7 @@ namespace Thermodynamics
             {
                 Width = ControlWidth,
                 Height = 26f,
+/// <summary>Color operation.</summary>
                 Color = new Color(38, 48, 56),
             };
 
@@ -643,10 +631,7 @@ namespace Thermodynamics
             return dropdown;
         }
 
-        /// <summary>
-        /// A setting typed rather than dragged, for the ranges a slider cannot divide: the step
-        /// budget spans four million and the friction scale spans a hundredth.
-        /// </summary>
+/// <summary>Field operation.</summary>
         private HudElementBase Field(string name, ThermalSettingsMenu.Entry entry, bool enabled,
             Label label, ToolTip tip)
         {
@@ -654,8 +639,10 @@ namespace Thermodynamics
             {
                 Width = ControlWidth,
                 Height = 26f,
+/// <summary>Color operation.</summary>
                 Color = new Color(38, 48, 56),
                 BorderColor = Edge,
+/// <summary>GlyphFormat operation.</summary>
                 Format = new GlyphFormat(new Color(214, 228, 236), TextAlignment.Left, 1.02f),
                 Text = ThermalSettingsMenu.Number(Settings.Instance.GetValue(name), entry),
                 EnableEditing = enabled,
@@ -665,8 +652,6 @@ namespace Thermodynamics
             closeTextInputs.Add(() => { field.FocusHandler.ReleaseFocus(); field.CloseInput(); });
             field.UseCursor = enabled;
 
-            // Anything that cannot be part of a number never reaches the field, so a typo is
-            // refused as it is made rather than on losing focus.
             field.CharFilterFunc = c =>
                 (c >= '0' && c <= '9') || c == '.' || c == '-' || c == 'e' || c == 'E' || c == '+';
 
@@ -682,8 +667,6 @@ namespace Thermodynamics
 
             refreshers.Add(() =>
             {
-                // Not while it is being typed into: putting the setting's value back mid-number
-                // would fight whoever is typing it.
                 if (!field.InputOpen)
                     field.Text = ThermalSettingsMenu.Number(Settings.Instance.GetValue(name), entry);
 
@@ -693,31 +676,13 @@ namespace Thermodynamics
             return field;
         }
 
-        /// <summary>
-        /// A slider, and the field it becomes when a value is held down on with **Ctrl**.
-        ///
-        /// <para>
-        /// **A slider has about two hundred positions and some of these ranges have thousands of
-        /// values a player means exactly.** The menu already types the ranges no slider can divide
-        /// at all — the step budget, the friction scale — but a range that a slider can *nearly*
-        /// divide is the worse case: it looks as though it reached 6.5 and it is at 6.47. Ctrl and a
-        /// click puts the number in a field, Enter or a click elsewhere commits it, and Escape
-        /// leaves the setting where it was.
-        /// </para>
-        ///
-        /// <para>
-        /// **The grab is what takes the click, not the slider.** A ctrl-click that reached the
-        /// slider would move it to wherever it landed before the field opened, so the setting would
-        /// change on the way to typing a different value. The grab sits over the cell with the
-        /// window's own topmost offset and is only visible — and a hidden element takes no input —
-        /// while Ctrl is down.
-        /// </para>
-        /// </summary>
+/// <summary>Slider operation.</summary>
         private HudElementBase Slider(string name, ThermalSettingsMenu.Entry entry, bool enabled,
             Label label, Label value, ToolTip tip)
         {
             HudElementBase cell = new EmptyHudElement { Width = ControlWidth };
 
+/// <summary>SliderBox operation.</summary>
             SliderBox slider = new SliderBox(cell)
             {
                 DimAlignment = DimAlignments.Size,
@@ -725,14 +690,19 @@ namespace Thermodynamics
                 Max = entry.Max,
                 Value = Settings.Instance.GetValue(name),
                 BorderColor = Edge,
+/// <summary>Color operation.</summary>
                 BackgroundColor = new Color(38, 48, 56),
             };
 
+/// <summary>TextField operation.</summary>
             TextField typed = new TextField(cell)
             {
                 DimAlignment = DimAlignments.Size,
+/// <summary>Color operation.</summary>
                 Color = new Color(38, 48, 56),
+/// <summary>Color operation.</summary>
                 BorderColor = new Color(120, 168, 196),
+/// <summary>GlyphFormat operation.</summary>
                 Format = new GlyphFormat(new Color(226, 238, 246), TextAlignment.Left, 1.02f),
                 Visible = false,
             };
@@ -740,6 +710,7 @@ namespace Thermodynamics
             typed.CharFilterFunc = c =>
                 (c >= '0' && c <= '9') || c == '.' || c == '-' || c == 'e' || c == 'E' || c == '+';
 
+/// <summary>MouseInputElement operation.</summary>
             MouseInputElement grab = new MouseInputElement(cell)
             {
                 DimAlignment = DimAlignments.Size,
@@ -754,12 +725,6 @@ namespace Thermodynamics
 
             value.Text = ThermalSettingsMenu.ValueText(slider.Value, entry);
 
-            // **A drag writes once, when it ends.** Every write applies the whole configuration:
-            // it publishes to the network, bumps the solver revision every grid then notices, and
-            // has each of them walk its nodes and rebuild its room air. A slider dragged for a
-            // second used to do that sixty times, which on a fleet is far more work than a frame
-            // can carry and reads as input lag rather than as a slow menu. The label follows the
-            // handle live; the setting follows the mouse button.
             bool held = false;
             float pending = 0f;
 
@@ -791,8 +756,6 @@ namespace Thermodynamics
                 typed.OpenInput();
             };
 
-            // Closing hands the field's text to the same write path a slider uses, so a typed value
-            // goes through the same clamp as the chat command and the mod API.
             Action close = () =>
             {
                 if (!typed.Visible) return;
@@ -819,8 +782,6 @@ namespace Thermodynamics
 
             polls.Add(() =>
             {
-                // The end of a drag: the button is up and the last value the handle passed has not
-                // been written yet.
                 if (held && !slider.MouseInput.IsLeftClicked)
                 {
                     held = false;
@@ -829,8 +790,6 @@ namespace Thermodynamics
 
                 if (typed.Visible)
                 {
-                    // Escape leaves the setting alone; Enter and losing the field's focus commit.
-                    // Focus is what `InputOpen` follows, so clicking anywhere else is a commit.
                     if (SharedBinds.Escape.IsNewPressed) { close(); return; }
                     if (SharedBinds.Enter.IsNewPressed || !typed.InputOpen) commit();
 
@@ -853,15 +812,13 @@ namespace Thermodynamics
             return cell;
         }
 
-        /// <summary>A setting moved away from what a fresh install ships is dotted.</summary>
+/// <summary>Mark operation.</summary>
         private static void Mark(Label label, string name)
         {
             label.Text = ThermalSettingsMenu.Label(name, ThermalSettingsMenu.Changed(name));
         }
 
-        /// <summary>
-        /// Brings every control back in step with the settings behind them.
-        /// </summary>
+/// <summary>Refresh operation.</summary>
         public void Refresh()
         {
             refreshing = true;

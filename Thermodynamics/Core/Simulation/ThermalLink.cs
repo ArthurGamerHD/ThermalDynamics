@@ -3,22 +3,16 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// A conduction path between two nodes, with a single symmetric conductance in W/K — one figure
-    /// shared by both ends, which is what makes the exchange energy-conserving.
-    /// See thermal-model.md, The three invariants.
-    /// </summary>
     public struct ThermalLink
     {
         public int NodeA;
         public int NodeB;
 
-        /// <summary>Conductance, W/K. Always positive.</summary>
         public float Conductance;
 
-        /// <summary>Mounted contact area in lattice cell faces. Diagnostic only.</summary>
         public int ContactFaces;
 
+/// <summary>ThermalLink operation.</summary>
         public ThermalLink(int nodeA, int nodeB, float conductance, int contactFaces)
         {
             NodeA = nodeA;
@@ -28,44 +22,22 @@ namespace Thermodynamics.Core
         }
     }
 
-    /// <summary>
-    /// Builds conduction links between blocks. Every query is answered from the two blocks' bounds and
-    /// their per-face surface summaries in constant time; nothing walks a block's cells, which on an
-    /// SE2 lattice would be eight thousand of them per five-metre block.
-    /// See scale-design.md, Cell-centric to boundary-centric.
-    /// </summary>
     public static class ConductionBuilder
     {
-        /// <summary>
-        /// The face of <paramref name="a"/> that touches <paramref name="b"/>, or -1 when the
-        /// two blocks do not share any area.
-        /// </summary>
+/// <summary>ContactFace operation.</summary>
         public static int ContactFace(BlockInstance a, BlockInstance b)
         {
             if (a == null || b == null || a == b) return -1;
             return BoxGeometry.TouchingFace(a.Min, a.MaxExclusive, b.Min, b.MaxExclusive);
         }
 
-        /// <summary>
-        /// Shared area where both blocks carry a mount surface across the joint. This is the area
-        /// heat conducts through.
-        /// </summary>
-        /// <remarks>
-        /// Exact where a face is uniformly mounted or uniformly bare. Where both sides are partly
-        /// mounted the fractions combine as independent, since the model records coverage per face
-        /// rather than per cell. See known-issues.md, Deliberate limits.
-        /// </remarks>
+/// <summary>CountContactFaces operation.</summary>
         public static int CountContactFaces(BlockInstance a, BlockInstance b)
         {
             return CountContactFaces(a, b, ContactFace(a, b));
         }
 
-        /// <summary>
-        /// The same count for a caller that has already found the touching face — which the link
-        /// builder has, since it tests for one before asking. Finding it twice per pair was a
-        /// million redundant box overlaps on a large grid.
-        /// See performance.md, Pass 3, Iteration 4.
-        /// </summary>
+/// <summary>CountContactFaces operation.</summary>
         public static int CountContactFaces(BlockInstance a, BlockInstance b, int face)
         {
             if (face < 0) return 0;
@@ -81,24 +53,23 @@ namespace Thermodynamics.Core
             return bolted;
         }
 
-        /// <summary>
-        /// Conductance in W/K for a contact between two blocks: two conductors in series, centre to
-        /// interface to centre, <c>G = A_contact / (L_a / k_a + L_b / k_b)</c>. Symmetric by
-        /// construction, and scaling with real dimensions, which is what lets one grid mix block
-        /// sizes. See thermal-model.md, Conduction.
-        /// </summary>
+/// <summary>Conductance operation.</summary>
         public static float Conductance(
             float latticeSize, BlockInstance a, BlockInstance b, int contactFaces, int axis)
         {
             if (contactFaces <= 0 || latticeSize <= 0f) return 0f;
 
+/// <summary>Conductivity operation.</summary>
             float ka = Conductivity(a);
+/// <summary>Conductivity operation.</summary>
             float kb = Conductivity(b);
             if (ka <= 0f || kb <= 0f) return 0f;
 
             float contactArea = contactFaces * latticeSize * latticeSize;
 
+/// <summary>HalfDepth operation.</summary>
             float la = HalfDepth(a, axis, latticeSize);
+/// <summary>HalfDepth operation.</summary>
             float lb = HalfDepth(b, axis, latticeSize);
 
             float resistance = (la / ka) + (lb / kb);
@@ -107,11 +78,13 @@ namespace Thermodynamics.Core
             return contactArea / resistance;
         }
 
+/// <summary>Conductivity operation.</summary>
         private static float Conductivity(BlockInstance block)
         {
             return block.Thermal.Conductivity * ThermalConstants.ConductionScale;
         }
 
+/// <summary>HalfDepth operation.</summary>
         private static float HalfDepth(BlockInstance block, int axis, float latticeSize)
         {
             return BoxGeometry.Depth(block.Extents, axis, latticeSize) * 0.5f;

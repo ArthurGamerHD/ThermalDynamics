@@ -7,75 +7,22 @@ using Xunit.Abstractions;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **The game had two conduction paces, and the second one is gone.**
-    ///
-    /// <para>
-    /// <see cref="ThermalConstants.ConductionScale"/> sets the pace for solid conduction — block to
-    /// block, and block to a bolted panel. The coolant loop's fluid coupling used to have its own,
-    /// a 0…1 quality against a reference conductivity of 200 W/(m·K), and nothing in the code made
-    /// the two agree: the ratio between them is what decides whether plumbing beats bolting
-    /// It is a heat transfer coefficient in W/(m²·K)
-    /// now — what the transfer physically is — so there is one pace and one dial rather than two
-    /// that had to be moved together.
-    /// </para>
-    ///
-    /// <para>
-    /// **Measured, on the retune `C12` asks for.** Raising the solid pace ×4 and leaving the loop's
-    /// alone took a coolant sink from buying **195.3 K** against the best surface dial's 41.5 K to
-    /// buying **73.3 K** against 135.3 K — the mod's own headline finding, *the radiator is a block
-    /// you plumb*, inverted, and nothing said so except four balance tests failing for what read
-    /// like unrelated reasons. Moving the loop's pace with it recovered 73.3 K to 108.2 K and did
-    /// not restore the ordering, which is a separate finding and is
-    /// balance.md's.
-    /// </para>
-    ///
-    /// <para>
-    /// So what is left to hold is the solid pace itself and the coefficient the loop shipped at,
-    /// both of which every cooling figure in balance.md was measured
-    /// against. The failure they prevent is the same one: a balance change nobody chose, in a
-    /// mechanism nobody was editing.
-    /// </para>
-    /// </summary>
     public class ConductionPaceTests
     {
         private readonly ITestOutputHelper output;
 
+/// <summary>ConductionPaceTests operation.</summary>
         public ConductionPaceTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-        /// <summary>
-        /// The coefficient the shipped loop runs at while its pump is running, W/(m²·K).
-        ///
-        /// <para>
-        /// **It was 160 and `C42` made it 1,000.** 160 was what the old quality-times-reference came
-        /// to on a large grid, and it is the stagnant end of the range a pumped water-glycol mix
-        /// actually sits in — which mattered because the pickup a block gets is `sink faces × h · A`,
-        /// the face count is fixed by design, and watts over the pickup is the gradient a buried
-        /// source is forced to sit at whatever radiator is hung off the far end. At 160 a 6.4 MW
-        /// jump drive was forced 6,400 K above its surroundings against a 689 K rating: no answer at
-        /// any radiator count, on the block carrying 65.5 % of a loaded fleet's heat.
-        /// </para>
-        ///
-        /// <para>
-        /// **160 is still what a stopped ring runs at**, through
-        /// <see cref="LoopThermalProperties.StagnantTransferFraction"/> at 0.16, so nothing anywhere
-        /// carries less than it did. See balance.md, *What was decided, and what it cost*.
-        /// </para>
-        /// </summary>
         private const float ShippedCoefficient = 1000f;
 
-        /// <summary>What a ring with nothing circulating carries, W/(m²·K) — unchanged by `C42`.</summary>
         private const float StoppedCoefficient = 160f;
 
-        /// <summary>
-        /// **And a stopped ring carries exactly what every ring carried before the retune.** The
-        /// product is the invariant, not either number: moving one without the other silently makes
-        /// a stopped ring better or worse than it has ever been.
-        /// </summary>
         [Fact]
+/// <summary>AStoppedRingStillCarriesTheOldCoefficient operation.</summary>
         public void AStoppedRingStillCarriesTheOldCoefficient()
         {
             LoopThermalProperties properties = LoopThermalProperties.Default();
@@ -85,6 +32,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheFluidCouplingIsStillWhatTheCoolingFiguresWereMeasuredAt operation.</summary>
         public void TheFluidCouplingIsStillWhatTheCoolingFiguresWereMeasuredAt()
         {
             LoopThermalProperties properties = LoopThermalProperties.Default();
@@ -97,18 +45,15 @@ namespace Thermodynamics.Tests
                 + " at. Moving it is a balance decision and wants those figures re-derived with it.");
         }
 
-        /// <summary>
-        /// **And it no longer depends on the size of the grid it is in.** The old form divided a
-        /// conductivity by half a cell, so the coefficient it implied was 160 on a large grid and
-        /// 800 on a small one — the same fluid against the same wall, five times better because the
-        /// cells were smaller. Convection has no length in it, and this is what says so.
-        /// </summary>
         [Fact]
+/// <summary>TheSameFluidCouplesTheSameWhateverSizeTheGridIs operation.</summary>
         public void TheSameFluidCouplesTheSameWhateverSizeTheGridIs()
         {
             LoopThermalProperties properties = LoopThermalProperties.Default();
 
+/// <summary>GridModel operation.</summary>
             GridModel large = new GridModel(2.5f);
+/// <summary>GridModel operation.</summary>
             GridModel small = new GridModel(0.5f);
 
             float perAreaLarge = CoolantLoopBuilder.PlateConductance(large, properties) / large.CellFaceArea;
@@ -118,22 +63,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(ShippedCoefficient, perAreaLarge, 3);
         }
 
-        /// <summary>
-        /// The shipped pace itself, so a change to it is a deliberate edit here rather than a
-        /// number that moved.
-        ///
-        /// <para>
-        /// **2.4 was the calibration and 9.6 is a balance choice on top of it.** 2.4 is what puts
-        /// mild steel exactly where the old 0…1 quality value put it, which is what the real-unit
-        /// conversion was built around — see definitions.md — and the
-        /// shipped pace is four times that, because nothing else reaches the 2–5 minute
-        /// significance window `G8` asks for without pushing the hull out of a session. Both
-        /// numbers are asserted, so the ratio between them is the thing that cannot move quietly.
-        /// balance.md, The route is chosen; backlog.md
-        /// `C12`, `C24`.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheShippedSolidPaceIsFourTimesWhatTheConversionCalibratedTo operation.</summary>
         public void TheShippedSolidPaceIsFourTimesWhatTheConversionCalibratedTo()
         {
             const float Calibrated = 2.4f;
@@ -142,41 +73,30 @@ namespace Thermodynamics.Tests
             Assert.Equal(4f, ThermalConstants.ConductionScale / Calibrated, 4);
         }
 
-        /// <summary>
-        /// **What the correction costs a small-grid loop**, which is the one place it is not a
-        /// re-expression.
-        ///
-        /// <para>
-        /// The old form divided a conductivity by half a cell, so a small-grid ring coupled at an
-        /// implied 800 W/(m²·K) against a large-grid ring's 160 — five times better for being built
-        /// out of smaller cells. Both now run at the coefficient the fluid actually has, so a
-        /// small-grid loop is weaker than it was, and this is by how much on a rig rather than by
-        /// argument.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ASmallGridLoopCouplesLessHardThanItUsedTo operation.</summary>
         public void ASmallGridLoopCouplesLessHardThanItUsedTo()
         {
+/// <summary>Sets the tle.</summary>
             float now = Settle(160f);
+/// <summary>Sets the tle.</summary>
             float before = Settle(800f);
 
             output.WriteLine("small-grid ring source: {0:n1} K at 160 W/(m2 K), {1:n1} K at the 800"
                 + " the old form implied", now, before);
 
-            // Weaker coupling means the source holds more of its own heat.
             Assert.True(now > before,
                 "the source settled at " + now + " K on the corrected coupling against " + before
                 + " K on the old one, so the correction did not reach the rig");
 
-            // And the rig is one where a loop matters at all, or the comparison is of two numbers
-            // that were never going to differ (`E8`).
             Assert.True(now - before > 1f,
                 "the two couplings are " + (now - before) + " K apart, which is not a measurement");
         }
 
-        /// <summary>A small-grid ring round a source, settled, at one coupling.</summary>
+/// <summary>Sets the tle.</summary>
         private static float Settle(float coefficient)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubsteps = 4096;
             settings.MaxElementVisitsPerStep = 0;
@@ -192,10 +112,9 @@ namespace Thermodynamics.Tests
             builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Wasting(20000f);
             BlockInstance source = builder.Last;
 
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(settings, builder.Grid);
 
-            // Set before the loops are found: the conductances are computed when a ring is built,
-            // so a coefficient assigned afterwards describes a loop nothing recomputed.
             LoopThermalProperties properties = LoopThermalProperties.Default();
             properties.HeatTransferCoefficient = coefficient;
             simulation.LoopProperties = properties;

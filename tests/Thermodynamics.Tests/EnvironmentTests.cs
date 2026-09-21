@@ -6,20 +6,13 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The world a grid sits in, resolved from one sample into the terms a step consumes.
-    ///
-    /// <para>
-    /// Everything here is a function of where the grid is and what time it is, and none of it depends
-    /// on a temperature. These are the boundary conditions; the suites below them are what the model
-    /// does with those conditions.
-    /// </para>
-    /// </summary>
     public class EnvironmentSolverTests
     {
         [Fact]
+/// <summary>NoPlanetMeansVacuum operation.</summary>
         public void NoPlanetMeansVacuum()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             EnvironmentState state = EnvironmentSolver.Solve(settings, null, Worlds.Shadow());
 
@@ -30,12 +23,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AmbientIsNeverColderThanVacuum operation.</summary>
         public void AmbientIsNeverColderThanVacuum()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
 
-            // vanishingly thin air at midnight
             EnvironmentSample sample = Worlds.PlanetSurface(0.0001f, 0f);
             EnvironmentState state = EnvironmentSolver.Solve(settings, planet, sample);
 
@@ -43,8 +37,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NoonIsWarmerThanMidnight operation.</summary>
         public void NoonIsWarmerThanMidnight()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
 
@@ -57,8 +53,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>UndergroundUsesItsOwnTemperatureAndBlocksTheSun operation.</summary>
         public void UndergroundUsesItsOwnTemperatureAndBlocksTheSun()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
 
@@ -70,6 +68,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AtmosphereFactorRisesFasterThanRawDensity operation.</summary>
         public void AtmosphereFactorRisesFasterThanRawDensity()
         {
             Assert.Equal(0f, EnvironmentSolver.AtmosphereFactor(0f), 5);
@@ -79,7 +78,6 @@ namespace Thermodynamics.Tests
             Assert.True(quarter > 0.25f);
             Assert.True(quarter < 1f);
 
-            // monotonic
             float previous = -1f;
             for (float d = 0f; d <= 1f; d += 0.05f)
             {
@@ -90,8 +88,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SolarEnergyDecaysThroughAtmosphere operation.</summary>
         public void SolarEnergyDecaysThroughAtmosphere()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
 
@@ -103,8 +103,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>WindRaisesTheConvectionCoefficient operation.</summary>
         public void WindRaisesTheConvectionCoefficient()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
 
@@ -116,13 +118,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>FrictionNeedsBothAirAndSpeed operation.</summary>
         public void FrictionNeedsBothAirAndSpeed()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
 
-            // Any airspeed at all is enough since the floor ships at zero — the v³ law is what
-            // keeps slow flight cool, not a gate — but no airspeed, or no air, is still nothing.
             Assert.False(EnvironmentSolver.Solve(settings, planet, Worlds.Flight(0.8f, 0f)).FrictionActive);
             Assert.False(EnvironmentSolver.Solve(settings, planet, Worlds.Flight(0.001f, 300f)).FrictionActive);
             Assert.True(EnvironmentSolver.Solve(settings, planet, Worlds.Flight(0.8f, 10f)).FrictionActive);
@@ -130,8 +132,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>DisablingPlanetsFallsBackToVacuumEvenOnASurface operation.</summary>
         public void DisablingPlanetsFallsBackToVacuumEvenOnASurface()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnablePlanets = false;
 
@@ -142,8 +146,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AmbientPow4TracksAmbient operation.</summary>
         public void AmbientPow4TracksAmbient()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             EnvironmentState state = EnvironmentSolver.Solve(settings, PlanetThermalProperties.Default(), Worlds.PlanetSurface(1f, 0.5f));
 
@@ -153,17 +159,9 @@ namespace Thermodynamics.Tests
         }
     }
 
-    /// <summary>
-    /// Stefan-Boltzmann, against a figure computed by hand rather than by the model.
-    ///
-    /// <para>
-    /// Four properties follow from the equation and each has a case: radiation is toward ambient
-    /// rather than away, it needs an exposed face, emissivity is the rate dial, and a block colder
-    /// than ambient warms by the same equation that cools a hot one.
-    /// </para>
-    /// </summary>
     public class RadiationTests
     {
+/// <summary>SingleBlock operation.</summary>
         private static ThermalSimulation SingleBlock(ThermalSettings settings, float temperature)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -174,33 +172,30 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ALoneBlockRadiatesTowardAmbient operation.</summary>
         public void ALoneBlockRadiatesTowardAmbient()
         {
+/// <summary>SingleBlock operation.</summary>
             ThermalSimulation simulation = SingleBlock(Fixture.EnvironmentOnly(), 800f);
             ThermalNode node = simulation.Solver.Nodes[0];
 
             simulation.StepExact(400, Worlds.Shadow());
 
-            // Radiative cooling is fast at first and then very slow, because the driving term
-            // falls with the fourth power. 800 K to under 300 K in 100 s, but the last hundred
-            // kelvin take longer than the first five hundred.
             Assert.True(node.Temperature < 300f, "block should have shed most of its heat, at " + node.Temperature);
             Assert.True(node.Temperature > 0f);
         }
 
         [Fact]
+/// <summary>RadiatedPowerMatchesStefanBoltzmann operation.</summary>
         public void RadiatedPowerMatchesStefanBoltzmann()
         {
             ThermalSettings settings = Fixture.EnvironmentOnly(1000);
+/// <summary>SingleBlock operation.</summary>
             ThermalSimulation simulation = SingleBlock(settings, 500f);
             ThermalNode node = simulation.Solver.Nodes[0];
 
             simulation.StepExact(1, Worlds.Shadow());
 
-            // 6 faces of 6.25 m^2 at the block's own emissivity, ambient 2.7 K. Read off the
-            // block rather than written out: the catalogue's stand-ins derive from the blocks they
-            // stand in for now, so a literal here would be asserting the catalogue rather than
-            // Stefan-Boltzmann.
             float area = 6f * 6.25f;
             float emissivity = node.Thermal.Emissivity;
             float expected = -emissivity * ThermalConstants.StefanBoltzmann * area
@@ -210,6 +205,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ASealedBlockWithNoExposedFacesDoesNotRadiate operation.</summary>
         public void ASealedBlockWithNoExposedFacesDoesNotRadiate()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -227,6 +223,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>HigherEmissivityCoolsFaster operation.</summary>
         public void HigherEmissivityCoolsFaster()
         {
             BlockThermalProperties dull = Catalog.DefaultThermal();
@@ -234,12 +231,15 @@ namespace Thermodynamics.Tests
             BlockThermalProperties shiny = Catalog.DefaultThermal();
             shiny.Emissivity = 0.9f;
 
+/// <summary>CoolFor operation.</summary>
             float dullResult = CoolFor(dull);
+/// <summary>CoolFor operation.</summary>
             float shinyResult = CoolFor(shiny);
 
             Assert.True(shinyResult < dullResult);
         }
 
+/// <summary>CoolFor operation.</summary>
         private static float CoolFor(BlockThermalProperties thermal)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -250,13 +250,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ABlockColderThanAmbientWarmsUp operation.</summary>
         public void ABlockColderThanAmbientWarmsUp()
         {
             ThermalSettings settings = Fixture.EnvironmentOnly();
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
             ThermalSimulation simulation = builder.BuildSimulation(settings, 100f);
-            // The per-mechanism watt figures are diagnostics, and diagnostics are opt-in.
             simulation.Solver.CollectDiagnostics = true;
             simulation.Planet = PlanetThermalProperties.Default();
 
@@ -266,28 +266,22 @@ namespace Thermodynamics.Tests
         }
     }
 
-    /// <summary>
-    /// The three environment mechanisms that are not radiation, each checked for what makes it distinct.
-    ///
-    /// <para>
-    /// Convection carries the air blend and falls with density; solar follows the projected area of a
-    /// face and disappears under occlusion; friction has a speed threshold and cubes above it. The one
-    /// non-obvious result is that a settled temperature is not monotonic in air density — thinner air
-    /// convects less, and also blocks less sun.
-    /// </para>
-    /// </summary>
     public class ConvectionSolarFrictionTests
     {
         [Fact]
+/// <summary>AirCoolsFasterThanVacuum operation.</summary>
         public void AirCoolsFasterThanVacuum()
         {
+/// <summary>CoolIn operation.</summary>
             float inVacuum = CoolIn(Worlds.Shadow());
+/// <summary>CoolIn operation.</summary>
             float inAir = CoolIn(Worlds.PlanetSurface(1f, 0f));
 
             Assert.True(inAir < inVacuum,
                 "convection should beat radiation at sea level: air " + inAir + " vs vacuum " + inVacuum);
         }
 
+/// <summary>CoolIn operation.</summary>
         private static float CoolIn(EnvironmentSample sample)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -299,8 +293,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SolarGainMatchesTheProjectedArea operation.</summary>
         public void SolarGainMatchesTheProjectedArea()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableFriction = false;
@@ -310,22 +306,20 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
             ThermalSimulation simulation = builder.BuildSimulation(settings, 200f);
-            // The per-mechanism watt figures are diagnostics, and diagnostics are opt-in.
             simulation.Solver.CollectDiagnostics = true;
 
             simulation.StepExact(1, Worlds.Space(new Vector3(1f, 0f, 0f)));
 
-            // one of six exposed faces points at the sun: 37.5 m^2 / 6 = 6.25 m^2 projected, at
-            // the block's own absorptivity rather than a literal — the catalogue's armour derives
-            // from the block it stands in for, so a number here would pin that instead.
             ThermalNode node = simulation.Solver.Nodes[0];
             float expected = 1000f * node.Thermal.EffectiveSolarAbsorptivity * 6.25f;
             Assert.Equal(expected, node.LastSolarWatts, 1);
         }
 
         [Fact]
+/// <summary>OcclusionRemovesSolarGainEntirely operation.</summary>
         public void OcclusionRemovesSolarGainEntirely()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
@@ -333,7 +327,6 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
             ThermalSimulation simulation = builder.BuildSimulation(settings, 200f);
-            // The per-mechanism watt figures are diagnostics, and diagnostics are opt-in.
             simulation.Solver.CollectDiagnostics = true;
 
             simulation.StepExact(1, Worlds.Shadow());
@@ -343,17 +336,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SolarGainFollowsTheSunAroundTheBlock operation.</summary>
         public void SolarGainFollowsTheSunAroundTheBlock()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
 
             GridBuilder builder = GridBuilder.Large();
-            // a flat plate: much more area facing up than sideways
             builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(3, 1, 3));
             ThermalSimulation simulation = builder.BuildSimulation(settings, 200f);
-            // The per-mechanism watt figures are diagnostics, and diagnostics are opt-in.
             simulation.Solver.CollectDiagnostics = true;
 
             ThermalNode centre = simulation.Solver.GetNodeAt(new Vector3I(1, 0, 1));
@@ -368,13 +361,11 @@ namespace Thermodynamics.Tests
                 "overhead sun should beat a grazing one: " + fromAbove + " vs " + fromTheSide);
         }
 
-        /// <summary>
-        /// In the original solver the friction term was computed, written into a variable, and
-        /// then overwritten by the conduction result before it was ever applied.
-        /// </summary>
         [Fact]
+/// <summary>FrictionActuallyHeatsTheBlock operation.</summary>
         public void FrictionActuallyHeatsTheBlock()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -384,7 +375,6 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
-            // The per-mechanism watt figures are diagnostics, and diagnostics are opt-in.
             simulation.Solver.CollectDiagnostics = true;
             simulation.Planet = PlanetThermalProperties.Default();
 
@@ -396,13 +386,11 @@ namespace Thermodynamics.Tests
                 "friction must raise the temperature");
         }
 
-        /// <summary>
-        /// A world that sets the aero floor gets the legacy cut: nothing below it, not a small
-        /// term. The shipped floor is zero, so the floor is set here rather than inherited.
-        /// </summary>
         [Fact]
+/// <summary>BelowAConfiguredFloorFrictionDoesNothing operation.</summary>
         public void BelowAConfiguredFloorFrictionDoesNothing()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -412,7 +400,6 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
-            // The per-mechanism watt figures are diagnostics, and diagnostics are opt-in.
             simulation.Solver.CollectDiagnostics = true;
             simulation.Planet = PlanetThermalProperties.Default();
 
@@ -423,16 +410,21 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>FrictionScalesWithTheCubeOfSpeed operation.</summary>
         public void FrictionScalesWithTheCubeOfSpeed()
         {
+/// <summary>FrictionWattsAt operation.</summary>
             float slow = FrictionWattsAt(100f);
+/// <summary>FrictionWattsAt operation.</summary>
             float fast = FrictionWattsAt(200f);
 
             Assert.Equal(8f, fast / slow, 2);
         }
 
+/// <summary>FrictionWattsAt operation.</summary>
         private static float FrictionWattsAt(float speed)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -441,7 +433,6 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
-            // The per-mechanism watt figures are diagnostics, and diagnostics are opt-in.
             simulation.Solver.CollectDiagnostics = true;
             simulation.Planet = PlanetThermalProperties.Default();
 
@@ -449,21 +440,12 @@ namespace Thermodynamics.Tests
             return simulation.Solver.Nodes[0].LastFrictionWatts;
         }
 
-        // ---- convection against air density --------------------------------------------------
 
-        /// <summary>
-        /// The coefficient a report shows has to be the rate a surface exchanges at.
-        ///
-        /// <see cref="EnvironmentState.ConvectionCoefficient"/> is the planet's figure scaled by
-        /// wind and weather, and the solver blends it by <see cref="EnvironmentState.AtmosphereFactor"/>
-        /// at the point of transfer — because the same factor weights radiation down as it weights
-        /// convection up, so the blend belongs where the two meet. Everything that reported
-        /// convection read the unblended number, which is why a field dump showed 50 W/(m2 K) at
-        /// 44 km beside an air density of 0.0000.
-        /// </summary>
         [Fact]
+/// <summary>TheEffectiveCoefficientCarriesTheAtmosphereBlend operation.</summary>
         public void TheEffectiveCoefficientCarriesTheAtmosphereBlend()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
 
@@ -477,15 +459,15 @@ namespace Thermodynamics.Tests
                     state.EffectiveConvectionCoefficient,
                     4);
 
-                // No wind and no weather in this sample, so the planet's figure passes through
-                // untouched — the raw coefficient is deliberately density-blind.
                 Assert.Equal(planet.ConvectionCoefficient, state.ConvectionCoefficient, 2);
             }
         }
 
         [Fact]
+/// <summary>TheEffectiveCoefficientFallsWithTheAir operation.</summary>
         public void TheEffectiveCoefficientFallsWithTheAir()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
 
@@ -502,15 +484,15 @@ namespace Thermodynamics.Tests
             Assert.True(nearVacuum < 0.05f);
         }
 
-        /// <summary>
-        /// And the transfer agrees with the reported figure, which is the claim that matters:
-        /// convective watts fall with the air even though the raw coefficient does not.
-        /// </summary>
         [Fact]
+/// <summary>ConvectiveWattsFallWithTheAir operation.</summary>
         public void ConvectiveWattsFallWithTheAir()
         {
+/// <summary>ConvectionWatts operation.</summary>
             float thick = ConvectionWatts(1f);
+/// <summary>ConvectionWatts operation.</summary>
             float thin = ConvectionWatts(0.05f);
+/// <summary>ConvectionWatts operation.</summary>
             float nearVacuum = ConvectionWatts(0.0001f);
 
             Assert.True(thick < 0f);
@@ -519,34 +501,26 @@ namespace Thermodynamics.Tests
             Assert.True(nearVacuum > -1000f);
         }
 
-        /// <summary>
-        /// What a settled temperature does *not* do, characterised so nobody re-derives an alarm
-        /// from it — as this test's first version did.
-        ///
-        /// Thinner air convects less, so a block in it might be expected to run hotter. It does
-        /// not, over most of the range: thin air is also much colder — 294 K at sea level against
-        /// 101 K at a twentieth — and a weak coupling to a very cold sink beats a strong coupling
-        /// to a warm one. Measured, the same 200 kW block settles at 321 K at sea level, 241 K at
-        /// a twentieth, and 553 K only once the air is gone entirely and radiation is all there is.
-        /// </summary>
         [Fact]
+/// <summary>ASettledTemperatureIsNotMonotonicInAirDensity operation.</summary>
         public void ASettledTemperatureIsNotMonotonicInAirDensity()
         {
+/// <summary>Sets the tledtemperature.</summary>
             float sealevel = SettledTemperature(1f);
+/// <summary>Sets the tledtemperature.</summary>
             float thin = SettledTemperature(0.05f);
+/// <summary>Sets the tledtemperature.</summary>
             float vacuum = SettledTemperature(0f);
 
             Assert.True(thin < sealevel);
             Assert.True(vacuum > sealevel);
         }
 
-        /// <summary>
-        /// Wind and weather still multiply the coefficient — the blend is on top of them, not a
-        /// replacement for them. A gale in thin air is still thin air.
-        /// </summary>
         [Fact]
+/// <summary>WindStillRaisesTheCoefficientAtEveryDensity operation.</summary>
         public void WindStillRaisesTheCoefficientAtEveryDensity()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
 
@@ -561,6 +535,7 @@ namespace Thermodynamics.Tests
             }
         }
 
+/// <summary>Rig operation.</summary>
         private static ThermalSimulation Rig(float density, out EnvironmentSample sample)
         {
             ThermalSettings settings = new ThermalSettings
@@ -581,24 +556,25 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>Sets the tledtemperature.</summary>
         private static float SettledTemperature(float density)
         {
             EnvironmentSample sample;
+/// <summary>Rig operation.</summary>
             ThermalSimulation simulation = Rig(density, out sample);
 
             for (int step = 0; step < LabClock.Steps(600); step++) simulation.StepExact(1, sample);
             return simulation.Solver.Nodes[0].Temperature;
         }
 
+/// <summary>ConvectionWatts operation.</summary>
         private static float ConvectionWatts(float density)
         {
             EnvironmentSample sample;
+/// <summary>Rig operation.</summary>
             ThermalSimulation simulation = Rig(density, out sample);
             simulation.Solver.CollectDiagnostics = true;
 
-            // Long enough to have settled, which is a length of thermal time rather than of steps:
-            // at the clock `C24` ships, six hundred steps leave this block still climbing and the
-            // three densities are then compared mid-transient. See LabClock.
             for (int step = 0; step < LabClock.Steps(600); step++) simulation.StepExact(1, sample);
             return simulation.Solver.Nodes[0].LastConvectionWatts;
         }

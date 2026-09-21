@@ -6,24 +6,11 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The census hull's bolt search — which way each partial-mount block turns — is held against
-    /// the search it replaced, orientation for orientation (`D8`).
-    ///
-    /// <para>
-    /// The replacement resolves the 24 orientations' rotated faces once and probes each block's six
-    /// neighbours once, where the original built a matrix and probed a dictionary for every face of
-    /// every candidate of every block. Same candidates in the same order, same tie-break, same
-    /// count — so the two must agree exactly, and a hull where they do not is a different ship
-    /// from the one every benchmark describes. The reference below is the original, kept verbatim,
-    /// because the old code is the only oracle that answers *did this change anything* (`P4`).
-    /// </para>
-    /// </summary>
     public class CensusBoltTests
     {
-        /// <summary>The search as it was written for `C26`, verbatim, minus the unused argument.</summary>
         private static class Reference
         {
+/// <summary>Bolt operation.</summary>
             public static BlockOrientation[] Bolt(List<Vector3I> layout, int[] tierOf, BlockModel[] tiers)
             {
                 BlockOrientation[] chosen = new BlockOrientation[layout.Count];
@@ -75,6 +62,7 @@ namespace Thermodynamics.Tests
                 return chosen;
             }
 
+/// <summary>MountsToward operation.</summary>
             private static bool MountsToward(
                 BlockModel[] tiers, int[] tierOf, BlockOrientation[] chosen, int index, Vector3I toward)
             {
@@ -89,6 +77,7 @@ namespace Thermodynamics.Tests
                 return false;
             }
 
+/// <summary>Orientations operation.</summary>
             private static IEnumerable<BlockOrientation> Orientations()
             {
                 Array directions = Enum.GetValues(typeof(Base6Directions.Direction));
@@ -112,8 +101,10 @@ namespace Thermodynamics.Tests
         [InlineData("ship", 8000)]
         [InlineData("cube", 2000)]
         [InlineData("truss", 2000)]
+/// <summary>TheTableDrivenSearchChoosesWhatTheOriginalChose operation.</summary>
         public void TheTableDrivenSearchChoosesWhatTheOriginalChose(string shape, int blocks)
         {
+/// <summary>List operation.</summary>
             List<Vector3I> layout = new List<Vector3I>(LoadShapes.Build(shape, blocks));
             int[] tierOf = Census.TiersFor(layout);
             BlockModel[] tiers = Census.Models();
@@ -123,7 +114,6 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(expected.Length, actual.Length);
 
-            // A fixture where every block stayed at the identity would let any search pass.
             int turned = 0;
             for (int i = 0; i < expected.Length; i++)
             {

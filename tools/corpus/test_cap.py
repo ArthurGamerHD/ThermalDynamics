@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """**The cap report reads a sampled walk with weights, and every way of forgetting that is here.**
 
 `C3` is decided on the paired cap walk, and after `A13` that walk has to be re-taken on a corpus
@@ -32,6 +31,7 @@ import cap
 import scoring
 
 
+# row operation.
 def row(ship, workshop, scenario, cap_value, **columns):
     """One outcome row, with the columns the cap report reads and defaults for the rest."""
     out = {
@@ -50,6 +50,7 @@ def row(ship, workshop, scenario, cap_value, **columns):
     return out
 
 
+# paired operation.
 def paired(workshop, scenario="vacuum-shadow", demand=10.0, peak_off=300.0, peak_on=300.0,
            cost=1000.0, floored=0.0, blocks=100.0):
     """A control arm and its capped partner, which is the unit every figure here is taken over."""
@@ -69,10 +70,12 @@ class ASampledWalkIsRecognisedRatherThanDeclared(unittest.TestCase):
     a population that does not exist.
     """
 
+# setUp operation.
     def setUp(self):
         self.selection = list(scoring.core_selection())
         self.assertTrue(self.selection, "the committed core selection is missing")
 
+# test a walk of the selection carries the selection weights operation.
     def test_a_walk_of_the_selection_carries_the_selection_weights(self):
         rows = []
         for workshop in self.selection:
@@ -84,6 +87,7 @@ class ASampledWalkIsRecognisedRatherThanDeclared(unittest.TestCase):
         self.assertGreater(max(weights.values()), 1.0,
                            "a core walk whose weights are all 1 is a core walk read unweighted")
 
+# test a full corpus walk is unweighted operation.
     def test_a_full_corpus_walk_is_unweighted(self):
         rows = []
         for workshop in self.selection:
@@ -95,6 +99,7 @@ class ASampledWalkIsRecognisedRatherThanDeclared(unittest.TestCase):
         self.assertFalse(core)
         self.assertEqual(set(weights.values()), {1.0})
 
+# test a ship outside the selection is a stray rather than a default operation.
     def test_a_ship_outside_the_selection_is_a_stray_rather_than_a_default(self):
         """A weight of 1 invented for an unknown ship is the silent wrong answer (`E4`)."""
         rows = []
@@ -119,6 +124,7 @@ class AWeightIsCarriedIntoEveryPopulationFigure(unittest.TestCase):
     percentile helper alone -- `test_core.py` already pins the helper.
     """
 
+# test a giant standing for twenty moves the percentile like twenty operation.
     def test_a_giant_standing_for_twenty_moves_the_percentile_like_twenty(self):
         heavy = [(9.0e6, 20.0)] + [(1.0e5, 1.0)] * 80
         expanded = [9.0e6] * 20 + [1.0e5] * 80
@@ -127,6 +133,7 @@ class AWeightIsCarriedIntoEveryPopulationFigure(unittest.TestCase):
             self.assertAlmostEqual(scoring.weighted_percentile(heavy, q),
                                    scoring.percentile(expanded, q), places=6)
 
+# test the reach share counts a sampled giant for what it stands for operation.
     def test_the_reach_share_counts_a_sampled_giant_for_what_it_stands_for(self):
         """The reach is a share of node-runs, which is the one figure a sample estimates cleanly."""
         weights = {"small": 1.0, "giant": 20.0}
@@ -137,8 +144,6 @@ class AWeightIsCarriedIntoEveryPopulationFigure(unittest.TestCase):
         floored = sum(scoring.number(capped, "floored") * weight for _, _, capped, weight in pairs)
         blocks = sum(scoring.number(capped, "blocks") * weight for _, _, capped, weight in pairs)
 
-        # Unweighted the two ships are 50 of 200 node-runs, 25 %. Weighted the giant is twenty
-        # ships, so it is 1,000 of 2,100 -- 47.6 %, and the band it is scored against is 3-10 %.
         self.assertAlmostEqual(100.0 * floored / blocks, 100.0 * 1000.0 / 2100.0, places=6)
 
 
@@ -150,9 +155,9 @@ class AWalkCheckIsNotWeighted(unittest.TestCase):
     broken pair on a ship of weight 1 behind twenty good ones on a ship of weight 20.
     """
 
+# test a single broken pair is reported whatever its weight operation.
     def test_a_single_broken_pair_is_reported_whatever_its_weight(self):
         rows = paired("light", demand=10.0) + paired("heavy", demand=10.0)
-        # The heavy ship's capped arm did not cap: its demand came back uncapped.
         rows[3]["substeps_demanded"] = "10"
 
         pairs, _, _, _ = cap.pair(rows, {"light": 1.0, "heavy": 20.0})
@@ -170,6 +175,7 @@ class WhatASampleCannotAnswerIsUnscored(unittest.TestCase):
     max half has no reading and the verdict says so (`E8`).
     """
 
+# run report operation.
     def run_report(self, rows):
         out = io.StringIO()
         with unittest.mock.patch.object(cap, "load", lambda path: rows), \
@@ -177,6 +183,7 @@ class WhatASampleCannotAnswerIsUnscored(unittest.TestCase):
             cap.main()
         return out.getvalue()
 
+# test a core walk leaves the cost verdict unscored when the p99 holds operation.
     def test_a_core_walk_leaves_the_cost_verdict_unscored_when_the_p99_holds(self):
         rows = []
         for workshop in scoring.core_selection():
@@ -187,6 +194,7 @@ class WhatASampleCannotAnswerIsUnscored(unittest.TestCase):
         self.assertIn("[  ?  ] the cost", report)
         self.assertIn("a sampled walk cannot score", report)
 
+# test a core walk still fails the cost verdict on the half it can score operation.
     def test_a_core_walk_still_fails_the_cost_verdict_on_the_half_it_can_score(self):
         """An unscorable half never rescues a failing one: a p99 over 1 K is a failure outright."""
         rows = []
@@ -197,6 +205,7 @@ class WhatASampleCannotAnswerIsUnscored(unittest.TestCase):
 
         self.assertIn("[FAILS] the cost", report)
 
+# test a full walk scores both halves operation.
     def test_a_full_walk_scores_both_halves(self):
         rows = []
         for workshop in scoring.core_selection():
@@ -219,6 +228,7 @@ class ASummaryIsWhatMakesAFigureQuotable(unittest.TestCase):
     full-walk figure as though they were the same reading.
     """
 
+# summary operation.
     def summary(self, rows, directory):
         cap.FIGURES[:] = []
         out = io.StringIO()
@@ -228,6 +238,7 @@ class ASummaryIsWhatMakesAFigureQuotable(unittest.TestCase):
             cap.main()
         return {statistic: value for statistic, value, _ in cap.FIGURES}
 
+# test a core summary names its figures weighted and its max a sample operation.
     def test_a_core_summary_names_its_figures_weighted_and_its_max_a_sample(self):
         rows = []
         for workshop in scoring.core_selection():
@@ -240,6 +251,7 @@ class ASummaryIsWhatMakesAFigureQuotable(unittest.TestCase):
         self.assertNotIn("C3 dpeak p99", figures)
         self.assertNotIn("C3 off work max", figures)
 
+# test a full summary names them plainly operation.
     def test_a_full_summary_names_them_plainly(self):
         rows = []
         for workshop in scoring.core_selection():
@@ -253,11 +265,13 @@ class ASummaryIsWhatMakesAFigureQuotable(unittest.TestCase):
         self.assertIn("C3 off work max", figures)
         self.assertNotIn("C3 weighted dpeak p99", figures)
 
+# test a dataset with no provenance records absent rather than nothing operation.
     def test_a_dataset_with_no_provenance_records_absent_rather_than_nothing(self):
         rows = paired("a") + paired("b")
         figures = self.summary(rows, "out/does-not-exist")
         self.assertEqual(figures["provenance"], "absent")
 
+# test an unscored verdict is recorded as unscored not as a failure operation.
     def test_an_unscored_verdict_is_recorded_as_unscored_not_as_a_failure(self):
         rows = []
         for workshop in scoring.core_selection():
@@ -273,6 +287,7 @@ class TheProvenanceRowsAreOneImplementation(unittest.TestCase):
     is which build a published figure was measured on.
     """
 
+# test a resumed walk carries every version it saw operation.
     def test_a_resumed_walk_carries_every_version_it_saw(self):
         import provenance
         import tempfile

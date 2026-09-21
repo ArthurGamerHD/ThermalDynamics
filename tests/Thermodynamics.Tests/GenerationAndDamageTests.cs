@@ -6,22 +6,11 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Power crossing a block turned into watts of heat.
-    ///
-    /// <para>
-    /// The producer and consumer fractions are separate dials on separate flows, and thrust counts as
-    /// consumption — which is what makes hydrogen thrusters the hottest thing on most ships. The last
-    /// case is the one that matters for balance: generation is watts, so it must not change when the
-    /// step rate does.
-    /// </para>
-    /// </summary>
     public class HeatGenerationTests
     {
+/// <summary>Isolated operation.</summary>
         private static ThermalSettings Isolated()
         {
-            // The pace is pinned because these assert temperatures after a fixed number of steps,
-            // and a step's length is the shipped default's to change.
             ThermalSettings settings = new ThermalSettings { Frequency = 4 };
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -31,6 +20,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>GeneratedPowerBecomesHeatAtTheDeclaredFraction operation.</summary>
         public void GeneratedPowerBecomesHeatAtTheDeclaredFraction()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -39,9 +29,6 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
             ThermalNode node = simulation.Solver.Nodes[0];
 
-            // 10 MW at the fraction the block itself declares, which is the claim in the name.
-            // Written as the product rather than as a literal: the catalogue's reactor derives
-            // from the shipped definition now, so a number here would pin the definition instead.
             float waste = 10f * ThermalConstants.MegawattsToWatts * node.Thermal.ProducerWasteEnergy;
             Assert.True(waste > 0f, "the reactor wastes nothing, so this judges nothing");
             Assert.Equal(waste, node.HeatGenerationWatts, 0);
@@ -54,6 +41,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ConsumedPowerAndThrustBothCount operation.</summary>
         public void ConsumedPowerAndThrustBothCount()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -64,11 +52,11 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(Isolated(), 300f);
             ThermalNode node = simulation.Solver.Nodes[0];
 
-            // (1 MW + 3 MW) at 25% consumer waste
             Assert.Equal(1e6f, node.HeatGenerationWatts, 0);
         }
 
         [Fact]
+/// <summary>ProducerAndConsumerFractionsAreIndependent operation.</summary>
         public void ProducerAndConsumerFractionsAreIndependent()
         {
             BlockThermalProperties thermal = Catalog.DefaultThermal();
@@ -85,6 +73,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ChangingPowerTakesEffectAfterARefresh operation.</summary>
         public void ChangingPowerTakesEffectAfterARefresh()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -101,16 +90,21 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>HeatGenerationIsIndependentOfStepRate operation.</summary>
         public void HeatGenerationIsIndependentOfStepRate()
         {
+/// <summary>TemperatureAfterOneSecond operation.</summary>
             float atFour = TemperatureAfterOneSecond(4);
+/// <summary>TemperatureAfterOneSecond operation.</summary>
             float atSixteen = TemperatureAfterOneSecond(16);
 
             Assert.Equal(atFour, atSixteen, 2);
         }
 
+/// <summary>TemperatureAfterOneSecond operation.</summary>
         private static float TemperatureAfterOneSecond(int frequency)
         {
+/// <summary>Isolated operation.</summary>
             ThermalSettings settings = Isolated();
             settings.Frequency = frequency;
             settings.Derive();
@@ -124,18 +118,9 @@ namespace Thermodynamics.Tests
         }
     }
 
-    /// <summary>
-    /// What happens above a block's critical temperature.
-    ///
-    /// <para>
-    /// The rate has to be per second rather than per step, or a server running at a different
-    /// frequency destroys ships at a different speed. The pre-fix per-step behaviour is kept behind a
-    /// setting and pinned as still scaling with frequency, so the difference between the two stays a
-    /// measurement rather than a memory.
-    /// </para>
-    /// </summary>
     public class DamageTests
     {
+/// <summary>Overheated operation.</summary>
         private static ThermalSimulation Overheated(ThermalSettings settings, float temperature)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -145,8 +130,10 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>NoTransfer operation.</summary>
         private static ThermalSettings NoTransfer(int frequency)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -157,8 +144,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>BelowCriticalNothingIsDamaged operation.</summary>
         public void BelowCriticalNothingIsDamaged()
         {
+/// <summary>Overheated operation.</summary>
             ThermalSimulation simulation = Overheated(NoTransfer(4), 500f);
             simulation.StepExact(4, Worlds.Shadow());
 
@@ -166,8 +155,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AboveCriticalTheBlockIsReported operation.</summary>
         public void AboveCriticalTheBlockIsReported()
         {
+/// <summary>Overheated operation.</summary>
             ThermalSimulation simulation = Overheated(NoTransfer(4), 1000f);
             simulation.StepExact(1, Worlds.Shadow());
 
@@ -176,39 +167,44 @@ namespace Thermodynamics.Tests
             Assert.True(simulation.Overheats[0].Damage > 0f);
         }
 
-        /// <summary>
-        /// The original applied the full overshoot as damage on every solver update, so raising
-        /// the update rate silently multiplied how fast blocks were destroyed.
-        /// </summary>
         [Fact]
+/// <summary>DamagePerSecondDoesNotDependOnStepRate operation.</summary>
         public void DamagePerSecondDoesNotDependOnStepRate()
         {
+/// <summary>TotalDamageOverOneSecond operation.</summary>
             float atFour = TotalDamageOverOneSecond(NoTransfer(4));
+/// <summary>TotalDamageOverOneSecond operation.</summary>
             float atSixteen = TotalDamageOverOneSecond(NoTransfer(16));
 
-            // critical is 900 K, block sits at 1000 K, scaler 1 -> 100 damage per second
             Assert.Equal(100f, atFour, 1);
             Assert.Equal(100f, atSixteen, 1);
         }
 
         [Fact]
+/// <summary>TheOldPerStepBehaviourIsStillAvailableAndScalesWithFrequency operation.</summary>
         public void TheOldPerStepBehaviourIsStillAvailableAndScalesWithFrequency()
         {
+/// <summary>NoTransfer operation.</summary>
             ThermalSettings four = NoTransfer(4);
             four.DamageIsPerSecond = false;
 
+/// <summary>NoTransfer operation.</summary>
             ThermalSettings sixteen = NoTransfer(16);
             sixteen.DamageIsPerSecond = false;
 
+/// <summary>TotalDamageOverOneSecond operation.</summary>
             float atFour = TotalDamageOverOneSecond(four);
+/// <summary>TotalDamageOverOneSecond operation.</summary>
             float atSixteen = TotalDamageOverOneSecond(sixteen);
 
             Assert.Equal(400f, atFour, 1);
             Assert.Equal(1600f, atSixteen, 1);
         }
 
+/// <summary>TotalDamageOverOneSecond operation.</summary>
         private static float TotalDamageOverOneSecond(ThermalSettings settings)
         {
+/// <summary>Overheated operation.</summary>
             ThermalSimulation simulation = Overheated(settings, 1000f);
 
             float total = 0f;
@@ -224,6 +220,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>DamageScalesWithOvershootAndScaler operation.</summary>
         public void DamageScalesWithOvershootAndScaler()
         {
             BlockThermalProperties thermal = Catalog.DefaultThermal();
@@ -233,21 +230,24 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(BlockModel.Solid("Fragile", Vector3I.One, 500f, thermal), Vector3I.Zero);
 
+/// <summary>NoTransfer operation.</summary>
             ThermalSettings settings = NoTransfer(1);
             ThermalSimulation simulation = builder.BuildSimulation(settings, 600f);
 
             simulation.StepExact(1, Worlds.Shadow());
 
-            // (600 - 500) * 2 per second, over a one second step
             Assert.Equal(200f, simulation.Overheats[0].Damage, 1);
         }
 
         [Fact]
+/// <summary>DisablingDamageSilencesTheEvents operation.</summary>
         public void DisablingDamageSilencesTheEvents()
         {
+/// <summary>NoTransfer operation.</summary>
             ThermalSettings settings = NoTransfer(4);
             settings.EnableDamage = false;
 
+/// <summary>Overheated operation.</summary>
             ThermalSimulation simulation = Overheated(settings, 2000f);
             simulation.StepExact(4, Worlds.Shadow());
 

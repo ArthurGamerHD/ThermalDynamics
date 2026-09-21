@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Scoring helpers shared by a report and by its tests.
 
 `verdict.py` is a script: its body runs on import, against whatever dataset the command line names.
@@ -11,6 +10,7 @@ import sys
 
 
 
+# oversubscription note operation.
 def oversubscription_note(p99, cap):
     """What a `G6` breach is worth, in the words of the measurement that priced it.
 
@@ -35,11 +35,10 @@ def oversubscription_note(p99, cap):
     return f"; p99 is {over:.2f}x the ceiling{priced}"
 
 
-# Past here a peak says "ran away" and nothing finer: 1,800 s of an undamped source rather than a
-# temperature the mod can reach.
 RAN_AWAY_KELVIN = 1500.0
 
 
+# peak is censored operation.
 def peak_is_censored(over_critical, peak):
     """Whether a run's peak temperature has stopped being a temperature (`E9`).
 
@@ -53,20 +52,19 @@ def peak_is_censored(over_critical, peak):
     return (over_critical or 0) > 0
 
 
+# peak ran away operation.
 def peak_ran_away(peak):
     """The stronger flag: a peak past `RAN_AWAY_KELVIN` is not even an ordering."""
     return peak is not None and peak >= RAN_AWAY_KELVIN
 
 
-# ---- how stable a censored median is -------------------------------------------------------
 
 INFINITE = float("inf")
 
-# Resamples per estimate. Enough that the interval is stable to about a per cent, and cheap
-# enough to run inside a report: forty hulls resampled four thousand times is a millisecond.
 RESAMPLES = 4000
 
 
+# censored median operation.
 def censored_median(values):
     """The median of a series holding `float("inf")` for the runs that never got there.
 
@@ -86,6 +84,7 @@ def censored_median(values):
     return (values[n // 2 - 1] + values[n // 2]) / 2.0
 
 
+# joint median stability operation.
 def joint_median_stability(entries, resamples=RESAMPLES, seed=20260824):
     """The same bootstrap over several series at once, drawn from the same hulls.
 
@@ -123,6 +122,7 @@ def joint_median_stability(entries, resamples=RESAMPLES, seed=20260824):
     return passed / float(resamples)
 
 
+# median stability operation.
 def median_stability(series, predicate, resamples=RESAMPLES, seed=20260824):
     """How often a resampled fleet's median still satisfies `predicate`.
 
@@ -152,8 +152,6 @@ def median_stability(series, predicate, resamples=RESAMPLES, seed=20260824):
     for _ in range(resamples):
         picked = []
         for _ in range(len(values)):
-            # xorshift32 rather than `random`, so the number a report prints does not depend on
-            # what else in the process drew from the shared generator first.
             state ^= (state << 13) & 0xFFFFFFFF
             state ^= state >> 17
             state ^= (state << 5) & 0xFFFFFFFF
@@ -165,63 +163,34 @@ def median_stability(series, predicate, resamples=RESAMPLES, seed=20260824):
     return passed / float(resamples)
 
 
+# in window operation.
 def in_window(low, high):
     """A predicate for `median_stability`: inside a closed window, and never is outside it."""
+# test operation.
     def test(value):
         return value != INFINITE and low <= value <= high
 
     return test
 
 
+# within operation.
 def within(bound):
     """A predicate for `median_stability`: at or under a bound, and never is over it."""
+# test operation.
     def test(value):
         return value != INFINITE and value <= bound
 
     return test
 
-# ---- what a step costs, in the solver's own unit -------------------------------------------
 
-# Element visits a substep charges per node, from `ThermalSettings.NodeCostInLinks` — the weight
-# `MaxElementVisitsPerStep` is denominated in. Links are one visit each and are added separately.
-#
-# **Nothing here multiplies by it any more, and that is the point.** `step_work` reads the walk's
-# `substep_cost` column, which is `ThermalSimulation.SubstepCost` — the mod's own arithmetic, taken
-# from the run that produced the row. This constant is the *label* a report prints beside the
-# figure, and the pinned statement of what the unit is, so a reader is told the currency without a
-# second implementation of it existing to drift (`P5`).
-#
-# **This was 2.125 until 2026-08-24, and 2.125 is a real number about the solver that is the wrong
-# one here.** It is `ThermalSolverStep.SubstepWork`: the buffers cleared, the environment pass, the
-# apply pass and one more walk, which is how a step is cut into frame-sized slices. The *allowance*
-# is spent in a different currency — `ThermalSimulation.SubstepCost` is `links + 4 x nodes`, and
-# that is what a step's length is divided by when the bound decides whether to shorten it. Scoring
-# work in the pacing unit and comparing it against a bound denominated in the budget unit is a
-# comparison between two currencies, 1.45x apart on a census hull. See benchmarks.md, What a
-# substep costs, for where the 4 comes from, and What the allowance is worth for what it buys.
 NODE_COST_IN_LINKS = 4.0
 
-# What the shipped `MaxElementVisitsPerStep` grants one grid's step. Not a threshold invented for
-# this criterion: it is the mod's own statement of what a step may cost, and a step past it is
-# spread over more frames rather than refused — so the grid's simulated time runs slower than real
-# time. It moves when the default does, deliberately, so this criterion scores the configuration
-# that ships rather than one nobody runs; it was 2,000,000 until `C27` priced what a shortened step
-# costs. See configuration.md, What a shortened step costs, and balance-lab.md for G6's cost half.
 SHIPPED_VISIT_ALLOWANCE = 4000000.0
 
-# What the shipped `MaxSubsteps` grants one step, whatever a grid asks for. The other half of
-# `G6`'s "what the shipped caps grant", and pinned here for the same reason the allowance is: the
-# criterion has to score the configuration that ships.
-#
-# **`verdict.py` used the largest `substeps_granted` in the dataset until 2026-08-24, and that is
-# not a cap — it is the largest demand the population happened to make.** Granted is `ceil(demand)`
-# until something clamps it, so on a population nothing clamps, `max(granted)` is `ceil(max
-# demand)`, which is never below p99. The demand half was passing by construction: it compared a
-# population against itself. Every figure it produced in vacuum was true anyway, because the real
-# margin there is 4.6 against 64.
 SHIPPED_SUBSTEP_CAP = 64.0
 
 
+# step work operation.
 def step_work(substep_cost, substeps):
     """Element visits one step of a grid charges, which is the cost half of `G6`.
 
@@ -257,14 +226,15 @@ def step_work(substep_cost, substeps):
     return substeps * substep_cost
 
 
+# keeps up operation.
 def keeps_up(work, allowance=SHIPPED_VISIT_ALLOWANCE):
     """Whether a step of this cost fits the allowance, which is whether the grid keeps real time."""
     return work is not None and work <= allowance
 
 
-# ---- reading one run against another --------------------------------------------------------
 
 
+# compare operation.
 def compare(before, now):
     """Rows of `(statistic, was, became, change)` for every statistic on either side that moved.
 
@@ -297,13 +267,12 @@ def compare(before, now):
     return rows
 
 
-# What a statistic reads as when a dataset does not carry it at all.
 ABSENT = "\u2014"
 
 
-# ---- reading a cell -------------------------------------------------------------------------
 
 
+# number operation.
 def number(row, key):
     """A CSV cell as a float, or **None** where the dataset does not carry it.
 
@@ -329,6 +298,7 @@ def number(row, key):
         return None
 
 
+# flag operation.
 def flag(name, fallback=None, argv=None):
     """The value after a `--name` flag, or the fallback when the flag is absent — or dangling.
 
@@ -346,6 +316,7 @@ def flag(name, fallback=None, argv=None):
     return argv[at + 1] if at + 1 < len(argv) else fallback
 
 
+# positionals operation.
 def positionals(value_flags, argv=None):
     """Positional arguments: argv past the program name, minus flags and the values of the
     flags that take one.
@@ -374,6 +345,7 @@ def positionals(value_flags, argv=None):
     return out
 
 
+# write summary operation.
 def write_summary(path, figures):
     """The `statistic,value,unit` summary page, as one statement of the format.
 
@@ -390,6 +362,7 @@ def write_summary(path, figures):
             writer.writerow([statistic, value, unit])
 
 
+# load operation.
 def load(data_dir, name):
     """The rows of `<data_dir>/<name>.csv`, or an empty list where the file does not exist.
 
@@ -406,6 +379,7 @@ def load(data_dir, name):
         return list(csv.DictReader(handle))
 
 
+# load required operation.
 def load_required(path):
     """The rows of a CSV the tool cannot run without: absent means exit, with the path named.
 
@@ -423,6 +397,7 @@ def load_required(path):
         return list(csv.DictReader(handle))
 
 
+# number or operation.
 def number_or(row, key, default):
     """`number`, with the caller's own answer for a cell the dataset does not carry.
 
@@ -436,18 +411,11 @@ def number_or(row, key, default):
     return default if value is None else value
 
 
-# ---- what identifies a row ------------------------------------------------------------------
 
-#: The columns that name the ship a row is about.
-#:
-#: **A ship is a name *and* a workshop id, not either alone.** Two published blueprints can share a
-#: name, and a workshop item can be a *collection* holding several ships under one id — which is not
-#: hypothetical: the 2026-08-28 air walk had fourteen distinct ships sharing `workshop_id` 0 until
-#: the reader was taught to walk up to the segment under the app id. Keyed by id alone those
-#: fourteen are one ship; keyed by name alone, two hulls called `Drone` are one ship.
 ROW_KEY = ("ship", "workshop_id")
 
 
+# pair cell operation.
 def pair_cell(row):
     """The cell of the pair grid a row belongs to: `(conductivity, clock)`.
 
@@ -461,6 +429,7 @@ def pair_cell(row):
     return (float(row["conductivity"]), float(row["clock"]))
 
 
+# key of operation.
 def key_of(row, *extra):
     """The identity of an outcome row: the ship, plus any column the caller adds.
 
@@ -473,9 +442,9 @@ def key_of(row, *extra):
     return tuple(row.get(column) for column in ROW_KEY + tuple(extra))
 
 
-# ---- percentiles ----------------------------------------------------------------------------
 
 
+# percentile operation.
 def percentile(values, q):
     """The `q` quantile, interpolated between the two ranks it falls between.
 
@@ -491,6 +460,7 @@ def percentile(values, q):
     return weighted_percentile([(value, 1.0) for value in values], q)
 
 
+# weighted percentile operation.
 def weighted_percentile(pairs, q):
     """The `q` quantile of `(value, weight)` pairs, on the same definition as `percentile`.
 
@@ -544,6 +514,7 @@ def weighted_percentile(pairs, q):
     return ordered[-1][0]
 
 
+# percentiles operation.
 def percentiles(values):
     """The five figures a population row prints, all from `percentile`.
 
@@ -555,6 +526,7 @@ def percentiles(values):
     return weighted_percentiles([(value, 1.0) for value in values])
 
 
+# weighted percentiles operation.
 def weighted_percentiles(pairs):
     """The five figures a population row prints, over `(value, weight)` pairs.
 
@@ -571,11 +543,6 @@ def weighted_percentiles(pairs):
 
     return {
         "min": ordered[0],
-        # **p10 and p90 are here for the constants rather than for the row.** `Census.Corpus`
-        # states the corpus's substep demand as p10/p50/p90 and those figures were transcribed by
-        # hand from a walk's output, which is the shape `F14` records going wrong once already —
-        # a page saying twenty-four sealed blocks where the dataset said 1,184. A summary that
-        # carries them is a summary a test can hold the constants against (`E5`).
         "p10": weighted_percentile(pairs, 0.1),
         "p50": weighted_percentile(pairs, 0.5),
         "p90": weighted_percentile(pairs, 0.9),
@@ -585,73 +552,31 @@ def weighted_percentiles(pairs):
     }
 
 
-# ---- the per-block cap, and the rule that decides whether it ships -------------------------
 
-# What the mod already accepts as the price of an approximation it ships: refusing 1.15x of the
-# substep demand costs this much on the hottest block of a driven census hull over 600 simulated
-# seconds, and `C19` closed by keeping the cap and letting `G6` fail rather than paying for
-# fidelity nobody can perceive.
-# ---- the four predictions, as balance-lab.md registered them before the walk ------------------
-#
-# **These are the falsifiers, not the decision rule.** A prediction and a decision are different
-# questions and the pre-registration keeps them apart: the predictions say what the walk was
-# expected to find, and `CAP_ACCEPTED_KELVIN` / `CAP_REFUSED_KELVIN` below say what would be done
-# about it. A prediction can be falsified while the decision is unchanged, and that is worth seeing.
 
-#: The predicted capped work p99, and the band outside which the prediction is falsified. The
-#: figure was arithmetic — the air walk's rows with each demand replaced by min(demand, 6), times a
-#: hull's link-to-node ratio — so *under* the band falsifies it as surely as over.
 CAP_BENEFIT_BAND = (1500000.0, 4000000.0)
 
-#: The rate the settle test tolerates, in kelvin a second: 0.25 K over a sixty-second chunk.
-#:
-#: **A run that satisfies it is not a run that has stopped.** Held for the rest of a 1,800 s
-#: scenario, that rate is another 7.5 K — so two arms can both be *settled* by this criterion and
-#: still be tens of kelvin apart, because each is still travelling at its own speed. It is used to
-#: split the cost figure into the pairs where both arms are at rest and the pairs where they are
-#: not; see `at_rest`.
 SETTLE_RATE_KELVIN_PER_SECOND = 0.25 / 60.0
 
-#: The predicted delta-peak: p99 under a kelvin, max under ten. Its only evidence was one hull, and
-#: the pre-registration says so.
 CAP_COST_P99_KELVIN = 1.0
 CAP_COST_MAX_KELVIN = 10.0
 
-#: The predicted share of blocks the cap holds back, in air.
 CAP_REACH_BAND = (3.0, 10.0)
 
 
-# ---- the over-budget floor, and the rule that decides whether it ships ------------------------
-#
-# **the over-budget floor's predictions, which lived only in prose until 2026-08-29.** They were registered in
-# balance-lab.md before `CorpusFloorWalk` ran and then scored by hand, so the figures the page
-# quotes had no source anything could check them against — which is the failure `E5` is about, and
-# the reason `floor.py` exists. Written here beside `C3`'s so the two mechanisms are scored against
-# constants under test rather than against sentences (`D3`).
 
-#: The predicted share of blocks the floor holds back: **fewer** than `C3`'s fixed cap of 6 did,
-#: because a grid's own budget is a larger grant than 6. The band is open at the bottom and closed
-#: at the cap's measured 5.83 %, which is what the prediction named as its falsifier.
 FLOOR_REACH_BAND = (0.0, 5.83)
 
-#: The predicted delta-peak: p99 under the 0.03 K this mod already accepts, on the argument that a
-#: budget is a gentler cap than 6 and 6 cost 0.024 K at rest. It is the prediction with an argument
-#: rather than a measurement behind it, and it failed by three orders of magnitude.
 FLOOR_COST_P99_KELVIN = 0.03
 
-#: Substeps of slack before a floored arm counts as having come back *stiffer* than it went in,
-#: which the mechanism must never do. The walk's own tolerance, restated here so the report and the
-#: walk cannot drift apart (`D3`).
 FLOOR_SLACK_SUBSTEPS = 0.5
 
 CAP_ACCEPTED_KELVIN = 0.03
 
-# What the mod already refuses as the price of a default: `MaxSubstepsPerBlock 6` cost this much on
-# the worst-placed block when it was first measured, and that is what made it a switch rather than
-# a default. See backlog.md, C3.
 CAP_REFUSED_KELVIN = 0.6
 
 
+# cap decision operation.
 def cap_decision(p99_delta_kelvin):
     """Whether a per-block cap's measured cost puts it inside what the mod already accepts.
 
@@ -678,6 +603,7 @@ def cap_decision(p99_delta_kelvin):
     return "judgement"
 
 
+# delta peak operation.
 def delta_peak(control, capped):
     """How far apart two arms of one paired run finished, in kelvin.
 
@@ -694,6 +620,7 @@ def delta_peak(control, capped):
     return abs(capped - control)
 
 
+# split arms operation.
 def split_arms(rows):
     """`(arms, shipped rows)` for a paired walk, or `([], rows)` for an ordinary one.
 
@@ -715,6 +642,7 @@ def split_arms(rows):
     return arms, [row for row in rows if row.get("cap", "") in ("", "0")]
 
 
+# at rest operation.
 def at_rest(control_peak_rate):
     """Whether a run had actually stopped moving when it was read.
 
@@ -736,6 +664,7 @@ def at_rest(control_peak_rate):
     return abs(control_peak_rate) < SETTLE_RATE_KELVIN_PER_SECOND
 
 
+# resolves operation.
 def resolves(runs, threshold_percent):
     """Whether `runs` rows can answer a criterion that turns on `threshold_percent` of them.
 
@@ -755,6 +684,7 @@ def resolves(runs, threshold_percent):
     return runs * threshold_percent / 100.0 >= 1.0
 
 
+# too coarse operation.
 def too_coarse(runs, threshold_percent, what):
     """The `measured:` line for a criterion its dataset cannot resolve."""
     each = 100.0 / runs if runs else 0.0
@@ -764,23 +694,15 @@ def too_coarse(runs, threshold_percent, what):
             f"It needs {needed:,}.")
 
 
-# ---- is a dataset the whole corpus (`E4`) -------------------------------------------------------
 
-# Where the corpus lives when nothing says otherwise, as `pace.py` has it and development.md
-# documents. Only needed to count blueprints, which is a directory listing.
 CORPUS = os.path.expanduser(
     os.environ.get("THERMAL_CORPUS_CONTENT",
                    "~/.local/share/thermal-dynamics/corpus/steamapps/workshop/content/244850"))
 
-# **A walk is allowed to lose a few ships and still be whole.** The blueprint filters reject hulls
-# — not vanilla, too small, unparsable — so the finished 2026-08-21 survey recorded 8,132 distinct
-# ships over the corpus's 8,144 blueprints, which is 99.9 %, and the `A13` reader fix moved four
-# more. Demanding equality would call every complete dataset partial. Ninety-five per cent is far
-# above any rejection rate this corpus has shown and far below any interruption worth catching: the
-# case `E4` is about read 43 % when it was quoted.
 WHOLE_ENOUGH = 0.95
 
 
+# corpus population operation.
 def corpus_population(stated=None):
     """Blueprints the corpus holds, or None where that cannot be established here.
 
@@ -797,10 +719,6 @@ def corpus_population(stated=None):
     if not os.path.isdir(CORPUS):
         return None
 
-    # **Recursive, because a workshop item can be a collection.** One id directory can hold several
-    # named blueprint folders — `.../372787238/T.N.F. Planetary Dropship 'Ghost' Mk.III (M)/bp.sbc`
-    # — and counting one level deep misses fourteen of them and reports a population *smaller than
-    # the walk that covered it*, which reads as a dataset more than whole. A tenth of a second.
     count = 0
     for _, _, filenames in os.walk(CORPUS):
         if "bp.sbc" in filenames:
@@ -809,6 +727,7 @@ def corpus_population(stated=None):
     return count or None
 
 
+# walked share operation.
 def walked_share(walked, population):
     """What share of the corpus a dataset reached, or None where the population is unknown."""
     if not population:
@@ -816,17 +735,13 @@ def walked_share(walked, population):
     return walked / float(population)
 
 
-# ---- the core corpus ------------------------------------------------------------------------
 
 CORE_SELECTION = os.path.join(os.path.dirname(os.path.abspath(__file__)), "core-corpus.csv")
 
-# How much of the selection a walk must cover before it is called a core walk. A core walk that
-# died halfway is still a core walk and still must not be read unweighted, so this is well under
-# one; a full-corpus walk contains every core ship and is separated by the other half of the
-# test -- it also contains thousands that are not in the selection.
 CORE_ENOUGH = 0.5
 
 
+# core selection operation.
 def core_selection(path=None):
     """The workshop ids of the core corpus, or an empty set where the selection is not on disk."""
     path = path or CORE_SELECTION
@@ -836,6 +751,7 @@ def core_selection(path=None):
         return set(row["workshop_id"] for row in csv.DictReader(handle))
 
 
+# is core walk operation.
 def is_core_walk(walked, path=None):
     """Whether a set of walked workshop ids is a walk of the core corpus rather than the corpus.
 

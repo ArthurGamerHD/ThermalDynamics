@@ -5,32 +5,22 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// What a block is made of, turned into what a block is thermally.
-    ///
-    /// Before this existed, twenty-eight block types out of a hundred and one had hand-written
-    /// thermal properties and everything else in the game — and every block of every other mod —
-    /// fell through to a single entry describing mild steel. A window, a battery, a medical bay and
-    /// a plushie were the same object. The game already publishes what every block is built from,
-    /// so none of that had to be true.
-    /// </summary>
     public class BlockDerivationTests
     {
+/// <summary>Of operation.</summary>
         private static List<BlockComponent> Of(params BlockComponent[] components)
         {
             return new List<BlockComponent>(components);
         }
 
+/// <summary>Part operation.</summary>
         private static BlockComponent Part(string component, int count, float massEach)
         {
             return new BlockComponent(component, count, massEach);
         }
 
-        /// <summary>
-        /// Heat capacity is additive, so the mass-weighted mean specific heat is exactly right
-        /// rather than an approximation. Half steel at 466 and half glass at 840 by mass is 653.
-        /// </summary>
         [Fact]
+/// <summary>SpecificHeatIsTheMassWeightedMeanExactly operation.</summary>
         public void SpecificHeatIsTheMassWeightedMeanExactly()
         {
             BlockThermalProperties p = BlockThermalDerivation.Material(Of(
@@ -41,6 +31,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AMassiveComponentDominatesALightOne operation.</summary>
         public void AMassiveComponentDominatesALightOne()
         {
             BlockThermalProperties p = BlockThermalDerivation.Material(Of(
@@ -51,12 +42,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(BlockMaterials.Steel.Conductivity, p.Conductivity, 0);
         }
 
-        /// <summary>
-        /// The single largest material distinction in the game. Glass conducts two orders of
-        /// magnitude worse than steel and radiates six times better, and a window made of it must
-        /// come out on the glass side of that gap rather than in the middle.
-        /// </summary>
         [Fact]
+/// <summary>AWindowIsGlassAndAnArmourBlockIsSteel operation.</summary>
         public void AWindowIsGlassAndAnArmourBlockIsSteel()
         {
             BlockThermalProperties window = BlockThermalDerivation.Material(Of(
@@ -72,12 +59,8 @@ namespace Thermodynamics.Tests
                 "window emissivity " + window.Emissivity + " does not beat steel's " + armour.Emissivity);
         }
 
-        /// <summary>
-        /// Emissivity is a surface property, so it comes from the cladding — the heaviest component
-        /// — rather than from a blend. A blend would give a glass box the emissivity of its steel
-        /// frame in proportion to a mass that is not on the outside of it.
-        /// </summary>
         [Fact]
+/// <summary>EmissivityComesFromTheHeaviestComponentRatherThanTheBlend operation.</summary>
         public void EmissivityComesFromTheHeaviestComponentRatherThanTheBlend()
         {
             BlockThermalProperties p = BlockThermalDerivation.Material(Of(
@@ -87,12 +70,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(BlockMaterials.Get("BulletproofGlass").Emissivity, p.Emissivity, 3);
         }
 
-        /// <summary>
-        /// A battery is the least heat-tolerant thing on a ship and a reactor is the most, and
-        /// neither fact was written down anywhere before: both now follow from lithium cells giving
-        /// out at 360 K and reactor assemblies being built to run at 1,200.
-        /// </summary>
         [Fact]
+/// <summary>CriticalTemperatureSeparatesABatteryFromAReactor operation.</summary>
         public void CriticalTemperatureSeparatesABatteryFromAReactor()
         {
             BlockThermalProperties battery = BlockThermalDerivation.Material(Of(
@@ -107,13 +86,8 @@ namespace Thermodynamics.Tests
                 "battery " + battery.CriticalTemperature + " K against reactor " + reactor.CriticalTemperature + " K");
         }
 
-        /// <summary>
-        /// The defect this fixes outright, from docs/stiffness.md: a plushie was simulated as a
-        /// kilogram of steel with a heat capacity of 2 J/K, which made it the stiffest object on a
-        /// fleet and set the substep count for whole capital ships. Fabric is nearly an insulator
-        /// and holds a great deal of heat per kilogram, and now says so.
-        /// </summary>
         [Fact]
+/// <summary>APlushieIsFabricRatherThanSteel operation.</summary>
         public void APlushieIsFabricRatherThanSteel()
         {
             BlockThermalProperties p = BlockThermalDerivation.Material(Of(
@@ -123,16 +97,14 @@ namespace Thermodynamics.Tests
             Assert.True(p.SpecificHeat > 1000f, "a plushie holds " + p.SpecificHeat + " J/(kg K)");
         }
 
-        /// <summary>
-        /// A definition with no priced components must come out as the steel it would have been
-        /// before any of this existed, rather than as a block with no heat capacity.
-        /// </summary>
         [Fact]
+/// <summary>ABlockWithNoComponentsIsSteel operation.</summary>
         public void ABlockWithNoComponentsIsSteel()
         {
             foreach (List<BlockComponent> components in new List<BlockComponent>[]
             {
                 null,
+/// <summary>List operation.</summary>
                 new List<BlockComponent>(),
                 Of(Part("SteelPlate", 0, 20f)),
             })
@@ -146,6 +118,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnUnknownComponentIsTreatedAsSteel operation.</summary>
         public void AnUnknownComponentIsTreatedAsSteel()
         {
             BlockThermalProperties p = BlockThermalDerivation.Material(Of(
@@ -154,13 +127,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(BlockMaterials.Steel.SpecificHeat, p.SpecificHeat, 2);
         }
 
-        /// <summary>
-        /// The functional half cannot be derived and is not: two blocks of identical construction,
-        /// one a thruster and one a girder, differ entirely in what they put into the ship.
-        /// </summary>
         [Fact]
+/// <summary>FunctionComesFromTheTypeAndNotFromTheComponents operation.</summary>
         public void FunctionComesFromTheTypeAndNotFromTheComponents()
         {
+/// <summary>Of operation.</summary>
             List<BlockComponent> same = Of(Part("SteelPlate", 10, 20f));
 
             BlockThermalProperties thruster = ShippedBlocks.DeriveWithFunction(same, "Thrust");
@@ -171,27 +142,19 @@ namespace Thermodynamics.Tests
             Assert.True(thruster.ExposedSurfaceMultiplier > girder.ExposedSurfaceMultiplier);
         }
 
-        /// <summary>
-        /// A producer's heat runs through the producer fraction and nothing else, which is the
-        /// mistake that left every reactor in the game at 0 W. Any type the table calls a producer
-        /// must carry one.
-        /// </summary>
         [Theory]
         [InlineData("Reactor")]
         [InlineData("HydrogenEngine")]
         [InlineData("BatteryBlock")]
+/// <summary>EveryProducerTypeConvertsSomeOfItsOutput operation.</summary>
         public void EveryProducerTypeConvertsSomeOfItsOutput(string typeId)
         {
             Assert.True(ShippedBlocks.FunctionOf(typeId).ProducerWasteEnergy > 0f,
                 typeId + " produces power and makes no heat doing it");
         }
 
-        /// <summary>
-        /// A hydrogen engine burns fuel for electricity and should be the hottest producer in the
-        /// game per watt delivered — hotter than a reactor, whose fraction is held down only
-        /// because Space Engineers rates a 3x3x3 block at 300 MW.
-        /// </summary>
         [Fact]
+/// <summary>ACombustionEngineRunsHotterThanAReactorPerWatt operation.</summary>
         public void ACombustionEngineRunsHotterThanAReactorPerWatt()
         {
             Assert.True(
@@ -199,11 +162,8 @@ namespace Thermodynamics.Tests
                 ShippedBlocks.FunctionOf("Reactor").ProducerWasteEnergy);
         }
 
-        /// <summary>
-        /// Nothing may claim to turn more energy into heat than passed through it. The solver would
-        /// not stop it and the grid would gain energy from nothing.
-        /// </summary>
         [Fact]
+/// <summary>NoFunctionCreatesEnergyFromNothing operation.</summary>
         public void NoFunctionCreatesEnergyFromNothing()
         {
             foreach (string typeId in ShippedBlocks.FunctionTypes())
@@ -217,12 +177,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Every derived block must survive its own <c>Validate</c>, which is the check a mod
-        /// author's hand-written definition gets. A generator that emits values the validator would
-        /// complain about is worse than a hand-written one.
-        /// </summary>
         [Fact]
+/// <summary>EveryMaterialProducesAValidBlock operation.</summary>
         public void EveryMaterialProducesAValidBlock()
         {
             foreach (string component in BlockMaterials.Names)
@@ -236,13 +192,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// A third of the material table is invented, because a third of the components are. The
-        /// invention is kept modest on purpose: an imaginary alloy may flavour a block but must not
-        /// take it anywhere the real materials could not, or the derivation stops being a
-        /// description and becomes a balance lever with a physics-shaped name.
-        /// </summary>
         [Fact]
+/// <summary>EveryInventedMaterialSitsInsideTheRangeOfTheRealOnes operation.</summary>
         public void EveryInventedMaterialSitsInsideTheRangeOfTheRealOnes()
         {
             CheckInsideRealRange(delegate (BlockMaterial m) { return m.Conductivity; }, "conductivity");
@@ -251,6 +202,7 @@ namespace Thermodynamics.Tests
             CheckInsideRealRange(delegate (BlockMaterial m) { return m.ServiceLimit; }, "service limit");
         }
 
+/// <summary>CheckInsideRealRange operation.</summary>
         private static void CheckInsideRealRange(System.Func<BlockMaterial, float> property, string name)
         {
             float lowest, highest;
@@ -261,6 +213,7 @@ namespace Thermodynamics.Tests
                 BlockMaterial material = BlockMaterials.Get(component);
                 if (!material.Invented) continue;
 
+/// <summary>property operation.</summary>
                 float value = property(material);
                 Assert.True(value >= lowest && value <= highest,
                     component + " invents a " + name + " of " + value

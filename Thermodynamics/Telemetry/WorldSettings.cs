@@ -3,18 +3,10 @@ using System.Collections.Generic;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// The world's own settings, as the report sees them: the mod's say what the model was asked to do
-    /// and these say whether the game allowed it. Read out of the serialised session settings rather
-    /// than a hand-written list, so a setting the game adds appears in the next dump.
-    /// See telemetry.md, Output.
-    /// </summary>
     public static class WorldSettings
     {
-        /// <summary>Rows kept from one serialised settings block.</summary>
         public const int MaxRows = 512;
 
-        /// <summary>Which of the mod's own features a conflict is judged against.</summary>
         public struct ModFeatures
         {
             public bool Damage;
@@ -22,17 +14,13 @@ namespace Thermodynamics
             public bool Persistence;
         }
 
-        /// <summary>
-        /// Flattens serialised settings into name/value rows, in document order.
-        ///
-        /// Leaf elements only. A container contributes its name as a prefix — <c>A.B</c> — so a
-        /// nested block reads unambiguously against a flat one.
-        /// </summary>
+/// <summary>Parse operation.</summary>
         public static List<KeyValuePair<string, string>> Parse(string xml)
         {
             List<KeyValuePair<string, string>> rows = new List<KeyValuePair<string, string>>();
             if (string.IsNullOrEmpty(xml)) return rows;
 
+/// <summary>List operation.</summary>
             List<string> path = new List<string>();
             string open = null;
             int textStart = -1;
@@ -49,18 +37,16 @@ namespace Thermodynamics
                 string tag = xml.Substring(start + 1, end - start - 1);
                 cursor = end + 1;
 
-                // Declarations, comments and doctypes carry no settings.
                 if (tag.Length == 0 || tag[0] == '?' || tag[0] == '!') continue;
 
                 bool closing = tag[0] == '/';
                 bool empty = tag[tag.Length - 1] == '/';
+/// <summary>TagName operation.</summary>
                 string name = TagName(tag, closing);
                 if (name.Length == 0) continue;
 
                 if (empty)
                 {
-                    // A value the game left null or blank. Recorded rather than skipped: which
-                    // settings a world does not carry is itself an answer.
                     Add(rows, path, path.Count, name, "");
                     open = null;
                     continue;
@@ -70,7 +56,6 @@ namespace Thermodynamics
                 {
                     if (open == name && textStart >= 0)
                     {
-                        // The element itself sits on the path; only its parents prefix it.
                         Add(rows, path, path.Count - 1, name, Decode(xml.Substring(textStart, start - textStart)));
                     }
 
@@ -87,7 +72,7 @@ namespace Thermodynamics
             return rows;
         }
 
-        /// <summary>The value of a leaf by name, or null. Matches the last path segment.</summary>
+/// <summary>Value operation.</summary>
         public static string Value(IList<KeyValuePair<string, string>> rows, string name)
         {
             if (rows == null) return null;
@@ -108,23 +93,20 @@ namespace Thermodynamics
             return null;
         }
 
+/// <summary>Flag operation.</summary>
         public static bool Flag(IList<KeyValuePair<string, string>> rows, string name, bool missing)
         {
+/// <summary>Value operation.</summary>
             string value = Value(rows, name);
             if (string.IsNullOrEmpty(value)) return missing;
 
             return value == "true" || value == "True" || value == "1";
         }
 
-        /// <summary>
-        /// World settings that silence something the mod was asked to do.
-        ///
-        /// Each entry names the mod feature, the world setting overriding it, and what the dump will
-        /// therefore not show. A conflict is not a fault — the world is entitled to its settings —
-        /// but reading a dump without knowing about one wastes the reading.
-        /// </summary>
+/// <summary>Conflicts operation.</summary>
         public static List<string> Conflicts(IList<KeyValuePair<string, string>> rows, ModFeatures features)
         {
+/// <summary>List operation.</summary>
             List<string> conflicts = new List<string>();
             if (rows == null || rows.Count == 0) return conflicts;
 
@@ -154,16 +136,14 @@ namespace Thermodynamics
             return conflicts;
         }
 
+/// <summary>Adds a .</summary>
         private static void Add(
             List<KeyValuePair<string, string>> rows, List<string> path, int parents, string name, string value)
         {
             rows.Add(new KeyValuePair<string, string>(Join(path, parents, name), value.Trim()));
         }
 
-        /// <summary>
-        /// The dotted name of a leaf. The outermost element is the serialised type itself and says
-        /// nothing about any one setting, so it is dropped.
-        /// </summary>
+/// <summary>Join operation.</summary>
         private static string Join(List<string> path, int parents, string name)
         {
             if (parents <= 1) return name;
@@ -177,6 +157,7 @@ namespace Thermodynamics
             return joined + name;
         }
 
+/// <summary>TagName operation.</summary>
         private static string TagName(string tag, bool closing)
         {
             int start = closing ? 1 : 0;
@@ -190,6 +171,7 @@ namespace Thermodynamics
             return tag.Substring(start, i - start);
         }
 
+/// <summary>Decode operation.</summary>
         private static string Decode(string value)
         {
             if (value.IndexOf('&') < 0) return value;

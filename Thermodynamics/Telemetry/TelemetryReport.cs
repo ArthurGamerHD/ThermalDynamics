@@ -9,25 +9,21 @@ using VRageMath;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// Turns the collected telemetry into files in world storage — a prose report and a CSV per
-    /// block definition and per grid, so one session can be diffed against another without parsing
-    /// the prose. See telemetry.md, Output.
-    /// </summary>
     public static class TelemetryReport
     {
         private const int DetailedGridLimit = 25;
 
+/// <summary>Write operation.</summary>
         public static void Write(string reason)
         {
             string stamp = Telemetry.StartedUtc.ToString("yyyyMMdd_HHmmss");
 
+/// <summary>Builds the method table.</summary>
             string report = BuildReport(reason);
 
-            // The game log always receives the headline figures: world-storage writes are the most
-            // likely part to fail during shutdown.
             MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] " + BuildLogSummary(reason));
 
+/// <summary>TryWrite operation.</summary>
             bool wrote = TryWrite("Thermodynamics_Telemetry_" + stamp + ".log", report);
             TryWrite("Thermodynamics_BlockTypes_" + stamp + ".csv", BuildBlockTypeCsv());
             TryWrite("Thermodynamics_Grids_" + stamp + ".csv", BuildGridCsv());
@@ -35,8 +31,6 @@ namespace Thermodynamics
             TryWrite("Thermodynamics_Rooms_" + stamp + ".csv", BuildRoomCsv());
             TryWrite("Thermodynamics_Environment_" + stamp + ".csv", BuildEnvironmentCsv());
 
-            // Only when a sweep actually ran, so a world that never switched probes on does not
-            // collect an empty file with a header in it.
             if (PlanetProbes.Rows.Count > 0)
             {
                 TryWrite("Thermodynamics_PlanetProbes_" + stamp + ".csv", PlanetProbes.Csv());
@@ -44,11 +38,11 @@ namespace Thermodynamics
 
             if (!wrote)
             {
-                // No storage available, so the whole report goes to the log rather than being lost.
                 MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] world storage unavailable, full report follows\n" + report);
             }
         }
 
+/// <summary>TryWrite operation.</summary>
         private static bool TryWrite(string filename, string content)
         {
             try
@@ -69,6 +63,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>Builds the API method table.</summary>
         private static string BuildLogSummary(string reason)
         {
             long liveGrids = 0;
@@ -78,18 +73,18 @@ namespace Thermodynamics
             }
 
             return "session ended (" + reason + ") after " + Telemetry.SessionSeconds.ToString("n1")
+/// <summary>grids operation.</summary>
                 + "s: " + Telemetry.GridsSeen + " grids (" + liveGrids + " alive at close), "
                 + Telemetry.BlockTypes.Count + " block types, "
                 + Telemetry.CellUpdatesObserved.ToString("n0") + " cell updates, "
                 + Telemetry.Anomalies.Count + " anomaly kinds";
         }
 
-        // ------------------------------------------------------------------------------------
-        // Text report
-        // ------------------------------------------------------------------------------------
 
+/// <summary>Builds the API method table.</summary>
         private static string BuildReport(string reason)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder(64 * 1024);
 
             WriteHeader(sb, reason);
@@ -111,10 +106,7 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
-        /// <summary>
-        /// What the grid's plumbing and heat pumps achieved, printed only when it carries some. For an
-        /// idle pump, which of the three fixable reasons applies.
-        /// </summary>
+/// <summary>AppendCoolantAndPumps operation.</summary>
         private static void AppendCoolantAndPumps(StringBuilder sb, GridTelemetry g)
         {
             bool loops = g.LoopTemperature.Count > 0;
@@ -129,8 +121,6 @@ namespace Thermodynamics
                 Field(sb, "  drawn from blocks W", g.LoopWattsAbsorbed.Format("n0"));
                 Field(sb, "  shed into blocks W", g.LoopWattsRejected.Format("n0"));
 
-                // The pair above is gross. A loop in balance nets to about nothing while carrying
-                // its full load, so the net is stated separately rather than instead.
                 Field(sb, "  net into the fluid W",
                     (g.LoopWattsAbsorbed.Mean - g.LoopWattsRejected.Mean).ToString("n0"));
                 Field(sb, "  pipes per loop", g.LoopPipes.Format("n0"));
@@ -179,7 +169,6 @@ namespace Thermodynamics
                     Percent(g.HeatPumpLimitedByCarnotOrHeat, limited) + " of running samples");
             }
 
-            // A pump paying for more than it moves is working against a gap too wide to be worth it.
             if (g.HeatPumpCoefficient.Count > 0 && g.HeatPumpCoefficient.Mean < 1.0)
             {
                 sb.Append("      note: mean coefficient below 1 — these pumps spend more energy than\n");
@@ -187,40 +176,33 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>Percent operation.</summary>
         private static string Percent(long part, long whole)
         {
             if (whole <= 0) return "-";
             return (100.0 * part / whole).ToString("n1") + " %";
         }
 
+/// <summary>Section operation.</summary>
         private static void Section(StringBuilder sb, string title)
         {
             sb.Append('\n').Append(title).Append('\n');
             sb.Append(new string('=', title.Length)).Append('\n');
         }
 
-        /// <summary>
-        /// One "name value" line. The name is padded to a fixed column and always followed by at
-        /// least one space, so a name that fills the column does not run into its value.
-        /// </summary>
+/// <summary>Field operation.</summary>
         private static void Field(StringBuilder sb, string name, object value)
         {
             sb.Append("  ").Append(name.PadRight(30)).Append(name.Length >= 30 ? " " : "").Append(value).Append('\n');
         }
 
-        /// <summary>
-        /// What the room mapper made of the grid, and whether it agrees with the grid.
-        ///
-        /// Every cell of the padded search box is classified as external, structure or room, so
-        /// block cells counted as external identify a sealing failure directly.
-        /// </summary>
+/// <summary>WriteRoomMapping operation.</summary>
         private static void WriteRoomMapping(StringBuilder sb, GridTelemetry g)
         {
             sb.Append("\n    room mapping (min / mean / max)\n");
 
             if (g.MapperCompletions == 0)
             {
-                // Not a measurement: the grid closed before its first mapper pass completed.
                 Field(sb, "  mapped", "never (no pass completed)");
                 return;
             }
@@ -254,11 +236,7 @@ namespace Thermodynamics
             WriteRooms(sb, g);
         }
 
-        /// <summary>
-        /// Every compartment on the grid: those this model mapped, and those only the game holds —
-        /// each named by the vent standing in it and by the subtypes across the faces this model
-        /// leaves open. See telemetry.md, Room dump.
-        /// </summary>
+/// <summary>WriteRooms operation.</summary>
         private static void WriteRooms(StringBuilder sb, GridTelemetry g)
         {
             if (!g.RoomScanRan && g.Rooms.Count == 0) return;
@@ -287,8 +265,6 @@ namespace Thermodynamics
             Field(sb, "  held only by the game", lost.ToString("n0")
                 + (lostWithVent > 0 ? "  (" + lostWithVent + " with a vent reporting pressurised)" : ""));
 
-            // Mapped, sealed as far as the game is concerned, and still running no air — the case
-            // where the map is correct but the air is missing.
             Field(sb, "  found, dry, air in game", dry.ToString("n0")
                 + (dry > 0 ? "  <-- the game has air in these and this model runs none" : ""));
 
@@ -344,13 +320,9 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Rooms printed per grid before the report defers to the CSV.</summary>
         private const int MaxRoomsReported = 60;
 
-        /// <summary>
-        /// The rooms as sizes, for example "1 room, 2 cells". A bare count cannot distinguish one
-        /// enclosed cell from a whole sealed deck.
-        /// </summary>
+/// <summary>DescribeRooms operation.</summary>
         private static string DescribeRooms(Core.RoomAudit audit)
         {
             if (audit.RoomCount == 0) return "none";
@@ -359,6 +331,7 @@ namespace Thermodynamics
                 return audit.RoomCount + " (" + audit.RoomCells + " cells)";
             }
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append(audit.RoomCount).Append(audit.RoomCount == 1 ? " room, cells: " : " rooms, cells: ");
             for (int i = 0; i < audit.RoomSizes.Count; i++)
@@ -370,11 +343,12 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
-        /// <summary>Per-face fractions in canonical face order, as "F:1.0 L:1.0 U:0.0 ...".</summary>
+/// <summary>FaceFractions operation.</summary>
         private static string FaceFractions(float[] byFace)
         {
             if (byFace == null) return "-";
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             for (int face = 0; face < Core.Face.Count && face < byFace.Length; face++)
             {
@@ -384,6 +358,7 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
+/// <summary>WriteHeader operation.</summary>
         private static void WriteHeader(StringBuilder sb, string reason)
         {
             sb.Append("Thermodynamics telemetry report\n");
@@ -407,10 +382,7 @@ namespace Thermodynamics
             Field(sb, "sample stride", "1 in " + Telemetry.SampleStride + " cell updates");
         }
 
-        /// <summary>
-        /// The world the mod ran in, printed before the mod's own settings because it outranks them:
-        /// a world with DestructibleBlocks off discards every gram of heat damage the model applied.
-        /// </summary>
+/// <summary>WriteWorld operation.</summary>
         private static void WriteWorld(StringBuilder sb)
         {
             Section(sb, "World");
@@ -422,6 +394,7 @@ namespace Thermodynamics
                 Field(sb, "  " + (i + 1).ToString("n0"), Telemetry.Mods[i]);
             }
 
+/// <summary>WorldConflicts operation.</summary>
             List<string> conflicts = WorldConflicts();
             for (int i = 0; i < conflicts.Count; i++)
             {
@@ -442,7 +415,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Which of the mod's features the world overrides. Empty when nothing is silenced.</summary>
+/// <summary>WorldConflicts operation.</summary>
         private static List<string> WorldConflicts()
         {
             Settings s = Telemetry.SettingsSnapshot;
@@ -455,6 +428,7 @@ namespace Thermodynamics
             return WorldSettings.Conflicts(Telemetry.WorldSettingsRows, features);
         }
 
+/// <summary>WriteSettings operation.</summary>
         private static void WriteSettings(StringBuilder sb)
         {
             Section(sb, "Settings in force");
@@ -466,8 +440,6 @@ namespace Thermodynamics
                 return;
             }
 
-            // Driven from the name table rather than a hand-written list, so a setting added to the
-            // config cannot be missing from the report.
             Field(sb, "Version", s.Version);
             Field(sb, "StepsPerSecond", s.StepsPerSecond);
 
@@ -478,10 +450,12 @@ namespace Thermodynamics
                 float value = s.GetValue(name);
 
                 if (Settings.IsFlag(name)) Field(sb, name, value != 0f);
+/// <summary>Field operation.</summary>
                 else Field(sb, name, value);
             }
         }
 
+/// <summary>WriteSessionTotals operation.</summary>
         private static void WriteSessionTotals(StringBuilder sb)
         {
             Section(sb, "Session totals");
@@ -513,10 +487,6 @@ namespace Thermodynamics
                 damageEvents += g.DamageEvents;
                 totalDamage += g.TotalDamage;
                 simFrames += g.SimulationSteps;
-                // CoolantLoopsCreated was never written by anything and reported 0 for every
-                // session, including ones where four ships each held a working ring. The useful
-                // session figures come from the per-grid state instead: how many loops were seen,
-                // and how many grids carry plumbing that formed none.
                 if (g.CoolantLoops.Count > 0 && g.CoolantLoops.Max > 0) gridsWithLoops++;
                 if (g.LoopWattsAbsorbed.Count > 0 && g.LoopWattsAbsorbed.Max > 0) gridsWithWorkingLoops++;
                 if (g.HeatPumps.Count > 0 && g.HeatPumps.Max > 0) gridsWithHeatPumps++;
@@ -568,6 +538,7 @@ namespace Thermodynamics
                 Field(sb, "anomaly kinds dropped", Telemetry.AnomalyKindsDropped);
         }
 
+/// <summary>WriteAnomalies operation.</summary>
         private static void WriteAnomalies(StringBuilder sb)
         {
             Section(sb, "Anomalies");
@@ -578,11 +549,9 @@ namespace Thermodynamics
                 return;
             }
 
+/// <summary>List operation.</summary>
             List<AnomalyRecord> records = new List<AnomalyRecord>(Telemetry.Anomalies.Values);
 
-            // Faults first, then by frequency. A caught exception is a defect in the mod and a
-            // suspect measurement may be a defect in a definition, so the two want reading in that
-            // order rather than in whichever order they happened to fire most.
             records.Sort(delegate (AnomalyRecord a, AnomalyRecord b)
             {
                 if (a.IsFault != b.IsFault) return a.IsFault ? -1 : 1;
@@ -601,37 +570,51 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Figures as the Cost table saw them, so the consistency section can re-take them after every
-        /// other section is written and report whether they moved. They have been observed to.
-        /// See telemetry.md, Whether the report agrees with itself.
-        /// </summary>
         private static int costRecords;
         private static long costCalls;
         private static double costMilliseconds;
         private static long costSteps;
 
+/// <summary>WritePerformance operation.</summary>
         private static void WritePerformance(StringBuilder sb)
         {
             Section(sb, "Cost");
 
+/// <summary>TimingStat operation.</summary>
             TimingStat simulation = new TimingStat("  of which grid simulation");
+/// <summary>TimingStat operation.</summary>
             TimingStat topology = new TimingStat("    of which topology rebuild");
+/// <summary>TimingStat operation.</summary>
             TimingStat mapping = new TimingStat("    of which room mapping");
+/// <summary>TimingStat operation.</summary>
             TimingStat exposure = new TimingStat("    of which exposure refresh");
+/// <summary>TimingStat operation.</summary>
             TimingStat sample = new TimingStat("    of which environment sample");
+/// <summary>TimingStat operation.</summary>
             TimingStat solar = new TimingStat("      of which solar occlusion");
+/// <summary>TimingStat operation.</summary>
             TimingStat solver = new TimingStat("    of which solver");
+/// <summary>TimingStat operation.</summary>
             TimingStat after = new TimingStat("    of which after step");
+/// <summary>TimingStat operation.</summary>
             TimingStat pressure = new TimingStat("      of which room pressure");
+/// <summary>TimingStat operation.</summary>
             TimingStat damage = new TimingStat("      of which overheat damage");
+/// <summary>TimingStat operation.</summary>
             TimingStat massSweep = new TimingStat("      of which mass sweep");
+/// <summary>TimingStat operation.</summary>
             TimingStat lostRooms = new TimingStat("      of which lost-room scan");
+/// <summary>TimingStat operation.</summary>
             TimingStat health = new TimingStat("      of which hottest and health");
+/// <summary>TimingStat operation.</summary>
             TimingStat sampling = new TimingStat("      of which telemetry sampling");
+/// <summary>TimingStat operation.</summary>
             TimingStat save = new TimingStat("save");
+/// <summary>TimingStat operation.</summary>
             TimingStat load = new TimingStat("load");
+/// <summary>TimingStat operation.</summary>
             TimingStat build = new TimingStat("build");
+/// <summary>TimingStat operation.</summary>
             TimingStat blockEvents = new TimingStat("block events");
 
             costRecords = 0;
@@ -688,8 +671,6 @@ namespace Thermodynamics
             health.WriteRow(sb);
             sampling.WriteRow(sb);
 
-            // Derived, so it cannot disagree with the rows above it. Solar occlusion and the
-            // pressure sweep are nested one level deeper and are already inside their parents.
             double unattributed = CostRollup.Unattributed(
                 simulation.TotalMilliseconds,
                 sample.TotalMilliseconds + topology.TotalMilliseconds + mapping.TotalMilliseconds
@@ -736,15 +717,9 @@ namespace Thermodynamics
             solar.WriteDistribution(sb, "    ");
         }
 
-        /// <summary>
-        /// Cost per frame across every grid, and the worst frames in full. The first section to read
-        /// for a stutter, because every other figure here is per grid and a stutter is per frame.
-        /// See telemetry.md, Frame cost and hitching.
-        /// </summary>
+/// <summary>WriteFrames operation.</summary>
         private static void WriteFrames(StringBuilder sb)
         {
-            // Grids running below real time. Expected under the work budget rather than a fault,
-            // but it also explains slow-moving heat, so it is reported explicitly.
             int throttled = 0;
             double worstRate = 1d;
             for (int i = 0; i < Telemetry.Grids.Count; i++)
@@ -788,9 +763,6 @@ namespace Thermodynamics
                     : (100.0 * frames.FramesOverBudget / frames.FramesWithWork).ToString("n2") + " %")
                 + ")");
 
-            // Peak-to-median ratio. Near one means a uniformly expensive mod, which costs frame
-            // rate; in the hundreds means one that is cheap on average and occasionally very
-            // expensive, which costs a stutter. The two call for different fixes.
             Field(sb, "worst over mean", frames.SpikeRatio.ToString("n1") + "x");
 
             sb.Append("\n    distribution:\n");
@@ -806,13 +778,16 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>SortedGrids operation.</summary>
         private static List<GridTelemetry> SortedGrids()
         {
+/// <summary>List operation.</summary>
             List<GridTelemetry> grids = new List<GridTelemetry>(Telemetry.Grids);
             grids.Sort(delegate (GridTelemetry a, GridTelemetry b) { return b.PeakCellCount.CompareTo(a.PeakCellCount); });
             return grids;
         }
 
+/// <summary>WriteGridTable operation.</summary>
         private static void WriteGridTable(StringBuilder sb)
         {
             Section(sb, "Grids");
@@ -834,6 +809,7 @@ namespace Thermodynamics
               .Append("life s".PadLeft(9))
               .Append("  state\n");
 
+/// <summary>SortedGrids operation.</summary>
             List<GridTelemetry> grids = SortedGrids();
             for (int i = 0; i < grids.Count; i++)
             {
@@ -853,11 +829,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// What the block overlay cost, on the frames it drew. It runs on the render thread and
-        /// simulates nothing, so its cost appears nowhere in the Cost table — a frame it stalls would
-        /// otherwise read as a simulation that stalled. See telemetry.md, What the block overlay costs.
-        /// </summary>
+/// <summary>WriteOverlay operation.</summary>
         private static void WriteOverlay(StringBuilder sb)
         {
             if (Telemetry.Overlay.Frames == 0) return;
@@ -866,12 +838,7 @@ namespace Thermodynamics
             Telemetry.Overlay.Write(sb);
         }
 
-        /// <summary>
-        /// The climate each planet was simulated with, and how much of it the planet's own
-        /// definition supplied. A planet whose definition never loaded reads as the mod's defaults
-        /// with an empty supplied list, which is the difference between a tuning question and a
-        /// definition that is not reaching the mod.
-        /// </summary>
+/// <summary>WritePlanetProperties operation.</summary>
         private static void WritePlanetProperties(StringBuilder sb)
         {
             if (Telemetry.PlanetProperties.Count == 0) return;
@@ -884,6 +851,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>WriteSubsteps operation.</summary>
         private static void WriteSubsteps(StringBuilder sb)
         {
             Section(sb, "Substeps");
@@ -892,15 +860,15 @@ namespace Thermodynamics
             sb.Append("  other element pays for all of them. Demand figures are computed from real heat\n");
             sb.Append("  capacities, so they describe the grids rather than the settings in force.\n");
 
+/// <summary>SortedGrids operation.</summary>
             List<GridTelemetry> grids = SortedGrids();
 
-            // Measured substep cost: the solver's own milliseconds divided by the passes it made,
-            // and again per element visited.
             double passes = 0;
             double solverMs = 0;
             double elementPasses = 0;
             long stepping = 0;
 
+/// <summary>Histogram operation.</summary>
             Histogram granted = new Histogram(new float[] { 1.5f, 2.5f, 4.5f, 6.5f, 8.5f, 12.5f, 16.5f, 32.5f, 64.5f });
             long[] grantedCells = new long[granted.Counts.Length];
 
@@ -920,8 +888,6 @@ namespace Thermodynamics
 
                 granted.Add((float)substeps);
 
-                // The same buckets weighted by block count, so a few large grids are not read the
-                // same way as many small ones.
                 float value = (float)substeps;
                 int bucket = granted.Edges.Length;
                 for (int e = 0; e < granted.Edges.Length; e++)
@@ -956,13 +922,10 @@ namespace Thermodynamics
             WriteSubstepProjection(sb, grids);
         }
 
-        /// <summary>
-        /// Block definitions ranked by substep demand across every grid, which is what a definition
-        /// author can act on. Demand is not a property of the definition alone, so the spread is
-        /// reported beside the peak. See stiffness.md.
-        /// </summary>
+/// <summary>WriteStiffestBlockTypes operation.</summary>
         private static void WriteStiffestBlockTypes(StringBuilder sb)
         {
+/// <summary>List operation.</summary>
             List<BlockTypeTelemetry> types = new List<BlockTypeTelemetry>();
             foreach (BlockTypeTelemetry type in Telemetry.BlockTypes.Values)
             {
@@ -997,9 +960,10 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>The block on each grid that sets its substep count, highest demand first.</summary>
+/// <summary>WriteSubstepDrivers operation.</summary>
         private static void WriteSubstepDrivers(StringBuilder sb, IList<GridTelemetry> grids)
         {
+/// <summary>List operation.</summary>
             List<GridTelemetry> profiled = new List<GridTelemetry>();
             for (int i = 0; i < grids.Count; i++)
             {
@@ -1038,11 +1002,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Effect of each candidate <c>MaxSubstepsPerBlock</c>, summed over the world: blocks the
-        /// cap would floor, the substep count that would result, and the share of solver work it
-        /// would remove.
-        /// </summary>
+/// <summary>WriteSubstepProjection operation.</summary>
         private static void WriteSubstepProjection(StringBuilder sb, IList<GridTelemetry> grids)
         {
             int[] caps = ThermalSolver.SubstepProfile.ProjectedCaps;
@@ -1064,12 +1024,6 @@ namespace Thermodynamics
                 nodes += p.Nodes;
                 environmentDominated += p.EnvironmentDominatedNodes;
 
-                // Per simulated second rather than per step. MaxElementVisitsPerStep shortens a step
-                // it cannot afford, so a throttled grid already takes few substeps and a per-step
-                // measurement shows the cap saving nothing — what it buys is returned as simulated
-                // time rather than as arithmetic. Per simulated second the budget cancels out:
-                // substeps are proportional to step length, so a second of heat costs
-                // elements * demand / StepSeconds however the step is cut.
                 double elements = p.Nodes + p.Links;
                 double perStepSecond = p.StepSeconds <= 0 ? 1 : elements / p.StepSeconds;
 
@@ -1123,12 +1077,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Checks the report against itself: the record list must not change while it is built, and a
-        /// grid cannot tick more often than the session frames. A line beginning <c>!!</c> is a defect
-        /// in the telemetry rather than in the simulation.
-        /// See telemetry.md, Whether the report agrees with itself.
-        /// </summary>
+/// <summary>WriteConsistency operation.</summary>
         private static void WriteConsistency(StringBuilder sb)
         {
             Section(sb, "Consistency");
@@ -1173,13 +1122,6 @@ namespace Thermodynamics
                 sb.Append("  !! every aggregate above the grid detail is short by the difference.\n");
             }
 
-            // **A child cannot cost more than the parent it runs inside**, and the Cost table nests
-            // grid simulation inside the session frame — `Session.Update` wraps `Tick`, `Tick` calls
-            // the scheduler, and the scheduler is the only caller of a grid's tick. Both figures are
-            // plain stopwatches over those spans, so if this line fires, one of them is not
-            // measuring the span its name claims and the negative `unattributed` row is the symptom
-            // rather than the fault. A 2026-09-01 field report read 156,231 ms of grid simulation
-            // inside a 46,359 ms frame — 3.4x — with no explanation yet. See backlog `D15`.
             double frame = Telemetry.SessionFrameTime.TotalMilliseconds;
             if (frame > 0d && milliseconds > frame)
             {
@@ -1220,8 +1162,6 @@ namespace Thermodynamics
             Field(sb, "session seconds", Telemetry.SessionSeconds.ToString("n1"));
             Field(sb, "longest grid lifetime", longestLife.ToString("n1") + " s");
 
-            // Both are read from the same stopwatch, so a grid cannot outlive its session. Where it
-            // appears to, the clock was restarted under the record.
             if (longestLife > Telemetry.SessionSeconds + 1.0)
             {
                 sb.Append("  !! a grid outlived the session clock, which is only possible if the\n");
@@ -1229,10 +1169,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Why this grid takes the substeps it does: what sets the count, the distribution of demand
-        /// behind it, and the result of each candidate cap.
-        /// </summary>
+/// <summary>WriteGridSubsteps operation.</summary>
         private static void WriteGridSubsteps(StringBuilder sb, GridTelemetry g)
         {
             ThermalSolver.SubstepProfile p = g.Profile;
@@ -1247,12 +1184,14 @@ namespace Thermodynamics
             if (p.WorstRoomAirDemand > 0f)
             {
                 Field(sb, "  stiffest room air", p.WorstRoomAirDemand.ToString("n2")
+/// <summary>substeps operation.</summary>
                     + " substeps (room " + p.WorstRoomAirIndex + ")");
             }
 
             if (p.WorstLoopDemand > 0f)
             {
                 Field(sb, "  stiffest coolant loop", p.WorstLoopDemand.ToString("n2")
+/// <summary>substeps operation.</summary>
                     + " substeps (loop " + p.WorstLoopIndex + ")");
             }
 
@@ -1295,8 +1234,10 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>WriteGridDetails operation.</summary>
         private static void WriteGridDetails(StringBuilder sb)
         {
+/// <summary>SortedGrids operation.</summary>
             List<GridTelemetry> grids = SortedGrids();
             int limit = Math.Min(grids.Count, DetailedGridLimit);
 
@@ -1410,6 +1351,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>WriteBlockTypes operation.</summary>
         private static void WriteBlockTypes(StringBuilder sb)
         {
             Section(sb, "Block types (" + Telemetry.BlockTypes.Count + ")");
@@ -1420,6 +1362,7 @@ namespace Thermodynamics
                 return;
             }
 
+/// <summary>SortedBlockTypes operation.</summary>
             List<BlockTypeTelemetry> types = SortedBlockTypes();
 
             sb.Append("  ")
@@ -1518,8 +1461,10 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>SortedBlockTypes operation.</summary>
         private static List<BlockTypeTelemetry> SortedBlockTypes()
         {
+/// <summary>List operation.</summary>
             List<BlockTypeTelemetry> types = new List<BlockTypeTelemetry>(Telemetry.BlockTypes.Values);
             types.Sort(delegate (BlockTypeTelemetry a, BlockTypeTelemetry b)
             {
@@ -1529,12 +1474,11 @@ namespace Thermodynamics
             return types;
         }
 
-        // ------------------------------------------------------------------------------------
-        // CSV
-        // ------------------------------------------------------------------------------------
 
+/// <summary>Builds the API method table.</summary>
         private static string BuildBlockTypeCsv()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder(16 * 1024);
             sb.Append("subtype,type,placed,removed,live,peak_live,updates,sampled,");
             sb.Append("conductivity,specific_heat,emissivity,surface_area_scaler,");
@@ -1546,6 +1490,7 @@ namespace Thermodynamics
             sb.Append("critical_updates,total_damage,");
             sb.Append("substep_demand_mean,substep_demand_max,substep_demand_peak,substep_demand_where\n");
 
+/// <summary>SortedBlockTypes operation.</summary>
             List<BlockTypeTelemetry> types = SortedBlockTypes();
             for (int i = 0; i < types.Count; i++)
             {
@@ -1607,15 +1552,10 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
-        /// <summary>
-        /// One row per compartment per grid, mapped or lost.
-        ///
-        /// The diagnostic columns are the last four: the game's verdict on the same cells, what a
-        /// vent in the room reports, and, for a room only the game holds, the block subtypes across
-        /// the faces this model leaves open.
-        /// </summary>
+/// <summary>Builds the API method table.</summary>
         private static string BuildRoomCsv()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.Append("grid,grid_id,kind,index,anchor_x,anchor_y,anchor_z,cells,volume_m3,");
@@ -1627,6 +1567,7 @@ namespace Thermodynamics
             for (int g = 0; g < grids.Count; g++)
             {
                 GridTelemetry record = grids[g];
+/// <summary>Truncate operation.</summary>
                 string name = Truncate(record.Name, 40);
 
                 for (int i = 0; i < record.Rooms.Count; i++)
@@ -1665,13 +1606,10 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
-        /// <summary>
-        /// One row per block face: which of the three rejection rules excluded it, which no aggregate
-        /// can express. Read from the telemetry records rather than the live grids, since a report is
-        /// usually written while the world is closing. See telemetry.md, Surface dump.
-        /// </summary>
+/// <summary>Builds the API method table.</summary>
         private static string BuildSurfaceCsv()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.Append("grid,grid_id,block,subtype,cell_x,cell_y,cell_z,size_x,size_y,size_z,");
@@ -1683,6 +1621,7 @@ namespace Thermodynamics
             for (int g = 0; g < grids.Count; g++)
             {
                 GridTelemetry record = grids[g];
+/// <summary>Truncate operation.</summary>
                 string gridName = Truncate(record.Name, 40);
 
                 for (int i = 0; i < record.Surfaces.Count; i++)
@@ -1719,10 +1658,7 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
-        /// <summary>
-        /// A climate summary per planet, readable without opening the CSV: temperature range, air
-        /// density range, and the surface materials seen.
-        /// </summary>
+/// <summary>AppendClimate operation.</summary>
         private static void AppendClimate(StringBuilder sb)
         {
             Dictionary<string, ClimateSummary> planets = new Dictionary<string, ClimateSummary>();
@@ -1740,6 +1676,7 @@ namespace Thermodynamics
                     ClimateSummary summary;
                     if (!planets.TryGetValue(planet, out summary))
                     {
+/// <summary>ClimateSummary operation.</summary>
                         summary = new ClimateSummary();
                         planets[planet] = summary;
                     }
@@ -1761,31 +1698,39 @@ namespace Thermodynamics
             WritePlanetProperties(sb);
         }
 
-        /// <summary>Ranges seen on one planet, over every grid that was on it.</summary>
         private class ClimateSummary
         {
+/// <summary>RunningStat operation.</summary>
             private readonly RunningStat ambient = new RunningStat();
+/// <summary>RunningStat operation.</summary>
             private readonly RunningStat density = new RunningStat();
+/// <summary>RunningStat operation.</summary>
             private readonly RunningStat altitude = new RunningStat();
+/// <summary>RunningStat operation.</summary>
             private readonly RunningStat solar = new RunningStat();
+/// <summary>RunningStat operation.</summary>
             private readonly RunningStat wind = new RunningStat();
+/// <summary>RunningStat operation.</summary>
             private readonly RunningStat game = new RunningStat();
+/// <summary>RunningStat operation.</summary>
             private readonly RunningStat convection = new RunningStat();
 
-            /// <summary>Depth, over the rows that were underground.</summary>
+/// <summary>RunningStat operation.</summary>
             private readonly RunningStat depth = new RunningStat();
 
-            /// <summary>Ambient with weather in force, and the offset the weather contributed.</summary>
+/// <summary>RunningStat operation.</summary>
             private readonly RunningStat weatherOffset = new RunningStat();
 
             private readonly Dictionary<string, int> weathers = new Dictionary<string, int>();
 
-            /// <summary>Warmest and coldest readings with the sun above and below the horizon.</summary>
+/// <summary>RunningStat operation.</summary>
             private readonly RunningStat day = new RunningStat();
+/// <summary>RunningStat operation.</summary>
             private readonly RunningStat night = new RunningStat();
 
             private readonly Dictionary<string, int> materials = new Dictionary<string, int>();
 
+/// <summary>Adds a .</summary>
             public void Add(ref EnvironmentRow row)
             {
                 ambient.Add(row.AmbientKelvin);
@@ -1799,8 +1744,6 @@ namespace Thermodynamics
                 if (row.SunElevationDegrees > 0f) day.Add(row.AmbientKelvin);
                 else night.Add(row.AmbientKelvin);
 
-                // Only the rows the weather occurred on: averaging a storm against the clear
-                // periods around it understates both.
                 if (row.Depth > 0f) depth.Add(row.Depth);
 
                 if (!string.IsNullOrEmpty(row.Weather) && row.WeatherIntensity > 0f)
@@ -1819,6 +1762,7 @@ namespace Thermodynamics
                 materials[row.SurfaceMaterial] = count + 1;
             }
 
+/// <summary>Write operation.</summary>
             public void Write(StringBuilder sb)
             {
                 Field(sb, "    ambient C", Celsius(ambient));
@@ -1847,9 +1791,10 @@ namespace Thermodynamics
                 Field(sb, "    ground", Counted(materials));
             }
 
-            /// <summary>Surface materials seen and their counts, as "Snow 56, Sand_02 56".</summary>
+/// <summary>Counted operation.</summary>
             private static string Counted(Dictionary<string, int> counts)
             {
+/// <summary>StringBuilder operation.</summary>
                 StringBuilder seen = new StringBuilder();
                 foreach (KeyValuePair<string, int> pair in counts)
                 {
@@ -1860,6 +1805,7 @@ namespace Thermodynamics
                 return seen.ToString();
             }
 
+/// <summary>Celsius operation.</summary>
             private static string Celsius(RunningStat stat)
             {
                 if (stat.Count == 0) return "-";
@@ -1871,15 +1817,10 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// What the world was doing at each grid over time; the file for balancing a planet.
-        ///
-        /// One row per grid per sampling interval, carrying position on the globe, the air, the
-        /// sun, this model's interpretation and the game's own weather figures. Kept unaggregated
-        /// because the useful shape is ambient against altitude, against latitude and around a day.
-        /// </summary>
+/// <summary>Builds the API method table.</summary>
         private static string BuildEnvironmentCsv()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             sb.Append("time_s,grid,grid_id,planet,altitude_surface_m,altitude_sealevel_m,latitude_deg,");
@@ -1894,6 +1835,7 @@ namespace Thermodynamics
             for (int g = 0; g < grids.Count; g++)
             {
                 GridTelemetry record = grids[g];
+/// <summary>Truncate operation.</summary>
                 string name = Truncate(record.Name, 40);
 
                 for (int i = 0; i < record.Environment.Count; i++)
@@ -1948,8 +1890,10 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
+/// <summary>Builds the API method table.</summary>
         private static string BuildGridCsv()
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder(8 * 1024);
             sb.Append("entity_id,name,grid_size,is_static,closed,lifetime_s,");
             sb.Append("peak_cells,mean_cells,peak_links,peak_rooms,peak_loops,");
@@ -1967,8 +1911,6 @@ namespace Thermodynamics
             sb.Append("demand_uncapped,demand_configured,demand_conduction_share,");
             sb.Append("demand_room_air,demand_loop,environment_stiff_nodes,substep_driver,");
 
-            // Generated from the same array the projection walks, so a cap added there cannot leave
-            // the header describing columns that are no longer written.
             int[] capColumns = ThermalSolver.SubstepProfile.ProjectedCaps;
             for (int c = 0; c < capColumns.Length; c++)
             {
@@ -1980,6 +1922,7 @@ namespace Thermodynamics
                 sb.Append(c == capColumns.Length - 1 ? "\n" : ",");
             }
 
+/// <summary>SortedGrids operation.</summary>
             List<GridTelemetry> grids = SortedGrids();
             for (int i = 0; i < grids.Count; i++)
             {
@@ -2083,6 +2026,7 @@ namespace Thermodynamics
                 for (int c = 0; c < caps.Length; c++)
                 {
                     if (c == caps.Length - 1) CsvLast(sb, p == null ? 0 : p.CapNodesFloored[c]);
+/// <summary>Csv operation.</summary>
                     else Csv(sb, p == null ? 0 : p.CapNodesFloored[c]);
                 }
             }
@@ -2090,41 +2034,49 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
+/// <summary>Csv operation.</summary>
         private static void Csv(StringBuilder sb, string value)
         {
             TelemetryFormat.AppendCsv(sb, value);
         }
 
+/// <summary>Csv operation.</summary>
         private static void Csv(StringBuilder sb, long value)
         {
             TelemetryFormat.AppendCsv(sb, value);
         }
 
+/// <summary>Csv operation.</summary>
         private static void Csv(StringBuilder sb, double value)
         {
             TelemetryFormat.AppendCsv(sb, value);
         }
 
+/// <summary>CsvLast operation.</summary>
         private static void CsvLast(StringBuilder sb, double value)
         {
             TelemetryFormat.AppendCsvLast(sb, value);
         }
 
+/// <summary>CsvLast operation.</summary>
         private static void CsvLast(StringBuilder sb, long value)
         {
             TelemetryFormat.AppendCsvLast(sb, value);
         }
 
+/// <summary>CsvLast operation.</summary>
         private static void CsvLast(StringBuilder sb, string value)
         {
             TelemetryFormat.AppendCsvLast(sb, value);
         }
 
+/// <summary>Truncate operation.</summary>
         private static string Truncate(string value, int length)
         {
             return TelemetryFormat.Truncate(value, length);
         }
 
+/// <summary>FormatPeak operation.</summary>
         private static string FormatPeak(float value)
         {
             return TelemetryFormat.Peak(value);

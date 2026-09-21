@@ -6,35 +6,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Sunlight never cools a real hull, proven the transient-proof way: **cold start, equal
-    /// clocks, all six directions.**
-    ///
-    /// <para>
-    /// The survey's version of this claim compares two adaptively-stopped runs that begin at
-    /// 293 K — above both equilibria — so both hulls are cooling and the comparison depends on
-    /// when each run happened to stop. Twenty per cent of real ships "violated" it that way, every
-    /// one an artifact of unequal stop times. Started at the vacuum floor instead, both runs warm:
-    /// the shadowed hull from its own waste heat, the sunlit one from waste heat plus the sun, so
-    /// the sunlit hull is at least as warm at *every* instant — provided the clocks are equal,
-    /// which is why this runs a fixed duration with no early exit.
-    /// </para>
-    ///
-    /// <para>
-    /// Six directions rather than the survey's one, because a panel of two hundred ships can
-    /// afford what ten thousand cannot, and the spread across directions is itself balance data:
-    /// how much a real hull's heat budget depends on which way it faces the sun.
-    /// </para>
-    /// </summary>
     public class SunlightPanelWalk
     {
-        /// <summary>Ships, strided across the size range.</summary>
         private const int Panel = 200;
 
-        /// <summary>The vacuum floor. Radiation is zero here, so every run warms monotonically.</summary>
         private const float ColdStart = 2.7f;
 
-        /// <summary>Simulated seconds, identical for every run — the whole point.</summary>
         private const float Clock = 1800f;
 
         private static readonly Vector3[] Directions =
@@ -45,6 +22,7 @@ namespace Thermodynamics.Tests
         };
 
         [Fact]
+/// <summary>SunlightNeverCoolsFromAnyDirection operation.</summary>
         public void SunlightNeverCoolsFromAnyDirection()
         {
             List<Blueprints.Ship> ships = CorpusFixture.Spread(Panel);
@@ -52,6 +30,7 @@ namespace Thermodynamics.Tests
 
             List<List<string>> reports = LabRun.Map(ships, Compare, LabMode.Parallel);
 
+/// <summary>List operation.</summary>
             List<string> violations = new List<string>();
             foreach (List<string> report in reports) violations.AddRange(report);
 
@@ -59,19 +38,19 @@ namespace Thermodynamics.Tests
             Assert.Empty(violations);
         }
 
-        /// <summary>
-        /// One ship: a shadowed reference and six sunlit runs, all from the same cold start on the
-        /// same clock, compared pointwise at the end.
-        /// </summary>
+/// <summary>Compare operation.</summary>
         private static List<string> Compare(Blueprints.Ship ship)
         {
+/// <summary>List operation.</summary>
             List<string> violations = new List<string>();
 
+/// <summary>Run operation.</summary>
             ScenarioOutcome shadow = Run(ship, null);
             List<ScenarioOutcome> record = new List<ScenarioOutcome> { shadow };
 
             foreach (Vector3 direction in Directions)
             {
+/// <summary>Run operation.</summary>
                 ScenarioOutcome sunlit = Run(ship, direction);
                 record.Add(sunlit);
 
@@ -79,6 +58,7 @@ namespace Thermodynamics.Tests
                 {
                     violations.Add("sunlight-panel: " + ship.Name + " is "
                         + (shadow.MeanKelvin - sunlit.MeanKelvin).ToString("n1")
+/// <summary>Name operation.</summary>
                         + " K cooler lit from " + Name(direction) + " than in shadow, on equal "
                         + "clocks from a cold start — the solar path cooled a hull");
                 }
@@ -88,9 +68,11 @@ namespace Thermodynamics.Tests
             return violations;
         }
 
+/// <summary>Run operation.</summary>
         private static ScenarioOutcome Run(Blueprints.Ship ship, Vector3? sunDirection)
         {
             ShipAssembly assembly = ship.Build(null, ColdStart);
+/// <summary>AssemblyRunner operation.</summary>
             AssemblyRunner runner = new AssemblyRunner(assembly);
 
             runner.Environment = sunDirection == null
@@ -100,11 +82,13 @@ namespace Thermodynamics.Tests
             runner.Run(Clock);
 
             ScenarioOutcome outcome = ScenarioOutcome.Read(assembly, ship.Name,
+/// <summary>Name operation.</summary>
                 sunDirection == null ? "cold-shadow" : "cold-sunlit-" + Name(sunDirection.Value));
             outcome.WorkshopId = ship.WorkshopId;
             return outcome;
         }
 
+/// <summary>Name operation.</summary>
         private static string Name(Vector3 direction)
         {
             if (direction == Vector3.Forward) return "forward";

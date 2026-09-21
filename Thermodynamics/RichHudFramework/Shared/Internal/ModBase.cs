@@ -5,30 +5,14 @@ using VRage.Game.Components;
 
 namespace RichHudFramework.Internal
 {
-	/// <summary>
-	/// Extends <see cref="MySessionComponentBase"/> to include built-in exception handling, logging and a component
-	/// system.
-	/// </summary>
 	public abstract partial class ModBase : MySessionComponentBase
 	{
-		/// <summary>
-		/// Determines whether or not the main class will be allowed to run on a dedicated server.
-		/// </summary>
 		public bool RunOnServer { get; }
 
-		/// <summary>
-		/// If true, then the mod will be allowed to run on a client.
-		/// </summary>
 		public bool RunOnClient { get; }
 
-		/// <summary>
-		/// If true, the mod is currently loaded.
-		/// </summary>
 		public new bool Loaded { get; private set; }
 
-		/// <summary>
-		/// If true, then the session component will be allowed to update.
-		/// </summary>
 		public bool CanUpdate
 		{
 			get { return _canUpdate && ((RunOnClient && ExceptionHandler.IsClient) || (RunOnServer && ExceptionHandler.IsDedicated)); }
@@ -38,13 +22,16 @@ namespace RichHudFramework.Internal
 		private readonly List<ModuleBase> modules;
 		private bool _canUpdate, closing;
 
+/// <summary>ModBase operation.</summary>
 		protected ModBase(bool runOnServer, bool runOnClient)
 		{
+/// <summary>List operation.</summary>
 			modules = new List<ModuleBase>();
 			RunOnServer = runOnServer;
 			RunOnClient = runOnClient;
 		}
 
+/// <summary>LoadData operation.</summary>
 		public sealed override void LoadData()
 		{
 			if (!Loaded && !ExceptionHandler.Unloading && !closing)
@@ -57,8 +44,10 @@ namespace RichHudFramework.Internal
 			}
 		}
 
+/// <summary>AfterLoadData operation.</summary>
 		protected new virtual void AfterLoadData() { }
 
+/// <summary>Init operation.</summary>
 		public sealed override void Init(MyObjectBuilder_SessionComponent sessionComponent)
 		{
 			if (!Loaded && !ExceptionHandler.Unloading && !closing)
@@ -70,8 +59,10 @@ namespace RichHudFramework.Internal
 			}
 		}
 
+/// <summary>AfterInit operation.</summary>
 		protected virtual void AfterInit() { }
 
+/// <summary>ManualStart operation.</summary>
 		public void ManualStart()
 		{
 			if (!Loaded && !ExceptionHandler.Unloading && !closing)
@@ -81,6 +72,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
+/// <summary>Draw operation.</summary>
 		public override void Draw()
 		{
 			if (Loaded && CanUpdate)
@@ -99,6 +91,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
+/// <summary>HandleInput operation.</summary>
 		public override void HandleInput()
 		{
 			if (Loaded && CanUpdate)
@@ -117,19 +110,19 @@ namespace RichHudFramework.Internal
 			}
 		}
 
+/// <summary>UpdateBeforeSimulation operation.</summary>
 		public sealed override void UpdateBeforeSimulation() =>
 			BeforeUpdate();
 
+/// <summary>Simulate operation.</summary>
 		public sealed override void Simulate() =>
 			BeforeUpdate();
 
+/// <summary>UpdateAfterSimulation operation.</summary>
 		public sealed override void UpdateAfterSimulation() =>
 			BeforeUpdate();
 
-		/// <summary>
-		/// The update function used (Before/Sim/After) is determined by the settings used by
-		/// the MySessionComponentDescriptorAttribute applied to the child class.
-		/// </summary>
+/// <summary>BeforeUpdate operation.</summary>
 		protected virtual void BeforeUpdate()
 		{
 			if (Loaded && CanUpdate)
@@ -150,20 +143,13 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-		/// <summary>
-		/// Sim update.
-		/// </summary>
+/// <summary>Update operation.</summary>
 		protected virtual void Update() { }
 
-		/// <summary>
-		/// Called before close used to stop, clean up and save before other components
-		/// start to unload.
-		/// </summary>
+/// <summary>BeforeClose operation.</summary>
 		public virtual void BeforeClose() { }
 
-		/// <summary>
-		/// Called for final cleanup. Other components may have already unloaded by this point.
-		/// </summary>
+/// <summary>Close operation.</summary>
 		public virtual void Close()
 		{
 			if (!closing)
@@ -179,8 +165,10 @@ namespace RichHudFramework.Internal
 			}
 		}
 
+/// <summary>CloseModules operation.</summary>
 		private void CloseModules()
 		{
+/// <summary>Returns the type.</summary>
 			string typeName = GetType().Name;
 
 			for (int n = modules.Count - 1; n >= 0; n--)
@@ -204,21 +192,17 @@ namespace RichHudFramework.Internal
 			}
 		}
 
+/// <summary>UnloadData operation.</summary>
 		protected override void UnloadData()
 		{ }
 
-		/// <summary>
-		/// Base class for ModBase components.
-		/// </summary>
 		public abstract class ModuleBase
 		{
 			protected ModBase Parent { get; private set; }
 
-			/// <summary>
-			/// Determines whether or not this component will run on a dedicated server and/or client.
-			/// </summary>
 			public readonly bool runOnServer, runOnClient;
 
+/// <summary>ModuleBase operation.</summary>
 			protected ModuleBase(bool runOnServer, bool runOnClient, ModBase parent)
 			{
 				this.runOnServer = runOnServer;
@@ -227,6 +211,7 @@ namespace RichHudFramework.Internal
 				RegisterComponent(parent);
 			}
 
+/// <summary>Registers the API and message handler.</summary>
 			public void RegisterComponent(ModBase parent)
 			{
 				if (Parent == null)
@@ -238,10 +223,7 @@ namespace RichHudFramework.Internal
 				}
 			}
 
-			/// <summary>
-			/// Used to manually remove object from update queue. This should only be used for objects that
-			/// need to be closed while the mod is running.
-			/// </summary>
+/// <summary>Unregisters the API and cleans resources.</summary>
 			public void UnregisterComponent()
 			{
 				if (Parent != null)
@@ -253,10 +235,7 @@ namespace RichHudFramework.Internal
 				}
 			}
 
-			/// <summary>
-			/// Used to manually remove object from update queue. This should only be used for objects that
-			/// need to be closed while the mod is running.
-			/// </summary>
+/// <summary>Unregisters the API and cleans resources.</summary>
 			public void UnregisterComponent(int index)
 			{
 				if (Parent != null && index < Parent.modules.Count && Parent.modules[index] == this)
@@ -268,31 +247,31 @@ namespace RichHudFramework.Internal
 				}
 			}
 
+/// <summary>Draw operation.</summary>
 			public virtual void Draw() { }
 
+/// <summary>HandleInput operation.</summary>
 			public virtual void HandleInput() { }
 
+/// <summary>Update operation.</summary>
 			public virtual void Update() { }
 
+/// <summary>Close operation.</summary>
 			public virtual void Close() { }
 		}
 
-		/// <summary>
-		/// Extension of <see cref="ModuleBase"/> that includes a task pool.
-		/// </summary>
 		public abstract class ParallelModuleBase : ModuleBase
 		{
 			private readonly TaskPool taskPool;
 
+/// <summary>ParallelModuleBase operation.</summary>
 			protected ParallelModuleBase(bool runOnServer, bool runOnClient, ModBase parent) : base(runOnServer, runOnClient, parent)
 			{
+/// <summary>TaskPool operation.</summary>
 				taskPool = new TaskPool(ErrorCallback);
 			}
 
-			/// <summary>
-			/// Called in the event an exception occurs in one of the component's tasks with a list of <see cref="KnownException"/>s
-			/// and a single aggregate exception of all other exceptions.
-			/// </summary>
+/// <summary>ErrorCallback operation.</summary>
 			protected virtual void ErrorCallback(List<KnownException> knownExceptions, AggregateException aggregate)
 			{
 				if (knownExceptions.Count > 0)
@@ -302,15 +281,11 @@ namespace RichHudFramework.Internal
 					ExceptionHandler.ReportException(aggregate);
 			}
 
-			/// <summary>
-			/// Enqueues an action to run in parallel. Not thread safe; must be called from the main thread.
-			/// </summary>
+/// <summary>EnqueueTask operation.</summary>
 			protected void EnqueueTask(Action action) =>
 				taskPool.EnqueueTask(action);
 
-			/// <summary>
-			/// Enqueues an action to run on the main thread. Meant to be used by threads other than the main.
-			/// </summary>
+/// <summary>EnqueueAction operation.</summary>
 			protected void EnqueueAction(Action action) =>
 				taskPool.EnqueueAction(action);
 		}

@@ -8,54 +8,38 @@ using Xunit.Abstractions;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **Every world knob's `Shipped` value is the value that actually ships.**
-    ///
-    /// <para>
-    /// The knob sweep prints each level against `Shipped` so a curve can be read from where the mod
-    /// sits, and nothing checked that the two agreed. `C24` moved `HeatTimeScale` from 225 to 90 on
-    /// 2026-08-24 and the knob kept 225 — so the column comparing every level to *shipped* compared
-    /// it to a level nobody runs, and the ladder of doublings around 225 put the shipped value
-    /// between two of its own cells, which means the sweep contained no answer for the world as it
-    /// is.
-    /// </para>
-    ///
-    /// <para>
-    /// **The check needs no table of expected values**, which is what makes it survive the next
-    /// retune: a knob whose `Shipped` is the default is one that changes nothing when applied to
-    /// default settings. Applying it and comparing every field is the whole test (`D3` — where one
-    /// thing exists twice, a test compares the two).
-    /// </para>
-    /// </summary>
     public class KnobBaselineTests
     {
         private readonly ITestOutputHelper output;
 
+/// <summary>KnobBaselineTests operation.</summary>
         public KnobBaselineTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
         [Fact]
+/// <summary>EveryWorldKnobsShippedValueIsTheShippedValue operation.</summary>
         public void EveryWorldKnobsShippedValueIsTheShippedValue()
         {
             List<KnobLab.Knob> knobs = KnobLab.Knobs();
             Assert.True(knobs.Count > 5, "only " + knobs.Count + " knobs, so this checked nothing");
 
+/// <summary>List operation.</summary>
             List<string> wrong = new List<string>();
             int checkedKnobs = 0;
 
             foreach (KnobLab.Knob knob in knobs)
             {
-                // A block dial rewrites materials rather than the world, and its `Shipped` is a
-                // multiplier on a definition rather than a value in the settings.
                 if (knob.World == null) continue;
 
                 checkedKnobs++;
 
+/// <summary>ThermalSettings operation.</summary>
                 ThermalSettings applied = new ThermalSettings();
                 knob.World(applied, knob.Shipped);
 
+/// <summary>ThermalSettings operation.</summary>
                 ThermalSettings untouched = new ThermalSettings();
 
                 foreach (string field in Differences(untouched, applied))
@@ -77,14 +61,10 @@ namespace Thermodynamics.Tests
                 + "nobody runs:\n  " + string.Join("\n  ", wrong.ToArray()));
         }
 
-        /// <summary>
-        /// Fields where two settings objects disagree, as `name was x, is y`.
-        ///
-        /// By reflection over the public fields, so a setting added later is covered without this
-        /// test being touched — which is the only way a check like this stays true.
-        /// </summary>
+/// <summary>Differences operation.</summary>
         private static List<string> Differences(ThermalSettings before, ThermalSettings after)
         {
+/// <summary>List operation.</summary>
             List<string> moved = new List<string>();
 
             foreach (FieldInfo field in typeof(ThermalSettings).GetFields(

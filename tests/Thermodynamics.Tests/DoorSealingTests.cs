@@ -5,15 +5,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// A door seals differently in each of its two states, and not by the same rule on every
-    /// face. The sides it is bolted in by hold whatever it is doing; only the way through opens.
-    /// One flag cannot express that, which is what these pin down.
-    /// </summary>
     public class DoorSealingTests
     {
+/// <summary>Door operation.</summary>
         private static BlockInstance Door(bool sealed_)
         {
+/// <summary>BlockInstance operation.</summary>
             BlockInstance door = new BlockInstance(Catalog.SlideDoor(), Vector3I.Zero, BlockOrientation.Identity);
             door.IsSealedByDoorState = sealed_;
             door.RefreshSurfaces();
@@ -21,6 +18,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AClosedDoorSealsTheWayThroughAndAnOpenOneDoesNot operation.</summary>
         public void AClosedDoorSealsTheWayThroughAndAnOpenOneDoesNot()
         {
             Assert.Equal(1f, Door(true).SealFraction(Face.Forward));
@@ -28,8 +26,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>OpeningADoorLeavesTheSidesItIsBoltedInBySealed operation.</summary>
         public void OpeningADoorLeavesTheSidesItIsBoltedInBySealed()
         {
+/// <summary>Door operation.</summary>
             BlockInstance open = Door(false);
 
             Assert.Equal(1f, open.SealFraction(Face.Up));
@@ -39,8 +39,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheSurfaceBitsAgreeWithTheFaceFractions operation.</summary>
         public void TheSurfaceBitsAgreeWithTheFaceFractions()
         {
+/// <summary>Door operation.</summary>
             BlockInstance open = Door(false);
             int state = open.SelfSurfaces[0];
 
@@ -49,15 +51,11 @@ namespace Thermodynamics.Tests
             Assert.True(CellSurface.SelfMount(state, Face.Forward));
         }
 
-        /// <summary>
-        /// A block with no open state is not a door, and the door flag means nothing on it.
-        ///
-        /// This used to quietly strip every seal bit, which let the test harness fake airlocks
-        /// out of armour cubes — and a fake airlock cannot catch a defect in real ones.
-        /// </summary>
         [Fact]
+/// <summary>ABlockWithNoOpenStateIsNotADoorAndIgnoresTheFlag operation.</summary>
         public void ABlockWithNoOpenStateIsNotADoorAndIgnoresTheFlag()
         {
+/// <summary>BlockInstance operation.</summary>
             BlockInstance block = new BlockInstance(Catalog.LightArmor(), Vector3I.Zero, BlockOrientation.Identity);
 
             Assert.False(block.HasStateDependentSealing);
@@ -73,12 +71,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The door's own cell is not structure — the game does not seal a sliding door on both
-        /// sides — so it belongs to the room it closes off. The audit has to read that as normal
-        /// rather than as a leak, or every airlock reports a fault.
-        /// </summary>
         [Fact]
+/// <summary>TheDoorCellJoinsTheRoomAndIsNotReportedAsALeak operation.</summary>
         public void TheDoorCellJoinsTheRoomAndIsNotReportedAsALeak()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -103,6 +97,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>OpeningTheDoorPutsTheRoomOutdoorsAndClosingItRestoresTheRoom operation.</summary>
         public void OpeningTheDoorPutsTheRoomOutdoorsAndClosingItRestoresTheRoom()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -120,8 +115,6 @@ namespace Thermodynamics.Tests
             door.IsSealedByDoorState = false;
             simulation.RefreshBlockSealing(door);
 
-            // The room did not cease to exist; it stopped holding anything in. No pass was
-            // needed to work that out, which is the point of the portal model.
             Assert.Equal(1, simulation.Rooms.Map.RoomCount);
             Assert.Equal(room, simulation.Rooms.Map.RoomIndexOf(Vector3I.Zero));
             Assert.True(simulation.Rooms.Map.IsVented(room));

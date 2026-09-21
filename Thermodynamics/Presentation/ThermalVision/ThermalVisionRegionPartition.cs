@@ -4,43 +4,44 @@ using VRageMath;
 
 namespace Thermodynamics.Presentation
 {
-    /// <summary>
-    /// Non-overlapping, axis-aligned thermal regions. Hotter input wins overlaps.
-    /// A capacity failure preserves the previous complete field; never publishes a partial update.
-    /// This is field preparation, not a game renderer or a per-frame discovery scheduler.
-    /// </summary>
     public sealed class ThermalVisionRegionPartition
     {
         public struct Region
         {
             public Vector3D Min, Max;
             public float Kelvin;
+/// <summary>Region operation.</summary>
             public Region(Vector3D min, Vector3D max, float kelvin)
             { Min = min; Max = max; Kelvin = kelvin; }
         }
 
         private readonly int capacity;
+/// <summary>List operation.</summary>
         private List<Region> regions = new List<Region>();
         public int Count { get { return regions.Count; } }
         public Region this[int index] { get { return regions[index]; } }
 
+/// <summary>ThermalVisionRegionPartition operation.</summary>
         public ThermalVisionRegionPartition(int capacity)
         {
             if (capacity < 1) throw new ArgumentException("Positive region capacity required");
             this.capacity = capacity;
         }
 
+/// <summary>TryAdd operation.</summary>
         public bool TryAdd(Region input)
         {
             if (!Finite(input.Min) || !Finite(input.Max) || !Valid(input.Min, input.Max)
                 || float.IsNaN(input.Kelvin) || float.IsInfinity(input.Kelvin) || input.Kelvin < 0)
                 throw new ArgumentException("Finite positive-volume region and nonnegative temperature required");
+/// <summary>List operation.</summary>
             var output = new List<Region>();
             var pending = new List<Region> { input };
             foreach (Region old in regions)
             {
                 if (old.Kelvin >= input.Kelvin)
                 {
+/// <summary>List operation.</summary>
                     var remaining = new List<Region>();
                     foreach (Region piece in pending)
                         if (!Subtract(piece, old, remaining)) return false;
@@ -54,12 +55,13 @@ namespace Thermodynamics.Presentation
             return true;
         }
 
-        /// <summary>Replace estimated temperature inside an exact block, including cooling; failure is transactional.</summary>
+/// <summary>TryOverwrite operation.</summary>
         public bool TryOverwrite(Region input)
         {
             if (!Finite(input.Min) || !Finite(input.Max) || !Valid(input.Min, input.Max)
                 || float.IsNaN(input.Kelvin) || float.IsInfinity(input.Kelvin) || input.Kelvin < 0)
                 throw new ArgumentException("Finite positive-volume region and nonnegative temperature required");
+/// <summary>List operation.</summary>
             var output = new List<Region>();
             foreach (Region old in regions)
                 if (!Subtract(old, input, output)) return false;
@@ -68,13 +70,13 @@ namespace Thermodynamics.Presentation
             return true;
         }
 
-        /// <summary>Clip the camera near-plane quad to a region, initializing inside-region views.</summary>
+/// <summary>NearCap operation.</summary>
         public static Vector3D[] NearCap(Region region, MatrixD world, MatrixD projection, double near)
         {
             return NearCap(region,world,projection,near,new List<Vector3D>(16),new List<Vector3D>(16)).ToArray();
         }
 
-        /// <summary>Clip into caller-owned scratch lists. The returned list is valid until the next use.</summary>
+/// <summary>NearCap operation.</summary>
         public static List<Vector3D> NearCap(Region region, MatrixD world, MatrixD projection, double near,
             List<Vector3D> polygon, List<Vector3D> scratch)
         {
@@ -91,6 +93,7 @@ namespace Thermodynamics.Presentation
             for (int axis = 0; axis < 3; axis++) for (int side = 0; side < 2; side++)
             {
                 if (polygon.Count == 0) return polygon;
+/// <summary>Coordinate operation.</summary>
                 double plane = Coordinate(side == 0 ? region.Min : region.Max, axis);
                 scratch.Clear();
                 Vector3D previous = polygon[polygon.Count - 1];
@@ -109,17 +112,20 @@ namespace Thermodynamics.Presentation
             return polygon;
         }
 
+/// <summary>Coordinate operation.</summary>
         private static double Coordinate(Vector3D value, int axis)
         { return axis == 0 ? value.X : axis == 1 ? value.Y : value.Z; }
 
-        /// <summary>Replace coarse estimates inside an aligned focus box, even with cooler readings.</summary>
+/// <summary>TryFocus operation.</summary>
         public static bool TryFocus(ThermalVisionRegionScan coarse, ThermalVisionRegionScan fine,
             Vector3D min, Vector3D max, int capacity, out ThermalVisionRegionPartition field)
         {
             field = null;
             if (coarse == null || fine == null || coarse.Running || fine.Running || coarse.Failure != null || fine.Failure != null
                 || !Finite(min) || !Finite(max) || !Valid(min, max)) return false;
+/// <summary>ThermalVisionRegionPartition operation.</summary>
             var result = new ThermalVisionRegionPartition(capacity);
+/// <summary>Region operation.</summary>
             var cut = new Region(min, max, 0);
             for (int i = 0; i < coarse.Count; i++)
                 if (!result.Subtract(coarse[i], cut, result.regions)) return false;
@@ -134,14 +140,16 @@ namespace Thermodynamics.Presentation
             return true;
         }
 
-        /// <summary>Replace a complete field inside a LOD box. Coarsened cells are clipped to the box.</summary>
+/// <summary>TryReplace operation.</summary>
         public static bool TryReplace(ThermalVisionRegionPartition coarse, ThermalVisionRegionScan fine,
             Vector3D min, Vector3D max, int capacity, out ThermalVisionRegionPartition field)
         {
             field = null;
             if (coarse == null || fine == null || fine.Running || fine.Failure != null || fine.Generation == 0
                 || !Finite(min) || !Finite(max) || !Valid(min, max)) return false;
+/// <summary>ThermalVisionRegionPartition operation.</summary>
             var result = new ThermalVisionRegionPartition(capacity);
+/// <summary>Region operation.</summary>
             var cut = new Region(min, max, 0);
             for (int i = 0; i < coarse.Count; i++)
                 if (!result.Subtract(coarse[i], cut, result.regions)) return false;
@@ -154,14 +162,17 @@ namespace Thermodynamics.Presentation
             return true;
         }
 
+/// <summary>FromScan operation.</summary>
         public static ThermalVisionRegionPartition FromScan(ThermalVisionRegionScan scan, int capacity)
         {
             if (scan == null || scan.Running || scan.Failure != null || scan.Generation == 0 || scan.Count > capacity) return null;
+/// <summary>ThermalVisionRegionPartition operation.</summary>
             var result = new ThermalVisionRegionPartition(capacity);
             for (int i = 0; i < scan.Count; i++) result.regions.Add(scan[i]);
             return result;
         }
 
+/// <summary>Append operation.</summary>
         private bool Append(List<Region> target, Region item)
         {
             if (target.Count >= capacity) return false;
@@ -169,24 +180,32 @@ namespace Thermodynamics.Presentation
             return true;
         }
 
+/// <summary>Slab operation.</summary>
         private bool Slab(List<Region> target, Vector3D min, Vector3D max, float kelvin)
         { return !Valid(min, max) || Append(target, new Region(min, max, kelvin)); }
 
+/// <summary>Subtract operation.</summary>
         private bool Subtract(Region source, Region cut, List<Region> target)
         {
             Vector3D lo = Vector3D.Max(source.Min, cut.Min), hi = Vector3D.Min(source.Max, cut.Max);
             if (!Valid(lo, hi)) return Append(target, source);
-            // Six disjoint slabs cover source minus its intersection with cut.
             return Slab(target, source.Min, new Vector3D(lo.X, source.Max.Y, source.Max.Z), source.Kelvin)
+/// <summary>Slab operation.</summary>
                 && Slab(target, new Vector3D(hi.X, source.Min.Y, source.Min.Z), source.Max, source.Kelvin)
+/// <summary>Slab operation.</summary>
                 && Slab(target, new Vector3D(lo.X, source.Min.Y, source.Min.Z), new Vector3D(hi.X, lo.Y, source.Max.Z), source.Kelvin)
+/// <summary>Slab operation.</summary>
                 && Slab(target, new Vector3D(lo.X, hi.Y, source.Min.Z), new Vector3D(hi.X, source.Max.Y, source.Max.Z), source.Kelvin)
+/// <summary>Slab operation.</summary>
                 && Slab(target, new Vector3D(lo.X, lo.Y, source.Min.Z), new Vector3D(hi.X, hi.Y, lo.Z), source.Kelvin)
+/// <summary>Slab operation.</summary>
                 && Slab(target, new Vector3D(lo.X, lo.Y, hi.Z), new Vector3D(hi.X, hi.Y, source.Max.Z), source.Kelvin);
         }
 
+/// <summary>Valid operation.</summary>
         private static bool Valid(Vector3D min, Vector3D max)
         { return min.X < max.X && min.Y < max.Y && min.Z < max.Z; }
+/// <summary>Finite operation.</summary>
         private static bool Finite(Vector3D v)
         { return !double.IsNaN(v.X + v.Y + v.Z) && !double.IsInfinity(v.X + v.Y + v.Z); }
     }

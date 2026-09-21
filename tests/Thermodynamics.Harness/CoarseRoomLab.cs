@@ -7,52 +7,28 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// The supercell flood against the shipped mapper, on the same grid: does it find the same
-    /// rooms, and what does it pay to?
-    ///
-    /// <para>
-    /// **A speedup on a wrong partition is worth nothing, so the match is measured before the
-    /// milliseconds.** Every run verifies the prototype's partition against the
-    /// <see cref="RoomMapper"/>'s room for room and cell for cell — external count equal, room
-    /// count equal, and a bijection between room ids under which every room's cell set agrees —
-    /// and a row whose match fails reports the mismatch instead of a time.
-    /// </para>
-    ///
-    /// <para>
-    /// Both walks are timed under <see cref="StageLab"/>'s settling protocol on one prebuilt
-    /// grid, so the comparison carries the same evidence a stage pairing does. The work columns
-    /// differ by design: the mapper's unit is cells visited, the prototype's is supercells taken
-    /// plus fine cells visited — the two prices whose ratio is the whole point.
-    /// </para>
-    /// </summary>
     public static class CoarseRoomLab
     {
         public class Row
         {
-            /// <summary>Supercell edge, or 1 for the shipped mapper's own row.</summary>
             public int Edge;
 
             public StageLab.Row Timing;
 
-            /// <summary>Null when the partition matched the mapper's; the mismatch otherwise.</summary>
             public string Mismatch;
 
-            /// <summary>Open supercells taken whole, fine cells visited, and the sealing bytes held.</summary>
             public long SupercellsTaken;
             public long FineCellsVisited;
             public long SealingBytes;
         }
 
-        /// <summary>
-        /// The shipped mapper once, then the prototype at each supercell edge, all on one grid.
-        /// The builder is dealt by the caller so the same hull can be measured raw and refined.
-        /// </summary>
+/// <summary>Run operation.</summary>
         public static List<Row> Run(GridBuilder builder, int[] edges, Action<string> log)
         {
             ThermalSimulation simulation = StageLab.Registered(builder);
             simulation.Surfaces.Rebuild(simulation.Grid);
 
+/// <summary>List operation.</summary>
             List<Row> rows = new List<Row>();
 
             if (log != null) log("shipped mapper, "
@@ -72,8 +48,10 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
+/// <summary>Baseline operation.</summary>
         private static Row Baseline(ThermalSimulation simulation)
         {
+/// <summary>Row operation.</summary>
             Row row = new Row();
             row.Edge = 1;
 
@@ -104,13 +82,17 @@ namespace Thermodynamics.Harness
             return row;
         }
 
+/// <summary>Prototype operation.</summary>
         private static Row Prototype(ThermalSimulation simulation, RoomMap oracle, int edge)
         {
+/// <summary>Row operation.</summary>
             Row row = new Row();
             row.Edge = edge;
 
+/// <summary>CoarseRoomFlood operation.</summary>
             CoarseRoomFlood flood = new CoarseRoomFlood(edge);
             flood.Run(simulation.Grid, simulation.Surfaces);
+/// <summary>Verify operation.</summary>
             row.Mismatch = Verify(oracle, flood);
             row.SupercellsTaken = flood.SupercellsTaken;
             row.FineCellsVisited = flood.FineCellsVisited;
@@ -138,11 +120,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-        /// <summary>
-        /// The bijection check: external counts equal, room counts equal, and every mapper room's
-        /// cells landing in exactly one prototype region of the same size, no region claimed
-        /// twice. Returns null on a match and the first disagreement otherwise.
-        /// </summary>
+/// <summary>Verify operation.</summary>
         public static string Verify(RoomMap oracle, CoarseRoomFlood flood)
         {
             if (oracle.ExternalCellCount != flood.ExternalCells)
@@ -195,8 +173,10 @@ namespace Thermodynamics.Harness
             return null;
         }
 
+/// <summary>Table operation.</summary>
         public static string Table(IList<Row> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
             text.AppendLine("  walk        blocks       best ms    median ms  repeats  stopped          work  unit             supers     fine cells    sealing KB  match");
             for (int i = 0; i < rows.Count; i++)
@@ -216,8 +196,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
+/// <summary>Csv operation.</summary>
         public static string Csv(IList<Row> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
             text.AppendLine("walk,edge,blocks,best_ms,median_ms,repeats,stopped,work,supercells,fine_cells,sealing_bytes,match,taken_utc,host");
             for (int i = 0; i < rows.Count; i++)

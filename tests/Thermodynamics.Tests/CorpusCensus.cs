@@ -9,28 +9,18 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// What every ship in the corpus *is*, before anything is stepped — the terms G4 needs and the
-    /// survey's outcome rows do not carry. **This costs a build, not a simulation**, so the full
-    /// corpus is minutes rather than the survey's eight hours and can be re-run whenever a definition
-    /// moves.
-    ///
-    /// <para>
-    /// <c>census.csv</c> is one row per ship, <c>composition.csv</c> one per ship and heat-making block
-    /// type. See balance.md, The datasets.
-    /// </para>
-    /// </summary>
     [Collection("alone")]
     public class CorpusCensus
     {
-        /// <summary>Everything the census learned about one ship.</summary>
         private class Censused
         {
             public string Row;
+/// <summary>List operation.</summary>
             public List<string> Composition = new List<string>();
         }
 
         [Fact]
+/// <summary>EveryShipInTheCorpusIsCounted operation.</summary>
         public void EveryShipInTheCorpusIsCounted()
         {
             if (CorpusFixture.Files().Count == 0) return;
@@ -39,9 +29,6 @@ namespace Thermodynamics.Tests
 
             Assert.True(results.Count > 0, "the corpus yielded no censusable ships");
 
-            // The census exists to make G4 answerable, and it cannot do that if the terms it was
-            // added for are absent. A run where nothing reported exposure has a build or a mount
-            // table broken upstream, and would otherwise write a full-looking file of zeroes.
             int withExposure = 0;
             int withPower = 0;
             foreach (Censused ship in results)
@@ -54,8 +41,6 @@ namespace Thermodynamics.Tests
             Assert.True(withExposure > 0, "not one ship reported any exposed area");
             Assert.True(withPower > 0, "not one ship reported any installed power");
 
-            // The geometry terms are what the hot-spot question rests on, and a broken link graph
-            // or an unapplied load would write a full-looking file of zeroes for all of them.
             int withSources = 0;
             foreach (Censused ship in results)
             {
@@ -64,15 +49,13 @@ namespace Thermodynamics.Tests
             Assert.True(withSources > 0, "not one ship reported a single heat source");
         }
 
-        /// <summary>Column of <c>exposed_area_m2</c> in <see cref="Header"/>.</summary>
         private const int ExposedAreaColumn = 11;
 
-        /// <summary>Column of <c>installed_power_w</c> in <see cref="Header"/>.</summary>
         private const int InstalledPowerColumn = 16;
 
-        /// <summary>Column of <c>heat_sources</c>, the first of the geometry terms.</summary>
         private const int HeatSourcesColumn = 31;
 
+/// <summary>Positive operation.</summary>
         private static bool Positive(string[] fields, int column)
         {
             float value;
@@ -96,41 +79,14 @@ namespace Thermodynamics.Tests
         public const string CompositionHeader =
             "ship,workshop_id,subtype,type_id,count,waste_full_w,share_of_waste";
 
-        /// <summary>What one walk of the hull's surfaces learned about how it meets the air.</summary>
         private struct Aerodynamics
         {
-            /// <summary>
-            /// **What the hull's own shape is worth to its drag**: the projected-area-weighted mean
-            /// of `ShapeNormal.Factor` over the six axis winds, the six averaged. One is a hull the
-            /// shape term does not touch; below one is what it takes off (backlog.md `K22`).
-            /// </summary>
             public float ShapeFactor;
 
-            /// <summary>
-            /// **How much lift the hull makes for the drag it makes**, the same six directions
-            /// averaged.
-            ///
-            /// <para>
-            /// Lift is the part of the pressure sum perpendicular to the flow and drag is the part
-            /// along it, so their ratio is a property of the shape alone — no density, no speed, no
-            /// coefficient. That is what makes it scoreable on a census rather than in a walk, and
-            /// it is `K23`'s fourth criterion: **p95 at most 2.0**, because a blocky hull under a
-            /// Newtonian flat-plate model has no business reaching a glider's ratio.
-            /// </para>
-            /// </summary>
             public float LiftOverDrag;
         }
 
-        /// <summary>
-        /// Both aerodynamic shape figures, from one walk of the nodes per direction.
-        ///
-        /// <para>
-        /// **Six directions rather than one, because a ship has no fixed attitude to the wind** and
-        /// a single axis would score a hull on how it happens to be drawn. Six is the cheap
-        /// direction-average; the honest one is Cauchy's over all orientations, which the census's
-        /// own `exposed_area_m2` already leans on for the projection it feeds `cruise.py`.
-        /// </para>
-        /// </summary>
+/// <summary>Aero operation.</summary>
         private static Aerodynamics Aero(ShipAssembly assembly)
         {
             double shapeSum = 0d;
@@ -156,8 +112,6 @@ namespace Thermodynamics.Tests
                         int total = node.TotalExposedFaces;
                         if (total <= 0 || node.ExposedArea <= 0f) continue;
 
-                        // An axis wind lights exactly one face, so the node's projected area is its
-                        // own area times the share of its faces pointing that way.
                         double share = (double)node.GetExposedFaces(f) / total;
                         if (share <= 0d) continue;
 
@@ -168,8 +122,6 @@ namespace Thermodynamics.Tests
                         projected += area;
                         weighted += area * factor;
 
-                        // The same contribution with its direction kept, which is what the solver
-                        // accumulates when lift is on: Newtonian pressure acts along `-n`.
                         pressure -= normal * (float)(area * factor);
                     }
                 }
@@ -179,8 +131,6 @@ namespace Thermodynamics.Tests
                 shapeSum += weighted / projected;
                 directions++;
 
-                // Drag is the pressure along the flow and lift is the remainder, so the ratio is
-                // the shape's alone — no density, no speed, no coefficient in it.
                 float along = Vector3.Dot(pressure, wind);
                 float drag = along < 0f ? -along : along;
                 if (drag > 0f)
@@ -190,32 +140,22 @@ namespace Thermodynamics.Tests
                 }
             }
 
+/// <summary>Aerodynamics operation.</summary>
             Aerodynamics aero = new Aerodynamics();
 
-            // No projected area in any direction is a hull with no exposed faces at all. One is
-            // *no correction*, which is what the solver reads a missing normal as (`E8`).
             aero.ShapeFactor = directions == 0 ? 1f : (float)(shapeSum / directions);
             aero.LiftOverDrag = directions == 0 ? 0f : (float)(ratioSum / directions);
             return aero;
         }
 
-        /// <summary>
-        /// Builds one ship, measures it under three load states, and returns its rows.
-        ///
-        /// The three states are the same ones the survey runs, so a census row and an outcome row
-        /// for the same ship describe the same configuration. Nothing is stepped: applying a load
-        /// settles every block's heat generation, which is all the census reads.
-        /// </summary>
+/// <summary>Count operation.</summary>
         private static Censused Count(Blueprints.Ship ship)
         {
             ShipAssembly assembly = ship.Build();
             if (assembly.NodeCount == 0) return null;
 
-            // By model name: a placed block carries its type where the game states no subtype,
-            // and a subtype index resolves all thirteen of those to one arbitrary definition.
             Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.ByModelName();
 
-            // ---- the hull, as built ------------------------------------------------------------
 
             int exposedBlocks = 0;
             int buried = 0;
@@ -223,9 +163,6 @@ namespace Thermodynamics.Tests
             double exposedArea = 0d;
             double thermalMass = 0d;
 
-            // **Physical mass, which is not thermal mass.** `ThermalMass` is a heat capacity, J/K, and
-            // the two differ by a specific heat that varies with what a block is made of. the drag milestone scores
-            // deceleration, `a = F/m`, and needs the kilograms.
             double mass = 0d;
 
             for (int g = 0; g < assembly.Simulations.Count; g++)
@@ -243,9 +180,6 @@ namespace Thermodynamics.Tests
                     {
                         buried++;
 
-                        // A block with neither a face to radiate from nor a link to conduct along
-                        // cannot shed heat by any route. The survey counts these too; repeated here
-                        // so the census stands on its own.
                         if (solver.Nodes.Count >= 2 && solver.NodeConductanceTotal(i) <= 0f)
                         {
                             sealedBlocks++;
@@ -254,7 +188,6 @@ namespace Thermodynamics.Tests
                 }
             }
 
-            // ---- what it installs ---------------------------------------------------------------
 
             int armor = 0, producers = 0, stores = 0, thrusters = 0, tools = 0, consumers = 0, other = 0;
             double installed = 0d, storePower = 0d, thrust = 0d, draw = 0d;
@@ -282,15 +215,18 @@ namespace Thermodynamics.Tests
                         installed += definition.PowerOutputWatts;
                     }
                 }
+/// <summary>if operation.</summary>
                 else if (definition.ThrustNewtons > 0f)
                 {
                     thrusters++;
                     thrust += definition.ThrustNewtons;
                 }
+/// <summary>if operation.</summary>
                 else if (definition.TypeId == "CubeBlock")
                 {
                     armor++;
                 }
+/// <summary>if operation.</summary>
                 else if (definition.PowerDrawWatts > 0f)
                 {
                     consumers++;
@@ -298,23 +234,15 @@ namespace Thermodynamics.Tests
                 }
                 else other++;
 
-                // Counted as well as in its power category, because "how many tools" and "how many
-                // consumers" are different questions about the same block. The list is the load
-                // model's own, so what counts as a tool cannot drift from what runs as one.
                 if (ShipLoad.IsTool(definition.TypeId)) tools++;
             }
 
-            // ---- what it makes, at each load ---------------------------------------------------
 
             float idle = ShipLoad.Apply(assembly, ShipLoad.State.Idle);
             float burn = ShipLoad.Apply(assembly, ShipLoad.State.Burn(Face.Forward));
 
-            // Full last, so the per-block figures the composition rows and the geometry read are
-            // the full-load ones.
             float full = ShipLoad.Apply(assembly, ShipLoad.State.Full);
 
-            // Where the heat is put, rather than how much of it there is. Measured after the load
-            // is applied, because every figure in it reads HeatGenerationWatts.
             HeatGeometry.Result geometry = HeatGeometry.Measure(assembly, ship.Large);
 
             Dictionary<string, double> wasteBySubtype = new Dictionary<string, double>();
@@ -338,17 +266,13 @@ namespace Thermodynamics.Tests
                 topSource = entry.Key;
             }
 
-            // ---- the two derived terms the criteria wanted --------------------------------------
-            //
-            // Exposure per kilowatt is G4's missing side: how much radiating surface a design gives
-            // each kilowatt it makes. Capacity per watt is the time constant in disguise — joules
-            // per kelvin against watts arriving is, to a factor, the seconds a hull takes to move a
-            // kelvin, which is what the survey's six-second failures are really about.
             double exposurePerKilowatt = full > 0f ? exposedArea / (full / 1000d) : 0d;
             double capacityPerWatt = full > 0f ? thermalMass / full : 0d;
 
+/// <summary>Censused operation.</summary>
             Censused censused = new Censused();
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder row = new StringBuilder();
             row.Append(CorpusRecord.Text(ship.Name)).Append(',');
             row.Append(ship.WorkshopId.ToString(CultureInfo.InvariantCulture)).Append(',');
@@ -398,23 +322,19 @@ namespace Thermodynamics.Tests
             row.Append(CorpusRecord.Num((float)geometry.LocalWattsPerAreaMax)).Append(',');
             row.Append(CorpusRecord.Num((float)geometry.SpreadMetres)).Append(',');
             row.Append(CorpusRecord.Num((float)geometry.HottestSourceConductance)).Append(',');
+/// <summary>Aero operation.</summary>
             Aerodynamics aero = Aero(assembly);
             row.Append(CorpusRecord.Num(aero.ShapeFactor)).Append(',');
             row.Append(CorpusRecord.Num(aero.LiftOverDrag));
 
             censused.Row = row.ToString();
 
-            // ---- composition, for the block types that carry heat --------------------------------
-            //
-            // Every subtype would be six hundred columns of mostly armour. What a balance question
-            // needs is the types that make the heat, so a distribution can be read against the
-            // heating: the rows are the heat-making types plus their counts, and their share of the
-            // hull's total waste.
             foreach (KeyValuePair<string, double> entry in wasteBySubtype)
             {
                 GameBlocks.Definition definition;
                 definitions.TryGetValue(entry.Key, out definition);
 
+/// <summary>StringBuilder operation.</summary>
                 StringBuilder line = new StringBuilder();
                 line.Append(CorpusRecord.Text(ship.Name)).Append(',');
                 line.Append(ship.WorkshopId.ToString(CultureInfo.InvariantCulture)).Append(',');

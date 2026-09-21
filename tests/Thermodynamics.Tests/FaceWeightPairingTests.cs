@@ -5,27 +5,9 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// A node's exposure on face <i>f</i> is weighted against the sun's and the wind's incidence on
-    /// **that same face**. A sum pairing face 2's exposure with face 3's incidence compiles, stays
-    /// symmetric, conserves energy and reads plausibly on every hull, and a cube — which is what
-    /// <see cref="SolarSymmetryTests"/> uses — cannot see a permutation at all.
-    ///
-    /// <para>
-    /// The fixture is a block buried on five sides. The assertion is the weaker and more useful one:
-    /// that one direction lights each node, and that it is the same function of the open face for all
-    /// six — which a permutation breaks and a handedness convention does not.
-    /// </para>
-    /// </summary>
     public class FaceWeightPairingTests
     {
-        /// <summary>
-        /// A block open on exactly one face: the centre of a plus with one arm left off.
-        ///
-        /// The centre is placed first so it is the first node, but it is found by its exposure
-        /// rather than by its index, so a change to build order cannot quietly retarget the test
-        /// onto one of the arms.
-        /// </summary>
+/// <summary>OpenOn operation.</summary>
         private static ThermalSimulation OpenOn(int face, ThermalSettings settings)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -42,7 +24,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-        /// <summary>The node with one open face, and a check that it is the one asked for.</summary>
+/// <summary>Centre operation.</summary>
         private static ThermalNode Centre(ThermalSimulation simulation, int face)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -61,13 +43,8 @@ namespace Thermodynamics.Tests
             return null;
         }
 
-        /// <summary>
-        /// The sun. This half is derivable rather than conventional: <c>ResolveDirection</c>
-        /// weights a face by <c>max(0, dot(normal, direction))</c>, so a sun along a face's own
-        /// normal weights that face at one and every other at zero. A node open only on face
-        /// <i>f</i> must therefore take sunlight from <c>Normals[f]</c> and from nothing else.
-        /// </summary>
         [Fact]
+/// <summary>EachFaceTakesSunFromItsOwnNormalAndNoOther operation.</summary>
         public void EachFaceTakesSunFromItsOwnNormalAndNoOther()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -76,9 +53,11 @@ namespace Thermodynamics.Tests
             {
                 for (int from = 0; from < Face.Count; from++)
                 {
+/// <summary>OpenOn operation.</summary>
                     ThermalSimulation simulation = OpenOn(open, new ThermalSettings());
                     simulation.StepExact(1, Worlds.Space(Face.Normals[from]));
 
+/// <summary>Centre operation.</summary>
                     float watts = Centre(simulation, open).LastSolarWatts;
                     string what = "open on " + Face.Name(open) + ", sun from " + Face.Name(from);
 
@@ -98,22 +77,12 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The wind, which shares the six hoisted face weights with the sun and is a separate
-        /// transcription of the same sum.
-        ///
-        /// Unlike the sun, which direction of travel presents which face is a convention owned by
-        /// <c>ComposeRelativeWind</c> and the environment solver, not by the weighting — so this
-        /// does not assert what that convention is. It reads the convention off the first face and
-        /// then requires the other five to obey the same one, which is what a permutation cannot
-        /// do and a sign flip elsewhere in the model would not disturb.
-        /// </summary>
         [Fact]
+/// <summary>EveryFaceMeetsTheWindOnTheSameConventionAsTheFirst operation.</summary>
         public void EveryFaceMeetsTheWindOnTheSameConventionAsTheFirst()
         {
             if (!GameBlocks.IsInstalled) return;
 
-            // Fast enough for friction to engage, in air dense enough for it to matter.
             const float Speed = 300f;
 
             int[] answeredTo = new int[Face.Count];
@@ -124,6 +93,7 @@ namespace Thermodynamics.Tests
 
                 for (int blowing = 0; blowing < Face.Count; blowing++)
                 {
+/// <summary>OpenOn operation.</summary>
                     ThermalSimulation simulation = OpenOn(open, new ThermalSettings());
                     simulation.StepExact(1, Worlds.WindAndMotion(
                         1f, Speed, Face.Normals[blowing], Vector3.Zero));
@@ -144,9 +114,6 @@ namespace Thermodynamics.Tests
                 answeredTo[open] = found;
             }
 
-            // The convention itself is whatever it is; what matters is that all six agree on it.
-            // Identity means the wind that reaches a face runs along that face's own normal, and
-            // Opposite means it runs against it. Anything else is a permutation.
             bool identity = answeredTo[0] == 0;
 
             for (int open = 0; open < Face.Count; open++)

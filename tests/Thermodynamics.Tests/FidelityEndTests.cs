@@ -8,33 +8,15 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **Which way each integration dial points is stated in the code, and the page cannot drift
-    /// from it.**
-    ///
-    /// <para>
-    /// `C15` wants a mechanism configured from `off` to `realistic`. The four integration dials are
-    /// the exception, and configuration.md said so and then said *nothing tells a reader which way
-    /// each points but this page* — which is the sentence this file exists to make false. They run
-    /// in three directions: two are faithful at zero, two at their ceiling, and a player in the
-    /// menu had four differently worded tips and no rule (`B31`).
-    /// </para>
-    /// </summary>
     public class FidelityEndTests
     {
+/// <summary>Configuration operation.</summary>
         private static string Configuration()
         {
             return File.ReadAllText(Path.Combine(ShippedBlocks.RepoRoot(), "docs", "configuration.md"));
         }
 
-        /// <summary>
-        /// Every setting's shipped default, read from the source.
-        ///
-        /// <para>
-        /// Textual for the reason `ConfigurationDocTests` gives: `Settings.cs` reads `Sandbox.*` and
-        /// cannot be linked into this project, so the alternative to reading it is not reading it.
-        /// </para>
-        /// </summary>
+/// <summary>Defaults operation.</summary>
         private static Dictionary<string, float> Defaults()
         {
             string source = File.ReadAllText(Path.Combine(ShippedBlocks.RepoRoot(),
@@ -61,13 +43,11 @@ namespace Thermodynamics.Tests
             return defaults;
         }
 
-        /// <summary>
-        /// Every dial in the table is a setting that exists and can be read, so a rename cannot
-        /// leave the table describing something that is gone (`D2`).
-        /// </summary>
         [Fact]
+/// <summary>EveryDialNamesASettingThatExists operation.</summary>
         public void EveryDialNamesASettingThatExists()
         {
+/// <summary>Defaults operation.</summary>
             Dictionary<string, float> defaults = Defaults();
 
             Assert.NotEmpty(FidelityEnds.All);
@@ -79,15 +59,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// **The four claims configuration.md makes, held against the table.** The page is where
-        /// this was written down first and it is still where it is argued; what must not happen is
-        /// the two saying different things, which is how a reader ends up trusting the wrong one
-        /// (`D3`).
-        /// </summary>
         [Fact]
+/// <summary>ThePageAndTheTableAgreeAboutWhichEndIsFaithful operation.</summary>
         public void ThePageAndTheTableAgreeAboutWhichEndIsFaithful()
         {
+/// <summary>Configuration operation.</summary>
             string page = Configuration();
 
             Assert.Equal(0f, Faithful("MaxSubstepsPerBlock"));
@@ -96,7 +72,6 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, Faithful("MaxElementVisitsPerStep"));
             Assert.Contains("`MaxElementVisitsPerStep` 0 means uncapped", page);
 
-            // The two that point the other way.
             Assert.True(Faithful("MaxSubsteps") > 0f);
             Assert.Contains("`MaxSubsteps` is the opposite", page);
 
@@ -104,22 +79,11 @@ namespace Thermodynamics.Tests
             Assert.Contains("`Frequency` up is dearer and more faithful", page);
         }
 
-        /// <summary>
-        /// **Two of the four do not ship at their faithful end, and that is the fact worth
-        /// pinning.** A dial whose default *is* its faithful end tells a reader nothing they did
-        /// not assume; the two that are not are exactly the ones the sentence in the menu is for,
-        /// and each has a reason this repository measured — `Frequency` is the quarter-second basis
-        /// every substep figure is quoted on, and the step budget is `G6` asking a grid to keep up
-        /// with real time.
-        ///
-        /// <para>
-        /// It is asserted rather than described so that a later change to either default is a
-        /// failure a reader has to look at, rather than a silent move of what *realistic* means.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheTwoDialsThatDoNotShipFaithfulAreTheTwoTheSentenceIsFor operation.</summary>
         public void TheTwoDialsThatDoNotShipFaithfulAreTheTwoTheSentenceIsFor()
         {
+/// <summary>Defaults operation.</summary>
             Dictionary<string, float> shipped = Defaults();
 
             Assert.Equal(Faithful("MaxSubstepsPerBlock"), shipped["MaxSubstepsPerBlock"]);
@@ -129,12 +93,8 @@ namespace Thermodynamics.Tests
             Assert.NotEqual(Faithful("MaxElementVisitsPerStep"), shipped["MaxElementVisitsPerStep"]);
         }
 
-        /// <summary>
-        /// The sentence is one sentence, said the same way for every dial, and absent for a setting
-        /// that has no faithful end — four dials described in four voices is what a reader has to
-        /// learn rather than read.
-        /// </summary>
         [Fact]
+/// <summary>TheSentenceIsUniformAndOnlyForDialsThatHaveOne operation.</summary>
         public void TheSentenceIsUniformAndOnlyForDialsThatHaveOne()
         {
             foreach (FidelityEnds.End end in FidelityEnds.All)
@@ -150,20 +110,8 @@ namespace Thermodynamics.Tests
             Assert.Null(FidelityEnds.For("EnableConduction"));
         }
 
-        /// <summary>
-        /// **The menu says it, which is the whole point.** The table and the page could agree
-        /// perfectly while the surface a player actually reads said nothing, which is the state
-        /// this was in. Read from the source because the menu binds Rich HUD and no test project
-        /// compiles it.
-        ///
-        /// <para>
-        /// **One place builds every tooltip now**, where there were four call sites appending the
-        /// sentence separately and a fifth that could have forgotten to. So this judges the builder
-        /// — that it appends the sentence and names its one exception — and then that the window
-        /// takes every control's tip from it rather than writing one of its own.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheMenuRendersTheSentenceIntoEveryDialsTip operation.</summary>
         public void TheMenuRendersTheSentenceIntoEveryDialsTip()
         {
             string menu = File.ReadAllText(Path.Combine(ShippedBlocks.RepoRoot(),
@@ -171,25 +119,22 @@ namespace Thermodynamics.Tests
             string window = File.ReadAllText(Path.Combine(ShippedBlocks.RepoRoot(),
                 "Thermodynamics", "ThermalSettingsWindow.cs"));
 
-            // The one builder, appending the sentence in the one place a tooltip is made.
             Assert.Equal(1, Occurrences(menu, "internal static ToolTip TipFor"));
             Assert.Equal(1, Occurrences(menu, "FidelityEnds.Sentence(name)"));
 
-            // The overlay dropdown is a view chooser rather than a dial and is the one exception.
             int builder = menu.IndexOf("internal static ToolTip TipFor", StringComparison.Ordinal);
             Assert.Contains("DebugBlockOverlay", menu.Substring(builder, 600));
 
-            // Every control the window offers is given that tip, and none of them builds its own —
-            // a control with a tooltip made elsewhere is a dial whose faithful end is invisible in
-            // exactly one place.
             Assert.Equal(1, Occurrences(window, "ThermalSettingsMenu.TipFor("));
             Assert.Equal(0, Occurrences(window, "new ToolTip"));
 
+/// <summary>Occurrences operation.</summary>
             int given = Occurrences(window, "ToolTip = tip");
             Assert.True(given >= 4, "only " + given + " controls were given a tip, so either a"
                 + " control kind has lost its tooltip or this is reading the wrong file");
         }
 
+/// <summary>Faithful operation.</summary>
         private static float Faithful(string setting)
         {
             FidelityEnds.End? end = FidelityEnds.For(setting);
@@ -197,6 +142,7 @@ namespace Thermodynamics.Tests
             return end.Value.Faithful;
         }
 
+/// <summary>Occurrences operation.</summary>
         private static int Occurrences(string text, string needle)
         {
             int count = 0;

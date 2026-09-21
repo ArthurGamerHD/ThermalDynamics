@@ -3,62 +3,34 @@ using System.Text;
 
 namespace Thermodynamics
 {
-    /// <summary>A class of value the simulation should not have produced.</summary>
     public enum TelemetryAnomalyKind
     {
         None = 0,
 
-        /// <summary>A temperature that is not a number at all.</summary>
         NotANumber,
 
-        /// <summary>A temperature that has run away to infinity.</summary>
         Infinite,
 
-        /// <summary>Finite, but far above anything the model should reach.</summary>
         Implausible,
 
-        /// <summary>
-        /// The solver's floor at zero absorbed a negative excursion. The signature of an unstable
-        /// step: without the clamp the value would go negative and then oscillate with growing
-        /// amplitude.
-        /// </summary>
         ClampedToZero
     }
 
-    /// <summary>
-    /// Classifies a cell's post-update state as an anomaly or not.
-    ///
-    /// Free of any Space Engineers type, so the classification can be tested outside the game, on
-    /// the same boundary the simulation core draws.
-    /// </summary>
     public static class TelemetryAnomalies
     {
-        /// <param name="temperature">The cell temperature after the update and after the clamp.</param>
-        /// <param name="lastTemperature">Its temperature at the start of the update.</param>
-        /// <param name="implausible">The threshold above which a finite value is suspect.</param>
+/// <summary>Classify operation.</summary>
         public static TelemetryAnomalyKind Classify(float temperature, float lastTemperature, float implausible)
         {
             if (float.IsNaN(temperature)) return TelemetryAnomalyKind.NotANumber;
             if (float.IsInfinity(temperature)) return TelemetryAnomalyKind.Infinite;
             if (temperature > implausible) return TelemetryAnomalyKind.Implausible;
 
-            // Only reported when the cell had heat to lose: a cell already at zero that stayed there
-            // is the normal state of an unsimulated block.
             if (temperature == 0f && lastTemperature > 0f) return TelemetryAnomalyKind.ClampedToZero;
 
             return TelemetryAnomalyKind.None;
         }
 
-        /// <summary>
-        /// Classifies a whole grid from three figures the solver already publishes, so a grid that has
-        /// gone numerically bad is caught without walking it. A NaN at any node propagates into the
-        /// two watt sums. The one case it cannot see is a bad temperature on a node with no exposed
-        /// face. See telemetry.md, A grid that has gone numerically bad is also a fault.
-        /// </summary>
-        /// <param name="hottestTemperature">
-        /// The hottest node's temperature, or 0 when the grid has no nodes. A NaN never wins a
-        /// maximum, so this catches runaway rather than NaN; the watt sums catch NaN.
-        /// </param>
+/// <summary>ClassifyGrid operation.</summary>
         public static TelemetryAnomalyKind ClassifyGrid(float environmentWatts, float heatGainWatts,
             float hottestTemperature, float implausible)
         {
@@ -73,7 +45,7 @@ namespace Thermodynamics
             return TelemetryAnomalyKind.None;
         }
 
-        /// <summary>The name a grid-level kind is aggregated under. See <see cref="Name"/>.</summary>
+/// <summary>GridName operation.</summary>
         public static string GridName(TelemetryAnomalyKind kind, float implausible)
         {
             switch (kind)
@@ -85,10 +57,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// The name a kind is aggregated under in the report. Stable, since it is the dictionary key
-        /// grouping every occurrence of the same problem.
-        /// </summary>
+/// <summary>Name operation.</summary>
         public static string Name(TelemetryAnomalyKind kind, float implausible)
         {
             switch (kind)
@@ -102,11 +71,6 @@ namespace Thermodynamics
         }
     }
 
-    /// <summary>
-    /// Admits one call in every N, so the expensive half of the per-cell data collection runs on
-    /// a fraction of updates. The first call is always admitted, so a short session still
-    /// produces samples.
-    /// </summary>
     public class SampleGate
     {
         private int _stride = 1;
@@ -118,6 +82,7 @@ namespace Thermodynamics
             set { _stride = value < 1 ? 1 : value; }
         }
 
+/// <summary>Admit operation.</summary>
         public bool Admit()
         {
             if (--_countdown > 0) return false;
@@ -126,13 +91,13 @@ namespace Thermodynamics
             return true;
         }
 
+/// <summary>Reset operation.</summary>
         public void Reset()
         {
             _countdown = 0;
         }
     }
 
-    /// <summary>One occurrence class of something the simulation should not have produced.</summary>
     public class AnomalyRecord
     {
         public string Kind;
@@ -142,27 +107,17 @@ namespace Thermodynamics
         public string FirstExample;
         public string LastExample;
 
-        /// <summary>
-        /// True when this is a caught exception rather than a suspect measurement. Faults are
-        /// recorded whether or not collection is running, and are the only thing in the module
-        /// that reaches the game log by itself.
-        /// </summary>
         public bool IsFault;
     }
 
-    /// <summary>
-    /// Every anomaly and fault the session has seen, one record per kind, holding one rule: **an
-    /// observation is recorded only while collection is running, and a fault is recorded always.**
-    /// Free of any Space Engineers type, so that rule can be tested rather than argued about.
-    /// </summary>
     public class AnomalyRegistry
     {
         private readonly Dictionary<string, AnomalyRecord> records = new Dictionary<string, AnomalyRecord>();
         private readonly int maxKinds;
 
-        /// <summary>Kinds refused because the registry was full. Counted so the report can say so.</summary>
         public long KindsDropped;
 
+/// <summary>AnomalyRegistry operation.</summary>
         public AnomalyRegistry(int maxKinds)
         {
             this.maxKinds = maxKinds < 1 ? 1 : maxKinds;
@@ -178,16 +133,7 @@ namespace Thermodynamics
             get { return records.Count; }
         }
 
-        /// <summary>
-        /// Files one occurrence.
-        /// </summary>
-        /// <param name="fault">A caught exception, rather than a suspect measurement.</param>
-        /// <param name="collecting">Whether telemetry collection is running.</param>
-        /// <returns>
-        /// True when the caller should write this to the game log: the first occurrence of a fault
-        /// kind, and nothing else. A throw inside the step fires once per grid per frame, and the
-        /// count still accumulates for the report and the closing summary.
-        /// </returns>
+/// <summary>Record operation.</summary>
         public bool Record(string kind, string example, bool fault, bool collecting, double seconds)
         {
             if (!collecting && !fault) return false;
@@ -224,9 +170,10 @@ namespace Thermodynamics
             return false;
         }
 
-        /// <summary>The fault records, in the order they were first seen.</summary>
+/// <summary>Faults operation.</summary>
         public List<AnomalyRecord> Faults()
         {
+/// <summary>List operation.</summary>
             List<AnomalyRecord> faults = new List<AnomalyRecord>();
 
             foreach (AnomalyRecord record in records.Values)
@@ -242,16 +189,14 @@ namespace Thermodynamics
             return faults;
         }
 
-        /// <summary>
-        /// One block of text naming every fault of the session and how often each fired, or null when
-        /// there were none. Only the first of each kind is logged as it happens, so without this a
-        /// fault that fired ten thousand times reads exactly like one that fired once.
-        /// </summary>
+/// <summary>FaultSummary operation.</summary>
         public string FaultSummary(bool collecting)
         {
+/// <summary>Faults operation.</summary>
             List<AnomalyRecord> faults = Faults();
             if (faults.Count == 0) return null;
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append(faults.Count).Append(" fault kind(s) this session");
 
@@ -272,6 +217,7 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
+/// <summary>Clear operation.</summary>
         public void Clear()
         {
             records.Clear();

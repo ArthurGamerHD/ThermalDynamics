@@ -11,45 +11,28 @@ using static VRageRender.MyBillboard;
 
 namespace Thermodynamics
 {
-    /// <summary>Soft additive heat patches and bounded nearby heat lights; see thermal-glow.md.</summary>
     public static class ThermalGlow
     {
         private static readonly MyStringId GlowMaterial = MyStringId.GetOrCompute("GaugeHeatGlow");
 
-        /// <summary>Quads submitted during the most recent draw.</summary>
         public static int LastQuads { get; private set; }
         public static int LastHotBlocks { get; private set; }
         public static int LastSurfaceBlocks { get; private set; }
         public static int ActiveLights { get { return Lights.Count; } }
         public static string LastState { get; private set; }
 
-        /// <summary>
-        /// Brightest a grid's heat light gets, at the moment its hottest block reaches its rating.
-        /// Chosen against the game's own interior light rather than derived: a block about to fail
-        /// should light the compartment it is in, not wash it out.
-        /// </summary>
         private const float LightIntensity = 2.5f;
 
-        /// <summary>
-        /// Metres the light reaches past the glowing blocks themselves, and the least it reaches at
-        /// all. A single cooking block still has to light the corridor it sits in.
-        /// </summary>
         private const float LightReach = 6f;
 
         private const float LightRangeCap = 120f;
 
-        /// <summary>
-        /// One light per grid, held for as long as that grid has anything glowing.
-        ///
-        /// **Per grid rather than per block, deliberately.** A hull losing five hundred blocks would
-        /// otherwise ask the renderer for five hundred dynamic lights. The block glow above already
-        /// carries which block is hot; all the light has to do is let it fall on what is around it,
-        /// and that is a property of the region rather than of the cube.
-        /// </summary>
         private static readonly Dictionary<long, MyLight> Lights = new Dictionary<long, MyLight>();
 
+/// <summary>List operation.</summary>
         private static readonly List<long> Extinguished = new List<long>();
 
+/// <summary>Draw operation.</summary>
         public static void Draw()
         {
             LastQuads = LastHotBlocks = LastSurfaceBlocks = 0;
@@ -94,6 +77,7 @@ namespace Thermodynamics
                 UpdateLight(thermals, ref eye);
 
                 if (quads < HeatGlowStyle.MaxQuads)
+/// <summary>DrawGrid operation.</summary>
                     quads += DrawGrid(thermals, ref eye, HeatGlowStyle.MaxQuads - quads);
             }
 
@@ -104,10 +88,7 @@ namespace Thermodynamics
             if (LastHotBlocks > 0) LastState = quads > 0 ? "submitted" : "culled";
         }
 
-        /// <summary>
-        /// Puts every heat light out. Called when the feature is switched off or the world ends: a
-        /// light this mod created and forgot outlives the grid it was lighting.
-        /// </summary>
+/// <summary>Clear operation.</summary>
         public static void Clear()
         {
             LastQuads = LastHotBlocks = LastSurfaceBlocks = 0;
@@ -118,6 +99,7 @@ namespace Thermodynamics
             Extinguished.Clear();
         }
 
+/// <summary>Extinguish operation.</summary>
         private static void Extinguish(long entityId)
         {
             MyLight light;
@@ -132,10 +114,7 @@ namespace Thermodynamics
             MyLights.RemoveLight(light);
         }
 
-        /// <summary>
-        /// Sets one grid's heat light from the blocks it has glowing: the glow-weighted centre of
-        /// them, the colour of its hottest, and a range that covers the set.
-        /// </summary>
+/// <summary>UpdateLight operation.</summary>
         private static void UpdateLight(ThermalGrid thermals, ref Vector3D eye)
         {
             GlowRegion region;
@@ -173,6 +152,7 @@ namespace Thermodynamics
             Vector3 locus = Incandescence.Colour(region.Kelvin);
 
             light.Position = centre;
+/// <summary>Color operation.</summary>
             light.Color = new Color(locus);
             light.Intensity = region.Glow * LightIntensity * fade;
             light.Range = lightRange;
@@ -181,10 +161,7 @@ namespace Thermodynamics
             light.UpdateLight();
         }
 
-        /// <summary>
-        /// Where one grid's glow region sits in the world. The reduction itself is
-        /// <see cref="GlowRegion"/>, in grid cells; this is the transform onto the grid.
-        /// </summary>
+/// <summary>Region operation.</summary>
         private static bool Region(ThermalGrid thermals, out GlowRegion region, out Vector3D centre,
             out float radius)
         {
@@ -201,7 +178,7 @@ namespace Thermodynamics
             return true;
         }
 
-        /// <summary>Draws one grid's glowing blocks, and says how many quads that took.</summary>
+/// <summary>DrawGrid operation.</summary>
         private static int DrawGrid(ThermalGrid thermals, ref Vector3D eye, int budget)
         {
             MatrixD gridMatrix = thermals.Grid.WorldMatrix;
@@ -229,6 +206,7 @@ namespace Thermodynamics
 
                 Vector3 half = FaceQuad.HalfExtents(bound.Block.Min, bound.Block.Max, gridSize);
                 LastSurfaceBlocks++;
+/// <summary>Colour operation.</summary>
                 Vector4 colour = Colour(block) * fade;
 
                 for (int face = 0; face < Face.Count && quads < budget; face++)
@@ -244,10 +222,7 @@ namespace Thermodynamics
             return quads;
         }
 
-        /// <summary>
-        /// Draws one face, and says whether it was drawn. A face turned away from the camera is not:
-        /// it is on the far side of the block that would occlude it.
-        /// </summary>
+/// <summary>DrawFace operation.</summary>
         private static bool DrawFace(int face, ref Vector3D centre, ref Vector3 half,
             ref MatrixD gridMatrix, ref Vector3D eye, ref Vector4 colour, float gridSize)
         {
@@ -282,7 +257,7 @@ namespace Thermodynamics
             return true;
         }
 
-        /// <summary>Linear emission before view fades and the billboard API colour encoding.</summary>
+/// <summary>Colour operation.</summary>
         private static Vector4 Colour(LitBlock block)
         {
             Vector3 locus = Incandescence.Colour(block.Kelvin);

@@ -9,6 +9,7 @@ from continuous_surface import mesh, render
 from optimize_surface import optimize
 
 
+# main operation.
 def main(source,out):
     out.mkdir(parents=True,exist_ok=True)
     scene=json.loads(source.read_text());nodes=scene['nodes']

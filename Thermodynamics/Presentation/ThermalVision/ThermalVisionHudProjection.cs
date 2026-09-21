@@ -2,10 +2,9 @@ using VRageMath;
 
 namespace Thermodynamics.Presentation
 {
-    /// <summary>Maps centred HUD points to the current camera, independent of HUD layout timing.</summary>
     public static class ThermalVisionHudProjection
     {
-        /// <summary>Creates a camera-facing plane with DPI-scaled pixel coordinates.</summary>
+/// <summary>Create operation.</summary>
         public static MatrixD Create(MatrixD cameraWorld, MatrixD projection, Vector2 viewport,
             double depth, double dpi)
         {

@@ -6,26 +6,25 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Room air. A sealed room holds a mass of air that every surface bounding it exchanges with,
-    /// which is the only path heat has between two walls that do not touch.
-    /// </summary>
     public class RoomAirTests
     {
-        /// <summary>A 5x5x5 shell with a 3x3x3 cavity, and one hot block set into a wall.</summary>
+/// <summary>SealedBox operation.</summary>
         private static ThermalSimulation SealedBox(ThermalSettings settings, out Vector3I interior)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Shell(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(5, 5, 5));
 
+/// <summary>Vector3I operation.</summary>
             interior = new Vector3I(2, 2, 2);
             return builder.BuildSimulation(settings, 293.15f);
         }
 
         [Fact]
+/// <summary>ASealedRoomHasAirAndAVentedOneDoesNot operation.</summary>
         public void ASealedRoomHasAirAndAVentedOneDoesNot()
         {
             Vector3I interior;
+/// <summary>SealedBox operation.</summary>
             ThermalSimulation simulation = SealedBox(new ThermalSettings(), out interior);
 
             Assert.Equal(1, simulation.Rooms.Map.RoomCount);
@@ -34,9 +33,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AirIsInertUntilTheHostReportsPressure operation.</summary>
         public void AirIsInertUntilTheHostReportsPressure()
         {
             Vector3I interior;
+/// <summary>SealedBox operation.</summary>
             ThermalSimulation simulation = SealedBox(new ThermalSettings(), out interior);
 
             RoomAirNode air = simulation.GetRoomAir(interior);
@@ -47,9 +48,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>PressurisingARoomLinksItToEverySurfaceAroundIt operation.</summary>
         public void PressurisingARoomLinksItToEverySurfaceAroundIt()
         {
             Vector3I interior;
+/// <summary>SealedBox operation.</summary>
             ThermalSimulation simulation = SealedBox(new ThermalSettings(), out interior);
 
             Assert.True(simulation.SetRoomPressure(interior, 1f));
@@ -57,21 +60,22 @@ namespace Thermodynamics.Tests
             RoomAirNode air = simulation.GetRoomAir(interior);
             Assert.True(air.HasAir);
 
-            // each of the cavity's six faces is a 3x3 patch of wall, and no block bounds it twice
-            // from the same side
             Assert.Equal(54, air.Links.Count);
             Assert.True(air.AirMass > 0f);
         }
 
         [Fact]
+/// <summary>AHotWallWarmsTheAirAndTheAirWarmsTheFarWall operation.</summary>
         public void AHotWallWarmsTheAirAndTheAirWarmsTheFarWall()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableConduction = false;   // the only path left is through the air
             settings.Derive();
 
             Vector3I interior;
+/// <summary>SealedBox operation.</summary>
             ThermalSimulation simulation = SealedBox(settings, out interior);
             simulation.SetRoomPressure(interior, 1f);
 
@@ -89,13 +93,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RoomAirConservesEnergy operation.</summary>
         public void RoomAirConservesEnergy()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
 
             Vector3I interior;
+/// <summary>SealedBox operation.</summary>
             ThermalSimulation simulation = SealedBox(settings, out interior);
             simulation.SetRoomPressure(interior, 1f);
 
@@ -109,13 +116,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheSwitchRemovesRoomAirEntirely operation.</summary>
         public void TheSwitchRemovesRoomAirEntirely()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableRoomAir = false;
             settings.Derive();
 
             Vector3I interior;
+/// <summary>SealedBox operation.</summary>
             ThermalSimulation simulation = SealedBox(settings, out interior);
 
             Assert.Empty(simulation.RoomAir);
@@ -123,13 +133,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SwitchingRoomAirOnMidSessionBuildsIt operation.</summary>
         public void SwitchingRoomAirOnMidSessionBuildsIt()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableRoomAir = false;
             settings.Derive();
 
             Vector3I interior;
+/// <summary>SealedBox operation.</summary>
             ThermalSimulation simulation = SealedBox(settings, out interior);
             Assert.Empty(simulation.RoomAir);
 
@@ -141,8 +154,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AirTemperatureSurvivesARebuildOfTheMap operation.</summary>
         public void AirTemperatureSurvivesARebuildOfTheMap()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
@@ -151,11 +166,12 @@ namespace Thermodynamics.Tests
             builder.Shell(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(5, 5, 5));
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
 
+/// <summary>Vector3I operation.</summary>
             Vector3I interior = new Vector3I(2, 2, 2);
             simulation.SetRoomPressure(interior, 1f);
             simulation.GetRoomAir(interior).Temperature = 400f;
 
-            // a block welded somewhere else entirely still remakes the whole map
+/// <summary>BlockInstance operation.</summary>
             BlockInstance addition = new BlockInstance(
                 Catalog.LightArmor(), new Vector3I(6, 0, 0), BlockOrientation.Identity);
             simulation.AddBlock(addition);
@@ -167,27 +183,25 @@ namespace Thermodynamics.Tests
             Assert.Equal(1f, air.Pressure, 3);
         }
 
-        /// <summary>
-        /// The load path in full: a saved temperature has to survive being restored onto a room
-        /// that is not yet pressurised, because pressure arrives from the vent sweep afterwards and
-        /// filling a room for the first time is what takes its temperature from the walls.
-        /// </summary>
         [Fact]
+/// <summary>AirTemperatureSurvivesASaveAndLoad operation.</summary>
         public void AirTemperatureSurvivesASaveAndLoad()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
 
             Vector3I interior;
+/// <summary>SealedBox operation.</summary>
             ThermalSimulation saved = SealedBox(settings, out interior);
             saved.SetRoomPressure(interior, 1f);
             saved.GetRoomAir(interior).Temperature = 400f;
 
             string data = saved.Save();
 
-            // a fresh world load: the same ship, built again, before any vent has reported
             Vector3I reloadedInterior;
+/// <summary>SealedBox operation.</summary>
             ThermalSimulation reloaded = SealedBox(settings, out reloadedInterior);
             Assert.False(reloaded.GetRoomAir(reloadedInterior).Initialised);
 
@@ -196,60 +210,53 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, reloaded.RoomsRestored);
             Assert.Equal(400f, reloaded.GetRoomAir(reloadedInterior).Temperature, 2);
 
-            // and the first vent report must not throw it away for the average of the walls
             reloaded.SetRoomPressure(reloadedInterior, 1f);
             Assert.Equal(400f, reloaded.GetRoomAir(reloadedInterior).Temperature, 2);
         }
 
-        /// <summary>
-        /// Air that was never filled holds a placeholder, not a measurement. Saving it would turn
-        /// the guess into a remembered fact and stop the room taking its temperature from its walls
-        /// the first time it is actually pressurised.
-        /// </summary>
         [Fact]
+/// <summary>AirThatWasNeverFilledIsNotSaved operation.</summary>
         public void AirThatWasNeverFilledIsNotSaved()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
 
             Vector3I interior;
+/// <summary>SealedBox operation.</summary>
             ThermalSimulation saved = SealedBox(settings, out interior);
             string data = saved.Save();
 
             Vector3I reloadedInterior;
+/// <summary>SealedBox operation.</summary>
             ThermalSimulation reloaded = SealedBox(settings, out reloadedInterior);
             reloaded.Load(data);
 
             Assert.Equal(0, reloaded.RoomsRestored);
 
-            // heat the walls after the load, so taking their temperature is distinguishable from
-            // having kept the placeholder the save would have carried
             reloaded.Solver.SetAllTemperatures(500f);
             reloaded.SetRoomPressure(reloadedInterior, 1f);
             Assert.Equal(500f, reloaded.GetRoomAir(reloadedInterior).Temperature, 2);
         }
 
-        /// <summary>
-        /// A room is matched by its anchor cell, so a compartment that was rebuilt into a different
-        /// shape while the world was closed is a different room. It starts from its walls, exactly
-        /// as it would have done had the change happened mid-session.
-        /// </summary>
         [Fact]
+/// <summary>ARoomThatChangedShapeDoesNotTakeTheSavedTemperature operation.</summary>
         public void ARoomThatChangedShapeDoesNotTakeTheSavedTemperature()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
 
             Vector3I interior;
+/// <summary>SealedBox operation.</summary>
             ThermalSimulation saved = SealedBox(settings, out interior);
             saved.SetRoomPressure(interior, 1f);
             saved.GetRoomAir(interior).Temperature = 400f;
 
             string data = saved.Save();
 
-            // the same shell, but with the anchor corner of the cavity filled in
             GridBuilder builder = GridBuilder.Large();
             builder.Shell(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(5, 5, 5));
             builder.Place(Catalog.LightArmor(), new Vector3I(1, 1, 1));
@@ -264,8 +271,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>OpeningADoorTakesTheAirAwayWithTheSeal operation.</summary>
         public void OpeningADoorTakesTheAirAwayWithTheSeal()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
@@ -273,13 +282,14 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Shell(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(5, 5, 5));
 
-            // replace one wall cell with a door
+/// <summary>Vector3I operation.</summary>
             Vector3I doorCell = new Vector3I(2, 0, 2);
             BlockInstance wall = builder.Grid.GetAtCell(doorCell);
             builder.Grid.Remove(wall);
             builder.Place(Catalog.AirtightDoor(), doorCell);
 
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
+/// <summary>Vector3I operation.</summary>
             Vector3I interior = new Vector3I(2, 2, 2);
 
             Assert.True(simulation.SetRoomPressure(interior, 1f));

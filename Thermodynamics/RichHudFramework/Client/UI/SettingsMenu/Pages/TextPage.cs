@@ -22,54 +22,44 @@ namespace RichHudFramework
 			Action // Clear
 		>;
 
-		/// <summary>
-		/// A scrolling page of wrapped, read-only text in the <see cref="RichHudTerminal"/>.
-		/// <para>Useful for help screens, changelogs, or information displays.</para>
-		/// </summary>
 		public class TextPage : TerminalPageBase, ITextPage
 		{
-			/// <summary>
-			/// Gets or sets the formatted header text displayed at the top of the page.
-			/// </summary>
 			public RichText HeaderText
 			{
+/// <summary>RichText operation.</summary>
 				get { return new RichText(GetOrSetMemberFunc(null, (int)TextPageAccessors.GetOrSetHeader) as List<RichStringMembers>); }
+/// <summary>Returns the orsetmemberfunc.</summary>
 				set { GetOrSetMemberFunc(value.apiData, (int)TextPageAccessors.GetOrSetHeader); }
 			}
 
-			/// <summary>
-			/// Gets or sets the formatted subheader text displayed below the header.
-			/// </summary>
 			public RichText SubHeaderText
 			{
+/// <summary>RichText operation.</summary>
 				get { return new RichText(GetOrSetMemberFunc(null, (int)TextPageAccessors.GetOrSetSubheader) as List<RichStringMembers>); }
+/// <summary>Returns the orsetmemberfunc.</summary>
 				set { GetOrSetMemberFunc(value.apiData, (int)TextPageAccessors.GetOrSetSubheader); }
 			}
 
-			/// <summary>
-			/// Gets or sets the main body content of the text page.
-			/// </summary>
 			public RichText Text
 			{
+/// <summary>RichText operation.</summary>
 				get { return new RichText(GetOrSetMemberFunc(null, (int)TextPageAccessors.GetOrSetText) as List<RichStringMembers>); }
+/// <summary>Returns the orsetmemberfunc.</summary>
 				set { GetOrSetMemberFunc(value.apiData, (int)TextPageAccessors.GetOrSetText); }
 			}
 
-			/// <summary>
-			/// Provides direct access to the underlying text builder for advanced manipulation (e.g., appending, inserting).
-			/// </summary>
 			public ITextBuilder TextBuilder { get; }
 
+/// <summary>TextPage operation.</summary>
 			public TextPage() : base(ModPages.TextPage)
 			{
+/// <summary>BasicTextBuilder operation.</summary>
 				TextBuilder = new BasicTextBuilder((TextBuilderMembers)GetOrSetMemberFunc(null, (int)TextPageAccessors.GetTextBuilder));
 			}
 
-			/// <summary>
-			/// Wrapper for the internal API TextBuilder.
-			/// </summary>
 			private class BasicTextBuilder : TextBuilder
 			{
+/// <summary>BasicTextBuilder operation.</summary>
 				public BasicTextBuilder(TextBuilderMembers members) : base(members)
 				{ }
 			}

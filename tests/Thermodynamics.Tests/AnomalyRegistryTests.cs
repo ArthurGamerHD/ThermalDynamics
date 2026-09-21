@@ -3,21 +3,6 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The rule that decides whether a problem is recorded at all.
-    ///
-    /// The defect these were written against: <c>Telemetry.Exception</c> filed through the same
-    /// gate as every measurement hook, and telemetry is off by default. Every <c>catch</c> in the
-    /// simulation adapter — twenty-two of them, including the guard around <c>ThermalGrid.Tick</c>
-    /// whose own comment says an exception named there is worth more than a crash dump — therefore
-    /// discarded its exception in an ordinary world, wrote nothing to any file, and left the grid
-    /// running in whatever state the throw abandoned it in. A player's crash was unrecoverable
-    /// after the fact by construction.
-    ///
-    /// The distinction the registry holds is between an *observation*, which costs something on
-    /// every healthy frame and is rightly opt-in, and a *fault*, which costs nothing until the mod
-    /// has already failed.
-    /// </summary>
     public class AnomalyRegistryTests
     {
         private const bool Collecting = true;
@@ -25,14 +10,17 @@ namespace Thermodynamics.Tests
         private const bool Fault = true;
         private const bool Observation = false;
 
+/// <summary>Registry operation.</summary>
         private static AnomalyRegistry Registry(int maxKinds = 64)
         {
             return new AnomalyRegistry(maxKinds);
         }
 
         [Fact]
+/// <summary>AFaultIsRecordedWhileCollectionIsOff operation.</summary>
         public void AFaultIsRecordedWhileCollectionIsOff()
         {
+/// <summary>Registry operation.</summary>
             AnomalyRegistry registry = Registry();
 
             registry.Record("exception in ThermalGrid.Tick", "NullReferenceException", Fault, NotCollecting, 12.5d);
@@ -42,8 +30,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnObservationIsDroppedWhileCollectionIsOff operation.</summary>
         public void AnObservationIsDroppedWhileCollectionIsOff()
         {
+/// <summary>Registry operation.</summary>
             AnomalyRegistry registry = Registry();
 
             registry.Record("temperature is NaN", "grid / block", Observation, NotCollecting, 12.5d);
@@ -52,8 +42,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnObservationIsRecordedWhileCollectionIsOn operation.</summary>
         public void AnObservationIsRecordedWhileCollectionIsOn()
         {
+/// <summary>Registry operation.</summary>
             AnomalyRegistry registry = Registry();
 
             registry.Record("temperature is NaN", "grid / block", Observation, Collecting, 12.5d);
@@ -62,15 +54,11 @@ namespace Thermodynamics.Tests
             Assert.Empty(registry.Faults());
         }
 
-        /// <summary>
-        /// A throw inside the step runs once per grid per frame. Logging every one would fill the
-        /// game log with the same six stack frames and bury everything else in it, so only the
-        /// first occurrence of a kind asks to be logged — while the count goes on rising, which is
-        /// what tells a reader the difference between a one-off and a permanent failure.
-        /// </summary>
         [Fact]
+/// <summary>OnlyTheFirstOccurrenceOfAFaultAsksToBeLogged operation.</summary>
         public void OnlyTheFirstOccurrenceOfAFaultAsksToBeLogged()
         {
+/// <summary>Registry operation.</summary>
             AnomalyRegistry registry = Registry();
 
             Assert.True(registry.Record("exception in Tick", "first", Fault, NotCollecting, 1d));
@@ -82,21 +70,20 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnObservationNeverAsksToBeLogged operation.</summary>
         public void AnObservationNeverAsksToBeLogged()
         {
+/// <summary>Registry operation.</summary>
             AnomalyRegistry registry = Registry();
 
             Assert.False(registry.Record("temperature is NaN", "first", Observation, Collecting, 1d));
         }
 
-        /// <summary>
-        /// First and last are both kept because they answer different questions: the first says
-        /// what started it, and the last says whether it is still happening at the end of the
-        /// session or burned out early.
-        /// </summary>
         [Fact]
+/// <summary>TheFirstAndLastExampleOfAKindAreBothKept operation.</summary>
         public void TheFirstAndLastExampleOfAKindAreBothKept()
         {
+/// <summary>Registry operation.</summary>
             AnomalyRegistry registry = Registry();
 
             registry.Record("exception in Tick", "first", Fault, NotCollecting, 1d);
@@ -111,15 +98,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(9d, record.LastSeconds);
         }
 
-        /// <summary>
-        /// A grid throwing once per frame must not be able to grow the registry without bound. The
-        /// cap is on *kinds*, so a repeating fault costs one record however often it fires; only a
-        /// fault whose text varies every time can reach the cap, and the drop is counted so the
-        /// report can say the list is truncated rather than complete.
-        /// </summary>
         [Fact]
+/// <summary>TheRegistryIsBoundedAndSaysWhatItDropped operation.</summary>
         public void TheRegistryIsBoundedAndSaysWhatItDropped()
         {
+/// <summary>Registry operation.</summary>
             AnomalyRegistry registry = Registry(2);
 
             registry.Record("a", "x", Fault, NotCollecting, 1d);
@@ -131,13 +114,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(2L, registry.KindsDropped);
         }
 
-        /// <summary>
-        /// A kind that fires as an observation and later as a fault is a fault: the stricter
-        /// classification wins, so it cannot be hidden by having been seen benignly first.
-        /// </summary>
         [Fact]
+/// <summary>AKindSeenAsBothIsTreatedAsAFault operation.</summary>
         public void AKindSeenAsBothIsTreatedAsAFault()
         {
+/// <summary>Registry operation.</summary>
             AnomalyRegistry registry = Registry();
 
             registry.Record("mixed", "observation", Observation, Collecting, 1d);
@@ -147,8 +128,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ThereIsNoSummaryWhenNothingFailed operation.</summary>
         public void ThereIsNoSummaryWhenNothingFailed()
         {
+/// <summary>Registry operation.</summary>
             AnomalyRegistry registry = Registry();
 
             registry.Record("temperature is NaN", "x", Observation, Collecting, 1d);
@@ -156,14 +139,11 @@ namespace Thermodynamics.Tests
             Assert.Null(registry.FaultSummary(Collecting));
         }
 
-        /// <summary>
-        /// The closing summary is the only output a world with collection off ever produces, so it
-        /// has to carry the count — only the first of each kind was logged as it happened — and it
-        /// has to say why there is no report to go with it.
-        /// </summary>
         [Fact]
+/// <summary>TheSummaryCarriesEveryFaultItsCountAndHowToGetMore operation.</summary>
         public void TheSummaryCarriesEveryFaultItsCountAndHowToGetMore()
         {
+/// <summary>Registry operation.</summary>
             AnomalyRegistry registry = Registry();
 
             for (int i = 0; i < 7; i++)
@@ -180,26 +160,22 @@ namespace Thermodynamics.Tests
             Assert.Contains("EnableTelemetry", summary);
         }
 
-        /// <summary>
-        /// With collection on there is a full report beside the log, so the summary does not tell
-        /// the reader to go and turn on something already running.
-        /// </summary>
         [Fact]
+/// <summary>TheSummaryDoesNotAskForTelemetryThatIsAlreadyOn operation.</summary>
         public void TheSummaryDoesNotAskForTelemetryThatIsAlreadyOn()
         {
+/// <summary>Registry operation.</summary>
             AnomalyRegistry registry = Registry();
             registry.Record("exception in Tick", "boom", Fault, Collecting, 1d);
 
             Assert.DoesNotContain("EnableTelemetry", registry.FaultSummary(Collecting));
         }
 
-        /// <summary>
-        /// Faults are summarised in the order they first appeared, because the first one is
-        /// usually the cause and the rest are usually the consequences of continuing after it.
-        /// </summary>
         [Fact]
+/// <summary>FaultsAreSummarisedInTheOrderTheyFirstAppeared operation.</summary>
         public void FaultsAreSummarisedInTheOrderTheyFirstAppeared()
         {
+/// <summary>Registry operation.</summary>
             AnomalyRegistry registry = Registry();
 
             registry.Record("second", "x", Fault, NotCollecting, 50d);
@@ -212,8 +188,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ClearingDropsEverythingIncludingTheDropCount operation.</summary>
         public void ClearingDropsEverythingIncludingTheDropCount()
         {
+/// <summary>Registry operation.</summary>
             AnomalyRegistry registry = Registry(1);
 
             registry.Record("a", "x", Fault, NotCollecting, 1d);

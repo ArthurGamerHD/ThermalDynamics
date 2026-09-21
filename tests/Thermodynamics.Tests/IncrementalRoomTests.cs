@@ -6,17 +6,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The room mapper is well covered for grids built in one shot through
-    /// <see cref="ThermalSimulation.RebuildAll"/>. A player welding a room is a different path
-    /// entirely: one <see cref="ThermalSimulation.AddBlock"/> per block, with
-    /// <see cref="ThermalSimulation.Update"/> pumping the budgeted mapper in between. These
-    /// tests walk that path.
-    /// </summary>
     public class IncrementalRoomTests
     {
+/// <summary>ShellCells operation.</summary>
         private static List<Vector3I> ShellCells(Vector3I min, Vector3I maxExclusive)
         {
+/// <summary>List operation.</summary>
             List<Vector3I> cells = new List<Vector3I>();
             for (int z = min.Z; z < maxExclusive.Z; z++)
             {
@@ -35,7 +30,7 @@ namespace Thermodynamics.Tests
             return cells;
         }
 
-        /// <summary>Runs frames until the mapper has nothing left to do, or the guard trips.</summary>
+/// <summary>Sets the tlemapper.</summary>
         private static void SettleMapper(ThermalSimulation simulation, int maxFrames = 600)
         {
             for (int i = 0; i < maxFrames && (simulation.Rooms.HasWorkPending || i == 0); i++)
@@ -45,19 +40,22 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>WeldingAShellOneBlockAtATimeStillFindsTheRoom operation.</summary>
         public void WeldingAShellOneBlockAtATimeStillFindsTheRoom()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(Catalog.LargeGridSize);
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
 
             BlockModel armour = Catalog.LightArmor();
+/// <summary>ShellCells operation.</summary>
             List<Vector3I> cells = ShellCells(new Vector3I(-1, -1, -1), new Vector3I(2, 2, 2));
 
             for (int i = 0; i < cells.Count; i++)
             {
                 simulation.AddBlock(new BlockInstance(armour, cells[i], BlockOrientation.Identity));
 
-                // the game polls on the ten-frame tick; the mapper gets a budget each poll
                 simulation.Update(ThermalGridTick, Worlds.Shadow());
             }
 
@@ -70,12 +68,16 @@ namespace Thermodynamics.Tests
         private const float ThermalGridTick = 10f / 60f;
 
         [Fact]
+/// <summary>EveryBlockCellIsSolidNotExternalAfterAnIncrementalBuild operation.</summary>
         public void EveryBlockCellIsSolidNotExternalAfterAnIncrementalBuild()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(Catalog.LargeGridSize);
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
 
             BlockModel armour = Catalog.LightArmor();
+/// <summary>ShellCells operation.</summary>
             List<Vector3I> cells = ShellCells(new Vector3I(-1, -1, -1), new Vector3I(2, 2, 2));
             for (int i = 0; i < cells.Count; i++)
             {
@@ -91,20 +93,13 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// A door in the shell wall is the one shell block whose sealing depends on state. Closed,
-        /// the room is still a room; open, it is not — and the interior stops being enclosed.
-        ///
-        /// This is the reported failure in miniature: the field grid was a shell with one sliding
-        /// door, and it mapped as no rooms at all because the door never sealed in either state.
-        /// </summary>
         [Fact]
+/// <summary>AClosedDoorInTheWallKeepsTheRoomSealedAndAnOpenOneDoesNot operation.</summary>
         public void AClosedDoorInTheWallKeepsTheRoomSealedAndAnOpenOneDoesNot()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Shell(Catalog.LightArmor(), new Vector3I(-1, -1, -1), new Vector3I(2, 2, 2));
 
-            // swap the face centre for a sliding door, facing out of the room
             BlockInstance plug = builder.Grid.GetAtCell(new Vector3I(0, 0, -1));
             builder.Grid.Remove(plug);
             builder.Place(Catalog.SlideDoor(), new Vector3I(0, 0, -1));
@@ -126,12 +121,8 @@ namespace Thermodynamics.Tests
             Assert.False(simulation.Rooms.Map.IsExternal(Vector3I.Zero));
         }
 
-        /// <summary>
-        /// The reported symptom: a sealed room whose mapper says nothing is enclosed. This asserts
-        /// the classification adds up — every cell of the padded search box is external, solid, or
-        /// in a room, and the counts match the geometry exactly.
-        /// </summary>
         [Fact]
+/// <summary>TheClassificationOfEveryCellInTheSearchBoxAddsUp operation.</summary>
         public void TheClassificationOfEveryCellInTheSearchBoxAddsUp()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -140,7 +131,6 @@ namespace Thermodynamics.Tests
 
             RoomMap map = simulation.Rooms.Map;
 
-            // padded box is (-2..2)^3 = 125 cells; 26 shell cells, 1 room cell, 98 external
             Assert.Equal(98, map.ExternalCellCount);
             Assert.Equal(26, map.SolidCellCount);
             Assert.Equal(1, map.RoomCount);

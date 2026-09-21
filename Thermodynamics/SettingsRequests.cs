@@ -7,52 +7,27 @@ using VRage.Utils;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// One client asking the server to change a world setting, and the server's answer.
-    /// </summary>
     [ProtoContract]
     public class SettingsRequest
     {
-        /// <summary>Setting name, as <see cref="Settings.Names"/> spells it.</summary>
         [ProtoMember(1)] public string Name;
 
-        /// <summary>Value to set. Switches are 0 and 1, as everywhere else.</summary>
         [ProtoMember(2)] public float Value;
 
-        /// <summary>Set on the reply: what happened, for the requester to read.</summary>
         [ProtoMember(3)] public string Result;
 
-        /// <summary>True on a reply, so one message type serves both directions.</summary>
         [ProtoMember(4)] public bool IsReply;
     }
 
-    /// <summary>
-    /// Lets an admin change the world's settings from a multiplayer client. **Deliberately not on the
-    /// mod's <see cref="SENetworkAPI"/> channel**, whose sender id is a field the sender wrote; the
-    /// engine's secure handler supplies one the transport verified. The reply path exists because a
-    /// refusal is otherwise indistinguishable from a lost packet.
-    /// See configuration.md, Changing settings from a client.
-    /// </summary>
     public static class SettingsRequests
     {
-        /// <summary>
-        /// A channel of this mod's own, one above the shared one the network API uses. Kept
-        /// separate rather than multiplexed: the two use different engine handlers, and a single
-        /// id registered with both delivers every packet twice.
-        /// </summary>
         public const ushort ChannelId = Session.ModID + 1;
 
-        /// <summary>
-        /// Lowest promote level allowed to change a world setting.
-        ///
-        /// Space master rather than admin: on most servers that is the level given to people
-        /// trusted with the world's own state, and every setting here is world state. The offline
-        /// and single-player case never reaches this — a lone player is the server.
-        /// </summary>
         private const MyPromoteLevel Required = MyPromoteLevel.SpaceMaster;
 
         private static bool registered;
 
+/// <summary>Registers the API and message handler.</summary>
         public static void Register()
         {
             if (registered) return;
@@ -68,6 +43,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>Unregisters the API and cleans resources.</summary>
         public static void Unregister()
         {
             if (!registered) return;
@@ -83,10 +59,6 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Whether this machine has to ask rather than simply set. True only on a multiplayer
-        /// client; the server, and a single player who is the server, change settings directly.
-        /// </summary>
         public static bool MustAsk
         {
             get
@@ -102,11 +74,6 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Whether this player is likely to be allowed to change world settings, for deciding
-        /// whether to grey a control out. The server checks again on arrival and its answer is the
-        /// one that counts — this only avoids offering a control that will be refused.
-        /// </summary>
         public static bool MayAsk
         {
             get
@@ -125,7 +92,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>Asks the server to change one setting.</summary>
+/// <summary>Send operation.</summary>
         public static void Send(string name, float value)
         {
             if (string.IsNullOrEmpty(name)) return;
@@ -143,6 +110,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>Handle operation.</summary>
         private static void Handle(ushort channel, byte[] payload, ulong sender, bool fromServer)
         {
             try
@@ -153,8 +121,6 @@ namespace Thermodynamics
 
                 if (request.IsReply)
                 {
-                    // Only the server answers, and a reply that did not come from it is a client
-                    // telling this machine what it wants it to believe.
                     if (!fromServer) return;
 
                     MyAPIGateway.Utilities.ShowMessage(Settings.Name, request.Result);
@@ -171,10 +137,9 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>Applies the .</summary>
         private static void Apply(SettingsRequest request, ulong sender)
         {
-            // The sender the engine supplies, not one out of the payload. This is the whole reason
-            // the request does not travel on the shared channel.
             MyPromoteLevel level = MyAPIGateway.Session.GetUserPromoteLevel(sender);
 
             if (level < Required)
@@ -197,11 +162,9 @@ namespace Thermodynamics
                 return;
             }
 
-            // Applying publishes the whole settings object to every client, so the change is its
-            // own confirmation everywhere else. The requester is told separately because a value
-            // that lands where it already was looks like nothing happened.
             Settings.Instance.Apply();
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder message = new StringBuilder();
             message.Append(request.Name).Append(" = ")
                 .Append(Settings.Instance.GetValue(request.Name).ToString("n4"))
@@ -211,6 +174,7 @@ namespace Thermodynamics
             MyLog.Default.Info("[" + Settings.Name + "] " + sender + " set " + message);
         }
 
+/// <summary>Reply operation.</summary>
         private static void Reply(ulong recipient, string text)
         {
             try

@@ -6,33 +6,10 @@ using Thermodynamics.Core;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// What the SE2 lattice costs each structure of the model, measured: one dealt hull, the same
-    /// blocks at every rung, re-expressed on a lattice one, two, five and ten times finer per
-    /// axis by <see cref="Se2Refine"/> — ten being SE2's 25 cm under SE1's 2.5 m.
-    ///
-    /// <para>
-    /// **The claim under test is that cells multiply and nodes do not.** A structure priced per
-    /// node or per link — the solver's arrays, the conduction graph — should hold flat across the
-    /// rungs; a structure priced per cell or per bounding volume — the block table, the surface
-    /// map, the room flood — should climb by the factor squared or cubed. The lab measures where
-    /// each stage actually lands, which is the shopping list for a port: whatever climbs must be
-    /// re-keyed or re-priced before SE2, and whatever holds flat ports as it is.
-    /// </para>
-    ///
-    /// <para>
-    /// The stage rows are <see cref="StageLab"/> rows under its own settling protocol, so the
-    /// figures carry the same evidence `bench stages` carries. The repeat floor is lowered here —
-    /// the effects under test are multiples, not percents, and a `place` repeat at factor ten is
-    /// nine million cell inserts.
-    /// </para>
-    /// </summary>
     public static class Se2LatticeLab
     {
-        /// <summary>The rungs a default run measures. Ten is the SE2 factor.</summary>
         public static readonly int[] DefaultFactors = { 1, 2, 5, 10 };
 
-        /// <summary>The stages worth pricing across lattices, in a grid's build order.</summary>
         public static readonly string[] Stages = { "place", "surfaces", "links", "rooms", "exposure", "solver" };
 
         public class StageRow
@@ -41,7 +18,6 @@ namespace Thermodynamics.Harness
             public StageLab.Row Row;
         }
 
-        /// <summary>The counts that say which axis each structure actually scales on.</summary>
         public class Summary
         {
             public int Factor;
@@ -54,10 +30,10 @@ namespace Thermodynamics.Harness
             public long RoomCells;
             public long ExternalCells;
 
-            /// <summary>Managed bytes the built grid, surfaces, rooms and solver hold together.</summary>
             public long RetainedBytes;
         }
 
+/// <summary>Run operation.</summary>
         public static void Run(string shape, int blocks, int[] factors,
             List<Summary> summaries, List<StageRow> stageRows, Action<string> log)
         {
@@ -78,6 +54,7 @@ namespace Thermodynamics.Harness
                     if (log != null) log("factor " + factor + ", " + Stages[s]);
                     StageLab.Settle();
 
+/// <summary>StageRow operation.</summary>
                     StageRow row = new StageRow();
                     row.Factor = factor;
                     row.Row = StageLab.Measure(Stages[s], fine);
@@ -87,6 +64,7 @@ namespace Thermodynamics.Harness
             }
         }
 
+/// <summary>Summarise operation.</summary>
         private static Summary Summarise(int factor, GridBuilder fine)
         {
             StageLab.Settle();
@@ -104,6 +82,7 @@ namespace Thermodynamics.Harness
 
             long after = GC.GetTotalMemory(true);
 
+/// <summary>Summary operation.</summary>
             Summary summary = new Summary();
             summary.Factor = factor;
             summary.Blocks = simulation.Grid.BlockCount;
@@ -128,8 +107,10 @@ namespace Thermodynamics.Harness
             return summary;
         }
 
+/// <summary>SummaryTable operation.</summary>
         public static string SummaryTable(IList<Summary> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
             text.AppendLine("  factor    blocks         cells      box cells   surface cells       links   rooms     room cells    retained MB");
             for (int i = 0; i < rows.Count; i++)
@@ -143,8 +124,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
+/// <summary>StageTable operation.</summary>
         public static string StageTable(IList<StageRow> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
             text.AppendLine("  factor  stage        blocks       best ms    median ms      worst ms  repeats  stopped          work  unit              ns/unit      alloc KB");
             for (int i = 0; i < rows.Count; i++)
@@ -159,8 +142,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
+/// <summary>SummaryCsv operation.</summary>
         public static string SummaryCsv(IList<Summary> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
             text.AppendLine("factor,blocks,cells,box_cells,surface_cells,links,rooms,room_cells,external_cells,retained_bytes,taken_utc,host");
             for (int i = 0; i < rows.Count; i++)
@@ -183,8 +168,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
+/// <summary>StageCsv operation.</summary>
         public static string StageCsv(IList<StageRow> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
             text.AppendLine("factor,stage,blocks,best_ms,median_ms,worst_ms,repeats,stopped,work,work_unit,ns_per_unit,allocated_bytes,taken_utc,host");
             for (int i = 0; i < rows.Count; i++)

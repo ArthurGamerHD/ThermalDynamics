@@ -6,30 +6,15 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **A block behind another is sheltered from the wind, for heat and for drag.**
-    ///
-    /// <para>
-    /// The same self-shadowing pass the sun uses, aimed at the relative wind — `SunShadowMap` takes
-    /// its direction as an argument, so it was always a direction pass. What differs is the
-    /// cadence, and that is measured rather than inherited: see `WindShieldingCostTests` for why the
-    /// threshold is 20° rather than the sun's 2°, and why a running pass is never restarted.
-    /// </para>
-    ///
-    /// <para>
-    /// **Off by default, and the default is the conservative answer.** Unshielded, every face is
-    /// treated as being in the open, so a hull is heated and dragged at least as much as it should
-    /// be and never less. A world that switches this on is asking for the more forgiving model, not
-    /// the harsher one.
-    /// </para>
-    /// </summary>
     public class WindShieldingTests
     {
         private const float ThickAir = 1f;
         private const float Speed = 120f;
 
+/// <summary>Sets the tings.</summary>
         private static ThermalSettings Settings(bool shielding)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -39,11 +24,7 @@ namespace Thermodynamics.Tests
             return settings;
         }
 
-        /// <summary>
-        /// A wall of hull with a second wall directly behind it, down the wind. `Worlds.Flight`
-        /// moves the ship backward, so the air comes from `+Z` and the second wall is in the lee of
-        /// the first.
-        /// </summary>
+/// <summary>Sheltered operation.</summary>
         private static ThermalSimulation Sheltered(bool shielding)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -55,22 +36,20 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>DragWatts operation.</summary>
         private static float DragWatts(ThermalSimulation simulation)
         {
-            // Several steps, because the shielding pass is sliced and only a completed one changes
-            // any reading — a single step would measure the frame before it finished.
             simulation.StepExact(8, Worlds.Flight(ThickAir, Speed));
             return simulation.Solver.LastFrictionWatts;
         }
 
-        /// <summary>
-        /// **The finding this exists for**: the same hull takes less wind when what is behind
-        /// counts as behind.
-        /// </summary>
         [Fact]
+/// <summary>AHullBehindAnotherTakesLessWindWhenShielded operation.</summary>
         public void AHullBehindAnotherTakesLessWindWhenShielded()
         {
+/// <summary>DragWatts operation.</summary>
             float open = DragWatts(Sheltered(false));
+/// <summary>DragWatts operation.</summary>
             float shielded = DragWatts(Sheltered(true));
 
             Assert.True(open > 0f, "the hull took no wind at all, so this compares nothing");
@@ -78,22 +57,16 @@ namespace Thermodynamics.Tests
                 "shielding changed nothing: " + shielded + " against " + open);
         }
 
-        /// <summary>
-        /// **Unshielded is the conservative answer, and that is why it is the default.** A world
-        /// that has not switched this on is heated and dragged at least as much as it should be.
-        /// </summary>
         [Fact]
+/// <summary>TheDefaultIsTheHarsherAnswer operation.</summary>
         public void TheDefaultIsTheHarsherAnswer()
         {
             Assert.False(new ThermalSettings().EnableWindwardShielding);
             Assert.True(DragWatts(Sheltered(false)) >= DragWatts(Sheltered(true)));
         }
 
-        /// <summary>
-        /// **A hull with nothing behind anything is unchanged**, which is the check that the
-        /// shielding shelters what is sheltered rather than everything.
-        /// </summary>
         [Fact]
+/// <summary>AHullInClearAirIsUnchangedByShielding operation.</summary>
         public void AHullInClearAirIsUnchangedByShielding()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -110,63 +83,42 @@ namespace Thermodynamics.Tests
             Assert.Equal(DragWatts(open), DragWatts(shielded), 2);
         }
 
-        /// <summary>
-        /// **A world with the shielding off allocates nothing for it.** Six floats a node is 3 MB on
-        /// a 126,731-block hull, and a world not using it should not carry it.
-        /// </summary>
         [Fact]
+/// <summary>TheShieldingArrayIsNotAllocatedWhenItIsOff operation.</summary>
         public void TheShieldingArrayIsNotAllocatedWhenItIsOff()
         {
+/// <summary>Sheltered operation.</summary>
             ThermalSimulation off = Sheltered(false);
             off.StepExact(1, Worlds.Flight(ThickAir, Speed));
 
             Assert.Equal(0, off.Solver.WindLitLength);
 
+/// <summary>Sheltered operation.</summary>
             ThermalSimulation on = Sheltered(true);
             on.StepExact(1, Worlds.Flight(ThickAir, Speed));
 
             Assert.True(on.Solver.WindLitLength > 0,
                 "the shielding is on and its array is empty, so it is reading nothing");
         }
-        /// <summary>
-        /// **The shielding reaches convection as well as friction, and this measures how far.**
-        ///
-        /// <para>
-        /// The six-face wind sum is read by *both* the friction row and the convection factor —
-        /// `windFactor = 1 + wind` — so sheltering a face reduces the forced convection over it as
-        /// well as the aerodynamic heating of it. That is physically right: a face in another
-        /// block's lee has less air moving across it, and forced convection is what air moving
-        /// across a surface does.
-        /// </para>
-        ///
-        /// <para>
-        /// **But it means this is a change to the heat model rather than an addition to the force
-        /// one**, which is thermal-model.md's change log and the reason the switch ships off. Nothing has changed
-        /// for any existing world; what a world turns on when it sets the switch is measured here
-        /// on a hull and wants the corpus before it becomes a default.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ShieldingChangesTemperaturesAndNotOnlyDrag operation.</summary>
         public void ShieldingChangesTemperaturesAndNotOnlyDrag()
         {
-            // **The environment on**, unlike the drag rigs above: those switch it off to isolate
-            // friction, and convection is the term being measured here.
+/// <summary>Convecting operation.</summary>
             ThermalSimulation open = Convecting(false);
+/// <summary>Convecting operation.</summary>
             ThermalSimulation shielded = Convecting(true);
 
             open.StepExact(120, Worlds.Flight(ThickAir, Speed));
             shielded.StepExact(120, Worlds.Flight(ThickAir, Speed));
 
+/// <summary>Peak operation.</summary>
             float openPeak = Peak(open);
+/// <summary>Peak operation.</summary>
             float shieldedPeak = Peak(shielded);
 
             Assert.True(openPeak > 0f && shieldedPeak > 0f);
 
-            // **The shielded hull runs hotter, and that is the right direction.** A sheltered face
-            // has less air moving over it, so it loses less to forced convection — and this hull
-            // starts above the air, so losing less means staying warmer. Measured at **7.4 K** on
-            // this rig, 316.1 K open against 323.5 K shielded, which is the size of the change
-            // the drag milestone says has to reach the corpus before it could ever be a default.
             Assert.True(shieldedPeak > openPeak,
                 "the shielded hull is not hotter, so the shielding is not reducing convection the "
                 + "way it reduces friction — open " + openPeak + " K, shielded " + shieldedPeak + " K");
@@ -176,9 +128,10 @@ namespace Thermodynamics.Tests
                 + shieldedPeak + " K");
         }
 
-        /// <summary>The sheltered pair with the environment left on, so convection is live.</summary>
+/// <summary>Convecting operation.</summary>
         private static ThermalSimulation Convecting(bool shielding)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableSolarHeat = false;
             settings.EnableDamage = false;
@@ -194,6 +147,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
+/// <summary>Peak operation.</summary>
         private static float Peak(ThermalSimulation simulation)
         {
             float peak = 0f;

@@ -6,25 +6,19 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Specific heat is stated in real J/(kg K), and the game's pace comes from one global
-    /// factor that divides every heat capacity.
-    ///
-    /// The claim that makes that honest is that dividing capacity is <em>exactly</em> running
-    /// thermal time faster: nothing about the physics changes, only the clock. These tests hold
-    /// that claim to account, because if it is wrong the setting is not a time scale, it is a
-    /// silent rebalance.
-    /// </summary>
     public class HeatTimeScaleTests
     {
+/// <summary>Sets the tings.</summary>
         private static ThermalSettings Settings(float scale, int frequency = 4)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.HeatTimeScale = scale;
             settings.Frequency = frequency;
             return settings.Derive();
         }
 
+/// <summary>Cube operation.</summary>
         private static ThermalSimulation Cube(ThermalSettings settings, float temperature)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -35,9 +29,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>CapacityIsDividedByTheScale operation.</summary>
         public void CapacityIsDividedByTheScale()
         {
+/// <summary>Cube operation.</summary>
             ThermalSimulation physical = Cube(Settings(1f), 300f);
+/// <summary>Cube operation.</summary>
             ThermalSimulation accelerated = Cube(Settings(225f), 300f);
 
             float a = physical.Solver.Nodes[0].ThermalMass;
@@ -46,29 +43,23 @@ namespace Thermodynamics.Tests
             Assert.Equal(225f, a / b, 2);
         }
 
-        /// <summary>
-        /// The central claim: k× the scale for t seconds equals 1× the scale for k×t seconds.
-        /// Radiation is quartic in temperature, so this is not a trivial identity — it holds
-        /// because every mechanism is a rate divided by the same capacity.
-        /// </summary>
         [Fact]
+/// <summary>ScalingCapacityIsTheSameAsRunningTimeFaster operation.</summary>
         public void ScalingCapacityIsTheSameAsRunningTimeFaster()
         {
             const int scale = 20;
 
+/// <summary>Cube operation.</summary>
             ThermalSimulation fast = Cube(Settings(scale), 800f);
+/// <summary>Cube operation.</summary>
             ThermalSimulation slow = Cube(Settings(1f), 800f);
 
-            // one simulated minute at scale 20 against twenty simulated minutes at scale 1
             fast.StepExact(60 * 4, Worlds.Shadow());
             slow.StepExact(60 * 4 * scale, Worlds.Shadow());
 
             IList<ThermalNode> a = fast.Solver.Nodes;
             IList<ThermalNode> b = slow.Solver.Nodes;
 
-            // Not bit-identical: the two runs choose different substep counts, so they
-            // discretise the same curve differently. Agreement to a fraction of a percent is
-            // the claim — that this is one curve, sampled twice.
             for (int i = 0; i < a.Count; i++)
             {
                 float relative = Math.Abs(a[i].Temperature - b[i].Temperature) / b[i].Temperature;
@@ -77,11 +68,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Equilibrium is set by watts in against watts out, and the scale divides both. A
-        /// player changing the pace must not find their reactor settling somewhere else.
-        /// </summary>
         [Fact]
+/// <summary>EquilibriumDoesNotDependOnTheScale operation.</summary>
         public void EquilibriumDoesNotDependOnTheScale()
         {
             float[] scales = new float[] { 50f, 225f, 1000f };
@@ -101,7 +89,6 @@ namespace Thermodynamics.Tests
                 ThermalSimulation simulation = builder.BuildSimulation(Settings(scales[s]), 293.15f);
                 simulation.RebuildAll();
 
-                // Long enough that even the slowest scale here has settled.
                 simulation.StepExact(30000, Worlds.Shadow());
 
                 float reactor = simulation.Solver.GetNodeAt(Vector3I.Zero).Temperature;
@@ -111,14 +98,13 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// Raising the scale makes the system stiffer, which is the price of the acceleration.
-        /// The solver has to absorb that in substeps rather than in wrong answers.
-        /// </summary>
         [Fact]
+/// <summary>AHigherScaleCostsSubstepsNotAccuracy operation.</summary>
         public void AHigherScaleCostsSubstepsNotAccuracy()
         {
+/// <summary>Cube operation.</summary>
             ThermalSimulation gentle = Cube(Settings(1f), 800f);
+/// <summary>Cube operation.</summary>
             ThermalSimulation harsh = Cube(Settings(2000f), 800f);
 
             gentle.StepExact(40, Worlds.Shadow());
@@ -135,13 +121,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>CoolantRunsOnTheSameClockAsTheBlocksItCools operation.</summary>
         public void CoolantRunsOnTheSameClockAsTheBlocksItCools()
         {
             LoopThermalProperties properties = LoopThermalProperties.Default();
             properties.SpecificHeat = 3400f;
             properties.CoolantMassPerPipe = 500f;
 
+/// <summary>CoolantLoop operation.</summary>
             CoolantLoop physical = new CoolantLoop(properties, 300f, 1f);
+/// <summary>CoolantLoop operation.</summary>
             CoolantLoop accelerated = new CoolantLoop(properties, 300f, new ThermalSettings().HeatTimeScale);
 
             Assert.Equal(new ThermalSettings().HeatTimeScale,
@@ -149,14 +138,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnInvalidScaleFallsBackToPhysical operation.</summary>
         public void AnInvalidScaleFallsBackToPhysical()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.HeatTimeScale = 0f;
             settings.Derive();
 
             Assert.Equal(1f, settings.HeatTimeScale);
 
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings negative = new ThermalSettings();
             negative.HeatTimeScale = -5f;
             negative.Derive();
@@ -164,23 +156,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(1f, negative.HeatTimeScale);
         }
 
-        /// <summary>
-        /// **The shipped clock and what it used to be**, which are two different questions since
-        /// `C24`.
-        ///
-        /// <para>
-        /// 225 is the clock that reproduces the pace the mod had when the definitions were written
-        /// as 1–6: steel's real 450 J/(kg·K) over 225 is the 2 that definition used to carry, and
-        /// that arithmetic is what the real-unit conversion was checked against. The shipped clock
-        /// is **90**, two and a half times slower, because the significance window `G8` asks for is
-        /// not reachable at 225 by any dial that keeps the hull inside a session — see
-        /// balance.md, The route is chosen. Both are asserted so neither
-        /// can move quietly.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheShippedClockIsSlowerThanTheOneTheConversionReproduced operation.</summary>
         public void TheShippedClockIsSlowerThanTheOneTheConversionReproduced()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
 
             const float steel = 450f;         // Data/Cubes.xml, DefaultThermodynamics

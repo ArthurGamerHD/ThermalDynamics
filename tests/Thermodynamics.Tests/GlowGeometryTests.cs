@@ -6,24 +6,10 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The arithmetic behind a drawn glow: the quad that covers one face of a block, and the single
-    /// light a grid's glowing blocks reduce to.
-    ///
-    /// <para>
-    /// Both live in <c>Core</c> rather than beside the draw call precisely so they can be checked
-    /// here. What cannot be checked offline is whether the renderer draws what it is handed, which
-    /// is a session's job — see known-issues.md, testing gaps.
-    /// </para>
-    /// </summary>
     public class GlowGeometryTests
     {
-        /// <summary>
-        /// Every face's two in-plane axes are perpendicular to the face and to each other, which is
-        /// the whole of what a quad needs from them. A pair that drifted onto the face's own normal
-        /// would draw a quad edge-on and glow nothing.
-        /// </summary>
         [Fact]
+/// <summary>EveryFacesTangentsSpanIt operation.</summary>
         public void EveryFacesTangentsSpanIt()
         {
             for (int face = 0; face < Face.Count; face++)
@@ -40,17 +26,10 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The quad covers the face exactly: its two half-widths are the block's half-extents along
-        /// its own two in-plane axes, and its centre stands off along the third.
-        ///
-        /// Checked on a deliberately unequal block, because a cube cannot tell a correct pairing of
-        /// axis to extent from a transposed one.
-        /// </summary>
         [Fact]
+/// <summary>AQuadCoversTheFaceItIsDrawnOn operation.</summary>
         public void AQuadCoversTheFaceItIsDrawnOn()
         {
-            // 1 x 2 x 3 cells on a 2.5 m grid: half-extents 1.25, 2.5, 3.75 m.
             Vector3 half = FaceQuad.HalfExtents(Vector3I.Zero, new Vector3I(0, 1, 2), 2.5f);
             Assert.Equal(new Vector3(1.25f, 2.5f, 3.75f), half);
 
@@ -64,8 +43,6 @@ namespace Thermodynamics.Tests
                 float height = FaceQuad.Extent(ref half, ref up);
                 float reach = FaceQuad.Extent(ref half, ref normal);
 
-                // The three together are the block's three half-extents, once each — which is the
-                // statement that the quad is the face and not some other rectangle of it.
                 List<float> got = new List<float> { width, height, reach };
                 got.Sort();
 
@@ -79,10 +56,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>An extent is a distance, so it is never negative however the axis points.</summary>
         [Fact]
+/// <summary>AnExtentIsADistanceAndNeverNegative operation.</summary>
         public void AnExtentIsADistanceAndNeverNegative()
         {
+/// <summary>Vector3 operation.</summary>
             Vector3 half = new Vector3(1.25f, 2.5f, 3.75f);
 
             for (int face = 0; face < Face.Count; face++)
@@ -92,8 +70,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>Nothing glowing is not a region, so nothing is lit.</summary>
         [Fact]
+/// <summary>NothingGlowingIsNotARegion operation.</summary>
         public void NothingGlowingIsNotARegion()
         {
             GlowRegion region;
@@ -101,7 +79,6 @@ namespace Thermodynamics.Tests
             Assert.False(GlowRegion.Reduce(new List<LitBlock>(), out region));
             Assert.False(GlowRegion.Reduce(null, out region));
 
-            // A block in the list at zero glow is a block that has cooled, not a block to light.
             List<LitBlock> cooled = new List<LitBlock>
             {
                 new LitBlock { Position = Vector3I.Zero, Kelvin = 900f, Glow = 0f },
@@ -109,15 +86,8 @@ namespace Thermodynamics.Tests
             Assert.False(GlowRegion.Reduce(cooled, out region));
         }
 
-        /// <summary>
-        /// The centre is weighted by glow, so it sits on the block that is failing rather than
-        /// between it and everything that is merely warm.
-        ///
-        /// The case is the one that matters on a real hull: one block at its rating with a crowd of
-        /// barely-glowing neighbours ten cells away. An unweighted mean would put the light in the
-        /// crowd.
-        /// </summary>
         [Fact]
+/// <summary>TheCentreFollowsTheBlocksThatAreFailing operation.</summary>
         public void TheCentreFollowsTheBlocksThatAreFailing()
         {
             List<LitBlock> lit = new List<LitBlock>
@@ -129,6 +99,7 @@ namespace Thermodynamics.Tests
             {
                 lit.Add(new LitBlock
                 {
+/// <summary>Vector3I operation.</summary>
                     Position = new Vector3I(10, 0, 0),
                     Kelvin = 820f,
                     Glow = 0.05f,
@@ -138,27 +109,24 @@ namespace Thermodynamics.Tests
             GlowRegion region;
             Assert.True(GlowRegion.Reduce(lit, out region));
 
-            // Weighted: 1 x 0 + 0.45 x 10 over 1.45 = 3.10 cells. An unweighted mean would be 9.
             Assert.Equal(3.10, region.Centre.X, 2);
             Assert.Equal(0d, region.Centre.Y, 6);
 
-            // The colour is the hottest block's and the brightness the brightest, not an average of
-            // either: a region containing something at its rating is a region about to lose it.
             Assert.Equal(1200f, region.Kelvin);
             Assert.Equal(1f, region.Glow);
         }
 
-        /// <summary>
-        /// The radius reaches the furthest glowing block, so the light covers the set rather than
-        /// its centre.
-        /// </summary>
         [Fact]
+/// <summary>TheRadiusReachesTheFurthestGlowingBlock operation.</summary>
         public void TheRadiusReachesTheFurthestGlowingBlock()
         {
             List<LitBlock> lit = new List<LitBlock>
             {
+/// <summary>Vector3I operation.</summary>
                 new LitBlock { Position = new Vector3I(-4, 0, 0), Kelvin = 900f, Glow = 0.5f },
+/// <summary>Vector3I operation.</summary>
                 new LitBlock { Position = new Vector3I(4, 0, 0), Kelvin = 900f, Glow = 0.5f },
+/// <summary>Vector3I operation.</summary>
                 new LitBlock { Position = new Vector3I(0, 0, 0), Kelvin = 900f, Glow = 0f },
             };
 
@@ -169,15 +137,13 @@ namespace Thermodynamics.Tests
             Assert.Equal(4f, region.RadiusCells, 4);
         }
 
-        /// <summary>
-        /// A single glowing block is a region on that block with no radius, which is the case every
-        /// ordinary overheat is: one reactor, one thruster.
-        /// </summary>
         [Fact]
+/// <summary>OneGlowingBlockIsARegionOnIt operation.</summary>
         public void OneGlowingBlockIsARegionOnIt()
         {
             List<LitBlock> lit = new List<LitBlock>
             {
+/// <summary>Vector3I operation.</summary>
                 new LitBlock { Position = new Vector3I(3, -2, 7), Kelvin = 1000f, Glow = 0.4f },
             };
 

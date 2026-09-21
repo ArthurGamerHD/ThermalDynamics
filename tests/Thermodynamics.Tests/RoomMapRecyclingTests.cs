@@ -6,44 +6,32 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// A room pass writes into a recycled map instead of buying a new one (`D20`): the mapper
-    /// rotates three slots, because a published map may be read until the publish after next —
-    /// the solver holds one across a budgeted exposure refresh — so the map free to be written
-    /// is the one two publishes old.
-    ///
-    /// <para>
-    /// Four claims, each the failure the design has to survive: the rotation really is three
-    /// maps and no fourth (a fourth is `D20`'s leak back); a map two publishes old still answers,
-    /// even while the pass recycling its successor is in flight (two slots instead of three would
-    /// republish or reset a map somebody holds); a recycled map is cell-for-cell identical to a
-    /// fresh one (`D8` — the fresh path is the code the recycled path replaced); and a warm pass
-    /// allocates an order less than a cold one, which is the saving itself, asserted rather than
-    /// read off a benchmark nobody re-runs (`E5`).
-    /// </para>
-    /// </summary>
     public class RoomMapRecyclingTests
     {
+/// <summary>Shell operation.</summary>
         private static ThermalSimulation Shell()
         {
             GridBuilder builder = RoomFixtures.DooredShell();
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
             simulation.RebuildAll();
             return simulation;
         }
 
+/// <summary>Census operation.</summary>
         private static ThermalSimulation Census()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", 8000));
+/// <summary>ThermalSimulation operation.</summary>
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
             simulation.RebuildAll();
             return simulation;
         }
 
-        /// <summary>Runs one full room pass and hands back the map it published.</summary>
+/// <summary>RunPass operation.</summary>
         private static RoomMap RunPass(ThermalSimulation simulation)
         {
             simulation.Rooms.RequestRestart(simulation.Grid);
@@ -52,23 +40,23 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheMapperRotatesThreeMapsAndAllocatesNoFourth operation.</summary>
         public void TheMapperRotatesThreeMapsAndAllocatesNoFourth()
         {
+/// <summary>Shell operation.</summary>
             ThermalSimulation simulation = Shell();
 
+/// <summary>List operation.</summary>
             List<RoomMap> published = new List<RoomMap>();
             published.Add(simulation.Rooms.Map);
             Assert.True(published[0].RoomCount > 0, "the shell mapped no rooms, so the rotation would cycle empty maps");
 
             for (int i = 0; i < 8; i++) published.Add(RunPass(simulation));
 
-            // Three distinct slots while the rotation fills...
             Assert.NotSame(published[0], published[1]);
             Assert.NotSame(published[1], published[2]);
             Assert.NotSame(published[0], published[2]);
 
-            // ...and from the fourth pass on, every map is one of the three again, with period
-            // three exactly. A fourth instance anywhere here is the allocation `D20` removed.
             for (int i = 3; i < published.Count; i++)
             {
                 Assert.Same(published[i - 3], published[i]);
@@ -76,8 +64,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>APublishedMapAnswersUntilThePublishAfterNext operation.</summary>
         public void APublishedMapAnswersUntilThePublishAfterNext()
         {
+/// <summary>Shell operation.</summary>
             ThermalSimulation simulation = Shell();
             RoomMap held = simulation.Rooms.Map;
 
@@ -93,12 +83,8 @@ namespace Thermodynamics.Tests
                 probes[r] = held.CellsOf(r)[0];
             }
 
-            // One publish: the held map is superseded, and still readable.
             RunPass(simulation);
 
-            // The pass after that, caught in flight: the map it is writing into must not be the
-            // held one. With two slots instead of three, this is exactly where the held map is
-            // reset under its reader.
             simulation.Rooms.RequestRestart(simulation.Grid);
             simulation.Rooms.Step(64);
 
@@ -113,47 +99,47 @@ namespace Thermodynamics.Tests
 
             Assert.True(simulation.Rooms.RunToCompletion(), "the in-flight pass did not finish");
 
-            // The publish after next has now happened, and it did not hand the held instance back
-            // out: a two-slot swap would republish the very object a refresh may still be reading.
             Assert.NotSame(held, simulation.Rooms.Map);
         }
 
         [Fact]
+/// <summary>ARecycledMapIsCellForCellIdenticalToAFreshOne operation.</summary>
         public void ARecycledMapIsCellForCellIdenticalToAFreshOne()
         {
+/// <summary>Census operation.</summary>
             ThermalSimulation recycled = Census();
             RoomMap firstMap = recycled.Rooms.Map;
 
             RoomMap current = firstMap;
             for (int i = 0; i < 6; i++) current = RunPass(recycled);
 
-            // Prove the fixture exercised recycling before comparing anything: with seven passes
-            // and three slots, the published map is the first map on its third time round. Two
-            // fresh maps agreeing proves only that the grid did not change (`E8`).
             Assert.Same(firstMap, current);
 
+/// <summary>Census operation.</summary>
             ThermalSimulation fresh = Census();
             RoomMapAssert.SameMap(fresh.Rooms.Map, current, "census hull, recycled against fresh");
         }
 
         [Fact]
+/// <summary>AWarmPassAllocatesAnOrderLessThanAColdOne operation.</summary>
         public void AWarmPassAllocatesAnOrderLessThanAColdOne()
         {
+/// <summary>Census operation.</summary>
             ThermalSimulation simulation = Census();
 
-            // Passes two and three each still build a slot, so pass two is the cold figure...
+/// <summary>AllocatedBy operation.</summary>
             long cold = AllocatedBy(() => RunPass(simulation));
 
-            // ...and two passes later the rotation is warm: every array recycled, the cell store
-            // already exact from the pass before, nothing to grow and nothing to trim.
             RunPass(simulation);
             RunPass(simulation);
+/// <summary>AllocatedBy operation.</summary>
             long warm = AllocatedBy(() => RunPass(simulation));
 
             Assert.True(cold > 100_000, "the cold pass allocated " + cold + " B — too little for the ratio below to mean anything");
             Assert.True(warm * 10 < cold, "a warm pass allocated " + warm + " B against the cold pass's " + cold + " B; recycling is not recycling");
         }
 
+/// <summary>AllocatedBy operation.</summary>
         private static long AllocatedBy(Action pass)
         {
             long before = GC.GetAllocatedBytesForCurrentThread();

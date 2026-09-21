@@ -6,28 +6,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **The lab that asks which summary of a stage's repeats is reproducible.**
-    ///
-    /// <para>
-    /// `SampleStatisticLab` decides a rule the whole performance page rests on, so its arithmetic is
-    /// checked against hand-computed answers rather than against itself (`E7`), and the two ways it
-    /// can quietly compare the wrong thing — a stage present in some runs and not others, a run file
-    /// that parsed to nothing — are checked to be loud (`P2`).
-    /// </para>
-    /// </summary>
     public class SampleStatisticTests
     {
-        /// <summary>
-        /// The quantile is by nearest rank, so every value it returns is a reading the instrument
-        /// actually took. Interpolating would invent a time that was never measured, which is a poor
-        /// property for a figure a comparison divides.
-        /// </summary>
         [Fact]
+/// <summary>AQuantileIsAReadingThatWasActuallyTaken operation.</summary>
         public void AQuantileIsAReadingThatWasActuallyTaken()
         {
-            // A hundred and one sorted readings valued 0..100, so index = floor(q * 100) is the
-            // value: every candidate lands somewhere different and the test can tell them apart.
             double[] sorted = new double[101];
             for (int i = 0; i < sorted.Length; i++) sorted[i] = i;
 
@@ -38,35 +22,23 @@ namespace Thermodynamics.Tests
             Assert.Equal(25d, SampleStatisticLab.Quantile(sorted, 0.25d));
             Assert.Equal(50d, SampleStatisticLab.Quantile(sorted, 0.50d));
 
-            // Every answer is one of the inputs.
             foreach (double q in SampleStatisticLab.Quantiles)
             {
                 Assert.Contains(SampleStatisticLab.Quantile(sorted, q), sorted);
             }
 
-            // **On a short sample the low quantiles collapse onto the minimum**, by nearest rank
-            // and correctly: there is no fifth-percentile reading in ten. It is asserted rather
-            // than left to surprise a reader of a `--repeats 10` run, and it is why the floor the
-            // lab runs at matters to the choice of statistic as much as to the statistic's value.
             double[] ten = { 1d, 2d, 3d, 4d, 5d, 6d, 7d, 8d, 9d, 10d };
             Assert.Equal(1d, SampleStatisticLab.Quantile(ten, 0.05d));
             Assert.Equal(1d, SampleStatisticLab.Quantile(ten, 0.10d));
             Assert.Equal(3d, SampleStatisticLab.Quantile(ten, 0.25d));
 
-            // An empty sample answers zero rather than throwing out of a reporting path.
             Assert.Equal(0d, SampleStatisticLab.Quantile(new double[0], 0.5d));
         }
 
-        /// <summary>
-        /// The spread is between runs, per statistic — the figure that decides which statistic to
-        /// keep, so it is computed here by hand and compared.
-        /// </summary>
         [Fact]
+/// <summary>TheSpreadIsBetweenRunsForOneStatistic operation.</summary>
         public void TheSpreadIsBetweenRunsForOneStatistic()
         {
-            // Two runs of one stage. The minima are 1 and 3 — 200 % apart. The medians are 10 and
-            // 11 — 10 % apart. A statistic can be far more reproducible than the minimum, and that
-            // is the whole question this lab exists to ask.
             List<SampleStatisticLab.Series> series = new List<SampleStatisticLab.Series>
             {
                 Series("run1", "links", new double[] { 1d, 10d, 10d, 10d, 12d }),
@@ -78,24 +50,22 @@ namespace Thermodynamics.Tests
 
             Assert.Empty(dropped);
 
+/// <summary>Find operation.</summary>
             SampleStatisticLab.Row min = Find(rows, "links", 0d);
             Assert.Equal(2, min.Runs);
             Assert.Equal(1d, min.Lowest);
             Assert.Equal(3d, min.Highest);
             Assert.Equal(200d, min.SpreadPercent, 6);
 
+/// <summary>Find operation.</summary>
             SampleStatisticLab.Row median = Find(rows, "links", 0.50d);
             Assert.Equal(10d, median.Lowest);
             Assert.Equal(11d, median.Highest);
             Assert.Equal(10d, median.SpreadPercent, 6);
         }
 
-        /// <summary>
-        /// A stage that is not in every run is named and dropped, never averaged over the runs that
-        /// happen to hold it. Comparing a stage across two runs and calling it three is the
-        /// partial-sweep failure in miniature (`E4`).
-        /// </summary>
         [Fact]
+/// <summary>AStageMissingFromARunIsDroppedAndSaidSo operation.</summary>
         public void AStageMissingFromARunIsDroppedAndSaidSo()
         {
             List<SampleStatisticLab.Series> series = new List<SampleStatisticLab.Series>
@@ -115,11 +85,8 @@ namespace Thermodynamics.Tests
             foreach (SampleStatisticLab.Row row in rows) Assert.Equal("links", row.Stage);
         }
 
-        /// <summary>
-        /// A run file that parsed to no repeats throws rather than contributing nothing quietly:
-        /// a comparison silently short of a run reads exactly like one that had it (`E8`).
-        /// </summary>
         [Fact]
+/// <summary>ARunThatParsedToNothingIsLoud operation.</summary>
         public void ARunThatParsedToNothingIsLoud()
         {
             string path = Path.GetTempFileName();
@@ -134,8 +101,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>The file the stage lab writes is the file this lab reads, round trip.</summary>
         [Fact]
+/// <summary>TheStageLabsSamplesFileIsWhatThisLabReads operation.</summary>
         public void TheStageLabsSamplesFileIsWhatThisLabReads()
         {
             int repeats = StageLab.Repeats;
@@ -161,8 +128,6 @@ namespace Thermodynamics.Tests
                         Assert.Equal(stageRows[i].Repeats, read[i].Samples.Count);
                         Assert.Equal(stageRows[i].Samples.Count, read[i].Samples.Count);
 
-                        // The fastest the stage reported is the fastest in the file, or the
-                        // artefact is not of the run that produced the row.
                         double[] sorted = read[i].Samples.ToArray();
                         Array.Sort(sorted);
                         Assert.Equal(stageRows[i].BestMs, sorted[0], 9);
@@ -180,19 +145,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// **Two runs an hour apart are not one measurement, and the artefact now says so.**
-        ///
-        /// <para>
-        /// Every spread this lab reports is a spread between runs; Pass 9, Iteration 6 found the
-        /// same exposure code measuring 4.75 ms across twelve processes of one window and 11.40 in
-        /// a session two days earlier, so a comparison that silently spans sessions reports session
-        /// drift as if it were the statistic's own irreproducibility. The window is asserted at the
-        /// boundary in both directions, because a threshold checked on one side only is a threshold
-        /// that can be off by any amount on the other.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>RunsAreOneWindowOnlyIfTheyWereTakenInsideOne operation.</summary>
         public void RunsAreOneWindowOnlyIfTheyWereTakenInsideOne()
         {
             List<SampleStatisticLab.Series> inside = new List<SampleStatisticLab.Series>
@@ -208,25 +162,21 @@ namespace Thermodynamics.Tests
             Assert.Equal("2026-08-27T10:59:00Z", span.Latest);
             Assert.Equal(59d, span.Elapsed.TotalMinutes);
 
-            // Exactly the boundary is still one window; a minute past it is not.
+/// <summary>Stamped operation.</summary>
             inside[1] = Stamped("run2", "2026-08-27T11:00:00Z");
             Assert.True(SampleStatisticLab.Window(inside).IsOneWindow);
 
+/// <summary>Stamped operation.</summary>
             inside[1] = Stamped("run2", "2026-08-27T11:01:00Z");
             Assert.False(SampleStatisticLab.Window(inside).IsOneWindow);
 
-            // The order the runs are given in cannot change the answer.
             inside.Reverse();
             Assert.False(SampleStatisticLab.Window(inside).IsOneWindow);
             Assert.Equal("2026-08-27T10:00:00Z", SampleStatisticLab.Window(inside).Earliest);
         }
 
-        /// <summary>
-        /// A run that carries no stamp, or one nothing can read, is not one window with anything.
-        /// The failure this exists to prevent is the quiet one: an unstamped artefact read as
-        /// *taken together*, which is the state every artefact written before the stamp is in.
-        /// </summary>
         [Fact]
+/// <summary>ARunWithNoReadableStampIsNotOneWindowWithAnything operation.</summary>
         public void ARunWithNoReadableStampIsNotOneWindowWithAnything()
         {
             List<SampleStatisticLab.Series> runs = new List<SampleStatisticLab.Series>
@@ -239,11 +189,11 @@ namespace Thermodynamics.Tests
             Assert.False(span.IsOneWindow);
             Assert.Equal(1, span.Unstamped);
 
+/// <summary>Stamped operation.</summary>
             runs[1] = Stamped("run2", "not a time");
             Assert.False(SampleStatisticLab.Window(runs).IsOneWindow);
             Assert.Equal(1, SampleStatisticLab.Window(runs).Unstamped);
 
-            // One run's several stages are one run, not several.
             List<SampleStatisticLab.Series> oneRun = new List<SampleStatisticLab.Series>
             {
                 Stamped("run1", string.Empty, "place"),
@@ -252,12 +202,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, SampleStatisticLab.Window(oneRun).Unstamped);
         }
 
-        /// <summary>
-        /// The stamp survives the artefact. `SamplesCsv` writes it and `Read` recovers it, which is
-        /// the pair the window check actually runs on — an in-memory `Series` would prove nothing
-        /// about the column (`D3`).
-        /// </summary>
         [Fact]
+/// <summary>TheStampIsWrittenToTheArtefactAndReadBackFromIt operation.</summary>
         public void TheStampIsWrittenToTheArtefactAndReadBackFromIt()
         {
             StageLab.Row row = new StageLab.Row();
@@ -284,6 +230,7 @@ namespace Thermodynamics.Tests
             }
         }
 
+/// <summary>Stamped operation.</summary>
         private static SampleStatisticLab.Series Stamped(string run, string takenUtc, string stage = "exposure")
         {
             SampleStatisticLab.Series series = new SampleStatisticLab.Series();
@@ -293,6 +240,7 @@ namespace Thermodynamics.Tests
             return series;
         }
 
+/// <summary>Series operation.</summary>
         private static SampleStatisticLab.Series Series(string run, string stage, double[] samples)
         {
             SampleStatisticLab.Series series = new SampleStatisticLab.Series();
@@ -302,6 +250,7 @@ namespace Thermodynamics.Tests
             return series;
         }
 
+/// <summary>Find operation.</summary>
         private static SampleStatisticLab.Row Find(IList<SampleStatisticLab.Row> rows, string stage, double quantile)
         {
             foreach (SampleStatisticLab.Row row in rows)

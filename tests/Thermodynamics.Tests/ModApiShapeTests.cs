@@ -7,38 +7,15 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The mod API's delegate table has the shape the API page says it has.
-    ///
-    /// <para>
-    /// A consumer reaches this mod by casting: `api["GetBlockTemperature"] as
-    /// Func&lt;IMySlimBlock, float&gt;`. A cast that does not match returns **null**, not an error —
-    /// so a signature that changes on one side and not the other produces a second mod whose
-    /// feature silently does nothing, in a session, with no message anywhere. `R9` calls the API
-    /// page part of the contract, and until now the only thing checked was that every entry is
-    /// *named* there.
-    /// </para>
-    ///
-    /// <para>
-    /// Textual, because the shape is text on both sides and neither can be reached without a
-    /// session. It cannot check that a signature is a good one; it checks that there is one answer
-    /// rather than two (`D3`).
-    /// </para>
-    /// </summary>
     public class ModApiShapeTests
     {
+/// <summary>RepoRoot operation.</summary>
         private static string RepoRoot()
         {
             return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
 
-        /// <summary>
-        /// Every `methods["Name"] = new Func&lt;…&gt;` in the table, as name against signature.
-        ///
-        /// The generic argument list is taken by matching angle brackets rather than by regex,
-        /// because `MyTuple&lt;float, float, float, int&gt;` nests and a lazy pattern stops at the
-        /// first `&gt;` it meets — which is the middle of the tuple.
-        /// </summary>
+/// <summary>Declared operation.</summary>
         private static Dictionary<string, string> Declared()
         {
             string source = File.ReadAllText(Path.Combine(RepoRoot(),
@@ -58,6 +35,7 @@ namespace Thermodynamics.Tests
                 while (i < source.Length)
                 {
                     if (source[i] == '<') depth++;
+/// <summary>if operation.</summary>
                     else if (source[i] == '>')
                     {
                         depth--;
@@ -67,45 +45,21 @@ namespace Thermodynamics.Tests
                 }
 
                 if (i >= source.Length) continue;
+/// <summary>Normalise operation.</summary>
                 shapes[match.Groups[1].Value] = Normalise("Func" + source.Substring(open, i - open + 1));
             }
 
             return shapes;
         }
 
-        /// <summary>
-        /// **Every entry in the table is wrapped, so no call across this mod's API can throw into
-        /// its caller** (`W4`).
-        ///
-        /// <para>
-        /// That rule's *Checked by* field read "— nothing… that is discipline", and discipline had
-        /// already missed one: `GetSetting` was `name => Settings.Instance.GetValue(name)` four
-        /// lines above a `SetSetting` that guarded the same field and returned `false`. A consumer
-        /// asking for a setting before this mod had loaded its own got a `NullReferenceException`
-        /// with this mod's name on it, which is the one outcome the rule exists to prevent, and
-        /// nothing anywhere would have said so — an exception crossing a mod boundary lands in
-        /// somebody else's session.
-        /// </para>
-        ///
-        /// <para>
-        /// Eighteen bodies audited by eye is how that happened, so the check is not "each body
-        /// guards its arguments" — it is that every entry goes through `Guard`, which is one thing
-        /// to see and cannot be true of seventeen entries and false of the eighteenth without this
-        /// naming it. What `Guard` does is the mod's business; that everything is inside one is
-        /// this test's.
-        /// </para>
-        ///
-        /// <para>
-        /// It reads the source rather than the table, for the same reason `Declared` does: the
-        /// table binds game types this project does not reference, so nothing here can build one.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>EveryEntryInTheTableIsWrappedSoItCannotThrowIntoItsCaller operation.</summary>
         public void EveryEntryInTheTableIsWrappedSoItCannotThrowIntoItsCaller()
         {
             string source = File.ReadAllText(Path.Combine(RepoRoot(),
                 "Thermodynamics", "ThermalApi.cs"));
 
+/// <summary>List operation.</summary>
             List<string> bare = new List<string>();
 
             foreach (Match match in Regex.Matches(source,
@@ -119,16 +73,16 @@ namespace Thermodynamics.Tests
 
             Assert.True(bare.Count == 0,
                 "these API entries are not wrapped in Guard, so an exception inside one reaches the"
+/// <summary>it operation.</summary>
                 + " consumer that called it (`W4`): " + string.Join(", ", bare.ToArray()));
 
-            // And the assertion means nothing if the table is empty or the pattern stopped
-            // matching, which is `E8` at the place it is least visible.
             Assert.True(Declared().Count >= 15,
+/// <summary>Declared operation.</summary>
                 "only " + Declared().Count + " entries were found in the table, so this judged"
                 + " almost nothing");
         }
 
-        /// <summary>Every `| `Name` | `Func&lt;…&gt;` |` row of the API page's tables.</summary>
+/// <summary>Documented operation.</summary>
         private static Dictionary<string, string> Documented()
         {
             string page = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "api.md"));
@@ -138,48 +92,21 @@ namespace Thermodynamics.Tests
             foreach (Match match in Regex.Matches(page,
                 @"\|\s*`(\w+)`\s*\|\s*`(Func<[^`]*)`\s*\|"))
             {
+/// <summary>Normalise operation.</summary>
                 shapes[match.Groups[1].Value] = Normalise(match.Groups[2].Value);
             }
 
             return shapes;
         }
 
-        /// <summary>Whitespace is not part of a signature, and the two sides space them differently.</summary>
+/// <summary>Normalise operation.</summary>
         private static string Normalise(string signature)
         {
             return Regex.Replace(signature, @"\s+", "");
         }
 
-        /// <summary>
-        /// **What moves the API's major version, checked rather than described.**
-        ///
-        /// <para>
-        /// backlog.md `B37`: `ThermalApi.Version` is 1 and
-        /// api.md tells a caller to read it and refuse a major it was
-        /// not written against, so *keys do not change meaning within a major version* is a
-        /// promise with a referent. What was undeclared is which change moves it — and a removed
-        /// key, a widened signature and a grown `MyTuple` were all reachable without anybody
-        /// deciding, because `EveryEntryHasTheSignatureTheApiPageGivesIt` compares the table with
-        /// the page and neither of them with the number.
-        /// </para>
-        ///
-        /// <para>
-        /// **The rule is one sentence: the major moves when a caller written against the previous
-        /// major could still bind and then be wrong.** A key that goes away and a key whose
-        /// signature changes both do that — a caller binds by name and casts to the exact delegate
-        /// type, so a widened `Func` or a `MyTuple` with another field fails at the cast or, worse,
-        /// binds against a stale copy. A key that is *added* does not: a caller that has never
-        /// heard of it is unaffected.
-        /// </para>
-        ///
-        /// <para>
-        /// Meaning-without-signature — watts becoming kilowatts, a delegate returning `NaN` where
-        /// it returned zero — is the one this cannot see, and it is named in `ApiSurface.txt` so
-        /// that the file is where the whole rule lives rather than only the half a test can reach
-        /// (`R11`).
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ApiVersionMovesWhenTheSurfaceBreaks operation.</summary>
         public void ApiVersionMovesWhenTheSurfaceBreaks()
         {
             string path = Path.Combine(RepoRoot(), "tests", "Thermodynamics.Tests",
@@ -215,8 +142,11 @@ namespace Thermodynamics.Tests
                 "the recorded surface holds " + recorded.Count + " entries, so this check would "
                 + "pass whatever the table said");
 
+/// <summary>Declared operation.</summary>
             Dictionary<string, string> declared = Declared();
+/// <summary>List operation.</summary>
             List<string> breaking = new List<string>();
+/// <summary>List operation.</summary>
             List<string> added = new List<string>();
 
             foreach (KeyValuePair<string, string> entry in recorded)
@@ -239,14 +169,13 @@ namespace Thermodynamics.Tests
                 if (!recorded.ContainsKey(entry.Key)) added.Add(entry.Key);
             }
 
+/// <summary>DeclaredVersion operation.</summary>
             int current = DeclaredVersion();
 
-            // **An addition is not a break**, and saying so here is what keeps the file honest:
-            // without this the only way to add a key would be to move the major, and the rule the
-            // page states would quietly stop being the rule the tree follows.
             if (breaking.Count == 0)
             {
                 Assert.True(current == recordedVersion,
+/// <summary>key operation.</summary>
                     "the API surface has not broken — " + added.Count + " key(s) added, nothing "
                     + "removed or reshaped — but ThermalApi.Version is " + current
                     + " against the recorded " + recordedVersion + ". A major that moves without a "
@@ -261,7 +190,7 @@ namespace Thermodynamics.Tests
                 + "same commit:\n  " + string.Join("\n  ", breaking.ToArray()));
         }
 
-        /// <summary>`ThermalApi.Version`, read from the source rather than linked to.</summary>
+/// <summary>DeclaredVersion operation.</summary>
         private static int DeclaredVersion()
         {
             string source = File.ReadAllText(Path.Combine(RepoRoot(),
@@ -274,9 +203,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EveryEntryHasTheSignatureTheApiPageGivesIt operation.</summary>
         public void EveryEntryHasTheSignatureTheApiPageGivesIt()
         {
+/// <summary>Declared operation.</summary>
             Dictionary<string, string> declared = Declared();
+/// <summary>Documented operation.</summary>
             Dictionary<string, string> documented = Documented();
 
             Assert.True(declared.Count > 10,
@@ -285,6 +217,7 @@ namespace Thermodynamics.Tests
             Assert.True(documented.Count > 10,
                 "only " + documented.Count + " signatures were read out of the API page");
 
+/// <summary>List operation.</summary>
             List<string> wrong = new List<string>();
 
             foreach (KeyValuePair<string, string> entry in declared)
@@ -301,8 +234,6 @@ namespace Thermodynamics.Tests
                 wrong.Add(entry.Key + ":\n      code " + entry.Value + "\n      page " + page);
             }
 
-            // And the other direction: a signature on the page for something the table no longer
-            // holds is an entry a consumer will cast and get null from.
             foreach (KeyValuePair<string, string> entry in documented)
             {
                 if (!declared.ContainsKey(entry.Key))
@@ -317,17 +248,15 @@ namespace Thermodynamics.Tests
                 + " entries:\n  " + string.Join("\n  ", wrong.ToArray()));
         }
 
-        /// <summary>
-        /// The worked examples on the page cast with the same signatures its table gives, because a
-        /// reader copies the example rather than the table — and an example that casts wrongly
-        /// hands them a null they will not understand.
-        /// </summary>
         [Fact]
+/// <summary>TheWorkedExamplesCastWithTheSignaturesTheTableGives operation.</summary>
         public void TheWorkedExamplesCastWithTheSignaturesTheTableGives()
         {
             string page = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "api.md"));
+/// <summary>Documented operation.</summary>
             Dictionary<string, string> documented = Documented();
 
+/// <summary>List operation.</summary>
             List<string> wrong = new List<string>();
             int checked_ = 0;
 
@@ -335,6 +264,7 @@ namespace Thermodynamics.Tests
                 @"api\[""(\w+)""\]\s*as\s+(Func<[^;>]*(?:<[^>]*>)?[^;]*?)>\s*;"))
             {
                 string name = match.Groups[1].Value;
+/// <summary>Normalise operation.</summary>
                 string cast = Normalise(match.Groups[2].Value + ">");
 
                 string table;

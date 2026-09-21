@@ -16,26 +16,231 @@ namespace SENetworkAPI
 		private Vector3D[] m_snapshotPositions = new Vector3D[16];
 		private ulong[] m_snapshotIds = new ulong[16];
 		private int m_snapshotCount;
+/// <summary>List operation.</summary>
 		private readonly List<IMyPlayer> m_snapshotSource = new List<IMyPlayer>();
 		private int m_snapshotFrame = int.MinValue;
 
-		private readonly Func<IMyPlayer, bool> m_singleRecipientFilter;
-		private ulong m_filterWanted;
+		// A sorted projection narrows sphere queries without allocating cells or
+		// rebuilding a tree. Small populations and broad queries use the linear path.
+		// Algorithm crossover heuristics, never limits on players or recipients.
+		private const int SpatialIndexMinimumPlayers = 16;
+		private const int SpatialIndexWarmupQueries = 16;
+		private double[] m_sortedCoordinates = new double[16];
+		private int[] m_sortedIndices = new int[16];
+		private int[] m_matches = new int[16];
+		private int m_queryCount;
+		private int m_previousMatchCount;
+		private int m_indexAxis;
+		private bool m_indexBuilt;
+		private bool m_indexValid;
+		private bool m_boundsBuilt;
+		private bool m_boundsValid;
+		private Vector3D m_boundsMin;
+		private Vector3D m_boundsMax;
+
+		private readonly Stack<List<ulong>> m_recipientPool = new Stack<List<ulong>>();
 
 		/// <summary>Use <see cref="NetworkAPI.Init"/> instead of constructing this directly.</summary>
 		/// <param name="comId">The communication channel this mod sends and listens on</param>
 		/// <param name="modName">Sender name used for chat messages the API prints</param>
 		/// <param name="keyword">Chat command prefix, or null to disable chat commands</param>
+/// <summary>Server operation.</summary>
 		public Server(ushort comId, string modName, string keyword = null) : base(comId, modName, keyword)
 		{
-			m_singleRecipientFilter = IsWantedRecipient;
 		}
 
-		private bool IsWantedRecipient(IMyPlayer player)
+		// Each caller owns its list until release, including during reentrant sends.
+/// <summary>CollectRecipients operation.</summary>
+		internal List<ulong> CollectRecipients(Vector3D point, double radius, ulong sendTo, ulong excluded)
 		{
-			return player.SteamUserId == m_filterWanted;
+/// <summary>List operation.</summary>
+			List<ulong> recipients = m_recipientPool.Count == 0 ? new List<ulong>() : m_recipientPool.Pop();
+			try
+			{
+				// Directed sends must see players joining after this frame's snapshot.
+				if (sendTo != 0)
+				{
+					m_snapshotSource.Clear();
+					MyAPIGateway.Players.GetPlayers(m_snapshotSource);
+					for (int i = 0; i < m_snapshotSource.Count; i++)
+						if (m_snapshotSource[i].SteamUserId == sendTo) recipients.Add(sendTo);
+					m_snapshotSource.Clear();
+					return recipients;
+				}
+				RefreshSnapshot();
+				if (radius == 0) radius = MyAPIGateway.Session?.SessionSettings.SyncDistance ?? 0;
+				m_queryCount++;
+				double squared = radius * radius;
+				// Crowded grids often contain every player. Prove that using the
+				// snapshot bounds, then copy IDs without repeating distance tests.
+				if (m_snapshotCount >= SpatialIndexMinimumPlayers && m_queryCount >= SpatialIndexWarmupQueries &&
+/// <summary>AllPlayersInRange operation.</summary>
+					m_previousMatchCount >= m_snapshotCount - 1 && AllPlayersInRange(point, squared))
+				{
+					for (int i = 0; i < m_snapshotCount; i++)
+						if (m_snapshotIds[i] != excluded) recipients.Add(m_snapshotIds[i]);
+					m_previousMatchCount = recipients.Count;
+					return recipients;
+				}
+
+				// Amortize sorting only across repeated, selective queries. A scan
+				// is cheaper for the common case of players clustered around a grid.
+				bool selective = m_previousMatchCount < m_snapshotCount / 4;
+				if (m_snapshotCount >= SpatialIndexMinimumPlayers && m_queryCount >= SpatialIndexWarmupQueries && selective && !m_indexBuilt)
+					BuildSpatialIndex();
+
+/// <summary>Coordinate operation.</summary>
+				double center = Coordinate(point, m_indexAxis);
+				if (m_indexValid && selective && IsFinite(center) && IsFinite(radius))
+				{
+					double extent = Math.Abs(radius);
+/// <summary>LowerBound operation.</summary>
+					int start = LowerBound(center - extent);
+/// <summary>UpperBound operation.</summary>
+					int end = UpperBound(center + extent);
+					// Use contiguous snapshot arrays when the projection cannot prune much.
+					if (end - start < m_snapshotCount / 2)
+					{
+						int matches = 0;
+						for (int i = start; i < end; i++)
+						{
+							int index = m_sortedIndices[i];
+							if (InRange(index, point, squared, excluded)) m_matches[matches++] = index;
+						}
+						// Preserve snapshot recipient order, including during nested sends.
+						Array.Sort(m_matches, 0, matches);
+						for (int i = 0; i < matches; i++) recipients.Add(m_snapshotIds[m_matches[i]]);
+						m_previousMatchCount = matches;
+						return recipients;
+					}
+				}
+
+				for (int i = 0; i < m_snapshotCount; i++)
+					if (InRange(i, point, squared, excluded)) recipients.Add(m_snapshotIds[i]);
+				m_previousMatchCount = recipients.Count;
+				return recipients;
+			}
+			catch
+			{
+				ReleaseRecipients(recipients);
+				throw;
+			}
 		}
 
+/// <summary>InRange operation.</summary>
+		private bool InRange(int index, Vector3D point, double squared, ulong excluded)
+		{
+			Vector3D position = m_snapshotPositions[index];
+			double dx = position.X - point.X, dy = position.Y - point.Y, dz = position.Z - point.Z;
+			return m_snapshotIds[index] != excluded && dx * dx + dy * dy + dz * dz < squared;
+		}
+
+/// <summary>Coordinate operation.</summary>
+		private static double Coordinate(Vector3D point, int axis)
+		{
+			return axis == 0 ? point.X : axis == 1 ? point.Y : point.Z;
+		}
+
+/// <summary>IsFinite operation.</summary>
+		private static bool IsFinite(double value)
+		{
+			return !double.IsNaN(value) && !double.IsInfinity(value);
+		}
+
+/// <summary>EnsureBounds operation.</summary>
+		private bool EnsureBounds()
+		{
+			if (m_boundsBuilt) return m_boundsValid;
+			m_boundsBuilt = true;
+			Vector3D min = m_snapshotPositions[0], max = min;
+			for (int i = 0; i < m_snapshotCount; i++)
+			{
+				Vector3D p = m_snapshotPositions[i];
+				if (!IsFinite(p.X) || !IsFinite(p.Y) || !IsFinite(p.Z)) return false;
+				min.X = Math.Min(min.X, p.X); max.X = Math.Max(max.X, p.X);
+				min.Y = Math.Min(min.Y, p.Y); max.Y = Math.Max(max.Y, p.Y);
+				min.Z = Math.Min(min.Z, p.Z); max.Z = Math.Max(max.Z, p.Z);
+			}
+			m_boundsMin = min;
+			m_boundsMax = max;
+			m_boundsValid = true;
+			return true;
+		}
+
+/// <summary>AllPlayersInRange operation.</summary>
+		private bool AllPlayersInRange(Vector3D point, double squared)
+		{
+			if (!EnsureBounds()) return false;
+			double dx = Math.Max(Math.Abs(m_boundsMin.X - point.X), Math.Abs(m_boundsMax.X - point.X));
+			double dy = Math.Max(Math.Abs(m_boundsMin.Y - point.Y), Math.Abs(m_boundsMax.Y - point.Y));
+			double dz = Math.Max(Math.Abs(m_boundsMin.Z - point.Z), Math.Abs(m_boundsMax.Z - point.Z));
+			return dx * dx + dy * dy + dz * dz < squared;
+		}
+
+/// <summary>Builds the method table.</summary>
+		private void BuildSpatialIndex()
+		{
+			m_indexBuilt = true;
+			if (!EnsureBounds()) return;
+			Vector3D min = m_boundsMin, max = m_boundsMax;
+			double x = max.X - min.X, y = max.Y - min.Y, z = max.Z - min.Z;
+			m_indexAxis = y > x ? (z > y ? 2 : 1) : (z > x ? 2 : 0);
+			for (int i = 0; i < m_snapshotCount; i++)
+			{
+/// <summary>Coordinate operation.</summary>
+				m_sortedCoordinates[i] = Coordinate(m_snapshotPositions[i], m_indexAxis);
+				m_sortedIndices[i] = i;
+			}
+			Array.Sort(m_sortedCoordinates, m_sortedIndices, 0, m_snapshotCount);
+			m_indexValid = true;
+		}
+
+/// <summary>LowerBound operation.</summary>
+		private int LowerBound(double value)
+		{
+			int low = 0, high = m_snapshotCount;
+			while (low < high)
+			{
+				int mid = low + (high - low) / 2;
+				if (m_sortedCoordinates[mid] < value) low = mid + 1;
+				else high = mid;
+			}
+			return low;
+		}
+
+/// <summary>UpperBound operation.</summary>
+		private int UpperBound(double value)
+		{
+			int low = 0, high = m_snapshotCount;
+			while (low < high)
+			{
+				int mid = low + (high - low) / 2;
+				if (m_sortedCoordinates[mid] <= value) low = mid + 1;
+				else high = mid;
+			}
+			return low;
+		}
+
+/// <summary>ReleaseRecipients operation.</summary>
+		internal void ReleaseRecipients(List<ulong> recipients)
+		{
+			recipients.Clear();
+			m_recipientPool.Push(recipients);
+		}
+
+/// <summary>SendPrepared operation.</summary>
+		internal void SendPrepared(Command cmd, List<ulong> recipients, bool isReliable)
+		{
+			if (recipients.Count == 0) return;
+			Compress(cmd);
+/// <summary>Encode operation.</summary>
+			byte[] packet = Encode(cmd);
+			for (int i = 0; i < recipients.Count; i++) Send(packet, recipients[i], isReliable);
+			if (LogNetworkTraffic)
+				MyLog.Default.Info($"[NetworkAPI] TRANSMITTING Bytes: {packet.Length} To: {recipients.Count} Users");
+		}
+
+/// <summary>RefreshSnapshot operation.</summary>
 		private void RefreshSnapshot()
 		{
 			IMySession session = MyAPIGateway.Session;
@@ -47,6 +252,12 @@ namespace SENetworkAPI
 			}
 
 			m_snapshotFrame = frame;
+			m_queryCount = 0;
+			m_previousMatchCount = 0;
+			m_indexBuilt = false;
+			m_indexValid = false;
+			m_boundsBuilt = false;
+			m_boundsValid = false;
 			m_snapshotSource.Clear();
 
 			MyAPIGateway.Players.GetPlayers(m_snapshotSource);
@@ -55,8 +266,12 @@ namespace SENetworkAPI
 
 			if (count > m_snapshotPositions.Length)
 			{
-				m_snapshotPositions = new Vector3D[count];
-				m_snapshotIds = new ulong[count];
+				int capacity = Math.Max(count, m_snapshotPositions.Length * 2);
+				m_snapshotPositions = new Vector3D[capacity];
+				m_snapshotIds = new ulong[capacity];
+				m_sortedCoordinates = new double[capacity];
+				m_sortedIndices = new int[capacity];
+				m_matches = new int[capacity];
 			}
 
 			for (int i = 0; i < count; i++)
@@ -78,6 +293,7 @@ namespace SENetworkAPI
 		/// <param name="sent">Send timestamp. Defaults to now</param>
 		/// <param name="steamId">Recipient, or 0 for all clients</param>
 		/// <param name="isReliable">False permits the unreliable channel for small packets</param>
+/// <summary>SendCommand operation.</summary>
 		public override void SendCommand(string commandString, string message = null, byte[] data = null, DateTime? sent = null, ulong steamId = ulong.MinValue, bool isReliable = true)
 		{
 			SendCommand(new Command() { SteamId = steamId, CommandString = commandString, Message = message, Data = data, Timestamp = (sent == null) ? DateTime.UtcNow.Ticks : sent.Value.Ticks }, steamId, isReliable);
@@ -95,6 +311,7 @@ namespace SENetworkAPI
 		/// <param name="sent">Send timestamp. Defaults to now</param>
 		/// <param name="steamId">Recipient, ignoring the radius, or 0 for everyone in range</param>
 		/// <param name="isReliable">False permits the unreliable channel for small packets</param>
+/// <summary>SendCommand operation.</summary>
 		public override void SendCommand(string commandString, Vector3D point, double radius = 0, string message = null, byte[] data = null, DateTime? sent = null, ulong steamId = ulong.MinValue, bool isReliable = true)
 		{
 			SendCommand(new Command() { SteamId = steamId, CommandString = commandString, Message = message, Data = data, Timestamp = (sent == null) ? DateTime.UtcNow.Ticks : sent.Value.Ticks }, point, radius, steamId, isReliable);
@@ -107,6 +324,7 @@ namespace SENetworkAPI
 		/// <param name="data">Serialized payload</param>
 		/// <param name="sent">Send timestamp. Defaults to now</param>
 		/// <param name="isReliable">False permits the unreliable channel for small packets</param>
+/// <summary>SendCommandTo operation.</summary>
 		public void SendCommandTo(ulong[] steamIds, string commandString, string message = null, byte[] data = null, DateTime? sent = null, bool isReliable = true)
 		{
 			if (steamIds == null || steamIds.Length == 0)
@@ -114,6 +332,7 @@ namespace SENetworkAPI
 				return;
 			}
 
+/// <summary>Command operation.</summary>
 			Command cmd = new Command() { CommandString = commandString, Message = message, Data = data, Timestamp = (sent == null) ? DateTime.UtcNow.Ticks : sent.Value.Ticks };
 			Compress(cmd);
 
@@ -122,6 +341,7 @@ namespace SENetworkAPI
 			for (int i = 0; i < steamIds.Length; i++)
 			{
 				cmd.SteamId = steamIds[i];
+/// <summary>Encode operation.</summary>
 				byte[] packet = Encode(cmd);
 
 				if (LogNetworkTraffic)
@@ -133,6 +353,7 @@ namespace SENetworkAPI
 			}
 		}
 
+/// <summary>SendCommand operation.</summary>
 		internal override void SendCommand(Command cmd, ulong steamId = ulong.MinValue, bool isReliable = true)
 		{
 			Compress(cmd);
@@ -140,6 +361,7 @@ namespace SENetworkAPI
 
 			byte[] packet = MyAPIGateway.Utilities.SerializeToBinary(cmd);
 
+/// <summary>ResolveReliability operation.</summary>
 			isReliable = ResolveReliability(packet, isReliable);
 
 			if (LogNetworkTraffic)
@@ -157,85 +379,19 @@ namespace SENetworkAPI
 			}
 		}
 
+/// <summary>SendCommand operation.</summary>
 		internal override void SendCommand(Command cmd, Vector3D point, double radius = 0, ulong steamId = ulong.MinValue, bool isReliable = true)
 		{
-			Compress(cmd);
-
-			if (radius == 0)
-			{
-				IMySession session = MyAPIGateway.Session;
-				radius = (session != null) ? session.SessionSettings.SyncDistance : 0;
-			}
-
 			ShowLocally(cmd.Message);
-
-			if (steamId != ulong.MinValue)
-			{
-				List<IMyPlayer> recipients = new List<IMyPlayer>();
-				m_filterWanted = steamId;
-				MyAPIGateway.Players.GetPlayers(recipients, m_singleRecipientFilter);
-
-				byte[] addressed = (recipients.Count > 0) ? Encode(cmd) : null;
-
-				for (int i = 0; i < recipients.Count; i++)
-				{
-					Send(addressed, recipients[i].SteamUserId, isReliable);
-				}
-
-				if (LogNetworkTraffic)
-				{
-					MyLog.Default.Info($"[NetworkAPI] _TRANSMITTING_ Bytes: {addressed?.Length ?? 0}  Command: {cmd.CommandString}  To: {recipients.Count} Users");
-				}
-
-				return;
-			}
-
-			RefreshSnapshot();
-
-			double radiusSquared = radius * radius;
-			ulong sender = cmd.SteamId;
-			double px = point.X, py = point.Y, pz = point.Z;
-			Vector3D[] positions = m_snapshotPositions;
-			ulong[] ids = m_snapshotIds;
-			int count = m_snapshotCount;
-			int sent = 0;
-
-			byte[] packet = null;
-
-			for (int i = 0; i < count; i++)
-			{
-				Vector3D position = positions[i];
-				double dx = position.X - px;
-				double dy = position.Y - py;
-				double dz = position.Z - pz;
-
-				if ((dx * dx) + (dy * dy) + (dz * dz) >= radiusSquared)
-				{
-					continue;
-				}
-
-				ulong recipient = ids[i];
-
-				if (recipient == sender)
-				{
-					continue;
-				}
-
-				if (packet == null)
-				{
-					packet = Encode(cmd);
-				}
-
-				sent++;
-				Send(packet, recipient, isReliable);
-			}
-
-			if (LogNetworkTraffic)
-			{
-				MyLog.Default.Info($"[NetworkAPI] _TRANSMITTING_ Bytes: {packet?.Length ?? 0}  Command: {cmd.CommandString}  To: {sent} Users within {radius}m");
-			}
+/// <summary>CollectRecipients operation.</summary>
+			List<ulong> recipients = CollectRecipients(point, radius, steamId, cmd.SteamId);
+/// <summary>SendPrepared operation.</summary>
+			try { SendPrepared(cmd, recipients, isReliable); }
+/// <summary>ReleaseRecipients operation.</summary>
+			finally { ReleaseRecipients(recipients); }
 		}
 
+/// <summary>ShowLocally operation.</summary>
 		private void ShowLocally(string message)
 		{
 			if (!string.IsNullOrWhiteSpace(message) && MyAPIGateway.Multiplayer.IsServer && MyAPIGateway.Session != null)
@@ -244,6 +400,7 @@ namespace SENetworkAPI
 			}
 		}
 
+/// <summary>Encode operation.</summary>
 		private static byte[] Encode(Command cmd)
 		{
 			if (cmd.Timestamp == 0)
@@ -254,6 +411,7 @@ namespace SENetworkAPI
 			return MyAPIGateway.Utilities.SerializeToBinary(cmd);
 		}
 
+/// <summary>Send operation.</summary>
 		private void Send(byte[] packet, ulong steamId, bool isReliable)
 		{
 			MyAPIGateway.Multiplayer.SendMessageTo(ComId, packet, steamId, ResolveReliability(packet, isReliable));

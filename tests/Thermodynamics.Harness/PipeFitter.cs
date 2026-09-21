@@ -5,16 +5,9 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Works out how to rotate a coolant block so its ports face where you need them, and lays
-    /// complete rings out from a list of cells.
-    ///
-    /// Building rings by hand means deriving rotations by hand, which is exactly the kind of
-    /// thing that produces a scenario that silently tests nothing.
-    /// </summary>
     public static class PipeFitter
     {
-        /// <summary>The 24 legal block orientations.</summary>
+/// <summary>AllOrientations operation.</summary>
         public static IEnumerable<BlockOrientation> AllOrientations()
         {
             Array directions = Enum.GetValues(typeof(Base6Directions.Direction));
@@ -30,11 +23,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// Finds an orientation whose link ports face <paramref name="a"/> and
-        /// <paramref name="b"/> in grid space, and — when <paramref name="requiredSink"/> is not
-        /// zero — that also puts a sink port on that grid direction.
-        /// </summary>
+/// <summary>TryOrient operation.</summary>
         public static bool TryOrient(BlockModel model, Vector3I a, Vector3I b, Vector3I requiredSink, out BlockOrientation orientation)
         {
             if (model != null && model.Coolant != null)
@@ -53,16 +42,21 @@ namespace Thermodynamics.Harness
             return false;
         }
 
+/// <summary>TryOrient operation.</summary>
         public static bool TryOrient(BlockModel model, Vector3I a, Vector3I b, out BlockOrientation orientation)
         {
+/// <summary>TryOrient operation.</summary>
             return TryOrient(model, a, b, Vector3I.Zero, out orientation);
         }
 
+/// <summary>Orient operation.</summary>
         public static BlockOrientation Orient(BlockModel model, Vector3I a, Vector3I b)
         {
+/// <summary>Orient operation.</summary>
             return Orient(model, a, b, Vector3I.Zero);
         }
 
+/// <summary>Orient operation.</summary>
         public static BlockOrientation Orient(BlockModel model, Vector3I a, Vector3I b, Vector3I requiredSink)
         {
             BlockOrientation orientation;
@@ -75,15 +69,7 @@ namespace Thermodynamics.Harness
             return orientation;
         }
 
-        /// <summary>
-        /// An orientation whose inlet port faces <paramref name="inlet"/> and whose outlet faces
-        /// <paramref name="outlet"/>, in that order.
-        ///
-        /// <see cref="TryOrient(BlockModel,Vector3I,Vector3I,out BlockOrientation)"/> accepts either
-        /// order, which is right for a pipe — a pipe has no direction — and wrong for a pump, which
-        /// drives fluid out of its second port. Building a pump deliberately the wrong way round
-        /// needs the ordered form.
-        /// </summary>
+/// <summary>TryOrientDirected operation.</summary>
         public static bool TryOrientDirected(BlockModel model, Vector3I inlet, Vector3I outlet,
             out BlockOrientation orientation)
         {
@@ -105,6 +91,7 @@ namespace Thermodynamics.Harness
             return false;
         }
 
+/// <summary>OrientDirected operation.</summary>
         public static BlockOrientation OrientDirected(BlockModel model, Vector3I inlet, Vector3I outlet)
         {
             BlockOrientation orientation;
@@ -117,6 +104,7 @@ namespace Thermodynamics.Harness
             return orientation;
         }
 
+/// <summary>LinksMatch operation.</summary>
         private static bool LinksMatch(BlockModel model, BlockOrientation orientation, Vector3I a, Vector3I b)
         {
             CoolantPort[] ports = model.Coolant.LinkPorts;
@@ -128,6 +116,7 @@ namespace Thermodynamics.Harness
             return (first == a && second == b) || (first == b && second == a);
         }
 
+/// <summary>HasSinkToward operation.</summary>
         private static bool HasSinkToward(BlockModel model, BlockOrientation orientation, Vector3I gridDirection)
         {
             CoolantPort[] sinks = model.Coolant.SinkPorts;
@@ -138,25 +127,13 @@ namespace Thermodynamics.Harness
             return false;
         }
 
-        /// <summary>
-        /// Lays a closed ring of pipe with **no pump in it**, which is a ring that never
-        /// circulates.
-        ///
-        /// <para>
-        /// It is the fault case rather than a variant of a working ring, and it had been written
-        /// out by hand three times — once in `Scenarios.LoopFaults` and twice in
-        /// `CoolantFaultTests` — each time re-deriving the same orientation from the previous and
-        /// next cell. Three copies of a geometry derivation is three chances for one to lay a
-        /// corner where a straight belongs, and a mis-oriented pipe still builds a ring: it just
-        /// builds one that fails for a second reason, and a fault test that fails for the wrong
-        /// reason passes.
-        /// </para>
-        /// </summary>
+/// <summary>Builds the API method table.</summary>
         public static List<BlockInstance> BuildPumplessRing(GridBuilder builder, IList<Vector3I> cells)
         {
             if (builder == null) throw new ArgumentNullException("builder");
             if (cells == null || cells.Count < 4) throw new ArgumentException("A ring needs at least four cells");
 
+/// <summary>List operation.</summary>
             List<BlockInstance> ring = new List<BlockInstance>();
 
             for (int i = 0; i < cells.Count; i++)
@@ -176,20 +153,7 @@ namespace Thermodynamics.Harness
             return ring;
         }
 
-        /// <summary>
-        /// Lays a closed ring of coolant blocks through <paramref name="cells"/>, in order,
-        /// wrapping from the last cell back to the first.
-        ///
-        /// Each cell gets a straight or a corner depending on whether its two neighbours are
-        /// opposite or perpendicular, rotated to fit. The cell at
-        /// <paramref name="pumpIndex"/> gets a pump, which requires a straight run.
-        /// </summary>
-        /// <param name="pumpIndex">
-        /// Ring index for the pump, or -1 to use the first straight run.
-        /// </param>
-        /// <param name="sinkDirections">
-        /// Optional grid-space sink direction per ring index. Only straight runs can carry one.
-        /// </param>
+/// <summary>Builds the method table.</summary>
         public static List<BlockInstance> BuildRing(
             GridBuilder builder,
             IList<Vector3I> cells,
@@ -200,10 +164,6 @@ namespace Thermodynamics.Harness
             if (builder == null) throw new ArgumentNullException("builder");
             if (cells == null || cells.Count < 4) throw new ArgumentException("A ring needs at least four cells");
 
-            // A pump carries no sink ports, so a sink asked for on the pump's cell cannot exist.
-            // Silently dropping it is how a scenario ends up testing nothing — the exact failure
-            // this class was written to prevent — so an automatic choice steps aside and an explicit
-            // one is an error.
             if (pumpIndex < 0) pumpIndex = FirstStraightIndexAvoiding(cells, sinkDirections);
             else if (sinkDirections != null && sinkDirections.ContainsKey(pumpIndex))
             {
@@ -212,6 +172,7 @@ namespace Thermodynamics.Harness
                     + "no sink ports, so the sink would be dropped and the ring would test nothing.");
             }
 
+/// <summary>List operation.</summary>
             List<BlockInstance> ring = new List<BlockInstance>();
 
             for (int i = 0; i < cells.Count; i++)
@@ -240,14 +201,15 @@ namespace Thermodynamics.Harness
                     model = Catalog.CoolantPump();
                     sink = Vector3I.Zero;
 
-                    // Ordered, so the pump's outlet faces the next cell along the ring — or the
-                    // previous one when the caller wants it fitted backwards.
                     builder.Place(model, cell, reversePump
+/// <summary>OrientDirected operation.</summary>
                         ? OrientDirected(model, toNext, toPrevious)
+/// <summary>OrientDirected operation.</summary>
                         : OrientDirected(model, toPrevious, toNext));
                     ring.Add(builder.Last);
                     continue;
                 }
+/// <summary>if operation.</summary>
                 else if (isStraight)
                 {
                     model = wantsSink
@@ -261,6 +223,7 @@ namespace Thermodynamics.Harness
                         : Catalog.CoolantPipeCorner();
                 }
 
+/// <summary>Orient operation.</summary>
                 BlockOrientation orientation = Orient(model, toPrevious, toNext, sink);
                 builder.Place(model, cell, orientation);
                 ring.Add(builder.Last);
@@ -269,16 +232,13 @@ namespace Thermodynamics.Harness
             return ring;
         }
 
+/// <summary>IsUnitStep operation.</summary>
         private static bool IsUnitStep(Vector3I step)
         {
             return Face.IndexOf(step) >= 0;
         }
 
-        /// <summary>
-        /// As <see cref="FirstStraightIndex"/>, skipping any cell the caller asked for a sink face
-        /// on. Every rectangle's first straight run is index 1, so a caller asking for a sink there —
-        /// which every scenario in this repository did — would otherwise lose it to the pump.
-        /// </summary>
+/// <summary>FirstStraightIndexAvoiding operation.</summary>
         public static int FirstStraightIndexAvoiding(IList<Vector3I> cells, IDictionary<int, Vector3I> sinks)
         {
             for (int i = 0; i < cells.Count; i++)
@@ -294,10 +254,7 @@ namespace Thermodynamics.Harness
                 "This ring has no straight run left for a pump once every requested sink is placed");
         }
 
-        /// <summary>
-        /// Index of the first cell whose neighbours are directly opposite each other, which is
-        /// where a straight block — and therefore a pump — can go.
-        /// </summary>
+/// <summary>FirstStraightIndex operation.</summary>
         public static int FirstStraightIndex(IList<Vector3I> cells)
         {
             for (int i = 0; i < cells.Count; i++)
@@ -309,9 +266,7 @@ namespace Thermodynamics.Harness
             throw new ArgumentException("This ring has no straight run to put a pump on");
         }
 
-        /// <summary>
-        /// A rectangular ring in the XZ plane with one corner at <paramref name="origin"/>.
-        /// </summary>
+/// <summary>RectangleXZ operation.</summary>
         public static List<Vector3I> RectangleXZ(Vector3I origin, int width, int depth)
         {
             if (width < 2 || depth < 2) throw new ArgumentException("A rectangle ring needs sides of at least two");
@@ -319,33 +274,25 @@ namespace Thermodynamics.Harness
             return Rectangle(origin, width, depth, new Vector3I(1, 0, 0), new Vector3I(0, 0, 1));
         }
 
-        /// <summary>A rectangular ring in the XY plane, with one corner at <paramref name="origin"/>.</summary>
+/// <summary>RectangleXY operation.</summary>
         public static List<Vector3I> RectangleXY(Vector3I origin, int width, int height)
         {
             return Rectangle(origin, width, height, new Vector3I(1, 0, 0), new Vector3I(0, 1, 0));
         }
 
-        /// <summary>A rectangular ring in the YZ plane, with one corner at <paramref name="origin"/>.</summary>
+/// <summary>RectangleYZ operation.</summary>
         public static List<Vector3I> RectangleYZ(Vector3I origin, int height, int depth)
         {
             return Rectangle(origin, height, depth, new Vector3I(0, 1, 0), new Vector3I(0, 0, 1));
         }
 
-        /// <summary>
-        /// The ring itself, in whichever plane the two axes span.
-        ///
-        /// <para>
-        /// Three planes rather than one because a retrofit takes the room a finished hull happens
-        /// to leave, and a hull does not leave it in the plane the harness prefers. The cells come
-        /// back in ring order — each adjacent to the next and the last adjacent to the first —
-        /// which is what <see cref="BuildRing"/> needs to orient the ports.
-        /// </para>
-        /// </summary>
+/// <summary>Rectangle operation.</summary>
         private static List<Vector3I> Rectangle(Vector3I origin, int along, int across,
             Vector3I first, Vector3I second)
         {
             if (along < 2 || across < 2) throw new ArgumentException("A rectangle ring needs sides of at least two");
 
+/// <summary>List operation.</summary>
             List<Vector3I> cells = new List<Vector3I>();
             for (int a = 0; a < along; a++) cells.Add(origin + (first * a));
             for (int b = 1; b < across; b++) cells.Add(origin + (first * (along - 1)) + (second * b));

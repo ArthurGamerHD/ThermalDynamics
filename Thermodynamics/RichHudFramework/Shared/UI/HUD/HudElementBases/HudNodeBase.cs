@@ -6,56 +6,30 @@ namespace RichHudFramework
     {
         using static RichHudFramework.UI.NodeConfigIndices;
 
-        /// <summary>
-        /// Abstract base for hud elements that can be parented to other elements.
-        /// </summary>
         public abstract partial class HudNodeBase : HudParentBase, IReadOnlyHudNode
         {
-            /// <summary>
-            /// Default node visibility mask
-            /// </summary>
-            /// <exclude/>
             protected const uint nodeVisible = (uint)(HudElementStates.IsVisible | HudElementStates.WasParentVisible | HudElementStates.IsRegistered);
 
-            /// <summary>
-            /// Default node input enabled mask
-            /// </summary>
-            /// <exclude/>
             protected const uint nodeInputEnabled = (uint)(HudElementStates.IsInputEnabled | HudElementStates.WasParentInputEnabled);
 
-            /// <summary>
-            /// Read-only reference to the node's parent
-            /// </summary>
             IReadOnlyHudParent IReadOnlyHudNode.Parent => Parent;
 
-            /// <summary>
-            /// Parent object of the node.
-            /// </summary>
             public HudParentBase Parent { get; private set; }
 
-            /// <summary>
-            /// Returns true if the node has been registered to a parent. Does not necessarilly indicate that 
-            /// the parent is registered or that the node is active.
-            /// </summary>
             public bool Registered => (Config[StateID] & (uint)HudElementStates.IsRegistered) > 0;
 
-            /// <summary>
-            /// Specialized ZOffset range used for creating windows.
-            /// </summary>
             protected byte OverlayOffset
             {
+/// <summary>return operation.</summary>
                 get { return (byte)Config[ZOffsetInnerID]; }
                 set
                 {
                     _config[ZOffsetInnerID] = value;
 
-                    // Update combined ZOffset for layer sorting
                     {
                         byte outerOffset = (byte)((sbyte)Config[ZOffsetID] - sbyte.MinValue);
                         ushort innerOffset = (ushort)(Config[ZOffsetInnerID] << 8);
 
-                        // Combine local node inner and outer offsets with parent and pack into
-                        // full ZOffset
                         if (Parent != null)
                         {
                             ushort parentFull = (ushort)Parent.Config[FullZOffsetID];
@@ -71,6 +45,7 @@ namespace RichHudFramework
                 }
             }
 
+/// <summary>HudNodeBase operation.</summary>
             public HudNodeBase(HudParentBase parent)
             {
                 _config[VisMaskID] = nodeVisible;
@@ -80,10 +55,7 @@ namespace RichHudFramework
                 Register(parent);
             }
 
-            /// <summary>
-            /// Updates internal state. Override Layout() for customization.
-            /// </summary>
-            /// <exclude/>
+/// <summary>BeginLayout operation.</summary>
             protected override void BeginLayout(bool _)
             {
                 if ((Config[StateID] & (uint)HudElementStates.IsSpaceNode) == 0)
@@ -98,9 +70,7 @@ namespace RichHudFramework
                     Layout();
             }
 
-            /// <summary>
-            /// Registers the element to the given parent object.
-            /// </summary>
+/// <summary>Registers and opens communication.</summary>
             public virtual bool Register(HudParentBase newParent)
             {
                 if (newParent == this)
@@ -125,9 +95,7 @@ namespace RichHudFramework
                     return false;
             }
 
-            /// <summary>
-            /// Unregisters the element from its parent, if it has one.
-            /// </summary>
+/// <summary>Unregisters and closes communication.</summary>
             public virtual bool Unregister()
             {
                 if (Parent != null)

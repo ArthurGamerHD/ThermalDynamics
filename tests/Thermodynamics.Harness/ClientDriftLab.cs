@@ -6,75 +6,16 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// How long a client that started from the wrong temperatures stays wrong.
-    ///
-    /// <para>
-    /// Block temperatures are not replicated. A client re-simulates from the same inputs and a
-    /// client joining mid-session starts from whatever the world was last *saved* at, so its
-    /// readouts disagree with the server's by however much the ship moved since. The open question
-    /// was how far a client may drift before it has to be corrected — and the answer this lab
-    /// exists to test is that it may not need correcting at all, because **the model is
-    /// dissipative**: two runs of the same grid with the same inputs and different initial
-    /// temperatures converge, and what decides whether a protocol is needed is how fast.
-    /// </para>
-    ///
-    /// <para>
-    /// **The perturbation is the real one.** The client is not started from noise or from ambient:
-    /// it is started from the state the server was actually in a stated number of simulated seconds
-    /// earlier, which is exactly what restoring a save gives it. Both then run forward on identical
-    /// inputs, because everything else a client and a server disagree about — settings, the work
-    /// budget, room pressure — is replicated or server-authoritative already.
-    /// </para>
-    ///
-    /// <para>
-    /// See known-issues.md, and backlog.md `B4`.
-    /// </para>
-    /// </summary>
     public static class ClientDriftLab
     {
-        /// <summary>
-        /// A correction protocol under test: how often the server states the near-critical band,
-        /// and how much of it it is allowed to send.
-        ///
-        /// <para>
-        /// **What is modelled is the reconciliation, not the transport.** The server selects
-        /// through <see cref="HotTailCodec"/> — the same call the mod makes — the bytes are packed
-        /// and unpacked through the same codec so a packing error shows up here rather than in a
-        /// session, and the client applies them. What is not modelled is latency, loss and the
-        /// game's own send queue, none of which this lab can see; those are why the mechanism has
-        /// a switch and a counter rather than only a measurement.
-        /// </para>
-        /// </summary>
         public class Correction
         {
-            /// <summary>Simulated seconds between updates. Zero or less means no correction.</summary>
             public float IntervalSeconds;
 
-            /// <summary>
-            /// How far below its own critical temperature a block is still worth sending, K.
-            /// Defaults to the band the mod already glows over, which is the set a player is being
-            /// warned about.
-            /// </summary>
             public float BandKelvin = Incandescence.GlowBandKelvin;
 
-            /// <summary>Most blocks one update may carry. Zero or less means no budget.</summary>
             public int MaxBlocks;
 
-            /// <summary>
-            /// Whether the server states the **whole** hull once, when the client joins, before it
-            /// starts tracking the band.
-            ///
-            /// <para>
-            /// **Measured, and it is what the band alone cannot do.** Correcting the near-critical
-            /// band on a client whose whole hull is stale leaves a residual that never clears: the
-            /// corrected blocks conduct to neighbours that are still wrong, and a block crossing
-            /// into the band arrives with its client-side twin far behind. Replicating every block
-            /// on an interval removes the residual and costs fifteen times the bandwidth; doing it
-            /// **once** costs one packet and removes the same residual, because after it the client
-            /// is not stale any more and the band is tracking rather than repairing.
-            /// </para>
-            /// </summary>
             public bool WholeHullOnJoin;
 
             public static Correction None
@@ -83,41 +24,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// The client's machine, to the one extent this lab can model it.
-        ///
-        /// <para>
-        /// **What loses a client simulated time is running fewer simulation ticks, and that is a
-        /// rate difference.** The mod advances a fixed sixtieth of a simulated second per tick —
-        /// `ThermalGridScheduler` passes a constant frame length and `Session` runs on
-        /// `MyUpdateOrder.Simulation` — so simulated time is counted in ticks rather than in real
-        /// seconds, and a machine executing fewer of them per real second has a thermal clock that
-        /// runs slow. This lab's `hitch` is that deficit arriving in lumps.
-        /// </para>
-        ///
-        /// <para>
-        /// **The mechanism once named here was a solver backlog being dropped, and nothing in the
-        /// mod does that.** `ThermalSimulation.Update` banks work credit against the frame it is
-        /// handed and discards credit above one step's worth, which cannot bind at a constant
-        /// sixtieth at any legal `Frequency`; the second accumulator that did drop a backlog was on
-        /// `SimulationScheduler`, was called by no shipped path, and has been removed
-        /// (backlog.md `F23`).
-        /// </para>
-        ///
-        /// <para>
-        /// **A single hitch is the perturbation this lab already runs.** Dropping the backlog once
-        /// leaves the client holding the server's state from a moment ago and running forward on
-        /// the same inputs, which is exactly what restoring a stale save does — so the join figures
-        /// cover it. What they do not cover is a machine that does it *repeatedly*, which never
-        /// gets the quiet run the convergence needs, and that is what this models.
-        /// </para>
-        /// </summary>
         public class Machine
         {
-            /// <summary>Simulated seconds between hitches. Zero or less means none.</summary>
             public float HitchEverySeconds;
 
-            /// <summary>How much simulated time each hitch costs the client.</summary>
             public float HitchLosesSeconds = 1f;
 
             public static Machine KeepsUp
@@ -126,163 +36,79 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>One moment in the comparison.</summary>
         public class Sample
         {
-            /// <summary>Simulated seconds since the client joined.</summary>
             public float Seconds;
 
-            /// <summary>The largest disagreement between the two runs, K.</summary>
             public float MaxKelvin;
 
-            /// <summary>The mean disagreement over every block, K.</summary>
             public float MeanKelvin;
 
-            /// <summary>
-            /// Blocks the two runs put on opposite sides of their own critical temperature.
-            ///
-            /// The disagreement that is not cosmetic: a client showing safe where the server is
-            /// damaging is the readout a player trusts being wrong about the thing it is for.
-            /// </summary>
             public int DisagreeOnCritical;
 
-            /// <summary>
-            /// Of those, the ones where the **server** has the block past critical and the client
-            /// does not — the client showing safe while the block is being destroyed.
-            ///
-            /// **The two directions are different defects and a correction reaches them
-            /// differently.** A server states the blocks *it* has in the band, so this direction is
-            /// covered by construction; the other one is a block the client thinks is failing and
-            /// the server does not, which no packet built from the server's own hot set contains.
-            /// Counted separately so that a correction which fixes one and leaves the other cannot
-            /// report as fixing both.
-            /// </summary>
             public int ClientShowsSafe;
 
-            /// <summary>The other direction: the client cries wolf where the server is calm.</summary>
             public int ClientCriesWolf;
 
-            /// <summary>
-            /// Blocks the server has within a tenth of their own critical temperature or past it.
-            ///
-            /// **The size of the set a correction would have to carry.** The disagreement is not a
-            /// uniform offset — the worst block is several times the mean — so a per-grid scalar
-            /// would leave exactly the blocks that matter wrong. What a correction has to replicate
-            /// is the hot tail, and this is how long that tail is. A tenth, because that is the
-            /// band a warning is about: below it, being wrong by a few kelvin changes nothing a
-            /// player would do.
-            /// </summary>
             public int HotBlocks;
         }
 
         public class Run
         {
-            /// <summary>How stale the client's starting state was, in simulated seconds.</summary>
             public float StaleSeconds;
 
             public string Scenario;
             public int Blocks;
 
-            /// <summary>The disagreement at the moment the client joined.</summary>
             public float JoinKelvin;
 
+/// <summary>List operation.</summary>
             public readonly List<Sample> Samples = new List<Sample>();
 
-            /// <summary>
-            /// Simulated seconds until the largest disagreement falls under a kelvin, or -1 if it
-            /// never does within the clock.
-            /// </summary>
             public float SecondsToAgree = -1f;
 
-            /// <summary>The same, to under ten kelvin.</summary>
             public float SecondsToTenKelvin = -1f;
 
-            /// <summary>
-            /// Simulated seconds for which at least one block was on the wrong side of its own
-            /// critical temperature.
-            /// </summary>
             public float SecondsMisreadingCritical;
 
-            /// <summary>The same, counting only the client showing safe where the server is not.</summary>
             public float SecondsShowingSafe;
 
-            /// <summary>
-            /// The same for the other direction, which a packet built from the server's own hot set
-            /// cannot contain.
-            ///
-            /// **Reported whether or not it is zero.** A correction that only ever states what the
-            /// server has hot is structurally blind to a client that thinks a cool block is
-            /// failing, and the only evidence that this does not happen is a column that would show
-            /// it if it did (`P2`).
-            /// </summary>
             public float SecondsCryingWolf;
 
-            /// <summary>The correction this run was made under. Never null.</summary>
             public Correction Protocol = Correction.None;
 
-            /// <summary>The client machine this run was made on. Never null.</summary>
             public Machine Host = Machine.KeepsUp;
 
-            /// <summary>How many hitches the client took, and what they cost it in total.</summary>
             public int Hitches;
 
-            /// <summary>Simulated seconds the client never ran, summed over every hitch.</summary>
             public float SecondsLostToHitches;
 
-            /// <summary>How many updates the server sent over the run.</summary>
             public int Updates;
 
-            /// <summary>Total bytes those updates carried, as the codec packs them.</summary>
             public long Bytes;
 
-            /// <summary>The most blocks any one update carried, after the budget.</summary>
             public int PeakBlocksSent;
 
-            /// <summary>
-            /// How many blocks the budget cut, summed over every update.
-            ///
-            /// **A truncated packet is a client left wrong about the blocks that were cut**, so
-            /// this is the correction's own blind spot and is reported whether or not it is zero
-            /// (`P2`).
-            /// </summary>
             public long BlocksDropped;
 
-            /// <summary>Bytes a second of simulated time, which is what a server pays.</summary>
             public float BytesPerSecond;
 
-            /// <summary>
-            /// The most blocks any one sample had on the wrong side of critical.
-            ///
-            /// **"At least one block" is a harsh binary on a hull of nine thousand**, and a
-            /// protocol that leaves one block wrong reads the same as one that leaves three
-            /// thousand wrong. This is the column that separates them.
-            /// </summary>
             public int PeakDisagreeing;
 
-            /// <summary>The mean of the same over every sample, which is what a player mostly sees.</summary>
             public float MeanDisagreeing;
         }
 
-        /// <summary>Seconds between samples. Fine enough to see a fast convergence.</summary>
         public const float SampleSeconds = 5f;
 
-        /// <summary>
-        /// Runs one comparison: warm a hull, take the state <paramref name="staleSeconds"/> before
-        /// the join, and run the two forward together for <paramref name="watchSeconds"/>.
-        /// </summary>
+/// <summary>Measure operation.</summary>
         public static Run Measure(string scenario, float staleSeconds, float watchSeconds,
             int blocks = 2000, ThermalSettings settings = null)
         {
+/// <summary>Measure operation.</summary>
             return Measure(scenario, staleSeconds, watchSeconds, blocks, settings, Correction.None);
         }
 
-        /// <summary>
-        /// The same comparison, with the server correcting the client on an interval.
-        ///
-        /// The correction runs at the sample boundary, and the sample is taken *after* it, so what
-        /// every column reports is the readout a player would be looking at — not the state
-        /// between an update and its arrival.
-        /// </summary>
+/// <summary>Measure operation.</summary>
         public static Run Measure(string scenario, float staleSeconds, float watchSeconds,
             int blocks, ThermalSettings settings, Correction protocol)
         {
@@ -290,33 +116,23 @@ namespace Thermodynamics.Harness
                 Machine.KeepsUp);
         }
 
-        /// <summary>
-        /// The same comparison again, on a client that loses simulated time as it runs.
-        /// </summary>
+/// <summary>Measure operation.</summary>
         public static Run Measure(string scenario, float staleSeconds, float watchSeconds,
             int blocks, ThermalSettings settings, Correction protocol, Machine host)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings world = settings ?? new ThermalSettings().Derive();
+/// <summary>Environment operation.</summary>
             Func<float, EnvironmentSample> environment = Environment(scenario);
 
             ThermalSimulation server = Hulls.DrivenPastCritical(world, blocks);
 
-            // Long enough that the hull is somewhere interesting rather than at its start, and
-            // that the stale state is genuinely behind.
-            //
-            // **Not stretched by the clock, though every other length in this harness is.** The
-            // hull is driven past its ratings for this lab, and at that load it crosses at about
-            // 300 s and has settled by 450 s whatever the clock says; warming for longer would put
-            // the server at equilibrium, where a stale client is a client that agrees. What this
-            // rig needs is the middle of the transient, and 120 s is still in it.
             float warm = 120f;
             Step(server, environment, warm);
 
             float[] stale = GridState.Temperatures(server);
             Step(server, environment, staleSeconds);
 
-            // The client is the same hull, built the same way, put into the state the server was in
-            // staleSeconds ago. Built rather than copied so nothing is shared between them.
             ThermalSimulation client = Hulls.DrivenPastCritical(world, blocks);
             Step(client, environment, warm);
             GridState.Restore(client, stale);
@@ -326,29 +142,23 @@ namespace Thermodynamics.Harness
                 StaleSeconds = staleSeconds,
                 Scenario = scenario,
                 Blocks = server.Solver.Nodes.Count,
+/// <summary>MaxDifference operation.</summary>
                 JoinKelvin = MaxDifference(server, client),
                 Protocol = protocol ?? Correction.None,
                 Host = host ?? Machine.KeepsUp,
             };
 
+/// <summary>List operation.</summary>
             List<StoredTemperature> selection = new List<StoredTemperature>();
+/// <summary>List operation.</summary>
             List<StoredTemperature> received = new List<StoredTemperature>();
 
-            // **The run advances by the finer of the two cadences, not by the sample.** Stepping a
-            // whole sample at a time would make every interval under SampleSeconds land on the
-            // same boundary and report identically, which is the instrument's resolution being
-            // read as the protocol's (`P2`).
             float tick = run.Protocol.IntervalSeconds > 0f
                 ? Math.Min(SampleSeconds, run.Protocol.IntervalSeconds)
                 : SampleSeconds;
 
-            // Never finer than a solver step: Step rounds seconds to whole steps, so a smaller tick
-            // would advance the clock while advancing neither simulation, and the run would report
-            // a protocol that corrected a hull nothing had moved.
             if (tick < world.StepSeconds) tick = world.StepSeconds;
 
-            // The join packet, before the run starts: this is what a client fetching on load gets,
-            // and it is one send rather than a cadence.
             if (run.Protocol.WholeHullOnJoin && run.Protocol.IntervalSeconds > 0f)
             {
                 Correct(server, client, run, selection, received, float.MaxValue);
@@ -364,8 +174,6 @@ namespace Thermodynamics.Harness
             {
                 Step(server, environment, tick);
 
-                // A hitch is the client not running, not the client running wrong: the scheduler
-                // drops the backlog, so those steps are never taken and the simulated time is gone.
                 if (owed > 0f)
                 {
                     owed -= tick;
@@ -388,13 +196,9 @@ namespace Thermodynamics.Harness
                     run.Hitches++;
                 }
 
-                // **Sampled before the correction, never after.** Taking the reading immediately
-                // after an update measures the client at the one moment it is right, and an
-                // interval equal to the sample cadence then reports a perfect protocol whatever it
-                // does in between. What a player sees is the state at the end of an interval, so
-                // that is what is read (`M7`: measure a pass against its own start).
                 if (sinceSample >= SampleSeconds)
                 {
+/// <summary>Compare operation.</summary>
                     Sample sample = Compare(server, client);
                     sample.Seconds = elapsed;
                     run.Samples.Add(sample);
@@ -431,20 +235,10 @@ namespace Thermodynamics.Harness
             return run;
         }
 
-        /// <summary>
-        /// One update: the server selects its band, the bytes are packed and unpacked, and the
-        /// client applies them.
-        ///
-        /// **The round trip through the codec is deliberate.** Selecting on one side and assigning
-        /// on the other would measure a protocol nobody can send — the quantisation, the position
-        /// key and the record layout are part of what is being tested, and a lab that skips them
-        /// reports an accuracy the wire cannot deliver (`E7`).
-        /// </summary>
+/// <summary>Correct operation.</summary>
         private static void Correct(ThermalSimulation server, ThermalSimulation client, Run run,
             List<StoredTemperature> selection, List<StoredTemperature> received, float band)
         {
-            // The join packet is not budgeted: a truncated join leaves exactly the residual the
-            // join exists to remove, and it happens once.
             int budget = band >= float.MaxValue ? 0 : run.Protocol.MaxBlocks;
             int inBand = server.ExportHotTail(band, budget, selection);
 
@@ -459,7 +253,7 @@ namespace Thermodynamics.Harness
             if (selection.Count > run.PeakBlocksSent) run.PeakBlocksSent = selection.Count;
         }
 
-        /// <summary>The environments a client and a server would both be computing.</summary>
+/// <summary>Environment operation.</summary>
         private static Func<float, EnvironmentSample> Environment(string scenario)
         {
             if (scenario == "sunlit") return t => Worlds.Space(new Vector3(0.3f, 0.9f, 0.2f));
@@ -467,6 +261,7 @@ namespace Thermodynamics.Harness
             return t => Worlds.Shadow();
         }
 
+/// <summary>Step operation.</summary>
         private static void Step(ThermalSimulation simulation,
             Func<float, EnvironmentSample> environment, float seconds)
         {
@@ -474,16 +269,19 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < steps; i++) simulation.StepExact(1, environment(0f));
         }
 
+/// <summary>MaxDifference operation.</summary>
         private static float MaxDifference(ThermalSimulation a, ThermalSimulation b)
         {
             return Compare(a, b).MaxKelvin;
         }
 
+/// <summary>Compare operation.</summary>
         private static Sample Compare(ThermalSimulation server, ThermalSimulation client)
         {
             IList<ThermalNode> mine = server.Solver.Nodes;
             IList<ThermalNode> theirs = client.Solver.Nodes;
 
+/// <summary>Sample operation.</summary>
             Sample sample = new Sample();
             int count = Math.Min(mine.Count, theirs.Count);
             if (count == 0) return sample;
@@ -513,16 +311,10 @@ namespace Thermodynamics.Harness
             return sample;
         }
 
-        /// <summary>
-        /// The correction sweep as a table: what each protocol leaves the readout wrong for, and
-        /// what it costs to send.
-        ///
-        /// **The uncorrected run is the first row and is not optional**, because every figure here
-        /// is a difference against it and a sweep printed without its control is a set of numbers
-        /// with nothing to be better than.
-        /// </summary>
+/// <summary>CorrectionReport operation.</summary>
         public static string CorrectionReport(IList<Run> runs)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
             text.AppendLine("What the server stating its near-critical band buys, and what it costs");
             text.AppendLine();
@@ -564,16 +356,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-        /// <summary>
-        /// What a client that keeps losing simulated time looks like, with the correction off and
-        /// on.
-        ///
-        /// **The staleness is zero in every row here**, so nothing in this table is the join: the
-        /// client starts in exactly the server's state and every kelvin of disagreement was
-        /// produced by the hitches.
-        /// </summary>
+/// <summary>HitchReport operation.</summary>
         public static string HitchReport(IList<Run> runs)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
             text.AppendLine("A client that keeps losing simulated time, started in step with the server");
             text.AppendLine();
@@ -610,9 +396,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-        /// <summary>The whole comparison as a table, for the command and the report.</summary>
+/// <summary>Report operation.</summary>
         public static string Report(IList<Run> runs)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
             text.AppendLine("scenario   stale s   join K   to 10 K    to 1 K   misreading critical");
 

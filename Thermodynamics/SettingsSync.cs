@@ -8,58 +8,30 @@ using VRage.Utils;
 
 namespace Thermodynamics
 {
-    /// <summary>
-    /// Replicates the world's settings from the server to every client, since only the server reads
-    /// the config file. One session-scoped property carries the whole object rather than one per
-    /// field, which would cost an address per field in declaration order across builds.
-    /// See configuration.md, Checking a client has the server's settings.
-    /// </summary>
     public static class SettingsSync
     {
         private static NetSync<Settings> synced;
 
-        /// <summary>
-        /// True while a received value is being applied, so applying it cannot bounce back out.
-        /// The publish path hangs off <see cref="Settings.Apply"/>, which the receive path calls.
-        /// </summary>
         private static bool applying;
 
-        /// <summary>
-        /// True while a value from the server is being applied, so the receiving side can tell an
-        /// incoming change from one made here — one is worth saving to the world's file, the other
-        /// is someone else's world arriving.
-        /// </summary>
         public static bool Applying
         {
             get { return applying; }
         }
 
-        /// <summary>
-        /// Declares the property. Called once from the session component, before anything can
-        /// change a setting.
-        ///
-        /// Session-scoped properties take their address from the order they are constructed in, so
-        /// this must run on both sides and must stay the first one declared.
-        /// </summary>
+/// <summary>Registers the API and message handler.</summary>
         public static void Register(MySessionComponentBase session)
         {
             if (synced != null || session == null) return;
 
             try
             {
-                // Seeded, never left at null: a null value is never transmitted, so a joining
-                // client's fetch is answered with silence and — since the server publishes only on a
-                // change — an untouched world leaves every client on the shipped defaults.
-                // Server to client only; fetch is exempt inside the API, which is what lets a joining
-                // client ask at all.
+/// <summary>NetSync operation.</summary>
                 synced = new NetSync<Settings>(
                     session, TransferType.ServerToClient, Settings.EnsureLoaded(), true);
 
                 synced.ValueChangedByNetwork += Received;
 
-                // Answered from the live object rather than from whatever was last assigned, so a
-                // fetch cannot hand out a stale copy if some path ever mutates the settings
-                // without going through Apply.
                 synced.BeforeFetchRequestResponse += Refresh;
             }
             catch (Exception e)
@@ -68,11 +40,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Publishes the current settings. Called from <see cref="Settings.Apply"/>, which every
-        /// path that changes a setting already goes through — the chat commands, the settings
-        /// menu, the mod API and a profile change.
-        /// </summary>
+/// <summary>Publishes the API table to other mods.</summary>
         public static void Publish(Settings settings)
         {
             if (synced == null || settings == null || applying) return;
@@ -80,9 +48,6 @@ namespace Thermodynamics
 
             try
             {
-                // A reference type is sent on every assignment rather than compared, which is what
-                // this wants: the settings object is mutated in place, so the reference is the
-                // same one it was last time and only its contents have moved.
                 synced.Value = settings;
             }
             catch (Exception e)
@@ -91,19 +56,13 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// Points the property at the current settings before a fetch is answered. Server side
-        /// only; a client answering a fetch would be handing out its own copy.
-        /// </summary>
+/// <summary>Refresh operation.</summary>
         private static void Refresh(ulong sender)
         {
             if (synced == null || !IsServer() || Settings.Instance == null) return;
 
             try
             {
-                // SetValue rather than Value: this is a read being served, not a change being
-                // announced, and broadcasting here would send the settings to everyone every time
-                // one player joined.
                 synced.SetValue(Settings.Instance, SyncType.None);
             }
             catch (Exception e)
@@ -112,6 +71,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>Received operation.</summary>
         private static void Received(Settings previous, Settings value, ulong sender)
         {
             if (value == null) return;
@@ -120,10 +80,6 @@ namespace Thermodynamics
             {
                 applying = true;
 
-                // Copied into the live object rather than swapped for it: a grid takes its core
-                // settings once at construction and notices later changes only through that object's
-                // Revision, so replacing the instance leaves every existing grid on what it was born
-                // with. The four client-owned presentation switches are skipped.
                 Settings target = Settings.Instance;
                 if (target == null)
                 {
@@ -141,13 +97,9 @@ namespace Thermodynamics
                         target.SetValue(name, value.GetValue(name));
                     }
 
-                    // Bumps the revision the simulations watch, so every grid picks the new values
-                    // up on its next step without being rebuilt.
                     target.Apply();
                 }
 
-                // The menu marks what differs from the shipped defaults, so values arriving from
-                // the server have to reach it too — otherwise an open menu shows the old marks.
                 ThermalSettingsMenu.Refresh();
 
                 MyLog.Default.Info("[" + Settings.Name + "] settings received from the server");
@@ -162,18 +114,12 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>
-        /// A short digest of every replicated setting, for comparing two machines by eye — the only
-        /// check available, since none of this can be tested outside a live session. Covers exactly
-        /// what replicates and nothing that is allowed to differ.
-        /// </summary>
+/// <summary>Fingerprint operation.</summary>
         public static string Fingerprint()
         {
             Settings settings = Settings.Instance;
             if (settings == null) return "none";
 
-            // FNV-1a over each replicated name and its value, rounded to four decimals so a float
-            // that survived a round trip with a last-bit difference still agrees.
             unchecked
             {
                 uint hash = 2166136261;
@@ -198,7 +144,7 @@ namespace Thermodynamics
             }
         }
 
-        /// <summary>How many settings the digest covers.</summary>
+/// <summary>ReplicatedCount operation.</summary>
         public static int ReplicatedCount()
         {
             List<string> names = Settings.Names();
@@ -210,16 +156,12 @@ namespace Thermodynamics
             return count;
         }
 
-        /// <summary>Whether the property exists and holds something that could be sent.</summary>
         public static bool Ready
         {
             get { return synced != null && synced.Value != null; }
         }
 
-        /// <summary>
-        /// Asks the server for the current settings again. A client only fetches automatically
-        /// once, when it loads, so this is the way to re-ask after a change that went missing.
-        /// </summary>
+/// <summary>Fetch operation.</summary>
         public static bool Fetch()
         {
             if (synced == null || IsServer()) return false;
@@ -236,6 +178,7 @@ namespace Thermodynamics
             }
         }
 
+/// <summary>IsServer operation.</summary>
         private static bool IsServer()
         {
             try

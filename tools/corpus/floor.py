@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """What flooring an over-budget grid buys and costs, on the ships the allowance binds on.
 
 Reads the paired dataset `CorpusFloorWalk` writes — every ship the element-visit allowance binds on,
@@ -38,21 +37,17 @@ ARGS = scoring.positionals(("--csv",))
 DATA = ARGS[0] if ARGS else "out/floor-2026-08-29"
 CSV_OUT = scoring.flag("--csv")
 
-# The order the scenarios print in: the anchor first, then the three with air in them, in rising
-# wind. The same order `air.py` and `cap.py` use, so three reports of one corpus read alike.
 ORDER = ["vacuum-shadow", "surface-hot-noon", "storm-parked", "reentry"]
 
-# The scenario with no air in it, which is the walk's control for *air cannot make a hull softer*.
 ANCHOR = "vacuum-shadow"
 
-# The arms, as the walk writes them into the `cap` column: 0 is the shipped configuration with the
-# floor off, -1 is the floor on. Read from the data rather than assumed.
 OFF = 0
 ON = -1
 
 FIGURES = []
 
 
+# record operation.
 def record(statistic, value, unit=""):
     FIGURES.append((statistic, value, unit))
 
@@ -62,6 +57,7 @@ def record(statistic, value, unit=""):
 load = scoring.load_required
 
 
+# pair operation.
 def pair(rows):
     """Rows grouped into `(control, floored)` by ship, workshop id and scenario.
 
@@ -86,6 +82,7 @@ def pair(rows):
     return pairs, orphans
 
 
+# verdict operation.
 def verdict(key, label, holds, detail):
     """One scored row, printed and recorded under a name that does not move (`E5`)."""
     mark = "HOLDS" if holds else ("  ?  " if holds is None else "FAILS")
@@ -95,6 +92,7 @@ def verdict(key, label, holds, detail):
     print("        " + detail)
 
 
+# main operation.
 def main():
     rows = load(os.path.join(DATA, "outcomes.csv"))
     pairs, orphans = pair(rows)
@@ -121,9 +119,6 @@ def main():
     for statistic, value, unit in provenance_lib.summary_rows(DATA):
         record(statistic, value, unit)
 
-    # ---- the clock ---------------------------------------------------------------------------
-    # The floored arm runs to the control's elapsed seconds, so a pair on two clocks is measuring
-    # the stopping rule rather than the floor (`M1`, `P6`).
     off_clock = 0
     for _, control, floored in pairs:
         a = scoring.number(control, "run_seconds")
@@ -136,9 +131,6 @@ def main():
             "%s of %s pairs ran their two arms on different clocks"
             % (format(off_clock, ","), format(len(pairs), ",")))
 
-    # ---- the safety -------------------------------------------------------------------------
-    # The control must never floor — it has the mechanism off — and the floored arm must never
-    # *stiffen* a block, which would be the mechanism working backwards.
     control_floored = 0
     stiffened = 0
     for _, control, floored in pairs:
@@ -156,7 +148,6 @@ def main():
             "%s pairs came back stiffer than they went in"
             % (format(int(control_floored), ","), format(stiffened, ",")))
 
-    # ---- the reach --------------------------------------------------------------------------
     floored_nodes = 0
     blocks = 0
     engaged = []
@@ -181,10 +172,6 @@ def main():
             % (format(int(floored_nodes), ","), format(int(blocks), ","), share, low, high,
                format(len(engaged), ","), format(len(pairs), ",")))
 
-    # ---- the cost ---------------------------------------------------------------------------
-    # **Scored over the cells the floor engaged on**, because a cell it never touched has a delta of
-    # nought by construction and folding those in reports the mechanism's reach as though it were
-    # its price. Both are printed and the band is read against the engaged one.
     deltas = []
     by_scenario = collections.defaultdict(list)
     everything = []
@@ -252,8 +239,6 @@ def main():
               % (scoring.CAP_ACCEPTED_KELVIN, scoring.CAP_REFUSED_KELVIN))
         print("        p99 is %.4f K  ->  %s" % (p["p99"], decision))
 
-        # The worst cells by name, because a tail that is one ship is a different finding from a
-        # tail that is a thousand, and the ships are what a reader would go and look at.
         deltas.sort(key=lambda d: d[0], reverse=True)
         print("\n        the ten furthest-apart cells")
         for delta, key in deltas[:10]:

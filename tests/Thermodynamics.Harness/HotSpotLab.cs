@@ -6,18 +6,6 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Why one block on one ship is the hottest thing on it.
-    ///
-    /// A peak temperature says a ship has a problem; it does not say whose. This runs a single
-    /// ship through a single scenario and then dumps the blocks at the top of the distribution with
-    /// the three figures that decide where each of them landed: what it generates, what it can
-    /// radiate through its own faces, and what it can conduct into its neighbours.
-    ///
-    /// A block with a large generation and a small conductance and no exposure has to run a wide
-    /// gradient to shed what it makes, and that is a *layout* result rather than a solver one.
-    /// Telling those apart by hand is exactly what a hot spot needs and what a matrix cannot do.
-    /// </summary>
     public static class HotSpotLab
     {
         public class Row
@@ -32,19 +20,16 @@ namespace Thermodynamics.Harness
             public float ConductanceOut;
             public float ThermalMass;
 
-            /// <summary>
-            /// Kelvin of gradient the block must run to conduct away what it makes, if conduction
-            /// were its only exit. The back-of-envelope check on whether a temperature is a
-            /// consequence or a defect.
-            /// </summary>
             public float ImpliedGradient
             {
                 get { return ConductanceOut <= 0f ? 0f : GenerationWatts / ConductanceOut; }
             }
         }
 
+/// <summary>Report operation.</summary>
         public static string Report(string path, string shipMatch, string scenarioName, int top)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             string root = path ?? Blueprints.DefaultPath();
@@ -85,16 +70,16 @@ namespace Thermodynamics.Harness
                 return sb.ToString();
             }
 
-            // Re-run the scenario here rather than reading a matrix, because the per-block state
-            // this needs is gone by the time an outcome has been summarised.
             ShipAssembly assembly = ship.Build();
             assembly.CollectDiagnostics(true);
             float applied = ShipLoad.Apply(assembly, scenario.Load);
 
+/// <summary>AssemblyRunner operation.</summary>
             AssemblyRunner runner = new AssemblyRunner(assembly);
             runner.Environment = scenario.Environment;
             runner.Run(scenario.Seconds);
 
+/// <summary>Rows operation.</summary>
             List<Row> rows = Rows(assembly);
             rows.Sort(delegate (Row a, Row b) { return b.Kelvin.CompareTo(a.Kelvin); });
 
@@ -139,19 +124,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        /// <summary>
-        /// The nodes this grid's room air is linked to, by index.
-        ///
-        /// **Air is a block's third exit and the sealed test used to miss it.** A face that looks
-        /// into a sealed compartment is deliberately *not* exposed — `SurfaceMap.GetExposedFaces`
-        /// requires the cell beyond it to reach the outside — so a block standing in a void inside a
-        /// pressurised hull has no external face at all. If it also bolts to nothing it reads as
-        /// having no exit, and it has one: `ThermalSolver.BuildRoomLinks` gives every node with a
-        /// face onto a room a link to that room's air. See backlog.md
-        /// `F14`.
-        /// </summary>
+/// <summary>NodesTouchingAir operation.</summary>
         public static HashSet<int> NodesTouchingAir(ThermalSolver solver)
         {
+/// <summary>HashSet operation.</summary>
             HashSet<int> touching = new HashSet<int>();
             if (solver == null) return touching;
 
@@ -165,14 +141,7 @@ namespace Thermodynamics.Harness
             return touching;
         }
 
-        /// <summary>
-        /// Whether a block has no way to shed heat at all: no face onto the outside, no conduction
-        /// joint, and no room air against it.
-        ///
-        /// **One definition, two consumers** (`P5`): this report and `CorpusSurvey`'s population
-        /// bound. They disagreed once already — the survey counted a block coupled to air as sealed
-        /// and the corpus figure quoted in balance-lab.md was taken from that count.
-        /// </summary>
+/// <summary>IsSealed operation.</summary>
         public static bool IsSealed(ThermalSolver solver, int index, HashSet<int> touchingAir)
         {
             if (solver == null || index < 0 || index >= solver.Nodes.Count) return false;
@@ -182,16 +151,10 @@ namespace Thermodynamics.Harness
             return touchingAir == null || !touchingAir.Contains(index);
         }
 
-        /// <summary>
-        /// Every block on every ship with no exit at all — no exposed face, no conduction and no
-        /// air against it.
-        ///
-        /// Kept beside the hot-spot dump because it is the same question asked of the whole corpus
-        /// rather than of one block: a sealed block heats without bound and has no symptom but its
-        /// temperature, so finding them by hand means noticing an odd number.
-        /// </summary>
+/// <summary>SealedReport operation.</summary>
         public static string SealedReport(string path)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             string root = path ?? Blueprints.DefaultPath();
@@ -199,6 +162,7 @@ namespace Thermodynamics.Harness
 
             CorpusLab.Summary corpus = CorpusLab.Scan(root);
             Dictionary<string, int> counts = new Dictionary<string, int>();
+/// <summary>List operation.</summary>
             List<string> examples = new List<string>();
             int total = 0;
             int incomplete = 0;
@@ -210,9 +174,6 @@ namespace Thermodynamics.Harness
                 ShipAssembly assembly = ship.Build();
                 if (assembly.NodeCount < 2) continue;
 
-                // Whether the room map finished. A flood fill that gave up leaves every block
-                // looking un-exposed, which is indistinguishable from being buried — and a buried
-                // block with no mount joint is exactly what this report calls sealed.
                 for (int g2 = 0; g2 < assembly.Simulations.Count; g2++)
                 {
                     if (assembly.Simulations[g2].Rooms.HasWorkPending) incomplete++;
@@ -221,6 +182,7 @@ namespace Thermodynamics.Harness
                 for (int g = 0; g < assembly.Simulations.Count; g++)
                 {
                     ThermalSolver solver = assembly.Simulations[g].Solver;
+/// <summary>NodesTouchingAir operation.</summary>
                     HashSet<int> touchingAir = NodesTouchingAir(solver);
 
                     IList<RoomAirNode> air = solver.RoomAir;
@@ -237,9 +199,6 @@ namespace Thermodynamics.Harness
                         counts[node.Block.Name] = count + 1;
                         total++;
 
-                        // The first few get explained rather than counted. "Sealed" on its own is an
-                        // assertion; naming the neighbours it failed to bolt to, and which way each
-                        // of them mounts, is the evidence for whether the isolation is real.
                         if (examples.Count < 5) Explain(examples, ship, assembly.Simulations[g], node);
                     }
                 }
@@ -248,10 +207,6 @@ namespace Thermodynamics.Harness
             sb.Append("SEALED BLOCKS  ").Append(total).AppendLine(" across the corpus");
             sb.Append("  ").Append(incomplete).AppendLine(" grids whose room map did not finish");
 
-            // **Air is a block's third exit, and a lab hull has none unless something pressurises
-            // it.** Printed rather than assumed, because a count taken on unpressurised hulls is a
-            // count of blocks sealed *in that scenario* — the same blocks in a pressurised
-            // compartment have a room to shed into and are not sealed at all.
             sb.Append("  ").Append(roomsWithAir).Append(" of ").Append(rooms)
               .AppendLine(" rooms hold air, so that many blocks have a third exit");
             sb.AppendLine();
@@ -287,17 +242,11 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-        /// <summary>
-        /// Writes out one sealed block and every block it touches, with the mount fractions on
-        /// both sides of each joint.
-        ///
-        /// Conduction here runs across the area where *both* blocks carry a mount surface, so a
-        /// zero on either side is a joint that carries nothing. Six zeros is a sealed block, and
-        /// this is what shows whether that is the geometry or the parser.
-        /// </summary>
+/// <summary>Explain operation.</summary>
         private static void Explain(List<string> examples, Blueprints.Ship ship,
             ThermalSimulation simulation, ThermalNode node)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append("    ").Append(node.Block.Name).Append(" at ").Append(node.Block.Position)
                 .Append("  faces ").Append(node.TotalExposedFaces)
@@ -328,6 +277,7 @@ namespace Thermodynamics.Harness
             examples.Add(sb.ToString().TrimEnd());
         }
 
+/// <summary>FaceName operation.</summary>
         private static string FaceName(int face)
         {
             switch (face)
@@ -341,8 +291,10 @@ namespace Thermodynamics.Harness
             }
         }
 
+/// <summary>Rows operation.</summary>
         private static List<Row> Rows(ShipAssembly assembly)
         {
+/// <summary>List operation.</summary>
             List<Row> rows = new List<Row>(assembly.NodeCount);
 
             for (int g = 0; g < assembly.Simulations.Count; g++)
@@ -370,6 +322,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
+/// <summary>Trim operation.</summary>
         private static string Trim(string text, int width)
         {
             if (text == null) return "";

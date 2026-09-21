@@ -5,42 +5,17 @@ using Thermodynamics.Core;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// How much of a real ship the base-variant defect was getting wrong, measured on the corpus
-    /// rather than argued from the game's definition files.
-    ///
-    /// <para>
-    /// The game leaves <c>SubtypeId</c> empty on thirteen definitions and eleven of them are not
-    /// armour. <see cref="Blueprints"/> resolved every empty <c>SubtypeName</c> to a plain armour
-    /// cube until 2026-08-25, so every vanilla oxygen generator, air vent, oxygen tank, gravity
-    /// generator, door, hangar door, passage, ladder and large turret in the corpus was built as
-    /// 500 kg of steel that draws no power and therefore makes no heat. Nothing about that looked
-    /// wrong: the ship parsed, the block count was right, and the hull stayed vanilla.
-    /// </para>
-    ///
-    /// <para>
-    /// **This is a parse, not a simulation**, and that is what makes it cheap enough to run on
-    /// demand. It asks what each ship's blocks *are* and what they would waste at full electrical
-    /// load — the same basis the census's `waste_full_w` uses — and reports the difference between
-    /// what the resolver builds now and the armour it used to build. It says nothing about where a
-    /// hull settles; a temperature needs the census re-run, which is backlog.md `A13`.
-    /// </para>
-    /// </summary>
     public static class BaseVariantLab
     {
-        /// <summary>One block type that a blueprint spells with an empty subtype.</summary>
         public class Row
         {
             public string TypeId;
             public bool Large;
 
-            /// <summary>Blocks placed, across the sample.</summary>
             public int Blocks;
 
-            /// <summary>Kilograms the sample gains: the real mass, less the armour it was.</summary>
             public float MassGainedKilograms;
 
-            /// <summary>Watts of full-load waste the sample gains. Armour draws nothing.</summary>
             public float WasteGainedWatts;
         }
 
@@ -49,60 +24,29 @@ namespace Thermodynamics.Harness
             public int ShipsRead;
             public int BlocksRead;
 
-            /// <summary>Blocks in the sample whose identity the fix changes.</summary>
             public int BlocksCorrected;
 
-            /// <summary>Files that would not parse, counted rather than dropped (`O5`).</summary>
             public int FilesUnread;
 
-            /// <summary>
-            /// Ships the corpus filter rejects as non-vanilla.
-            ///
-            /// **Here because a resolver change moves the population before it moves a
-            /// measurement.** The corpus admits only ships whose every block resolves, so a fix
-            /// that resolves *more* block kinds can only admit more ships — but a fix that resolves
-            /// them to the wrong grid size would reject ships that used to pass, and the walk after
-            /// it would be over a different set of hulls with no sign that anything had moved
-            /// (`J3`).
-            /// </summary>
             public int ShipsRejected;
 
-            /// <summary>Ships carrying at least one corrected block.</summary>
             public int ShipsAffected;
 
-            /// <summary>
-            /// Blocks resolved on their subtype alone because type and subtype named nothing —
-            /// the one place the pre-`A13` behaviour survives, counted so it cannot be silent.
-            /// </summary>
             public int BlocksAmbiguous;
 
-            /// <summary>Full-load waste the sample makes now, watts.</summary>
             public float WasteWatts;
 
-            /// <summary>Full-load waste it would have made with those blocks as armour, watts.</summary>
             public float WasteAsArmourWatts;
 
+/// <summary>List operation.</summary>
             public readonly List<Row> Types = new List<Row>();
         }
 
-        /// <summary>
-        /// The armour cube every one of these blocks used to be, per grid size. Named here so the
-        /// counterfactual is the same block the defect actually built rather than a stand-in.
-        /// </summary>
         private const string LargeArmour = "LargeBlockArmorBlock";
 
-        /// <summary>The small-grid half of <see cref="LargeArmour"/>.</summary>
         private const string SmallArmour = "SmallBlockArmorBlock";
 
-        /// <summary>
-        /// An evenly-strided sample of <paramref name="ships"/> blueprints from the corpus, or all
-        /// of them for a count of zero or less.
-        ///
-        /// **A stride rather than the first N**, because the corpus is stored by workshop id and
-        /// the first N by name is a sample of whatever a sort order happens to put first. A stride
-        /// over a sorted list is reproducible and spans the population, which is the written rule
-        /// a sample needs before it stands for anything (`P1`).
-        /// </summary>
+/// <summary>Sample operation.</summary>
         public static List<string> Sample(string root, int ships)
         {
             List<string> all = Blueprints.Files(root ?? Blueprints.CorpusPath());
@@ -110,21 +54,16 @@ namespace Thermodynamics.Harness
 
             if (ships <= 0 || ships >= all.Count) return all;
 
+/// <summary>List operation.</summary>
             List<string> taken = new List<string>(ships);
             for (int i = 0; i < ships; i++) taken.Add(all[(int)((long)i * all.Count / ships)]);
             return taken;
         }
 
-        /// <summary>
-        /// Walk <paramref name="files"/> and report what the base variants in them are worth.
-        ///
-        /// Streamed one file at a time and never held: a `Blueprints.Ship` carries every grid and
-        /// every block, and parsing a corpus in one pass is what takes a machine down (`O5`). A
-        /// blueprint that will not parse is skipped and the ship count says how many were read, so
-        /// a sample that half-failed cannot report a clean number (`O5` again).
-        /// </summary>
+/// <summary>Walk operation.</summary>
         public static Reading Walk(IList<string> files)
         {
+/// <summary>Reading operation.</summary>
             Reading reading = new Reading();
             Dictionary<string, Row> byType = new Dictionary<string, Row>(StringComparer.Ordinal);
 
@@ -153,6 +92,7 @@ namespace Thermodynamics.Harness
                                 continue;
                             }
 
+/// <summary>FullLoadWatts operation.</summary>
                             float waste = FullLoadWatts(definition);
                             reading.WasteWatts += waste;
 
@@ -165,8 +105,10 @@ namespace Thermodynamics.Harness
                             affected = true;
                             reading.BlocksCorrected++;
 
+/// <summary>RowFor operation.</summary>
                             Row row = RowFor(byType, definition);
                             row.Blocks++;
+/// <summary>ArmourMass operation.</summary>
                             row.MassGainedKilograms += definition.Mass - ArmourMass(definition.Large);
                             row.WasteGainedWatts += waste;
                         }
@@ -183,14 +125,10 @@ namespace Thermodynamics.Harness
             return reading;
         }
 
-        /// <summary>
-        /// Every carrying ship's own share of full-load waste taken by <paramref name="typeId"/>,
-        /// sorted — the statistic the census answers with `--type`, recomputed here because the
-        /// census on disk was taken before the base-variant fix and cannot see the largest member
-        /// of some types at all.
-        /// </summary>
+/// <summary>ShareOf operation.</summary>
         public static List<float> ShareOf(IList<string> files, string typeId, out int shipsRead)
         {
+/// <summary>List operation.</summary>
             List<float> shares = new List<float>();
             shipsRead = 0;
 
@@ -216,6 +154,7 @@ namespace Thermodynamics.Harness
                                 continue;
                             }
 
+/// <summary>FullLoadWatts operation.</summary>
                             float waste = FullLoadWatts(definition);
                             total += waste;
                             if (definition.TypeId == typeId) mine += waste;
@@ -230,6 +169,7 @@ namespace Thermodynamics.Harness
             return shares;
         }
 
+/// <summary>RowFor operation.</summary>
         private static Row RowFor(Dictionary<string, Row> byType, GameBlocks.Definition definition)
         {
             string key = GameBlocks.BaseVariantKey(definition.TypeId, definition.Large);
@@ -244,23 +184,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-        /// <summary>
-        /// Watts of heat this block makes with everything on it running: what it produces through
-        /// its producer fraction, what it draws through its consumer one. The census's own basis
-        /// (`E3`) — a bound rather than a duty cycle.
-        ///
-        /// Read from the definition rather than from the placed block, because a block only
-        /// carries watts after a scenario has been applied to it and this class does not step
-        /// anything.
-        ///
-        /// <para>
-        /// **Thrusters contribute nothing**, which is what makes this the census's *full
-        /// electrical* basis rather than a ceiling — a burn is its own scenario there and is here
-        /// too. A store is skipped for the census's reason: it rates both ways, is never doing
-        /// both, and only makes heat for the share of a load the generators cannot cover, which
-        /// needs both totals and a scenario.
-        /// </para>
-        /// </summary>
+/// <summary>FullLoadWatts operation.</summary>
         private static float FullLoadWatts(GameBlocks.Definition definition)
         {
             if (definition.ThrustNewtons > 0f) return 0f;
@@ -273,18 +197,21 @@ namespace Thermodynamics.Harness
                 : definition.PowerDrawWatts * function.ConsumerWasteEnergy;
         }
 
+/// <summary>ArmourMass operation.</summary>
         private static float ArmourMass(bool large)
         {
             Vanilla.Block plate = Vanilla.Find(large ? LargeArmour : SmallArmour);
             return plate == null ? 0f : plate.Mass;
         }
 
-        /// <summary>One type's per-ship share, as a report.</summary>
+/// <summary>ShareReport operation.</summary>
         public static string ShareReport(IList<string> files, string typeId)
         {
             int ships;
+/// <summary>ShareOf operation.</summary>
             List<float> shares = ShareOf(files, typeId, out ships);
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.AppendLine(typeId + "  share of the full-load waste of the ships that carry one");
             sb.AppendLine("  basis: full electrical load, no thrust, stores held in reserve");
@@ -297,6 +224,7 @@ namespace Thermodynamics.Harness
             }
 
             sb.AppendLine("  " + shares.Count.ToString("n0") + " of " + ships.ToString("n0")
+/// <summary>one operation.</summary>
                 + " ships carry one ("
                 + ((float)shares.Count / ships * 100f).ToString("n1") + " %)");
 
@@ -315,10 +243,13 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>Report operation.</summary>
         public static string Report(IList<string> files)
         {
+/// <summary>Walk operation.</summary>
             Reading reading = Walk(files);
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("BASE VARIANTS  (blocks a blueprint spells with an empty SubtypeName)");
             sb.AppendLine("  the resolver built every one of these as a plain armour cube until 2026-08-25:");

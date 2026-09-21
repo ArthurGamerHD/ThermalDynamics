@@ -5,19 +5,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The block overlay's two cost bounds: dropping what the camera cannot see, and fitting a
-    /// radius to a box budget.
-    ///
-    /// The cull must never drop a box that is on screen — an overlay that hides part of a hull is
-    /// worse than a slow one, because it reads as a hull that is not there. The fit must settle
-    /// rather than oscillate, since a radius that pulses is a picture that flickers.
-    /// </summary>
     public class OverlayBudgetTests
     {
+/// <summary>Vector3D operation.</summary>
         private static readonly Vector3D Forward = new Vector3D(0, 0, -1);
 
-        /// <summary>A 70 degree vertical field of view on a 16:9 screen, as the game runs it.</summary>
+/// <summary>Cone operation.</summary>
         private static void Cone(out double sin, out double cos)
         {
             double half = OverlayBudget.ConeHalfAngle(70.0 * Math.PI / 180.0, 16.0 / 9.0);
@@ -25,6 +18,7 @@ namespace Thermodynamics.Tests
             cos = Math.Cos(half);
         }
 
+/// <summary>InView operation.</summary>
         private static bool InView(Vector3D delta, double radius)
         {
             double sin, cos;
@@ -35,37 +29,37 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ABoxStraightAheadIsDrawn operation.</summary>
         public void ABoxStraightAheadIsDrawn()
         {
             Assert.True(InView(new Vector3D(0, 0, -50), 1.25));
         }
 
         [Fact]
+/// <summary>ABoxBehindTheCameraIsNot operation.</summary>
         public void ABoxBehindTheCameraIsNot()
         {
             Assert.False(InView(new Vector3D(0, 0, 50), 1.25));
             Assert.False(InView(new Vector3D(10, 4, 30), 1.25));
         }
 
-        /// <summary>A box the eye sits inside straddles the cone apex and must survive it.</summary>
         [Fact]
+/// <summary>ABoxAroundTheCameraIsDrawn operation.</summary>
         public void ABoxAroundTheCameraIsDrawn()
         {
             Assert.True(InView(new Vector3D(0, 0, 0.5), 2.5));
         }
 
         [Fact]
+/// <summary>ABoxOffToTheSideIsNot operation.</summary>
         public void ABoxOffToTheSideIsNot()
         {
             Assert.False(InView(new Vector3D(200, 0, -20), 1.25));
             Assert.False(InView(new Vector3D(0, 200, -20), 1.25));
         }
 
-        /// <summary>
-        /// The cone contains the frustum, so everything the screen shows survives it — including the
-        /// corners, which are the widest part and the reason the cone is built from the diagonal.
-        /// </summary>
         [Fact]
+/// <summary>EveryPointOfTheScreenSurvivesTheCull operation.</summary>
         public void EveryPointOfTheScreenSurvivesTheCull()
         {
             double fov = 70.0 * Math.PI / 180.0;
@@ -76,7 +70,7 @@ namespace Thermodynamics.Tests
             {
                 for (double y = -1; y <= 1.0001; y += 0.1)
                 {
-                    // A point on the near-plane rectangle at 100 m, projected out to that distance.
+/// <summary>Vector3D operation.</summary>
                     Vector3D delta = new Vector3D(x * tangent * aspect * 100, y * tangent * 100, -100);
 
                     Assert.True(InView(delta, 0.0), "screen point " + x + "," + y + " was culled");
@@ -84,25 +78,19 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// A box whose centre is outside the cone is still drawn when its own size reaches back in,
-        /// which is what keeps a large block at the edge of the screen from popping out of the view.
-        /// </summary>
         [Fact]
+/// <summary>ABoxOutsideTheConeSurvivesByItsOwnRadius operation.</summary>
         public void ABoxOutsideTheConeSurvivesByItsOwnRadius()
         {
+/// <summary>Vector3D operation.</summary>
             Vector3D delta = new Vector3D(0, 200, -100);
 
             Assert.False(InView(delta, 0.0));
             Assert.True(InView(delta, 40.0));
         }
 
-        // ---- budget ------------------------------------------------------------------------
 
-        /// <summary>
-        /// Runs one frame of a solid cube of blocks, a metre apart, centred ahead of the camera.
-        /// Returns how many were drawn.
-        /// </summary>
+/// <summary>Frame operation.</summary>
         private static int Frame(OverlayBudget budget, int side, double spacing)
         {
             budget.BeginFrame();
@@ -117,6 +105,7 @@ namespace Thermodynamics.Tests
                 {
                     for (int z = 0; z < side; z++)
                     {
+/// <summary>Vector3D operation.</summary>
                         Vector3D delta = new Vector3D(
                             (x - (side * 0.5)) * spacing,
                             (y - (side * 0.5)) * spacing,
@@ -138,11 +127,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AGridInsideTheBudgetIsDrawnWholeAndNeverLimited operation.</summary>
         public void AGridInsideTheBudgetIsDrawnWholeAndNeverLimited()
         {
+/// <summary>OverlayBudget operation.</summary>
             OverlayBudget budget = new OverlayBudget();
             budget.MaxBoxes = 12000;
 
+/// <summary>Frame operation.</summary>
             int drawn = Frame(budget, 10, 2.5);
 
             Assert.Equal(budget.Considered - budget.OffScreen, drawn);
@@ -151,8 +143,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheFirstFrameOverTheBudgetIsStillCapped operation.</summary>
         public void TheFirstFrameOverTheBudgetIsStillCapped()
         {
+/// <summary>OverlayBudget operation.</summary>
             OverlayBudget budget = new OverlayBudget();
             budget.MaxBoxes = 500;
 
@@ -161,32 +155,31 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheRadiusSettlesNearTheBudgetWithinAFewFrames operation.</summary>
         public void TheRadiusSettlesNearTheBudgetWithinAFewFrames()
         {
+/// <summary>OverlayBudget operation.</summary>
             OverlayBudget budget = new OverlayBudget();
             budget.MaxBoxes = 2000;
 
+/// <summary>List operation.</summary>
             List<int> drawn = new List<int>();
             for (int frame = 0; frame < 8; frame++)
             {
                 drawn.Add(Frame(budget, 40, 1.0));
             }
 
-            // Settled: within the deadband, and holding there rather than passing through.
             for (int frame = 4; frame < drawn.Count; frame++)
             {
                 Assert.InRange(drawn[frame], 1500, 2000);
             }
         }
 
-        /// <summary>
-        /// Once settled, nothing is left to the hard stop. The stop drops whichever blocks the walk
-        /// reaches last, which is an arbitrary part of the hull, so a steady view must not rely on
-        /// it — the radius is what decides, and a radius is a shape a reader can account for.
-        /// </summary>
         [Fact]
+/// <summary>ASettledFrameDropsNothingToTheHardStop operation.</summary>
         public void ASettledFrameDropsNothingToTheHardStop()
         {
+/// <summary>OverlayBudget operation.</summary>
             OverlayBudget budget = new OverlayBudget();
             budget.MaxBoxes = 2000;
 
@@ -197,15 +190,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheRadiusLiftsAgainWhenTheGridNoLongerNeedsIt operation.</summary>
         public void TheRadiusLiftsAgainWhenTheGridNoLongerNeedsIt()
         {
+/// <summary>OverlayBudget operation.</summary>
             OverlayBudget budget = new OverlayBudget();
             budget.MaxBoxes = 2000;
 
             for (int frame = 0; frame < 8; frame++) Frame(budget, 40, 1.0);
             Assert.True(budget.IsLimiting);
 
-            // The camera pulls back to a small grid: nothing is held back, so the radius releases.
             for (int frame = 0; frame < 10; frame++) Frame(budget, 8, 1.0);
 
             Assert.False(budget.IsLimiting);
@@ -213,8 +207,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheRadiusNeverFallsBelowSomethingWorthDrawing operation.</summary>
         public void TheRadiusNeverFallsBelowSomethingWorthDrawing()
         {
+/// <summary>OverlayBudget operation.</summary>
             OverlayBudget budget = new OverlayBudget();
             budget.MaxBoxes = 1;
 
@@ -225,8 +221,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ABudgetOfZeroDrawsNothingAndDoesNotDivideByIt operation.</summary>
         public void ABudgetOfZeroDrawsNothingAndDoesNotDivideByIt()
         {
+/// <summary>OverlayBudget operation.</summary>
             OverlayBudget budget = new OverlayBudget();
             budget.MaxBoxes = 0;
 
@@ -234,8 +232,8 @@ namespace Thermodynamics.Tests
             Assert.True(budget.OverBudget > 0);
         }
 
-        /// <summary>The cone half-angle must contain the frustum for any shape of window.</summary>
         [Fact]
+/// <summary>TheConeContainsTheFrustumAtEveryAspect operation.</summary>
         public void TheConeContainsTheFrustumAtEveryAspect()
         {
             double fov = 60.0 * Math.PI / 180.0;
@@ -245,7 +243,7 @@ namespace Thermodynamics.Tests
                 double half = OverlayBudget.ConeHalfAngle(fov, aspect);
                 double tangent = Math.Tan(fov * 0.5);
 
-                // The frustum corner, which is its widest direction.
+/// <summary>Vector3D operation.</summary>
                 Vector3D corner = new Vector3D(tangent * aspect, tangent, -1);
                 double angle = Math.Acos(Vector3D.Dot(Vector3D.Normalize(corner), Forward));
 

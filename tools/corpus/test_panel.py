@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """`panel.py`'s per-type rules select the ships they name.
 
 The panel is the instrument every dial is swept over, and a rule that selects the *wrong* ships
@@ -18,6 +17,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
+# panel types operation.
 def panel_types():
     """`panel.py`'s type table, read without running the script.
 
@@ -43,17 +43,19 @@ def panel_types():
 
 
 class EveryPerTypeRuleNamesATypeTheGameHas(unittest.TestCase):
-    # Type ids as the census writes them, which is what a rule has to match.
     KNOWN = {"JumpDrive", "HydrogenEngine", "Reactor", "OxygenGenerator", "BatteryBlock",
              "Thrust", "Refinery", "Assembler", "GravityGenerator", "AirVent", "VirtualMass"}
 
+# test the table is read and is not empty operation.
     def test_the_table_is_read_and_is_not_empty(self):
         self.assertTrue(panel_types(), "no TYPES table was read, so this test checks nothing")
 
+# test every name points at a real type id operation.
     def test_every_name_points_at_a_real_type_id(self):
         for name, type_id in panel_types().items():
             self.assertIn(type_id, self.KNOWN, f"{name} points at {type_id!r}")
 
+# test the dial names and the knobs agree operation.
     def test_the_dial_names_and_the_knobs_agree(self):
         """Each per-type panel rule exists because a dial acts on that type."""
         table = panel_types()
@@ -61,6 +63,7 @@ class EveryPerTypeRuleNamesATypeTheGameHas(unittest.TestCase):
         for name in ("jumpdrive", "engine", "reactor", "oxygen"):
             self.assertIn(name, table, f"{name} has no type to select on")
 
+# test no vanilla reactor subtype contains the word reactor operation.
     def test_no_vanilla_reactor_subtype_contains_the_word_reactor(self):
         """The defect this table replaced, kept as a fact rather than as a memory.
 
@@ -73,6 +76,7 @@ class EveryPerTypeRuleNamesATypeTheGameHas(unittest.TestCase):
         for subtype in vanilla:
             self.assertNotIn("reactor", subtype.lower())
 
+# test the composition is keyed on type id in the script operation.
     def test_the_composition_is_keyed_on_type_id_in_the_script(self):
         """The script compares `r["type_id"]`, not a substring of `r["subtype"]`."""
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "panel.py")

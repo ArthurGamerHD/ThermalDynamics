@@ -6,20 +6,18 @@ using Xunit.Abstractions;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// **What the mod's blocks cost to build, placed inside the distribution the game itself
-    /// prices** — backlog.md `B33`.
-    /// </summary>
     public class BuildCostTests
     {
         private readonly ITestOutputHelper output;
 
+/// <summary>Builds the API method table.</summary>
         public BuildCostTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
         [Fact]
+/// <summary>EveryShippedBlockIsPricedInsideTheGamesOwnRange operation.</summary>
         public void EveryShippedBlockIsPricedInsideTheGamesOwnRange()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -58,8 +56,7 @@ namespace Thermodynamics.Tests
                     BuildCostLab.Quantile(entry.Value, 0.99d));
             }
 
-            // **Who else is at the bottom of PCU per cubic metre**, printed because the one block
-            // that lands there is the radiator and a claim about why needs the company named.
+/// <summary>List operation.</summary>
             List<BuildCostLab.Row> byVolume = new List<BuildCostLab.Row>(vanilla);
             byVolume.Sort(delegate (BuildCostLab.Row a, BuildCostLab.Row b)
             {
@@ -73,6 +70,7 @@ namespace Thermodynamics.Tests
                     byVolume[i].CubicMetres);
             }
 
+/// <summary>List operation.</summary>
             List<string> outside = new List<string>();
 
             foreach (BuildCostLab.Row row in shipped)
@@ -93,15 +91,6 @@ namespace Thermodynamics.Tests
                 Check(outside, row.Subtype, "PCU",
                     BuildCostLab.Percentile(perBlock, row.PcuPerBlock));
 
-                // **PCU per cubic metre is reported and not judged**, and the change is recorded
-                // here rather than made quietly (`E11`). It was one of the three checked ratios and
-                // it flagged exactly one block: the large radiator, at p0 — 1 PCU over 156 m3.
-                // Two things say the ratio is wrong rather than the price. PCU is a *per entity*
-                // budget, spent by the block and not by the space it takes up, and the game's own
-                // median block is 1 PCU. And the vanilla blocks at the bottom of this ratio are
-                // printed above: vivariums, platforms and support beams, all 1 PCU over hundreds
-                // of cubic metres — large hollow structures, which is what a radiator panel is.
-                // Dividing by volume prices the radiator's mechanism as though it were a cost.
             }
 
             outside.Sort(StringComparer.Ordinal);
@@ -111,22 +100,9 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", outside.ToArray()));
         }
 
-        /// <summary>
-        /// **A recipe moves when a block gets there, not where it ends up**, which is the answer to
-        /// the sharpest half of `B33`: a component list is already a thermal dial, because mass is
-        /// the sum of the components and capacity is mass times specific heat.
-        ///
-        /// <para>
-        /// It reaches the transient and not the steady state, and that is arithmetic rather than a
-        /// preference: radiation is `εσA(T⁴ − T⁴)` and conduction is `kA/d × ΔT`, and mass appears
-        /// in neither. Where a hull settles under a load is set by its surfaces; how long it takes
-        /// to get there is set by its mass. So the two purposes of the component list are not in
-        /// conflict — the balance figures balance.md prices blocks on are steady-state
-        /// figures, and a change to a recipe does not move them.
-        /// </para>
-        /// </summary>
         [Fact]
         [Trait("speed", "slow")]
+/// <summary>ChangingARecipeMovesTheTransientAndNotTheSteadyState operation.</summary>
         public void ChangingARecipeMovesTheTransientAndNotTheSteadyState()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -148,8 +124,6 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(3, rungs.Count);
 
-            // **Where it ends up does not move.** A tenth of a kelvin over a factor of four in
-            // mass, against a rig that settles hundreds of kelvin above ambient.
             for (int i = 1; i < rungs.Count; i++)
             {
                 float moved = Math.Abs(rungs[i].SettledKelvin - rungs[0].SettledKelvin);
@@ -159,10 +133,6 @@ namespace Thermodynamics.Tests
                     + "component list are in conflict after all");
             }
 
-            // **And how long it takes does.** Stated as strictly longer rather than as a ratio,
-            // because the rig is a stack of nine blocks with its own conduction time constant and
-            // only the radiators' mass is being scaled — a clean factor would be a claim about a
-            // single lumped capacity, which this is not.
             for (int i = 1; i < rungs.Count; i++)
             {
                 Assert.True(rungs[i].SecondsToSettle > rungs[i - 1].SecondsToSettle,
@@ -173,13 +143,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// One ratio of one block against the vanilla population.
-        ///
-        /// **The first and ninety-ninth percentiles**, because the game's own range is wide and a
-        /// tighter bound would fail on blocks the game itself prices that way. Outside it, the mod
-        /// is charging for something the game does not charge for.
-        /// </summary>
+/// <summary>Check operation.</summary>
         private static void Check(List<string> outside, string subtype, string ratio,
             double percentile)
         {

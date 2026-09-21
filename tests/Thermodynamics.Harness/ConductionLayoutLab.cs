@@ -8,32 +8,8 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// The conduction kernel in the shapes SE2's engine wants, priced against the shape the
-    /// solver ships: what a DCS-style port could buy the step, measured rather than promised.
-    ///
-    /// <para>
-    /// **SE2 runs systems as jobs over flat component data.** The shipped conduction loop is
-    /// already flat arrays, but it is a <em>scatter</em> — `watts[a] += w; watts[b] -= w` at
-    /// arbitrary indices — which no job system can split without races. The alternative is CSR:
-    /// each node's neighbours contiguous, each node's watts written once by one iteration, every
-    /// link read twice. That trade — double the reads for perfect parallelism and sequential
-    /// writes — is the load-bearing question for a port, so this lab measures both shapes
-    /// serially, the CSR shape across a thread ladder, and both with the nodes renumbered along a
-    /// Morton curve to say how much of the price is placement order rather than layout.
-    /// </para>
-    ///
-    /// <para>
-    /// The kernels compute the plain flux form on the solver's own graph — its links, its
-    /// conductances, a settled hull's temperatures — and every variant's watts are checked
-    /// against the serial scatter's before its clock is trusted. They are the arithmetic of the
-    /// conduction phase without its clamps and telemetry, so the figures compare kernels with
-    /// each other, not with `bench stepphases`.
-    /// </para>
-    /// </summary>
     public static class ConductionLayoutLab
     {
-        /// <summary>Thread counts the ladder climbs, clipped to the machine.</summary>
         public static readonly int[] DefaultThreads = { 1, 2, 4, 8, 16, 32 };
 
         public class Row
@@ -42,7 +18,6 @@ namespace Thermodynamics.Harness
             public int Threads;
             public StageLab.Row Timing;
 
-            /// <summary>Largest relative disagreement with the serial scatter's watts.</summary>
             public double WorstError;
         }
 
@@ -54,30 +29,33 @@ namespace Thermodynamics.Harness
             public float[] Conductance;
             public float[] Temperature;
 
-            // CSR: node i's neighbours at [Start[i], Start[i+1]).
             public int[] Start;
             public int[] Neighbour;
             public float[] NeighbourConductance;
 
-            /// <summary>Each node's block cell, for the Morton renumbering.</summary>
             public Vector3I[] Position;
         }
 
+/// <summary>Run operation.</summary>
         public static List<Row> Run(string shape, int blocks, int[] threads, Action<string> log)
         {
             if (log != null) log("building " + blocks.ToString("n0") + " blocks");
+/// <summary>Builds the method table.</summary>
             Graph graph = Build(shape, blocks);
 
+/// <summary>List operation.</summary>
             List<Row> rows = new List<Row>();
             float[] reference = new float[graph.Nodes];
             Scatter(graph, reference);
 
             if (log != null) log("scatter, serial");
             rows.Add(Measure("scatter", 1, graph, reference,
+/// <summary>Scatter operation.</summary>
                 watts => Scatter(graph, watts)));
 
             if (log != null) log("gather, serial");
             rows.Add(Measure("gather", 1, graph, reference,
+/// <summary>GatherRange operation.</summary>
                 watts => GatherRange(graph, watts, 0, graph.Nodes)));
 
             for (int t = 0; t < threads.Length; t++)
@@ -87,17 +65,21 @@ namespace Thermodynamics.Harness
 
                 if (log != null) log("gather, " + count + " threads");
                 rows.Add(Measure("gather", count, graph, reference,
+/// <summary>GatherParallel operation.</summary>
                     watts => GatherParallel(graph, watts, count)));
             }
 
             if (log != null) log("morton reorder");
+/// <summary>Reorder operation.</summary>
             Graph morton = Reorder(graph, MortonOrder(graph));
             float[] mortonReference = new float[morton.Nodes];
             Scatter(morton, mortonReference);
 
             rows.Add(Measure("m-scatter", 1, morton, mortonReference,
+/// <summary>Scatter operation.</summary>
                 watts => Scatter(morton, watts)));
             rows.Add(Measure("m-gather", 1, morton, mortonReference,
+/// <summary>GatherRange operation.</summary>
                 watts => GatherRange(morton, watts, 0, morton.Nodes)));
 
             for (int t = 0; t < threads.Length; t++)
@@ -107,14 +89,15 @@ namespace Thermodynamics.Harness
 
                 if (log != null) log("morton gather, " + count + " threads");
                 rows.Add(Measure("m-gather", count, morton, mortonReference,
+/// <summary>GatherParallel operation.</summary>
                     watts => GatherParallel(morton, watts, count)));
             }
 
             return rows;
         }
 
-        // ---- graph extraction -------------------------------------------------------------
 
+/// <summary>Builds the API method table.</summary>
         private static Graph Build(string shape, int blocks)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -131,6 +114,7 @@ namespace Thermodynamics.Harness
                 simulation.Solver.Step(simulation.Settings.StepSeconds, state);
             }
 
+/// <summary>Graph operation.</summary>
             Graph graph = new Graph();
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             graph.Nodes = nodes.Count;
@@ -158,6 +142,7 @@ namespace Thermodynamics.Harness
             return graph;
         }
 
+/// <summary>Builds the API method table.</summary>
         private static void BuildCsr(Graph graph)
         {
             int[] degree = new int[graph.Nodes];
@@ -193,11 +178,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// The permutation a Morton-curve renumbering of the same hull induces: nodes sorted by
-        /// the interleaved bits of their block's cell, which is the ordering an octree-backed
-        /// store hands out for free.
-        /// </summary>
+/// <summary>MortonOrder operation.</summary>
         private static int[] MortonOrder(Graph graph)
         {
             Vector3I min = graph.Position[0];
@@ -211,6 +192,7 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < graph.Nodes; i++)
             {
                 Vector3I at = graph.Position[i] - min;
+/// <summary>Morton operation.</summary>
                 codes[i] = Morton(at.X, at.Y, at.Z);
                 order[i] = i;
             }
@@ -219,6 +201,7 @@ namespace Thermodynamics.Harness
             return order;
         }
 
+/// <summary>Morton operation.</summary>
         private static long Morton(int x, int y, int z)
         {
             long code = 0;
@@ -231,6 +214,7 @@ namespace Thermodynamics.Harness
             return code;
         }
 
+/// <summary>Reorder operation.</summary>
         private static Graph Reorder(Graph graph, int[] order)
         {
             int[] position = new int[graph.Nodes];
@@ -239,6 +223,7 @@ namespace Thermodynamics.Harness
                 position[order[i]] = i;
             }
 
+/// <summary>Graph operation.</summary>
             Graph reordered = new Graph();
             reordered.Nodes = graph.Nodes;
             reordered.Temperature = new float[graph.Nodes];
@@ -261,8 +246,8 @@ namespace Thermodynamics.Harness
             return reordered;
         }
 
-        // ---- kernels ----------------------------------------------------------------------
 
+/// <summary>Scatter operation.</summary>
         private static void Scatter(Graph graph, float[] watts)
         {
             Array.Clear(watts, 0, watts.Length);
@@ -280,6 +265,7 @@ namespace Thermodynamics.Harness
             }
         }
 
+/// <summary>GatherRange operation.</summary>
         private static void GatherRange(Graph graph, float[] watts, int from, int toExclusive)
         {
             int[] start = graph.Start;
@@ -300,10 +286,9 @@ namespace Thermodynamics.Harness
             }
         }
 
+/// <summary>GatherParallel operation.</summary>
         private static void GatherParallel(Graph graph, float[] watts, int threads)
         {
-            // Static ranges rather than a work-stealing partitioner: a DCS job is a declared
-            // range of an archetype's rows, and the lab prices that shape.
             int chunk = (graph.Nodes + threads - 1) / threads;
             Parallel.For(0, threads,
                 new ParallelOptions { MaxDegreeOfParallelism = threads },
@@ -315,17 +300,19 @@ namespace Thermodynamics.Harness
                 });
         }
 
-        // ---- measurement ------------------------------------------------------------------
 
+/// <summary>Measure operation.</summary>
         private static Row Measure(string variant, int threads, Graph graph, float[] reference,
             Action<float[]> kernel)
         {
             float[] watts = new float[graph.Nodes];
             kernel(watts);
 
+/// <summary>Row operation.</summary>
             Row row = new Row();
             row.Variant = variant;
             row.Threads = threads;
+/// <summary>WorstError operation.</summary>
             row.WorstError = WorstError(reference, watts);
 
             StageLab.Row timing = new StageLab.Row();
@@ -354,10 +341,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-        /// <summary>
-        /// Largest relative disagreement between two kernels' watts. Summation order moves the
-        /// last bits, so the tolerance a caller holds this to is a float's, not a bit's.
-        /// </summary>
+/// <summary>WorstError operation.</summary>
         public static double WorstError(float[] reference, float[] candidate)
         {
             double worst = 0d;
@@ -370,8 +354,10 @@ namespace Thermodynamics.Harness
             return worst;
         }
 
+/// <summary>Table operation.</summary>
         public static string Table(IList<Row> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
 
             double serialScatter = 0d;
@@ -397,8 +383,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
+/// <summary>Csv operation.</summary>
         public static string Csv(IList<Row> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
             text.AppendLine("kernel,threads,nodes,best_ms,median_ms,repeats,stopped,work,ns_per_visit,worst_error,taken_utc,host");
             for (int i = 0; i < rows.Count; i++)

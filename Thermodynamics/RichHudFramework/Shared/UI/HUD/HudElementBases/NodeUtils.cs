@@ -10,15 +10,9 @@ namespace RichHudFramework
 
 		public abstract partial class HudNodeBase
 		{
-			/// <summary>
-			/// Collection of utilities used internally to manage HUD nodes
-			/// </summary>
-			/// <exclude/>
 			protected static class NodeUtils
 			{
-				/// <summary>
-				/// Used internally quickly register a list of child nodes to a parent.
-				/// </summary>
+/// <summary>Registers the API and message handler.</summary>
 				public static void RegisterNodes(HudParentBase newParent, IReadOnlyList<HudNodeBase> nodes)
 				{
 					ParentUtils.RegisterNodes(newParent, nodes);
@@ -33,10 +27,8 @@ namespace RichHudFramework
 					}
 				}
 
-				/// <summary>
-				/// Used internally quickly register a list of child nodes to a parent.
-				/// </summary>
 				public static void RegisterNodes<TCon, TNode>(HudParentBase newParent, IReadOnlyList<TCon> nodes)
+/// <summary>new operation.</summary>
 					where TCon : IHudNodeContainer<TNode>, new()
 					where TNode : HudNodeBase
 				{
@@ -52,10 +44,7 @@ namespace RichHudFramework
 					}
 				}
 
-				/// <summary>
-				/// Used internally to quickly unregister child nodes from their parent. Removes the range of nodes
-				/// specified in the node list from the child list.
-				/// </summary>
+/// <summary>Unregisters the API and cleans resources.</summary>
 				public static void UnregisterNodes(HudParentBase parent, IReadOnlyList<HudNodeBase> nodes, int index, int count)
 				{
 					if (count > 0)
@@ -77,11 +66,8 @@ namespace RichHudFramework
 					}
 				}
 
-				/// <summary>
-				/// Used internally to quickly unregister child nodes from their parent. Removes the range of nodes
-				/// specified in the node list from the child list.
-				/// </summary>
 				public static void UnregisterNodes<TCon, TNode>(HudParentBase parent, IReadOnlyList<TCon> nodes, int index, int count)
+/// <summary>new operation.</summary>
 					where TCon : IHudNodeContainer<TNode>, new()
 					where TNode : HudNodeBase
 				{
@@ -104,9 +90,7 @@ namespace RichHudFramework
 					}
 				}
 
-				/// <summary>
-				/// Used internally to modify the state of hud nodes
-				/// </summary>
+/// <summary>Sets the nodesstate.</summary>
 				public static void SetNodesState(HudElementStates state, bool mask, IReadOnlyList<HudNodeBase> nodes, int index, int count)
 				{
 					if (count > 0)
@@ -131,10 +115,8 @@ namespace RichHudFramework
 					}
 				}
 
-				/// <summary>
-				/// Used internally to modify the state of hud nodes
-				/// </summary>
 				public static void SetNodesState<TCon, TNode>(HudElementStates state, bool mask, IReadOnlyList<TCon> nodes, int index, int count)
+/// <summary>new operation.</summary>
 					where TCon : IHudNodeContainer<TNode>, new()
 					where TNode : HudNodeBase
 				{
@@ -164,12 +146,11 @@ namespace RichHudFramework
 		
 		public abstract partial class HudElementBase
 		{
-			/// <exclude/>
 			public static class ElementUtils
 			{
+/// <summary>UpdateRootAnchoring operation.</summary>
 				public static void UpdateRootAnchoring(Vector2 size, IReadOnlyList<HudNodeBase> children)
 				{
-					// Update position
 					for (int i = 0; i < children.Count; i++)
 					{
 						var child = children[i] as HudElementBase;

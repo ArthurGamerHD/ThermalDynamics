@@ -5,16 +5,9 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Two properties the game adapter depends on and cannot check for itself.
-    ///
-    /// A host holds its own map from game block to simulation node. These pin down what that map
-    /// has to be keyed on, and what the host is guaranteed to be told about damage — both of
-    /// which had adapter bugs that only showed up on blocks larger than one cell, or on ticks
-    /// that ran more than one step.
-    /// </summary>
     public class MultiCellAndDamageTests
     {
+/// <summary>Fragile operation.</summary>
         private static BlockThermalProperties Fragile()
         {
             BlockThermalProperties t = Catalog.DefaultThermal();
@@ -23,33 +16,31 @@ namespace Thermodynamics.Tests
             return t;
         }
 
-        /// <summary>
-        /// A block's identity in the model is its minimum cell, not the game's centre-ish
-        /// reference cell. The two agree for a 1x1x1 block and disagree for every larger one, so
-        /// a host keying on the wrong one loses exactly the big blocks.
-        /// </summary>
         [Fact]
+/// <summary>ABlockIsIdentifiedByItsMinimumCell operation.</summary>
         public void ABlockIsIdentifiedByItsMinimumCell()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(2.5f);
             BlockModel model = BlockModel.Solid("BigBlock", new Vector3I(3, 3, 3), 5000f, Catalog.DefaultThermal());
 
+/// <summary>Vector3I operation.</summary>
             Vector3I min = new Vector3I(4, 0, 0);
             BlockInstance block = grid.Add(model, min);
 
             Assert.Equal(min, block.Position);
             Assert.Equal(GridMath.Key(min), block.Key);
 
-            // Every cell it occupies resolves back to the same instance, whichever one a host
-            // happens to be holding.
             Assert.Same(block, grid.GetAtCell(min));
             Assert.Same(block, grid.GetAtCell(min + new Vector3I(1, 1, 1)));
             Assert.Same(block, grid.GetAtCell(min + new Vector3I(2, 2, 2)));
         }
 
         [Fact]
+/// <summary>AnOverheatEventNamesTheBlockByItsMinimumCell operation.</summary>
         public void AnOverheatEventNamesTheBlockByItsMinimumCell()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
@@ -66,14 +57,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(new Vector3I(2, 0, 0), simulation.Overheats[0].Block.Position);
         }
 
-        /// <summary>
-        /// The solver clears its overheat list every step. An update that runs several steps has
-        /// to hand the host all of them, or damage silently scales down with how often the host
-        /// polls — which is the same class of bug as damage scaling with Frequency.
-        /// </summary>
         [Fact]
+/// <summary>OverheatsFromEveryStepOfAnUpdateReachTheHost operation.</summary>
         public void OverheatsFromEveryStepOfAnUpdateReachTheHost()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
@@ -90,8 +78,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EachUpdateReportsOnlyItsOwnOverheats operation.</summary>
         public void EachUpdateReportsOnlyItsOwnOverheats()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
@@ -110,6 +100,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ACoolBlockProducesNoOverheats operation.</summary>
         public void ACoolBlockProducesNoOverheats()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -122,11 +113,8 @@ namespace Thermodynamics.Tests
             Assert.Empty(simulation.Overheats);
         }
 
-        /// <summary>
-        /// A door opening changes what a face seals and nothing else. Rebuilding the conduction
-        /// graph and re-tracing the coolant loops for it is work a busy airlock does not need.
-        /// </summary>
         [Fact]
+/// <summary>RefreshingSealingLeavesTheConductionGraphAlone operation.</summary>
         public void RefreshingSealingLeavesTheConductionGraphAlone()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -149,6 +137,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>RefreshingSealingStillRemapsTheRooms operation.</summary>
         public void RefreshingSealingStillRemapsTheRooms()
         {
             GridBuilder builder = GridBuilder.Large();

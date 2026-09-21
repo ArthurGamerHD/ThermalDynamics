@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """**What a progress file can and cannot be asked**, pinned so that changing it fails a check.
 
 Every rule here is one that was got wrong once, and the one that cost a run is the first: a walk's
@@ -24,6 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pace
 
 
+# progress operation.
 def progress(*lines):
     """A progress file holding the given `HH:MM:SS files` pairs, as a path."""
     handle = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8")
@@ -33,6 +33,7 @@ def progress(*lines):
     return handle.name
 
 
+# at operation.
 def at(minute, files):
     """A mark at `minute` past noon. Minutes past fifty-nine roll into the hour, so a fixture can
     span one without the reader having to do the arithmetic."""
@@ -40,12 +41,12 @@ def at(minute, files):
 
 
 class AProgressFileIsReadAsMarks(unittest.TestCase):
+# test a repeated final line is not a stall operation.
     def test_a_repeated_final_line_is_not_a_stall(self):
-        # A walk writes its last batch line twice, once from the batch and once from the end. Kept
-        # as two marks it reads as a walk that did nothing for the interval between them.
         order = pace.marks(progress(at(0, 10), at(5, 20), at(5, 20)))
         self.assertEqual([10, 20], [files for _, files in order])
 
+# test lines that are not batch lines are ignored operation.
     def test_lines_that_are_not_batch_lines_are_ignored(self):
         path = progress(at(0, 10))
         with open(path, "a", encoding="utf-8") as handle:
@@ -53,6 +54,7 @@ class AProgressFileIsReadAsMarks(unittest.TestCase):
 
         self.assertEqual([10], [files for _, files in pace.marks(path)])
 
+# test elapsed is measured from the first mark operation.
     def test_elapsed_is_measured_from_the_first_mark(self):
         order = pace.marks(progress(at(0, 10), at(30, 20)))
         self.assertEqual(30.0, pace.elapsed(order, 20))
@@ -73,6 +75,7 @@ class ASlicedWalkReadsAsOneWalk(unittest.TestCase):
     time.
     """
 
+# sliced operation.
     def sliced(self, *blocks):
         """A progress file of several slices: each block is `(already done, [(minute, files)])`."""
         handle = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8")
@@ -86,12 +89,14 @@ class ASlicedWalkReadsAsOneWalk(unittest.TestCase):
         handle.close()
         return handle.name
 
+# test a slices counts continue from what earlier slices finished operation.
     def test_a_slices_counts_continue_from_what_earlier_slices_finished(self):
         path = self.sliced((0, [at(0, 10), at(10, 20)]),
                            (20, [at(40, 10), at(50, 20)]))
 
         self.assertEqual([10, 20, 30, 40], [files for _, files in pace.marks(path)])
 
+# sliced at operation.
     def sliced_at(self, *blocks):
         """The same, with each slice's resume line placed at a stated minute."""
         handle = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8")
@@ -106,14 +111,14 @@ class ASlicedWalkReadsAsOneWalk(unittest.TestCase):
         handle.close()
         return handle.name
 
+# test the gap between slices is not walked time operation.
     def test_the_gap_between_slices_is_not_walked_time(self):
-        # Slice one walks minutes 0 to 10. Slice two is relaunched at minute 40 and walks to 60.
-        # The walk walked thirty minutes; fifty went by.
         path = self.sliced_at((0, None, [at(0, 10), at(10, 20)]),
                               (20, 40, [at(50, 10), at(60, 20)]))
 
         self.assertEqual(30.0, pace.elapsed(pace.marks(path), 40))
 
+# test a sliced walk and the same walk in one run agree operation.
     def test_a_sliced_walk_and_the_same_walk_in_one_run_agree(self):
         """The property that matters: slicing is a way of splitting a walk, not a measurement.
 
@@ -129,10 +134,10 @@ class ASlicedWalkReadsAsOneWalk(unittest.TestCase):
         self.assertEqual([files for _, files in whole], [files for _, files in cut])
         self.assertEqual(pace.elapsed(whole, 40), pace.elapsed(cut, 40))
 
-        # And so does the ratio, which is the figure a session actually reads.
         reference = pace.marks(progress(at(0, 10), at(5, 20), at(10, 30), at(15, 40)))
         self.assertEqual(pace.ratio(whole, reference), pace.ratio(cut, reference))
 
+# test the ratio uses a resumed walks marks and not just its first slice operation.
     def test_the_ratio_uses_a_resumed_walks_marks_and_not_just_its_first_slice(self):
         """**A resumed walk's marks do not land on the reference's grid, and that hid most of them.**
 
@@ -144,7 +149,6 @@ class ASlicedWalkReadsAsOneWalk(unittest.TestCase):
         """
         reference = pace.marks(progress(*[at(i, (i + 1) * 10) for i in range(0, 60, 5)]))
 
-        # A subject resumed at 63, so every mark after it is 73, 83, ... — off the grid entirely.
         cut = pace.marks(self.sliced_at(
             (0, None, [at(0, 10), at(5, 20)]),
             (63, 20, [at(25, 10), at(30, 20), at(35, 30)])))
@@ -159,6 +163,7 @@ class ASlicedWalkReadsAsOneWalk(unittest.TestCase):
         self.assertEqual(93, last, "the ratio stopped at the last mark shared with the reference,"
                                    " so it is reading the first slice alone")
 
+# test the ratio is unchanged for a walk that was never resumed operation.
     def test_the_ratio_is_unchanged_for_a_walk_that_was_never_resumed(self):
         """Interpolation must not move the answer where the marks already line up."""
         reference = pace.marks(progress(at(0, 10), at(5, 20), at(10, 30), at(15, 40)))
@@ -170,6 +175,7 @@ class ASlicedWalkReadsAsOneWalk(unittest.TestCase):
         self.assertEqual(10, first)
         self.assertEqual(40, last)
 
+# test a resume line that names no count does not throw operation.
     def test_a_resume_line_that_names_no_count_does_not_throw(self):
         handle = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8")
         handle.write("12:00:00 air: resuming, everything already finished\n")
@@ -183,6 +189,7 @@ class TheRatioComparesTheSameFiles(unittest.TestCase):
     """`P6` — the comparison holds everything but the subject equal, and the thing held equal here
     is *which ships were walked*, not how long each walk had been running."""
 
+# test it is taken over the marks the two walks share operation.
     def test_it_is_taken_over_the_marks_the_two_walks_share(self):
         subject = pace.marks(progress(at(0, 10), at(20, 20), at(40, 30)))
         reference = pace.marks(progress(at(0, 10), at(10, 20), at(20, 30), at(25, 40)))
@@ -191,6 +198,7 @@ class TheRatioComparesTheSameFiles(unittest.TestCase):
         self.assertAlmostEqual(2.0, dearer)
         self.assertEqual((10, 30), (first, last))
 
+# test two walks with one mark in common have no ratio operation.
     def test_two_walks_with_one_mark_in_common_have_no_ratio(self):
         subject = pace.marks(progress(at(0, 10), at(20, 20)))
         reference = pace.marks(progress(at(0, 10), at(10, 70)))
@@ -202,9 +210,8 @@ class TheRatioComparesTheSameFiles(unittest.TestCase):
 class TheBlockShareEstimateIsReportedAsASpread(unittest.TestCase):
     """The estimator that abandoned the cap walk. It is kept so it can be shown, not trusted."""
 
+# test a falling rate projects a longer and longer run operation.
     def test_a_falling_rate_projects_a_longer_and_longer_run(self):
-        # Half the blocks in the first ten minutes, a tenth in the next ten: exactly the shape a
-        # largest-first walk produces whatever its health.
         order = pace.marks(progress(at(0, 10), at(10, 20), at(20, 30)))
         shares = [0.0] * 9 + [0.1] + [0.0] * 9 + [0.6] + [0.0] * 9 + [0.7]
 
@@ -212,10 +219,12 @@ class TheBlockShareEstimateIsReportedAsASpread(unittest.TestCase):
         self.assertEqual(3, len(rows))
         self.assertLess(rows[1][2], rows[2][2])
 
+# test the spread is the range and not the last mark operation.
     def test_the_spread_is_the_range_and_not_the_last_mark(self):
         rows = [(10.0, 0.1, 120.0), (20.0, 0.2, 600.0), (30.0, 0.3, 300.0)]
         self.assertEqual("3 marks projecting 120 to 600 min, median 300", pace.spread(rows))
 
+# test a stalled mark projects no finite time and is not counted operation.
     def test_a_stalled_mark_projects_no_finite_time_and_is_not_counted(self):
         rows = [(10.0, 0.1, float("inf"))]
         self.assertEqual("no finite projection", pace.spread(rows))
@@ -225,6 +234,7 @@ class CoverageNeedsThePopulationItIsAShareOf(unittest.TestCase):
     """`P2` — what the instrument could not see is part of the result. Without the corpus on this
     machine there is no denominator, and a guessed one would read as a measurement."""
 
+# test no corpus means no coverage rather than an assumed one operation.
     def test_no_corpus_means_no_coverage_rather_than_an_assumed_one(self):
         self.assertEqual([], pace.coverage([], {"1": 100}, root="/nonexistent"))
 
@@ -239,10 +249,10 @@ class ANarrowedWalkIsAShareOfWhatItWasNarrowedTo(unittest.TestCase):
     guessed (`P2`, `E8`).
     """
 
+# setUp operation.
     def setUp(self):
         self.root = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.root)
-        # Four ships, largest first by file size, of which two are in the selection.
         self.sizes = {"aaa": 4000, "bbb": 3000, "ccc": 2000, "ddd": 1000}
         for workshop, size in self.sizes.items():
             os.makedirs(os.path.join(self.root, workshop))
@@ -257,6 +267,7 @@ class ANarrowedWalkIsAShareOfWhatItWasNarrowedTo(unittest.TestCase):
 
         self.counts = {"aaa": 400, "bbb": 300, "ccc": 200, "ddd": 100}
 
+# progress operation.
     def progress(self, header):
         path = os.path.join(self.root, "progress.txt")
         with open(path, "w") as handle:
@@ -264,29 +275,32 @@ class ANarrowedWalkIsAShareOfWhatItWasNarrowedTo(unittest.TestCase):
             handle.write("00:01:00 cap batch 10/4 ships 10 files 10\n")
         return path
 
+# test the selection is read off the walks own first line operation.
     def test_the_selection_is_read_off_the_walks_own_first_line(self):
         path = self.progress("00:00:00 walking 2 blueprints named by %s\n" % self.chosen)
         self.assertEqual(pace.selection(path), {"aaa", "ccc"})
 
+# test a walk of the corpus names no selection operation.
     def test_a_walk_of_the_corpus_names_no_selection(self):
         path = self.progress("00:00:00 walking the corpus\n")
         self.assertIsNone(pace.selection(path))
 
+# test a selection file that is gone is unknown rather than assumed operation.
     def test_a_selection_file_that_is_gone_is_unknown_rather_than_assumed(self):
         path = self.progress("00:00:00 walking 2 blueprints named by /nowhere/at/all.txt\n")
         self.assertIsNone(pace.selection(path))
 
+# test the denominator is the selections blocks and not the populations operation.
     def test_the_denominator_is_the_selections_blocks_and_not_the_populations(self):
         whole = pace.coverage([], self.counts, root=self.root)
         narrowed = pace.coverage([], self.counts, root=self.root, only={"aaa", "ccc"})
 
-        # Whole: aaa is 400 of 1,000 blocks. Narrowed: aaa is 400 of 600, and the walk order holds
-        # two files rather than four, so the same file index means a different ship.
         self.assertEqual(len(whole), 4)
         self.assertEqual(len(narrowed), 2)
         self.assertAlmostEqual(whole[0], 0.4)
         self.assertAlmostEqual(narrowed[0], 400.0 / 600.0)
 
+# test a selection walk and a corpus walk have no per file ratio operation.
     def test_a_selection_walk_and_a_corpus_walk_have_no_per_file_ratio(self):
         """File N of each is a different ship, so the ratio is refused rather than printed."""
         narrowed = self.progress("00:00:00 walking 2 blueprints named by %s\n" % self.chosen)

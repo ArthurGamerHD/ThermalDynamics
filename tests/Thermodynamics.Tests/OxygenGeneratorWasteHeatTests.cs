@@ -5,38 +5,11 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// What decided the last of the three unsourced fractions with a real figure beside them,
-    /// pinned so it cannot invert quietly.
-    ///
-    /// <para>
-    /// The oxygen generator wasted **0.6** of what it draws under a comment admitting the figure
-    /// was invented, against water electrolysis sourcing 0.20–0.40. The rule for moving it was
-    /// registered in balance.md, *Oxygen generator waste heat*, before
-    /// <see cref="OxygenGeneratorLab"/> produced a number; the rule's first clause fired, and it
-    /// fired on a finding nobody had gone looking for. **At 0.6, two of the six vanilla generators
-    /// are past their own critical temperature alone in open space at their own rated draw** — a
-    /// state no build can improve on, because there is nothing cooler than every face on a 2.7 K
-    /// sky. 0.40 is the top of the sourced band and the highest value where all six survive both
-    /// rigs.
-    /// </para>
-    ///
-    /// <para>
-    /// Figures come from <see cref="OxygenGeneratorLab"/>, which reads the shipped XML at run time,
-    /// so a tuning change moves these tests rather than sliding past them.
-    /// </para>
-    /// </summary>
     [Trait("speed", "slow")]
     public class OxygenGeneratorWasteHeatTests
     {
-        /// <summary>
-        /// The shipped fraction is inside the band its own note claims.
-        ///
-        /// <see cref="AuthoredWasteTests"/> checks that of every fraction in the file; this says it
-        /// of the one this class is about, so a reader of these tests does not have to take the
-        /// provenance on trust from another suite.
-        /// </summary>
         [Fact]
+/// <summary>TheShippedFractionIsInsideTheBandElectrolysisSources operation.</summary>
         public void TheShippedFractionIsInsideTheBandElectrolysisSources()
         {
             float shipped = ShippedBlocks.FunctionOf("OxygenGenerator").ConsumerWasteEnergy;
@@ -44,12 +17,8 @@ namespace Thermodynamics.Tests
             Assert.InRange(shipped, OxygenGeneratorLab.SourcedLow, OxygenGeneratorLab.SourcedHigh);
         }
 
-        /// <summary>
-        /// The bound the decision turned on. Bare in shadow with every face on a 2.7 K sky is the
-        /// most heat a block can possibly shed, so one that cooks there cooks in every build a
-        /// player can make, and no plumbing reaches it.
-        /// </summary>
         [Fact]
+/// <summary>NoOxygenGeneratorDestroysItselfWithEveryFaceOnOpenSpace operation.</summary>
         public void NoOxygenGeneratorDestroysItselfWithEveryFaceOnOpenSpace()
         {
             foreach (OxygenGeneratorLab.Row row in Shipped())
@@ -62,19 +31,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// **The finding that moved the fraction, kept runnable rather than only written down.**
-        ///
-        /// At the 0.6 the file shipped until 2026-08-25, the two small-grid generators are past
-        /// critical bare at their rated draw — measured at 905.3 K against criticals of 862.8 K and
-        /// 848.6 K. That is the *unbuildable* bound `C28` named for the reactor, reached from the
-        /// other side: there, the sourced figure was the one that cooked and the invention was kept;
-        /// here the invention was the one that cooked.
-        ///
-        /// A failure of this test means the model has moved far enough that the reason recorded in
-        /// balance.md no longer reproduces, which is a page to correct rather than a bound to relax.
-        /// </summary>
         [Fact]
+/// <summary>TheFractionThisReplacedStillCooksTwoGeneratorsBare operation.</summary>
         public void TheFractionThisReplacedStillCooksTwoGeneratorsBare()
         {
             List<OxygenGeneratorLab.Row> cooked = OxygenGeneratorLab.Run(0.6f)
@@ -89,26 +47,8 @@ namespace Thermodynamics.Tests
             foreach (OxygenGeneratorLab.Row row in cooked) Assert.False(row.Large);
         }
 
-        /// <summary>
-        /// **A skin cools these blocks rather than cooking them, which is the opposite of a
-        /// reactor and the reason the two rigs are not simply *ceiling* and *floor*.**
-        ///
-        /// <para>
-        /// balance.md called bare the ceiling and skinned the floor, and that reading came from a
-        /// 300 MW reactor: at those watts the block-to-block conductance out of the block is the
-        /// bottleneck, so the armour traps more than it sheds. An oxygen generator wastes three
-        /// orders of magnitude less, conduction into the shell is nowhere near binding, and the
-        /// shell is a radiator with several times the block's own area. The vanilla generator at
-        /// rated draw settles **267 K cooler** skinned than bare at the fraction that was shipped.
-        /// </para>
-        ///
-        /// <para>
-        /// It is pinned because a registered prediction — *at 0.6 the block is past critical
-        /// skinned* — was falsified by exactly this, and a falsification that is only written down
-        /// in prose is one the next reader repeats.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>SkinningASmallHeatSourceCoolsItWhereSkinningAReactorDoesNot operation.</summary>
         public void SkinningASmallHeatSourceCoolsItWhereSkinningAReactorDoesNot()
         {
             foreach (OxygenGeneratorLab.Row row in Shipped()
@@ -122,12 +62,8 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// A generator that is switched on and converting nothing is not a cooling problem, and one
-        /// running at the duty the field dump observed is not either. Heat arrives when the block
-        /// is worked, which is the same shape a reactor's fraction was chosen to have.
-        /// </summary>
         [Fact]
+/// <summary>AGeneratorAtStandbyOrTheObservedDutyNeedsNoCooling operation.</summary>
         public void AGeneratorAtStandbyOrTheObservedDutyNeedsNoCooling()
         {
             foreach (OxygenGeneratorLab.Row row in Shipped()
@@ -141,11 +77,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-        /// <summary>
-        /// The sweep rows at the fraction Cubes.xml actually ships.
-        /// <see cref="OxygenGeneratorLab"/> caches them, so the tests here cost one pass between
-        /// them rather than one each.
-        /// </summary>
+/// <summary>Shipped operation.</summary>
         private static List<OxygenGeneratorLab.Row> Shipped()
         {
             List<OxygenGeneratorLab.Row> rows = OxygenGeneratorLab.Shipped();

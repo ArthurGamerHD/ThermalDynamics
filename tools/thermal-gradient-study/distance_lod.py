@@ -4,10 +4,12 @@ import itertools
 import numpy as np
 
 
+# pixels per metre operation.
 def pixels_per_metre(distance,height=1080,fov_degrees=60):
     return height/(2*math.tan(math.radians(fov_degrees)/2)*max(distance,.1))
 
 
+# coarse nodes operation.
 def coarse_nodes(nodes,cell):
     """Stable grid-local cells. Clip outer cells to the original overall bounds."""
     occupied={}
@@ -22,14 +24,15 @@ def coarse_nodes(nodes,cell):
             for k in sorted(occupied)]
 
 
+# desired level operation.
 def desired_level(levels,distance,grid_metres=2.5,pixel_error=3.,height=1080,fov=60):
-    # Cell diagonal bounds displacement conservatively; level zero is full source.
     ppm=pixels_per_metre(distance,height,fov)
     allowed=[i for i,l in enumerate(levels) if l['errorMetres']*ppm<=pixel_error]
     level=max(allowed,default=0)
     return 0 if levels[level]['errorMetres']==0 and grid_metres*ppm>=12 else level
 
 
+# allocate operation.
 def allocate(grids,budget=6000,pixel_error=3.):
     """Reserve visible-grid coverage first, then upgrade nearer grids first.
 
@@ -49,11 +52,13 @@ def allocate(grids,budget=6000,pixel_error=3.):
     return selected
 
 
+# transition cost operation.
 def transition_cost(grids,old,new):
     return sum(g['levels'][a]['triangles']+(g['levels'][b]['triangles'] if a!=b else 0)
                for g,a,b in zip(grids,old,new))
 
 
+# smooth weight operation.
 def smooth_weight(elapsed,duration=.3):
     t=max(0.,min(1.,elapsed/duration))
     return t*t*(3-2*t)

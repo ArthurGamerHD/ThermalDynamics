@@ -3,54 +3,21 @@ using System.Collections.Generic;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// What one build component is made of, thermally.
-    ///
-    /// Conductivity and specific heat are real units, the same ones a materials table gives, and
-    /// the game's pace is set once elsewhere — in <c>ThermalConstants.ConductionScale</c> and
-    /// <c>HeatTimeScale</c> — so nothing here is a balance figure.
-    /// </summary>
     public struct BlockMaterial
     {
-        /// <summary>Thermal conductivity, W/(m K).</summary>
         public float Conductivity;
 
-        /// <summary>Specific heat capacity, J/(kg K).</summary>
         public float SpecificHeat;
 
-        /// <summary>Grey-body emissivity, 0..1. Also used as solar absorptivity.</summary>
         public float Emissivity;
 
-        /// <summary>
-        /// Kelvin at which the material stops doing its job — **not its melting point**. Steel melts at
-        /// 1,700 K and has lost half its yield strength by 850; a motor winding is limited by its
-        /// insulation and silicon by about 425. This is where the spread between block types comes from.
-        /// </summary>
         public float ServiceLimit;
 
-        /// <summary>
-        /// True when the component has no real-world counterpart and these figures are invented.
-        ///
-        /// Kept as a flag rather than a comment because it is the honest answer to "where did this
-        /// number come from" for a third of the table, and a reader deserves to be told which
-        /// third. `EveryInventedMaterialSitsInsideTheRangeOfTheRealOnes` keeps the invention modest.
-        /// </summary>
         public bool Invented;
     }
 
-    /// <summary>
-    /// The material properties of every component Space Engineers builds blocks out of, and so the
-    /// basis of <see cref="BlockThermalDerivation"/>. Real figures are ordinary engineering
-    /// references; where a component is invented so are its numbers, and
-    /// <see cref="BlockMaterial.Invented"/> says which. Free of any Space Engineers type, so the whole
-    /// derivation is testable outside a session.
-    /// </summary>
     public static class BlockMaterials
     {
-        /// <summary>
-        /// Mild steel: the fallback for any component this table does not know, including
-        /// components added by a future game update or by another mod.
-        /// </summary>
         public static readonly BlockMaterial Steel = new BlockMaterial
         {
             Conductivity = ReferenceMaterials.MildSteel.Conductivity,
@@ -59,6 +26,7 @@ namespace Thermodynamics.Core
             ServiceLimit = 900f,
         };
 
+/// <summary>Builds the method table.</summary>
         private static readonly Dictionary<string, BlockMaterial> Table = Build();
 
         public static ICollection<string> Names
@@ -66,18 +34,20 @@ namespace Thermodynamics.Core
             get { return Table.Keys; }
         }
 
-        /// <summary>The material for a component, or <see cref="Steel"/> when it is unknown.</summary>
+/// <summary>Returns the .</summary>
         public static BlockMaterial Get(string component)
         {
             BlockMaterial material;
             return component != null && Table.TryGetValue(component, out material) ? material : Steel;
         }
 
+/// <summary>IsKnown operation.</summary>
         public static bool IsKnown(string component)
         {
             return component != null && Table.ContainsKey(component);
         }
 
+/// <summary>Adds a .</summary>
         private static void Add(Dictionary<string, BlockMaterial> table, string component,
             float conductivity, float specificHeat, float emissivity, float serviceLimit,
             bool invented = false)
@@ -92,11 +62,7 @@ namespace Thermodynamics.Core
             };
         }
 
-        /// <summary>
-        /// A component made of a material the reference table holds, so its two bulk figures come
-        /// off that table rather than being typed again. Emissivity and the service limit stay
-        /// arguments: both are properties of the component rather than of the substance.
-        /// </summary>
+/// <summary>Adds a of.</summary>
         private static void AddOf(Dictionary<string, BlockMaterial> table, string component,
             ReferenceMaterials.Reference material, float emissivity, float serviceLimit)
         {
@@ -104,13 +70,11 @@ namespace Thermodynamics.Core
                 emissivity, serviceLimit);
         }
 
+/// <summary>Builds the method table.</summary>
         private static Dictionary<string, BlockMaterial> Build()
         {
             Dictionary<string, BlockMaterial> t = new Dictionary<string, BlockMaterial>();
 
-            // ---- structural steel ------------------------------------------------------------
-            // Mild steel throughout. They differ only in surface: a flat plate is smoother than a
-            // mesh or a girder, and emissivity is a surface property.
             AddOf(t, "SteelPlate", ReferenceMaterials.MildSteel, 0.15f, 900f);
             AddOf(t, "Construction", ReferenceMaterials.MildSteel, 0.15f, 900f);
             AddOf(t, "SmallTube", ReferenceMaterials.MildSteel, 0.20f, 900f);
@@ -118,74 +82,38 @@ namespace Thermodynamics.Core
             AddOf(t, "MetalGrid", ReferenceMaterials.MildSteel, 0.30f, 900f);
             AddOf(t, "Girder", ReferenceMaterials.MildSteel, 0.25f, 900f);
 
-            // A thin painted interior panel. Lighter gauge and a painted face, which is why it
-            // radiates far better than bare plate — paint of any colour runs about 0.9.
             Add(t, "InteriorPlate", 40f, 500f, 0.35f, 800f);
 
-            // ---- glass -----------------------------------------------------------------------
-            // Soda-lime glass: 1.0 W/(m K), 840 J/(kg K), emissivity 0.92. Two orders of magnitude
-            // below steel in conductivity, which is the single largest material distinction in the
-            // game and the reason windows deserve an entry of their own.
             AddOf(t, "BulletproofGlass", ReferenceMaterials.SodaLimeGlass, 0.92f, 800f);
 
-            // ---- electrical ------------------------------------------------------------------
-            // Copper windings on steel laminations, roughly half and half by mass. Limited by the
-            // winding insulation — class H is 453 K — long before either metal cares.
             Add(t, "Motor", 120f, 420f, 0.20f, 450f);
 
-            // Copper-stabilised filament. Very conductive, bright, and it quenches when warm.
             Add(t, "Superconductor", 350f, 390f, 0.05f, 400f);
 
-            // Epoxy board, silicon and a little copper. The epoxy sets the bulk properties and the
-            // silicon sets the limit: a junction is done at about 425 K.
             Add(t, "Computer", 15f, 700f, 0.85f, 400f);
             Add(t, "Detector", 15f, 700f, 0.80f, 400f);
             Add(t, "RadioCommunication", 30f, 700f, 0.60f, 400f);
             Add(t, "Display", 1.5f, 800f, 0.90f, 400f);
 
-            // Encapsulated silicon under glass, so it behaves far more like the glass than like
-            // the wafer. Dark and deliberately absorptive, which is what a solar cell is for.
             Add(t, "SolarCell", 30f, 700f, 0.85f, 400f);
 
-            // Lithium-ion: about 1,000 J/(kg K), poorly conductive across the stack, and in thermal
-            // runaway by 420 K. The most fragile thing in ordinary use.
             Add(t, "PowerCell", 3.0f, 1000f, 0.85f, 360f);
 
-            // ---- reactive and refractory -----------------------------------------------------
-            // Fuel in a graphite and steel assembly. Built to run hot, which is the whole point.
             Add(t, "Reactor", 30f, 600f, 0.25f, 1200f);
 
-            // A nozzle alloy in the Inconel family: about 15 W/(m K), 500 J/(kg K), and oxidised
-            // to a high emissivity by use.
             Add(t, "Thrust", 15f, 500f, 0.40f, 1600f);
 
-            // Chemical explosive. Cooks off well below anything structural.
             Add(t, "Explosives", 0.3f, 1400f, 0.90f, 450f);
 
-            // ---- fittings and fluids ---------------------------------------------------------
-            // A medical bay is mostly water, plastics and fluids, which is why it holds so much
-            // heat per kilogram and tolerates so little.
             Add(t, "Medical", 3f, 1500f, 0.90f, 350f);
 
-            // ---- soft goods ------------------------------------------------------------------
-            // Fabric and stuffing. Almost an insulator, and it holds a great deal of heat for its
-            // mass. Also the fix for a real defect: a plushie was being simulated as a kilogram of
-            // steel with a heat capacity of 2 J/K, which made it the stiffest object on a fleet and
-            // set the substep count for whole capital ships. See docs/stiffness.md.
             Add(t, "EngineerPlushie", 0.05f, 1300f, 0.95f, 500f);
             Add(t, "EngineerPlushieSE2", 0.05f, 1300f, 0.95f, 500f);
             Add(t, "SabiroidPlushie", 0.05f, 1300f, 0.95f, 500f);
 
-            // ---- invented --------------------------------------------------------------------
-            // Nothing below has a real counterpart. The figures are chosen inside the range the
-            // real materials above already span, so an invented component can flavour a block but
-            // cannot take it anywhere the rest of the table could not.
             Add(t, "GravityGenerator", 60f, 450f, 0.20f, 1000f, true);
             Add(t, "ZoneChip", 15f, 700f, 0.80f, 1000f, true);
 
-            // Prototech: recovered alloys, better than anything built from ore. Slightly more
-            // conductive than steel, a little more heat-tolerant, and in the cooling unit's case
-            // deliberately built to move heat.
             Add(t, "PrototechFrame", 80f, 500f, 0.25f, 1500f, true);
             Add(t, "PrototechPanel", 90f, 500f, 0.30f, 1500f, true);
             Add(t, "PrototechMachinery", 70f, 480f, 0.25f, 1500f, true);
@@ -197,7 +125,7 @@ namespace Thermodynamics.Core
             return t;
         }
 
-        /// <summary>The lowest and highest figure any *real* material in the table carries.</summary>
+/// <summary>RealRange operation.</summary>
         public static void RealRange(Func<BlockMaterial, float> property, out float lowest, out float highest)
         {
             lowest = float.MaxValue;
@@ -207,6 +135,7 @@ namespace Thermodynamics.Core
             {
                 if (material.Invented) continue;
 
+/// <summary>property operation.</summary>
                 float value = property(material);
                 if (value < lowest) lowest = value;
                 if (value > highest) highest = value;

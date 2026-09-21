@@ -5,20 +5,13 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The parts of the game adapter that can be checked without the game: the gate that decides
-    /// whether a tick is worth sampling the world for, and the coolant plumbing table.
-    /// </summary>
     public class HostAdapterTests
     {
-        // ---- step pacing -------------------------------------------------------------------
 
-        /// <summary>
-        /// A hull the pacing can be watched on. Small and inert: what is being counted is steps,
-        /// not what a step does.
-        /// </summary>
+/// <summary>Paced operation.</summary>
         private static ThermalSimulation Paced(int frequency, float speed)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.Frequency = frequency;
             settings.SimulationSpeed = speed;
@@ -32,6 +25,7 @@ namespace Thermodynamics.Tests
             return builder.BuildSimulation(settings, 300f);
         }
 
+/// <summary>Frames operation.</summary>
         private static long Frames(ThermalSimulation simulation, int frames, float frameSeconds)
         {
             long before = simulation.StepsCompleted;
@@ -39,59 +33,37 @@ namespace Thermodynamics.Tests
             return simulation.StepsCompleted - before;
         }
 
-        /// <summary>
-        /// **The step rate is what `Frequency` says, measured on the path the game actually
-        /// drives.**
-        ///
-        /// <para>
-        /// It used to be measured on `SimulationScheduler.StepsDue`, a second step-credit
-        /// accumulator that no shipped code called — the pacing is `ThermalSimulation.Update`,
-        /// which banks work credit against the frame it is handed and spends it a slice at a time.
-        /// A test on the wrong one of those is why a degraded-input row spent months naming a
-        /// mechanism the mod cannot perform (backlog.md `F23`).
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>FrequencyIsStepsPerSimulatedSecond operation.</summary>
         public void FrequencyIsStepsPerSimulatedSecond()
         {
             Assert.Equal(4, Frames(Paced(4, 1f), 60, 1f / 60f));
         }
 
-        /// <summary>The rate is pinned above; this is the multiplier on top of it.</summary>
         [Fact]
+/// <summary>SimulationSpeedMultipliesTheStepRate operation.</summary>
         public void SimulationSpeedMultipliesTheStepRate()
         {
             Assert.Equal(12, Frames(Paced(4, 3f), 60, 1f / 60f));
         }
 
-        /// <summary>
-        /// **A long frame cannot produce a burst of steps**, which is the lump the pacing exists to
-        /// avoid: an update completes at most one step whatever it is handed, and the credit above
-        /// one step's work is discarded rather than banked.
-        ///
-        /// <para>
-        /// The shipped adapter never hands it a long frame — `ThermalGridScheduler` passes a
-        /// constant sixtieth — so this is the guard rather than a thing that happens. What a
-        /// stalling machine really does is run fewer *ticks*, which is a rate difference and is
-        /// measured as one in `ClientInputTests`.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>ALongFrameDoesNotProduceABurstOfSteps operation.</summary>
         public void ALongFrameDoesNotProduceABurstOfSteps()
         {
             Assert.Equal(1, Frames(Paced(4, 1f), 1, 60f));
         }
 
-        /// <summary>A zero-length frame advances nothing.</summary>
         [Fact]
+/// <summary>AZeroLengthFrameStepsNothing operation.</summary>
         public void AZeroLengthFrameStepsNothing()
         {
             Assert.Equal(0, Frames(Paced(4, 1f), 10, 0f));
         }
 
-        // ---- coolant plumbing --------------------------------------------------------------
 
         [Fact]
+/// <summary>StraightPipeLinksForwardAndBackward operation.</summary>
         public void StraightPipeLinksForwardAndBackward()
         {
             CoolantShape shape = ThermalCoolantShapes.Get("Gauge_LG_CoolantPipe_Straight", Vector3I.One);
@@ -105,6 +77,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>CornerPipeTurns operation.</summary>
         public void CornerPipeTurns()
         {
             CoolantShape shape = ThermalCoolantShapes.Get("Gauge_LG_CoolantPipe_Corner", Vector3I.One);
@@ -114,6 +87,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>SinkVariantsCarryTheirPlates operation.</summary>
         public void SinkVariantsCarryTheirPlates()
         {
             Assert.Single(ThermalCoolantShapes.Get("Gauge_LG_CoolantPipe_Straight_SingleSink", Vector3I.One).SinkPorts);
@@ -123,6 +97,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>BothGridSizesResolveToTheSamePlumbing operation.</summary>
         public void BothGridSizesResolveToTheSamePlumbing()
         {
             CoolantShape large = ThermalCoolantShapes.Get("Gauge_LG_CoolantPipe_Corner_DoubleSink", Vector3I.One);
@@ -133,11 +108,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(large.SinkPorts.Length, small.SinkPorts.Length);
         }
 
-        /// <summary>
-        /// The old crawler multiplied the pump's port offset by three for the small grid, by
-        /// subtype name. The port now sits on whichever cell the block's own size puts it on.
-        /// </summary>
         [Fact]
+/// <summary>PumpPortsSitAtTheEndsOfTheBlockWhateverItsLength operation.</summary>
         public void PumpPortsSitAtTheEndsOfTheBlockWhateverItsLength()
         {
             CoolantShape shortPump = ThermalCoolantShapes.Get("Gauge_LG_CoolantPump", Vector3I.One);
@@ -154,6 +126,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ABlockWithNoPlumbingHasNoShape operation.</summary>
         public void ABlockWithNoPlumbingHasNoShape()
         {
             Assert.Null(ThermalCoolantShapes.Get("LargeBlockArmorBlock", Vector3I.One));
@@ -162,6 +135,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>PrefixStrippingLeavesUnprefixedNamesAlone operation.</summary>
         public void PrefixStrippingLeavesUnprefixedNamesAlone()
         {
             Assert.Equal("CoolantPump", ThermalCoolantShapes.StripGridPrefix("Gauge_LG_CoolantPump"));
@@ -169,13 +143,11 @@ namespace Thermodynamics.Tests
             Assert.Equal("SomeOtherMod_Pipe", ThermalCoolantShapes.StripGridPrefix("SomeOtherMod_Pipe"));
         }
 
-        /// <summary>
-        /// A pump built from the table has to actually close a ring in the model, which is the
-        /// only thing the plumbing table exists to do.
-        /// </summary>
         [Fact]
+/// <summary>ShapesFromTheTableFormAWorkingRing operation.</summary>
         public void ShapesFromTheTableFormAWorkingRing()
         {
+/// <summary>GridModel operation.</summary>
             GridModel grid = new GridModel(2.5f);
 
             BlockModel straight = BlockModel.Solid("CoolantPipe_Straight", Vector3I.One, 220f, new BlockThermalProperties());
@@ -184,7 +156,6 @@ namespace Thermodynamics.Tests
             BlockModel pump = BlockModel.Solid("CoolantPump", Vector3I.One, 600f, new BlockThermalProperties());
             pump.WithCoolant(ThermalCoolantShapes.Get("Gauge_LG_CoolantPump", Vector3I.One));
 
-            // A straight run cannot close on itself, so this is a dead end, not a ring.
             grid.Add(pump, Vector3I.Zero);
             grid.Add(straight, new Vector3I(0, 0, 1));
 

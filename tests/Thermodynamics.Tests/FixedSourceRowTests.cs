@@ -5,21 +5,9 @@ using VRageMath;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Waste heat, solar gain and friction are all fixed for the length of a step — none of them
-    /// depends on a node's temperature — so the environment pass carries their sum as one row and
-    /// reads that instead of three arrays per node per substep. The pass is bound by how many node
-    /// arrays it streams, and the three separate rows survive only for the diagnostics substep.
-    ///
-    /// <para>
-    /// The risk that buys is a row that disagrees with its parts: the reported heat gain would
-    /// then be a different number from the four figures a player sees beside it, and nothing else
-    /// in the model would notice. These pin the two together, on a hull where all three terms are
-    /// live and on one where only waste heat is.
-    /// </para>
-    /// </summary>
     public class FixedSourceRowTests
     {
+/// <summary>Hull operation.</summary>
         private static ThermalSimulation Hull()
         {
             ThermalSimulation simulation = Hulls.Driven();
@@ -27,10 +15,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-        /// <summary>
-        /// Sums the four per-node figures the diagnostics publish, which between them are what the
-        /// combined row holds.
-        /// </summary>
+/// <summary>SumOfParts operation.</summary>
         private static float SumOfParts(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -48,29 +33,25 @@ namespace Thermodynamics.Tests
             return total;
         }
 
-        /// <summary>
-        /// In sunlight and fast wind, where waste heat, solar and friction are all non-zero and a
-        /// row that dropped any one of them would still look plausible.
-        /// </summary>
         [Fact]
+/// <summary>TheReportedHeatGainIsTheSumOfTheFiguresBesideIt operation.</summary>
         public void TheReportedHeatGainIsTheSumOfTheFiguresBesideIt()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation simulation = Hull();
 
             simulation.StepExact(6,
                 Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 140f));
 
+/// <summary>SumOfParts operation.</summary>
             float parts = SumOfParts(simulation);
 
             Assert.True(parts > 0f, "the hull gained nothing, so this test asserts nothing");
             Assert.Equal(parts, simulation.HeatGainWatts, 1);
         }
 
-        /// <summary>
-        /// A generating block with no exposed face takes the buried branch, which reads the same
-        /// row without ever filling a solar or friction term into it.
-        /// </summary>
         [Fact]
+/// <summary>ABuriedProducerStillReportsItsWasteHeat operation.</summary>
         public void ABuriedProducerStillReportsItsWasteHeat()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -93,13 +74,11 @@ namespace Thermodynamics.Tests
             Assert.True(reactor.HeatGenerationWatts > 0f);
         }
 
-        /// <summary>
-        /// Switching a mechanism off must empty its share of the row rather than leave the
-        /// previous step's value in it.
-        /// </summary>
         [Fact]
+/// <summary>SwitchingSolarAndFrictionOffEmptiesTheirShareOfTheRow operation.</summary>
         public void SwitchingSolarAndFrictionOffEmptiesTheirShareOfTheRow()
         {
+/// <summary>Hull operation.</summary>
             ThermalSimulation simulation = Hull();
             EnvironmentSample sample = Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 140f);
 

@@ -8,18 +8,6 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// What a substep costs, split into what it spends per node, per conduction link and per exposed
-    /// face — the coefficients <c>MaxElementVisitsPerStep</c> charges in.
-    ///
-    /// <para>
-    /// **Two fits, not one.** On a cube lattice <c>faces ≈ 6*nodes − 2*links</c>, so exposure and link
-    /// count are collinear and no single fit can separate them; the environment is separated by
-    /// differencing each shape measured twice instead. **Absolute nanoseconds here are a floor, not a
-    /// prediction** — the harness is .NET 9 and the game is .NET 4.8, so only the ratios transfer.
-    /// See benchmarks.md, What a substep costs.
-    /// </para>
-    /// </summary>
     public static class ElementCostLab
     {
         public class Row
@@ -28,25 +16,19 @@ namespace Thermodynamics.Harness
             public int Nodes;
             public int Links;
 
-            /// <summary>Exposed cell faces summed over every node: what the environment pass walks.</summary>
             public int Faces;
 
             public double LinksPerNode;
             public double FacesPerNode;
 
-            /// <summary>Substeps each step was cut into, which differs per shape by stiffness.</summary>
             public double SubstepsPerStep;
 
-            /// <summary>Substep passes the timed run made. A short run measures noise.</summary>
             public long Substeps;
 
-            /// <summary>Nanoseconds per substep with the environment switched off.</summary>
             public double ConductionNanoseconds;
 
-            /// <summary>Nanoseconds per substep with radiation, convection and solar on.</summary>
             public double EnvironmentNanoseconds;
 
-            /// <summary>What the environment pass added.</summary>
             public double EnvironmentCost
             {
                 get { return EnvironmentNanoseconds - ConductionNanoseconds; }
@@ -55,34 +37,24 @@ namespace Thermodynamics.Harness
 
         public class Fit
         {
-            /// <summary>Nanoseconds a substep spends per node, before any exposure.</summary>
             public double PerNode;
 
-            /// <summary>Nanoseconds a substep spends per conduction link.</summary>
             public double PerLink;
 
-            /// <summary>Nanoseconds the environment pass spends per node, whatever its exposure.</summary>
             public double PerEnvironmentNode;
 
-            /// <summary>Nanoseconds the environment pass spends per exposed cell face.</summary>
             public double PerFace;
 
-            /// <summary>How many links one node is worth, before any exposure.</summary>
             public double NodeWeight
             {
                 get { return PerLink <= 0d ? 0d : PerNode / PerLink; }
             }
 
-            /// <summary>How many links one exposed face is worth.</summary>
             public double FaceWeight
             {
                 get { return PerLink <= 0d ? 0d : PerFace / PerLink; }
             }
 
-            /// <summary>
-            /// How many links one node is worth once the environment is on: its share of the
-            /// conduction pass plus its share of the environment pass, before exposure.
-            /// </summary>
             public double NodeWeightWithEnvironment
             {
                 get { return PerLink <= 0d ? 0d : (PerNode + PerEnvironmentNode) / PerLink; }
@@ -91,16 +63,11 @@ namespace Thermodynamics.Harness
             public double ConductionRSquared;
             public double EnvironmentRSquared;
 
+/// <summary>List operation.</summary>
             public List<Row> Rows = new List<Row>();
         }
 
-        /// <summary>
-        /// Shapes chosen for their link-to-node ratio, spanning as much of the range as a lattice
-        /// allows: isolated blocks touch nothing, a stick is a chain, a plate is two-dimensional,
-        /// and a solid box approaches three links per node. The hollow box is here to break the
-        /// collinearity as far as it can be broken — it has a box's surface with a shell's link
-        /// count. The ship is held out of both fits and predicted from them as a check.
-        /// </summary>
+/// <summary>Shapes operation.</summary>
         private static IEnumerable<KeyValuePair<string, HashSet<Vector3I>>> Shapes(int target)
         {
             int side = Math.Max(2, (int)Math.Round(Math.Pow(target, 1d / 3d)));
@@ -117,14 +84,13 @@ namespace Thermodynamics.Harness
             yield return new KeyValuePair<string, HashSet<Vector3I>>(
                 "box", GridShapes.SolidBox(Vector3I.Zero, new Vector3I(side, side, side)));
 
-            // The shipped ship shape at its own proportions. Its size need not match the others:
-            // the fit predicts from nodes, links and faces, not from grid size.
             yield return new KeyValuePair<string, HashSet<Vector3I>>("ship", GridShapes.Ship());
         }
 
-        /// <summary>Blocks spaced so none touches another: nodes with no links at all.</summary>
+/// <summary>Dust operation.</summary>
         private static HashSet<Vector3I> Dust(int count)
         {
+/// <summary>HashSet operation.</summary>
             HashSet<Vector3I> cells = new HashSet<Vector3I>(Vector3I.Comparer);
             int side = Math.Max(1, (int)Math.Ceiling(Math.Pow(count, 1d / 3d)));
 
@@ -136,12 +102,10 @@ namespace Thermodynamics.Harness
             return cells;
         }
 
-        /// <summary>
-        /// A spine with teeth: every second block on a stick carries a one-block branch. Fills the
-        /// gap between dust and a stick, where a fit is otherwise extrapolating.
-        /// </summary>
+/// <summary>Comb operation.</summary>
         private static HashSet<Vector3I> Comb(int count)
         {
+/// <summary>HashSet operation.</summary>
             HashSet<Vector3I> cells = new HashSet<Vector3I>(Vector3I.Comparer);
             int z = 0;
 
@@ -154,6 +118,7 @@ namespace Thermodynamics.Harness
             return cells;
         }
 
+/// <summary>Sets the tings.</summary>
         private static ThermalSettings Settings(bool environment)
         {
             ThermalSettings settings = new ThermalSettings
@@ -161,16 +126,8 @@ namespace Thermodynamics.Harness
                 Frequency = 4,
                 SimulationSpeed = 1f,
 
-                // Deliberately stiff. At the shipped 225 these grids demand a single substep a
-                // step, so a per-substep figure would be measuring the per-step overhead the
-                // substep loop sits inside — array syncing, environment precompute, write-back —
-                // rather than the per-element work a budget charges for. Running thermal time
-                // fast forces tens of substeps a step, which is the regime a large grid is in and
-                // the one the budget exists to bound. HeatTimeScale divides heat capacity, so a
-                // large value is a stiff grid.
                 HeatTimeScale = 20000f,
 
-                // The measurement is cost per substep, so nothing may refuse or shorten one.
                 MaxSubsteps = 4096,
                 MaxSubstepsPerBlock = 0,
                 MaxElementVisitsPerStep = 0,
@@ -186,6 +143,7 @@ namespace Thermodynamics.Harness
             return settings;
         }
 
+/// <summary>Measure operation.</summary>
         private static double Measure(
             HashSet<Vector3I> cells, bool environment, float seconds,
             out int nodeCount, out int links, out int faces, out long substepCount, out double perStep)
@@ -195,8 +153,6 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(Settings(environment));
 
-            // A gradient across the grid, so no link can be skipped for having equal ends — a
-            // settled grid measures the branch that decides not to work rather than the work.
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             for (int i = 0; i < nodes.Count; i++)
             {
@@ -215,8 +171,6 @@ namespace Thermodynamics.Harness
 
             int steps = Math.Max(1, (int)(seconds * simulation.Settings.StepsPerSecond));
 
-            // Warm up: the first pass through the solver is the JIT, and the first touch of every
-            // flat array is a page fault. Neither is what a budget needs to charge for.
             simulation.StepExact(Math.Min(steps, 8), sample);
 
             long substepsBefore = simulation.Work.SolverSubsteps;
@@ -235,12 +189,7 @@ namespace Thermodynamics.Harness
             return (clock.Elapsed.TotalMilliseconds * 1e6) / substeps;
         }
 
-        /// <summary>
-        /// Best of three, for the reason <see cref="FrequencyLab"/> documents: a mean measures the
-        /// machine's other work, and the fastest run is the one where the solver had the core to
-        /// itself. Both conditions are measured the same way, since the environment cost is their
-        /// difference and a noisy minuend would swamp it.
-        /// </summary>
+/// <summary>Best operation.</summary>
         private static Row Best(string shape, HashSet<Vector3I> cells, float seconds)
         {
             int nodes = 0, links = 0, faces = 0;
@@ -256,9 +205,11 @@ namespace Thermodynamics.Harness
                 long sc;
                 double ps;
 
+/// <summary>Measure operation.</summary>
                 double cold = Measure(cells, false, seconds, out n, out l, out f, out sc, out ps);
                 if (cold < conduction) conduction = cold;
 
+/// <summary>Measure operation.</summary>
                 double hot = Measure(cells, true, seconds, out n, out l, out f, out sc, out ps);
                 if (hot < environment) environment = hot;
 
@@ -284,11 +235,7 @@ namespace Thermodynamics.Harness
             };
         }
 
-        /// <summary>
-        /// Least squares through the origin on two predictors. No intercept, because a substep over
-        /// an empty grid does no work — an intercept would be fitting the per-step overhead the
-        /// substep loop sits inside, which a budget charges once per step rather than per element.
-        /// </summary>
+/// <summary>Solve2 operation.</summary>
         public static void Solve2(
             IList<Row> rows, Func<Row, double> x1, Func<Row, double> x2, Func<Row, double> y,
             out double a, out double b, out double r2)
@@ -297,6 +244,7 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < rows.Count; i++)
             {
+/// <summary>x1 operation.</summary>
                 double p = x1(rows[i]), q = x2(rows[i]), v = y(rows[i]);
                 s11 += p * p;
                 s22 += q * q;
@@ -323,6 +271,7 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < rows.Count; i++)
             {
                 double predicted = (a * x1(rows[i])) + (b * x2(rows[i]));
+/// <summary>y operation.</summary>
                 double actual = y(rows[i]);
                 residual += (actual - predicted) * (actual - predicted);
                 total += (actual - mean) * (actual - mean);
@@ -330,15 +279,17 @@ namespace Thermodynamics.Harness
             r2 = total <= 0d ? 1d : 1d - (residual / total);
         }
 
-        /// <summary>Least squares through the origin on one predictor.</summary>
+/// <summary>Solve1 operation.</summary>
         public static void Solve1(
             IList<Row> rows, Func<Row, double> x, Func<Row, double> y, out double a, out double r2)
         {
             double sxx = 0, sxy = 0;
             for (int i = 0; i < rows.Count; i++)
             {
+/// <summary>x operation.</summary>
                 double p = x(rows[i]);
                 sxx += p * p;
+/// <summary>y operation.</summary>
                 sxy += p * y(rows[i]);
             }
 
@@ -351,7 +302,9 @@ namespace Thermodynamics.Harness
             double residual = 0, total = 0;
             for (int i = 0; i < rows.Count; i++)
             {
+/// <summary>x operation.</summary>
                 double predicted = a * x(rows[i]);
+/// <summary>y operation.</summary>
                 double actual = y(rows[i]);
                 residual += (actual - predicted) * (actual - predicted);
                 total += (actual - mean) * (actual - mean);
@@ -359,15 +312,12 @@ namespace Thermodynamics.Harness
             r2 = total <= 0d ? 1d : 1d - (residual / total);
         }
 
-        /// <summary>
-        /// Shapes to measure, or null for all of them. A large run is dominated by building the
-        /// grids, so a sweep at half a million blocks is worth restricting to the shapes that
-        /// span the ratio — stick, plate and box do that on their own.
-        /// </summary>
         public static string[] OnlyShapes;
 
+/// <summary>Run operation.</summary>
         public static Fit Run(int target = 8000, float seconds = 20f)
         {
+/// <summary>Fit operation.</summary>
             Fit fit = new Fit();
 
             foreach (KeyValuePair<string, HashSet<Vector3I>> shape in Shapes(target))
@@ -376,16 +326,7 @@ namespace Thermodynamics.Harness
                 fit.Rows.Add(Best(shape.Key, shape.Value, seconds));
             }
 
-            // The ship is held out and predicted: a shape the coefficients have never seen is the
-            // only honest test of whether they predict anything.
-            //
-            // Dust is held out for a different reason. With no links it has no conduction
-            // stiffness, so it demands one substep however stiff the settings are, and its
-            // per-substep figure is really the per-step overhead — array syncing, environment
-            // sampling, write-back — which is an order of magnitude larger than the per-element
-            // work and is charged once a step rather than per element. Leaving it in drove the
-            // per-link coefficient negative. It stays in the table because that overhead is worth
-            // seeing; it does not belong in a per-element fit.
+/// <summary>List operation.</summary>
             List<Row> fitted = new List<Row>();
             for (int i = 0; i < fit.Rows.Count; i++)
             {
@@ -397,10 +338,6 @@ namespace Thermodynamics.Harness
             Solve2(fitted, r => r.Nodes, r => r.Links, r => r.ConductionNanoseconds,
                 out perNode, out perLink, out conductionR2);
 
-            // The environment pass is fitted on nodes *and* faces. Per face alone does not
-            // describe it: the measured cost per face rises sevenfold as exposure falls, because
-            // most of the pass is per node — sampling the environment, the four radiation terms'
-            // setup, the write-back — and only the face loop inside it scales with exposure.
             double perEnvironmentNode, perFace, environmentR2;
             Solve2(fitted, r => r.Nodes, r => r.Faces, r => r.EnvironmentCost,
                 out perEnvironmentNode, out perFace, out environmentR2);
@@ -414,22 +351,26 @@ namespace Thermodynamics.Harness
             return fit;
         }
 
-        /// <summary>What the fitted model says a substep on this grid should cost, in nanoseconds.</summary>
+/// <summary>Predict operation.</summary>
         public static double Predict(Fit fit, Row row)
         {
             return (fit.PerNode * row.Nodes) + (fit.PerLink * row.Links)
                 + (fit.PerEnvironmentNode * row.Nodes) + (fit.PerFace * row.Faces);
         }
 
+/// <summary>N operation.</summary>
         private static string N(double value, int decimals = 2)
         {
             return value.ToString("n" + decimals, CultureInfo.InvariantCulture);
         }
 
+/// <summary>Report operation.</summary>
         public static string Report(int target = 8000, float seconds = 20f)
         {
+/// <summary>Run operation.</summary>
             Fit fit = Run(target, seconds);
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append("Element cost: what a substep spends per node, link and exposed face\n");
             sb.Append("==================================================================\n\n");
@@ -445,6 +386,7 @@ namespace Thermodynamics.Harness
 
             foreach (Row row in fit.Rows)
             {
+/// <summary>Predict operation.</summary>
                 double predicted = Predict(fit, row);
                 double error = row.EnvironmentNanoseconds <= 0d
                     ? 0d
@@ -482,10 +424,13 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>Csv operation.</summary>
         public static string Csv(int target = 8000, float seconds = 20f)
         {
+/// <summary>Run operation.</summary>
             Fit fit = Run(target, seconds);
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append("shape,nodes,links,faces,links_per_node,faces_per_node,conduction_ns,"
                 + "environment_ns,predicted_ns,ns_per_node,ns_per_link,ns_per_environment_node,"
@@ -515,6 +460,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>R operation.</summary>
         private static string R(double value)
         {
             return value.ToString("r", CultureInfo.InvariantCulture);

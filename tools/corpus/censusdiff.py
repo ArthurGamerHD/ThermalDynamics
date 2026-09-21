@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """**What changed between two censuses, and whether the predictions written before the run hold.**
 
 `reproduce.py` asks whether two walks that saw the same ship wrote the same row — a check that
@@ -32,8 +31,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import scoring
 
-# Columns worth comparing, and what each one answers. Everything else in a census row is an
-# identifier, a name, or a figure derived from these.
 HEAT = ["waste_idle_w", "waste_full_w", "waste_burn_w", "installed_power_w", "consumer_draw_w"]
 
 GEOMETRY = ["blocks", "grids", "joints", "rooms", "exposed_blocks", "buried_blocks",
@@ -46,6 +43,7 @@ COLUMNS = HEAT + GEOMETRY
 
 
 
+# read operation.
 def read(directory, name):
     """One census file as a dict keyed by ship, or an empty dict when it is not there."""
     path = os.path.join(directory, name)
@@ -56,6 +54,7 @@ def read(directory, name):
         return {scoring.key_of(r): r for r in csv.DictReader(handle)}, path
 
 
+# composition operation.
 def composition(directory):
     """Watts of full-load waste by type id, and how many ships carry each."""
     path = os.path.join(directory, "composition.csv")
@@ -72,6 +71,7 @@ def composition(directory):
     return watts, {t: len(s) for t, s in ships.items()}
 
 
+# share operation.
 def share(before, after):
     """`after / before - 1` as a percentage, or None where there is nothing to divide by."""
     if before == 0:
@@ -79,6 +79,7 @@ def share(before, after):
     return (after / before - 1.0) * 100.0
 
 
+# main operation.
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("before")
@@ -116,11 +117,6 @@ def main(argv=None):
 
     moves = {}
     for column in COLUMNS:
-        # **A column one census does not carry is absent, not nought** (`E8`, `C8`). Summed as
-        # zero it printed as a total — *before 0, after 12,345* reads as a column that grew, when
-        # what happened is that one of the two censuses has no such column. Comparing censuses
-        # taken on different builds is what this tool is for, and columns coming and going between
-        # builds is what `C8` is about, so this is the case rather than the corner.
         readings_before = [scoring.number(before[k], column) for k in shared]
         readings_after = [scoring.number(after[k], column) for k in shared]
 

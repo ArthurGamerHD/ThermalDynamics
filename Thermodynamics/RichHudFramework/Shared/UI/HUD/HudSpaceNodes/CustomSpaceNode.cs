@@ -5,30 +5,21 @@ namespace RichHudFramework
 {
 	namespace UI
 	{
-		/// <summary>
-		/// HudSpace node that uses a completely user-supplied world matrix each frame.
-		/// If no delegate is assigned, the node simply inherits its parent's Plane-to-World matrix.
-		/// <para>Ideal for attaching UI to moving cockpits, turret bases, custom billboards, etc.</para>
-		/// </summary>
 		public class CustomSpaceNode : HudSpaceNodeBase
 		{
-			/// <summary>
-			/// Delegate called every frame to retrieve the current Plane-to-World matrix.
-			/// If null, the node falls back to its parent's matrix.
-			/// </summary>
 			public Func<MatrixD> UpdateMatrixFunc { get; set; }
 
+/// <summary>CustomSpaceNode operation.</summary>
 			public CustomSpaceNode(HudParentBase parent = null) : base(parent)
 			{ }
 
-			/// <summary>
-			/// Updates the node's Plane-to-World matrix either from <see cref="UpdateMatrixFunc"/>
-			/// or by copying the parent's matrix.
-			/// </summary>
+/// <summary>Layout operation.</summary>
 			protected override void Layout()
 			{
 				if (UpdateMatrixFunc != null)
+/// <summary>UpdateMatrixFunc operation.</summary>
 					PlaneToWorldRef[0] = UpdateMatrixFunc();
+/// <summary>if operation.</summary>
 				else if (Parent?.HudSpace != null)
 					PlaneToWorldRef[0] = Parent.HudSpace.PlaneToWorld;
 

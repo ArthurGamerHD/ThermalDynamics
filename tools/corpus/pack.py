@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Packs outcomes.csv into the compact columnar JSON the report reads.
 
 One array per row rather than one object, and names held once in side tables: the corpus is
@@ -20,6 +19,7 @@ import scoring
 DATA = sys.argv[1] if len(sys.argv) > 1 else "."
 
 
+# number operation.
 def number(row, key, default=None):
     """A cell as a float, defaulting where the dataset does not carry it.
 
@@ -56,13 +56,6 @@ workshop = {}
 for r in rows:
     workshop.setdefault(r["ship"], r["workshop_id"])
 
-# Two different counts, and the page has to state both because it groups by the first.
-#
-# `ships` is distinct *names*, which is what a row is keyed on and therefore what every statistic
-# on the page is computed over. The run simulated more hulls than that: 8,132 distinct name-and-id
-# pairs in the 2026-08-21 corpus against 8,054 names, so eighty-eight re-uploads and near-duplicates
-# merge into a neighbour. The header used to say 8,142 — the ships the sweep was handed — beside
-# statistics computed over 8,054 groups, and nothing on the page said the two were different.
 identities = len(set((r["ship"], r["workshop_id"]) for r in rows))
 
 payload = {

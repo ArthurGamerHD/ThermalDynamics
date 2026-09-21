@@ -4,53 +4,38 @@ using VRageMath;
 
 namespace Thermodynamics.Core
 {
-    /// <summary>
-    /// Finds closed coolant rings in a grid.
-    ///
-    /// The walk is driven entirely by the ports declared on each block's
-    /// <see cref="CoolantShape"/>, so blocks of any size or orientation work without subtype-name
-    /// special cases. Every ring is discovered once whichever pipe the search starts from, because
-    /// rings are keyed by their member set.
-    /// </summary>
     public static class CoolantLoopBuilder
     {
-        /// <summary>Finds every closed ring containing at least one pump.</summary>
+/// <summary>FindLoops operation.</summary>
         public static List<CoolantLoop> FindLoops(GridModel grid, LoopThermalProperties properties, float initialTemperature)
         {
+/// <summary>FindLoops operation.</summary>
             return FindLoops(grid, properties, initialTemperature, null);
         }
 
-        /// <param name="work">
-        /// Optional work counters. The search walks every block on the grid to find the few carrying
-        /// coolant ports, so its cost scales with grid size rather than with the amount of plumbing.
-        /// </param>
+/// <summary>FindLoops operation.</summary>
         public static List<CoolantLoop> FindLoops(GridModel grid, LoopThermalProperties properties,
             float initialTemperature, SimulationWork work)
         {
+/// <summary>FindLoops operation.</summary>
             return FindLoops(grid, properties, initialTemperature, work, null);
         }
 
-        /// <param name="diagnostics">
-        /// Optional. When supplied, records why each coolant block that ended up in no loop did not.
-        /// Costs one extra walk per unclaimed run and nothing at all when null, so an ordinary
-        /// rebuild does not pay for a readout nobody opened.
-        /// </param>
+/// <summary>FindLoops operation.</summary>
         public static List<CoolantLoop> FindLoops(GridModel grid, LoopThermalProperties properties,
             float initialTemperature, SimulationWork work, CoolantLoopDiagnostics diagnostics)
         {
+/// <summary>List operation.</summary>
             List<CoolantLoop> loops = new List<CoolantLoop>();
             if (grid == null) return loops;
 
-            // The call is counted unconditionally but the cells only when the search walks them, so
-            // the two counters separate how often the search runs from how much it costs.
             if (work != null) work.LoopSearches++;
 
-            // A ring needs pipe and most grids have none. The grid's coolant block count is one
-            // integer read, against a pass over every block on the grid.
             if (grid.CoolantBlockCount == 0) return loops;
 
             if (work != null) work.LoopSearchCells += grid.Blocks.Count;
 
+/// <summary>HashSet operation.</summary>
             HashSet<long> claimed = new HashSet<long>();
 
             IList<BlockInstance> blocks = grid.Blocks;
@@ -61,14 +46,11 @@ namespace Thermodynamics.Core
                 if (start.Model.Coolant.LinkPorts.Length < 2) continue;
                 if (claimed.Contains(start.Key)) continue;
 
+/// <summary>TraceRing operation.</summary>
                 List<BlockInstance> ring = TraceRing(grid, start);
                 if (ring == null) continue;
 
-                // A closed ring is a loop whether or not it holds a pump. It used to need one, which
-                // meant destroying the pump deleted the loop and silently deleted every joule its
-                // coolant was holding — a ship could dump heat by grinding its own pump. A pumpless
-                // ring is now a loop that circulates nothing: it keeps its coolant and its heat, and
-                // transports neither.
+/// <summary>CoolantLoop operation.</summary>
                 CoolantLoop loop = new CoolantLoop(properties, initialTemperature);
                 for (int r = 0; r < ring.Count; r++)
                 {
@@ -77,8 +59,10 @@ namespace Thermodynamics.Core
 
                     if (ring[r].Model.Coolant == null || !ring[r].Model.Coolant.IsPump) continue;
 
+/// <summary>CoolantPump operation.</summary>
                     CoolantPump pump = new CoolantPump();
                     pump.Block = ring[r];
+/// <summary>PumpDirection operation.</summary>
                     pump.Direction = PumpDirection(grid, ring, r);
                     pump.MaxPowerWatts = ring[r].Model.Coolant.MaxPowerWatts;
                     loop.Pumps.Add(pump);
@@ -97,13 +81,7 @@ namespace Thermodynamics.Core
             return loops;
         }
 
-        /// <summary>
-        /// Names the fault on every coolant block no loop claimed.
-        ///
-        /// A closed pumpless ring is reported against every block in it, because the fix — add a
-        /// pump — applies to the ring rather than to one cell. The walk is repeated here rather than
-        /// remembered from the search above so that the search stays free when nothing is asking.
-        /// </summary>
+/// <summary>Diagnose operation.</summary>
         private static void Diagnose(GridModel grid, HashSet<long> claimed,
             List<CoolantLoop> loops, CoolantLoopDiagnostics diagnostics)
         {
@@ -123,11 +101,7 @@ namespace Thermodynamics.Core
             }
         }
 
-        /// <summary>
-        /// Which way round the ring the pump at <paramref name="index"/> pushes: +1 with the ring's own
-        /// order, -1 against it. Decided by whether its outlet port — <see cref="CoolantShape.Pump"/>
-        /// takes the inlet first — faces the next pipe or the previous one.
-        /// </summary>
+/// <summary>PumpDirection operation.</summary>
         private static int PumpDirection(GridModel grid, List<BlockInstance> ring, int index)
         {
             BlockInstance pump = ring[index];
@@ -138,30 +112,19 @@ namespace Thermodynamics.Core
             BlockInstance next = ring[(index + 1) % ring.Count];
             if (next == pump) return 1;
 
-            // The outlet is the second port. If it opens onto the next block in crawl order the pump
-            // is pushing with the ring; anything else means it is pushing the other way.
             GridPort outlet = ports[1];
             return grid.GetAtCell(outlet.Target) == next ? 1 : -1;
         }
 
-        /// <summary>
-        /// Walks from <paramref name="start"/> through connected ports until it either returns
-        /// to the start (a ring) or runs out of pipe (a dead end).
-        /// </summary>
-        /// <returns>The ring's blocks in walk order, or null when the run is not closed.</returns>
+/// <summary>TraceRing operation.</summary>
         public static List<BlockInstance> TraceRing(GridModel grid, BlockInstance start)
         {
             CoolantFault fault;
+/// <summary>TraceRing operation.</summary>
             return TraceRing(grid, start, out fault);
         }
 
-        /// <summary>
-        /// As <see cref="TraceRing(GridModel,BlockInstance)"/>, and reports why a run is not closed.
-        ///
-        /// The reason is what a player needs and the loop list cannot carry: the symptom of a broken
-        /// ring is that it is absent. Every early return below names the fault it returns on rather
-        /// than collapsing them all into null.
-        /// </summary>
+/// <summary>TraceRing operation.</summary>
         public static List<BlockInstance> TraceRing(GridModel grid, BlockInstance start, out CoolantFault fault)
         {
             fault = CoolantFault.None;
@@ -174,7 +137,9 @@ namespace Thermodynamics.Core
                 return null;
             }
 
+/// <summary>List operation.</summary>
             List<BlockInstance> ring = new List<BlockInstance>();
+/// <summary>HashSet operation.</summary>
             HashSet<long> visited = new HashSet<long>();
 
             ring.Add(start);
@@ -183,7 +148,6 @@ namespace Thermodynamics.Core
             BlockInstance current = start;
             GridPort exit = startPorts[0];
 
-            // A ring can be no longer than the number of blocks on the grid.
             int guard = grid.BlockCount + 1;
 
             while (guard-- > 0)
@@ -209,7 +173,6 @@ namespace Thermodynamics.Core
 
                 if (next == start)
                 {
-                    // The ring closes only if the walk re-entered through a different port.
                     if (!SamePort(entry, startPorts[0])) return ring;
 
                     fault = CoolantFault.DoubledBack;
@@ -240,10 +203,7 @@ namespace Thermodynamics.Core
             return null;
         }
 
-        /// <summary>
-        /// Finds a port on <paramref name="block"/> that sits on <paramref name="cell"/> and
-        /// faces <paramref name="direction"/>.
-        /// </summary>
+/// <summary>TryFindPortFacing operation.</summary>
         private static bool TryFindPortFacing(BlockInstance block, Vector3I cell, Vector3I direction, out GridPort port)
         {
             List<GridPort> ports = block.CoolantLinkPorts();
@@ -255,10 +215,12 @@ namespace Thermodynamics.Core
                     return true;
                 }
             }
+/// <summary>default operation.</summary>
             port = default(GridPort);
             return false;
         }
 
+/// <summary>TryFindOtherPort operation.</summary>
         private static bool TryFindOtherPort(BlockInstance block, GridPort entry, out GridPort other)
         {
             List<GridPort> ports = block.CoolantLinkPorts();
@@ -268,33 +230,25 @@ namespace Thermodynamics.Core
                 other = ports[i];
                 return true;
             }
+/// <summary>default operation.</summary>
             other = default(GridPort);
             return false;
         }
 
+/// <summary>SamePort operation.</summary>
         private static bool SamePort(GridPort a, GridPort b)
         {
             return a.Cell == b.Cell && a.Direction == b.Direction;
         }
 
-        /// <summary>
-        /// Conductance between the coolant and one pipe block it runs through, W/K.
-        ///
-        /// **`h · A`, with no length in it**, because fluid-to-wall transfer is convective: the
-        /// resistance is the boundary layer against the wall, not a thickness of anything. It used
-        /// to be a conductivity over half a cell, which made the coefficient it implied five times
-        /// larger on a small grid than on a large one for the same fluid.
-        /// </summary>
+/// <summary>PipeConductance operation.</summary>
         public static float PipeConductance(GridModel grid, BlockInstance pipe, LoopThermalProperties properties)
         {
             float area = grid.CellFaceArea * properties.PipeContactMultiplier;
             return properties.HeatTransferCoefficient * area;
         }
 
-        /// <summary>
-        /// Conductance between the coolant and a block bolted to a sink face, W/K. As
-        /// <see cref="PipeConductance"/>: the fluid's side of the joint is convective.
-        /// </summary>
+/// <summary>PlateConductance operation.</summary>
         public static float PlateConductance(GridModel grid, LoopThermalProperties properties)
         {
             float area = grid.CellFaceArea * properties.SinkContactMultiplier;

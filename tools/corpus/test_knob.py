@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """**Reading a dial sweep as what moved, and the two ways that goes quietly wrong.**
 
 `KnobSweep` writes one row per ship, scenario and level. Turning that into *what this dial does*
@@ -19,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import knob
 
 
+# row operation.
 def row(ship, scenario, level, shipped, peak):
     return {"knob": "d", "ship": ship, "workshop_id": ship, "scenario": scenario,
             "level": str(level), "shipped": str(shipped), "peak_k": str(peak)}
@@ -31,6 +31,7 @@ class ALevelIsComparedAgainstTheSameShip(unittest.TestCase):
     is by ship and scenario, which is the same shape `cap.py` and `floor.py` use.
     """
 
+# test the pair is one ship in one scenario operation.
     def test_the_pair_is_one_ship_in_one_scenario(self):
         rows = [row("a", "s", 1, 1, 300.0), row("a", "s", 2, 1, 310.0),
                 row("b", "s", 1, 1, 500.0), row("b", "s", 2, 1, 505.0)]
@@ -42,6 +43,7 @@ class ALevelIsComparedAgainstTheSameShip(unittest.TestCase):
         deltas = sorted(abs(p - b) for b, p, _ in levels["2"])
         self.assertEqual([5.0, 10.0], deltas)
 
+# test a row with no shipped partner is counted rather than compared operation.
     def test_a_row_with_no_shipped_partner_is_counted_rather_than_compared(self):
         """An interrupted sweep leaves exactly that, and a default would compare against nothing."""
         rows = [row("a", "s", 2, 1, 310.0)]
@@ -50,6 +52,7 @@ class ALevelIsComparedAgainstTheSameShip(unittest.TestCase):
         self.assertEqual(1, orphans)
         self.assertEqual({}, dict(levels))
 
+# test a dial with no row at its shipped level is refused operation.
     def test_a_dial_with_no_row_at_its_shipped_level_is_refused(self):
         """Nothing says what it moved *from*, so there is no delta to take (`E8`)."""
         rows = [row("a", "s", 2, 1, 310.0), row("a", "s", 4, 1, 320.0)]
@@ -65,6 +68,7 @@ class ADialIsJudgedOnTheShipsItReaches(unittest.TestCase):
     avoids by scoring the cells its mechanism engaged on.
     """
 
+# test untouched cells would drown the effect operation.
     def test_untouched_cells_would_drown_the_effect(self):
         rows = []
         for i in range(4):
@@ -81,10 +85,8 @@ class ADialIsJudgedOnTheShipsItReaches(unittest.TestCase):
         self.assertEqual(100, len(deltas))
         self.assertEqual(4, len(reached))
 
-        # Over everything the median is nought — the dial reads as doing nothing at all.
         self.assertEqual(0.0, sorted(deltas)[len(deltas) // 2])
 
-        # Over the ships it reaches it is the 40 K it actually moved.
         self.assertEqual(40.0, sorted(reached)[len(reached) // 2])
 
 

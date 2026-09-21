@@ -8,6 +8,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 from corpus_render import raster, font, W, H
 
+# main operation.
 def main(data, output):
     output.mkdir(parents=True, exist_ok=True)
     source = Path('Data/Scripts/Thermodynamics/Presentation/ThermalVision/ThermalVisionPalette.cs').read_text()

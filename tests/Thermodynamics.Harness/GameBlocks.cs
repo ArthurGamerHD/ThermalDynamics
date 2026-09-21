@@ -8,16 +8,6 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// Every block Space Engineers ships, read from the installed game's own definitions.
-    ///
-    /// <see cref="Vanilla"/> transcribes fourteen reference blocks because the balance report has
-    /// to run on a machine with no install. This does not transcribe: it is the authoring side of
-    /// the definition pass, and there is no honest way to hand-copy 1,503 definitions. Everything
-    /// here returns empty when the game is absent, and the tests that use it skip rather than fail
-    /// — the *output* of the derivation is checked in as `Data/Cubes.xml` and pinned by a test that
-    /// needs no install at all.
-    /// </summary>
     public static class GameBlocks
     {
         public class Definition
@@ -26,127 +16,48 @@ namespace Thermodynamics.Harness
             public string SubtypeId;
             public bool Large;
 
-            /// <summary>Cells the block occupies, from its own <c>Size</c> element.</summary>
             public Vector3I Size = Vector3I.One;
 
-            /// <summary>Which of the six faces carry a mount point, so a joint can be found.</summary>
             public readonly bool[] MountFaces = new bool[Face.Count];
 
-            /// <summary>
-            /// Energy a jump drive holds when full, in joules, or zero for anything else.
-            ///
-            /// The definitions give it as `PowerNeededForJump` in megawatt-hours; this is that
-            /// times 3.6 GJ. With <see cref="PowerEfficiency"/> and
-            /// <see cref="PowerDrawWatts"/> it is what says how long the charge lasts, which is the
-            /// length of the largest thermal event most ships have.
-            /// </summary>
             public float JumpEnergyJoules;
 
-            /// <summary>
-            /// Fraction of drawn power that reaches the store, from `PowerEfficiency`.
-            ///
-            /// **Zero means the definition does not say**, which is every block in the game but the
-            /// four jump drives. It is not *stores none of it*: reading an absent field as total
-            /// loss would turn every block into a heater, which is why
-            /// <see cref="BlockThermalDerivation.WasteFromEfficiency"/> takes zero as silence.
-            /// </summary>
             public float PowerEfficiency;
 
-            /// <summary>
-            /// Whether the definition listed any mount points at all.
-            ///
-            /// **A definition that lists none is not a block that mounts nowhere** — it is a block
-            /// whose mount points the game derives from its model geometry, which this harness
-            /// cannot read. Six per cent of the game's definitions are in that state, and reading
-            /// their silence as "no mounts" builds a block with no conduction links and no exposed
-            /// faces: a thermally sealed box, which heats without bound and without a symptom
-            /// beyond the temperature. `LargeBlockBatteryBlock` is one of them.
-            /// </summary>
             public bool HasDeclaredMounts;
 
-            /// <summary>
-            /// Whether the definition seals. Read from <c>IsAirTight</c>, which is a tri-state in
-            /// the game: absent means "decide per face from the pressurisation table", which this
-            /// harness approximates as sealing wherever the block mounts.
-            /// </summary>
             public bool? Airtight;
 
-            /// <summary>
-            /// Rated electrical output in watts, for a block that delivers power through
-            /// <c>MyResourceSourceComponent</c> — reactors, engines, batteries, panels, turbines.
-            /// </summary>
             public float PowerOutputWatts;
 
-            /// <summary>
-            /// Rated electrical draw in watts. The definitions spell this four different ways
-            /// depending on the block's age, and all four are read.
-            /// </summary>
             public float PowerDrawWatts;
 
-            /// <summary>
-            /// Thrust in newtons, used as a watt-equivalent by the waste-heat model. It is what
-            /// makes a hydrogen thruster heat at all: it draws no electricity, so thrust is the
-            /// only term that can represent it. See docs/thermal-model.md.
-            ///
-            /// **Only a <c>Thrust</c> block has one.** Gyros carry the same
-            /// <c>ForceMagnitude</c> element, and it means torque in newton-metres rather than
-            /// thrust in newtons — a large gyro reads 3.36e7 and a prototech one 2.016e8 against a
-            /// real draw of ten kilowatts. Reading it off every block that has the element turned
-            /// one gyro into 33.6 MW of waste heat and drove a real hull to 342,000 K, which looked
-            /// convincingly like solver instability and was arithmetic.
-            /// </summary>
             public float ThrustNewtons;
 
-            /// <summary>Build cost, priced with the game's own component masses.</summary>
+/// <summary>List operation.</summary>
             public List<BlockComponent> Components = new List<BlockComponent>();
 
-            /// <summary>
-            /// The block's full hit points, summed from its components' <c>MaxIntegrity</c> exactly
-            /// as the game sums them.
-            ///
-            /// <para>
-            /// This is the denominator of every damage figure. The solver hands
-            /// <c>DoDamage</c> a number in these units — <c>(T - critical) x
-            /// OverheatDamagePerKelvin</c> per simulated second — so without the integrity a damage
-            /// rate says nothing about how long the block has. See balance.md, How long a block has
-            /// after it crosses.
-            /// </para>
-            /// </summary>
             public float Integrity;
 
-            /// <summary>
-            /// Declared PCU, or zero where the definition does not say — which is most of the
-            /// game, since the engine defaults an absent `PCU` to 1.
-            ///
-            /// **Read as declared rather than defaulted**, because zero and one are different
-            /// claims: one is a block the author priced and zero is a block nobody did, and
-            /// substituting the engine's default here would erase which of the two a figure is
-            /// over (`C8`).
-            /// </summary>
             public int Pcu;
 
-            /// <summary>Seconds to weld the block at the game's base speed, from `BuildTimeSeconds`.</summary>
             public float BuildSeconds;
 
-            /// <summary>Cells the block occupies.</summary>
             public int CellCount
             {
                 get { return Math.Abs(Size.X * Size.Y * Size.Z); }
             }
 
-            /// <summary>Metres a cell of this block's grid size measures, the game's own two values.</summary>
             public float GridSize
             {
                 get { return Large ? 2.5f : 0.5f; }
             }
 
-            /// <summary>Cubic metres the block's cells enclose.</summary>
             public float VolumeCubicMetres
             {
                 get { return CellCount * GridSize * GridSize * GridSize; }
             }
 
-            /// <summary>Kilograms, summed from the components.</summary>
             public float Mass
             {
                 get
@@ -157,19 +68,17 @@ namespace Thermodynamics.Harness
                 }
             }
 
+/// <summary>ToString operation.</summary>
             public override string ToString()
             {
                 return TypeId + "/" + SubtypeId;
             }
         }
 
-        /// <summary>
-        /// The installed game's `Content/Data`, or null: SE_BIN's parent first, then the Steam
-        /// defaults. Null is not a failure — most machines running this suite have no copy. This is
-        /// the one statement of the candidate list; the tests that need the game read it from here.
-        /// </summary>
+/// <summary>ContentPath operation.</summary>
         public static string ContentPath()
         {
+/// <summary>List operation.</summary>
             List<string> candidates = new List<string>();
 
             string bin = Environment.GetEnvironmentVariable("SE_BIN");
@@ -193,6 +102,7 @@ namespace Thermodynamics.Harness
 
         public static bool IsInstalled
         {
+/// <summary>ContentPath operation.</summary>
             get { return ContentPath() != null; }
         }
 
@@ -200,29 +110,17 @@ namespace Thermodynamics.Harness
         private static Dictionary<string, float> _componentMasses;
         private static Dictionary<string, float> _componentIntegrities;
 
-        /// <summary>
-        /// Guards the three lazy caches below.
-        ///
-        /// The lab runs ships concurrently, so every one of these is read from several workers at
-        /// once and built by whichever gets there first. An unguarded lazy field is the classic way
-        /// to hand one thread a half-built dictionary.
-        /// </summary>
+/// <summary>object operation.</summary>
         private static readonly object CacheLock = new object();
 
-        /// <summary>
-        /// Builds every cache up front, on one thread.
-        ///
-        /// Called before a parallel region so the workers find them warm. Correctness does not
-        /// depend on it — the locks cover that — but without it every worker blocks on the first
-        /// one to arrive, which on a corpus of thousands is the whole first minute.
-        /// </summary>
+/// <summary>Warm operation.</summary>
         public static void Warm()
         {
             All();
             BySubtype();
         }
 
-        /// <summary>Component name to kilograms, from the installed `Components.sbc`.</summary>
+/// <summary>ComponentMasses operation.</summary>
         public static Dictionary<string, float> ComponentMasses()
         {
             lock (CacheLock)
@@ -230,6 +128,7 @@ namespace Thermodynamics.Harness
             if (_componentMasses != null) return _componentMasses;
 
             Dictionary<string, float> masses = new Dictionary<string, float>();
+/// <summary>ContentPath operation.</summary>
             string content = ContentPath();
 
             if (content != null)
@@ -255,13 +154,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// Component name to hit points, from the installed `Components.sbc`.
-        ///
-        /// The counterpart of <see cref="ComponentMasses"/>, and read from the same file in the same
-        /// pass shape: a block's integrity is the sum of its components' <c>MaxIntegrity</c>, which
-        /// is how the game itself builds <c>MyCubeBlockDefinition.MaxIntegrity</c>.
-        /// </summary>
+/// <summary>ComponentIntegrities operation.</summary>
         public static Dictionary<string, float> ComponentIntegrities()
         {
             lock (CacheLock)
@@ -269,6 +162,7 @@ namespace Thermodynamics.Harness
             if (_componentIntegrities != null) return _componentIntegrities;
 
             Dictionary<string, float> integrities = new Dictionary<string, float>();
+/// <summary>ContentPath operation.</summary>
             string content = ContentPath();
 
             if (content != null)
@@ -294,10 +188,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// Hit points a block of this subtype has, or zero where the install is absent or the
-        /// subtype unknown. The lookup a lab uses to turn a stream of damage into a block lost.
-        /// </summary>
+/// <summary>IntegrityOf operation.</summary>
         public static float IntegrityOf(string subtype)
         {
             if (string.IsNullOrEmpty(subtype)) return 0f;
@@ -306,14 +197,16 @@ namespace Thermodynamics.Harness
             return BySubtype().TryGetValue(subtype, out definition) ? definition.Integrity : 0f;
         }
 
-        /// <summary>Every block definition in the installed game, or an empty list.</summary>
+/// <summary>All operation.</summary>
         public static List<Definition> All()
         {
             lock (CacheLock)
             {
             if (_all != null) return _all;
 
+/// <summary>List operation.</summary>
             List<Definition> blocks = new List<Definition>();
+/// <summary>ContentPath operation.</summary>
             string content = ContentPath();
             if (content == null)
             {
@@ -321,7 +214,9 @@ namespace Thermodynamics.Harness
                 return blocks;
             }
 
+/// <summary>ComponentMasses operation.</summary>
             Dictionary<string, float> masses = ComponentMasses();
+/// <summary>ComponentIntegrities operation.</summary>
             Dictionary<string, float> integrities = ComponentIntegrities();
             string directory = Path.Combine(content, "CubeBlocks");
             if (!Directory.Exists(directory))
@@ -339,13 +234,12 @@ namespace Thermodynamics.Harness
                 }
                 catch
                 {
-                    // A definition file the game itself tolerates but XDocument will not is not a
-                    // reason to fail the pass; the block simply keeps its fallback.
                     continue;
                 }
 
                 foreach (XElement definition in document.Descendants("Definition"))
                 {
+/// <summary>Read operation.</summary>
                     Definition block = Read(definition, masses, integrities);
                     if (block != null) blocks.Add(block);
                 }
@@ -356,6 +250,7 @@ namespace Thermodynamics.Harness
             }
         }
 
+/// <summary>Read operation.</summary>
         private static Definition Read(XElement definition, Dictionary<string, float> masses,
             Dictionary<string, float> integrities)
         {
@@ -366,7 +261,6 @@ namespace Thermodynamics.Harness
             string subtype = (string)id.Element("SubtypeId");
             if (string.IsNullOrEmpty(type)) return null;
 
-            // The .sbc files spell the type both ways depending on their age.
             if (type.StartsWith("MyObjectBuilder_")) type = type.Substring("MyObjectBuilder_".Length);
 
             Definition block = new Definition
@@ -374,10 +268,11 @@ namespace Thermodynamics.Harness
                 TypeId = type,
                 SubtypeId = subtype ?? "",
                 Large = ((string)definition.Element("CubeSize") ?? "Large") == "Large",
+/// <summary>ParseSize operation.</summary>
                 Size = ParseSize(definition.Element("Size")),
             };
 
-            // Megawatts in the definitions, watts everywhere in this model.
+/// <summary>Megawatts operation.</summary>
             block.PowerOutputWatts = Megawatts(definition, "MaxPowerOutput");
             block.PowerDrawWatts = Math.Max(
                 Megawatts(definition, "RequiredPowerInput"),
@@ -386,10 +281,11 @@ namespace Thermodynamics.Harness
                         Megawatts(definition, "OperationalPowerConsumption"))));
             if (block.TypeId == "Thrust") block.ThrustNewtons = Number(definition, "ForceMagnitude");
 
-            // Megawatt-hours in the definitions, joules everywhere in this model.
+/// <summary>Number operation.</summary>
             block.JumpEnergyJoules = Number(definition, "PowerNeededForJump") * 3600f
                 * ThermalConstants.MegawattsToWatts;
 
+/// <summary>Number operation.</summary>
             float efficiency = Number(definition, "PowerEfficiency");
             if (efficiency > 0f) block.PowerEfficiency = efficiency;
 
@@ -402,6 +298,7 @@ namespace Thermodynamics.Harness
             {
                 foreach (XElement mount in mounts.Elements("MountPoint"))
                 {
+/// <summary>FaceOf operation.</summary>
                     int face = FaceOf((string)mount.Attribute("Side"));
                     if (face < 0) continue;
 
@@ -417,6 +314,7 @@ namespace Thermodynamics.Harness
                 block.Pcu = pcu;
             }
 
+/// <summary>Number operation.</summary>
             block.BuildSeconds = Number(definition, "BuildTimeSeconds");
 
             XElement components = definition.Element("Components");
@@ -431,9 +329,6 @@ namespace Thermodynamics.Harness
                     if (!int.TryParse((string)component.Attribute("Count"),
                             NumberStyles.Integer, CultureInfo.InvariantCulture, out count)) continue;
 
-                    // Integrity is summed before the mass lookup can reject the component: the
-                    // game prices hit points off every component in the list, whether or not this
-                    // harness knows what it weighs.
                     float integrityEach;
                     if (integrities.TryGetValue(name, out integrityEach))
                     {
@@ -450,11 +345,13 @@ namespace Thermodynamics.Harness
             return block;
         }
 
+/// <summary>Megawatts operation.</summary>
         private static float Megawatts(XElement definition, string name)
         {
             return Number(definition, name) * ThermalConstants.MegawattsToWatts;
         }
 
+/// <summary>Number operation.</summary>
         private static float Number(XElement definition, string name)
         {
             float value;
@@ -463,6 +360,7 @@ namespace Thermodynamics.Harness
                 CultureInfo.InvariantCulture, out value) ? value : 0f;
         }
 
+/// <summary>ParseSize operation.</summary>
         private static Vector3I ParseSize(XElement size)
         {
             if (size == null) return Vector3I.One;
@@ -473,6 +371,7 @@ namespace Thermodynamics.Harness
                 Math.Max(1, ParseInt(size.Attribute("z"))));
         }
 
+/// <summary>ParseInt operation.</summary>
         private static int ParseInt(XAttribute attribute)
         {
             int value;
@@ -480,6 +379,7 @@ namespace Thermodynamics.Harness
                 NumberStyles.Integer, CultureInfo.InvariantCulture, out value) ? value : 1;
         }
 
+/// <summary>FaceOf operation.</summary>
         private static int FaceOf(string side)
         {
             switch (side)
@@ -494,7 +394,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>Every definition by subtype, for a blueprint to look its blocks up in.</summary>
+/// <summary>BySubtype operation.</summary>
         public static Dictionary<string, Definition> BySubtype()
         {
             lock (CacheLock)
@@ -504,8 +404,6 @@ namespace Thermodynamics.Harness
             Dictionary<string, Definition> map = new Dictionary<string, Definition>(StringComparer.Ordinal);
             foreach (Definition block in All())
             {
-                // A subtype can appear under more than one type across the files; first wins, which
-                // matches the order the game loads them in.
                 if (!map.ContainsKey(block.SubtypeId)) map[block.SubtypeId] = block;
             }
 
@@ -516,25 +414,7 @@ namespace Thermodynamics.Harness
 
         private static Dictionary<string, Definition> _bySubtype;
 
-        /// <summary>
-        /// The definitions that carry no <c>SubtypeId</c> at all, keyed by type and grid size.
-        ///
-        /// <para>
-        /// **Thirteen of the game's blocks are in this state and they are not armour**: the vanilla
-        /// oxygen generator, air vent, oxygen tank, both gravity generators, the door, the airtight
-        /// hangar door, the passage, the ladder, both large turrets and the two small-grid guns. A
-        /// blueprint spells them the way the game does, with an empty <c>SubtypeName</c>, and
-        /// <see cref="BySubtype"/> cannot tell them apart because they all key on the same empty
-        /// string — the first file read wins, and it is a door.
-        /// </para>
-        ///
-        /// <para>
-        /// So the identity has to come from the type, which the blueprint always states. Grid size
-        /// is in the key because two of the thirteen are small-grid and eleven are large, and a
-        /// small-grid ship built out of large-grid blocks is the failure
-        /// <see cref="Blueprints"/> already guards the named case against.
-        /// </para>
-        /// </summary>
+/// <summary>BaseVariants operation.</summary>
         public static Dictionary<string, Definition> BaseVariants()
         {
             lock (CacheLock)
@@ -548,6 +428,7 @@ namespace Thermodynamics.Harness
                 {
                     if (block.SubtypeId.Length > 0) continue;
 
+/// <summary>BaseVariantKey operation.</summary>
                     string key = BaseVariantKey(block.TypeId, block.Large);
                     if (!map.ContainsKey(key)) map[key] = block;
                 }
@@ -557,7 +438,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>The key <see cref="BaseVariants"/> is read with.</summary>
+/// <summary>BaseVariantKey operation.</summary>
         public static string BaseVariantKey(string typeId, bool large)
         {
             return (typeId ?? "") + (large ? "/large" : "/small");
@@ -565,32 +446,14 @@ namespace Thermodynamics.Harness
 
         private static Dictionary<string, Definition> _baseVariants;
 
-        /// <summary>
-        /// What a <see cref="BlockModel"/> built from <paramref name="definition"/> is called: its
-        /// subtype, or its type where the game states no subtype.
-        ///
-        /// <para>
-        /// **A placed block is identified by this name in a dozen places** — what power it draws,
-        /// what it weighs in a census row, what a hot-spot report prints — and for the thirteen
-        /// definitions with an empty subtype the name was the empty string, which resolves to
-        /// whichever of the thirteen a dictionary happened to keep. Naming them by type makes each
-        /// one distinct and makes a census row say `OxygenGenerator` rather than nothing.
-        /// </para>
-        /// </summary>
+/// <summary>ModelName operation.</summary>
         public static string ModelName(Definition definition)
         {
             if (definition == null) return null;
             return definition.SubtypeId.Length > 0 ? definition.SubtypeId : definition.TypeId;
         }
 
-        /// <summary>
-        /// Definitions keyed by <see cref="ModelName"/>, which is what a placed block carries.
-        ///
-        /// <see cref="BySubtype"/> is the right index for *a subtype named in a blueprint*; this is
-        /// the right one for *a block already built*, and the two differ only on the base variants.
-        /// A real subtype always wins a collision, so adding a type id to the table can never take
-        /// a name away from the block that had it.
-        /// </summary>
+/// <summary>ByModelName operation.</summary>
         public static Dictionary<string, Definition> ByModelName()
         {
             lock (CacheLock)
@@ -613,29 +476,7 @@ namespace Thermodynamics.Harness
 
         private static Dictionary<string, Definition> _byModelName;
 
-        /// <summary>
-        /// Definitions keyed by the pair the game itself keys on, type and subtype.
-        ///
-        /// <para>
-        /// **<see cref="BySubtype"/> says a subtype can appear under more than one type and that
-        /// first wins, "which matches the order the game loads them in". Nobody had checked what
-        /// that costs.** Three subtypes are claimed by two types each, and one of them is a block
-        /// players actually build: `LargePistonBase` and `SmallPistonBase` belong to both
-        /// `PistonBase` and `ExtendedPistonBase`. The two are identical in components, power and
-        /// thermal entry and differ in **size** — 1x2x1 against 1x3x1 — so a subtype-keyed lookup
-        /// builds every extended piston a cell short, with the exposed area and the link topology
-        /// of a block one third smaller. In a sixty-blueprint sample every piston base was an
-        /// `ExtendedPistonBase`, so the losing entry is the one players use.
-        /// </para>
-        ///
-        /// <para>
-        /// A blueprint states the type on every block element, so the pair is always available for
-        /// a corpus ship. It is a separate index rather than a replacement because a *modded* block
-        /// may name a subtype the game has under a different type, and refusing those would change
-        /// which ships the corpus admits — see <c>Blueprints.ReadGrid</c>, which tries the pair and
-        /// then falls back, counting the fallbacks so the ambiguity is visible rather than silent.
-        /// </para>
-        /// </summary>
+/// <summary>ByTypeAndSubtype operation.</summary>
         public static Dictionary<string, Definition> ByTypeAndSubtype()
         {
             lock (CacheLock)
@@ -647,6 +488,7 @@ namespace Thermodynamics.Harness
 
                 foreach (Definition block in All())
                 {
+/// <summary>TypeAndSubtypeKey operation.</summary>
                     string key = TypeAndSubtypeKey(block.TypeId, block.SubtypeId);
                     if (!map.ContainsKey(key)) map[key] = block;
                 }
@@ -656,7 +498,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>The key <see cref="ByTypeAndSubtype"/> is read with.</summary>
+/// <summary>TypeAndSubtypeKey operation.</summary>
         public static string TypeAndSubtypeKey(string typeId, string subtypeId)
         {
             string type = typeId ?? "";
@@ -666,7 +508,7 @@ namespace Thermodynamics.Harness
 
         private static Dictionary<string, Definition> _byTypeAndSubtype;
 
-        /// <summary>Definitions grouped by type id, in the order the files list them.</summary>
+/// <summary>ByType operation.</summary>
         public static Dictionary<string, List<Definition>> ByType()
         {
             Dictionary<string, List<Definition>> types = new Dictionary<string, List<Definition>>();
@@ -676,6 +518,7 @@ namespace Thermodynamics.Harness
                 List<Definition> list;
                 if (!types.TryGetValue(block.TypeId, out list))
                 {
+/// <summary>List operation.</summary>
                     list = new List<Definition>();
                     types[block.TypeId] = list;
                 }
@@ -685,14 +528,7 @@ namespace Thermodynamics.Harness
             return types;
         }
 
-        /// <summary>
-        /// The build cost of a whole type, summed over every subtype of it.
-        ///
-        /// This is what a type's fallback entry describes: not any one block, but the material a
-        /// block of that type is typically made of, weighted so the common subtypes count for more
-        /// than the rare ones — which is the right weighting for an entry whose job is to be a
-        /// reasonable answer for whatever is not named individually.
-        /// </summary>
+/// <summary>TypeComponents operation.</summary>
         public static List<BlockComponent> TypeComponents(IList<Definition> blocks)
         {
             Dictionary<string, BlockComponent> total = new Dictionary<string, BlockComponent>();

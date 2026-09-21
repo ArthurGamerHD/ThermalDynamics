@@ -6,21 +6,9 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// The three things the climate learned to react to after a test world with a four minute day
-    /// was measured: the weather standing over a grid, how far above sea level it is, and how far
-    /// under the ground.
-    ///
-    /// The run that produced these is worth stating, because one of the tests below exists only
-    /// because of it. Three grids on an earthlike, telemetry on, 851 seconds. The snowfield sat at
-    /// 5.6 km with an air density of 0.61 and reported an ambient of <b>36 K</b> for the whole run
-    /// — 220 K below what the model was asked for — and every block on it froze to match. Nothing
-    /// in the climate was wrong. The scale for thin air was being applied to the running ambient
-    /// instead of to the target the ambient was chasing, so it compounded against the lag on every
-    /// step and settled at a seventh of the intended figure.
-    /// </summary>
     public class WeatherAndDepthTests
     {
+/// <summary>Earthlike operation.</summary>
         private static PlanetThermalProperties Earthlike()
         {
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
@@ -35,25 +23,20 @@ namespace Thermodynamics.Tests
             return planet;
         }
 
-        // ---- the bug the telemetry found ---------------------------------------------------
 
-        /// <summary>
-        /// The exact arrangement that measured 36 K in game: an ambient scale below 1, a lag long
-        /// against the step, and enough steps to settle. Run for fifteen minutes of play — twenty
-        /// times the lag — and the answer has to be the target, not a fraction of it.
-        /// </summary>
         [Fact]
+/// <summary>ThinAirDoesNotCompoundAgainstTheLag operation.</summary>
         public void ThinAirDoesNotCompoundAgainstTheLag()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
+/// <summary>Earthlike operation.</summary>
             PlanetThermalProperties planet = Earthlike();
 
             EnvironmentSample sample = Worlds.PlanetSurface(0.612f, 0.5f);
             sample.SecondsSincePrevious = 1f / 6f;      // the mod's own step
             planet.AmbientLagSeconds = 45f;
 
-            // Started from the vacuum the grid loaded holding, with a history, so the lag has to
-            // actually run the whole way up. Seeding it at the target would pass either way.
             sample.PreviousAmbient = settings.VacuumTemperature;
             sample.HasPreviousAmbient = true;
 
@@ -67,25 +50,20 @@ namespace Thermodynamics.Tests
                 sample.HasPreviousAmbient = true;
             }
 
-            // What the place is actually worth: noon at the equator, thinned for its air.
             float target = ClimateModel.Thin(planet.DayTemperature, 0.612f, settings.VacuumTemperature);
 
             Assert.Equal(target, ambient, 1);
 
-            // And the failure it replaces, stated as the number the report carried, so this test
-            // fails loudly rather than subtly if the ordering is ever put back.
             Assert.True(ambient > 250f, "ambient collapsed toward vacuum: " + ambient + " K");
         }
 
-        /// <summary>
-        /// A grid that has just arrived has no ambient to chase from. Seeding the lag with the
-        /// vacuum every state starts out holding froze whole ships for the first three minutes of
-        /// a session — the desert grid's mean block temperature fell from 257 K to 103 K.
-        /// </summary>
         [Fact]
+/// <summary>AGridWithNoHistoryStartsAtItsClimateRatherThanAtVacuum operation.</summary>
         public void AGridWithNoHistoryStartsAtItsClimateRatherThanAtVacuum()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
+/// <summary>Earthlike operation.</summary>
             PlanetThermalProperties planet = Earthlike();
 
             EnvironmentSample sample = Worlds.PlanetSurface(1f, 0.5f);
@@ -97,41 +75,37 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(planet.DayTemperature, state.AmbientTemperature, 1);
 
-            // With a history it lags, which is the whole point of the flag being a flag.
             sample.HasPreviousAmbient = true;
             EnvironmentState lagged = EnvironmentSolver.Solve(settings, planet, sample);
             Assert.True(lagged.AmbientTemperature < 10f);
         }
 
-        // ---- altitude ----------------------------------------------------------------------
 
         [Fact]
+/// <summary>AirCoolsWithHeightAboveSeaLevel operation.</summary>
         public void AirCoolsWithHeightAboveSeaLevel()
         {
+/// <summary>Earthlike operation.</summary>
             PlanetThermalProperties planet = Earthlike();
 
             Assert.Equal(280f, ClimateModel.Lapse(280f, 0f, 4f), 3);
             Assert.Equal(276f, ClimateModel.Lapse(280f, 1000f, 4f), 3);
             Assert.Equal(258f, ClimateModel.Lapse(280f, 5500f, 4f), 3);
 
-            // Below sea level is warmer, and a planet with no lapse rate has no opinion at all.
             Assert.Equal(284f, ClimateModel.Lapse(280f, -1000f, 4f), 3);
             Assert.Equal(280f, ClimateModel.Lapse(280f, 5500f, 0f), 3);
         }
 
         [Fact]
+/// <summary>AmbientHoldsUpThroughTheAtmosphereAndDiesAtTheEdgeOfIt operation.</summary>
         public void AmbientHoldsUpThroughTheAtmosphereAndDiesAtTheEdgeOfIt()
         {
-            // Blunter than the curve convection and solar run on: at two thirds density the air
-            // still has essentially all of its temperature, which is the fact the old single
-            // multiply got wrong.
             Assert.True(ClimateModel.AmbientDensityFactor(0.61f) > 0.999f);
             Assert.True(ClimateModel.AmbientDensityFactor(0.61f) > EnvironmentSolver.AtmosphereFactor(0.61f));
 
             Assert.Equal(0f, ClimateModel.AmbientDensityFactor(0f), 5);
             Assert.Equal(1f, ClimateModel.AmbientDensityFactor(1f), 5);
 
-            // Monotonic, and it really does reach vacuum rather than stopping short.
             float previous = -1f;
             for (float d = 0f; d <= 1.0001f; d += 0.05f)
             {
@@ -144,19 +118,18 @@ namespace Thermodynamics.Tests
             Assert.Equal(300f, ClimateModel.Thin(300f, 1f, 2.7f), 3);
         }
 
-        // ---- underground -------------------------------------------------------------------
 
         [Fact]
+/// <summary>DepthBluntsTheDayAndThenRemovesIt operation.</summary>
         public void DepthBluntsTheDayAndThenRemovesIt()
         {
+/// <summary>Earthlike operation.</summary>
             PlanetThermalProperties planet = Earthlike();
             float radius = Worlds.EarthlikeRadius;
 
             float noon = 300f;
             float underground = planet.UndergroundTemperature;
 
-            // At the surface the day is untouched; halfway down the damping it is halfway gone;
-            // below it there is no day left at all.
             Assert.Equal(noon, ClimateModel.Underground(planet, noon, 0f, radius, radius), 2);
 
             float shallow = ClimateModel.Underground(planet, noon, 10f, radius - 10f, radius);
@@ -165,18 +138,18 @@ namespace Thermodynamics.Tests
             Assert.Equal(underground, ClimateModel.Underground(planet, noon, 20f, radius - 20f, radius), 2);
             Assert.Equal(underground, ClimateModel.Underground(planet, noon, 500f, radius - 500f, radius), 2);
 
-            // A cold night and a hot noon converge on the same rock, which is the point of it.
             float night = ClimateModel.Underground(planet, 250f, 500f, radius - 500f, radius);
             Assert.Equal(underground, night, 2);
         }
 
         [Fact]
+/// <summary>BelowTheDeadzoneTheRockWarmsTowardTheCore operation.</summary>
         public void BelowTheDeadzoneTheRockWarmsTowardTheCore()
         {
+/// <summary>Earthlike operation.</summary>
             PlanetThermalProperties planet = Earthlike();
             float radius = Worlds.EarthlikeRadius;
 
-            // Inside the deadzone nothing has started yet.
             float atDeadzone = ClimateModel.Underground(planet, 290f, 2000f, radius - 2000f, radius);
             Assert.Equal(planet.UndergroundTemperature, atDeadzone, 1);
 
@@ -184,7 +157,6 @@ namespace Thermodynamics.Tests
             Assert.True(deeper > planet.UndergroundTemperature);
             Assert.True(deeper < planet.CoreTemperature);
 
-            // Monotonic all the way down, and the centre is the core.
             float previous = planet.UndergroundTemperature - 1f;
             for (float depth = 2000f; depth <= radius; depth += 1000f)
             {
@@ -197,25 +169,27 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ATunnelIntoAMountainStaysCold operation.</summary>
         public void ATunnelIntoAMountainStaysCold()
         {
+/// <summary>Earthlike operation.</summary>
             PlanetThermalProperties planet = Earthlike();
             float radius = Worlds.EarthlikeRadius;
 
-            // A kilometre into a peak that stands 5 km above sea level: deep in the rock, and
-            // still four kilometres above the level where the deadzone even begins.
             float inMountain = ClimateModel.Underground(planet, 260f, 1000f, radius + 4000f, radius);
             Assert.Equal(planet.UndergroundTemperature, inMountain, 2);
 
-            // The same depth measured from a beach is the same, because the deadzone is 2 km deep.
             float fromBeach = ClimateModel.Underground(planet, 290f, 1000f, radius - 1000f, radius);
             Assert.Equal(planet.UndergroundTemperature, fromBeach, 2);
         }
 
         [Fact]
+/// <summary>TheSolverBuriesAGridAndTakesItsSunAway operation.</summary>
         public void TheSolverBuriesAGridAndTakesItsSunAway()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
+/// <summary>Earthlike operation.</summary>
             PlanetThermalProperties planet = Earthlike();
 
             EnvironmentState state = EnvironmentSolver.Solve(settings, planet, Worlds.Underground());
@@ -225,12 +199,11 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, state.SolarEnergy, 5);
         }
 
-        // ---- weather -----------------------------------------------------------------------
 
         [Fact]
+/// <summary>EveryWeatherTheGameShipsIsRecognised operation.</summary>
         public void EveryWeatherTheGameShipsIsRecognised()
         {
-            // Every subtype in Keen's WeatherEffects.sbc, less ExampleWeather which is a comment.
             string[] weathers =
             {
                 "ColdFront", "ExtremeCold", "HeatWave", "ExtremeHeat", "LowWinds", "HighWinds",
@@ -258,6 +231,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>NoWeatherAndAnUnknownWeatherAreBothCalm operation.</summary>
         public void NoWeatherAndAnUnknownWeatherAreBothCalm()
         {
             AssertCalm(WeatherResponse.For(""));
@@ -265,6 +239,7 @@ namespace Thermodynamics.Tests
             AssertCalm(WeatherResponse.For("SomeOtherModsWeather"));
         }
 
+/// <summary>AssertCalm operation.</summary>
         private static void AssertCalm(WeatherResponse.Weather weather)
         {
             Assert.Equal(0f, weather.TemperatureOffset, 5);
@@ -274,10 +249,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>TheKindsKeepTheOrderTheGameGaveThem operation.</summary>
         public void TheKindsKeepTheOrderTheGameGaveThem()
         {
-            // Snow is the cold one and a sandstorm the hot one; a storm blows and fog does not;
-            // and heavy weather keeps more of the sun out than light.
             Assert.True(WeatherResponse.For("SnowHeavy").TemperatureOffset < -10f);
             Assert.True(WeatherResponse.For("SandStormHeavy").TemperatureOffset > 10f);
 
@@ -286,16 +260,15 @@ namespace Thermodynamics.Tests
 
             Assert.True(WeatherResponse.For("RainHeavy").SolarMultiplier < WeatherResponse.For("RainLight").SolarMultiplier);
 
-            // Rain is wet and dust is not, so rain takes more heat off a hull.
             Assert.True(WeatherResponse.For("RainHeavy").ConvectionMultiplier
                 > WeatherResponse.For("Dust").ConvectionMultiplier);
 
-            // LowWinds must not read as a gale just because it has "wind" in the name.
             Assert.True(WeatherResponse.For("LowWinds").WindMultiplier < 1f);
             Assert.True(WeatherResponse.For("HighWinds").WindMultiplier > 1f);
         }
 
         [Fact]
+/// <summary>LightWeatherIsHalfOfHeavy operation.</summary>
         public void LightWeatherIsHalfOfHeavy()
         {
             WeatherResponse.Weather heavy = WeatherResponse.For("RainHeavy");
@@ -306,6 +279,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>IntensityFadesAWeatherInFromCalm operation.</summary>
         public void IntensityFadesAWeatherInFromCalm()
         {
             WeatherResponse.Weather storm = WeatherResponse.For("SnowHeavy");
@@ -322,10 +296,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>OvercastFlattensTheDay operation.</summary>
         public void OvercastFlattensTheDay()
         {
-            // Cloud that keeps the sun off by day keeps the heat in at night: it is one fact, so
-            // the swing follows the solar multiplier rather than a column of its own.
             Assert.Equal(1f, WeatherResponse.SwingMultiplier(WeatherResponse.Calm), 3);
 
             float storm = WeatherResponse.SwingMultiplier(WeatherResponse.For("SnowHeavy"));
@@ -333,12 +306,14 @@ namespace Thermodynamics.Tests
             Assert.True(storm > 0f);
         }
 
-        // ---- weather, through the solver ---------------------------------------------------
 
         [Fact]
+/// <summary>AStormCoolsTheAirDarkensTheSunAndStripsHeatFaster operation.</summary>
         public void AStormCoolsTheAirDarkensTheSunAndStripsHeatFaster()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
+/// <summary>Earthlike operation.</summary>
             PlanetThermalProperties planet = Earthlike();
 
             EnvironmentSample clear = Worlds.PlanetSurface(1f, 0.5f);
@@ -353,21 +328,21 @@ namespace Thermodynamics.Tests
             Assert.True(storm.SolarEnergy < calm.SolarEnergy * 0.2f);
             Assert.True(storm.ConvectionCoefficient > calm.ConvectionCoefficient * 2f);
 
-            // And it says so, so a readout can explain itself.
             Assert.Equal(1f, storm.WeatherIntensity, 3);
             Assert.True(storm.WeatherTemperatureOffset < 0f);
         }
 
         [Fact]
+/// <summary>ClearAirCostsTheModelNothing operation.</summary>
         public void ClearAirCostsTheModelNothing()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
+/// <summary>Earthlike operation.</summary>
             PlanetThermalProperties planet = Earthlike();
 
             EnvironmentSample clear = Worlds.PlanetSurface(1f, 0.5f);
 
-            // A sample that names a weather at zero intensity has to be identical to one that
-            // names none: intensity is the only thing that decides whether weather is happening.
             EnvironmentSample named = clear;
             named.Weather = WeatherResponse.For("ThunderstormHeavy");
             named.WeatherIntensity = 0f;
@@ -381,9 +356,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AHeatWaveWarmsTheAirAndBrightensTheSun operation.</summary>
         public void AHeatWaveWarmsTheAirAndBrightensTheSun()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
+/// <summary>Earthlike operation.</summary>
             PlanetThermalProperties planet = Earthlike();
 
             EnvironmentSample sample = Worlds.PlanetSurface(1f, 0.5f);
@@ -398,8 +376,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>WeatherDoesNotReachAGridWithNoPlanet operation.</summary>
         public void WeatherDoesNotReachAGridWithNoPlanet()
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
 
             EnvironmentSample sample = Worlds.Space(Vector3.Up);
@@ -412,22 +392,9 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, state.ConvectionCoefficient, 5);
         }
 
-        // ---- wind --------------------------------------------------------------------------
 
-        /// <summary>
-        /// Same ceiling, same intensity, same place: a gale and a fog have to differ, and before the
-        /// modifier existed they could not.
-        ///
-        /// <para>
-        /// **How far they may differ is bounded, and the bound is the model.** The modifier scales
-        /// how fast the share climbs from calm to storm rather than multiplying the finished share,
-        /// so the windiest weather lands exactly on `StormFraction` and the stillest cannot fall
-        /// below `CalmFraction` — the whole spread is the ratio of those two. Multiplying the share
-        /// instead let a sandstorm's 2.25 carry the wind past the planet's own ceiling, which is
-        /// backlog.md `B17`.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>TheWindFieldTakesTheWeathersOwnWindModifier operation.</summary>
         public void TheWindFieldTakesTheWeathersOwnWindModifier()
         {
             float gale = WindField.Speed(80f, 1f, 0.5f, WeatherResponse.For("SandStormHeavy").WindMultiplier);
@@ -442,15 +409,11 @@ namespace Thermodynamics.Tests
                 "no two weathers may differ by more than the storm share over the calm one: "
                 + (gale / fog).ToString("n2") + " against " + widest.ToString("n2"));
 
-            // The windiest weather lands on the storm share and does not pass it, whatever its
-            // modifier says — that is what makes the share mean "the worst weather".
             Assert.Equal(WindField.Speed(80f, 1f, 0.5f, 1f),
                 WindField.Speed(80f, 1f, 0.5f, 9f), 4);
 
-            // And the old three-argument form still means exactly what it did.
             Assert.Equal(WindField.Speed(80f, 1f, 0.5f), WindField.Speed(80f, 1f, 0.5f, 1f), 4);
 
-            // The ceiling is still a ceiling however hard the weather blows.
             Assert.True(WindField.Speed(80f, 1f, 1f, 4f) <= 80f);
         }
     }

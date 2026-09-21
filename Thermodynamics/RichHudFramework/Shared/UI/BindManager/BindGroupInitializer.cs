@@ -14,10 +14,6 @@ namespace RichHudFramework
 		using System.Collections;
 		using BindInitData = MyTuple<string, KeyComboInitData, IReadOnlyList<KeyComboInitData>>;
 
-		/// <summary>
-		/// A collection designed to simplify the definition and registration of groups of key binds.
-		/// <para>Supports mixed control types (Strings, MyKeys, RichHudControls, JoystickButtons) via <see cref="ControlHandle"/>.</para>
-		/// </summary>
 		public class BindGroupInitializer : IReadOnlyList<BindInitData>
 		{
 			public BindInitData this[int index] => bindData[index];
@@ -26,26 +22,24 @@ namespace RichHudFramework
 
 			private readonly List<BindInitData> bindData;
 
+/// <summary>BindGroupInitializer operation.</summary>
 			public BindGroupInitializer()
 			{
+/// <summary>List operation.</summary>
 				bindData = new List<BindInitData>();
 			}
 
+/// <summary>Returns the enumerator.</summary>
 			public IEnumerator<BindInitData> GetEnumerator() =>
 				bindData.GetEnumerator();
 
 			IEnumerator IEnumerable.GetEnumerator() =>
 				bindData.GetEnumerator();
 
-			/// <summary>
-			/// Adds a new bind to the group with a primary key combination.
-			/// </summary>
-			/// <param name="bindName">Unique name for the bind.</param>
-			/// <param name="con1">First control in the primary combo.</param>
-			/// <param name="con2">Optional second control.</param>
-			/// <param name="con3">Optional third control.</param>
+/// <summary>Adds a .</summary>
 			public void Add(string bindName, ControlHandle? con1 = null, ControlHandle? con2 = null, ControlHandle? con3 = null)
 			{
+/// <summary>KeyComboInit operation.</summary>
 				var combo = new KeyComboInit();
 
 				if (con1 != null)
@@ -60,11 +54,10 @@ namespace RichHudFramework
 				bindData.Add(new BindInitData(bindName, combo, null));
 			}
 
-			/// <summary>
-			/// Adds a new bind with a primary control and one alias combination.
-			/// </summary>
+/// <summary>Adds a .</summary>
 			public void Add(string bindName, ControlHandle? con1, KeyComboInit alias)
 			{
+/// <summary>KeyComboInit operation.</summary>
 				var combo = new KeyComboInit();
 
 				if (con1 != null)
@@ -73,11 +66,10 @@ namespace RichHudFramework
 				bindData.Add(new BindInitData(bindName, combo, new List<KeyComboInitData> { alias }));
 			}
 
-			/// <summary>
-			/// Adds a new bind with a two-key primary combo and one alias combination.
-			/// </summary>
+/// <summary>Adds a .</summary>
 			public void Add(string bindName, ControlHandle? con1, ControlHandle? con2, KeyComboInit alias)
 			{
+/// <summary>KeyComboInit operation.</summary>
 				var combo = new KeyComboInit();
 
 				if (con1 != null)
@@ -89,11 +81,10 @@ namespace RichHudFramework
 				bindData.Add(new BindInitData(bindName, combo, new List<KeyComboInitData> { alias }));
 			}
 
-			/// <summary>
-			/// Adds a new bind with a three-key primary combo and one alias combination.
-			/// </summary>
+/// <summary>Adds a .</summary>
 			public void Add(string bindName, ControlHandle? con1, ControlHandle? con2, ControlHandle? con3, KeyComboInit alias)
 			{
+/// <summary>KeyComboInit operation.</summary>
 				var combo = new KeyComboInit();
 
 				if (con1 != null)
@@ -108,25 +99,19 @@ namespace RichHudFramework
 				bindData.Add(new BindInitData(bindName, combo, new List<KeyComboInitData> { alias }));
 			}
 
-			/// <summary>
-			/// Adds a new bind using pre-configured KeyComboInit objects for both primary and alias.
-			/// </summary>
+/// <summary>Adds a .</summary>
 			public void Add(string bindName, KeyComboInit combo, KeyComboInit alias)
 			{
 				bindData.Add(new BindInitData(bindName, combo, new List<KeyComboInitData> { alias }));
 			}
 
-			/// <summary>
-			/// Adds a new bind using pre-configured KeyComboInit objects for primary and two aliases.
-			/// </summary>
+/// <summary>Adds a .</summary>
 			public void Add(string bindName, KeyComboInit combo, KeyComboInit alias1, KeyComboInit alias2)
 			{
 				bindData.Add(new BindInitData(bindName, combo, new List<KeyComboInitData> { alias1, alias2 }));
 			}
 
-			/// <summary>
-			/// Converts the initialization data into an array of <see cref="BindDefinition"/> structs.
-			/// </summary>
+/// <summary>Returns the binddefinitions.</summary>
 			public BindDefinition[] GetBindDefinitions()
 			{
 				var bindDefs = new BindDefinition[bindData.Count];
@@ -154,17 +139,13 @@ namespace RichHudFramework
 				return bindDefs;
 			}
 
-			/// <exclude/>
+/// <summary>List operation.</summary>
 			public static implicit operator List<BindInitData>(BindGroupInitializer gInit)
 			{
 				return gInit.bindData;
 			}
 		}
 
-		/// <summary>
-		/// Helper class for defining a specific combination of controls (up to 3).
-		/// <para>Used with <see cref="BindGroupInitializer"/> to specify bind combos or aliases.</para>
-		/// </summary>
 		public class KeyComboInit : IReadOnlyList<int>
 		{
 			public int this[int index] => comboData[index];
@@ -173,40 +154,45 @@ namespace RichHudFramework
 
 			private readonly List<int> comboData;
 
+/// <summary>KeyComboInit operation.</summary>
 			public KeyComboInit()
 			{
+/// <summary>List operation.</summary>
 				comboData = new List<int>(3);
 			}
 
+/// <summary>KeyComboInit operation.</summary>
 			public KeyComboInit(List<int> comboData)
 			{
 				this.comboData = comboData;
 			}
 
+/// <summary>KeyComboInit operation.</summary>
 			public KeyComboInit(ControlHandle con)
 			{
 				comboData = new List<int> { con.id };
 			}
 
+/// <summary>KeyComboInit operation.</summary>
 			public KeyComboInit(ControlHandle con1, ControlHandle con2)
 			{
 				comboData = new List<int> { con1.id, con2.id };
 			}
 
+/// <summary>KeyComboInit operation.</summary>
 			public KeyComboInit(ControlHandle con1, ControlHandle con2, ControlHandle con3)
 			{
 				comboData = new List<int> { con1.id, con2.id, con3.id };
 			}
 
+/// <summary>Returns the enumerator.</summary>
 			public IEnumerator<int> GetEnumerator() =>
 				comboData.GetEnumerator();
 
 			IEnumerator IEnumerable.GetEnumerator() =>
 				comboData.GetEnumerator();
 
-			/// <summary>
-			/// Adds a control to the combination. Throws an exception if more than 3 controls are added.
-			/// </summary>
+/// <summary>Adds a .</summary>
 			public void Add(ControlHandle con)
 			{
 				if (comboData.Count < BindManager.MaxBindLength)
@@ -215,11 +201,13 @@ namespace RichHudFramework
 					throw new Exception("Attempted to add more than 3 controls to a key combo.");
 			}
 
+/// <summary>KeyComboInit operation.</summary>
 			public static implicit operator KeyComboInit(List<int> comboData)
 			{
 				return new KeyComboInit(comboData);
 			}
 
+/// <summary>List operation.</summary>
 			public static implicit operator List<int>(KeyComboInit cInit)
 			{
 				return cInit.comboData;

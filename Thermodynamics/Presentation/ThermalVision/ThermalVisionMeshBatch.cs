@@ -3,7 +3,6 @@ using VRageMath;
 
 namespace Thermodynamics.Presentation
 {
-    /// <summary>Conservative interval bound for a contiguous set of triangle planes.</summary>
     public struct ThermalVisionMeshBatch
     {
         public const int Size = 64;
@@ -12,6 +11,7 @@ namespace Thermodynamics.Presentation
         private double minPlane;
         private bool unsafeBound;
 
+/// <summary>Adds a .</summary>
         public void Add(int index, ThermalVisionTriangle triangle)
         {
             Vector3 normal = triangle.LocalNormal;
@@ -26,11 +26,11 @@ namespace Thermodynamics.Presentation
                 maxNormal = Vector3.Max(maxNormal, normal);
                 minPlane = Math.Min(minPlane, plane);
             }
-            // Degenerate/non-finite input keeps the original per-triangle path.
             unsafeBound |= !(normal.LengthSquared() > 1e-20f) || double.IsNaN(plane) || double.IsInfinity(plane);
             Count++;
         }
 
+/// <summary>IsEntirelyBackFacing operation.</summary>
         public bool IsEntirelyBackFacing(Vector3D eye)
         {
             if (Count == 0 || unsafeBound) return false;
@@ -38,7 +38,6 @@ namespace Thermodynamics.Presentation
             double y = eye.Y * (eye.Y >= 0 ? maxNormal.Y : minNormal.Y);
             double z = eye.Z * (eye.Z >= 0 ? maxNormal.Z : minNormal.Z);
             double upper = x + y + z - minPlane;
-            // Keep uncertain/grazing bounds; false negatives only cost work, false positives lose surfaces.
             double tolerance = 1e-6 * (1 + Math.Abs(x) + Math.Abs(y) + Math.Abs(z) + Math.Abs(minPlane));
             return upper < -tolerance;
         }
@@ -48,6 +47,7 @@ namespace Thermodynamics.Presentation
     {
         public readonly ThermalVisionTriangle[] Triangles;
         public readonly ThermalVisionMeshBatch[] Batches;
+/// <summary>ThermalVisionMesh operation.</summary>
         public ThermalVisionMesh(ThermalVisionTriangle[] triangles, ThermalVisionMeshBatch[] batches)
         { Triangles = triangles; Batches = batches; }
     }

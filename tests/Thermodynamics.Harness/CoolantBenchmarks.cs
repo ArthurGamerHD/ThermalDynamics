@@ -7,18 +7,6 @@ using VRageMath;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// The segmented coolant model against the well-mixed one it replaced, on the same grid.
-    ///
-    /// Segmenting the fluid turns one temperature and one integration per ring into one per pipe, and
-    /// adds a pass that carries the fluid round. That is a real cost and it lands entirely on grids
-    /// carrying a lot of plumbing, which is exactly where nobody had measured: every performance
-    /// report in this repository ran on hulls with no pipe in them at all.
-    ///
-    /// The measurement that matters is not the ratio at one size but whether the ratio grows. A fixed
-    /// multiple is a tuning question; a multiple that climbs with the amount of pipe a player lays is
-    /// a design problem.
-    /// </summary>
     public static class CoolantBenchmarks
     {
         public class Row
@@ -35,7 +23,6 @@ namespace Thermodynamics.Harness
             public float SegmentedSubsteps;
             public float MixedSubsteps;
 
-            /// <summary>Share of transport served by mixing rather than carrying, 0..1.</summary>
             public float Mixing;
 
             public double Ratio
@@ -44,29 +31,23 @@ namespace Thermodynamics.Harness
             }
         }
 
-        /// <summary>
-        /// Builds a hull with <paramref name="rings"/> rings of pipe plumbed against it, and steps it
-        /// under both models.
-        ///
-        /// Each ring gets sink faces onto the hull, because a sink is a link and links are the cost.
-        /// A ring with no sinks would understate the segmented model's disadvantage.
-        /// </summary>
+/// <summary>Measure operation.</summary>
         public static Row Measure(int hullSize, int rings, int steps)
         {
+/// <summary>Measure operation.</summary>
             return Measure(hullSize, rings, steps, 0f);
         }
 
-        /// <param name="flowOverride">
-        /// Parcels per second at full flow, or zero for the shipped figure. Set it high to force the
-        /// mixing path, which only runs once the flow outruns the substep and so is absent from a
-        /// default measurement entirely.
-        /// </param>
+/// <summary>Measure operation.</summary>
         public static Row Measure(int hullSize, int rings, int steps, float flowOverride)
         {
+/// <summary>Row operation.</summary>
             Row row = new Row();
             row.Rings = rings;
 
+/// <summary>Builds the method table.</summary>
             ThermalSimulation segmented = Build(hullSize, rings, false, flowOverride);
+/// <summary>Builds the method table.</summary>
             ThermalSimulation mixed = Build(hullSize, rings, true, flowOverride);
 
             row.Blocks = segmented.Solver.Nodes.Count;
@@ -80,10 +61,6 @@ namespace Thermodynamics.Harness
             }
             row.Pipes = pipes;
 
-            // Best of several passes, alternating between the two models. A mean would report the
-            // machine's background noise as a difference between them, and the first attempt at this
-            // did exactly that: it timed a four-ring grid as faster than a one-ring grid, which is
-            // impossible. The minimum is the closest thing to the work actually required.
             if (segmented.Solver.Loops.Count > 0)
             {
                 CoolantLoop first = segmented.Solver.Loops[0];
@@ -98,10 +75,12 @@ namespace Thermodynamics.Harness
             {
                 float substeps;
 
+/// <summary>TimeSteps operation.</summary>
                 double a = TimeSteps(segmented, steps, out substeps);
                 if (a < row.SegmentedMsPerStep) row.SegmentedMsPerStep = a;
                 row.SegmentedSubsteps = substeps;
 
+/// <summary>TimeSteps operation.</summary>
                 double b = TimeSteps(mixed, steps, out substeps);
                 if (b < row.MixedMsPerStep) row.MixedMsPerStep = b;
                 row.MixedSubsteps = substeps;
@@ -110,15 +89,15 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-        /// <summary>Passes per model per row. The best of them is reported.</summary>
         public const int Repeats = 5;
 
+/// <summary>Builds the API method table.</summary>
         private static ThermalSimulation Build(int hullSize, int rings, bool wellMixed, float flowOverride)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.WellMixedCoolant = wellMixed;
 
-            // The bounds that would otherwise shorten a step and hide the difference.
             settings.MaxSubsteps = 4096;
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
@@ -135,11 +114,9 @@ namespace Thermodynamics.Harness
                 if (cell.Z > max.Z) max.Z = cell.Z;
             }
 
-            // Rings stacked in clear space beside the hull, each with a slab of armour under it for
-            // its sink faces to reach. What is being timed is the loop's own passes, which do not
-            // care where the ring sits.
             for (int r = 0; r < rings; r++)
             {
+/// <summary>Vector3I operation.</summary>
                 Vector3I origin = new Vector3I(max.X + 3, max.Y - (r * 3), max.Z + 3);
                 List<Vector3I> ring = PipeFitter.RectangleXZ(origin, 8, 6);
 
@@ -166,8 +143,6 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
             simulation.RebuildAll();
 
-            // A gradient across everything, so no link is skipped for having equal ends and no loop
-            // sits at the temperature of what it touches.
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             for (int i = 0; i < nodes.Count; i++)
             {
@@ -187,11 +162,11 @@ namespace Thermodynamics.Harness
             return simulation;
         }
 
+/// <summary>TimeSteps operation.</summary>
         private static double TimeSteps(ThermalSimulation simulation, int steps, out float substeps)
         {
             EnvironmentSample sample = Worlds.Shadow();
 
-            // Warm every array and JIT every path before the clock starts.
             simulation.StepExact(4, sample);
 
             Stopwatch clock = Stopwatch.StartNew();
@@ -202,8 +177,10 @@ namespace Thermodynamics.Harness
             return clock.Elapsed.TotalMilliseconds / steps;
         }
 
+/// <summary>Table operation.</summary>
         public static string Table(IList<Row> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append("  rings  pipes  loops   blocks    links   segmented   well-mixed   ratio  substeps   mixing\n");
             sb.Append("  -----  -----  -----   ------    -----   ---------   ----------   -----  --------   ------\n");
@@ -227,8 +204,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>Csv operation.</summary>
         public static string Csv(IList<Row> rows)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append("rings,pipes,loops,blocks,links,segmented_ms,mixed_ms,ratio,segmented_substeps,mixed_substeps\n");
 

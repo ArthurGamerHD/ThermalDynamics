@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """What the hull shape term is worth to a population's temperatures.
 
 **The reading that decides whether `EnableShapeDrag` can ever be a default.** The term scales the
@@ -27,18 +26,15 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import scoring
 
-#: The scenario the term is measured in, and the one with no air in it.
 MEASURED = "reentry"
 CONTROL = "vacuum-shadow"
 
-#: Suffix the walk marks the shaped arm with.
 SHAPED = "-shaped"
 
-#: Kelvin below which two settled readings count as the same. A settled pair does not produce
-#: identical floats and every claim here is about whole kelvin.
 SLACK = 0.01
 
 
+# pairs operation.
 def pairs(rows, scenario):
     """`{ship: (control K, shaped K)}` for one scenario, over ships carrying both arms."""
     peaks = collections.defaultdict(dict)
@@ -58,11 +54,13 @@ def pairs(rows, scenario):
     return out
 
 
+# deltas operation.
 def deltas(rows, scenario):
     """Shaped minus control, in kelvin, sorted."""
     return sorted(shaped - control for control, shaped in pairs(rows, scenario).values())
 
 
+# main operation.
 def main():
     args = scoring.positionals(("--csv",))
 

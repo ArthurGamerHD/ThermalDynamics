@@ -7,12 +7,12 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>Shared setup for solver tests.</summary>
     public static class Fixture
     {
-        /// <summary>Settings with everything but conduction switched off.</summary>
+/// <summary>ConductionOnly operation.</summary>
         public static ThermalSettings ConductionOnly(int frequency = 4)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -22,8 +22,10 @@ namespace Thermodynamics.Tests
             return settings.Derive();
         }
 
+/// <summary>EnvironmentOnly operation.</summary>
         public static ThermalSettings EnvironmentOnly(int frequency = 4)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.EnableSolarHeat = false;
             settings.EnableFriction = false;
@@ -32,7 +34,7 @@ namespace Thermodynamics.Tests
             return settings.Derive();
         }
 
-        /// <summary>A featherweight block, for driving the solver into stiff territory.</summary>
+/// <summary>Foil operation.</summary>
         public static BlockModel Foil(float mass = 10f)
         {
             BlockThermalProperties thermal = Catalog.DefaultThermal();
@@ -41,19 +43,10 @@ namespace Thermodynamics.Tests
         }
     }
 
-    /// <summary>
-    /// Heat between two touching blocks: the conductance, and the four properties of the flow it produces.
-    ///
-    /// <para>
-    /// Symmetry, conservation and order independence are asserted rather than assumed, because the
-    /// original model had none of the three and every one of its failures looked like a plausible
-    /// temperature. The last two cases run the original formulas from LegacyFormulas to show exactly
-    /// what changed.
-    /// </para>
-    /// </summary>
     public class ConductionTests
     {
         [Fact]
+/// <summary>ConductanceMatchesTheSeriesFormula operation.</summary>
         public void ConductanceMatchesTheSeriesFormula()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -65,9 +58,6 @@ namespace Thermodynamics.Tests
             Assert.Single(simulation.Solver.Links);
             ThermalLink link = simulation.Solver.Links[0];
 
-            // Light armour's own conductivity at the shipped pace; L = 1.25 m each; A = 6.25 m^2.
-            // Taken from the constant rather than written out, because the subject here is the
-            // series formula and not what the pace happens to be — it is 9.6 as of C24.
             float k = Catalog.LightArmor().Thermal.Conductivity * ThermalConstants.ConductionScale;
             float expected = 6.25f / ((1.25f / k) * 2f);
             Assert.Equal(expected, link.Conductance, 2);
@@ -75,6 +65,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ConductanceIsSymmetricWhicheverWayItIsBuilt operation.</summary>
         public void ConductanceIsSymmetricWhicheverWayItIsBuilt()
         {
             GridBuilder forwards = GridBuilder.Large();
@@ -92,6 +83,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ContactAreaScalesWithSharedFaces operation.</summary>
         public void ContactAreaScalesWithSharedFaces()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -106,9 +98,9 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>BlocksWithoutMountSurfacesDoNotConduct operation.</summary>
         public void BlocksWithoutMountSurfacesDoNotConduct()
         {
-            // The radiator only mounts on its top and bottom, so a block beside it is not bolted on.
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.Radiator(), Vector3I.Zero);
             builder.Place(Catalog.LightArmor(), new Vector3I(1, 0, 0));
@@ -119,6 +111,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>HeatFlowsFromHotToColdAndStops operation.</summary>
         public void HeatFlowsFromHotToColdAndStops()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -139,6 +132,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>EquilibriumIsWeightedByThermalMass operation.</summary>
         public void EquilibriumIsWeightedByThermalMass()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -162,6 +156,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ConductionConservesEnergyExactly operation.</summary>
         public void ConductionConservesEnergyExactly()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -169,7 +164,6 @@ namespace Thermodynamics.Tests
 
             ThermalSimulation simulation = builder.BuildSimulation(Fixture.ConductionOnly());
 
-            // seed a hot corner
             simulation.Solver.GetNodeAt(Vector3I.Zero).Temperature = 900f;
 
             float before = simulation.Solver.TotalEnergy;
@@ -179,26 +173,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(1f, after / before, 3);
         }
 
-        /// <summary>
-        /// **A block that leaves takes its heat with it, and a block that arrives brings ambient —
-        /// so energy is conserved across a step and not across a change in the population.**
-        ///
-        /// <para>
-        /// This is a deliberate limit rather than a defect (backlog.md `F26`,
-        /// known-issues.md). The alternative is a grinder that heats the ship
-        /// around it and a welder that chills it, and `P14` refuses to build a mechanism nobody
-        /// can perceive for what it costs. It is pinned here because a limit that is only
-        /// described gets rediscovered as a bug (`D5`, `D6`), and because the conservation test
-        /// directly above it is the one that would be read as promising otherwise.
-        /// </para>
-        ///
-        /// <para>
-        /// **Exactly, rather than approximately.** The claim is not that the loss is small — it is
-        /// that nothing is redistributed: the total falls by precisely the departing node's own
-        /// energy and every other node is untouched.
-        /// </para>
-        /// </summary>
         [Fact]
+/// <summary>EnergyIsNotConservedWhenTheBlockPopulationChanges operation.</summary>
         public void EnergyIsNotConservedWhenTheBlockPopulationChanges()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -206,8 +182,6 @@ namespace Thermodynamics.Tests
 
             ThermalSimulation simulation = builder.BuildSimulation(Fixture.ConductionOnly());
 
-            // A hot corner, spread a little, so the population is not uniform and a redistribution
-            // would show up as something other than zero.
             simulation.Solver.GetNodeAt(Vector3I.Zero).Temperature = 900f;
             simulation.StepExact(40, Worlds.Shadow());
 
@@ -224,14 +198,11 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(before - carriedOff, simulation.Solver.TotalEnergy, 0);
 
-            // **Nothing was handed to the neighbours**: the heat left the world rather than being
-            // shared out, which is the half of the limit a total on its own cannot show.
             Assert.Equal(neighbourBefore,
                 simulation.Solver.GetNodeAt(new Vector3I(1, 0, 0)).Temperature, 4);
 
-            // And the other direction. A block welded into place arrives at the world's ambient
-            // whatever it is bolted to, so energy enters with no source.
             float beforeWeld = simulation.Solver.TotalEnergy;
+/// <summary>BlockInstance operation.</summary>
             BlockInstance welded = new BlockInstance(
                 Catalog.LightArmor(), Vector3I.Zero, BlockOrientation.Identity);
             ThermalNode arriving = simulation.AddBlock(welded);
@@ -241,6 +212,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>ConductionResultDoesNotDependOnBlockOrder operation.</summary>
         public void ConductionResultDoesNotDependOnBlockOrder()
         {
             float[] results = new float[2];
@@ -267,12 +239,8 @@ namespace Thermodynamics.Tests
             Assert.Equal(results[0], results[1], 4);
         }
 
-        /// <summary>
-        /// In the original formulation the mass and specific heat terms in C and k cancel, so two
-        /// blocks that differ only in mass conduct at exactly the same rate. Thermal inertia
-        /// affected radiation but not conduction.
-        /// </summary>
         [Fact]
+/// <summary>OriginalConductionIgnoredThermalMass operation.</summary>
         public void OriginalConductionIgnoredThermalMass()
         {
             LegacyFormulas.Cell light = new LegacyFormulas.Cell
@@ -293,7 +261,6 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(lightDelta, heavyDelta, 6);
 
-            // The rewritten model does respond to mass.
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
             builder.Place(Catalog.HeavyArmor(), new Vector3I(1, 0, 0));
@@ -310,11 +277,8 @@ namespace Thermodynamics.Tests
                 "the lighter block must move further per joule");
         }
 
-        /// <summary>
-        /// Each block derived its own coefficient from its own geometry, so the watts one block
-        /// lost were not the watts its neighbour gained.
-        /// </summary>
         [Fact]
+/// <summary>OriginalConductionDidNotConserveEnergy operation.</summary>
         public void OriginalConductionDidNotConserveEnergy()
         {
             LegacyFormulas.Cell small = new LegacyFormulas.Cell
@@ -325,24 +289,21 @@ namespace Thermodynamics.Tests
             LegacyFormulas.Cell large = new LegacyFormulas.Cell
             {
                 Conductivity = 1f, SpecificHeat = 2f, Mass = 10000f, GridSize = 2.5f,
+/// <summary>Vector3I operation.</summary>
                 Extents = new Vector3I(3, 3, 4), Temperature = 400f
             };
 
             float smallGain = LegacyFormulas.ConductionDelta(small, large, 1, 0.25f) * small.SpecificHeat * small.Mass;
             float largeLoss = -LegacyFormulas.ConductionDelta(large, small, 1, 0.25f) * large.SpecificHeat * large.Mass;
 
-            // Energy in must equal energy out; under the original formulas it does not.
-            // Here the large block sheds 8333 J while the small one absorbs 5000 J, so a third
-            // of the energy leaves the simulation on every update of this one joint.
             float mismatch = Math.Abs(smallGain - largeLoss) / Math.Abs(largeLoss);
             Assert.True(mismatch > 0.2f,
                 "expected a large mismatch, got " + smallGain + " vs " + largeLoss);
 
-            // The rewritten model exchanges through a single shared conductance, so the two
-            // halves agree by construction.
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
             builder.Place(BlockModel.Solid("Bulk", new Vector3I(3, 3, 4), 10000f, Catalog.DefaultThermal()),
+/// <summary>Vector3I operation.</summary>
                 new Vector3I(1, 0, 0));
 
             ThermalSimulation simulation = builder.BuildSimulation(Fixture.ConductionOnly());
@@ -359,19 +320,10 @@ namespace Thermodynamics.Tests
         }
     }
 
-    /// <summary>
-    /// The integrator under step sizes it was never meant to see.
-    ///
-    /// <para>
-    /// An explicit scheme on a stiff grid diverges rather than degrading, so the substep estimate and
-    /// the overshoot clamp are the two things standing between a slow server and a ship at 10^30 K.
-    /// WithoutTheClampAnAbsurdStepBlowsUp exists so the clamp cannot be removed as an optimisation
-    /// without something saying what it was for.
-    /// </para>
-    /// </summary>
     public class StabilityTests
     {
         [Fact]
+/// <summary>ASmallStepNeedsNoSubstepping operation.</summary>
         public void ASmallStepNeedsNoSubstepping()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -385,6 +337,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AStiffGridAutomaticallySubsteps operation.</summary>
         public void AStiffGridAutomaticallySubsteps()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -401,6 +354,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>AnAbsurdStepStaysBoundedAndConservesEnergy operation.</summary>
         public void AnAbsurdStepStaysBoundedAndConservesEnergy()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -412,7 +366,6 @@ namespace Thermodynamics.Tests
             simulation.Solver.GetNodeAt(Vector3I.Zero).Temperature = 1000f;
             float before = simulation.Solver.TotalEnergy;
 
-            // ten seconds per step on a grid whose time constant is milliseconds
             for (int i = 0; i < 50; i++)
             {
                 simulation.Solver.Step(10f, EnvironmentState.Vacuum(2.7f));
@@ -430,6 +383,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
+/// <summary>WithoutTheClampAnAbsurdStepBlowsUp operation.</summary>
         public void WithoutTheClampAnAbsurdStepBlowsUp()
         {
             GridBuilder builder = GridBuilder.Large();

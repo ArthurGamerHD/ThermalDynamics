@@ -6,47 +6,23 @@ using Xunit;
 
 namespace Thermodynamics.Tests
 {
-    /// <summary>
-    /// Every corpus ship the element-visit allowance actually binds on, in air, **twice**: with
-    /// `FloorBlocksWhenOverBudget` off as it ships, and on.
-    ///
-    /// <para>
-    /// **Why it walks 294 ships and not 8,144.** The mechanism engages only where a grid cannot
-    /// afford the substeps its demand asks for, so the other 7,850 published hulls never reach the
-    /// branch and walking them would measure nothing at eight times the cost. The 294 are every
-    /// ship whose step work exceeds the allowance in at least one air scenario, read out of
-    /// `out/cap-2026-08-25`, and the rule is written into the selection file beside the dataset
-    /// rather than left in a commit message (`M10`).
-    /// </para>
-    ///
-    /// <para>
-    /// **The design is `CorpusCapWalk`'s and deliberately so.** Both arms run to the same simulated
-    /// clock, the unfloored arm first, because the difference being measured is smaller than the
-    /// settle tolerance and two settle-stopped runs would compare the stopping rule (`M1`, `P6`).
-    /// What differs is the arm: a *world* cap of 6 there, the *grid's own* budget here.
-    /// </para>
-    ///
-    /// <para>
-    /// What it is expected to say is written into balance-lab.md with its
-    /// falsifiers before this ran (`E1`, `E11`).
-    /// </para>
-    /// </summary>
     [Collection("alone")]
     public class CorpusFloorWalk
     {
         private const string Label = "floor";
 
-        /// <summary>Substeps of slack before two readings count as different.</summary>
         private const float Slack = 0.01f;
 
+/// <summary>Scenarios operation.</summary>
         private static List<Battery.Scenario> Scenarios()
         {
             return ScenarioIndex.Resolve(PairLab.AirScenarios, "the floor walk");
         }
 
-        /// <summary>Settings for one arm. The switch is the only thing that differs.</summary>
+/// <summary>Arm operation.</summary>
         private static ThermalSettings Arm(bool floorWhenOverBudget)
         {
+/// <summary>ThermalSettings operation.</summary>
             ThermalSettings settings = new ThermalSettings();
             settings.FloorBlocksWhenOverBudget = floorWhenOverBudget;
             return settings;
@@ -56,15 +32,19 @@ namespace Thermodynamics.Tests
         {
             public string Ship;
             public bool Floored;
+/// <summary>List operation.</summary>
             public readonly List<ScenarioOutcome> Outcomes = new List<ScenarioOutcome>();
+/// <summary>List operation.</summary>
             public readonly List<string> Violations = new List<string>();
         }
 
         [Fact]
+/// <summary>EveryShipTheAllowanceBindsOnIsMeasuredWithTheFloorAndWithoutIt operation.</summary>
         public void EveryShipTheAllowanceBindsOnIsMeasuredWithTheFloorAndWithoutIt()
         {
             if (CorpusFixture.Files().Count == 0) return;
 
+/// <summary>Scenarios operation.</summary>
             List<Battery.Scenario> scenarios = Scenarios();
 
             List<Walked> results = CorpusFixture.Sweep(Label,
@@ -72,6 +52,7 @@ namespace Thermodynamics.Tests
 
             Assert.True(results.Count > 0, "the selection yielded no ships to walk");
 
+/// <summary>List operation.</summary>
             List<string> violations = new List<string>();
             int floored = 0;
 
@@ -81,9 +62,6 @@ namespace Thermodynamics.Tests
                 violations.AddRange(ship.Violations);
             }
 
-            // **A walk that judged nothing reports success** (`E8`). This one could: if the
-            // selection were wrong, or the switch unwired, no run would ever floor a node and every
-            // delta would be floating-point noise dressed as a finding.
             Assert.True(floored > 0,
                 "the floor engaged on none of " + results.Count + " ships, so either the selection "
                 + "is not the population the allowance binds on or the switch reaches nothing");
@@ -93,6 +71,7 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", violations.ToArray()));
         }
 
+/// <summary>Walk operation.</summary>
         private static Walked Walk(Blueprints.Ship ship, List<Battery.Scenario> scenarios)
         {
             Walked walked = new Walked { Ship = ship.Name };
@@ -105,8 +84,6 @@ namespace Thermodynamics.Tests
                 ScenarioOutcome floored =
                     Battery.RunForSeconds(ship, scenario, shortened.RunSeconds, Arm(true));
 
-                // The arm marker: this dataset's second arm is a switch rather than a cap value, and
-                // the scorers key pairs on it. -1 says *the grid's own budget* rather than a number.
                 floored.SubstepsPerBlockCap = -1;
 
                 walked.Outcomes.Add(shortened);
@@ -119,6 +96,7 @@ namespace Thermodynamics.Tests
             return walked;
         }
 
+/// <summary>Judge operation.</summary>
         private static void Judge(Walked walked, string scenario,
             ScenarioOutcome shortened, ScenarioOutcome floored)
         {
@@ -131,8 +109,6 @@ namespace Thermodynamics.Tests
                     + floored.RunSeconds.ToString("n0") + " s floored");
             }
 
-            // **The control must floor nothing**, or the switch is on in the arm meant to be
-            // without it and every delta compares two floored runs.
             if (shortened.FlooredNodes != 0)
             {
                 walked.Violations.Add("control-floored: " + where + " floored "
@@ -141,8 +117,6 @@ namespace Thermodynamics.Tests
 
             if (floored.FlooredNodes > 0) walked.Floored = true;
 
-            // **The floor may never make a grid stiffer.** It raises capacity, so the demand can
-            // only fall; a rise means it is reaching something it should not.
             if (floored.SubstepsDemanded > shortened.SubstepsDemanded + Slack)
             {
                 walked.Violations.Add("stiffer: " + where + " demands "

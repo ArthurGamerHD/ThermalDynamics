@@ -2,9 +2,9 @@ using System;
 
 namespace Thermodynamics
 {
-    /// <summary>Runs every teardown step even when an earlier step fails; reports each failure to the caller.</summary>
     public static class SessionCleanup
     {
+/// <summary>Run operation.</summary>
         public static void Run(Action[] steps, Action<int, Exception> report)
         {
             for (int i = 0; i < steps.Length; i++)

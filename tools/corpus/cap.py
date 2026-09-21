@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """What a per-block substep cap buys and costs, over the whole population.
 
 Reads the paired dataset `CorpusCapWalk` writes — every ship through the four air scenarios twice,
@@ -52,25 +51,17 @@ ARGS = scoring.positionals(("--csv",))
 DATA = ARGS[0] if ARGS else "out/cap-2026-08-24"
 CSV_OUT = scoring.flag("--csv")
 
-# Every figure worth quoting, in the order it was produced, as `(statistic, value, unit)`. The
-# same shape `verdict.py` writes, so one reader can hold a cap summary and a survey summary
-# against each other without knowing which tool wrote which (`P5`, `E5`).
 FIGURES = []
 
 
+# record operation.
 def record(statistic, value, unit=""):
     FIGURES.append((statistic, value, unit))
 
-# The order the scenarios are printed in: the anchor first, then the three with air in them, in
-# rising wind. The same order `air.py` uses, so two reports of one experiment read alike.
 ORDER = ["vacuum-shadow", "surface-hot-noon", "storm-parked", "reentry"]
 
-# The scenario with no air in it. It is the walk's control and is not part of *in air*, which is how
-# the reach prediction is worded.
 ANCHOR = "vacuum-shadow"
 
-# The arm the walk ran, and the value `C3` is about. Read from the data rather than assumed: a
-# dataset walked at another cap must not be scored as though it were this one.
 OFF = 0
 
 
@@ -79,6 +70,7 @@ OFF = 0
 load = scoring.load_required
 
 
+# weights operation.
 def weights(rows):
     """What each walked ship stands for, and whether this dataset is a sample at all.
 
@@ -103,6 +95,7 @@ def weights(rows):
     return {ship: selection[ship] for ship in walked if ship in selection}, True
 
 
+# pair operation.
 def pair(rows, weight_by_ship):
     """Rows grouped into `(control, capped, weight)` by ship, workshop id and scenario.
 
@@ -145,6 +138,7 @@ def pair(rows, weight_by_ship):
     return pairs, capped_at, orphans, strays
 
 
+# work operation.
 def work(row):
     substeps = scoring.number(row, "substeps_demanded")
     if substeps is None:
@@ -152,6 +146,7 @@ def work(row):
     return scoring.step_work(scoring.number(row, "substep_cost"), substeps)
 
 
+# verdict operation.
 def verdict(key, label, holds, detail):
     """One scored row, printed and recorded under a name that does not move.
 
@@ -169,6 +164,7 @@ def verdict(key, label, holds, detail):
     print(f"        {detail}")
 
 
+# main operation.
 def main():
     rows = load(os.path.join(DATA, "outcomes.csv"))
     weight_by_ship, core = weights(rows)
@@ -199,10 +195,6 @@ def main():
         print("    is any rate under about half a per cent. Percentiles, medians and shares are "
               "what this answers.")
 
-    # **The summary says which population its figures are about, in the statistic names.** A core
-    # walk's rows are `weighted`; a full walk's are not. Two summaries put side by side then
-    # cannot be read as the same reading of the same thing, which is the mistake `A13`'s air half
-    # made when it scored a prediction against a figure from a walk that carried no link column.
     scale = "weighted " if core else ""
     record("dataset outcome rows", len(rows))
     record("dataset ships", ships)
@@ -219,10 +211,6 @@ def main():
     cap = capped_at[-1]
     record("C3 cap walked", cap, "substeps")
 
-    # ---- the identity ------------------------------------------------------------------------
-    # The predicted benefit was arithmetic that substituted `min(demand, cap)` into an earlier
-    # walk's rows. The walk asserts this per ship; this is the population statement of it, so a
-    # reader of the report is told the premise held rather than having to trust that it did.
     broken = 0
     worst = 0.0
     for _, control, capped, _ in pairs:
@@ -238,16 +226,11 @@ def main():
         if off_by > max(0.01, expected * 0.01):
             broken += 1
 
-    # **Counted unweighted, deliberately.** This is an assertion about the walk — did the capped
-    # arm do what a cap does — and every pair the walk ran is one observation of it. Weighting it
-    # would report how much of the *population* the check covers, which is a different sentence
-    # and not the one the row is making.
     verdict("identity", f"the identity: a capped demand is min(demand, {cap})", broken == 0,
             f"{broken:,} of {len(pairs):,} pairs differ by more than 1 %; the worst is "
             f"{worst:.4f} substeps  (counted over the pairs walked, unweighted: this is a check "
             f"on the walk, not an estimate of the population)")
 
-    # ---- the benefit -------------------------------------------------------------------------
     allowance = scoring.SHIPPED_VISIT_ALLOWANCE
     columns = {}
     for name, index in (("off", 1), (f"cap {cap}", 2)):
@@ -268,9 +251,6 @@ def main():
         arm = "off" if name == "off" else "capped"
         for label, q in (("p50", "p50"), ("p95", "p95"), ("p99", "p99")):
             record(f"C3 {arm} {scale}work {label}", round(p[q], 3), "element visits")
-        # **The max is the sample's own on a core walk and is named that way rather than dropped.**
-        # A reader wants to know the largest thing the walk saw; what they must not do is quote it
-        # as the population's, and a statistic called `sample work max` cannot be.
         record(f"C3 {arm} {'sample ' if core else ''}work max", round(p["max"], 3),
                "element visits")
         record(f"C3 {arm} runs over the allowance", over, "runs")
@@ -286,10 +266,6 @@ def main():
         past = sum(1 for v, _ in capped_values if not scoring.keeps_up(v))
         low, high = scoring.CAP_BENEFIT_BAND
 
-        # **Two answers, and they are different questions.** Whether `G6`'s cost half passes under
-        # the cap is the criterion; whether the walk found what the pre-registration predicted is
-        # the prediction, and its falsifier runs in both directions — a p99 *under* 1.5 M would mean
-        # the projection that produced 2.5 M was wrong, even though the criterion would pass.
         verdict("benefit", f"the benefit: G6's cost half under a cap of {cap}",
                 capped_p["p99"] <= allowance,
                 f"work p99 {capped_p['p99']:,.0f} against {allowance:,.0f} granted, from "
@@ -302,7 +278,6 @@ def main():
                 f"before the walk — a figure under the band falsifies the projection as surely as "
                 f"one over it")
 
-    # ---- the cost ----------------------------------------------------------------------------
     deltas = []
     by_scenario = collections.defaultdict(list)
     for key, control, capped, weight in pairs:
@@ -312,11 +287,6 @@ def main():
         deltas.append((delta, key, weight))
         by_scenario[key[2]].append((delta, weight))
 
-    # **The same deltas split by whether the control had stopped moving**, which is a different
-    # question from whether it *settled*: the settle test is an average over a chunk and a hull
-    # drifting at exactly the tolerated rate passes it for ever. Reported beside the registered
-    # statistic rather than instead of it — the decision rule was written against the unsplit
-    # figure, and re-pointing it after the data is `E11` exactly.
     resting = []
     travelling = []
     for key, control, capped, weight in pairs:
@@ -351,6 +321,7 @@ def main():
             record(f"C3 {scale}dpeak {label}", round(p[q], 4), "K")
         record(f"C3 {'sample ' if core else ''}dpeak max", round(p["max"], 4), "K")
 
+# moved more than operation.
         def moved_more_than(bound):
             """How many walked pairs moved further than `bound`, and what share of the population.
 
@@ -370,11 +341,6 @@ def main():
         record(f"C3 {scale}share over the refused kelvin", round(refused_share, 4), "%")
         record("C3 decision", decision)
 
-        # **On a sampled walk the max half of this prediction is unscored rather than passed.**
-        # The registered prediction is a p99 under 1 K *and* a max under 10 K; a core walk keeps
-        # one giant in twenty, so its largest delta is the largest of the sample and a pass on it
-        # would be a claim the dataset cannot support. `None` prints `?`, which is what an
-        # unmeasured half reports (`E8`).
         holds = p["p99"] < scoring.CAP_COST_P99_KELVIN
         if core:
             holds = None if holds else False
@@ -414,19 +380,11 @@ def main():
               f"{scoring.CAP_REFUSED_KELVIN} K it stays a switch")
         print(f"        p99 is {p['p99']:.4f} K  ->  {decision}")
 
-        # The worst pairs by name, because a tail that is one ship is a different finding from a
-        # tail that is a thousand, and the ships themselves are what a reader would go and look at.
         deltas.sort(key=lambda d: d[0], reverse=True)
         print(f"\n        the ten furthest-apart pairs")
         for delta, key, _ in deltas[:10]:
             print(f"        {delta:>10.4f} K  {key[0][:44]:44} {key[2]}")
 
-    # ---- the reach ---------------------------------------------------------------------------
-    #
-    # **Scored over the air scenarios, because that is how the prediction was written**: *the cap
-    # holds back 3-10 % of all blocks in air*. The anchor is vacuum-shadow and the cap is expected
-    # to bind least there, so folding it in dilutes the share by a quarter and scores a band nobody
-    # registered. Both are printed, and the one the band is read against is the air one.
     floored = 0
     blocks = 0
     air_floored = 0
@@ -458,9 +416,6 @@ def main():
         record(f"C3 {scale}reach over every scenario", round(share, 4), "%")
         record("C3 control floored", round(control_floored, 0), "node-runs")
 
-        # A share is the one figure a weighted sample estimates cleanly, so the reach band is
-        # scored on a core walk: the node-runs below are weighted counts of the population rather
-        # than of the walk, which is why they do not match the row count printed above.
         verdict("reach", f"the reach: what a cap of {cap} holds back", held,
                 f"in air, {air_floored:,.0f} of {air_blocks:,.0f} node-runs, {air_share:.2f} % "
                 f"against the {low:g}-{high:g} % predicted\n"
@@ -470,6 +425,7 @@ def main():
                 f"is not a control")
 
 
+# write summary operation.
 def write_summary(path):
     """The figures as `statistic,value,unit`, which is what makes them quotable (`E5`)."""
     scoring.write_summary(path, FIGURES)

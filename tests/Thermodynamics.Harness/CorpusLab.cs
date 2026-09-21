@@ -5,18 +5,8 @@ using Thermodynamics.Core;
 
 namespace Thermodynamics.Harness
 {
-    /// <summary>
-    /// What a blueprint corpus contains, before any of it is simulated.
-    ///
-    /// The first question of the balance lab is not "how hot does this get" but "can this be read
-    /// at all": a corpus is only a measurement of vanilla balance to the extent that its ships
-    /// resolve to vanilla blocks. This reports the yield — how many files parsed, how many ships
-    /// came out, how many are unmodded — and the size distribution of what survives, which is what
-    /// decides how the expensive passes are sampled.
-    /// </summary>
     public static class CorpusLab
     {
-        /// <summary>Ships below this are cockpits, doors and test rigs rather than designs.</summary>
         public const int MinimumBlocks = 25;
 
         public class Summary
@@ -28,18 +18,18 @@ namespace Thermodynamics.Harness
             public int TooSmall;
             public long Blocks;
 
-            /// <summary>Files that could not be read at all, and what stopped each one.</summary>
             public Dictionary<string, string> Unreadable = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            /// <summary>Usable ships, largest first.</summary>
+/// <summary>List operation.</summary>
             public List<Blueprints.Ship> Usable = new List<Blueprints.Ship>();
 
-            /// <summary>Subtypes that failed to resolve, by how many ships they disqualified.</summary>
             public Dictionary<string, int> Missing = new Dictionary<string, int>(StringComparer.Ordinal);
         }
 
+/// <summary>Scan operation.</summary>
         public static Summary Scan(string root)
         {
+/// <summary>Summary operation.</summary>
             Summary summary = new Summary();
 
             foreach (string file in Blueprints.Files(root))
@@ -84,21 +74,16 @@ namespace Thermodynamics.Harness
             return summary;
         }
 
-        /// <summary>
-        /// Every usable ship's blueprint path, one a line, largest first.
-        ///
-        /// **The report says how many there are and this says which.** A scan that answers *twelve
-        /// usable ships* and cannot name them is a scan whose answer has to be taken on trust, and
-        /// naming them is what lets a set of blueprints be moved, pruned or re-run on the strength
-        /// of it.
-        /// </summary>
+/// <summary>List operation.</summary>
         public static string List(string path)
         {
             string root = path ?? Blueprints.DefaultPath();
             if (root == null) return "";
 
+/// <summary>Scan operation.</summary>
             Summary summary = Scan(root);
 
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < summary.Usable.Count; i++)
             {
@@ -107,8 +92,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>Report operation.</summary>
         public static string Report(string path)
         {
+/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
 
             string root = path ?? Blueprints.DefaultPath();
@@ -122,6 +109,7 @@ namespace Thermodynamics.Harness
                 return sb.ToString();
             }
 
+/// <summary>Scan operation.</summary>
             Summary summary = Scan(root);
 
             sb.AppendLine("BLUEPRINT CORPUS");
@@ -199,9 +187,9 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
+/// <summary>Percentiles operation.</summary>
         private static List<KeyValuePair<string, int>> Percentiles(List<Blueprints.Ship> ships)
         {
-            // Usable is sorted largest first, so the percentile index counts from the end.
             List<KeyValuePair<string, int>> bands = new List<KeyValuePair<string, int>>();
             int last = ships.Count - 1;
 
@@ -214,6 +202,7 @@ namespace Thermodynamics.Harness
             return bands;
         }
 
+/// <summary>Trim operation.</summary>
         private static string Trim(string text, int width)
         {
             return LabText.Trim(text, width);
