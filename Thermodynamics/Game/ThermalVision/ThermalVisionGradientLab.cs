@@ -69,10 +69,13 @@ namespace Thermodynamics
         private static void DrawGradient(ThermalVisionWorldTriangle triangle)
         {
             Vector3 normal = triangle.Normal;
+            // Keen marks this overload "Only for modders"; this is the mod API.
+#pragma warning disable CS0618
             MyTransparentGeometry.AddTriangleBillboard(triangle.A, triangle.B, triangle.C,
                 normal, normal, normal, GradientUv(triangle.A), GradientUv(triangle.B), GradientUv(triangle.C),
                 State.Current == ThermalVisionState.Mode.Cividis ? GradientColour : GradientGrey,
                 0, (triangle.A + triangle.B + triangle.C) / 3, Vector4.One, MyBillboard.BlendTypeEnum.PostPP);
+#pragma warning restore CS0618
         }
     }
 }

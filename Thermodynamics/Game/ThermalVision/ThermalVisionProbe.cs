@@ -592,9 +592,12 @@ namespace Thermodynamics
                     if (projection == ThermalVisionProjection.Degenerate) { degenerate++; continue; }
                     Vector3 n = projected.Normal;
                     if (gradientLab) { DrawGradient(projected); drawn++; continue; }
+            // Keen marks this overload "Only for modders"; this is the mod API.
+#pragma warning disable CS0618
                     MyTransparentGeometry.AddTriangleBillboard(projected.A, projected.B, projected.C,
                         n, n, n, Vector2.Zero, Vector2.UnitX, Vector2.UnitY, compositeMode ? CompositeSurfaceMaterial : Material, 0,
                         (projected.A + projected.B + projected.C) / 3, colour, compositeMode ? MyBillboard.BlendTypeEnum.PostPP : MyBillboard.BlendTypeEnum.Standard);
+#pragma warning restore CS0618
                     drawn++;
                 }
             }

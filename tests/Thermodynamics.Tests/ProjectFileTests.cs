@@ -82,7 +82,9 @@ namespace Thermodynamics.Tests
             string solution = File.ReadAllText(
                 Path.Combine(ShippedBlocks.RepoRoot(), "tests", "Thermodynamics.slnx"));
 
-            Assert.Contains("Generic.csproj", solution);
+            Assert.Contains("../Thermodynamics/Thermodynamics.csproj", solution);
+            Assert.True(File.Exists(Path.Combine(ShippedBlocks.RepoRoot(),
+                "Thermodynamics", "Thermodynamics.csproj")));
         }
     }
 }

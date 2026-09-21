@@ -46,10 +46,13 @@ namespace Thermodynamics
         private static void SubmitGradientTriangle(Vector3D a,Vector3D b,Vector3D c,Vector3 normal,
             Vector2 ua,Vector2 ub,Vector2 uc,bool reverse)
         {
+            // Keen marks this overload "Only for modders"; this is the mod API.
+#pragma warning disable CS0618
             MyTransparentGeometry.AddTriangleBillboard(a,reverse?c:b,reverse?b:c,normal,normal,normal,
                 ua,reverse?uc:ub,reverse?ub:uc,
                 State.Current==ThermalVisionState.Mode.Cividis?GradientColour:GradientGrey,
                 0,(a+b+c)/3,Vector4.One,MyBillboard.BlendTypeEnum.PostPP);
+#pragma warning restore CS0618
             regionBillboards++; drawn++; examined++;
         }
 

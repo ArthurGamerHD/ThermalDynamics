@@ -343,7 +343,7 @@ namespace Thermodynamics
                     else names.Append(" | ");
                     names.Append(vent.CustomName);
 
-                    if (vent.IsPressurized()) reading.Pressurised = true;
+                    if (vent.CanPressurize) reading.Pressurised = true;
 
                     float level = vent.GetOxygenLevel();
                     if (level > reading.Oxygen) reading.Oxygen = level;
@@ -461,7 +461,7 @@ namespace Thermodynamics
 
                 try
                 {
-                    if (vent.IsPressurized()) return true;
+                    if (vent.CanPressurize) return true;
                 }
                 catch (Exception e)
                 {

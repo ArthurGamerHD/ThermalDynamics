@@ -211,9 +211,12 @@ namespace Thermodynamics
             n.Normalize();
             // Shift the boundary slightly toward the eye to avoid zero-opacity coincident surfaces.
             Vector3D offset = bias ? MyAPIGateway.Session.Camera.WorldMatrix.Backward * .001 : Vector3D.Zero;
+            // Keen marks this overload "Only for modders"; this is the mod API.
+#pragma warning disable CS0618
             MyTransparentGeometry.AddTriangleBillboard(a + offset, b + offset, c + offset,
                 (Vector3)n, (Vector3)n, (Vector3)n, Vector2.Zero, Vector2.UnitX, Vector2.UnitY,
                 CompositeSurfaceMaterial, 0, (a + b + c) / 3, colour, MyBillboard.BlendTypeEnum.PostPP);
+#pragma warning restore CS0618
             regionBillboards++; drawn++; examined++;
         }
 

@@ -51,7 +51,7 @@ namespace Thermodynamics.Tests
         [Fact]
         public void ActualSessionUnloadRoutesAllStagesThroughTheFailureBoundary()
         {
-            string path = Path.Combine(ShippedBlocks.RepoRoot(), "Data/Scripts/Thermodynamics/Session.cs");
+            string path = Path.Combine(ShippedBlocks.RepoRoot(), "Thermodynamics/Session.cs");
             var root = CSharpSyntaxTree.ParseText(File.ReadAllText(path)).GetRoot();
             var unload = root.DescendantNodes().OfType<MethodDeclarationSyntax>()
                 .Single(m => m.Identifier.Text == "UnloadData");

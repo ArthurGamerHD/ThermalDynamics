@@ -57,16 +57,16 @@ class GlowTextureTests(unittest.TestCase):
                 self.assertLessEqual(abs(linear - a / 255), 0.0065)
 
     def test_material_is_depth_tested_unlit_and_bound_to_asset(self):
-        materials = ET.parse(ROOT / 'Data/TransparentMaterials.sbc').findall('.//TransparentMaterial')
+        materials = ET.parse(ROOT / 'Thermodynamics/Content/Data/TransparentMaterials.sbc').findall('.//TransparentMaterial')
         matches = [m for m in materials if m.findtext('Id/SubtypeId') == 'GaugeHeatGlow']
         self.assertEqual(1, len(matches))
         material = matches[0]
         for name in ('IgnoreDepth', 'CanBeAffectedByOtherLights', 'UseAtlas', 'AlphaMistingEnable'):
             self.assertEqual('false', material.findtext(name))
         self.assertEqual('0', material.findtext('AlphaSaturation'))
-        texture = ROOT / material.findtext('Texture').replace('\\', '/')
+        texture = ROOT / 'Thermodynamics/Content' / material.findtext('Texture').replace('\\', '/')
         self.assertEqual(OUTPUT, texture)
-        renderer = (ROOT / 'Data/Scripts/Thermodynamics/ThermalGlow.cs').read_text()
+        renderer = (ROOT / 'Thermodynamics/ThermalGlow.cs').read_text()
         self.assertIn('GetOrCompute("GaugeHeatGlow")', renderer)
         self.assertNotIn('GetOrCompute("Square")', renderer)
         self.assertIn('BlendTypeEnum.AdditiveBottom', renderer)

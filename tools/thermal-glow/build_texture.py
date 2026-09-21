@@ -4,7 +4,7 @@ import math
 import struct
 
 ROOT = Path(__file__).resolve().parents[2]
-OUTPUT = ROOT / 'Textures/Particles/GaugeHeatGlow.dds'
+OUTPUT = ROOT / 'Thermodynamics/Content/Textures/Particles/GaugeHeatGlow.dds'
 SIZE = 128
 
 
