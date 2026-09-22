@@ -22,7 +22,6 @@ namespace Thermodynamics
 
         private static readonly object CacheLock = new object();
 
-/// <summary>Returns the .</summary>
         public static HeatPumpShape Get(string subtype, Vector3I size)
         {
             if (string.IsNullOrEmpty(subtype)) return null;
@@ -42,7 +41,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>MaxPowerWatts operation.</summary>
         public static float MaxPowerWatts(string subtype)
         {
             Rating rating;
@@ -50,13 +48,11 @@ namespace Thermodynamics
             return rating.Power;
         }
 
-/// <summary>IsHeatPump operation.</summary>
         public static bool IsHeatPump(string subtype)
         {
             return !string.IsNullOrEmpty(subtype) && Ratings.ContainsKey(subtype);
         }
 
-/// <summary>Clear operation.</summary>
         public static void Clear()
         {
             lock (CacheLock)

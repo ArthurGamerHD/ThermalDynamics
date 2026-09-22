@@ -12,13 +12,11 @@ namespace Thermodynamics
 {
     public static partial class ThermalVisionProbe
     {
-/// <summary>List operation.</summary>
         private static readonly List<PlanetManager.Planet> skyPlanets=new List<PlanetManager.Planet>();
         private struct SkyVertex { public Vector3D Position; public Vector2 Uv; public bool Valid; }
         private static readonly SkyVertex[,] skyVertices=new SkyVertex[13,97];
         private static readonly Vector2D[][] skyAngles=BuildSkyAngles();
 
-/// <summary>Builds the API method table.</summary>
         private static Vector2D[][] BuildSkyAngles()
         {
             var angles=new Vector2D[97][];
@@ -28,7 +26,6 @@ namespace Thermodynamics
                 for(int i=0;i<count;i++)
                 {
                     double angle=2*Math.PI*i/count;
-/// <summary>Vector2D operation.</summary>
                     angles[count][i]=new Vector2D(Math.Cos(angle),Math.Sin(angle));
                 }
                 angles[count][count]=angles[count][0];
@@ -36,7 +33,6 @@ namespace Thermodynamics
             return angles;
         }
 
-/// <summary>DrawThermalSky operation.</summary>
         private static void DrawThermalSky()
         {
             int start=regionBillboards;
@@ -67,7 +63,6 @@ namespace Thermodynamics
                 +" triangles="+(regionBillboards-start)+" depth-m="+depth.ToString("F1")
                 +" planets=climate-estimate sun=saturated exposure=excluded",false);
         }
-/// <summary>DrawSkyDisc operation.</summary>
         private static void DrawSkyDisc(Vector3D centre,double radius,Vector3D sun,Vector3D axis,
             PlanetDefinition definition,bool solar,double depth)
         {
@@ -99,7 +94,6 @@ namespace Thermodynamics
                 if(r>0) SkyTriangle(skyVertices[r,s],skyVertices[r+1,s+1],skyVertices[r,s+1],solar||climate!=null);
             }
         }
-/// <summary>SkyTriangle operation.</summary>
         private static void SkyTriangle(SkyVertex a,SkyVertex b,SkyVertex c,bool known)
         {
             if(!a.Valid || !b.Valid || !c.Valid) return;

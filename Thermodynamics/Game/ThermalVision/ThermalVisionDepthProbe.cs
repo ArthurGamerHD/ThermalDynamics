@@ -15,7 +15,6 @@ namespace Thermodynamics
         private static readonly MyStringId CompositeSurfaceMaterial = MyStringId.GetOrCompute("GaugeThermalCompositeSurface");
         private static readonly MyStringId DepthMaterial = MyStringId.GetOrCompute("GaugeThermalDepthLayer");
 
-/// <summary>DrawCompositeContext operation.</summary>
         private static void DrawCompositeContext()
         {
             var camera = MyAPIGateway.Session.Camera;
@@ -30,7 +29,6 @@ namespace Thermodynamics
                 ThermalVisionDepthLayers.Plane(i == 0 ? camera.NearPlaneDistance * 1.05 : ThermalVisionDepthLayers.Reach,
                     camera.ProjectionMatrix, camera.WorldMatrix, out centre, out width, out height);
                 MyTransparentGeometry.AddBillboardOriented(DepthMaterial,
-/// <summary>Vector4 operation.</summary>
                     i == 0 ? new Vector4(.035f, .035f, .035f, 1) : new Vector4(0, 0, 0, 1), centre,
                     (Vector3)camera.WorldMatrix.Right, (Vector3)camera.WorldMatrix.Up,
                     width * 1.25f, height * 1.25f, Vector2.Zero, MyBillboard.BlendTypeEnum.PostPP);
@@ -38,7 +36,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>DrawDepthLayers operation.</summary>
         private static void DrawDepthLayers()
         {
             var camera = MyAPIGateway.Session.Camera;
@@ -66,7 +63,6 @@ namespace Thermodynamics
             Outcome("depth-diagnostic-48-layers-5000m");
             panel.Visible = true;
             if (frames++ % 6 == 0)
-/// <summary>RichText operation.</summary>
                 panel.Text = new RichText("DEPTH DIAGNOSTIC / NOT TEMPERATURE\nLIVE / 48 layers / 5 km / near bright, far dark\n/thermal vision off");
         }
     }
