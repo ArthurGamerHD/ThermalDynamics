@@ -8,13 +8,10 @@ namespace Thermodynamics
 {
     public static class ThermalGridDrag
     {
-/// <summary>List operation.</summary>
         private static readonly List<IMyCubeGrid> GroupGrids = new List<IMyCubeGrid>();
 
-/// <summary>HashSet operation.</summary>
         private static readonly HashSet<long> Handled = new HashSet<long>();
 
-/// <summary>Tick operation.</summary>
         public static void Tick()
         {
             if (!Settings.Instance.EnableDrag) return;
@@ -38,7 +35,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Applies the togroupof.</summary>
         private static void ApplyToGroupOf(ThermalGrid leader)
         {
             if (!GridGroups.TryClaim(leader.Grid, GroupGrids, Handled)) return;

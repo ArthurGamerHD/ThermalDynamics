@@ -39,7 +39,6 @@ namespace Thermodynamics
             get { return speed == null ? 1f : ThermalMath.Clamp01(speed.Value); }
         }
 
-/// <summary>Sets the speed.</summary>
         public void SetSpeed(float value)
         {
             if (speed == null) return;
@@ -52,7 +51,6 @@ namespace Thermodynamics
             {
                 if (sink == null) return 1f;
 
-/// <summary>DemandMegawatts operation.</summary>
                 float demand = DemandMegawatts();
                 if (demand <= 0f) return 1f;
 
@@ -77,7 +75,6 @@ namespace Thermodynamics
 
         private float refillDemandWatts;
 
-/// <summary>Sets the refilldemandwatts.</summary>
         public void SetRefillDemandWatts(float watts)
         {
             refillDemandWatts = watts > 0f ? watts : 0f;
@@ -88,7 +85,6 @@ namespace Thermodynamics
             get { return IsRunning ? refillDemandWatts : 0f; }
         }
 
-/// <summary>DemandMegawatts operation.</summary>
         private float DemandMegawatts()
         {
             if (!IsRunning) return 0f;
@@ -97,11 +93,9 @@ namespace Thermodynamics
             return watts * ThermalConstants.WattsToMegawatts;
         }
 
-/// <summary>MaxDrawMegawatts operation.</summary>
         private float MaxDrawMegawatts()
         {
             float clock = Settings.Instance == null
-/// <summary>ThermalSettings operation.</summary>
                 ? new ThermalSettings().HeatTimeScale
                 : Settings.Instance.HeatTimeScale;
 
@@ -110,7 +104,6 @@ namespace Thermodynamics
             return (MaxPowerWatts + refill) * ThermalConstants.WattsToMegawatts;
         }
 
-/// <summary>AttachSink operation.</summary>
         private void AttachSink()
         {
             if (Entity.Components.Contains(typeof(MyResourceSinkComponent))) return;
@@ -118,19 +111,16 @@ namespace Thermodynamics
             MyResourceSinkInfo info = new MyResourceSinkInfo
             {
                 ResourceTypeId = MyResourceDistributorComponent.ElectricityId,
-/// <summary>MaxDrawMegawatts operation.</summary>
                 MaxRequiredInput = MaxDrawMegawatts(),
                 RequiredInputFunc = DemandMegawatts,
             };
 
-/// <summary>MyResourceSinkComponent operation.</summary>
             sink = new MyResourceSinkComponent();
             sink.Init(SinkGroup, info);
 
             Entity.Components.Add<MyResourceSinkComponent>(sink);
         }
 
-/// <summary>Init operation.</summary>
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
             base.Init(objectBuilder);
@@ -145,7 +135,6 @@ namespace Thermodynamics
                     NetworkAPI.Init(Session.ModID, Settings.Name);
                 }
 
-/// <summary>NetSync operation.</summary>
                 speed = new NetSync<float>(this, TransferType.Both, 1f);
 
                 AttachSink();

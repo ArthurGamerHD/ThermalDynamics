@@ -19,17 +19,14 @@ namespace Thermodynamics
 
         private static readonly MyStringId LineMaterial = MyStringId.GetOrCompute("Square");
 
-/// <summary>List operation.</summary>
         private static readonly List<IMyCubeGrid> GroupGrids = new List<IMyCubeGrid>();
 
-/// <summary>Draw operation.</summary>
         public static void Draw()
         {
             if (MyAPIGateway.Utilities == null || MyAPIGateway.Utilities.IsDedicated) return;
             if (Settings.Instance == null || !Settings.Instance.DebugAeroOverlay) return;
             if (MyAPIGateway.Session == null || MyAPIGateway.Session.Camera == null) return;
 
-/// <summary>Target operation.</summary>
             ThermalGrid thermals = Target();
             if (thermals == null || thermals.Grid == null || thermals.Simulation == null) return;
 
@@ -49,7 +46,6 @@ namespace Thermodynamics
             DrawArrows(ref centre, ref eye, radius, ref drag, ref lift, ref worldWind);
 
             Vector3D pressureCentre;
-/// <summary>CentreOfPressure operation.</summary>
             bool hasPressureCentre = CentreOfPressure(out pressureCentre);
             if (hasPressureCentre) DrawCentreOfPressure(ref pressureCentre, ref centre, ref eye, thermals.Grid);
 
@@ -57,7 +53,6 @@ namespace Thermodynamics
                 hasPressureCentre ? Vector3D.Distance(pressureCentre, centre) : -1d, anchored);
         }
 
-/// <summary>CentreOfPressure operation.</summary>
         private static bool CentreOfPressure(out Vector3D centre)
         {
             centre = Vector3D.Zero;
@@ -96,12 +91,10 @@ namespace Thermodynamics
             return true;
         }
 
-/// <summary>DrawCentreOfPressure operation.</summary>
         private static void DrawCentreOfPressure(ref Vector3D pressure, ref Vector3D mass,
             ref Vector3D eye, IMyCubeGrid grid)
         {
             const double armMetres = 1.5d;
-/// <summary>Color operation.</summary>
             Vector4 orange = new Color(255, 160, 40).ToVector4();
 
             MatrixD world = grid.WorldMatrix;
@@ -115,7 +108,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Target operation.</summary>
         private static ThermalGrid Target()
         {
             IMyCubeBlock seat = MyAPIGateway.Session.ControlledObject as IMyCubeBlock;
@@ -136,7 +128,6 @@ namespace Thermodynamics
             return grid.GameLogic.GetAs<ThermalGrid>();
         }
 
-/// <summary>SumGroup operation.</summary>
         private static void SumGroup(ThermalGrid leader, out Vector3D centre, out float mass,
             out Vector3 drag, out Vector3 lift, out Vector3 worldWind, out bool anchored)
         {
@@ -161,7 +152,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>DrawCentreOfMass operation.</summary>
         private static void DrawCentreOfMass(ref Vector3D centre, ref Vector3D eye, IMyCubeGrid grid)
         {
             const double armMetres = 2.5d;
@@ -173,7 +163,6 @@ namespace Thermodynamics
             XRayLine(centre - (world.Forward * armMetres), centre + (world.Forward * armMetres), ref eye, ref colour, 0.08d);
         }
 
-/// <summary>DrawArrows operation.</summary>
         private static void DrawArrows(ref Vector3D centre, ref Vector3D eye, double radius,
             ref Vector3 drag, ref Vector3 lift, ref Vector3 worldWind)
         {
@@ -181,7 +170,6 @@ namespace Thermodynamics
 
             if (worldWind.LengthSquared() > 1e-4f)
             {
-/// <summary>Color operation.</summary>
                 Vector4 blue = new Color(90, 160, 255).ToVector4();
                 Arrow(ref centre, Vector3D.Normalize((Vector3D)worldWind), reach * 0.6d, ref eye, ref blue);
             }
@@ -191,7 +179,6 @@ namespace Thermodynamics
 
             if (drag.LengthSquared() > 0f)
             {
-/// <summary>Color operation.</summary>
                 Vector4 red = new Color(240, 80, 60).ToVector4();
                 Arrow(ref centre, Vector3D.Normalize((Vector3D)drag),
                     reach * (drag.Length() / largest), ref eye, ref red);
@@ -199,14 +186,12 @@ namespace Thermodynamics
 
             if (lift.LengthSquared() > 0f)
             {
-/// <summary>Color operation.</summary>
                 Vector4 green = new Color(90, 230, 110).ToVector4();
                 Arrow(ref centre, Vector3D.Normalize((Vector3D)lift),
                     reach * (lift.Length() / largest), ref eye, ref green);
             }
         }
 
-/// <summary>Arrow operation.</summary>
         private static void Arrow(ref Vector3D from, Vector3D direction, double length,
             ref Vector3D eye, ref Vector4 colour)
         {
@@ -226,7 +211,6 @@ namespace Thermodynamics
             XRayLine(tip, back - (sweep * head * 0.5d), ref eye, ref colour, 0.12d);
         }
 
-/// <summary>XRayLine operation.</summary>
         private static void XRayLine(Vector3D from, Vector3D to, ref Vector3D eye,
             ref Vector4 colour, double thickness)
         {
@@ -242,7 +226,6 @@ namespace Thermodynamics
                 (float)(thickness * BandScale), BlendTypeEnum.PostPP);
         }
 
-/// <summary>Report operation.</summary>
         private static void Report(ThermalGrid thermals, ref Vector3 drag, ref Vector3 lift,
             ref Vector3 worldWind, float mass, double pressureArm, bool anchored)
         {
@@ -260,7 +243,6 @@ namespace Thermodynamics
                     ? "  CoP offset: " + pressureArm.ToString("n1") + " m (no torque is applied from it)"
                     : ""), 1, "White");
 
-/// <summary>Gates operation.</summary>
             string blocked = Gates(thermals, ref worldWind, anchored);
             if (blocked.Length > 0)
             {
@@ -270,13 +252,12 @@ namespace Thermodynamics
             ReportCrossover(ref worldWind, friction);
         }
 
-/// <summary>ReportCrossover operation.</summary>
         private static void ReportCrossover(ref Vector3 worldWind, float friction)
         {
             float speed = worldWind.Length();
             if (speed <= 0.5f || friction <= 0f)
             {
-                return; // Nothing to extrapolate from while the air is still.
+                return;
             }
 
             double removing = 0d;
@@ -302,7 +283,6 @@ namespace Thermodynamics
 
             if (removing > 0d)
             {
-/// <summary>CrossoverSpeed operation.</summary>
                 double crossover = CrossoverSpeed(friction, speed, (float)removing);
                 line += crossover > 0d
                     ? "; flips at ~" + crossover.ToString("n0") + " m/s at this hull temperature"
@@ -316,7 +296,6 @@ namespace Thermodynamics
             MyAPIGateway.Utilities.ShowNotification(line, 1, "White");
         }
 
-/// <summary>CrossoverSpeed operation.</summary>
         private static double CrossoverSpeed(float friction, float speed, float removing)
         {
             double k = friction / ((double)speed * speed * speed);
@@ -340,7 +319,6 @@ namespace Thermodynamics
             return (low + high) * 0.5d;
         }
 
-/// <summary>Gates operation.</summary>
         private static string Gates(ThermalGrid thermals, ref Vector3 worldWind, bool anchored)
         {
             Settings settings = Settings.Instance;
@@ -356,7 +334,6 @@ namespace Thermodynamics
             {
                 blocked += "no relative airspeed; ";
             }
-/// <summary>if operation.</summary>
             else if (settings.FrictionAtSpeedsAbove > 0f && speed <= settings.FrictionAtSpeedsAbove)
             {
                 blocked += "airspeed " + speed.ToString("n0") + " <= FrictionAtSpeedsAbove floor "
@@ -372,7 +349,6 @@ namespace Thermodynamics
 
             if (MyAPIGateway.Session != null && !MyAPIGateway.Session.IsServer)
             {
-/// <summary>server operation.</summary>
                 blocked += "client of a server (forces apply server-side); ";
             }
 

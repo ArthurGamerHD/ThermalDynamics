@@ -29,7 +29,6 @@ namespace Thermodynamics
         private static readonly MyStringId LegacyExposedSurfaceId = MyStringId.GetOrCompute("SurfaceAreaScaler");
         private static readonly MyStringId LegacyOverheatDamageId = MyStringId.GetOrCompute("CriticalTemperatureScaler");
 
-/// <summary>MyDefinitionId operation.</summary>
         private static readonly MyDefinitionId DefaultCubeBlockDefinitionId = new MyDefinitionId(typeof(MyObjectBuilder_EnvironmentDefinition), Settings.DefaultSubtypeId);
 
         [ProtoMember(1)]
@@ -85,7 +84,6 @@ namespace Thermodynamics
             HeatSourceWatts = 512,
         }
 
-/// <summary>WasDeclared operation.</summary>
         public bool WasDeclared(DeclaredProperties property)
         {
             return (Declared & property) != 0;
@@ -103,10 +101,8 @@ namespace Thermodynamics
         public Resolution ResolvedAt;
 
 
-/// <summary>Returns the definition.</summary>
         public static ThermalCellDefinition GetDefinition(MyDefinitionId defId)
         {
-/// <summary>ThermalCellDefinition operation.</summary>
             ThermalCellDefinition def = new ThermalCellDefinition();
             DefinitionExtensionsAPI lookup = Session.Definitions;
 
@@ -115,7 +111,6 @@ namespace Thermodynamics
 
             if (!lookup.DefinitionIdExists(defId) || !lookup.TryGetBool(defId, GroupId, IgnoreId, out isTrue))
             {
-/// <summary>MyDefinitionId operation.</summary>
                 defId = new MyDefinitionId(defId.TypeId, Settings.DefaultSubtypeId);
                 def.ResolvedAt = Resolution.Type;
 

@@ -5,7 +5,6 @@ namespace Thermodynamics
 {
     public static class GridGroups
     {
-/// <summary>TryClaim operation.</summary>
         public static bool TryClaim(IMyCubeGrid leader, List<IMyCubeGrid> grids, HashSet<long> handled)
         {
             IMyGridGroupData group = leader.GetGridGroup(GridLinkTypeEnum.Physical);

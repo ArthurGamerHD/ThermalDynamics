@@ -16,7 +16,6 @@ namespace Thermodynamics
             public float Conductance;
         }
 
-/// <summary>List operation.</summary>
         private static readonly List<Bridge> Bridges = new List<Bridge>();
 
         public static int Count
@@ -24,7 +23,6 @@ namespace Thermodynamics
             get { return Bridges.Count; }
         }
 
-/// <summary>Rebuild operation.</summary>
         public static void Rebuild(ThermalBlock baseBlock, IMyMechanicalConnectionBlock mechanical)
         {
             RemoveAllFor(baseBlock);
@@ -49,7 +47,6 @@ namespace Thermodynamics
             Bridges.Add(new Bridge { A = baseBlock, B = top, Conductance = conductance });
         }
 
-/// <summary>Removes the allfor.</summary>
         public static void RemoveAllFor(ThermalBlock block)
         {
             for (int i = Bridges.Count - 1; i >= 0; i--)
@@ -58,13 +55,11 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Clear operation.</summary>
         public static void Clear()
         {
             Bridges.Clear();
         }
 
-/// <summary>Update operation.</summary>
         public static void Update(float deltaSeconds)
         {
             if (Bridges.Count == 0 || deltaSeconds <= 0f) return;

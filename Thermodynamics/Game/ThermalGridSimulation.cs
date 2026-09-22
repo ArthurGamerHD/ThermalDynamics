@@ -23,12 +23,10 @@ namespace Thermodynamics
         private int stepsSinceHottest;
         private int stepsSinceMassSweep;
 
-/// <summary>UpdateBeforeSimulation10 operation.</summary>
         public override void UpdateBeforeSimulation10()
         {
         }
 
-/// <summary>Tick operation.</summary>
         public void Tick(float frameSeconds)
         {
             if (!PrepareTick(frameSeconds)) return;
@@ -37,7 +35,6 @@ namespace Thermodynamics
             PublishTick();
         }
 
-/// <summary>PrepareTick operation.</summary>
         public bool PrepareTick(float frameSeconds)
         {
             solveFailure = null;
@@ -52,7 +49,6 @@ namespace Thermodynamics
                 RefreshDiagnosticsFlag();
 
                 startingStep = Simulation.NeedsEnvironmentSample;
-/// <summary>TimedSample operation.</summary>
                 pendingSample = startingStep ? TimedSample() : default(EnvironmentSample);
 
                 if (startingStep) PushHeatPumpState();
@@ -79,7 +75,6 @@ namespace Thermodynamics
             return true;
         }
 
-/// <summary>SolveTick operation.</summary>
         public void SolveTick()
         {
             if (Simulation == null) return;
@@ -98,7 +93,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Publishes the API table to other mods.</summary>
         public void PublishTick()
         {
             if (Simulation == null) return;
@@ -120,7 +114,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Publishes the API table to other mods.</summary>
         private void PublishInternal()
         {
             long stepped = steppedThisFrame;
@@ -166,7 +159,6 @@ namespace Thermodynamics
 
         private bool timeSimulation;
 
-/// <summary>RefreshDiagnosticsFlag operation.</summary>
         private void RefreshDiagnosticsFlag()
         {
             bool client = MyAPIGateway.Utilities == null || !MyAPIGateway.Utilities.IsDedicated;
@@ -179,14 +171,12 @@ namespace Thermodynamics
             Simulation.Solver.CollectDiagnostics = wanted;
         }
 
-/// <summary>TimedSample operation.</summary>
         private EnvironmentSample TimedSample()
         {
             GridProfiler profiler = Profiler;
             if (profiler == null) return Sample();
 
             profiler.EnvironmentSample.Begin();
-/// <summary>Sample operation.</summary>
             EnvironmentSample sample = Sample();
             profiler.EnvironmentSample.End();
 
@@ -194,7 +184,6 @@ namespace Thermodynamics
             return sample;
         }
 
-/// <summary>TimedAfterSteps operation.</summary>
         private void TimedAfterSteps(int steps)
         {
             GridProfiler profiler = Profiler;
@@ -216,7 +205,6 @@ namespace Thermodynamics
             get { return Telemetry.Enabled && Stats != null ? Stats.Profiler : null; }
         }
 
-/// <summary>AfterSteps operation.</summary>
         private void AfterSteps(int steps)
         {
             GridProfiler profiler = Profiler;
@@ -269,13 +257,11 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Begin operation.</summary>
         private static void Begin(TimingStat stat)
         {
             if (stat != null) stat.Begin();
         }
 
-/// <summary>End operation.</summary>
         private static void End(TimingStat stat)
         {
             if (stat != null) stat.End();
@@ -283,7 +269,6 @@ namespace Thermodynamics
 
         private TelemetryAnomalyKind lastHealth;
 
-/// <summary>CheckHealth operation.</summary>
         private void CheckHealth()
         {
             TelemetryAnomalyKind health = TelemetryAnomalies.ClassifyGrid(
@@ -300,7 +285,6 @@ namespace Thermodynamics
             Telemetry.GridFault(this, TelemetryAnomalies.GridName(health, Telemetry.ImplausibleTemperature));
         }
 
-/// <summary>Applies the overheatdamage.</summary>
         private void ApplyOverheatDamage()
         {
             IList<OverheatEvent> overheats = Simulation.Overheats;
@@ -313,7 +297,6 @@ namespace Thermodynamics
             {
                 OverheatEvent overheat = overheats[i];
 
-/// <summary>Returns the .</summary>
                 ThermalBlock bound = Get(overheat.Block.Position);
                 if (bound == null) continue;
 
@@ -323,7 +306,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>SweepMass operation.</summary>
         private void SweepMass(int steps)
         {
             int count = sweepOrder.Count;
@@ -339,7 +321,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>PushHeatPumpState operation.</summary>
         private void PushHeatPumpState()
         {
             PushCoolantPumpState();
@@ -366,7 +347,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>PushCoolantPumpState operation.</summary>
         private void PushCoolantPumpState()
         {
             IList<CoolantLoop> loops = Simulation.Solver.Loops;
@@ -383,7 +363,6 @@ namespace Thermodynamics
                     Core.CoolantPump pump = pumps[p];
                     if (pump.Block == null) continue;
 
-/// <summary>Returns the .</summary>
                     ThermalBlock bound = Get(pump.Block.Min);
                     ThermalCoolantPumpBlock control = bound == null ? null : bound.CoolantPump;
 
@@ -414,7 +393,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Publishes the API table to other mods.</summary>
         private void PublishRefillDemand(CoolantLoop loop)
         {
             IList<Core.CoolantPump> pumps = loop.Pumps;
@@ -427,7 +405,6 @@ namespace Thermodynamics
                 Core.CoolantPump pump = pumps[p];
                 if (pump.Block == null) continue;
 
-/// <summary>Returns the .</summary>
                 ThermalBlock bound = Get(pump.Block.Min);
                 if (bound == null || bound.CoolantPump == null) continue;
 
@@ -435,7 +412,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Publishes the API table to other mods.</summary>
         private void PublishHeatPumpDemand()
         {
             if (heatPumps.Count == 0) return;
@@ -450,7 +426,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>SweepRoomPressure operation.</summary>
         private void SweepRoomPressure()
         {
             if (!Settings.Instance.EnableRoomAir) return;
@@ -469,7 +444,6 @@ namespace Thermodynamics
                     Stats.RoomPressureRoomVisits += air.Count;
                 }
 
-/// <summary>WorldPressurised operation.</summary>
                 bool worldPressurised = WorldPressurised();
 
                 if (!worldPressurised)
@@ -487,7 +461,6 @@ namespace Thermodynamics
 
                 for (int i = 0; i < air.Count; i++)
                 {
-/// <summary>GameOxygenAt operation.</summary>
                     float level = GameOxygenAt(air[i].Anchor);
                     bool sealedByGame = Grid.IsRoomAtPositionAirtight(air[i].Anchor);
 
@@ -535,7 +508,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>WorldPressurised operation.</summary>
         private static bool WorldPressurised()
         {
             if (MyAPIGateway.Session == null) return false;
@@ -546,7 +518,6 @@ namespace Thermodynamics
             return settings.EnableOxygen && settings.EnableOxygenPressurization;
         }
 
-/// <summary>ReadVents operation.</summary>
         private void ReadVents()
         {
             for (int i = vents.Count - 1; i >= 0; i--)
@@ -585,13 +556,10 @@ namespace Thermodynamics
 
         private readonly Dictionary<int, float> VentLevels = new Dictionary<int, float>();
 
-/// <summary>List operation.</summary>
         private readonly List<float> GasLevels = new List<float>();
 
-/// <summary>List operation.</summary>
         private readonly List<bool> SealedByGame = new List<bool>();
 
-/// <summary>Raises a thresholdcrossings event.</summary>
         private void RaiseThresholdCrossings()
         {
             IList<ThresholdCrossing> crossings = Simulation.Crossings;
@@ -600,7 +568,6 @@ namespace Thermodynamics
             for (int i = 0; i < crossings.Count; i++)
             {
                 ThresholdCrossing crossing = crossings[i];
-/// <summary>Returns the .</summary>
                 ThermalBlock bound = Get(crossing.Block.Position);
                 if (bound == null) continue;
 

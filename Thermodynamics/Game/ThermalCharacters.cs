@@ -14,20 +14,17 @@ namespace Thermodynamics
 
         private static readonly Dictionary<long, float> Interiors = new Dictionary<long, float>();
 
-/// <summary>List operation.</summary>
         private static readonly List<IMyPlayer> Players = new List<IMyPlayer>();
 
         public static int Overwhelmed { get; private set; }
 
         public static float HottestInterior { get; private set; }
 
-/// <summary>Forget operation.</summary>
         public static void Forget(long identityId)
         {
             Interiors.Remove(identityId);
         }
 
-/// <summary>Reset operation.</summary>
         public static void Reset()
         {
             Interiors.Clear();
@@ -35,7 +32,6 @@ namespace Thermodynamics
             HottestInterior = 0f;
         }
 
-/// <summary>Step operation.</summary>
         public static void Step(float seconds)
         {
             Overwhelmed = 0;
@@ -57,7 +53,6 @@ namespace Thermodynamics
             Players.Clear();
         }
 
-/// <summary>Step operation.</summary>
         private static void Step(ThermalSettings core, IMyPlayer player, float seconds)
         {
             if (player == null || core == null) return;
@@ -99,7 +94,6 @@ namespace Thermodynamics
             if (destroyable != null) destroyable.DoDamage(result.Damage, ThermalGrid.ThermalDamage, true);
         }
 
-/// <summary>RoomTemperature operation.</summary>
         private static bool RoomTemperature(IMyCharacter character, out float kelvin)
         {
             kelvin = 0f;

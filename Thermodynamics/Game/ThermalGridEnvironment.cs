@@ -40,7 +40,6 @@ namespace Thermodynamics
             get { return Simulation.Solver.Environment; }
         }
 
-/// <summary>ResetEnvironmentCaches operation.</summary>
         public static void ResetEnvironmentCaches()
         {
             PlanetProperties.Clear();
@@ -50,16 +49,13 @@ namespace Thermodynamics
             Day.Reset();
         }
 
-/// <summary>Sample operation.</summary>
         private EnvironmentSample Sample()
         {
-/// <summary>EnvironmentSample operation.</summary>
             EnvironmentSample sample = new EnvironmentSample();
 
             Vector3D position = Grid.PositionComp.WorldAABB.Center;
             MatrixD worldToLocal = MatrixD.Transpose(Grid.WorldMatrix.GetOrientation());
 
-/// <summary>SunDirection operation.</summary>
             sample.SunDirection = SunDirection();
             sample.DayLengthSeconds = Day.Known ? Day.Seconds : 0f;
             sample.SunDirectionLocal = Vector3.Normalize(
@@ -71,7 +67,6 @@ namespace Thermodynamics
             SamplePlanet(ref sample, ref position, planet);
             SampleWind(ref sample, ref position, ref worldToLocal, planet);
             bool buried = sample.IsUnderground || sample.Depth > 0f;
-/// <summary>SolarOcclusion operation.</summary>
             sample.SolarOcclusion = buried ? 1f : SolarOcclusion(ref position, ref sample);
             sample.IsSolarOccluded = sample.SolarOcclusion >= 1f;
 
@@ -89,7 +84,6 @@ namespace Thermodynamics
             return sample;
         }
 
-/// <summary>SunDirection operation.</summary>
         private static Vector3 SunDirection()
         {
             int frame = MyAPIGateway.Session != null ? MyAPIGateway.Session.GameplayFrameCounter : 0;
@@ -105,10 +99,8 @@ namespace Thermodynamics
             return sunDirection;
         }
 
-/// <summary>DayLength operation.</summary>
         public static readonly DayLength Day = new DayLength();
 
-/// <summary>SamplePlanet operation.</summary>
         private void SamplePlanet(ref EnvironmentSample sample, ref Vector3D position, PlanetManager.Planet planet)
         {
             if (planet == null || planet.Entity == null)
@@ -131,7 +123,6 @@ namespace Thermodynamics
             Vector3 axis = planet.Entity.PositionComp.WorldMatrixRef.Up;
             sample.LatitudeSine = Vector3.Dot(sample.UpDirection, Vector3.Normalize(axis));
 
-/// <summary>GroundUnder operation.</summary>
             GroundTemperature.Ground ground = GroundUnder(planet.Entity, ref position);
             sample.GroundOffset = ground.Offset;
             sample.GroundSwing = ground.Swing;
@@ -142,7 +133,6 @@ namespace Thermodynamics
             sample.Altitude = radius - sample.MeanRadius;
             sample.Depth = groundSurfaceRadius > 0f ? groundSurfaceRadius - radius : 0f;
 
-/// <summary>WeatherOver operation.</summary>
             sample.Weather = WeatherOver(ref position);
             sample.WeatherIntensity = MyVisualScriptLogicProvider.GetWeatherIntensity(position);
 
@@ -157,7 +147,6 @@ namespace Thermodynamics
             if (!samePlanet)
             {
                 currentPlanetId = planetId;
-/// <summary>PropertiesOf operation.</summary>
                 Simulation.Planet = PropertiesOf(planet);
 
                 if (Telemetry.Enabled && Stats != null) Stats.NotePlanet(planet.Entity.StorageName);
@@ -166,7 +155,6 @@ namespace Thermodynamics
 
         private bool hasAmbientHistory;
 
-/// <summary>WeatherOver operation.</summary>
         private WeatherResponse.Weather WeatherOver(ref Vector3D position)
         {
             float influence = Settings.Instance.ClimateWeatherInfluence;
@@ -187,7 +175,6 @@ namespace Thermodynamics
             return weatherResponse;
         }
 
-/// <summary>BurialDepth operation.</summary>
         private float BurialDepth()
         {
             BoundingBoxD box = Grid.PositionComp.WorldAABB;
@@ -208,7 +195,6 @@ namespace Thermodynamics
         private Vector3D profilePosition;
         private PlanetManager.Planet profilePlanet;
 
-/// <summary>ProfileEnvironment operation.</summary>
         public void ProfileEnvironment()
         {
             if (!Telemetry.Enabled || Stats == null) return;
@@ -226,7 +212,6 @@ namespace Thermodynamics
             stepsSinceProfile = 0;
 
 
-/// <summary>EnvironmentRow operation.</summary>
             EnvironmentRow row = new EnvironmentRow();
             EnvironmentState state = LastState;
 
@@ -240,7 +225,6 @@ namespace Thermodynamics
             row.SolarEnergy = state.SolarEnergy;
             row.SolarOcclusion = state.SolarOcclusion;
             row.WindSpeed = state.WindSpeed;
-/// <summary>MeanTemperature operation.</summary>
             row.GridMeanKelvin = MeanTemperature();
             row.GridPeakKelvin = HottestNode != null ? HottestNode.Temperature : 0f;
 
@@ -291,14 +275,12 @@ namespace Thermodynamics
                         Vector3.Dot(wind, east), Vector3.Dot(wind, north)) * 180d / Math.PI);
                 }
                 row.GameComfort = MyVisualScriptLogicProvider.GetTemperatureInPoint(position);
-/// <summary>MaterialUnder operation.</summary>
                 row.SurfaceMaterial = MaterialUnder(entity, ref surface);
             }
 
             Stats.NoteEnvironmentProfile(row);
         }
 
-/// <summary>MaterialUnder operation.</summary>
         private static string MaterialUnder(MyPlanet planet, ref Vector3D surface)
         {
             Vector3D centre = planet.PositionComp.WorldMatrixRef.Translation;
@@ -315,7 +297,6 @@ namespace Thermodynamics
 
         private int stepsSinceProfile = ProfileInterval;
 
-/// <summary>MeanTemperature operation.</summary>
         private float MeanTemperature()
         {
             IList<ThermalNode> nodes = Simulation.Solver.Nodes;
@@ -326,7 +307,6 @@ namespace Thermodynamics
             return total / nodes.Count;
         }
 
-/// <summary>GroundUnder operation.</summary>
         private GroundTemperature.Ground GroundUnder(MyPlanet planet, ref Vector3D position)
         {
             RefreshSurface(planet, ref position);
@@ -339,7 +319,6 @@ namespace Thermodynamics
                 1f + ((ground.Swing - 1f) * influence));
         }
 
-/// <summary>RefreshSurface operation.</summary>
         private void RefreshSurface(MyPlanet planet, ref Vector3D position)
         {
             if (Vector3D.DistanceSquared(position, groundSampledAt) <= GroundResampleDistance * GroundResampleDistance)
@@ -361,7 +340,6 @@ namespace Thermodynamics
 
         private float groundSurfaceRadius;
 
-/// <summary>PropertiesOf operation.</summary>
         private static PlanetThermalProperties PropertiesOf(PlanetManager.Planet planet)
         {
             PlanetThermalProperties properties;
@@ -382,7 +360,6 @@ namespace Thermodynamics
             return properties;
         }
 
-/// <summary>SampleWind operation.</summary>
         private void SampleWind(
             ref EnvironmentSample sample, ref Vector3D position, ref MatrixD worldToLocal, PlanetManager.Planet planet)
         {
@@ -422,7 +399,6 @@ namespace Thermodynamics
             inputs.Variation = WindField.Variation(position);
             inputs.HeightAboveGround = height;
 
-/// <summary>BurialDepth operation.</summary>
             inputs.BurialDepth = BurialDepth();
             inputs.Heating = windHeating;
 
@@ -431,7 +407,6 @@ namespace Thermodynamics
                 : settings.WindRoughnessLength;
 
             inputs.GradientHeight = WindProfile.GradientHeightIn(
-/// <summary>AirAboveGround operation.</summary>
                 settings.WindGradientHeight, AirAboveGround(planet, groundSurfaceRadius));
             inputs.DiurnalAmplitude = settings.WindDiurnalAmplitude;
             inputs.DiurnalCrossover = settings.WindDiurnalCrossover;
@@ -443,7 +418,6 @@ namespace Thermodynamics
                 settings.EnableWind
                     && settings.WindTerrainInfluence > 0f && settings.WindTerrainRadius > 0f
                     && height < settings.WindGradientHeight * TerrainFadesBy
-/// <summary>ReadTerrain operation.</summary>
                     && ReadTerrain(planet, ref position, up, axis, settings.WindTerrainRadius)
                 ? windTerrain : null;
 
@@ -481,7 +455,6 @@ namespace Thermodynamics
 
         private const float TerrainFadesBy = 1f;
 
-/// <summary>ReadTerrain operation.</summary>
         private bool ReadTerrain(
             PlanetManager.Planet planet, ref Vector3D position, Vector3 up, Vector3 axis, float radius)
         {
@@ -532,7 +505,6 @@ namespace Thermodynamics
 
         private const double WindVectorScale = 0.6d;
 
-/// <summary>DrawWindVector operation.</summary>
         private static void DrawWindVector(ref Vector3D position, ref Vector3 relative, float speed)
         {
             if (!Settings.Instance.DebugWindRaycast) return;
@@ -540,9 +512,7 @@ namespace Thermodynamics
             if (speed <= 0f) return;
 
             Vector4 colour = (speed > Settings.Instance.FrictionAtSpeedsAbove
-/// <summary>Color operation.</summary>
                 ? new Color(235, 70, 55)
-/// <summary>Color operation.</summary>
                 : new Color(90, 220, 120)).ToVector4();
 
             MySimpleObjectDraw.DrawLine(
@@ -553,7 +523,6 @@ namespace Thermodynamics
                 0.15f);
         }
 
-/// <summary>SolarOcclusion operation.</summary>
         private float SolarOcclusion(ref Vector3D position, ref EnvironmentSample sample)
         {
             if (!Settings.Instance.EnableSolarHeat) return 1f;
@@ -571,7 +540,6 @@ namespace Thermodynamics
             if (Telemetry.Enabled && Stats != null) Stats.SolarTime.Begin();
             try
             {
-/// <summary>MeasureOcclusion operation.</summary>
                 solarOcclusion = MeasureOcclusion(ref position, ref sample);
             }
             catch (Exception e)
@@ -586,7 +554,6 @@ namespace Thermodynamics
             return solarOcclusion;
         }
 
-/// <summary>MeasureOcclusion operation.</summary>
         private float MeasureOcclusion(ref Vector3D position, ref EnvironmentSample sample)
         {
             Settings settings = Settings.Instance;
@@ -605,12 +572,10 @@ namespace Thermodynamics
             return SamplePoints.Count == 0 ? 0f : occluded / (float)SamplePoints.Count;
         }
 
-/// <summary>RaycastSun operation.</summary>
         private bool RaycastSun(ref Vector3D position, ref EnvironmentSample sample)
         {
             Settings settings = Settings.Instance;
 
-/// <summary>LineD operation.</summary>
             LineD line = new LineD(position, position + ((Vector3D)sample.SunDirection * 15000000d));
 
             OverlapResults.Clear();
@@ -636,7 +601,6 @@ namespace Thermodynamics
                         if (occluded) continue;
                     }
 
-/// <summary>TerrainOccluded operation.</summary>
                     occluded = TerrainOccluded(planet, ref position, ref sample);
                     continue;
                 }
@@ -676,10 +640,8 @@ namespace Thermodynamics
             return occluded;
         }
 
-/// <summary>List operation.</summary>
         private static readonly List<Vector3D> SamplePoints = new List<Vector3D>();
 
-/// <summary>RefreshShadowOccluders operation.</summary>
         private void RefreshShadowOccluders(ref Vector3D position, ref EnvironmentSample sample)
         {
             Settings settings = Settings.Instance;
@@ -702,7 +664,6 @@ namespace Thermodynamics
 
             OccluderScratch.Clear();
 
-/// <summary>LineD operation.</summary>
             LineD line = new LineD(position, position + ((Vector3D)sample.SunDirection * ShadowOccluderRange));
 
             OverlapResults.Clear();
@@ -740,7 +701,6 @@ namespace Thermodynamics
             Simulation.Solver.MarkSunOccludersChanged();
         }
 
-/// <summary>OccludersMoved operation.</summary>
         private static bool OccludersMoved(
             List<SunShadowMap.Occluder> current, List<SunShadowMap.Occluder> fresh)
         {
@@ -754,7 +714,7 @@ namespace Thermodynamics
                 MatrixD now = fresh[i].ToOccluder;
 
                 if (Vector3D.DistanceSquared(was.Translation, now.Translation) > 1d) return true;
-                if (Vector3D.Dot(was.Forward, now.Forward) < 0.9994d) return true;   // ~2 degrees
+                if (Vector3D.Dot(was.Forward, now.Forward) < 0.9994d) return true;
                 if (Vector3D.Dot(was.Up, now.Up) < 0.9994d) return true;
             }
 
@@ -764,10 +724,8 @@ namespace Thermodynamics
         private const double ShadowOccluderRange = 5000d;
 
         private static readonly List<SunShadowMap.Occluder> OccluderScratch =
-/// <summary>List operation.</summary>
             new List<SunShadowMap.Occluder>();
 
-/// <summary>TerrainOccluded operation.</summary>
         private bool TerrainOccluded(MyPlanet planet, ref Vector3D position, ref EnvironmentSample sample)
         {
             Settings settings = Settings.Instance;
@@ -789,7 +747,6 @@ namespace Thermodynamics
                 surfaceRadius ?? (surfaceRadius = SurfaceRadiusAt));
         }
 
-/// <summary>AirAboveGround operation.</summary>
         private static float AirAboveGround(PlanetManager.Planet planet, float groundSurfaceRadius)
         {
             if (planet == null || planet.Entity == null || !planet.Entity.HasAtmosphere) return 0f;
@@ -807,7 +764,6 @@ namespace Thermodynamics
         private Func<Vector3D, double> surfaceRadius;
         private MyPlanet terrainPlanet;
 
-/// <summary>SurfaceRadiusAt operation.</summary>
         private double SurfaceRadiusAt(Vector3D point)
         {
             MyPlanet planet = terrainPlanet;

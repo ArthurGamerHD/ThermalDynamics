@@ -17,25 +17,16 @@ namespace Thermodynamics
         private static bool registered;
         private static int frames;
 
-/// <summary>HotTailServerState operation.</summary>
         private static readonly HotTailServerState Owed = new HotTailServerState();
 
-/// <summary>HotTailClientState operation.</summary>
         private static readonly HotTailClientState Asked = new HotTailClientState();
 
-/// <summary>List operation.</summary>
         private static readonly List<IMyPlayer> Players = new List<IMyPlayer>();
-/// <summary>List operation.</summary>
         private static readonly List<StoredTemperature> Selection = new List<StoredTemperature>();
-/// <summary>List operation.</summary>
         private static readonly List<StoredTemperature> Received = new List<StoredTemperature>();
-/// <summary>List operation.</summary>
         private static readonly List<ulong> WantSnapshot = new List<ulong>();
-/// <summary>List operation.</summary>
         private static readonly List<ulong> WantBand = new List<ulong>();
-/// <summary>HashSet operation.</summary>
         private static readonly HashSet<ulong> Present = new HashSet<ulong>();
-/// <summary>HashSet operation.</summary>
         private static readonly HashSet<long> LiveIds = new HashSet<long>();
 
 
@@ -55,7 +46,6 @@ namespace Thermodynamics
 
         public static int MessagesDropped;
 
-/// <summary>Registers the API and message handler.</summary>
         public static void Register()
         {
             if (registered) return;
@@ -71,7 +61,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Unregisters the API and cleans resources.</summary>
         public static void Unregister()
         {
             Owed.Clear();
@@ -98,7 +87,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Tick operation.</summary>
         public static void Tick()
         {
             if (!registered) return;
@@ -113,7 +101,6 @@ namespace Thermodynamics
                 if (MyAPIGateway.Multiplayer == null || !MyAPIGateway.Multiplayer.MultiplayerActive) return;
 
                 if (MyAPIGateway.Multiplayer.IsServer) Serve(seconds);
-/// <summary>Ask operation.</summary>
                 else Ask(seconds);
             }
             catch (Exception e)
@@ -123,7 +110,6 @@ namespace Thermodynamics
         }
 
 
-/// <summary>Serve operation.</summary>
         private static void Serve(float seconds)
         {
             Players.Clear();
@@ -147,7 +133,6 @@ namespace Thermodynamics
             Owed.Forget(Present, LiveIds);
             Owed.Advance(seconds);
 
-/// <summary>SyncRange operation.</summary>
             double range = SyncRange();
 
             for (int g = 0; g < grids.Count; g++)
@@ -199,7 +184,6 @@ namespace Thermodynamics
             LiveIds.Clear();
         }
 
-/// <summary>Export operation.</summary>
         private static void Export(ThermalGrid thermals, HotTailKind kind)
         {
             float band = kind == HotTailKind.HullSnapshot
@@ -209,7 +193,6 @@ namespace Thermodynamics
             thermals.Simulation.ExportHotTail(band, 0, Selection);
         }
 
-/// <summary>Send operation.</summary>
         private static void Send(HotTailKind kind, long gridId, List<ulong> recipients)
         {
             int per = HotTailMessage.RecordsPerMessage;
@@ -233,7 +216,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>SyncRange operation.</summary>
         private static double SyncRange()
         {
             try
@@ -252,7 +234,6 @@ namespace Thermodynamics
         }
 
 
-/// <summary>Ask operation.</summary>
         private static void Ask(float seconds)
         {
             IList<ThermalGrid> grids = ThermalGrid.LiveGrids;
@@ -284,7 +265,6 @@ namespace Thermodynamics
         }
 
 
-/// <summary>Handle operation.</summary>
         private static void Handle(ushort channel, byte[] payload, ulong sender, bool fromServer)
         {
             try
@@ -320,13 +300,11 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Requested operation.</summary>
         private static void Requested(ulong client, long gridId)
         {
             if (!Settings.Instance.EnableTemperatureSync) return;
             if (client == MyAPIGateway.Multiplayer.MyId) return;
 
-/// <summary>Find operation.</summary>
             ThermalGrid thermals = Find(gridId);
             if (thermals == null)
             {
@@ -353,10 +331,8 @@ namespace Thermodynamics
             Selection.Clear();
         }
 
-/// <summary>Applies the .</summary>
         private static void Apply(HotTailKind kind, long gridId)
         {
-/// <summary>Find operation.</summary>
             ThermalGrid thermals = Find(gridId);
             if (thermals == null)
             {
@@ -370,7 +346,6 @@ namespace Thermodynamics
             if (kind == HotTailKind.HullSnapshot) Asked.Answered(gridId);
         }
 
-/// <summary>Find operation.</summary>
         private static ThermalGrid Find(long gridId)
         {
             IList<ThermalGrid> grids = ThermalGrid.LiveGrids;
@@ -385,7 +360,6 @@ namespace Thermodynamics
             return null;
         }
 
-/// <summary>Report operation.</summary>
         public static string Report()
         {
             if (!registered) return "temperature sync is not registered";

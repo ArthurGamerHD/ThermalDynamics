@@ -20,7 +20,6 @@ namespace Thermodynamics
 
         private static readonly Dictionary<string, HeatPumpShape> Cache = new Dictionary<string, HeatPumpShape>();
 
-/// <summary>object operation.</summary>
         private static readonly object CacheLock = new object();
 
 /// <summary>Returns the .</summary>

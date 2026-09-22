@@ -27,7 +27,6 @@ namespace Thermodynamics
 
         private float demandMegawatts;
 
-/// <summary>Sets the demandwatts.</summary>
         public void SetDemandWatts(float watts)
         {
             float megawatts = watts > 0f ? watts * ThermalConstants.WattsToMegawatts : 0f;
@@ -69,14 +68,12 @@ namespace Thermodynamics
             get { return powerSetting == null ? 1f : ThermalMath.Clamp01(powerSetting.Value); }
         }
 
-/// <summary>Sets the powersetting.</summary>
         public void SetPowerSetting(float value)
         {
             if (powerSetting == null) return;
             powerSetting.Value = ThermalMath.Clamp01(value);
         }
 
-/// <summary>Init operation.</summary>
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
             base.Init(objectBuilder);
@@ -92,7 +89,6 @@ namespace Thermodynamics
                     NetworkAPI.Init(Session.ModID, Settings.Name);
                 }
 
-/// <summary>NetSync operation.</summary>
                 powerSetting = new NetSync<float>(this, TransferType.Both, 1f);
 
                 AttachSink();
@@ -103,7 +99,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>AttachSink operation.</summary>
         private void AttachSink()
         {
             if (Entity.Components.Contains(typeof(MyResourceSinkComponent))) return;
@@ -111,25 +106,21 @@ namespace Thermodynamics
             MyResourceSinkInfo info = new MyResourceSinkInfo
             {
                 ResourceTypeId = MyResourceDistributorComponent.ElectricityId,
-/// <summary>MaxDrawMegawatts operation.</summary>
                 MaxRequiredInput = MaxDrawMegawatts(),
                 RequiredInputFunc = RequiredInput,
             };
 
-/// <summary>MyResourceSinkComponent operation.</summary>
             sink = new MyResourceSinkComponent();
             sink.Init(SinkGroup, info);
 
             Entity.Components.Add<MyResourceSinkComponent>(sink);
         }
 
-/// <summary>MaxDrawMegawatts operation.</summary>
         private float MaxDrawMegawatts()
         {
             return ThermalHeatPumpShapes.MaxPowerWatts(BlockSubtype()) * ThermalConstants.WattsToMegawatts;
         }
 
-/// <summary>BlockSubtype operation.</summary>
         private string BlockSubtype()
         {
             return block == null || block.BlockDefinition.SubtypeName == null
@@ -137,7 +128,6 @@ namespace Thermodynamics
                 : block.BlockDefinition.SubtypeName;
         }
 
-/// <summary>RequiredInput operation.</summary>
         private float RequiredInput()
         {
             return IsRunning ? demandMegawatts : 0f;

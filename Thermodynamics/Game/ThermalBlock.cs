@@ -47,18 +47,15 @@ namespace Thermodynamics
         private Action<bool> doorChanged;
         private Action<IMyMechanicalConnectionBlock> attachmentChanged;
 
-/// <summary>ThermalBlock operation.</summary>
         public ThermalBlock(ThermalGrid grid, IMySlimBlock block, BlockModel model)
         {
             Grid = grid;
             Block = block;
 
             MyBlockOrientation orientation = block.Orientation;
-/// <summary>BlockInstance operation.</summary>
             Instance = new BlockInstance(
                 model,
                 block.Min,
-/// <summary>BlockOrientation operation.</summary>
                 new BlockOrientation(orientation.Forward, orientation.Up));
 
             Instance.Mass = Math.Max(0f, block.Mass);
@@ -66,7 +63,6 @@ namespace Thermodynamics
             Stats = Telemetry.GetBlockType(block.BlockDefinition.Id);
         }
 
-/// <summary>RefreshStats operation.</summary>
         public void RefreshStats()
         {
             if (Stats != null) return;
@@ -86,7 +82,6 @@ namespace Thermodynamics
         }
 
 
-/// <summary>Attach operation.</summary>
         public void Attach()
         {
             IMyCubeBlock fat = Block.FatBlock;
@@ -152,7 +147,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Detach operation.</summary>
         public void Detach()
         {
             IMyCubeBlock fat = Block.FatBlock;
@@ -196,7 +190,6 @@ namespace Thermodynamics
             sink = null;
         }
 
-/// <summary>AttachSource operation.</summary>
         private void AttachSource(MyResourceSourceComponent component)
         {
             if (component == null) return;
@@ -214,7 +207,6 @@ namespace Thermodynamics
             RefreshHeat();
         }
 
-/// <summary>AttachSink operation.</summary>
         private void AttachSink(MyResourceSinkComponent component)
         {
             if (component == null) return;
@@ -232,7 +224,6 @@ namespace Thermodynamics
             RefreshHeat();
         }
 
-/// <summary>Carries operation.</summary>
         private static bool Carries(ListReader<MyDefinitionId> resources)
         {
             for (int i = 0; i < resources.Count; i++)
@@ -242,14 +233,12 @@ namespace Thermodynamics
             return false;
         }
 
-/// <summary>OnComponentAdded operation.</summary>
         private void OnComponentAdded(Type type, IMyEntityComponentBase component)
         {
             if (type == typeof(MyResourceSourceComponent)) AttachSource(component as MyResourceSourceComponent);
             if (type == typeof(MyResourceSinkComponent)) AttachSink(component as MyResourceSinkComponent);
         }
 
-/// <summary>OnComponentRemoved operation.</summary>
         private void OnComponentRemoved(Type type, IMyEntityComponentBase component)
         {
             if (type == typeof(MyResourceSourceComponent) && source != null && outputChanged != null)
@@ -270,7 +259,6 @@ namespace Thermodynamics
         }
 
 
-/// <summary>OnPowerProduced operation.</summary>
         private void OnPowerProduced(MyDefinitionId resource, float previous, MyResourceSourceComponent component)
         {
             try
@@ -286,7 +274,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>OnPowerConsumed operation.</summary>
         private void OnPowerConsumed(MyDefinitionId resource, float previous, MyResourceSinkComponent component)
         {
             try
@@ -302,7 +289,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>OnThrustChanged operation.</summary>
         private void OnThrustChanged(IMyThrust block, float previous, float current)
         {
             try
@@ -319,7 +305,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>OnDoorStateChanged operation.</summary>
         private void OnDoorStateChanged(bool closed)
         {
             try
@@ -338,7 +323,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>OnAttachmentChanged operation.</summary>
         private void OnAttachmentChanged(IMyMechanicalConnectionBlock block)
         {
             try
@@ -353,7 +337,6 @@ namespace Thermodynamics
 
         public int SweepSlot = -1;
 
-/// <summary>RefreshMass operation.</summary>
         public void RefreshMass()
         {
             float mass = Math.Max(0f, Block.Mass);
@@ -363,13 +346,11 @@ namespace Thermodynamics
             if (Node != null) Node.RefreshThermalMass();
         }
 
-/// <summary>RefreshHeat operation.</summary>
         private void RefreshHeat()
         {
             if (Node != null) Node.RefreshHeatGeneration();
         }
 
-/// <summary>RefreshProperties operation.</summary>
         public void RefreshProperties()
         {
             BlockModel model = ThermalBlockCatalog.Get(Block);

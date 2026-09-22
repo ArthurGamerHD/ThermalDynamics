@@ -15,18 +15,15 @@ namespace Thermodynamics
         private static readonly Dictionary<MyDefinitionId, BlockModel> Models =
             new Dictionary<MyDefinitionId, BlockModel>(MyDefinitionId.Comparer);
 
-/// <summary>object operation.</summary>
         private static readonly object ModelLock = new object();
 
         public static int ModelCount
         {
-/// <summary>lock operation.</summary>
             get { lock (ModelLock) { return Models.Count; } }
         }
 
         public static int ModelsBuilt;
 
-/// <summary>Returns the .</summary>
         public static BlockModel Get(IMySlimBlock block)
         {
             if (block == null || block.BlockDefinition == null) return null;
@@ -39,7 +36,6 @@ namespace Thermodynamics
                 if (Models.TryGetValue(id, out model)) return model;
             }
 
-/// <summary>Builds the method table.</summary>
             BlockModel built = Build(block.BlockDefinition as MyCubeBlockDefinition, id, DoorKindOf(block));
 
             lock (ModelLock)
@@ -53,7 +49,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Clear operation.</summary>
         public static void Clear()
         {
             lock (ModelLock)
@@ -74,7 +69,6 @@ namespace Thermodynamics
             Plain
         }
 
-/// <summary>DoorKindOf operation.</summary>
         public static DoorKind DoorKindOf(IMySlimBlock block)
         {
             if (block == null) return DoorKind.None;
@@ -87,15 +81,12 @@ namespace Thermodynamics
             return block.FatBlock is IMyDoor ? DoorKind.Plain : DoorKind.None;
         }
 
-/// <summary>Builds the API method table.</summary>
         private static BlockModel Build(MyCubeBlockDefinition definition, MyDefinitionId id, DoorKind door)
         {
-/// <summary>BlockModel operation.</summary>
             BlockModel model = new BlockModel();
             model.Name = id.SubtypeName;
             if (string.IsNullOrEmpty(model.Name)) model.Name = id.TypeId.ToString();
 
-/// <summary>ToThermalProperties operation.</summary>
             model.Thermal = ToThermalProperties(ThermalCellDefinition.GetDefinition(id), definition);
 
             if (definition == null)
@@ -108,12 +99,10 @@ namespace Thermodynamics
 
             model.Size = definition.Size;
             model.Mass = definition.Mass > 0f ? definition.Mass : 100f;
-/// <summary>Builds the method table.</summary>
             model.LocalSurfaces = BuildSurfaces(definition, door);
 
             if (door != DoorKind.None)
             {
-/// <summary>Builds the method table.</summary>
                 model.LocalSurfacesWhenOpen = BuildSurfaces(definition, DoorKind.None);
             }
 
@@ -123,17 +112,14 @@ namespace Thermodynamics
             return model;
         }
 
-/// <summary>Builds the API method table.</summary>
         private static int[] BuildSurfaces(MyCubeBlockDefinition definition, DoorKind door)
         {
-/// <summary>List operation.</summary>
             List<MountRect> mounts = new List<MountRect>();
             if (definition.MountPoints != null)
             {
                 for (int i = 0; i < definition.MountPoints.Length; i++)
                 {
                     MyCubeBlockDefinition.MountPoint mount = definition.MountPoints[i];
-/// <summary>MountRect operation.</summary>
                     MountRect rect = new MountRect(mount.Normal, mount.Start, mount.End);
                     rect.Enabled = mount.Enabled;
                     mounts.Add(rect);
@@ -150,10 +136,8 @@ namespace Thermodynamics
 
             MyCubeBlockDefinition captured = definition;
             DoorKind capturedDoor = door;
-/// <summary>delegate operation.</summary>
             SealTest seals = delegate (Vector3I localCell, int face)
             {
-/// <summary>Seals operation.</summary>
                 return Seals(captured, localCell, face, capturedDoor);
             };
 
@@ -170,7 +154,6 @@ namespace Thermodynamics
 
         public static int MountFallbacks;
 
-/// <summary>HasAnyMount operation.</summary>
         private static bool HasAnyMount(int[] surfaces)
         {
             for (int i = 0; i < surfaces.Length; i++)
@@ -180,7 +163,6 @@ namespace Thermodynamics
             return false;
         }
 
-/// <summary>Seals operation.</summary>
         private static bool Seals(MyCubeBlockDefinition definition, Vector3I localCell, int face, DoorKind door)
         {
             try
@@ -196,7 +178,6 @@ namespace Thermodynamics
                     }
                 }
 
-/// <summary>SealsAsDoor operation.</summary>
                 return SealsAsDoor(definition, face, door);
             }
             catch (Exception e)
@@ -206,7 +187,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>SealsAsDoor operation.</summary>
         private static bool SealsAsDoor(MyCubeBlockDefinition definition, int face, DoorKind door)
         {
             switch (door)
@@ -225,7 +205,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>HasMountOnFace operation.</summary>
         private static bool HasMountOnFace(MyCubeBlockDefinition definition, int face)
         {
             if (definition.MountPoints == null) return false;
@@ -238,14 +217,12 @@ namespace Thermodynamics
             return false;
         }
 
-/// <summary>StatedEfficiency operation.</summary>
         private static float StatedEfficiency(MyCubeBlockDefinition block)
         {
             MyJumpDriveDefinition drive = block as MyJumpDriveDefinition;
             return drive == null ? 0f : drive.PowerEfficiency;
         }
 
-/// <summary>ToThermalProperties operation.</summary>
         public static BlockThermalProperties ToThermalProperties(
             ThermalCellDefinition definition, MyCubeBlockDefinition block = null)
         {
@@ -293,10 +270,8 @@ namespace Thermodynamics
             return properties.Clamp();
         }
 
-/// <summary>ComponentsOf operation.</summary>
         private static List<BlockComponent> ComponentsOf(MyCubeBlockDefinition block)
         {
-/// <summary>List operation.</summary>
             List<BlockComponent> components = new List<BlockComponent>();
             if (block == null || block.Components == null) return components;
 
@@ -312,10 +287,8 @@ namespace Thermodynamics
             return components;
         }
 
-/// <summary>ToLoopProperties operation.</summary>
         public static LoopThermalProperties ToLoopProperties(ThermalLoopDefinition definition)
         {
-/// <summary>LoopThermalProperties operation.</summary>
             LoopThermalProperties properties = new LoopThermalProperties();
             if (definition == null) return properties.Clamp();
 
@@ -334,10 +307,8 @@ namespace Thermodynamics
             return properties.Clamp();
         }
 
-/// <summary>ToPlanetProperties operation.</summary>
         public static PlanetThermalProperties ToPlanetProperties(PlanetDefinition definition)
         {
-/// <summary>PlanetThermalProperties operation.</summary>
             PlanetThermalProperties properties = new PlanetThermalProperties();
             if (definition == null)
             {
@@ -345,7 +316,6 @@ namespace Thermodynamics
                 return properties.Clamp();
             }
 
-/// <summary>PlanetThermalProperties operation.</summary>
             PlanetThermalProperties read = new PlanetThermalProperties();
             read.NightTemperature = definition.NightTemperature;
             read.DayTemperature = definition.DayTemperature;
@@ -368,7 +338,6 @@ namespace Thermodynamics
             return properties.Clamp();
         }
 
-/// <summary>Applies the worldloopvalues.</summary>
         private static void ApplyWorldLoopValues(LoopThermalProperties properties)
         {
             Settings world = Settings.Instance;
@@ -407,7 +376,6 @@ namespace Thermodynamics
                 properties.StagnantTransferFraction = world.LoopStagnantTransferFraction;
         }
 
-/// <summary>Applies the worldplanetvalues.</summary>
         private static void ApplyWorldPlanetValues(PlanetThermalProperties properties)
         {
             Settings world = Settings.Instance;
@@ -462,7 +430,6 @@ namespace Thermodynamics
 
         private static Settings defaults;
 
-/// <summary>Moved operation.</summary>
         private static bool Moved(float world, float shipped)
         {
             float difference = world - shipped;

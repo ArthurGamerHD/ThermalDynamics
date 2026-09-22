@@ -22,19 +22,15 @@ namespace Thermodynamics
             public MatrixD Camera;
         }
 
-/// <summary>Resolve operation.</summary>
         public static bool Resolve(out Target target)
         {
             string reason;
-/// <summary>Resolve operation.</summary>
             return Resolve(ReachMetres, out target, out reason);
         }
 
-/// <summary>Resolve operation.</summary>
         public static bool Resolve(double reachMetres, out Target target, out string reason)
         {
             reason = "no-hit";
-/// <summary>Target operation.</summary>
             target = new Target();
             target.Camera = MyAPIGateway.Session.Camera.WorldMatrix;
 

@@ -33,7 +33,6 @@ namespace Thermodynamics
 
 
 
-/// <summary>MyDefinitionId operation.</summary>
         public static readonly MyDefinitionId DefaultLoopDefinitionId = new MyDefinitionId(typeof(MyObjectBuilder_EnvironmentDefinition), Settings.DefaultLoopSubtypeId);
 
         [ProtoMember(1)]
@@ -62,10 +61,8 @@ namespace Thermodynamics
         [ProtoMember(30)]
         public float StagnantTransferFraction = 0.16f;
 
-/// <summary>Returns the definition.</summary>
         public static ThermalLoopDefinition GetDefinition(MyDefinitionId defId)
         {
-/// <summary>ThermalLoopDefinition operation.</summary>
             ThermalLoopDefinition def = new ThermalLoopDefinition();
             DefinitionExtensionsAPI lookup = Session.Definitions;
 
@@ -75,7 +72,6 @@ namespace Thermodynamics
 
             if (!lookup.DefinitionIdExists(defId) || !carriesGroup)
             {
-/// <summary>MyDefinitionId operation.</summary>
                 defId = new MyDefinitionId(defId.TypeId, Settings.DefaultSubtypeId);
 
                 if (!lookup.DefinitionIdExists(defId))
