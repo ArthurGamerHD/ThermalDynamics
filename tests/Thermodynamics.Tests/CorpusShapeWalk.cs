@@ -18,23 +18,23 @@ namespace Thermodynamics.Tests
 
         private const float Slack = 0.01f;
 
-/// <summary>Arm operation.</summary>
+
         private static ThermalSettings Arm(bool shape)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableShapeDrag = shape;
             return settings;
         }
 
-/// <summary>Scenarios operation.</summary>
+
         private static List<Battery.Scenario> Scenarios()
         {
             Dictionary<string, Battery.Scenario> byName =
                 new Dictionary<string, Battery.Scenario>(StringComparer.Ordinal);
             foreach (Battery.Scenario scenario in Battery.All()) byName[scenario.Name] = scenario;
 
-/// <summary>List operation.</summary>
+
             List<Battery.Scenario> chosen = new List<Battery.Scenario>();
             foreach (string name in new[] { Control, Measured })
             {
@@ -50,19 +50,19 @@ namespace Thermodynamics.Tests
         {
             public string Ship;
             public bool Moved;
-/// <summary>List operation.</summary>
+
             public readonly List<ScenarioOutcome> Outcomes = new List<ScenarioOutcome>();
-/// <summary>List operation.</summary>
+
             public readonly List<string> Violations = new List<string>();
         }
 
         [Fact]
-/// <summary>EveryShipInTheCorpusIsMeasuredWithTheShapeTermAndWithoutIt operation.</summary>
+
         public void EveryShipInTheCorpusIsMeasuredWithTheShapeTermAndWithoutIt()
         {
             if (CorpusFixture.Files().Count == 0) return;
 
-/// <summary>Scenarios operation.</summary>
+
             List<Battery.Scenario> scenarios = Scenarios();
 
             List<Walked> results = CorpusFixture.Sweep(Label,
@@ -70,7 +70,7 @@ namespace Thermodynamics.Tests
 
             Assert.True(results.Count > 0, "the corpus yielded no ships to walk under the shape term");
 
-/// <summary>List operation.</summary>
+
             List<string> violations = new List<string>();
             int moved = 0;
 
@@ -89,7 +89,7 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", violations.ToArray()));
         }
 
-/// <summary>Walk operation.</summary>
+
         private static Walked Walk(Blueprints.Ship ship, List<Battery.Scenario> scenarios)
         {
             Walked walked = new Walked { Ship = ship.Name };
@@ -112,7 +112,7 @@ namespace Thermodynamics.Tests
             return walked;
         }
 
-/// <summary>Judge operation.</summary>
+
         private static void Judge(Walked walked, string scenario,
             ScenarioOutcome plain, ScenarioOutcome shaped)
         {

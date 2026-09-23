@@ -45,14 +45,14 @@ namespace Thermodynamics.Core
     {
         public const int DefaultExampleLimit = 8;
 
-/// <summary>Audit operation.</summary>
+
         public static RoomAudit Audit(GridModel grid, SurfaceMap surfaces, RoomMap map, int exampleLimit = DefaultExampleLimit)
         {
-/// <summary>RoomAudit operation.</summary>
+
             RoomAudit audit = new RoomAudit();
-/// <summary>List operation.</summary>
+
             audit.Examples = new List<string>();
-/// <summary>List operation.</summary>
+
             audit.RoomSizes = new List<int>();
 
             if (map != null)
@@ -76,7 +76,7 @@ namespace Thermodynamics.Core
 
             if (grid == null || map == null) return audit;
 
-/// <summary>SearchVolumeOf operation.</summary>
+
             audit.SearchVolume = SearchVolumeOf(grid);
 
             IList<BlockInstance> blocks = grid.Blocks;
@@ -119,7 +119,7 @@ namespace Thermodynamics.Core
             return audit;
         }
 
-/// <summary>CollectRoomSizes operation.</summary>
+
         private static void CollectRoomSizes(RoomMap map, List<int> sizes, int limit)
         {
             for (int i = 0; i < map.RoomCount; i++)
@@ -133,7 +133,7 @@ namespace Thermodynamics.Core
             if (limit > 0 && sizes.Count > limit) sizes.RemoveRange(limit, sizes.Count - limit);
         }
 
-/// <summary>SearchVolumeOf operation.</summary>
+
         public static int SearchVolumeOf(GridModel grid)
         {
             if (grid == null || grid.BlockCount == 0) return 0;
@@ -142,7 +142,7 @@ namespace Thermodynamics.Core
             return Math.Max(0, extents.X) * Math.Max(0, extents.Y) * Math.Max(0, extents.Z);
         }
 
-/// <summary>Describe operation.</summary>
+
         private static string Describe(BlockInstance block, Vector3I cell, SurfaceMap surfaces, int selfState)
         {
             string verdict;

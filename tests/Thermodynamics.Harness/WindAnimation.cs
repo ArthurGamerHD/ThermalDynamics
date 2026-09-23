@@ -15,10 +15,10 @@ namespace Thermodynamics.Harness
 
         public const int Longitudes = 12;
 
-/// <summary>Json operation.</summary>
+
         public static string Json()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append("{\"times\":").Append(Times);
             sb.Append(",\"lats\":").Append(Numbers(Latitudes));
@@ -41,7 +41,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Planet operation.</summary>
+
         private static void Planet(StringBuilder sb, string name)
         {
             WindLab.Planet planet = WindLab.Planet.Vanilla(name);
@@ -141,10 +141,10 @@ namespace Thermodynamics.Harness
             sb.Append('}');
         }
 
-/// <summary>Numbers operation.</summary>
+
         private static string Numbers(double[] values)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder("[");
             for (int i = 0; i < values.Length; i++)
             {
@@ -154,12 +154,12 @@ namespace Thermodynamics.Harness
             return sb.Append(']').ToString();
         }
 
-/// <summary>Floats operation.</summary>
+
         private static string Floats(float[] values, int decimals)
         {
-/// <summary>string operation.</summary>
+
             string format = decimals == 0 ? "0" : "0." + new string('#', decimals);
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder("[");
             for (int i = 0; i < values.Length; i++)
             {
@@ -169,7 +169,7 @@ namespace Thermodynamics.Harness
             return sb.Append(']').ToString();
         }
 
-/// <summary>N operation.</summary>
+
         private static string N(double value)
         {
             return value.ToString("0.###", CultureInfo.InvariantCulture);

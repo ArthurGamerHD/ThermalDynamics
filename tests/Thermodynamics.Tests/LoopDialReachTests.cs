@@ -14,16 +14,16 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>LoopDialReachTests operation.</summary>
+
         public LoopDialReachTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>Isolated operation.</summary>
+
         private static ThermalSettings Isolated()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -34,7 +34,7 @@ namespace Thermodynamics.Tests
             return settings.Derive();
         }
 
-/// <summary>Sample operation.</summary>
+
         private static void Sample(LoopThermalProperties properties, float gridSize,
             bool pumping, bool vented, List<float> into)
         {
@@ -78,7 +78,7 @@ namespace Thermodynamics.Tests
             into.Add(PumpDraw(loop));
         }
 
-/// <summary>PumpDraw operation.</summary>
+
         private static float PumpDraw(CoolantLoop loop)
         {
             float drawn = 0f;
@@ -89,10 +89,10 @@ namespace Thermodynamics.Tests
             return drawn;
         }
 
-/// <summary>Fingerprint operation.</summary>
+
         private static List<float> Fingerprint(LoopThermalProperties properties)
         {
-/// <summary>List operation.</summary>
+
             List<float> readings = new List<float>();
 
             Sample(properties, 2.5f, true, false, readings);
@@ -103,7 +103,7 @@ namespace Thermodynamics.Tests
             return readings;
         }
 
-/// <summary>Levels operation.</summary>
+
         private static float[] Levels(string name, float shipped)
         {
             if (name == "StagnantTransferFraction") return new float[] { 0f, 0.25f };
@@ -112,14 +112,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryCoolantDialReachesTheSimulation operation.</summary>
+
         public void EveryCoolantDialReachesTheSimulation()
         {
-/// <summary>typeof operation.</summary>
+
             FieldInfo[] fields = typeof(LoopThermalProperties)
                 .GetFields(BindingFlags.Public | BindingFlags.Instance);
 
-/// <summary>List operation.</summary>
+
             List<FieldInfo> floats = new List<FieldInfo>();
             for (int i = 0; i < fields.Length; i++)
             {
@@ -130,9 +130,9 @@ namespace Thermodynamics.Tests
                 "only " + floats.Count + " coolant dials were found, so this test would pass on a"
                 + " definition that had lost most of them");
 
-/// <summary>Fingerprint operation.</summary>
+
             List<float> shipped = Fingerprint(LoopThermalProperties.Default());
-/// <summary>List operation.</summary>
+
             List<string> inert = new List<string>();
 
             foreach (FieldInfo field in floats)
@@ -147,7 +147,7 @@ namespace Thermodynamics.Tests
                     LoopThermalProperties properties = LoopThermalProperties.Default();
                     field.SetValue(properties, level);
 
-/// <summary>Fingerprint operation.</summary>
+
                     List<float> moved = Fingerprint(properties.Clamp());
 
                     for (int i = 0; i < moved.Count && i < shipped.Count; i++)

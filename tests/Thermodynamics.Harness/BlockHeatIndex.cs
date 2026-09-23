@@ -64,15 +64,15 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>All operation.</summary>
+
         public static List<Reading> All()
         {
-/// <summary>List operation.</summary>
+
             List<Reading> readings = new List<Reading>();
 
             foreach (KeyValuePair<string, GameBlocks.Definition> entry in GameBlocks.BySubtype())
             {
-/// <summary>Measure operation.</summary>
+
                 Reading reading = Measure(entry.Value);
                 if (reading != null) readings.Add(reading);
             }
@@ -81,7 +81,7 @@ namespace Thermodynamics.Harness
             return readings;
         }
 
-/// <summary>Measure operation.</summary>
+
         public static Reading Measure(GameBlocks.Definition rating)
         {
             if (rating == null || rating.Components.Count == 0) return null;
@@ -98,7 +98,7 @@ namespace Thermodynamics.Harness
                 watts = rating.PowerOutputWatts * thermal.ProducerWasteEnergy;
                 source = "output";
             }
-/// <summary>if operation.</summary>
+
             else if (rating.ThrustNewtons > 0f)
             {
                 watts = rating.ThrustNewtons * thermal.ConsumerWasteEnergy;
@@ -127,11 +127,11 @@ namespace Thermodynamics.Harness
 
             if (conductivity > 0f)
             {
-/// <summary>FaceConductance operation.</summary>
+
                 conductance += FaceConductance(size.Y * size.Z, size.X, cell, conductivity);
-/// <summary>FaceConductance operation.</summary>
+
                 conductance += FaceConductance(size.X * size.Z, size.Y, cell, conductivity);
-/// <summary>FaceConductance operation.</summary>
+
                 conductance += FaceConductance(size.X * size.Y, size.Z, cell, conductivity);
                 conductance *= 2f;
             }
@@ -167,27 +167,27 @@ namespace Thermodynamics.Harness
                         * ThermalConstants.StefanBoltzmann), 0.25d)
                     : float.PositiveInfinity,
                 HeatCapacity = capacity,
-/// <summary>SecondsToReach operation.</summary>
+
                 SecondsToCritical = SecondsToReach(capacity, watts,
                     thermal.Emissivity * ThermalConstants.StefanBoltzmann * area, critical),
                 Integrity = rating.Integrity,
                 DamagePerKelvin = thermal.OverheatDamagePerKelvin,
-/// <summary>SecondsFromCriticalToLoss operation.</summary>
+
                 SecondsCriticalToLoss = SecondsFromCriticalToLoss(capacity, watts,
                     thermal.Emissivity * ThermalConstants.StefanBoltzmann * area, critical,
                     thermal.OverheatDamagePerKelvin, rating.Integrity),
             };
         }
 
-/// <summary>SecondsToReach operation.</summary>
+
         public static float SecondsToReach(float capacity, float watts, float radiativeCoefficient,
             float target)
         {
             if (capacity <= 0f || watts <= 0f) return float.PositiveInfinity;
             if (target <= AmbientKelvin) return 0f;
 
-            const int Intervals = 2048;                     // even, as Simpson requires
-/// <summary>Pow4 operation.</summary>
+            const int Intervals = 2048;
+
             double ambient4 = Pow4(AmbientKelvin);
             double width = (target - AmbientKelvin) / (double)Intervals;
             double total = 0d;
@@ -208,7 +208,7 @@ namespace Thermodynamics.Harness
 
         public const float LossHorizonSeconds = 3600f;
 
-/// <summary>SecondsFromCriticalToLoss operation.</summary>
+
         public static float SecondsFromCriticalToLoss(float capacity, float watts,
             float radiativeCoefficient, float critical, float damagePerKelvin, float integrity)
         {
@@ -222,14 +222,14 @@ namespace Thermodynamics.Harness
                 return linear > LossHorizonSeconds ? float.PositiveInfinity : (float)linear;
             }
 
-/// <summary>Pow4d operation.</summary>
+
             double ambient4 = Pow4d(AmbientKelvin);
             double equilibrium = Math.Pow((watts / radiativeCoefficient) + ambient4, 0.25d);
 
             if (equilibrium <= critical) return float.PositiveInfinity;
 
             const int Intervals = 2048;
-            const double Closest = 0.001d;          // how near the equilibrium the grid reaches
+            const double Closest = 0.001d;
 
             double span = equilibrium - critical;
             double decay = Math.Pow(Closest, 1d / Intervals);
@@ -238,8 +238,8 @@ namespace Thermodynamics.Harness
             double damage = 0d;
             double previousTemperature = critical;
             double criticalNet = watts - (radiativeCoefficient * (Pow4d(critical) - ambient4));
-            double previousTime = capacity / criticalNet;           // dt/dT where the damage starts
-            double previousDamage = 0d;                             // (T - critical) is zero there
+            double previousTime = capacity / criticalNet;
+            double previousDamage = 0d;
             double gap = 1d;
 
             for (int i = 1; i <= Intervals; i++)
@@ -279,14 +279,14 @@ namespace Thermodynamics.Harness
             return total > LossHorizonSeconds ? float.PositiveInfinity : (float)total;
         }
 
-/// <summary>Pow4d operation.</summary>
+
         private static double Pow4d(double value)
         {
             double square = value * value;
             return square * square;
         }
 
-/// <summary>FaceConductance operation.</summary>
+
         private static float FaceConductance(int contactCells, int depthCells, float cell,
             float conductivity)
         {
@@ -300,7 +300,7 @@ namespace Thermodynamics.Harness
             return resistance > 0f ? contactArea / resistance : 0f;
         }
 
-/// <summary>Pow4 operation.</summary>
+
         private static float Pow4(float value)
         {
             float square = value * value;

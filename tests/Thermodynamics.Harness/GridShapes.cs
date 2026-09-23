@@ -8,10 +8,10 @@ namespace Thermodynamics.Harness
     public static class GridShapes
     {
 
-/// <summary>SolidBox operation.</summary>
+
         public static HashSet<Vector3I> SolidBox(Vector3I origin, Vector3I extents)
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> cells = new HashSet<Vector3I>(Vector3I.Comparer);
             for (int z = 0; z < extents.Z; z++)
                 for (int y = 0; y < extents.Y; y++)
@@ -20,10 +20,10 @@ namespace Thermodynamics.Harness
             return cells;
         }
 
-/// <summary>HollowBox operation.</summary>
+
         public static HashSet<Vector3I> HollowBox(Vector3I origin, Vector3I extents)
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> cells = new HashSet<Vector3I>(Vector3I.Comparer);
             for (int z = 0; z < extents.Z; z++)
                 for (int y = 0; y < extents.Y; y++)
@@ -36,27 +36,27 @@ namespace Thermodynamics.Harness
             return cells;
         }
 
-/// <summary>Stick operation.</summary>
+
         public static HashSet<Vector3I> Stick(int length)
         {
             return SolidBox(Vector3I.Zero, new Vector3I(1, 1, Math.Max(1, length)));
         }
 
-/// <summary>Plate operation.</summary>
+
         public static HashSet<Vector3I> Plate(int width, int length)
         {
             return SolidBox(Vector3I.Zero, new Vector3I(1, Math.Max(1, width), Math.Max(1, length)));
         }
 
 
-/// <summary>Dumbbell operation.</summary>
+
         public static HashSet<Vector3I> Dumbbell(int massSide, int neckLength, int neckWidth = 1)
         {
             massSide = Math.Max(1, massSide);
             neckLength = Math.Max(1, neckLength);
             neckWidth = Math.Max(1, neckWidth);
 
-/// <summary>SolidBox operation.</summary>
+
             HashSet<Vector3I> cells = SolidBox(Vector3I.Zero, new Vector3I(massSide, massSide, massSide));
 
             int offset = (massSide - neckWidth) / 2;
@@ -66,31 +66,31 @@ namespace Thermodynamics.Harness
                         cells.Add(new Vector3I(offset + x, offset + y, massSide + z));
 
             cells.UnionWith(SolidBox(new Vector3I(0, 0, massSide + neckLength),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(massSide, massSide, massSide)));
             return cells;
         }
 
-/// <summary>LJunction operation.</summary>
+
         public static HashSet<Vector3I> LJunction(int armLength, int thickness = 3)
         {
             armLength = Math.Max(1, armLength);
             thickness = Math.Max(1, thickness);
 
-/// <summary>SolidBox operation.</summary>
+
             HashSet<Vector3I> cells = SolidBox(Vector3I.Zero, new Vector3I(thickness, thickness, armLength));
             cells.UnionWith(SolidBox(Vector3I.Zero, new Vector3I(armLength, thickness, thickness)));
             return cells;
         }
 
-/// <summary>Truss operation.</summary>
+
         public static HashSet<Vector3I> Truss(int length, int width = 4, int ringSpacing = 4)
         {
             length = Math.Max(1, length);
             width = Math.Max(1, width);
             ringSpacing = Math.Max(1, ringSpacing);
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> cells = new HashSet<Vector3I>(Vector3I.Comparer);
 
             for (int z = 0; z < length; z++)
@@ -110,7 +110,7 @@ namespace Thermodynamics.Harness
             return cells;
         }
 
-/// <summary>Ship operation.</summary>
+
         public static HashSet<Vector3I> Ship(
             int fuselageLength = 60,
             int fuselageWidth = 9,
@@ -120,7 +120,7 @@ namespace Thermodynamics.Harness
             fuselageWidth = Math.Max(3, fuselageWidth);
             bulkheadSpacing = Math.Max(2, bulkheadSpacing);
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> cells = new HashSet<Vector3I>(Vector3I.Comparer);
             int w = fuselageWidth;
             int mid = w / 2;
@@ -160,22 +160,22 @@ namespace Thermodynamics.Harness
             return cells;
         }
 
-/// <summary>Station operation.</summary>
+
         public static HashSet<Vector3I> Station(
             Vector3I extents,
             Vector3I room,
             int wallThickness = 1)
         {
-/// <summary>Vector3I operation.</summary>
+
             extents = new Vector3I(Math.Max(3, extents.X), Math.Max(3, extents.Y), Math.Max(3, extents.Z));
-/// <summary>Vector3I operation.</summary>
+
             room = new Vector3I(Math.Max(1, room.X), Math.Max(1, room.Y), Math.Max(1, room.Z));
             wallThickness = Math.Max(1, wallThickness);
 
-/// <summary>SolidBox operation.</summary>
+
             HashSet<Vector3I> cells = SolidBox(Vector3I.Zero, extents);
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I pitch = room + new Vector3I(wallThickness, wallThickness, wallThickness);
 
             for (int z = wallThickness; z + room.Z + wallThickness <= extents.Z; z += pitch.Z)
@@ -193,14 +193,14 @@ namespace Thermodynamics.Harness
             return cells;
         }
 
-/// <summary>Accreted operation.</summary>
+
         public static HashSet<Vector3I> Accreted(int blockCount, int seed = 1)
         {
             blockCount = Math.Max(1, blockCount);
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> cells = new HashSet<Vector3I>(Vector3I.Comparer);
-/// <summary>List operation.</summary>
+
             List<Vector3I> frontier = new List<Vector3I>();
 
             cells.Add(Vector3I.Zero);
@@ -217,7 +217,7 @@ namespace Thermodynamics.Harness
 
             while (cells.Count < blockCount && frontier.Count > 0)
             {
-/// <summary>next operation.</summary>
+
                 int pick = next(frontier.Count);
                 Vector3I from = frontier[pick];
                 Vector3I candidate = from + Face.Offsets[next(Face.Count)];
@@ -235,7 +235,7 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>PlaceAll operation.</summary>
+
         public static GridBuilder PlaceAll(this GridBuilder builder, BlockModel model, IEnumerable<Vector3I> cells)
         {
             if (builder == null) throw new ArgumentNullException("builder");
@@ -249,7 +249,7 @@ namespace Thermodynamics.Harness
             return builder;
         }
 
-/// <summary>Catalogue operation.</summary>
+
         public static IEnumerable<KeyValuePair<string, HashSet<Vector3I>>> Catalogue()
         {
             yield return Pair("solid-cube", SolidBox(Vector3I.Zero, new Vector3I(8, 8, 8)));
@@ -264,7 +264,7 @@ namespace Thermodynamics.Harness
             yield return Pair("accreted", Accreted(400));
         }
 
-/// <summary>Pair operation.</summary>
+
         private static KeyValuePair<string, HashSet<Vector3I>> Pair(string name, HashSet<Vector3I> cells)
         {
             return new KeyValuePair<string, HashSet<Vector3I>>(name, cells);

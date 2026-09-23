@@ -12,27 +12,27 @@ namespace RichHudFramework.UI
 
 	public class ListBoxEntry<TElement, TValue>
 		: SelectionBoxEntryTuple<TElement, TValue>, IListBoxEntry<TElement, TValue>
-/// <summary>new operation.</summary>
+
 		where TElement : HudElementBase, IMinLabelElement, new()
 	{
-/// <summary>ListBoxEntry operation.</summary>
+
 		public ListBoxEntry()
 		{
 			SetElement(new TElement());
 			Element.TextBoard.AutoResize = false;
 		}
 
-/// <summary>Reset operation.</summary>
+
 		public override void Reset()
 		{
 			Enabled = true;
 			AllowHighlighting = true;
-/// <summary>default operation.</summary>
+
 			AssocMember = default(TValue);
 			Element.TextBoard.Clear();
 		}
 
-/// <summary>Returns the orsetmember.</summary>
+
 		public object GetOrSetMember(object data, int memberEnum)
 		{
 			var member = (ListBoxEntryAccessors)memberEnum;

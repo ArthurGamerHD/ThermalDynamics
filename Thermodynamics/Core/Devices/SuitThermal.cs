@@ -19,11 +19,11 @@ namespace Thermodynamics.Core
 
         public const float OpenHelmetConductanceFactor = 10f;
 
-/// <summary>Step operation.</summary>
+
         public static SuitStepResult Step(ThermalSettings settings, float interiorKelvin,
             float environmentKelvin, bool helmetOpen, bool energyAvailable, float seconds)
         {
-/// <summary>SuitStepResult operation.</summary>
+
             SuitStepResult result = new SuitStepResult();
             result.InteriorKelvin = interiorKelvin;
 
@@ -66,7 +66,7 @@ namespace Thermodynamics.Core
             return result;
         }
 
-/// <summary>SurvivableKelvin operation.</summary>
+
         public static float SurvivableKelvin(ThermalSettings settings, bool helmetOpen = false)
         {
             if (settings == null || settings.SuitConductance <= 0f) return float.PositiveInfinity;

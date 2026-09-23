@@ -24,12 +24,12 @@ namespace Thermodynamics.Harness
             public double ShareOfRealTime;
         }
 
-/// <summary>Measure operation.</summary>
+
         public static Row Measure(string shape, IEnumerable<Vector3I> cells, int repeats = 20)
         {
             GridBuilder builder = GridBuilder.Large();
 
-/// <summary>List operation.</summary>
+
             List<Vector3I> ordered = new List<Vector3I>(cells);
             ordered.Sort(delegate (Vector3I a, Vector3I b)
             {
@@ -41,7 +41,7 @@ namespace Thermodynamics.Harness
             BlockModel armour = Catalog.LightArmor();
             foreach (Vector3I cell in ordered) builder.Place(armour, cell);
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableRoomAir = true;
             settings.Derive();
@@ -55,7 +55,7 @@ namespace Thermodynamics.Harness
 
             RoomMap rooms = simulation.Rooms.Map;
 
-/// <summary>List operation.</summary>
+
             List<Vector3I> anchors = new List<Vector3I>();
             for (int i = 0; i < rooms.RoomCount; i++)
             {
@@ -91,25 +91,25 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>Ladder operation.</summary>
+
         public static List<Row> Ladder()
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             rows.Add(Measure("ship 40x9", GridShapes.Ship(40, 9, 12)));
 
             Vector3I[] sizes =
             {
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(17, 15, 19),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(21, 19, 23),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(27, 23, 27),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(35, 31, 35),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(43, 39, 43),
             };
 
@@ -122,13 +122,13 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report()
         {
-/// <summary>Ladder operation.</summary>
+
             List<Row> rows = Ladder();
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("ROOM SWEEP AT STATION SCALE  (A4)");
             sb.AppendLine();

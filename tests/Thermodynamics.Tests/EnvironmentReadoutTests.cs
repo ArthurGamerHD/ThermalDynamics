@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
         private const float Ambient = 293.15f;
 
         [Fact]
-/// <summary>HotBeginsExactlyWhereTheGlowBegins operation.</summary>
+
         public void HotBeginsExactlyWhereTheGlowBegins()
         {
             float glow = Incandescence.GlowStartKelvin(Critical);
@@ -26,7 +26,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WarmIsHalfTheClimbFromTheAirRatherThanHalfTheRating operation.</summary>
+
         public void WarmIsHalfTheClimbFromTheAirRatherThanHalfTheRating()
         {
             float glow = Incandescence.GlowStartKelvin(Critical);
@@ -44,7 +44,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheClimbKeepsCountingPastTheGlow operation.</summary>
+
         public void TheClimbKeepsCountingPastTheGlow()
         {
             float glow = Incandescence.GlowStartKelvin(Critical);
@@ -55,7 +55,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWorldWithNoClimbToMeasureReadsCoolRatherThanInventingOne operation.</summary>
+
         public void AWorldWithNoClimbToMeasureReadsCoolRatherThanInventingOne()
         {
             Assert.Equal(0f, EnvironmentReadout.Climb(Ambient, 5000f, 0f));
@@ -72,7 +72,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheLineDropsTheShipsHalfRatherThanGuessingIt operation.</summary>
+
         public void TheLineDropsTheShipsHalfRatherThanGuessingIt()
         {
             string whole = EnvironmentReadout.Line(Ambient, 400f, Critical);
@@ -85,7 +85,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheThreeStatesReadDifferently operation.</summary>
+
         public void TheThreeStatesReadDifferently()
         {
             float glow = Incandescence.GlowStartKelvin(Critical);

@@ -38,7 +38,7 @@ namespace Thermodynamics.Core
 
         private BlockModel.FaceFractions fractions;
 
-/// <summary>BlockInstance operation.</summary>
+
         public BlockInstance(BlockModel model, Vector3I min, BlockOrientation orientation)
         {
             if (model == null) throw new ArgumentNullException("model");
@@ -76,7 +76,7 @@ namespace Thermodynamics.Core
             get { return Model.HasOpenState; }
         }
 
-/// <summary>IsPortalFace operation.</summary>
+
         public bool IsPortalFace(int gridFace)
         {
             if (!HasStateDependentSealing) return false;
@@ -90,20 +90,20 @@ namespace Thermodynamics.Core
             get { return MaxExclusive - Min; }
         }
 
-/// <summary>MountFraction operation.</summary>
+
         public float MountFraction(int gridFace)
         {
             return (gridFace >= 0 && gridFace < Face.Count) ? fractions.Mount[gridFace] : 0f;
         }
 
-/// <summary>SealFraction operation.</summary>
+
         public float SealFraction(int gridFace)
         {
             if (gridFace < 0 || gridFace >= Face.Count) return 0f;
             return IsSealedByDoorState ? fractions.SealClosed[gridFace] : fractions.SealOpen[gridFace];
         }
 
-/// <summary>FaceAreaCells operation.</summary>
+
         public int FaceAreaCells(int gridFace)
         {
             return BoxGeometry.FaceAreaCells(Extents, gridFace);
@@ -124,20 +124,20 @@ namespace Thermodynamics.Core
             get { return Model.Name; }
         }
 
-/// <summary>LocalToGrid operation.</summary>
+
         public Vector3I LocalToGrid(Vector3I localCell)
         {
             Vector3I rotated = Orientation.Rotate(localCell);
             return Min + (rotated - RotatedLocalMin());
         }
 
-/// <summary>LocalDirectionToGrid operation.</summary>
+
         public Vector3I LocalDirectionToGrid(Vector3I localDirection)
         {
             return Orientation.Rotate(localDirection);
         }
 
-/// <summary>RotatedLocalMin operation.</summary>
+
         private Vector3I RotatedLocalMin()
         {
             Vector3I a = Orientation.Rotate(Vector3I.Zero);
@@ -145,13 +145,13 @@ namespace Thermodynamics.Core
             return Vector3I.Min(a, b);
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private void BuildFaceFractions()
         {
             fractions = Model.FractionsFor(Orientation);
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private void BuildGridSurfaces()
         {
             BuildFaceFractions();
@@ -165,9 +165,9 @@ namespace Thermodynamics.Core
             {
                 gridCells[0] = Min;
 
-/// <summary>OneCellSurfaces operation.</summary>
+
                 gridStructuralSurfaces = OneCellSurfaces(true);
-/// <summary>OneCellSurfaces operation.</summary>
+
                 gridSurfaces = shared ? gridStructuralSurfaces : OneCellSurfaces(false);
                 return;
             }
@@ -178,37 +178,37 @@ namespace Thermodynamics.Core
             BuildGridSurfacesWalkingTheCells();
         }
 
-/// <summary>Builds the API method table.</summary>
+
         public void BuildGridSurfacesWalkingTheCells()
         {
             DetachInternedSurfaces();
 
-/// <summary>ReferenceEquals operation.</summary>
+
             bool shared = ReferenceEquals(gridSurfaces, gridStructuralSurfaces);
             int i = 0;
             foreach (Vector3I local in Model.LocalCells())
             {
-/// <summary>LocalToGrid operation.</summary>
+
                 gridCells[i] = LocalToGrid(local);
-/// <summary>RotateSurface operation.</summary>
+
                 gridStructuralSurfaces[i] = RotateSurface(Model.LocalSurfaceState(local, true));
                 if (!shared)
                 {
                     gridSurfaces[i] = IsSealedByDoorState
                         ? gridStructuralSurfaces[i]
-/// <summary>RotateSurface operation.</summary>
+
                         : RotateSurface(Model.LocalSurfaceState(local, false));
                 }
                 i++;
             }
         }
 
-/// <summary>DetachInternedSurfaces operation.</summary>
+
         private void DetachInternedSurfaces()
         {
             if (Model.CellCount != 1) return;
 
-/// <summary>ReferenceEquals operation.</summary>
+
             bool shared = ReferenceEquals(gridSurfaces, gridStructuralSurfaces);
             int[] structural = { gridStructuralSurfaces[0] };
             int[] live = shared ? structural : new[] { gridSurfaces[0] };
@@ -217,7 +217,7 @@ namespace Thermodynamics.Core
             gridSurfaces = live;
         }
 
-/// <summary>OneCellSurfaces operation.</summary>
+
         private int[] OneCellSurfaces(bool structural)
         {
             int[] known = Model.OneCellSurfaces(Orientation, structural);
@@ -227,7 +227,7 @@ namespace Thermodynamics.Core
                 RotateSurface(Model.LocalSurfaceState(Vector3I.Zero, structural)));
         }
 
-/// <summary>RotateSurface operation.</summary>
+
         private int RotateSurface(int localState)
         {
             if (localState == (CellSurface.SelfAirtightMask | CellSurface.SelfMountMask)
@@ -254,27 +254,27 @@ namespace Thermodynamics.Core
             return rotated;
         }
 
-/// <summary>RefreshSurfaces operation.</summary>
+
         public void RefreshSurfaces()
         {
             BuildGridSurfaces();
         }
 
-/// <summary>CoolantLinkPorts operation.</summary>
+
         public List<GridPort> CoolantLinkPorts()
         {
-/// <summary>ToGridPorts operation.</summary>
+
             return ToGridPorts(Model.Coolant == null ? null : Model.Coolant.LinkPorts);
         }
 
-/// <summary>CoolantSinkPorts operation.</summary>
+
         public List<GridPort> CoolantSinkPorts()
         {
-/// <summary>ToGridPorts operation.</summary>
+
             return ToGridPorts(Model.Coolant == null ? null : Model.Coolant.SinkPorts);
         }
 
-/// <summary>TryHeatPumpCells operation.</summary>
+
         public bool TryHeatPumpCells(out Vector3I coldCell, out Vector3I hotCell)
         {
             HeatPumpShape shape = Model.HeatPump;
@@ -285,17 +285,17 @@ namespace Thermodynamics.Core
                 return false;
             }
 
-/// <summary>LocalToGrid operation.</summary>
+
             coldCell = LocalToGrid(shape.ColdCell) + LocalDirectionToGrid(shape.ColdDirection);
-/// <summary>LocalToGrid operation.</summary>
+
             hotCell = LocalToGrid(shape.HotCell) + LocalDirectionToGrid(shape.HotDirection);
             return true;
         }
 
-/// <summary>ToGridPorts operation.</summary>
+
         private List<GridPort> ToGridPorts(CoolantPort[] ports)
         {
-/// <summary>List operation.</summary>
+
             List<GridPort> result = new List<GridPort>();
             if (ports == null) return result;
 
@@ -308,7 +308,7 @@ namespace Thermodynamics.Core
             return result;
         }
 
-/// <summary>ToString operation.</summary>
+
         public override string ToString()
         {
             return Model.Name + "@" + Min;
@@ -320,7 +320,7 @@ namespace Thermodynamics.Core
         public Vector3I Cell;
         public Vector3I Direction;
 
-/// <summary>GridPort operation.</summary>
+
         public GridPort(Vector3I cell, Vector3I direction)
         {
             Cell = cell;

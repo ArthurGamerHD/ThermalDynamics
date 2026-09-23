@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
 {
     public class RoomAirCanonicalTests
     {
-/// <summary>SealedBox operation.</summary>
+
         private static ThermalSimulation SealedBox()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -30,11 +30,11 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Reordered operation.</summary>
+
         private static RoomMap Reordered(ThermalSimulation simulation, bool reversed)
         {
             RoomMap source = simulation.Rooms.Map;
-/// <summary>RoomMap operation.</summary>
+
             RoomMap map = new RoomMap();
             map.SetSearchBounds(simulation.Grid.Min - Vector3I.One, simulation.Grid.Max + new Vector3I(2, 2, 2));
 
@@ -55,17 +55,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARoomsAirIsTheSameWhicheverOrderItsCellsArriveIn operation.</summary>
+
         public void ARoomsAirIsTheSameWhicheverOrderItsCellsArriveIn()
         {
-/// <summary>SealedBox operation.</summary>
+
             ThermalSimulation forwardSim = SealedBox();
-/// <summary>SealedBox operation.</summary>
+
             ThermalSimulation reverseSim = SealedBox();
 
-/// <summary>Reordered operation.</summary>
+
             RoomMap forwardMap = Reordered(forwardSim, false);
-/// <summary>Reordered operation.</summary>
+
             RoomMap reverseMap = Reordered(reverseSim, true);
 
             Assert.True(forwardMap.RoomCount > 0, "no rooms were mapped, so nothing is compared");
@@ -116,10 +116,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryRoomsLinksAreInNodeOrder operation.</summary>
+
         public void EveryRoomsLinksAreInNodeOrder()
         {
-/// <summary>SealedBox operation.</summary>
+
             ThermalSimulation simulation = SealedBox();
             Pressurise(simulation, Reordered(simulation, false));
 
@@ -142,7 +142,7 @@ namespace Thermodynamics.Tests
             Assert.True(judged > 10, "only " + judged + " neighbouring pairs of links were compared");
         }
 
-/// <summary>Pressurise operation.</summary>
+
         private static void Pressurise(ThermalSimulation simulation, RoomMap map)
         {
             simulation.Solver.RebuildRoomAir(map);
@@ -158,20 +158,20 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>Builds the API method table.</summary>
+
         public void BuildingARoomsAirTwiceGivesTheSameAnswer()
         {
-/// <summary>SealedBox operation.</summary>
+
             ThermalSimulation simulation = SealedBox();
-/// <summary>Reordered operation.</summary>
+
             RoomMap map = Reordered(simulation, false);
 
             Pressurise(simulation, map);
-/// <summary>Conductances operation.</summary>
+
             List<float> first = Conductances(simulation);
 
             Pressurise(simulation, map);
-/// <summary>Conductances operation.</summary>
+
             List<float> second = Conductances(simulation);
 
             Assert.True(first.Count > 10, "only " + first.Count + " links were compared");
@@ -186,10 +186,10 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Conductances operation.</summary>
+
         private static List<float> Conductances(ThermalSimulation simulation)
         {
-/// <summary>List operation.</summary>
+
             List<float> all = new List<float>();
             IList<RoomAirNode> air = simulation.Solver.RoomAir;
 
@@ -202,7 +202,7 @@ namespace Thermodynamics.Tests
             return all;
         }
 
-/// <summary>Bits operation.</summary>
+
         private static int Bits(float value)
         {
             return BitConverter.ToInt32(BitConverter.GetBytes(value), 0);

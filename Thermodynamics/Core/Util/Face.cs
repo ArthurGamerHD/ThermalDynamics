@@ -25,17 +25,17 @@ namespace Thermodynamics.Core
 
         public static readonly Vector3[] Normals = new Vector3[]
         {
-/// <summary>Vector3 operation.</summary>
+
             new Vector3(0, 0, -1),
-/// <summary>Vector3 operation.</summary>
+
             new Vector3(-1, 0, 0),
-/// <summary>Vector3 operation.</summary>
+
             new Vector3(0, 1, 0),
-/// <summary>Vector3 operation.</summary>
+
             new Vector3(0, -1, 0),
-/// <summary>Vector3 operation.</summary>
+
             new Vector3(1, 0, 0),
-/// <summary>Vector3 operation.</summary>
+
             new Vector3(0, 0, 1),
         };
 
@@ -44,19 +44,19 @@ namespace Thermodynamics.Core
             "Forward", "Left", "Up", "Down", "Right", "Backward"
         };
 
-/// <summary>Opposite operation.</summary>
+
         public static int Opposite(int face)
         {
             return 5 - face;
         }
 
-/// <summary>Name operation.</summary>
+
         public static string Name(int face)
         {
             return (face >= 0 && face < Count) ? NamesByIndex[face] : "NotAFace";
         }
 
-/// <summary>IndexOf operation.</summary>
+
         public static int IndexOf(Vector3I offset)
         {
             for (int i = 0; i < Count; i++)
@@ -66,7 +66,7 @@ namespace Thermodynamics.Core
             return -1;
         }
 
-/// <summary>Axis operation.</summary>
+
         public static int Axis(int face)
         {
             switch (face)

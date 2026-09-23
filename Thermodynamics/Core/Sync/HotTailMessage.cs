@@ -21,19 +21,19 @@ namespace Thermodynamics.Core
 
         public const int RecordsPerMessage = 2048;
 
-/// <summary>SizeOf operation.</summary>
+
         public static int SizeOf(int blocks)
         {
             return HeaderSize + HotTailCodec.SizeOf(blocks);
         }
 
-/// <summary>Messages operation.</summary>
+
         public static int Messages(int records)
         {
             return HotTailCodec.Packets(records, RecordsPerMessage);
         }
 
-/// <summary>EncodeSnapshotRequest operation.</summary>
+
         public static byte[] EncodeSnapshotRequest(long gridId)
         {
             byte[] bytes = new byte[HeaderSize];
@@ -41,7 +41,7 @@ namespace Thermodynamics.Core
             return bytes;
         }
 
-/// <summary>EncodeTemperatures operation.</summary>
+
         public static byte[] EncodeTemperatures(HotTailKind kind, long gridId,
             IList<StoredTemperature> tail, int offset, int count)
         {
@@ -59,7 +59,7 @@ namespace Thermodynamics.Core
             return bytes;
         }
 
-/// <summary>TryDecode operation.</summary>
+
         public static HotTailKind TryDecode(byte[] data, out long gridId,
             List<StoredTemperature> results)
         {
@@ -70,7 +70,7 @@ namespace Thermodynamics.Core
             if (data[0] != Version1Marker) return HotTailKind.Unknown;
 
             byte kind = data[1];
-/// <summary>ReadInt64 operation.</summary>
+
             gridId = ReadInt64(data, 2);
 
             if (kind == (byte)HotTailKind.SnapshotRequest)
@@ -90,7 +90,7 @@ namespace Thermodynamics.Core
                 : HotTailKind.Unknown;
         }
 
-/// <summary>WriteHeader operation.</summary>
+
         private static void WriteHeader(byte[] bytes, HotTailKind kind, long gridId)
         {
             bytes[0] = Version1Marker;
@@ -98,7 +98,7 @@ namespace Thermodynamics.Core
             for (int i = 0; i < 8; i++) bytes[2 + i] = (byte)(gridId >> (i * 8));
         }
 
-/// <summary>ReadInt64 operation.</summary>
+
         private static long ReadInt64(byte[] bytes, int at)
         {
             long value = 0;

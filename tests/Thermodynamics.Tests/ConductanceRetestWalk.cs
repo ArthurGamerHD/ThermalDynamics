@@ -31,7 +31,7 @@ namespace Thermodynamics.Tests
         private static int rowsWritten;
 
         [Fact]
-/// <summary>EveryArmOfTheConversionGetsAMeasuredEffect operation.</summary>
+
         public void EveryArmOfTheConversionGetsAMeasuredEffect()
         {
             if (CorpusFixture.Files().Count == 0) return;
@@ -64,7 +64,7 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(1, controls);
 
-/// <summary>Reach operation.</summary>
+
             Dictionary<string, int> reach = Reach(worlds, ships);
 
             foreach (ConductanceRetest.World world in worlds)
@@ -77,18 +77,18 @@ namespace Thermodynamics.Tests
         }
 
 
-/// <summary>Reach operation.</summary>
+
         private static Dictionary<string, int> Reach(List<ConductanceRetest.World> worlds,
             List<Blueprints.Ship> ships)
         {
             Dictionary<string, int> totals = new Dictionary<string, int>(StringComparer.Ordinal);
-/// <summary>List operation.</summary>
+
             List<string> rows = new List<string>();
 
             Dictionary<string, float> shippedBySubtype =
                 new Dictionary<string, float>(StringComparer.Ordinal);
 
-/// <summary>object operation.</summary>
+
             object gate = new object();
 
             System.Threading.Tasks.ParallelOptions options =
@@ -124,7 +124,7 @@ namespace Thermodynamics.Tests
                     {
                         Dictionary<string, float> mine =
                             new Dictionary<string, float>(StringComparer.Ordinal);
-/// <summary>Conductances operation.</summary>
+
                         Dictionary<string, int> counts = Conductances(ship, mine);
 
                         int retunedBlocks = 0;
@@ -144,7 +144,7 @@ namespace Thermodynamics.Tests
                             retunedBlocks += counts[pair.Key];
                         }
 
-/// <summary>StringBuilder operation.</summary>
+
                         StringBuilder row = new StringBuilder();
                         row.Append(CorpusRecord.Text(current.Name)).Append(',');
                         row.Append(CorpusRecord.Text(ship.Name)).Append(',');
@@ -188,7 +188,7 @@ namespace Thermodynamics.Tests
             return totals;
         }
 
-/// <summary>Conductances operation.</summary>
+
         private static Dictionary<string, int> Conductances(Blueprints.Ship ship,
             Dictionary<string, float> into)
         {
@@ -216,11 +216,11 @@ namespace Thermodynamics.Tests
         }
 
 
-/// <summary>Run operation.</summary>
+
         private static void Run(ConductanceRetest.World world, Dictionary<string, int> reach,
             List<Blueprints.Ship> ships, Dictionary<string, Battery.Scenario> scenarios)
         {
-/// <summary>object operation.</summary>
+
             object gate = new object();
             int written = 0;
             int skipped = 0;
@@ -247,7 +247,7 @@ namespace Thermodynamics.Tests
                         return;
                     }
 
-/// <summary>List operation.</summary>
+
                     List<string> mine = new List<string>();
 
                     Blueprints.Ship ship = source.Reload();
@@ -289,11 +289,11 @@ namespace Thermodynamics.Tests
                 + "resumed past " + skipped + " ships");
         }
 
-/// <summary>Row operation.</summary>
+
         private static string Row(ConductanceRetest.World world, int retuned,
             Blueprints.Ship ship, ScenarioOutcome o)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder row = new StringBuilder();
             row.Append(CorpusRecord.Text(world.Name)).Append(',');
             row.Append(CorpusRecord.Text(o.Scenario)).Append(',');
@@ -328,7 +328,7 @@ namespace Thermodynamics.Tests
 
         private static readonly ShipSet.Resume Record = new ShipSet.Resume("retest");
 
-/// <summary>Each operation.</summary>
+
         private static void Each(List<Blueprints.Ship> ships,
             System.Threading.Tasks.ParallelOptions options, Action<Blueprints.Ship> work)
         {
@@ -341,7 +341,7 @@ namespace Thermodynamics.Tests
                 });
         }
 
-/// <summary>Progress operation.</summary>
+
         private static void Progress(string line)
         {
             ShipSet.Progress("retest", line);

@@ -71,10 +71,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>All operation.</summary>
+
         public static List<Price> All()
         {
-/// <summary>List operation.</summary>
+
             List<Price> prices = new List<Price>();
 
             foreach (BlockHeatIndex.Reading reading in BlockHeatIndex.All())
@@ -104,7 +104,7 @@ namespace Thermodynamics.Harness
             return prices;
         }
 
-/// <summary>Quantile operation.</summary>
+
         public static float Quantile(List<float> ascending, double quantile)
         {
             if (ascending.Count == 0) return 0f;

@@ -7,13 +7,13 @@ namespace Thermodynamics.Tests
 {
     public class TelemetryFormatTests
     {
-/// <summary>InGermanLocale operation.</summary>
+
         private static void InGermanLocale(System.Action body)
         {
             CultureInfo original = Thread.CurrentThread.CurrentCulture;
             try
             {
-/// <summary>CultureInfo operation.</summary>
+
                 Thread.CurrentThread.CurrentCulture = new CultureInfo("de-DE");
                 body();
             }
@@ -24,7 +24,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NumbersUseAPointRegardlessOfTheClientLocale operation.</summary>
+
         public void NumbersUseAPointRegardlessOfTheClientLocale()
         {
             InGermanLocale(() =>
@@ -36,7 +36,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NumbersCarryNoThousandsSeparator operation.</summary>
+
         public void NumbersCarryNoThousandsSeparator()
         {
             Assert.Equal("1234567", TelemetryFormat.Number(1234567));
@@ -44,7 +44,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NonFiniteNumbersBecomeBlankRatherThanText operation.</summary>
+
         public void NonFiniteNumbersBecomeBlankRatherThanText()
         {
             Assert.Equal("", TelemetryFormat.Number(double.NaN));
@@ -53,7 +53,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WholeNumbersDoNotGrowATrailingDecimalPart operation.</summary>
+
         public void WholeNumbersDoNotGrowATrailingDecimalPart()
         {
             Assert.Equal("0", TelemetryFormat.Number(0));
@@ -61,7 +61,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>IntegersAreInvariantToo operation.</summary>
+
         public void IntegersAreInvariantToo()
         {
             InGermanLocale(() =>
@@ -72,7 +72,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>QuotingWrapsAValueAndDoublesAnyEmbeddedQuote operation.</summary>
+
         public void QuotingWrapsAValueAndDoublesAnyEmbeddedQuote()
         {
             Assert.Equal("\"Rusty Miner\"", TelemetryFormat.Quote("Rusty Miner"));
@@ -81,7 +81,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>QuotingAnEmptyOrNullValueProducesAnEmptyField operation.</summary>
+
         public void QuotingAnEmptyOrNullValueProducesAnEmptyField()
         {
             Assert.Equal("", TelemetryFormat.Quote(null));
@@ -89,7 +89,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TruncationNeverExceedsTheColumnWidth operation.</summary>
+
         public void TruncationNeverExceedsTheColumnWidth()
         {
             for (int width = 1; width <= 12; width++)
@@ -101,14 +101,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TruncationMarksTheClipSoAShortenedNameIsNeverMistakenForAWholeOne operation.</summary>
+
         public void TruncationMarksTheClipSoAShortenedNameIsNeverMistakenForAWholeOne()
         {
             Assert.Equal("Gaug~", TelemetryFormat.Truncate("Gauge_LG_CoolantPump", 5));
         }
 
         [Fact]
-/// <summary>AValueThatFitsIsLeftExactlyAsItIs operation.</summary>
+
         public void AValueThatFitsIsLeftExactlyAsItIs()
         {
             Assert.Equal("Reactor", TelemetryFormat.Truncate("Reactor", 7));
@@ -116,7 +116,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnAbsentValueTruncatesToADash operation.</summary>
+
         public void AnAbsentValueTruncatesToADash()
         {
             Assert.Equal("-", TelemetryFormat.Truncate(null, 10));
@@ -124,14 +124,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APeakThatWasNeverSetReadsAsAbsentRatherThanAsTheFloatFloor operation.</summary>
+
         public void APeakThatWasNeverSetReadsAsAbsentRatherThanAsTheFloatFloor()
         {
             Assert.Equal("-", TelemetryFormat.Peak(float.MinValue));
         }
 
         [Fact]
-/// <summary>APeakThatWasSetIsPrinted operation.</summary>
+
         public void APeakThatWasSetIsPrinted()
         {
             Assert.Contains("1", TelemetryFormat.Peak(1234.5f));
@@ -139,7 +139,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BucketLabelsCoverTheWholeLineWithoutAGap operation.</summary>
+
         public void BucketLabelsCoverTheWholeLineWithoutAGap()
         {
             float[] edges = { 10f, 20f, 30f };
@@ -151,7 +151,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BucketLabelsKeepAFractionalEdgeReadable operation.</summary>
+
         public void BucketLabelsKeepAFractionalEdgeReadable()
         {
             float[] edges = { 2.8f, 50f };
@@ -161,7 +161,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BucketLabelsAreInvariantToo operation.</summary>
+
         public void BucketLabelsAreInvariantToo()
         {
             InGermanLocale(() =>
@@ -171,7 +171,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABucketLabelWithoutEdgesDoesNotThrow operation.</summary>
+
         public void ABucketLabelWithoutEdgesDoesNotThrow()
         {
             Assert.Equal("all", TelemetryFormat.BucketLabel(null, 0, "K"));
@@ -179,10 +179,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CsvFieldsAreCommaSeparatedAndTheLastEndsTheLine operation.</summary>
+
         public void CsvFieldsAreCommaSeparatedAndTheLastEndsTheLine()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             TelemetryFormat.AppendCsv(sb, "Rusty Miner");
@@ -194,10 +194,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARowHasAsManyFieldsAsItsHeaderEvenWhenValuesAreMissing operation.</summary>
+
         public void ARowHasAsManyFieldsAsItsHeaderEvenWhenValuesAreMissing()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             TelemetryFormat.AppendCsv(sb, (string)null);
@@ -208,7 +208,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WhatTheShippedWriterQuotesTheHarnessReaderParsesBack operation.</summary>
+
         public void WhatTheShippedWriterQuotesTheHarnessReaderParsesBack()
         {
             string name = "The \"Iron\" Maiden, Mk II";

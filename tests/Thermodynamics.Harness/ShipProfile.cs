@@ -35,7 +35,7 @@ namespace Thermodynamics.Harness
             get { return ExposedArea <= 0f ? 0f : WasteWatts / ExposedArea; }
         }
 
-/// <summary>EquilibriumKelvin operation.</summary>
+
         public float EquilibriumKelvin(float emissivity = 0.15f)
         {
             if (ThermalStress <= 0f) return 0f;
@@ -83,16 +83,16 @@ namespace Thermodynamics.Harness
             "log waste W", "log stress", "log stiffness", "large grid",
         };
 
-/// <summary>Log operation.</summary>
+
         private static double Log(double value)
         {
             return Math.Log10(value > 0d ? value + 1d : 1d);
         }
 
-/// <summary>Measure operation.</summary>
+
         public static ShipProfile Measure(Blueprints.Ship ship, ThermalSettings settings = null)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings effective = settings ?? new ThermalSettings();
             ShipAssembly assembly = ship.Build(effective);
 
@@ -107,9 +107,9 @@ namespace Thermodynamics.Harness
                 Rooms = assembly.RoomCount,
             };
 
-/// <summary>List operation.</summary>
+
             List<float> demands = new List<float>(assembly.NodeCount);
-/// <summary>SeaLevelAir operation.</summary>
+
             EnvironmentState air = SeaLevelAir(effective);
             float peakInAir = 0f;
             float[] thrustByDirection = new float[Face.Count];
@@ -178,15 +178,15 @@ namespace Thermodynamics.Harness
             profile.PeakSubstepDemand = peak;
             profile.PeakSubstepDemandInAir = peakInAir;
             demands.Sort();
-/// <summary>Percentile operation.</summary>
+
             profile.SubstepDemandMedian = Percentile(demands, 0.50f);
-/// <summary>Percentile operation.</summary>
+
             profile.SubstepDemandP95 = Percentile(demands, 0.95f);
 
             return profile;
         }
 
-/// <summary>SeaLevelAir operation.</summary>
+
         private static EnvironmentState SeaLevelAir(ThermalSettings settings)
         {
             return EnvironmentSolver.Solve(
@@ -197,7 +197,7 @@ namespace Thermodynamics.Harness
 
         public float StoreReserveWatts;
 
-/// <summary>Rate operation.</summary>
+
         private static void Rate(ShipProfile profile, BlockInstance block, float[] thrustByDirection,
             ref float draw, ref float installed)
         {
@@ -233,7 +233,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Direction operation.</summary>
+
         private static int Direction(BlockInstance block)
         {
             Vector3I facing = block.Orientation.Rotate(Vector3I.Forward);
@@ -245,13 +245,13 @@ namespace Thermodynamics.Harness
             return 0;
         }
 
-/// <summary>Percentile operation.</summary>
+
         private static float Percentile(List<float> sorted, float fraction)
         {
             return LabStats.PercentileOfSorted(sorted, fraction);
         }
 
-/// <summary>ToString operation.</summary>
+
         public override string ToString()
         {
             return Name + " (" + Blocks + " blocks, " + ThermalStress.ToString("n0") + " W/m²)";

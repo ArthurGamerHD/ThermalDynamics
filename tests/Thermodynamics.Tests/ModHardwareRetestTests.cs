@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     public class ModHardwareRetestTests
     {
         [Fact]
-/// <summary>TheRigsMeasureTheShippedConductances operation.</summary>
+
         public void TheRigsMeasureTheShippedConductances()
         {
             Assert.Equal(
@@ -28,7 +28,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRadiatorConversionHelpsAndOnlyALittle operation.</summary>
+
         public void TheRadiatorConversionHelpsAndOnlyALittle()
         {
             ModHardwareRetest.Row shipped = ModHardwareRetest.RadiatorStack(8, false);
@@ -47,7 +47,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCoolantLoopDoesNotCarryMoreBecauseThePipesAreCopper operation.</summary>
+
         public void TheCoolantLoopDoesNotCarryMoreBecauseThePipesAreCopper()
         {
             ModHardwareRetest.Row shipped = ModHardwareRetest.CoolantRing(6, 5, false);
@@ -63,7 +63,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BothRigsHeatTheirSource operation.</summary>
+
         public void BothRigsHeatTheirSource()
         {
             ModHardwareRetest.Row stack = ModHardwareRetest.RadiatorStack(8, false);
@@ -85,7 +85,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheConversionsHeadlineMovesAreWhereTheyWereMeasured operation.</summary>
+
         public void TheConversionsHeadlineMovesAreWhereTheyWereMeasured()
         {
             if (!GameBlocks.IsInstalled) return;

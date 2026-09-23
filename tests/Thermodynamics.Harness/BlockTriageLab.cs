@@ -31,14 +31,14 @@ namespace Thermodynamics.Harness
 
         private const float ReachFloor = 0.0001f;
 
-/// <summary>Rank operation.</summary>
+
         public static List<Row> Rank(string composition)
         {
             Dictionary<string, float> share;
             Dictionary<string, int> carriers;
             Reach(composition, out share, out carriers);
 
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             foreach (BlockHeatIndex.Reading reading in BlockHeatIndex.All())
@@ -73,7 +73,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Reach operation.</summary>
+
         private static void Reach(string composition,
             out Dictionary<string, float> share, out Dictionary<string, int> carriers)
         {
@@ -89,7 +89,7 @@ namespace Thermodynamics.Harness
 
             foreach (string line in System.IO.File.ReadLines(composition))
             {
-/// <summary>Split operation.</summary>
+
                 string[] fields = Split(line);
                 if (fields.Length < 6 || fields[3] == "type_id") continue;
 
@@ -108,7 +108,7 @@ namespace Thermodynamics.Harness
                 HashSet<string> set;
                 if (!ships.TryGetValue(type, out set))
                 {
-/// <summary>HashSet operation.</summary>
+
                     set = new HashSet<string>(StringComparer.Ordinal);
                     ships[type] = set;
                 }
@@ -128,16 +128,16 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Split operation.</summary>
+
         private static string[] Split(string line)
         {
             return CsvLine.Split(line).ToArray();
         }
 
-/// <summary>Levers operation.</summary>
+
         public static string Levers(string composition, float target, float minimumReach)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("LEVERS TO A SELF INDEX OF " + target.ToString("n1")
                 + "  (blocks a censused fleet actually carries)");
@@ -189,10 +189,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(string composition)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("subtype,type_id,large,watts,index,self_index,settles_k,critical_k,fleet_share,carriers");
 
@@ -214,13 +214,13 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(string composition, int take)
         {
-/// <summary>Rank operation.</summary>
+
             List<Row> rows = Rank(composition);
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("BLOCK TRIAGE  (no simulation: an index from the definition, a reach from a census)");
             sb.AppendLine("  index      heat made over the most it could shed, every face radiating AND bolted");

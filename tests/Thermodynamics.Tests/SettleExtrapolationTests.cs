@@ -6,14 +6,14 @@ namespace Thermodynamics.Tests
     public class SettleExtrapolationTests
     {
         [Fact]
-/// <summary>AHalvingApproachInsideTheToleranceIsDone operation.</summary>
+
         public void AHalvingApproachInsideTheToleranceIsDone()
         {
             Assert.True(Battery.Converged(-0.2f, -0.4f));
         }
 
         [Fact]
-/// <summary>AHalvingApproachWithFurtherToGoIsNotDone operation.</summary>
+
         public void AHalvingApproachWithFurtherToGoIsNotDone()
         {
             Assert.False(Battery.Converged(-2f, -4f));
@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
         [InlineData(0.5f)]
         [InlineData(0.75f)]
         [InlineData(0.89f)]
-/// <summary>WhatIsSkippedIsInsideTheSameTolerance operation.</summary>
+
         public void WhatIsSkippedIsInsideTheSameTolerance(float ratio)
         {
             for (float step = 0.01f; step < 50f; step *= 1.3f)
@@ -40,7 +40,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACreepIsNotAConvergence operation.</summary>
+
         public void ACreepIsNotAConvergence()
         {
             Assert.False(Battery.Converged(0.99f, 1.0f));
@@ -48,7 +48,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnAcceleratingRunIsNotExtrapolated operation.</summary>
+
         public void AnAcceleratingRunIsNotExtrapolated()
         {
             Assert.False(Battery.Converged(-0.4f, -0.2f));
@@ -56,7 +56,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnOscillationIsNotExtrapolated operation.</summary>
+
         public void AnOscillationIsNotExtrapolated()
         {
             Assert.False(Battery.Converged(0.1f, -0.2f));
@@ -64,7 +64,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NothingIsExtrapolatedFromOneSample operation.</summary>
+
         public void NothingIsExtrapolatedFromOneSample()
         {
             Assert.False(Battery.Converged(-0.1f, float.NaN));
@@ -73,7 +73,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ItIsOffUnlessTheWalkAsksForIt operation.</summary>
+
         public void ItIsOffUnlessTheWalkAsksForIt()
         {
             Assert.Equal(

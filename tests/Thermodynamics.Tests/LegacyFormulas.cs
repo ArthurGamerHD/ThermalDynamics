@@ -5,7 +5,7 @@ namespace Thermodynamics.Tests
 {
     public static class LegacyFormulas
     {
-/// <summary>LargestFace operation.</summary>
+
         public static int LargestFace(Vector3I vector)
         {
             int s1 = 1;
@@ -21,7 +21,7 @@ namespace Thermodynamics.Tests
             return s1 * s2;
         }
 
-/// <summary>TemperatureColor operation.</summary>
+
         public static Vector3 TemperatureColor(float temp, float max, float low, float high)
         {
             float t = Math.Max(0, Math.Min(max, temp));
@@ -34,7 +34,7 @@ namespace Thermodynamics.Tests
             {
                 v = (1.5f * (t / low)) - 1;
             }
-/// <summary>if operation.</summary>
+
             else if (t < high)
             {
                 h = (240f - ((t - low) / (high - low) * 240f)) / 360f;
@@ -63,13 +63,13 @@ namespace Thermodynamics.Tests
                 get { return GridSize * GridSize * ExposedSurfaceMultiplier; }
             }
 
-/// <summary>C operation.</summary>
+
             public float C(float timeScaleRatio)
             {
                 return (1f / (SpecificHeat * Mass * GridSize)) * timeScaleRatio;
             }
 
-/// <summary>K operation.</summary>
+
             public float K()
             {
                 return Conductivity * (SpecificHeat * Mass * GridSize)
@@ -77,7 +77,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>ConductionDelta operation.</summary>
+
         public static float ConductionDelta(Cell self, Cell neighbour, int touchingSurfaces, float timeScaleRatio)
         {
             float area = Math.Min(self.Area, neighbour.Area);

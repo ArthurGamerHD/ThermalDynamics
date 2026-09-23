@@ -12,10 +12,10 @@ namespace Thermodynamics.Tests
     public class ShippedDefinitionTests
     {
         const string CUBES_DEFINITION_PATH = "Cubes.xml";
-/// <summary>LoadDefinition operation.</summary>
+
         private static XDocument LoadDefinition(string path) => XDocument.Load(Path.Combine(ShippedBlocks.DataRoot(), path));
 
-/// <summary>ShippedBlockTypes operation.</summary>
+
         private static Dictionary<string, string> ShippedBlockTypes()
         {
             Dictionary<string, string> types = new Dictionary<string, string>();
@@ -40,7 +40,7 @@ namespace Thermodynamics.Tests
             return types;
         }
 
-/// <summary>CubesEntries operation.</summary>
+
         private static List<KeyValuePair<string, string>> CubesEntries()
         {
             List<KeyValuePair<string, string>> entries = new List<KeyValuePair<string, string>>();
@@ -61,18 +61,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryShippedBlockDeclaresItsThermalPropertiesUnderItsOwnTypeId operation.</summary>
+
         public void EveryShippedBlockDeclaresItsThermalPropertiesUnderItsOwnTypeId()
         {
-/// <summary>ShippedBlockTypes operation.</summary>
+
             Dictionary<string, string> shipped = ShippedBlockTypes();
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
 
             foreach (KeyValuePair<string, string> entry in CubesEntries())
             {
                 string expected;
-                if (!shipped.TryGetValue(entry.Value, out expected)) continue;   // vanilla or fallback entry
+                if (!shipped.TryGetValue(entry.Value, out expected)) continue;
 
                 if (entry.Key != expected)
                 {
@@ -85,12 +85,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryShippedBlockHasThermalPropertiesOfItsOwn operation.</summary>
+
         public void EveryShippedBlockHasThermalPropertiesOfItsOwn()
         {
-/// <summary>ShippedBlockTypes operation.</summary>
+
             Dictionary<string, string> shipped = ShippedBlockTypes();
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> authored = new HashSet<string>();
 
             foreach (KeyValuePair<string, string> entry in CubesEntries())
@@ -98,7 +98,7 @@ namespace Thermodynamics.Tests
                 authored.Add(entry.Value);
             }
 
-/// <summary>List operation.</summary>
+
             List<string> missing = new List<string>();
             foreach (KeyValuePair<string, string> block in shipped)
             {
@@ -109,15 +109,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRadiatorShedsFasterThanTheDefaultBlock operation.</summary>
+
         public void TheRadiatorShedsFasterThanTheDefaultBlock()
         {
-/// <summary>PropertiesOf operation.</summary>
+
             Dictionary<string, double> fallback = PropertiesOf("DefaultThermodynamics");
 
             foreach (string subtype in new string[] { "Gauge_LG_Radiator", "Gauge_SG_Radiator" })
             {
-/// <summary>PropertiesOf operation.</summary>
+
                 Dictionary<string, double> radiator = PropertiesOf(subtype);
 
                 Assert.True(radiator["Emissivity"] > fallback["Emissivity"],
@@ -128,12 +128,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheHeatPumpChargesItsWorkOnlyOnce operation.</summary>
+
         public void TheHeatPumpChargesItsWorkOnlyOnce()
         {
             foreach (string subtype in new string[] { "Gauge_LG_HeatPump", "Gauge_SG_HeatPump" })
             {
-/// <summary>PropertiesOf operation.</summary>
+
                 Dictionary<string, double> pump = PropertiesOf(subtype);
 
                 Assert.Equal(0d, pump["ProducerWasteEnergy"]);
@@ -162,7 +162,7 @@ namespace Thermodynamics.Tests
 
         };
 
-/// <summary>BoundSubtypes operation.</summary>
+
         private static Dictionary<string, string> BoundSubtypes()
         {
             Dictionary<string, string> bound = new Dictionary<string, string>();
@@ -186,12 +186,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryBlockLogicComponentIsBoundToASubtypeThatShips operation.</summary>
+
         public void EveryBlockLogicComponentIsBoundToASubtypeThatShips()
         {
-/// <summary>ShippedBlockTypes operation.</summary>
+
             Dictionary<string, string> shipped = ShippedBlockTypes();
-/// <summary>List operation.</summary>
+
             List<string> dangling = new List<string>();
 
             foreach (KeyValuePair<string, string> entry in BoundSubtypes())
@@ -208,12 +208,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryUpgradeModuleTheModShipsHasLogicBoundToIt operation.</summary>
+
         public void EveryUpgradeModuleTheModShipsHasLogicBoundToIt()
         {
-/// <summary>BoundSubtypes operation.</summary>
+
             Dictionary<string, string> bound = BoundSubtypes();
-/// <summary>List operation.</summary>
+
             List<string> inert = new List<string>();
             int modules = 0;
 
@@ -238,10 +238,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryEntryInCubesDeclaresEveryPropertyTheGameReads operation.</summary>
+
         public void EveryEntryInCubesDeclaresEveryPropertyTheGameReads()
         {
-/// <summary>List operation.</summary>
+
             List<string> incomplete = new List<string>();
 
             foreach (XElement definition in LoadDefinition(CUBES_DEFINITION_PATH).Descendants("Definition"))
@@ -261,7 +261,7 @@ namespace Thermodynamics.Tests
                     XAttribute groupName = group.Attribute("Name");
                     if (groupName == null || groupName.Value != "ThermalBlockProperties") continue;
 
-/// <summary>HashSet operation.</summary>
+
                     HashSet<string> declared = new HashSet<string>();
                     foreach (XElement value in group.Elements("Decimal"))
                     {
@@ -284,7 +284,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheTypeEntriesStillCarryTheNumbersTheCodeTableHeld operation.</summary>
+
         public void TheTypeEntriesStillCarryTheNumbersTheCodeTableHeld()
         {
             Dictionary<string, float[]> expected = new Dictionary<string, float[]>
@@ -314,10 +314,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryEntryInCubesDeclaresTheBoolThatMakesItVisible operation.</summary>
+
         public void EveryEntryInCubesDeclaresTheBoolThatMakesItVisible()
         {
-/// <summary>List operation.</summary>
+
             List<string> invisible = new List<string>();
 
             foreach (XElement definition in LoadDefinition(CUBES_DEFINITION_PATH).Descendants("Definition"))
@@ -349,7 +349,7 @@ namespace Thermodynamics.Tests
             Assert.Empty(invisible);
         }
 
-/// <summary>PropertiesOf operation.</summary>
+
         private static Dictionary<string, double> PropertiesOf(string subtype)
         {
             foreach (XElement definition in LoadDefinition(CUBES_DEFINITION_PATH).Descendants("Definition"))

@@ -18,7 +18,7 @@ namespace Thermodynamics.Tests
             public bool HasAtmosphere;
         }
 
-/// <summary>Installed operation.</summary>
+
         private static Dictionary<string, Definition> Installed()
         {
             Dictionary<string, Definition> worlds =
@@ -73,19 +73,19 @@ namespace Thermodynamics.Tests
             };
 
         [Fact]
-/// <summary>EveryTranscribedWorldMatchesTheInstalledDefinition operation.</summary>
+
         public void EveryTranscribedWorldMatchesTheInstalledDefinition()
         {
-/// <summary>Installed operation.</summary>
+
             Dictionary<string, Definition> installed = Installed();
-            if (installed.Count == 0) return;                 // no install here
+            if (installed.Count == 0) return;
 
             Assert.True(installed.Count >= 8,
                 "only " + installed.Count + " planet definitions were read. Six of the eight are"
                 + " <Definition> and two are <PlanetGeneratorDefinition>, so a reader that keys on"
                 + " one of those names sees a subset and reports success");
 
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
             int checked_ = 0;
 
@@ -129,7 +129,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDeadzoneIsTheWorldsOwnDeepestGround operation.</summary>
+
         public void TheDeadzoneIsTheWorldsOwnDeepestGround()
         {
             foreach (PlanetLab.World world in PlanetLab.Vanilla())

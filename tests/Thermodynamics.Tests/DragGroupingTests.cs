@@ -10,10 +10,10 @@ namespace Thermodynamics.Tests
         private const float ThickAir = 1f;
         private const float Speed = 120f;
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -23,7 +23,7 @@ namespace Thermodynamics.Tests
             return settings;
         }
 
-/// <summary>Box operation.</summary>
+
         private static ThermalSimulation Box(Vector3I min, Vector3I maxExclusive)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -34,7 +34,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>DragWatts operation.</summary>
+
         private static float DragWatts(ThermalSimulation simulation)
         {
             simulation.StepExact(1, Worlds.Flight(ThickAir, Speed));
@@ -42,15 +42,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SplittingAHullIntoTwoGridsAddsDragThatIsNotThere operation.</summary>
+
         public void SplittingAHullIntoTwoGridsAddsDragThatIsNotThere()
         {
-/// <summary>DragWatts operation.</summary>
+
             float whole = DragWatts(Box(Vector3I.Zero, new Vector3I(4, 4, 4)));
 
-/// <summary>DragWatts operation.</summary>
+
             float front = DragWatts(Box(Vector3I.Zero, new Vector3I(4, 4, 2)));
-/// <summary>DragWatts operation.</summary>
+
             float back = DragWatts(Box(new Vector3I(0, 0, 2), new Vector3I(4, 4, 4)));
             float split = front + back;
 
@@ -62,20 +62,20 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACutAlongTheWindCostsLessThanACutAcrossIt operation.</summary>
+
         public void ACutAlongTheWindCostsLessThanACutAcrossIt()
         {
-/// <summary>DragWatts operation.</summary>
+
             float whole = DragWatts(Box(Vector3I.Zero, new Vector3I(4, 4, 4)));
 
-/// <summary>DragWatts operation.</summary>
+
             float acrossFront = DragWatts(Box(Vector3I.Zero, new Vector3I(4, 4, 2)));
-/// <summary>DragWatts operation.</summary>
+
             float acrossBack = DragWatts(Box(new Vector3I(0, 0, 2), new Vector3I(4, 4, 4)));
 
-/// <summary>DragWatts operation.</summary>
+
             float alongLeft = DragWatts(Box(Vector3I.Zero, new Vector3I(2, 4, 4)));
-/// <summary>DragWatts operation.</summary>
+
             float alongRight = DragWatts(Box(new Vector3I(2, 0, 0), new Vector3I(4, 4, 4)));
 
             Assert.Equal(whole, alongLeft + alongRight, 2);
@@ -83,13 +83,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGridInTheLeeOfAnotherIsNotSheltered operation.</summary>
+
         public void AGridInTheLeeOfAnotherIsNotSheltered()
         {
-/// <summary>DragWatts operation.</summary>
+
             float clear = DragWatts(Box(new Vector3I(0, 0, 40), new Vector3I(1, 1, 41)));
 
-/// <summary>DragWatts operation.</summary>
+
             float shadowed = DragWatts(Box(new Vector3I(0, 0, 5), new Vector3I(1, 1, 6)));
 
             Assert.True(clear > 0f);

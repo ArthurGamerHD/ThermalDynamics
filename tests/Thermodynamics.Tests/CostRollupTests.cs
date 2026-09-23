@@ -5,14 +5,14 @@ namespace Thermodynamics.Tests
     public class CostRollupTests
     {
         [Fact]
-/// <summary>TheTotalIsTheRootsOnly operation.</summary>
+
         public void TheTotalIsTheRootsOnly()
         {
             Assert.Equal(1000.0, Thermodynamics.CostRollup.MeasuredMilliseconds(880.0, 40.0, 60.0, 20.0));
         }
 
         [Fact]
-/// <summary>WorkNestedInsideTheFrameIsNotChargedTwice operation.</summary>
+
         public void WorkNestedInsideTheFrameIsNotChargedTwice()
         {
             const double sessionFrame = 221719.10;
@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AModCannotCostMoreTimeThanThereWas operation.</summary>
+
         public void AModCannotCostMoreTimeThanThereWas()
         {
             double total = Thermodynamics.CostRollup.MeasuredMilliseconds(600.0, 0.0, 0.0, 0.0);
@@ -34,7 +34,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WhatTheChildrenDoNotClaimIsReportedRatherThanLost operation.</summary>
+
         public void WhatTheChildrenDoNotClaimIsReportedRatherThanLost()
         {
             const double gridSimulation = 39540.00;
@@ -47,14 +47,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DoubleTimedWorkShowsAsNegativeRatherThanZero operation.</summary>
+
         public void DoubleTimedWorkShowsAsNegativeRatherThanZero()
         {
             Assert.Equal(-10.0, Thermodynamics.CostRollup.Unattributed(20.0, 30.0), 6);
         }
 
         [Fact]
-/// <summary>TheOneOffBuildIsARootAndReachesTheTotal operation.</summary>
+
         public void TheOneOffBuildIsARootAndReachesTheTotal()
         {
             double without = Thermodynamics.CostRollup.MeasuredMilliseconds(900.0, 0.0, 0.0, 0.0);
@@ -64,7 +64,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShareIsUndefinedBeforeTheClockHasRun operation.</summary>
+
         public void TheShareIsUndefinedBeforeTheClockHasRun()
         {
             Assert.True(Thermodynamics.CostRollup.ShareOfRealTime(100.0, 0.0) < 0.0);

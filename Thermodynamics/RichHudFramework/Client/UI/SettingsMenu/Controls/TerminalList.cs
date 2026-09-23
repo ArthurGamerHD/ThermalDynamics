@@ -17,13 +17,13 @@ namespace RichHudFramework.UI.Client
 
 		public ListBoxData<T> List { get; }
 
-/// <summary>TerminalList operation.</summary>
+
 		public TerminalList() : base(MenuControls.ListControl)
 		{
-/// <summary>Returns the orsetmember.</summary>
+
 			var listData = GetOrSetMember(null, (int)ListControlAccessors.ListAccessors) as ApiMemberAccessor;
 
-/// <summary>ListBoxData operation.</summary>
+
 			List = new ListBoxData<T>(listData);
 		}
 	}

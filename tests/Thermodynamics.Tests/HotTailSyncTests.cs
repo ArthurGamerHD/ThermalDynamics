@@ -8,10 +8,10 @@ namespace Thermodynamics.Tests
 {
     public class HotTailSyncTests
     {
-/// <summary>Hull operation.</summary>
+
         private static List<StoredTemperature> Hull(int blocks)
         {
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> hull = new List<StoredTemperature>(blocks);
 
             for (int i = 0; i < blocks; i++)
@@ -24,12 +24,12 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>AMessageSaysWhichGridItIsAbout operation.</summary>
+
         public void AMessageSaysWhichGridItIsAbout()
         {
-/// <summary>Hull operation.</summary>
+
             List<StoredTemperature> hull = Hull(4);
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> got = new List<StoredTemperature>();
 
             byte[] message = HotTailMessage.EncodeTemperatures(
@@ -42,12 +42,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHullSnapshotIsNotABandUpdate operation.</summary>
+
         public void AHullSnapshotIsNotABandUpdate()
         {
-/// <summary>Hull operation.</summary>
+
             List<StoredTemperature> hull = Hull(3);
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> got = new List<StoredTemperature>();
             long gridId;
 
@@ -60,10 +60,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARequestCarriesAGridAndNothingElse operation.</summary>
+
         public void ARequestCarriesAGridAndNothingElse()
         {
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> got = new List<StoredTemperature>();
             byte[] message = HotTailMessage.EncodeSnapshotRequest(-99L);
 
@@ -75,12 +75,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NothingUnrecognisedIsApplied operation.</summary>
+
         public void NothingUnrecognisedIsApplied()
         {
-/// <summary>Hull operation.</summary>
+
             List<StoredTemperature> hull = Hull(6);
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> got = new List<StoredTemperature>();
             long gridId;
 
@@ -106,7 +106,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARequestWithAPayloadIsNotARequest operation.</summary>
+
         public void ARequestWithAPayloadIsNotARequest()
         {
             byte[] message = new byte[HotTailMessage.HeaderSize + 4];
@@ -119,10 +119,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AKindThatIsNotTemperaturesIsNotEncodedAsThem operation.</summary>
+
         public void AKindThatIsNotTemperaturesIsNotEncodedAsThem()
         {
-/// <summary>Hull operation.</summary>
+
             List<StoredTemperature> hull = Hull(2);
 
             Assert.Null(HotTailMessage.EncodeTemperatures(HotTailKind.SnapshotRequest, 1L, hull, 0, 2));
@@ -131,15 +131,15 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>EverySliceIsAWholeMessageAndTheSlicesAreTheHull operation.</summary>
+
         public void EverySliceIsAWholeMessageAndTheSlicesAreTheHull()
         {
             int blocks = HotTailMessage.RecordsPerMessage * 2 + 37;
-/// <summary>Hull operation.</summary>
+
             List<StoredTemperature> hull = Hull(blocks);
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> rebuilt = new List<StoredTemperature>();
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> got = new List<StoredTemperature>();
 
             int messages = 0;
@@ -173,10 +173,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASliceOffTheEndIsClippedRatherThanThrown operation.</summary>
+
         public void ASliceOffTheEndIsClippedRatherThanThrown()
         {
-/// <summary>Hull operation.</summary>
+
             List<StoredTemperature> hull = Hull(5);
 
             Assert.Equal(HotTailCodec.SizeOf(2), HotTailCodec.Encode(hull, 3, 40).Length);
@@ -186,10 +186,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASliceHoldsTheSameRecordsAsAWholePacketOfThoseRecords operation.</summary>
+
         public void ASliceHoldsTheSameRecordsAsAWholePacketOfThoseRecords()
         {
-/// <summary>Hull operation.</summary>
+
             List<StoredTemperature> hull = Hull(20);
             List<StoredTemperature> middle = hull.GetRange(6, 7);
 
@@ -201,7 +201,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnEmptySelectionIsOneMessage operation.</summary>
+
         public void AnEmptySelectionIsOneMessage()
         {
             Assert.Equal(1, HotTailMessage.Messages(0));
@@ -213,10 +213,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>NothingIsDueBeforeTheIntervalAndTheBandIsDueAfterIt operation.</summary>
+
         public void NothingIsDueBeforeTheIntervalAndTheBandIsDueAfterIt()
         {
-/// <summary>HotTailSchedule operation.</summary>
+
             HotTailSchedule schedule = new HotTailSchedule();
             schedule.IntervalSeconds = 5f;
 
@@ -230,10 +230,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheHullOutranksTheBandAndResetsTheInterval operation.</summary>
+
         public void TheHullOutranksTheBandAndResetsTheInterval()
         {
-/// <summary>HotTailSchedule operation.</summary>
+
             HotTailSchedule schedule = new HotTailSchedule();
             schedule.IntervalSeconds = 5f;
 
@@ -248,10 +248,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AskingTwiceInsideTheCooldownIsRefused operation.</summary>
+
         public void AskingTwiceInsideTheCooldownIsRefused()
         {
-/// <summary>HotTailSchedule operation.</summary>
+
             HotTailSchedule schedule = new HotTailSchedule();
             schedule.SnapshotCooldownSeconds = 5f;
 
@@ -269,12 +269,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnHonestRetryIsAnsweredAndAFloodIsNot operation.</summary>
+
         public void AnHonestRetryIsAnsweredAndAFloodIsNot()
         {
             Assert.True(HotTailSchedule.DefaultSnapshotCooldownSeconds < HotTailSchedule.RetrySeconds);
 
-/// <summary>HotTailSchedule operation.</summary>
+
             HotTailSchedule schedule = new HotTailSchedule();
             Assert.True(schedule.RequestSnapshot());
             Assert.Equal(HotTailSend.Snapshot, schedule.Next());
@@ -284,10 +284,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnIntervalOfZeroStopsTheBandAndNotTheHull operation.</summary>
+
         public void AnIntervalOfZeroStopsTheBandAndNotTheHull()
         {
-/// <summary>HotTailSchedule operation.</summary>
+
             HotTailSchedule schedule = new HotTailSchedule();
             schedule.IntervalSeconds = 0f;
 
@@ -300,10 +300,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>AClientAsksAtOnceAndThenBacksOff operation.</summary>
+
         public void AClientAsksAtOnceAndThenBacksOff()
         {
-/// <summary>HotTailRequest operation.</summary>
+
             HotTailRequest request = new HotTailRequest();
             request.RetrySeconds = 8f;
             request.MaxRetrySeconds = 32f;
@@ -334,10 +334,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AClientStopsAskingWhenItHasTheHull operation.</summary>
+
         public void AClientStopsAskingWhenItHasTheHull()
         {
-/// <summary>HotTailRequest operation.</summary>
+
             HotTailRequest request = new HotTailRequest();
             Assert.True(request.ShouldAsk());
 
@@ -350,10 +350,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AClientNeverGivesUpOnAGridItStillHas operation.</summary>
+
         public void AClientNeverGivesUpOnAGridItStillHas()
         {
-/// <summary>HotTailRequest operation.</summary>
+
             HotTailRequest request = new HotTailRequest();
 
             for (int i = 0; i < 200; i++)
@@ -367,10 +367,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>WhatIsOwedToAPlayerWhoLeftIsDropped operation.</summary>
+
         public void WhatIsOwedToAPlayerWhoLeftIsDropped()
         {
-/// <summary>HotTailServerState operation.</summary>
+
             HotTailServerState state = new HotTailServerState();
 
             state.Next(1UL, 100L);
@@ -391,10 +391,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGridThatIsGoneIsForgottenAndAGridThatComesBackIsAskedAboutAgain operation.</summary>
+
         public void AGridThatIsGoneIsForgottenAndAGridThatComesBackIsAskedAboutAgain()
         {
-/// <summary>HotTailClientState operation.</summary>
+
             HotTailClientState client = new HotTailClientState();
 
             Assert.True(client.ShouldAsk(9L));
@@ -411,10 +411,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheLedgerAdvancesEverySchedulesClockIncludingOneNothingAskedAbout operation.</summary>
+
         public void TheLedgerAdvancesEverySchedulesClockIncludingOneNothingAskedAbout()
         {
-/// <summary>HotTailServerState operation.</summary>
+
             HotTailServerState state = new HotTailServerState();
             state.IntervalSeconds = 5f;
 
@@ -425,10 +425,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnIntervalChangedMidSessionReachesASchedulePlacedBeforeIt operation.</summary>
+
         public void AnIntervalChangedMidSessionReachesASchedulePlacedBeforeIt()
         {
-/// <summary>HotTailServerState operation.</summary>
+
             HotTailServerState state = new HotTailServerState();
             state.IntervalSeconds = 60f;
             state.Next(1UL, 100L);
@@ -442,10 +442,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARefusedRequestLeavesNothingOutstanding operation.</summary>
+
         public void ARefusedRequestLeavesNothingOutstanding()
         {
-/// <summary>HotTailServerState operation.</summary>
+
             HotTailServerState state = new HotTailServerState();
 
             Assert.True(state.Request(3UL, 55L));
@@ -458,19 +458,19 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheWholeHullAndTheBandAreTheSameCallWithADifferentBand operation.</summary>
+
         public void TheWholeHullAndTheBandAreTheSameCallWithADifferentBand()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings().Derive();
             ThermalSimulation simulation = Hulls.Driven(settings, 400);
 
             int steps = (int)(240f / settings.StepSeconds);
             for (int i = 0; i < steps; i++) simulation.StepExact(1, Worlds.Shadow());
 
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> hull = new List<StoredTemperature>();
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> band = new List<StoredTemperature>();
 
             simulation.ExportHotTail(float.MaxValue, 0, hull);
@@ -490,10 +490,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHullTravelsThroughTheWireAndArrivesOnTheOtherMachine operation.</summary>
+
         public void AHullTravelsThroughTheWireAndArrivesOnTheOtherMachine()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings().Derive();
 
             ThermalSimulation server = Hulls.Driven(settings, 300);
@@ -502,11 +502,11 @@ namespace Thermodynamics.Tests
             int steps = (int)(300f / settings.StepSeconds);
             for (int i = 0; i < steps; i++) server.StepExact(1, Worlds.Shadow());
 
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> hull = new List<StoredTemperature>();
             server.ExportHotTail(float.MaxValue, 0, hull);
 
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> got = new List<StoredTemperature>();
             int applied = 0;
 

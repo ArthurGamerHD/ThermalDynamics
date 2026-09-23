@@ -22,7 +22,7 @@ namespace Thermodynamics.Tests
         };
 
         [Fact]
-/// <summary>SunlightNeverCoolsFromAnyDirection operation.</summary>
+
         public void SunlightNeverCoolsFromAnyDirection()
         {
             List<Blueprints.Ship> ships = CorpusFixture.Spread(Panel);
@@ -30,7 +30,7 @@ namespace Thermodynamics.Tests
 
             List<List<string>> reports = LabRun.Map(ships, Compare, LabMode.Parallel);
 
-/// <summary>List operation.</summary>
+
             List<string> violations = new List<string>();
             foreach (List<string> report in reports) violations.AddRange(report);
 
@@ -38,19 +38,19 @@ namespace Thermodynamics.Tests
             Assert.Empty(violations);
         }
 
-/// <summary>Compare operation.</summary>
+
         private static List<string> Compare(Blueprints.Ship ship)
         {
-/// <summary>List operation.</summary>
+
             List<string> violations = new List<string>();
 
-/// <summary>Run operation.</summary>
+
             ScenarioOutcome shadow = Run(ship, null);
             List<ScenarioOutcome> record = new List<ScenarioOutcome> { shadow };
 
             foreach (Vector3 direction in Directions)
             {
-/// <summary>Run operation.</summary>
+
                 ScenarioOutcome sunlit = Run(ship, direction);
                 record.Add(sunlit);
 
@@ -58,7 +58,7 @@ namespace Thermodynamics.Tests
                 {
                     violations.Add("sunlight-panel: " + ship.Name + " is "
                         + (shadow.MeanKelvin - sunlit.MeanKelvin).ToString("n1")
-/// <summary>Name operation.</summary>
+
                         + " K cooler lit from " + Name(direction) + " than in shadow, on equal "
                         + "clocks from a cold start — the solar path cooled a hull");
                 }
@@ -68,11 +68,11 @@ namespace Thermodynamics.Tests
             return violations;
         }
 
-/// <summary>Run operation.</summary>
+
         private static ScenarioOutcome Run(Blueprints.Ship ship, Vector3? sunDirection)
         {
             ShipAssembly assembly = ship.Build(null, ColdStart);
-/// <summary>AssemblyRunner operation.</summary>
+
             AssemblyRunner runner = new AssemblyRunner(assembly);
 
             runner.Environment = sunDirection == null
@@ -82,13 +82,13 @@ namespace Thermodynamics.Tests
             runner.Run(Clock);
 
             ScenarioOutcome outcome = ScenarioOutcome.Read(assembly, ship.Name,
-/// <summary>Name operation.</summary>
+
                 sunDirection == null ? "cold-shadow" : "cold-sunlit-" + Name(sunDirection.Value));
             outcome.WorkshopId = ship.WorkshopId;
             return outcome;
         }
 
-/// <summary>Name operation.</summary>
+
         private static string Name(Vector3 direction)
         {
             if (direction == Vector3.Forward) return "forward";

@@ -18,7 +18,7 @@ namespace Thermodynamics
 
     public static class TelemetryAnomalies
     {
-/// <summary>Classify operation.</summary>
+
         public static TelemetryAnomalyKind Classify(float temperature, float lastTemperature, float implausible)
         {
             if (float.IsNaN(temperature)) return TelemetryAnomalyKind.NotANumber;
@@ -30,7 +30,7 @@ namespace Thermodynamics
             return TelemetryAnomalyKind.None;
         }
 
-/// <summary>ClassifyGrid operation.</summary>
+
         public static TelemetryAnomalyKind ClassifyGrid(float environmentWatts, float heatGainWatts,
             float hottestTemperature, float implausible)
         {
@@ -45,7 +45,7 @@ namespace Thermodynamics
             return TelemetryAnomalyKind.None;
         }
 
-/// <summary>GridName operation.</summary>
+
         public static string GridName(TelemetryAnomalyKind kind, float implausible)
         {
             switch (kind)
@@ -57,7 +57,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Name operation.</summary>
+
         public static string Name(TelemetryAnomalyKind kind, float implausible)
         {
             switch (kind)
@@ -82,7 +82,7 @@ namespace Thermodynamics
             set { _stride = value < 1 ? 1 : value; }
         }
 
-/// <summary>Admit operation.</summary>
+
         public bool Admit()
         {
             if (--_countdown > 0) return false;
@@ -91,7 +91,7 @@ namespace Thermodynamics
             return true;
         }
 
-/// <summary>Reset operation.</summary>
+
         public void Reset()
         {
             _countdown = 0;
@@ -117,7 +117,7 @@ namespace Thermodynamics
 
         public long KindsDropped;
 
-/// <summary>AnomalyRegistry operation.</summary>
+
         public AnomalyRegistry(int maxKinds)
         {
             this.maxKinds = maxKinds < 1 ? 1 : maxKinds;
@@ -133,7 +133,7 @@ namespace Thermodynamics
             get { return records.Count; }
         }
 
-/// <summary>Record operation.</summary>
+
         public bool Record(string kind, string example, bool fault, bool collecting, double seconds)
         {
             if (!collecting && !fault) return false;
@@ -170,10 +170,10 @@ namespace Thermodynamics
             return false;
         }
 
-/// <summary>Faults operation.</summary>
+
         public List<AnomalyRecord> Faults()
         {
-/// <summary>List operation.</summary>
+
             List<AnomalyRecord> faults = new List<AnomalyRecord>();
 
             foreach (AnomalyRecord record in records.Values)
@@ -189,14 +189,14 @@ namespace Thermodynamics
             return faults;
         }
 
-/// <summary>FaultSummary operation.</summary>
+
         public string FaultSummary(bool collecting)
         {
-/// <summary>Faults operation.</summary>
+
             List<AnomalyRecord> faults = Faults();
             if (faults.Count == 0) return null;
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append(faults.Count).Append(" fault kind(s) this session");
 
@@ -217,7 +217,7 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
-/// <summary>Clear operation.</summary>
+
         public void Clear()
         {
             records.Clear();

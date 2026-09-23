@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
 {
     public class OptimisedBuildTests
     {
-/// <summary>OptimiserDisabled operation.</summary>
+
         private static bool OptimiserDisabled(Assembly assembly)
         {
             DebuggableAttribute debuggable = assembly
@@ -23,7 +23,7 @@ namespace Thermodynamics.Tests
         [InlineData(typeof(ThermalSolver))]
         [InlineData(typeof(PerformanceReport))]
         [InlineData(typeof(OptimisedBuildTests))]
-/// <summary>EveryAssemblyTheHarnessTimesIsJitOptimised operation.</summary>
+
         public void EveryAssemblyTheHarnessTimesIsJitOptimised(System.Type inside)
         {
             Assembly assembly = inside.Assembly;

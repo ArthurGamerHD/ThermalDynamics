@@ -14,7 +14,7 @@ namespace RichHudFramework
 			[XmlArray("Controls")]
 			public string[] controlNames;
 
-/// <summary>BindAliasDefinition operation.</summary>
+
 			public BindAliasDefinition(string[] controlNames)
 			{
 				this.controlNames = controlNames;
@@ -25,7 +25,7 @@ namespace RichHudFramework
 				return aliasDef.controlNames;
 			}
 
-/// <summary>BindAliasDefinition operation.</summary>
+
 			public static implicit operator BindAliasDefinition(string[] alias)
 			{
 				return new BindAliasDefinition(alias);
@@ -44,7 +44,7 @@ namespace RichHudFramework
 			[XmlArray("Aliases")]
 			public BindAliasDefinition[] aliases;
 
-/// <summary>BindDefinition operation.</summary>
+
 			public BindDefinition(string name, string[] controlNames, BindAliasDefinition[] aliases = null)
 			{
 				this.name = name;
@@ -52,13 +52,13 @@ namespace RichHudFramework
 				this.aliases = aliases;
 			}
 
-/// <summary>BindDefinition operation.</summary>
+
 			public static implicit operator BindDefinition(BindDefinitionDataOld value)
 			{
 				return new BindDefinition(value.Item1, value.Item2);
 			}
 
-/// <summary>BindDefinition operation.</summary>
+
 			public static explicit operator BindDefinition(BindDefinitionData value)
 			{
 				BindAliasDefinition[] aliases = null;
@@ -69,14 +69,14 @@ namespace RichHudFramework
 					aliases = new BindAliasDefinition[aliasData.Length];
 
 					for (int i = 0; i < aliasData.Length; i++)
-/// <summary>BindAliasDefinition operation.</summary>
+
 						aliases[i] = new BindAliasDefinition(aliasData[i]);
 				}
 
 				return new BindDefinition(value.Item1, value.Item2, aliases);
 			}
 
-/// <summary>BindDefinitionData operation.</summary>
+
 			public static explicit operator BindDefinitionData(BindDefinition value)
 			{
 				string[][] aliasData = null;

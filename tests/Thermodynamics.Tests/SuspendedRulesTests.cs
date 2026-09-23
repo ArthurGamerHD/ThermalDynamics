@@ -21,7 +21,7 @@ namespace Thermodynamics.Tests
         };
 
         [Fact]
-/// <summary>NothingInTheModAsksWhetherTheWorldsRulesAreSuspended operation.</summary>
+
         public void NothingInTheModAsksWhetherTheWorldsRulesAreSuspended()
         {
             string scripts = Path.Combine(
@@ -29,7 +29,7 @@ namespace Thermodynamics.Tests
 
             Assert.True(Directory.Exists(scripts), "no mod sources at " + scripts);
 
-/// <summary>List operation.</summary>
+
             List<string> offenders = new List<string>();
             int scanned = 0;
 
@@ -59,7 +59,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TurningOffTheConsequenceIsASettingRatherThanAMode operation.</summary>
+
         public void TurningOffTheConsequenceIsASettingRatherThanAMode()
         {
             ThermalSettingsFields fields = ThermalSettingsFields.Read();
@@ -77,13 +77,13 @@ namespace Thermodynamics.Tests
     {
         private readonly string text;
 
-/// <summary>ThermalSettingsFields operation.</summary>
+
         private ThermalSettingsFields(string text)
         {
             this.text = text;
         }
 
-/// <summary>Read operation.</summary>
+
         public static ThermalSettingsFields Read()
         {
             string path = Path.Combine(
@@ -93,7 +93,7 @@ namespace Thermodynamics.Tests
             return new ThermalSettingsFields(File.ReadAllText(path));
         }
 
-/// <summary>Has operation.</summary>
+
         public bool Has(string field)
         {
             return text.Contains(" " + field + " =") || text.Contains(" " + field + ";");

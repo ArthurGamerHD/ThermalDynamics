@@ -11,17 +11,17 @@ namespace Thermodynamics.Tests
     {
         private readonly Xunit.Abstractions.ITestOutputHelper output;
 
-/// <summary>TimeToLossTests operation.</summary>
+
         public TimeToLossTests(Xunit.Abstractions.ITestOutputHelper output)
         {
             this.output = output;
         }
 
         [Fact]
-/// <summary>WithNothingRadiatingTheLossTimeIsTheClosedForm operation.</summary>
+
         public void WithNothingRadiatingTheLossTimeIsTheClosedForm()
         {
-            const float Capacity = 5000f;            // J/K
+            const float Capacity = 5000f;
             const float Watts = 250f;
             const float Critical = 600f;
             const float DamagePerKelvin = 2f;
@@ -42,7 +42,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockThatSettlesJustAboveCriticalGrindsDownAtAConstantRate operation.</summary>
+
         public void ABlockThatSettlesJustAboveCriticalGrindsDownAtAConstantRate()
         {
             const float Capacity = 200f;
@@ -51,13 +51,13 @@ namespace Thermodynamics.Tests
             const float DamagePerKelvin = 1f;
             const float Integrity = 20000f;
 
-/// <summary>Pow4 operation.</summary>
+
             float ambient4 = Pow4(BlockHeatIndex.AmbientKelvin);
             float coefficient = Watts / (Pow4(Critical + 10f) - ambient4);
 
             float measured = BlockHeatIndex.SecondsFromCriticalToLoss(
                 Capacity, Watts, coefficient, Critical, DamagePerKelvin, Integrity);
-/// <summary>MarchToLoss operation.</summary>
+
             float marched = MarchToLoss(Capacity, Watts, coefficient, Critical, DamagePerKelvin,
                 Integrity);
 
@@ -67,12 +67,12 @@ namespace Thermodynamics.Tests
             Assert.True(measured > 1500f, "the tail is most of the life, got " + measured);
         }
 
-/// <summary>MarchToLoss operation.</summary>
+
         private static float MarchToLoss(float capacity, float watts, float coefficient,
             float critical, float damagePerKelvin, float integrity)
         {
             const double Step = 0.001d;
-/// <summary>Pow4 operation.</summary>
+
             double ambient4 = Pow4(BlockHeatIndex.AmbientKelvin);
             double temperature = critical;
             double damage = 0d;
@@ -91,14 +91,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockThatNeverCrossesIsNeverDestroyed operation.</summary>
+
         public void ABlockThatNeverCrossesIsNeverDestroyed()
         {
             const float Capacity = 5000f;
             const float Watts = 250f;
             const float Critical = 900f;
 
-/// <summary>Pow4 operation.</summary>
+
             float ambient4 = Pow4(BlockHeatIndex.AmbientKelvin);
             float coefficient = Watts / (Pow4(Critical - 100f) - ambient4);
 
@@ -109,7 +109,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheClosedFormAgreesWithTheSolverOnASingleBlock operation.</summary>
+
         public void TheClosedFormAgreesWithTheSolverOnASingleBlock()
         {
             const float Mass = 30000f;
@@ -126,7 +126,7 @@ namespace Thermodynamics.Tests
             thermal.ProducerWasteEnergy = 1f;
             thermal.ExposedSurfaceMultiplier = 1f;
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableDamage = true;
             settings.EnableSolarHeat = false;
@@ -183,7 +183,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>DestructionBeyondTheHorizonReadsAsNever operation.</summary>
+
         public void DestructionBeyondTheHorizonReadsAsNever()
         {
             const float Capacity = 5000f;
@@ -191,7 +191,7 @@ namespace Thermodynamics.Tests
             float critical = BlockHeatIndex.AmbientKelvin + 100f;
 
             float equilibrium = critical + 1f;
-/// <summary>Pow4 operation.</summary>
+
             float ambient4 = Pow4(BlockHeatIndex.AmbientKelvin);
             float coefficient = Watts / (Pow4(equilibrium) - ambient4);
 
@@ -201,7 +201,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUnpricedBlockIsUnavailableRatherThanIndestructible operation.</summary>
+
         public void AnUnpricedBlockIsUnavailableRatherThanIndestructible()
         {
             Assert.Equal(0f, BlockHeatIndex.SecondsFromCriticalToLoss(
@@ -209,7 +209,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoShippedBlockIsLostBeforeItCrosses operation.</summary>
+
         public void NoShippedBlockIsLostBeforeItCrosses()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -218,7 +218,7 @@ namespace Thermodynamics.Tests
             Assert.True(readings.Count > 0, "the install yielded no readings");
 
             int crossing = 0;
-/// <summary>List operation.</summary>
+
             List<string> violations = new List<string>();
 
             foreach (BlockHeatIndex.Reading reading in readings)
@@ -238,7 +238,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheSpanGoesAsTheInverseSquareRootOfTheDamageDial operation.</summary>
+
         public void TheSpanGoesAsTheInverseSquareRootOfTheDamageDial()
         {
             const float Capacity = 5000f;
@@ -256,16 +256,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheAuthoredDamageRuleWouldPutTheWholeEventInsideAboutTenSeconds operation.</summary>
+
         public void TheAuthoredDamageRuleWouldPutTheWholeEventInsideAboutTenSeconds()
         {
             if (!GameBlocks.IsInstalled) return;
 
             const float Authored = 8f;
 
-/// <summary>List operation.</summary>
+
             List<float> shipped = new List<float>();
-/// <summary>List operation.</summary>
+
             List<float> authored = new List<float>();
 
             foreach (BlockHeatIndex.Reading reading in BlockHeatIndex.All())
@@ -285,9 +285,9 @@ namespace Thermodynamics.Tests
 
             Assert.True(shipped.Count > 20, "too few shipped blocks crossed to say anything");
 
-/// <summary>Median operation.</summary>
+
             float shippedMedian = Median(shipped);
-/// <summary>Median operation.</summary>
+
             float authoredMedian = Median(authored);
 
             output.WriteLine(string.Format("{0,-22}{1,9}{2,9}{3,9}", "damage per kelvin", "p10", "p50", "p90"));
@@ -307,26 +307,26 @@ namespace Thermodynamics.Tests
                 + " s, so restoring it would cost less than the third it costs now");
         }
 
-/// <summary>Percentile operation.</summary>
+
         private static float Percentile(List<float> values, int percent)
         {
-/// <summary>List operation.</summary>
+
             List<float> ordered = new List<float>(values);
             ordered.Sort();
             int index = (ordered.Count - 1) * percent / 100;
             return ordered[index];
         }
 
-/// <summary>Median operation.</summary>
+
         private static float Median(List<float> values)
         {
-/// <summary>List operation.</summary>
+
             List<float> ordered = new List<float>(values);
             ordered.Sort();
             return ordered[ordered.Count / 2];
         }
 
-/// <summary>Pow4 operation.</summary>
+
         private static float Pow4(float value)
         {
             float square = value * value;

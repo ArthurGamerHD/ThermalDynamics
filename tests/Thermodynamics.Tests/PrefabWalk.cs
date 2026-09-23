@@ -10,13 +10,13 @@ namespace Thermodynamics.Tests
     {
         private const int Sample = 140;
 
-/// <summary>Spread operation.</summary>
+
         private static List<string> Spread(int count)
         {
             List<string> all = Blueprints.PrefabFiles();
             if (all.Count <= count) return all;
 
-/// <summary>List operation.</summary>
+
             List<string> spread = new List<string>();
             int stride = all.Count / count;
             if (stride < 1) stride = 1;
@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
             return spread;
         }
 
-/// <summary>Walk operation.</summary>
+
         private static List<PrefabLab.Outcome> Walk(ShipLoad.State load)
         {
             return LabRun.Map(Spread(Sample), path => PrefabLab.Measure(path, null, load),
@@ -33,17 +33,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoShipTheGameSpawnsLosesABlockOnArrival operation.</summary>
+
         public void NoShipTheGameSpawnsLosesABlockOnArrival()
         {
             if (Blueprints.PrefabPath() == null) return;
 
-/// <summary>Walk operation.</summary>
+
             List<PrefabLab.Outcome> outcomes = Walk(ShipLoad.State.Idle);
 
             int measured = 0;
             long blocks = 0;
-/// <summary>List operation.</summary>
+
             List<string> lost = new List<string>();
 
             foreach (PrefabLab.Outcome outcome in outcomes)
@@ -60,7 +60,7 @@ namespace Thermodynamics.Tests
             }
 
             Assert.True(measured > 100,
-/// <summary>nothing operation.</summary>
+
                 "only " + measured + " prefabs were measured, so this walk judged nothing (`E8`)");
             Assert.True(blocks > 20000,
                 "only " + blocks + " blocks were simulated, so the prefabs are being read as empty");
@@ -72,12 +72,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSameShipsFlownHardDoLoseBlocks operation.</summary>
+
         public void TheSameShipsFlownHardDoLoseBlocks()
         {
             if (Blueprints.PrefabPath() == null) return;
 
-/// <summary>Walk operation.</summary>
+
             List<PrefabLab.Outcome> outcomes = Walk(ShipLoad.State.Everything);
 
             int measured = 0;
@@ -98,7 +98,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryPrefabTheGameShipsCanBeRead operation.</summary>
+
         public void EveryPrefabTheGameShipsCanBeRead()
         {
             if (Blueprints.PrefabPath() == null) return;
@@ -107,7 +107,7 @@ namespace Thermodynamics.Tests
             Assert.True(files.Count > 500,
                 "only " + files.Count + " prefab files were found, so this is reading the wrong place");
 
-/// <summary>List operation.</summary>
+
             List<string> unreadable = new List<string>();
             foreach (string path in files)
             {

@@ -32,10 +32,10 @@ namespace Thermodynamics.Harness
 
         public static readonly Vector3 Up = Vector3.Normalize(new Vector3(1f, 1f, 0f));
 
-/// <summary>Heights operation.</summary>
+
         public static double[] Heights()
         {
-/// <summary>List operation.</summary>
+
             List<double> heights = new List<double>();
 
             for (double h = 40; h > 0; h -= 10) heights.Add(h);
@@ -47,15 +47,15 @@ namespace Thermodynamics.Harness
             return heights.ToArray();
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Reading> Run(ThermalSettings settings = null, PlanetThermalProperties planet = null)
         {
             if (settings == null) settings = new ThermalSettings();
             if (planet == null) planet = new PlanetThermalProperties();
 
-/// <summary>List operation.</summary>
+
             List<Reading> readings = new List<Reading>();
-/// <summary>Heights operation.</summary>
+
             double[] heights = Heights();
 
             for (int i = 0; i < heights.Length; i++)
@@ -98,7 +98,7 @@ namespace Thermodynamics.Harness
 
                 EnvironmentState state = EnvironmentSolver.Solve(settings, planet, sample);
 
-/// <summary>Reading operation.</summary>
+
                 Reading reading = new Reading();
                 reading.Height = height;
                 reading.Depth = sample.Depth;
@@ -116,10 +116,10 @@ namespace Thermodynamics.Harness
             return readings;
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(List<Reading> readings)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append("height_m,depth_m,ambient_k,ambient_c,wind_speed,wind_burial,solar_w,solar_occlusion,");
             sb.Append("convection_coeff,game_underground\n");
@@ -143,7 +143,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>At operation.</summary>
+
         public static Reading At(List<Reading> readings, double height)
         {
             Reading best = readings[0];

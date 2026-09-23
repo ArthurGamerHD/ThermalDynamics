@@ -29,7 +29,7 @@ namespace Thermodynamics.Core
             get { return Seconds > 0f; }
         }
 
-/// <summary>Reset operation.</summary>
+
         public void Reset()
         {
             has = false;
@@ -37,7 +37,7 @@ namespace Thermodynamics.Core
             sweptSeconds = 0d;
         }
 
-/// <summary>Observe operation.</summary>
+
         public void Observe(Vector3 sunDirection, float seconds)
         {
             if (sunDirection.LengthSquared() < 1e-8f) return;

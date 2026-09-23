@@ -44,7 +44,7 @@ namespace Thermodynamics.Core
 
         public long StepAdvances;
 
-/// <summary>Reset operation.</summary>
+
         public void Reset()
         {
             TopologyRebuilds = 0;
@@ -76,10 +76,10 @@ namespace Thermodynamics.Core
             StepAdvances = 0;
         }
 
-/// <summary>Snapshot operation.</summary>
+
         public SimulationWork Snapshot()
         {
-/// <summary>SimulationWork operation.</summary>
+
             SimulationWork copy = new SimulationWork();
             copy.TopologyRebuilds = TopologyRebuilds;
             copy.TopologyNodeVisits = TopologyNodeVisits;

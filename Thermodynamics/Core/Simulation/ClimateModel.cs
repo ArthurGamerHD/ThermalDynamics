@@ -4,15 +4,15 @@ namespace Thermodynamics.Core
 {
     public static class ClimateModel
     {
-/// <summary>Target operation.</summary>
+
         public static float Target(
             PlanetThermalProperties planet, float latitudeSine, float sunElevationSine, float groundOffset)
         {
-/// <summary>Target operation.</summary>
+
             return Target(planet, latitudeSine, sunElevationSine, groundOffset, 1f);
         }
 
-/// <summary>Target operation.</summary>
+
         public static float Target(
             PlanetThermalProperties planet,
             float latitudeSine,
@@ -49,7 +49,7 @@ namespace Thermodynamics.Core
             return target < 0f ? 0f : target;
         }
 
-/// <summary>Lapse operation.</summary>
+
         public static float Lapse(float target, float altitude, float lapseRatePerKm)
         {
             if (lapseRatePerKm == 0f || altitude == 0f) return target;
@@ -58,7 +58,7 @@ namespace Thermodynamics.Core
             return cooled < 0f ? 0f : cooled;
         }
 
-/// <summary>AmbientDensityFactor operation.</summary>
+
         public static float AmbientDensityFactor(float airDensity)
         {
             float inverse = 1f - ThermalMath.Clamp01(airDensity);
@@ -67,15 +67,15 @@ namespace Thermodynamics.Core
             return 1f - (fourth * fourth);
         }
 
-/// <summary>Thin operation.</summary>
+
         public static float Thin(float target, float airDensity, float vacuum)
         {
-/// <summary>AmbientDensityFactor operation.</summary>
+
             float share = AmbientDensityFactor(airDensity);
             return vacuum + ((target - vacuum) * share);
         }
 
-/// <summary>Underground operation.</summary>
+
         public static float Underground(
             PlanetThermalProperties planet, float surface, float depth, float radius, float meanRadius)
         {
@@ -97,7 +97,7 @@ namespace Thermodynamics.Core
             return ambient + ((planet.CoreTemperature - ambient) * descended);
         }
 
-/// <summary>Follow operation.</summary>
+
         public static float Follow(float current, float target, float seconds, float lagSeconds)
         {
             if (lagSeconds <= 0f || seconds <= 0f) return target;

@@ -8,10 +8,10 @@ namespace Thermodynamics.Tests
 {
     public class SubgridBridgeTests
     {
-/// <summary>Pair operation.</summary>
+
         private static ShipAssembly Pair(bool bridged, out ThermalNode hot, out ThermalNode cold)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
             GridBuilder second = GridBuilder.Large();
             second.Place(Catalog.HeavyArmor(), Vector3I.Zero);
 
-/// <summary>ShipAssembly operation.</summary>
+
             ShipAssembly assembly = new ShipAssembly();
             ThermalSimulation a = first.BuildSimulation(settings, 800f);
             ThermalSimulation b = second.BuildSimulation(settings, 300f);
@@ -41,11 +41,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>HeatCrossesAJointBetweenTwoGrids operation.</summary>
+
         public void HeatCrossesAJointBetweenTwoGrids()
         {
             ThermalNode hot, cold;
-/// <summary>Pair operation.</summary>
+
             ShipAssembly assembly = Pair(true, out hot, out cold);
 
             Assert.Single(assembly.Bridges);
@@ -64,11 +64,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NothingCrossesWithoutOne operation.</summary>
+
         public void NothingCrossesWithoutOne()
         {
             ThermalNode hot, cold;
-/// <summary>Pair operation.</summary>
+
             ShipAssembly assembly = Pair(false, out hot, out cold);
 
             Assert.Empty(assembly.Bridges);
@@ -80,11 +80,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AJointCannotOvershootThePairItConnects operation.</summary>
+
         public void AJointCannotOvershootThePairItConnects()
         {
             ThermalNode hot, cold;
-/// <summary>Pair operation.</summary>
+
             ShipAssembly assembly = Pair(true, out hot, out cold);
 
             assembly.Step(Worlds.Shadow(), 60f);

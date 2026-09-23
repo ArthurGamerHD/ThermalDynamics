@@ -11,7 +11,7 @@ namespace Thermodynamics.Core
         private int scannedVersion;
         private bool scanned;
 
-/// <summary>RescanGate operation.</summary>
+
         public RescanGate(int interval)
         {
             Interval = interval;
@@ -22,14 +22,14 @@ namespace Thermodynamics.Core
             get { return scanned; }
         }
 
-/// <summary>Idle operation.</summary>
+
         public void Idle()
         {
             steps = int.MaxValue;
             scanned = false;
         }
 
-/// <summary>Due operation.</summary>
+
         public bool Due(int version, int steps)
         {
             if (this.steps < Interval)
@@ -53,7 +53,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>Mark operation.</summary>
+
         public void Mark(int version)
         {
             scanned = true;

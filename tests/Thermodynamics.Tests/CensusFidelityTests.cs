@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
 {
     public class CensusFidelityTests
     {
-/// <summary>Hull operation.</summary>
+
         private static ThermalSimulation Hull(int blocks, int cap = 0)
         {
             ThermalSettings settings = new ThermalSettings { Frequency = 4 };
@@ -26,7 +26,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheTiersCarryTheMountsTheirBlocksDeclare operation.</summary>
+
         public void TheTiersCarryTheMountsTheirBlocksDeclare()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -63,7 +63,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheTiersAreAWholePopulation operation.</summary>
+
         public void TheTiersAreAWholePopulation()
         {
             float total = 0f;
@@ -78,10 +78,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACensusHullIsAsStiffAsARealShip operation.</summary>
+
         public void ACensusHullIsAsStiffAsARealShip()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(4000);
             float demand = simulation.Solver.RequiredSubsteps(simulation.Settings.StepSeconds);
 
@@ -96,11 +96,11 @@ namespace Thermodynamics.Tests
         [InlineData(4, Census.Corpus.FlooredAtCap4)]
         [InlineData(2, Census.Corpus.FlooredAtCap2)]
         [InlineData(1, Census.Corpus.FlooredAtCap1)]
-/// <summary>ACapReachesAboutAsMuchOfTheHullAsItReachesOfARealPopulation operation.</summary>
+
         public void ACapReachesAboutAsMuchOfTheHullAsItReachesOfARealPopulation(
             int cap, float corpusShare)
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(4000, cap);
             ThermalSolver.SubstepProfile profile = simulation.Solver.ProfileSubsteps();
 
@@ -117,17 +117,17 @@ namespace Thermodynamics.Tests
 
 
 
-/// <summary>CensusHull operation.</summary>
+
         private static StiffnessLab.Row CensusHull()
         {
             return StiffnessLab.Census(4000);
         }
 
         [Fact]
-/// <summary>TheCensusHullIsInsideThePopulationItStandsIn operation.</summary>
+
         public void TheCensusHullIsInsideThePopulationItStandsIn()
         {
-/// <summary>CensusHull operation.</summary>
+
             StiffnessLab.Row hull = CensusHull();
 
             Assert.True(hull.Air > Census.Corpus.AirP10 && hull.Air < Census.Corpus.AirMax,
@@ -141,10 +141,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShippedCapReachesThePopulationsTailAndNotATypicalHull operation.</summary>
+
         public void TheShippedCapReachesThePopulationsTailAndNotATypicalHull()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(4000, 8);
             ThermalSolver.SubstepProfile profile = simulation.Solver.ProfileSubsteps();
 
@@ -161,10 +161,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCensusHullFeelsAirLikeARealHullDoes operation.</summary>
+
         public void TheCensusHullFeelsAirLikeARealHullDoes()
         {
-/// <summary>CensusHull operation.</summary>
+
             StiffnessLab.Row hull = CensusHull();
             Assert.True(hull.StiffestInVacuum > 0f, "the stiffest block has no vacuum demand");
 
@@ -184,7 +184,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCensusHullMakesFarMoreHeatThanARealShip operation.</summary>
+
         public void TheCensusHullMakesFarMoreHeatThanARealShip()
         {
             float perBlock = Census.ProducerShare * Census.ProducerWatts;
@@ -193,7 +193,7 @@ namespace Thermodynamics.Tests
 
             Assert.True(perBlock > Census.Corpus.WastePerBlockP90,
                 "the census hull now makes " + perBlock.ToString("n0")
-/// <summary>ships operation.</summary>
+
                 + " W of waste per block, below the ninetieth percentile of real ships ("
                 + Census.Corpus.WastePerBlockP90.ToString("n0")
                 + "). If the tiers have been softened toward a typical ship, every temperature"
@@ -205,7 +205,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFieldObservationsAreFromAPaceThatNoLongerShips operation.</summary>
+
         public void TheFieldObservationsAreFromAPaceThatNoLongerShips()
         {
             Assert.True(Census.Field.MostDemand > Census.Corpus.AirMax,
@@ -218,7 +218,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheTwoModesOfTheCorpusHaveClosed operation.</summary>
+
         public void TheTwoModesOfTheCorpusHaveClosed()
         {
             Assert.True(Census.Corpus.LitP50 > Census.Corpus.StructuralP50 * 2f,
@@ -242,7 +242,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFieldCapCurveMatchesTheCorpusWhereTheCapIsActuallySet operation.</summary>
+
         public void TheFieldCapCurveMatchesTheCorpusWhereTheCapIsActuallySet()
         {
             Assert.True(Census.Corpus.FlooredAtCap8 < Census.Field.RaisedAtCap8 * 2f,
@@ -264,7 +264,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRecordedCorpusFiguresAreInternallyConsistent operation.</summary>
+
         public void TheRecordedCorpusFiguresAreInternallyConsistent()
         {
             Assert.True(Census.Corpus.AirP10 < Census.Corpus.AirP50);
@@ -304,7 +304,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EvenASmallHullCarriesSomeOfTheTail operation.</summary>
+
         public void EvenASmallHullCarriesSomeOfTheTail()
         {
             Dictionary<string, int> counts = new Dictionary<string, int>();
@@ -321,10 +321,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ProducersAreTheMeasuredShareAndRatedHotterThanTheStructure operation.</summary>
+
         public void ProducersAreTheMeasuredShareAndRatedHotterThanTheStructure()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(4000);
             int producers = Census.DriveCensus(simulation);
 
@@ -342,10 +342,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheProducerPlacementRuleAndTheProducerIdentityPickTheSameBlocks operation.</summary>
+
         public void TheProducerPlacementRuleAndTheProducerIdentityPickTheSameBlocks()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(2000);
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
 
@@ -366,10 +366,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACensusShipRunsHotWithoutBurning operation.</summary>
+
         public void ACensusShipRunsHotWithoutBurning()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(2000);
             Census.DriveCensus(simulation);
 

@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
     public class ClientDriftTests
     {
         [Fact]
-/// <summary>ARunAgainstItselfDisagreesAboutNothing operation.</summary>
+
         public void ARunAgainstItselfDisagreesAboutNothing()
         {
             ClientDriftLab.Run run = ClientDriftLab.Measure("shadow", 0f, 30f, 400);
@@ -27,7 +27,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStaleClientStartsWrong operation.</summary>
+
         public void AStaleClientStartsWrong()
         {
             ClientDriftLab.Run run = ClientDriftLab.Measure("shadow", 60f, 30f, 400);
@@ -38,7 +38,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDisagreementDecaysOnItsOwn operation.</summary>
+
         public void TheDisagreementDecaysOnItsOwn()
         {
             ClientDriftLab.Run run = ClientDriftLab.Measure("shadow", 60f, 300f, 400);
@@ -59,7 +59,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AirConvergesFasterThanVacuum operation.</summary>
+
         public void AirConvergesFasterThanVacuum()
         {
             ClientDriftLab.Run vacuum = ClientDriftLab.Measure("shadow", 60f, 120f, 400);
@@ -75,7 +75,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>AClientThatKeepsLosingTimeHoldsAStandingError operation.</summary>
+
         public void AClientThatKeepsLosingTimeHoldsAStandingError()
         {
             ClientDriftLab.Run steady = ClientDriftLab.Measure("shadow", 0f, 240f, 400, null,
@@ -98,7 +98,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>CorrectingTheBandLeavesTheReadoutWrongForLessTime operation.</summary>
+
         public void CorrectingTheBandLeavesTheReadoutWrongForLessTime()
         {
             ClientDriftLab.Run alone = ClientDriftLab.Measure("shadow", 60f, 300f, 2000, null,
@@ -116,7 +116,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ALongerIntervalLeavesTheReadoutWrongForLonger operation.</summary>
+
         public void ALongerIntervalLeavesTheReadoutWrongForLonger()
         {
             ClientDriftLab.Run tight = ClientDriftLab.Measure("shadow", 60f, 300f, 2000, null,
@@ -134,7 +134,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheBytesChargedAreTheBytesTheCodecPacks operation.</summary>
+
         public void TheBytesChargedAreTheBytesTheCodecPacks()
         {
             ClientDriftLab.Run run = ClientDriftLab.Measure("shadow", 60f, 60f, 2000, null,
@@ -147,7 +147,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCorrectionSwitchedOffSendsNothing operation.</summary>
+
         public void TheCorrectionSwitchedOffSendsNothing()
         {
             ClientDriftLab.Run run = ClientDriftLab.Measure("shadow", 60f, 60f, 400, null,

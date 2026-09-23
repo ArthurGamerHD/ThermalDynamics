@@ -38,9 +38,9 @@ namespace Thermodynamics.Harness
 
             public int GridRows;
             public int BlockTypeRows;
-/// <summary>List operation.</summary>
+
             public readonly List<CheckResult> Checks = new List<CheckResult>();
-/// <summary>List operation.</summary>
+
             public readonly List<string> Summary = new List<string>();
 
             public bool Passed
@@ -53,7 +53,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>DefaultPath operation.</summary>
+
         public static string DefaultPath()
         {
             string configured = Environment.GetEnvironmentVariable("THERMAL_DUMPS");
@@ -69,7 +69,7 @@ namespace Thermodynamics.Harness
             string content = GameBlocks.ContentPath();
             if (content == null) return null;
 
-/// <summary>DirectoryInfo operation.</summary>
+
             DirectoryInfo directory = new DirectoryInfo(content);
             for (int i = 0; i < 4 && directory != null; i++) directory = directory.Parent;
             if (directory == null) return null;
@@ -80,7 +80,7 @@ namespace Thermodynamics.Harness
             return Directory.Exists(prefix) ? prefix : null;
         }
 
-/// <summary>Newest operation.</summary>
+
         public static string Newest(string path)
         {
             if (string.IsNullOrEmpty(path)) return null;
@@ -104,14 +104,14 @@ namespace Thermodynamics.Harness
             return newest;
         }
 
-/// <summary>Run operation.</summary>
+
         public static Result Run(string path)
         {
             Table table = Table.Read(path);
             Table grids = Table.Read(Sibling(path, "Grids"));
             Table types = Table.Read(Sibling(path, "BlockTypes"));
 
-/// <summary>Result operation.</summary>
+
             Result result = new Result();
             result.Path = path;
             result.Rows = table.Rows.Count;
@@ -143,7 +143,7 @@ namespace Thermodynamics.Harness
             return result;
         }
 
-/// <summary>Sibling operation.</summary>
+
         private static string Sibling(string path, string kind)
         {
             if (string.IsNullOrEmpty(path)) return null;
@@ -157,10 +157,10 @@ namespace Thermodynamics.Harness
             return string.IsNullOrEmpty(directory) ? sibling : Path.Combine(directory, sibling);
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(Result result)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("DUMP AUDIT");
@@ -191,7 +191,7 @@ namespace Thermodynamics.Harness
                 {
                     sb.Append("      not in this dump: ").AppendLine(check.Missing);
                 }
-/// <summary>if operation.</summary>
+
                 else if (check.Worst.Length > 0)
                 {
                     sb.Append("      ").AppendLine(check.Worst);
@@ -206,7 +206,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Verdict operation.</summary>
+
         private static string Verdict(CheckResult check)
         {
             if (check.Skipped) return "skipped";
@@ -215,10 +215,10 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>WindDecomposes operation.</summary>
+
         private static CheckResult WindDecomposes(Table table)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "wind decomposes into the factors reported beside it";
             check.Where = "WindSolverContractTests.TheReportedFactorsMultiplyBackIntoTheReportedSpeed";
@@ -252,7 +252,7 @@ namespace Thermodynamics.Harness
                 if (shortfall <= worst) continue;
 
                 worst = shortfall;
-/// <summary>Fixed operation.</summary>
+
                 check.Worst = "worst " + Fixed(speed) + " m/s reported against " + Fixed(predicted)
                     + " m/s composed, on " + table.Text(i, "grid");
             }
@@ -260,10 +260,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-/// <summary>NoWindWhollyBuried operation.</summary>
+
         private static CheckResult NoWindWhollyBuried(Table table)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "a wholly buried grid is in no wind";
             check.Where = "docs/environment.md, Under the surface; backlog A15";
@@ -285,19 +285,19 @@ namespace Thermodynamics.Harness
                 if (speed <= worst) continue;
 
                 worst = speed;
-/// <summary>Fixed operation.</summary>
+
                 check.Worst = "worst " + Fixed(speed) + " m/s at depth "
-/// <summary>Fixed operation.</summary>
+
                     + Fixed(table.Number(i, "depth_m")) + " m, on " + table.Text(i, "grid");
             }
 
             return check;
         }
 
-/// <summary>SlopeOnlyAdds operation.</summary>
+
         private static CheckResult SlopeOnlyAdds(Table table)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "slope wind is what adds to the composed speed";
             check.Where = "docs/environment.md, Slope winds; backlog B15";
@@ -327,19 +327,19 @@ namespace Thermodynamics.Harness
                 if (added <= worst) continue;
 
                 worst = added;
-/// <summary>Fixed operation.</summary>
+
                 check.Worst = "most added " + Fixed(added) + " m/s at "
-/// <summary>Fixed operation.</summary>
+
                     + Fixed(table.Number(i, "wind_agl_m")) + " m above ground";
             }
 
             return check;
         }
 
-/// <summary>WindUnderTheCeiling operation.</summary>
+
         private static CheckResult WindUnderTheCeiling(Table table)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "wind stays under the engine's own figure";
             check.Where = "docs/backlog.md B18 — open";
@@ -362,19 +362,19 @@ namespace Thermodynamics.Harness
                 if (over <= worst) continue;
 
                 worst = over;
-/// <summary>Fixed operation.</summary>
+
                 check.Worst = "worst " + Fixed(speed) + " m/s against a ceiling of " + Fixed(ceiling)
-/// <summary>Fixed operation.</summary>
+
                     + " m/s, at " + Fixed(table.Number(i, "wind_agl_m")) + " m above ground";
             }
 
             return check;
         }
 
-/// <summary>ConvectionNeedsAir operation.</summary>
+
         private static CheckResult ConvectionNeedsAir(Table table)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "convection is reported only where there is air";
             check.Where = "docs/known-issues.md, A6";
@@ -393,7 +393,7 @@ namespace Thermodynamics.Harness
                 check.Hits++;
                 if (check.Worst.Length > 0) continue;
 
-/// <summary>Fixed operation.</summary>
+
                 check.Worst = "first at " + Fixed(coefficient) + " W/m2K against an air density of "
                     + density.ToString("0.0000", CultureInfo.InvariantCulture);
             }
@@ -401,10 +401,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-/// <summary>DepthIsUndergroundOnly operation.</summary>
+
         private static CheckResult DepthIsUndergroundOnly(Table table)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "a positive depth means a buried grid";
             check.Where = "docs/environment.md, Underground";
@@ -423,7 +423,7 @@ namespace Thermodynamics.Harness
                 check.Hits++;
                 if (check.Worst.Length > 0) continue;
 
-/// <summary>Fixed operation.</summary>
+
                 check.Worst = "first at depth " + Fixed(table.Number(i, "depth_m"))
                     + " m with underground " + table.Text(i, "underground");
             }
@@ -431,10 +431,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-/// <summary>WeatherScalesWithIntensity operation.</summary>
+
         private static CheckResult WeatherScalesWithIntensity(Table table)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "a weather's offset scales with its intensity";
             check.Where = "docs/environment.md, Weather";
@@ -471,7 +471,7 @@ namespace Thermodynamics.Harness
                 if (drift <= worst) continue;
 
                 worst = drift;
-/// <summary>Fixed operation.</summary>
+
                 check.Worst = kind + " offsets " + Fixed(ratio) + " K against " + Fixed(expected)
                     + " K per unit of intensity";
             }
@@ -479,10 +479,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-/// <summary>NothingIsNonsense operation.</summary>
+
         private static CheckResult NothingIsNonsense(Table table, string what, string[] positive)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "no " + what + " reading is a NaN, an infinity or impossibly negative";
             check.Where = "docs/known-issues.md, A11";
@@ -511,7 +511,7 @@ namespace Thermodynamics.Harness
                     if (check.Worst.Length > 0) break;
 
                     check.Worst = "first " + column + " = " + table.Text(i, column)
-/// <summary>Identity operation.</summary>
+
                         + " on " + Identity(table, i);
                     break;
                 }
@@ -521,10 +521,10 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>StagesFitInsideTheUpdate operation.</summary>
+
         private static CheckResult StagesFitInsideTheUpdate(Table table)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "a grid's stages fit inside its update";
             check.Where = "docs/telemetry.md#what-the-stages-leave-over";
@@ -554,7 +554,7 @@ namespace Thermodynamics.Harness
                 if (over <= worst) continue;
 
                 worst = over;
-/// <summary>Fixed operation.</summary>
+
                 check.Worst = "worst " + Fixed(stages) + " ms of stages inside " + Fixed(update)
                     + " ms of update, on " + table.Text(i, "name");
             }
@@ -562,10 +562,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-/// <summary>AWorstCallFitsItsParent operation.</summary>
+
         private static CheckResult AWorstCallFitsItsParent(Table table)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "a grid's worst solver call fits its worst update";
             check.Where = "docs/telemetry.md#frame-cost-and-hitching";
@@ -584,7 +584,7 @@ namespace Thermodynamics.Harness
                 check.Hits++;
                 if (check.Worst.Length > 0) continue;
 
-/// <summary>Fixed operation.</summary>
+
                 check.Worst = "first " + Fixed(solver) + " ms of solver inside " + Fixed(update)
                     + " ms of update, on " + table.Text(i, "name");
             }
@@ -592,10 +592,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-/// <summary>ClampedStepsAreSteps operation.</summary>
+
         private static CheckResult ClampedStepsAreSteps(Table table)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "clamped steps are a subset of steps taken";
             check.Where = "docs/telemetry.md#substeps";
@@ -622,10 +622,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-/// <summary>GridRangesAreOrdered operation.</summary>
+
         private static CheckResult GridRangesAreOrdered(Table table)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "a grid's minima, means and maxima are ordered";
             check.Where = "RunningStat, TelemetryStats.cs";
@@ -637,7 +637,7 @@ namespace Thermodynamics.Harness
             {
                 check.Rows++;
 
-/// <summary>Ordered operation.</summary>
+
                 string broke = Ordered(table, i,
                     "ambient_min", "ambient_mean", "ambient_max");
                 if (broke == null && table.Number(i, "mean_cells") > table.Number(i, "peak_cells") + 0.5d)
@@ -657,10 +657,10 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>LiveBlocksAreWhatWasPlaced operation.</summary>
+
         private static CheckResult LiveBlocksAreWhatWasPlaced(Table table)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "live blocks are what was placed less what was removed";
             check.Where = "docs/telemetry.md#what-is-collected";
@@ -689,10 +689,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-/// <summary>BlockRangesAreOrdered operation.</summary>
+
         private static CheckResult BlockRangesAreOrdered(Table table)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "a block type's temperatures and demands are ordered";
             check.Where = "RunningStat, TelemetryStats.cs";
@@ -710,9 +710,9 @@ namespace Thermodynamics.Harness
 
                 check.Rows++;
 
-/// <summary>Ordered operation.</summary>
+
                 string broke = Ordered(table, i, "temp_min", "temp_mean", "temp_max", "peak_temp")
-/// <summary>Ordered operation.</summary>
+
                     ?? Ordered(table, i, "substep_demand_mean", "substep_demand_max");
                 if (broke == null) continue;
 
@@ -725,10 +725,10 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-/// <summary>EveryTypeHasUsableMaterialProperties operation.</summary>
+
         private static CheckResult EveryTypeHasUsableMaterialProperties(Table table)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "every block type has properties the solver can use";
             check.Where = "docs/definitions.md";
@@ -760,7 +760,7 @@ namespace Thermodynamics.Harness
             return check;
         }
 
-/// <summary>Identity operation.</summary>
+
         private static string Identity(Table table, int row)
         {
             if (table.Has("grid")) return table.Text(row, "grid");
@@ -769,7 +769,7 @@ namespace Thermodynamics.Harness
             return "row " + row;
         }
 
-/// <summary>Ordered operation.</summary>
+
         private static string Ordered(Table table, int row, params string[] columns)
         {
             for (int i = 1; i < columns.Length; i++)
@@ -809,10 +809,10 @@ namespace Thermodynamics.Harness
             "substep_demand_mean", "substep_demand_max", "substep_demand_peak",
         };
 
-/// <summary>AnIdlePumpLiftsNothing operation.</summary>
+
         private static CheckResult AnIdlePumpLiftsNothing(Table table)
         {
-/// <summary>CheckResult operation.</summary>
+
             CheckResult check = new CheckResult();
             check.Name = "a pump that drew nothing lifted nothing";
             check.Where = "docs/telemetry.md#coolant-loops-and-heat-pumps";
@@ -830,7 +830,7 @@ namespace Thermodynamics.Harness
                 check.Hits++;
                 if (check.Worst.Length > 0) continue;
 
-/// <summary>Fixed operation.</summary>
+
                 check.Worst = "first " + Fixed(table.Number(i, "pump_lift_w")) + " W lifted on no draw, on "
                     + table.Text(i, "name");
             }
@@ -839,11 +839,11 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Describe operation.</summary>
+
         private static void Describe(Table table, Result result)
         {
             result.Summary.Add(Distinct(table, "planet") + " planets, " + Distinct(table, "grid")
-/// <summary>Distinct operation.</summary>
+
                 + " grids, " + Distinct(table, "surface_material") + " ground materials");
 
             Range(table, "air_density", "air density", "0.000", result);
@@ -851,15 +851,15 @@ namespace Thermodynamics.Harness
             Range(table, "wind_speed", "wind m/s", "0.0", result);
             Range(table, "convection_coeff", "convection W/m2K", "0.0", result);
 
-/// <summary>Count operation.</summary>
+
             int buried = Count(table, "underground");
-/// <summary>Count operation.</summary>
+
             int weather = Count(table, "weather_intensity");
             result.Summary.Add("buried rows " + buried.ToString("n0") + ", rows under weather "
                 + weather.ToString("n0"));
         }
 
-/// <summary>Range operation.</summary>
+
         private static void Range(Table table, string column, string label, string format, Result result)
         {
             if (!table.Has(column)) return;
@@ -880,7 +880,7 @@ namespace Thermodynamics.Harness
                 + high.ToString(format, CultureInfo.InvariantCulture));
         }
 
-/// <summary>Distinct operation.</summary>
+
         private static int Distinct(Table table, string column)
         {
             if (!table.Has(column)) return 0;
@@ -895,7 +895,7 @@ namespace Thermodynamics.Harness
             return seen.Count;
         }
 
-/// <summary>Count operation.</summary>
+
         private static int Count(Table table, string column)
         {
             if (!table.Has(column)) return 0;
@@ -910,20 +910,20 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Tolerance operation.</summary>
+
         private static double Tolerance(double magnitude)
         {
             double scaled = Math.Abs(magnitude) * RelativeTolerance;
             return scaled > AbsoluteTolerance ? scaled : AbsoluteTolerance;
         }
 
-/// <summary>Fixed operation.</summary>
+
         private static string Fixed(double value)
         {
             return value.ToString("0.00", CultureInfo.InvariantCulture);
         }
 
-/// <summary>Trim operation.</summary>
+
         private static string Trim(string value, int width)
         {
             if (value == null) return "";
@@ -932,17 +932,17 @@ namespace Thermodynamics.Harness
 
         private sealed class Table
         {
-/// <summary>List operation.</summary>
+
             public readonly List<string> Columns = new List<string>();
-/// <summary>List operation.</summary>
+
             public readonly List<string[]> Rows = new List<string[]>();
 
             private readonly Dictionary<string, int> index = new Dictionary<string, int>();
 
-/// <summary>Read operation.</summary>
+
             public static Table Read(string path)
             {
-/// <summary>Table operation.</summary>
+
                 Table table = new Table();
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return table;
 
@@ -970,10 +970,10 @@ namespace Thermodynamics.Harness
                 return table;
             }
 
-/// <summary>Has operation.</summary>
+
             public bool Has(string column) { return index.ContainsKey(column); }
 
-/// <summary>Require operation.</summary>
+
             public bool Require(string[] columns, CheckResult check)
             {
                 string missing = "";
@@ -988,7 +988,7 @@ namespace Thermodynamics.Harness
                 return missing.Length == 0;
             }
 
-/// <summary>Text operation.</summary>
+
             public string Text(int row, string column)
             {
                 int at;
@@ -998,7 +998,7 @@ namespace Thermodynamics.Harness
                 return at < fields.Length ? fields[at] : "";
             }
 
-/// <summary>Number operation.</summary>
+
             public double Number(int row, string column)
             {
                 double value;
@@ -1007,7 +1007,7 @@ namespace Thermodynamics.Harness
                     ? value : 0d;
             }
 
-/// <summary>TryNumber operation.</summary>
+
             public bool TryNumber(int row, int column, out double value)
             {
                 value = 0d;

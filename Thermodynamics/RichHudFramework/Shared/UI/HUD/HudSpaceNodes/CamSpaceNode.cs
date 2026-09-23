@@ -22,18 +22,18 @@ namespace RichHudFramework
 
 			public bool UseResScaling { get; set; }
 
-/// <summary>CamSpaceNode operation.</summary>
+
 			public CamSpaceNode(HudParentBase parent = null) : base(parent)
 			{
 				PlaneScale = 1f;
-/// <summary>Vector3D operation.</summary>
+
 				TransformOffset = new Vector3D(0.0, 0.0, -MyAPIGateway.Session.Camera.NearPlaneDistance);
 
 				IsScreenSpace = true;
 				UseResScaling = true;
 			}
 
-/// <summary>Layout operation.</summary>
+
 			protected override void Layout()
 			{
 				double finalScale = PlaneScale;

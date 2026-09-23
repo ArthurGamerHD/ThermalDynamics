@@ -14,7 +14,7 @@ namespace Thermodynamics.Tests
         [InlineData(1000000f, "1.0 MW")]
         [InlineData(1e9f, "1.0 GW")]
         [InlineData(2.5e9f, "2.5 GW")]
-/// <summary>EachTierBeginsWhereTheOneBelowItEnds operation.</summary>
+
         public void EachTierBeginsWhereTheOneBelowItEnds(float watts, string expected)
         {
             Assert.Equal(expected, Units.Watts(watts, 1, CultureInfo.InvariantCulture));
@@ -24,14 +24,14 @@ namespace Thermodynamics.Tests
         [InlineData(-1500f, "-1.5 kW")]
         [InlineData(-2500000f, "-2.5 MW")]
         [InlineData(-500f, "-500 W")]
-/// <summary>ANegativeFigurePicksItsTierByMagnitude operation.</summary>
+
         public void ANegativeFigurePicksItsTierByMagnitude(float watts, string expected)
         {
             Assert.Equal(expected, Units.Watts(watts, 1, CultureInfo.InvariantCulture));
         }
 
         [Fact]
-/// <summary>ThePlacesAskedForAreThePlacesGiven operation.</summary>
+
         public void ThePlacesAskedForAreThePlacesGiven()
         {
             Assert.Equal("1 kW", Units.Watts(1234f, 0, CultureInfo.InvariantCulture));
@@ -41,7 +41,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WholeWattsStayWhole operation.</summary>
+
         public void WholeWattsStayWhole()
         {
             Assert.Equal("512 W", Units.Watts(512.4f, 2, CultureInfo.InvariantCulture));
@@ -49,7 +49,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCultureAskedForIsTheCultureUsed operation.</summary>
+
         public void TheCultureAskedForIsTheCultureUsed()
         {
             CultureInfo german = CultureInfo.GetCultureInfo("de-DE");
@@ -59,7 +59,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ANegativePlaceCountIsTakenAsNone operation.</summary>
+
         public void ANegativePlaceCountIsTakenAsNone()
         {
             Assert.Equal("2 MW", Units.Watts(2.4e6f, -3, CultureInfo.InvariantCulture));

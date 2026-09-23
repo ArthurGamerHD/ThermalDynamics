@@ -10,13 +10,13 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>PaceEquivalenceTests operation.</summary>
+
         public PaceEquivalenceTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation Build(float speed, float heatTimeScale, int frequency)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -27,7 +27,7 @@ namespace Thermodynamics.Tests
                 builder.Place((index++ % 8) == 0 ? Catalog.Grating() : Catalog.HeavyArmor(), cell);
             }
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.SimulationSpeed = speed;
             settings.HeatTimeScale = heatTimeScale;
@@ -47,7 +47,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>RunForRealSeconds operation.</summary>
+
         private static float RunForRealSeconds(ThermalSimulation simulation, float realSeconds)
         {
             EnvironmentSample sample = Worlds.Shadow();
@@ -70,14 +70,14 @@ namespace Thermodynamics.Tests
         [InlineData(0.5f, 450f)]
         [InlineData(0.25f, 900f)]
         [InlineData(2f, 112.5f)]
-/// <summary>ConstantSpeedTimesHeatScaleKeepsTheSameThermalPace operation.</summary>
+
         public void ConstantSpeedTimesHeatScaleKeepsTheSameThermalPace(float speed, float scale)
         {
             const float seconds = 6f;
 
-/// <summary>RunForRealSeconds operation.</summary>
+
             float reference = RunForRealSeconds(Build(1f, 225f, 4), seconds);
-/// <summary>RunForRealSeconds operation.</summary>
+
             float traded = RunForRealSeconds(Build(speed, scale, 4), seconds);
 
             float referenceDrop = 800f - reference;
@@ -94,14 +94,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TradingSpeedForTransferDoesNotBuyBackTheSubsteps operation.</summary>
+
         public void TradingSpeedForTransferDoesNotBuyBackTheSubsteps()
         {
             const float seconds = 6f;
 
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation reference = Build(1f, 225f, 4);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation traded = Build(0.25f, 900f, 4);
 
             reference.Work.Reset();
@@ -124,14 +124,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LoweringFrequencyReachesTheSamePlaceWithoutTouchingTheClock operation.</summary>
+
         public void LoweringFrequencyReachesTheSamePlaceWithoutTouchingTheClock()
         {
             const float seconds = 6f;
 
-/// <summary>RunForRealSeconds operation.</summary>
+
             float fast = RunForRealSeconds(Build(1f, 225f, 4), seconds);
-/// <summary>RunForRealSeconds operation.</summary>
+
             float slow = RunForRealSeconds(Build(1f, 225f, 1), seconds);
 
             float difference = Math.Abs(slow - fast) / Math.Max(1f, 800f - fast);

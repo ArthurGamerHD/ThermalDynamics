@@ -10,12 +10,12 @@ namespace Thermodynamics.Tests
         [InlineData(Face.Right, 0)]
         [InlineData(Face.Up, 1)]
         [InlineData(Face.Backward, 2)]
-/// <summary>APositiveFaceIsTheLastRowInsideTheBox operation.</summary>
+
         public void APositiveFaceIsTheLastRowInsideTheBox(int face, int axis)
         {
-/// <summary>Vector3I operation.</summary>
+
             Vector3I min = new Vector3I(2, 3, 5);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I maxExclusive = new Vector3I(6, 9, 11);
 
             BoxGeometry.FaceSpan span = BoxGeometry.Span(min, maxExclusive, face);
@@ -29,12 +29,12 @@ namespace Thermodynamics.Tests
         [InlineData(Face.Left, 0)]
         [InlineData(Face.Down, 1)]
         [InlineData(Face.Forward, 2)]
-/// <summary>ANegativeFaceIsTheFirstRowOfTheBox operation.</summary>
+
         public void ANegativeFaceIsTheFirstRowOfTheBox(int face, int axis)
         {
-/// <summary>Vector3I operation.</summary>
+
             Vector3I min = new Vector3I(2, 3, 5);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I maxExclusive = new Vector3I(6, 9, 11);
 
             BoxGeometry.FaceSpan span = BoxGeometry.Span(min, maxExclusive, face);
@@ -45,7 +45,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EverySlabIsInsideTheBox operation.</summary>
+
         public void EverySlabIsInsideTheBox()
         {
             for (int sx = 1; sx <= 3; sx++)
@@ -54,9 +54,9 @@ namespace Thermodynamics.Tests
                 {
                     for (int sz = 1; sz <= 3; sz++)
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I min = new Vector3I(-2, 4, 7);
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I maxExclusive = min + new Vector3I(sx, sy, sz);
 
                         for (int face = 0; face < Face.Count; face++)
@@ -73,11 +73,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSpannedAxesAreTheOtherTwoAxesExactlyOnce operation.</summary>
+
         public void TheSpannedAxesAreTheOtherTwoAxesExactlyOnce()
         {
             Vector3I min = Vector3I.Zero;
-/// <summary>Vector3I operation.</summary>
+
             Vector3I maxExclusive = new Vector3I(3, 4, 5);
 
             for (int face = 0; face < Face.Count; face++)
@@ -91,12 +91,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSpanCoversTheFacesArea operation.</summary>
+
         public void TheSpanCoversTheFacesArea()
         {
-/// <summary>Vector3I operation.</summary>
+
             Vector3I min = new Vector3I(1, 1, 1);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I size = new Vector3I(2, 3, 4);
             Vector3I maxExclusive = min + size;
 

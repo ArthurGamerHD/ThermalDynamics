@@ -21,12 +21,12 @@ namespace Thermodynamics.Tests
         private static int rowsWritten;
 
         [Fact]
-/// <summary>EveryDialGetsAMeasuredCurve operation.</summary>
+
         public void EveryDialGetsAMeasuredCurve()
         {
             if (CorpusFixture.Files().Count == 0) return;
 
-/// <summary>Panel operation.</summary>
+
             List<ShipSet.Entry> panel = Panel();
             Assert.True(panel.Count > 0,
                 "the corpus is opted in but no panel was read. Build one with "
@@ -52,15 +52,15 @@ namespace Thermodynamics.Tests
             Assert.True(rowsWritten > 0, "the sweep produced no rows");
         }
 
-/// <summary>Run operation.</summary>
+
         private static void Run(string knob, float level, bool shipped, string[] wanted,
             ThermalSettings settings,
             Func<string, string, BlockThermalProperties, BlockThermalProperties> material,
             List<Blueprints.Ship> ships, Dictionary<string, Battery.Scenario> scenarios)
         {
-/// <summary>List operation.</summary>
+
             List<string> rows = new List<string>();
-/// <summary>object operation.</summary>
+
             object gate = new object();
 
             try
@@ -76,7 +76,7 @@ namespace Thermodynamics.Tests
                     options,
                     range =>
                     {
-/// <summary>List operation.</summary>
+
                         List<string> mine = new List<string>();
 
                         for (int i = range.Item1; i < range.Item2; i++)
@@ -114,11 +114,11 @@ namespace Thermodynamics.Tests
                 + " wrote " + rows.Count + " rows");
         }
 
-/// <summary>Row operation.</summary>
+
         private static string Row(string knob, float level, bool shipped, Blueprints.Ship ship,
             ScenarioOutcome o)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder row = new StringBuilder();
             row.Append(CorpusRecord.Text(knob)).Append(',');
             row.Append(CorpusRecord.Num(level)).Append(',');
@@ -146,13 +146,13 @@ namespace Thermodynamics.Tests
         }
 
 
-/// <summary>Panel operation.</summary>
+
         private static List<ShipSet.Entry> Panel()
         {
             return ShipSet.Read("THERMAL_PANEL", "tools/corpus/panel.csv");
         }
 
-/// <summary>Progress operation.</summary>
+
         private static void Progress(string line)
         {
             ShipSet.Progress("knobs", line);

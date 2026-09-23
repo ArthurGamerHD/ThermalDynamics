@@ -30,10 +30,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Surfaces operation.</summary>
+
         public static List<Row> Surfaces()
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             rows.Add(Surface("shipped", 0.35f, -1f));
@@ -47,10 +47,10 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Surface operation.</summary>
+
         private static Row Surface(string name, float emissivity, float absorptivity)
         {
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Surface = name;
             row.Emissivity = emissivity;
@@ -58,28 +58,28 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(int radiators)
         {
-/// <summary>Surfaces operation.</summary>
+
             List<Row> rows = Surfaces();
 
             for (int i = 0; i < rows.Count; i++)
             {
                 rows[i].Radiators = radiators;
-/// <summary>Sets the tle.</summary>
+
                 rows[i].SunlitKelvin = Settle(rows[i], radiators, true);
-/// <summary>Sets the tle.</summary>
+
                 rows[i].ShadowKelvin = Settle(rows[i], radiators, false);
             }
 
             return rows;
         }
 
-/// <summary>Sets the tle.</summary>
+
         private static float Settle(Row row, int radiators, bool sunlit)
         {
-/// <summary>Resurfaced operation.</summary>
+
             BlockModel radiator = Resurfaced(row.Emissivity, row.Absorptivity);
 
             GridBuilder builder = GridBuilder.Large();
@@ -101,7 +101,7 @@ namespace Thermodynamics.Harness
             return simulation.Solver.GetNode(source).Temperature;
         }
 
-/// <summary>Resurfaced operation.</summary>
+
         private static BlockModel Resurfaced(float emissivity, float absorptivity)
         {
             BlockModel model = Catalog.Radiator();
@@ -114,10 +114,10 @@ namespace Thermodynamics.Harness
             return model;
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(int radiators = 8)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("SELECTIVE SURFACE  (a source under " + radiators
@@ -129,7 +129,7 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
             sb.AppendLine("  surface                  emis   absorp     sunlit K    shadow K   sun costs");
 
-/// <summary>Run operation.</summary>
+
             List<Row> rows = Run(radiators);
 
             foreach (Row row in rows)

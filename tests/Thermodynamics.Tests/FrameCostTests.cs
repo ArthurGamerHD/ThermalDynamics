@@ -5,10 +5,10 @@ namespace Thermodynamics.Tests
     public class FrameCostTests
     {
         [Fact]
-/// <summary>AFrameWithNoWorkIsNotRecorded operation.</summary>
+
         public void AFrameWithNoWorkIsNotRecorded()
         {
-/// <summary>FrameCostTracker operation.</summary>
+
             FrameCostTracker tracker = new FrameCostTracker();
 
             tracker.EndFrame(1, 0.1);
@@ -20,10 +20,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFrameCostsWhatEveryGridOnItCostTogether operation.</summary>
+
         public void AFrameCostsWhatEveryGridOnItCostTogether()
         {
-/// <summary>FrameCostTracker operation.</summary>
+
             FrameCostTracker tracker = new FrameCostTracker();
 
             for (int i = 0; i < 20; i++)
@@ -42,10 +42,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWorstGridOnAFrameIsNamed operation.</summary>
+
         public void TheWorstGridOnAFrameIsNamed()
         {
-/// <summary>FrameCostTracker operation.</summary>
+
             FrameCostTracker tracker = new FrameCostTracker();
 
             tracker.AddGrid("tug", 1d, 200);
@@ -61,17 +61,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>StagesAndWorkCountsAreCarriedWithTheFrame operation.</summary>
+
         public void StagesAndWorkCountsAreCarriedWithTheFrame()
         {
-/// <summary>FrameCostTracker operation.</summary>
+
             FrameCostTracker tracker = new FrameCostTracker();
 
             tracker.AddGrid("station", 30d, 300000);
-            tracker.AddStage(0, 12d);   // topology
-            tracker.AddStage(1, 8d);    // room mapping
-            tracker.AddStage(2, 4d);    // exposure
-            tracker.AddStage(3, 6d);    // solver
+            tracker.AddStage(0, 12d);
+            tracker.AddStage(1, 8d);
+            tracker.AddStage(2, 4d);
+            tracker.AddStage(3, 6d);
             tracker.AddWork(300000, 4096, 1500000);
             tracker.EndFrame(9, 4d);
 
@@ -85,10 +85,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheStagesAroundAStepReachTheFrameToo operation.</summary>
+
         public void TheStagesAroundAStepReachTheFrameToo()
         {
-/// <summary>FrameCostTracker operation.</summary>
+
             FrameCostTracker tracker = new FrameCostTracker();
 
             tracker.AddGrid("station", 30d, 300000);
@@ -105,10 +105,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WhatNoStageClaimedIsTheRemainderAndCanGoNegative operation.</summary>
+
         public void WhatNoStageClaimedIsTheRemainderAndCanGoNegative()
         {
-/// <summary>FrameCostTracker operation.</summary>
+
             FrameCostTracker tracker = new FrameCostTracker();
 
             tracker.AddGrid("station", 20d, 300000);
@@ -120,7 +120,7 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(0d, tracker.Worst[0].UnattributedMs, 6);
 
-/// <summary>FrameCostTracker operation.</summary>
+
             FrameCostTracker overlapping = new FrameCostTracker();
             overlapping.AddGrid("station", 20d, 300000);
             overlapping.AddStage(3, 15d);
@@ -131,10 +131,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EndingAFrameClearsWhatItAccumulated operation.</summary>
+
         public void EndingAFrameClearsWhatItAccumulated()
         {
-/// <summary>FrameCostTracker operation.</summary>
+
             FrameCostTracker tracker = new FrameCostTracker();
 
             tracker.AddGrid("station", 30d, 300000);
@@ -156,10 +156,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheListKeepsTheWorstFramesAndNotTheLatest operation.</summary>
+
         public void TheListKeepsTheWorstFramesAndNotTheLatest()
         {
-/// <summary>FrameCostTracker operation.</summary>
+
             FrameCostTracker tracker = new FrameCostTracker();
 
             tracker.AddGrid("station", 500d, 300000);
@@ -182,10 +182,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OrdinaryFramesDoNotFillTheHitchList operation.</summary>
+
         public void OrdinaryFramesDoNotFillTheHitchList()
         {
-/// <summary>FrameCostTracker operation.</summary>
+
             FrameCostTracker tracker = new FrameCostTracker();
 
             for (int i = 0; i < 500; i++)
@@ -200,10 +200,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SpikeRatioSeparatesUniformlySlowFromOccasionallyEnormous operation.</summary>
+
         public void SpikeRatioSeparatesUniformlySlowFromOccasionallyEnormous()
         {
-/// <summary>FrameCostTracker operation.</summary>
+
             FrameCostTracker uniform = new FrameCostTracker();
             for (int i = 0; i < 100; i++)
             {
@@ -211,7 +211,7 @@ namespace Thermodynamics.Tests
                 uniform.EndFrame(i, i);
             }
 
-/// <summary>FrameCostTracker operation.</summary>
+
             FrameCostTracker spiky = new FrameCostTracker();
             for (int i = 0; i < 99; i++)
             {

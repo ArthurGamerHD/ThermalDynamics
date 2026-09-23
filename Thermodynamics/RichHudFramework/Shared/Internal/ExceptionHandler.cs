@@ -48,7 +48,7 @@ namespace RichHudFramework.Internal
 		private Action lastMissionScreen;
 		private IMyHudNotification debugNotification;
 
-/// <summary>ExceptionHandler operation.</summary>
+
 		public ExceptionHandler()
 		{
 			if (instance == null)
@@ -59,17 +59,17 @@ namespace RichHudFramework.Internal
 			ModName = DebugName;
 			RecoveryLimit = 1;
 
-/// <summary>List operation.</summary>
+
 			exceptionMessages = new List<string>();
-/// <summary>Stopwatch operation.</summary>
+
 			errorTimer = new Stopwatch();
-/// <summary>List operation.</summary>
+
 			clients = new List<ModBase>();
-/// <summary>StringBuilder operation.</summary>
+
 			debugNotifications = new StringBuilder();
 		}
 
-/// <summary>LoadData operation.</summary>
+
 		public override void LoadData()
 		{
 			IsDedicated = MyAPIGateway.Utilities.IsDedicated;
@@ -79,7 +79,7 @@ namespace RichHudFramework.Internal
 			WriteToLogAndConsole($"Exception Handler Init. Dedicated: {IsDedicated}, IsServer: {IsServer}, IsClient: {IsClient}", true);
 		}
 
-/// <summary>Registers the API and message handler.</summary>
+
 		public static void RegisterClient(ModBase client)
 		{
 			if (!instance.clients.Contains(client))
@@ -89,7 +89,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>Draw operation.</summary>
+
 		public override void Draw()
 		{
 			if (errorTimer.ElapsedMilliseconds > exceptionReportInterval)
@@ -121,7 +121,7 @@ namespace RichHudFramework.Internal
 				FinishReload();
 		}
 
-/// <summary>Run operation.</summary>
+
 		public static void Run(Action Action)
 		{
 			try
@@ -137,15 +137,15 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>Run operation.</summary>
+
 		public static TResult Run<TResult>(Func<TResult> Func)
 		{
-/// <summary>default operation.</summary>
+
 			TResult value = default(TResult);
 
 			try
 			{
-/// <summary>Func operation.</summary>
+
 				value = Func();
 			}
 			catch (Exception e)
@@ -159,15 +159,15 @@ namespace RichHudFramework.Internal
 			return value;
 		}
 
-/// <summary>ReportException operation.</summary>
+
 		public static void ReportException(Exception e) =>
 			instance.ReportExceptionInternal(e);
 
-/// <summary>ReportExceptionInternal operation.</summary>
+
 		private void ReportExceptionInternal(Exception e)
 		{
 			if (e == null)
-/// <summary>Exception operation.</summary>
+
 				e = new Exception("Null exception reported.");
 
 			lock (exceptionMessages)
@@ -187,12 +187,12 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>HandleExceptions operation.</summary>
+
 		private void HandleExceptions()
 		{
 			if (exceptionCount > 0)
 			{
-/// <summary>Returns the exceptiontext.</summary>
+
 				string exceptionText = GetExceptionText();
 				exceptionCount = 0;
 
@@ -227,10 +227,10 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>Returns the exceptiontext.</summary>
+
 		private string GetExceptionText()
 		{
-/// <summary>StringBuilder operation.</summary>
+
 			StringBuilder errorMessage = new StringBuilder();
 
 			if (exceptionCount > exceptionLoopCount && errorTimer.ElapsedMilliseconds < exceptionLoopTime)
@@ -245,7 +245,7 @@ namespace RichHudFramework.Internal
 			return errorMessage.ToString();
 		}
 
-/// <summary>ShowErrorPrompt operation.</summary>
+
 		private void ShowErrorPrompt(string errorMessage, bool canReload)
 		{
 			if (canReload)
@@ -277,7 +277,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>AllowReload operation.</summary>
+
 		private void AllowReload(ResultEnum response)
 		{
 			if (response == ResultEnum.OK)
@@ -286,22 +286,22 @@ namespace RichHudFramework.Internal
 				UnloadClients();
 		}
 
-/// <summary>ReloadClients operation.</summary>
+
 		public static void ReloadClients() =>
 			instance.StartReload();
 
-/// <summary>ShowMissionScreen operation.</summary>
+
 		public static void ShowMissionScreen(string subHeading = null, string message = null, Action<ResultEnum> callback = null, string okButtonCaption = null)
 		{
 			Action messageAction = () => MyAPIGateway.Utilities.ShowMissionScreen(ModName, subHeading, null, message, callback, okButtonCaption);
 			instance.lastMissionScreen = messageAction;
 		}
 
-/// <summary>ShowMessageScreen operation.</summary>
+
 		public static void ShowMessageScreen(string subHeading, string message) =>
 			ShowMissionScreen(subHeading, message, null, "Close");
 
-/// <summary>SendChatMessage operation.</summary>
+
 		public static void SendChatMessage(string message)
 		{
 			if (!IsDedicated)
@@ -314,7 +314,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>SendDebugNotification operation.</summary>
+
 		public static void SendDebugNotification(string message)
 		{
 			if (!IsDedicated)
@@ -323,7 +323,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>WriteToLog operation.</summary>
+
 		public static void WriteToLog(string message, bool debugOnly = false)
 		{
 			if (!(debugOnly && !DebugLogging))
@@ -336,7 +336,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>WriteToConsole operation.</summary>
+
 		public static void WriteToConsole(string message, bool debugOnly = false)
 		{
 			if (!(debugOnly && !DebugLogging))
@@ -349,7 +349,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>WriteToLogAndConsole operation.</summary>
+
 		public static void WriteToLogAndConsole(string message, bool debugOnly = false)
 		{
 			if (!(debugOnly && !DebugLogging))
@@ -362,7 +362,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>PauseClients operation.</summary>
+
 		private void PauseClients()
 		{
 			for (int n = 0; n < clients.Count; n++)
@@ -371,7 +371,7 @@ namespace RichHudFramework.Internal
 			ClientsPaused = true;
 		}
 
-/// <summary>UnpauseClients operation.</summary>
+
 		private void UnpauseClients()
 		{
 			for (int n = 0; n < clients.Count; n++)
@@ -380,7 +380,7 @@ namespace RichHudFramework.Internal
 			ClientsPaused = false;
 		}
 
-/// <summary>StartReload operation.</summary>
+
 		private void StartReload()
 		{
 			if (!Reloading)
@@ -392,7 +392,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>FinishReload operation.</summary>
+
 		private void FinishReload()
 		{
 			if (Reloading)
@@ -421,7 +421,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>UnloadClients operation.</summary>
+
 		private void UnloadClients()
 		{
 			if (!Unloading)
@@ -436,7 +436,7 @@ namespace RichHudFramework.Internal
 			WriteToLog("Mod unloaded.");
 		}
 
-/// <summary>CloseClients operation.</summary>
+
 		private void CloseClients()
 		{
 			for (int n = 0; n < clients.Count; n++)
@@ -482,7 +482,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>UnloadData operation.</summary>
+
 		protected override void UnloadData()
 		{
 			UnloadClients();

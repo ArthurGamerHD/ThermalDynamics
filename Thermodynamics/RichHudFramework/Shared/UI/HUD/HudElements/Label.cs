@@ -22,32 +22,32 @@ namespace RichHudFramework.UI
 
 		public float LineWrapWidth { get { return TextBoard.LineWrapWidth; } set { TextBoard.LineWrapWidth = value; } }
 
-/// <summary>Label operation.</summary>
+
 		public Label(HudParentBase parent) : base(parent)
 		{
-/// <summary>TextBoard operation.</summary>
+
 			TextBoard = new TextBoard();
 			TextBoard.SetText("NewLabel", GlyphFormat.White);
-/// <summary>Vector2 operation.</summary>
+
 			UnpaddedSize = new Vector2(50f);
 		}
 
-/// <summary>Label operation.</summary>
+
 		public Label() : this(null)
 		{ }
 
-/// <summary>Measure operation.</summary>
+
 		protected override void Measure()
 		{
 			if (TextBoard.AutoResize)
 				UnpaddedSize = TextBoard.TextSize;
 		}
 
-/// <summary>Draw operation.</summary>
+
 		protected override void Draw()
 		{
 			Vector2 halfSize = .5f * UnpaddedSize;
-/// <summary>BoundingBox2 operation.</summary>
+
 			BoundingBox2 box = new BoundingBox2(Position - halfSize, Position + halfSize);
 
 			if (!TextBoard.AutoResize)

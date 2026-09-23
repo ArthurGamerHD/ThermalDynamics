@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     {
         private static class Reference
         {
-/// <summary>Bolt operation.</summary>
+
             public static BlockOrientation[] Bolt(List<Vector3I> layout, int[] tierOf, BlockModel[] tiers)
             {
                 BlockOrientation[] chosen = new BlockOrientation[layout.Count];
@@ -62,7 +62,7 @@ namespace Thermodynamics.Tests
                 return chosen;
             }
 
-/// <summary>MountsToward operation.</summary>
+
             private static bool MountsToward(
                 BlockModel[] tiers, int[] tierOf, BlockOrientation[] chosen, int index, Vector3I toward)
             {
@@ -77,7 +77,7 @@ namespace Thermodynamics.Tests
                 return false;
             }
 
-/// <summary>Orientations operation.</summary>
+
             private static IEnumerable<BlockOrientation> Orientations()
             {
                 Array directions = Enum.GetValues(typeof(Base6Directions.Direction));
@@ -101,10 +101,10 @@ namespace Thermodynamics.Tests
         [InlineData("ship", 8000)]
         [InlineData("cube", 2000)]
         [InlineData("truss", 2000)]
-/// <summary>TheTableDrivenSearchChoosesWhatTheOriginalChose operation.</summary>
+
         public void TheTableDrivenSearchChoosesWhatTheOriginalChose(string shape, int blocks)
         {
-/// <summary>List operation.</summary>
+
             List<Vector3I> layout = new List<Vector3I>(LoadShapes.Build(shape, blocks));
             int[] tierOf = Census.TiersFor(layout);
             BlockModel[] tiers = Census.Models();

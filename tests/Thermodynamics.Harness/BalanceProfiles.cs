@@ -15,10 +15,10 @@ namespace Thermodynamics.Harness
         public float ConductionPace = ThermalConstants.ConductionScale;
 
 
-/// <summary>ThermalSettings operation.</summary>
+
         public int Frequency = new ThermalSettings().Frequency;
 
-/// <summary>ThermalSettings operation.</summary>
+
         public int MaxSubsteps = new ThermalSettings().MaxSubsteps;
 
         public bool ClampOvershoot = true;
@@ -44,7 +44,7 @@ namespace Thermodynamics.Harness
         public float FlowRate = 10f;
 
 
-/// <summary>ToSettings operation.</summary>
+
         public ThermalSettings ToSettings()
         {
             ThermalSettings settings = new ThermalSettings
@@ -67,7 +67,7 @@ namespace Thermodynamics.Harness
             return settings.Derive();
         }
 
-/// <summary>Material operation.</summary>
+
         public BlockThermalProperties Material(BlockThermalProperties source)
         {
             BlockThermalProperties copy = source.Clone();
@@ -76,7 +76,7 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Physical operation.</summary>
+
         public static BalanceProfile Physical()
         {
             return new BalanceProfile
@@ -96,10 +96,10 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>Shipped operation.</summary>
+
         public static BalanceProfile Shipped()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings shipped = new ThermalSettings();
 
             return new BalanceProfile
@@ -113,7 +113,7 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>Arcade operation.</summary>
+
         public static BalanceProfile Arcade()
         {
             return new BalanceProfile
@@ -131,10 +131,10 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>Candidate operation.</summary>
+
         public static BalanceProfile Candidate()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings shipped = new ThermalSettings();
 
             return new BalanceProfile
@@ -152,7 +152,7 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>All operation.</summary>
+
         public static List<BalanceProfile> All()
         {
             return new List<BalanceProfile> { Physical(), Candidate(), Shipped(), Arcade() };

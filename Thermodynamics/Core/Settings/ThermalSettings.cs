@@ -117,13 +117,13 @@ namespace Thermodynamics.Core
 
         public int Revision { get; private set; }
 
-/// <summary>ThermalSettings operation.</summary>
+
         public ThermalSettings()
         {
             Derive();
         }
 
-/// <summary>Derive operation.</summary>
+
         public ThermalSettings Derive()
         {
             if (Frequency < 1) Frequency = 1;
@@ -156,10 +156,10 @@ namespace Thermodynamics.Core
             return this;
         }
 
-/// <summary>Validate operation.</summary>
+
         public List<string> Validate()
         {
-/// <summary>List operation.</summary>
+
             List<string> problems = new List<string>();
             if (Frequency < 1) problems.Add("Frequency must be at least 1.");
             if (Frequency > 60) problems.Add("Frequency above 60 costs more than one step per render frame.");
@@ -181,7 +181,7 @@ namespace Thermodynamics.Core
             return problems;
         }
 
-/// <summary>Clone operation.</summary>
+
         public ThermalSettings Clone()
         {
             return (ThermalSettings)MemberwiseClone();

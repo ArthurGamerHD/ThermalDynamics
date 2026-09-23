@@ -20,7 +20,7 @@ namespace Thermodynamics.Core
 
         public ThresholdDirection Direction;
 
-/// <summary>ThermalThreshold operation.</summary>
+
         public ThermalThreshold(int id, float temperature, ThresholdDirection direction)
         {
             Id = id;
@@ -40,7 +40,7 @@ namespace Thermodynamics.Core
 
         public bool Rising;
 
-/// <summary>ThresholdCrossing operation.</summary>
+
         public ThresholdCrossing(int id, BlockInstance block, float threshold, float temperature, bool rising)
         {
             ThresholdId = id;
@@ -53,7 +53,7 @@ namespace Thermodynamics.Core
 
     public class ThermalThresholds
     {
-/// <summary>List operation.</summary>
+
         private readonly List<ThermalThreshold> thresholds = new List<ThermalThreshold>();
         private int nextId = 1;
 
@@ -67,7 +67,7 @@ namespace Thermodynamics.Core
             get { return thresholds.Count; }
         }
 
-/// <summary>Adds a .</summary>
+
         public int Add(float temperature, ThresholdDirection direction)
         {
             int id = nextId++;
@@ -75,7 +75,7 @@ namespace Thermodynamics.Core
             return id;
         }
 
-/// <summary>Adds a .</summary>
+
         public void Add(ThermalThreshold threshold)
         {
             Remove(threshold.Id);
@@ -83,7 +83,7 @@ namespace Thermodynamics.Core
             if (threshold.Id >= nextId) nextId = threshold.Id + 1;
         }
 
-/// <summary>Removes the .</summary>
+
         public bool Remove(int id)
         {
             for (int i = 0; i < thresholds.Count; i++)
@@ -95,13 +95,13 @@ namespace Thermodynamics.Core
             return false;
         }
 
-/// <summary>Clear operation.</summary>
+
         public void Clear()
         {
             thresholds.Clear();
         }
 
-/// <summary>Collect operation.</summary>
+
         public void Collect(BlockInstance block, float previous, float current, List<ThresholdCrossing> results)
         {
             if (results == null || previous == current) return;

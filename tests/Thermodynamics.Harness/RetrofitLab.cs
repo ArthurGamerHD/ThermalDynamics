@@ -64,21 +64,21 @@ namespace Thermodynamics.Harness
             public float TransportSaved { get { return BareK - TransportK; } }
         }
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxElementVisitsPerStep = 0;
             return settings.Derive();
         }
 
-/// <summary>Load operation.</summary>
+
         private static float Load(ShipAssembly assembly, out ThermalNode hottest)
         {
             ShipLoad.Apply(assembly, ShipLoad.State.Full);
 
-/// <summary>AssemblyRunner operation.</summary>
+
             AssemblyRunner runner = new AssemblyRunner(assembly);
             runner.Environment = t => Worlds.Shadow();
             runner.Run(Seconds);
@@ -87,10 +87,10 @@ namespace Thermodynamics.Harness
             return hottest == null ? 0f : hottest.Temperature;
         }
 
-/// <summary>FreeCellsAround operation.</summary>
+
         private static List<Vector3I> FreeCellsAround(GridModel grid, Vector3I centre, int reach)
         {
-/// <summary>List operation.</summary>
+
             List<Vector3I> free = new List<Vector3I>();
 
             for (int radius = 1; radius <= reach; radius++)
@@ -103,7 +103,7 @@ namespace Thermodynamics.Harness
                         {
                             if (Math.Abs(x) != radius && Math.Abs(y) != radius && Math.Abs(z) != radius) continue;
 
-/// <summary>Vector3I operation.</summary>
+
                             Vector3I cell = centre + new Vector3I(x, y, z);
                             if (grid.IsOccupied(cell)) continue;
 
@@ -122,7 +122,7 @@ namespace Thermodynamics.Harness
             return free;
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static GridBuilder BuilderOf(Blueprints.Ship ship, ShipAssembly assembly, ThermalNode node)
         {
             for (int i = 0; i < assembly.Simulations.Count && i < ship.Grids.Count; i++)
@@ -137,10 +137,10 @@ namespace Thermodynamics.Harness
             return null;
         }
 
-/// <summary>Bolt operation.</summary>
+
         private static int Bolt(GridBuilder builder, Vector3I hot, BlockModel radiator)
         {
-/// <summary>FreeCellsAround operation.</summary>
+
             List<Vector3I> free = FreeCellsAround(builder.Grid, hot, 3);
             int placed = 0;
 
@@ -159,7 +159,7 @@ namespace Thermodynamics.Harness
             return placed;
         }
 
-/// <summary>Plumb operation.</summary>
+
         private static int Plumb(GridBuilder builder, Vector3I hot, BlockModel radiator)
         {
             GridModel grid = builder.Grid;
@@ -170,9 +170,9 @@ namespace Thermodynamics.Harness
                 {
                     for (int side = -1; side <= 1; side += 2)
                     {
-/// <summary>Origin operation.</summary>
+
                         Vector3I origin = Origin(hot, plane, offset, side);
-/// <summary>Ring operation.</summary>
+
                         List<Vector3I> ring = Ring(origin, plane);
                         if (ring == null) continue;
 
@@ -193,7 +193,7 @@ namespace Thermodynamics.Harness
 
                         if (sinks.Count == 0) continue;
 
-/// <summary>FeedPanels operation.</summary>
+
                         int fed = FeedPanels(builder, ring, sinks, radiator);
 
                         try
@@ -215,21 +215,21 @@ namespace Thermodynamics.Harness
             return 0;
         }
 
-/// <summary>Origin operation.</summary>
+
         private static Vector3I Origin(Vector3I hot, int plane, int offset, int side)
         {
             switch (plane)
             {
-/// <summary>Vector3I operation.</summary>
+
                 case 0: return hot + new Vector3I(offset, side, -1);
-/// <summary>Vector3I operation.</summary>
+
                 case 1: return hot + new Vector3I(-1, offset, side);
-/// <summary>Vector3I operation.</summary>
+
                 default: return hot + new Vector3I(side, -1, offset);
             }
         }
 
-/// <summary>Ring operation.</summary>
+
         private static List<Vector3I> Ring(Vector3I origin, int plane)
         {
             switch (plane)
@@ -241,19 +241,19 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>FeedPanels operation.</summary>
+
         private static int FeedPanels(GridBuilder builder, List<Vector3I> ring,
             Dictionary<int, Vector3I> sinks, BlockModel radiator)
         {
             int fed = 0;
-/// <summary>CountStraightWithoutSink operation.</summary>
+
             int straightLeft = CountStraightWithoutSink(ring, sinks);
 
             for (int i = 0; i < ring.Count && fed < MaxBlocks; i++)
             {
                 if (sinks.ContainsKey(i)) continue;
 
-/// <summary>IsStraight operation.</summary>
+
                 bool straight = IsStraight(ring, i);
                 if (straight && straightLeft <= 1) continue;
 
@@ -284,7 +284,7 @@ namespace Thermodynamics.Harness
             return fed;
         }
 
-/// <summary>ConductanceOutOf operation.</summary>
+
         private static float ConductanceOutOf(ShipAssembly assembly, Vector3I cell)
         {
             for (int s = 0; s < assembly.Simulations.Count; s++)
@@ -307,7 +307,7 @@ namespace Thermodynamics.Harness
             return 0f;
         }
 
-/// <summary>AboveMedian operation.</summary>
+
         private static float AboveMedian(ShipAssembly assembly, Vector3I cell)
         {
             for (int s = 0; s < assembly.Simulations.Count; s++)
@@ -321,7 +321,7 @@ namespace Thermodynamics.Harness
                 if (node == null) continue;
 
                 IList<ThermalNode> nodes = simulation.Solver.Nodes;
-/// <summary>List operation.</summary>
+
                 List<float> temperatures = new List<float>(nodes.Count);
                 for (int i = 0; i < nodes.Count; i++) temperatures.Add(nodes[i].Temperature);
 
@@ -332,7 +332,7 @@ namespace Thermodynamics.Harness
             return 0f;
         }
 
-/// <summary>CountStraightWithoutSink operation.</summary>
+
         private static int CountStraightWithoutSink(List<Vector3I> ring, Dictionary<int, Vector3I> sinks)
         {
             int count = 0;
@@ -343,7 +343,7 @@ namespace Thermodynamics.Harness
             return count;
         }
 
-/// <summary>IsStraight operation.</summary>
+
         private static bool IsStraight(List<Vector3I> ring, int index)
         {
             Vector3I cell = ring[index];
@@ -353,15 +353,15 @@ namespace Thermodynamics.Harness
             return (previous - cell) == -(next - cell);
         }
 
-/// <summary>Measure operation.</summary>
+
         public static Row Measure(Blueprints.Ship ship)
         {
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
 
             ShipAssembly bare = ship.Build(settings);
             ThermalNode hottest;
-/// <summary>Load operation.</summary>
+
             float bareK = Load(bare, out hottest);
 
             Row row = new Row
@@ -378,55 +378,55 @@ namespace Thermodynamics.Harness
 
             if (hottest == null) return row;
 
-/// <summary>Builds the method table.</summary>
+
             GridBuilder builder = BuilderOf(ship, bare, hottest);
             if (builder == null) return row;
 
             Vector3I hot = hottest.Block.Position;
             BlockModel radiator = ShippedBlocks.Model(ship.Large ? "Gauge_LG_Radiator" : "Gauge_SG_Radiator");
 
-/// <summary>Bolt operation.</summary>
+
             row.BoltedPlaced = Bolt(builder, hot, radiator);
             if (row.BoltedPlaced > 0)
             {
                 ShipAssembly bolted = ship.Build(settings);
                 ThermalNode after;
-/// <summary>Load operation.</summary>
+
                 row.BoltedK = Load(bolted, out after);
             }
 
-/// <summary>Plumb operation.</summary>
+
             row.PlumbedPipes = Plumb(builder, hot, radiator);
             if (row.PlumbedPipes > 0)
             {
                 ShipAssembly plumbed = ship.Build(settings);
                 ThermalNode after;
-/// <summary>Load operation.</summary>
+
                 row.PlumbedK = Load(plumbed, out after);
 
                 bool flowing;
-/// <summary>WorstSink operation.</summary>
+
                 row.LoopSinkWattsPerKelvin = WorstSink(plumbed, out flowing);
                 row.LoopFlowing = flowing;
-/// <summary>ConductanceOutOf operation.</summary>
+
                 row.HotBlockWattsPerKelvin = ConductanceOutOf(plumbed, hot);
-/// <summary>AboveMedian operation.</summary>
+
                 row.AboveHullKelvin = AboveMedian(plumbed, hot);
 
                 ShipAssembly carried = ship.Build(settings);
                 LoopBefore.Apply(carried);
-/// <summary>Load operation.</summary>
+
                 row.TransportK = Load(carried, out after);
 
                 bool carriedFlowing;
-/// <summary>WorstSink operation.</summary>
+
                 row.CarriedSinkWattsPerKelvin = WorstSink(carried, out carriedFlowing);
             }
 
             return row;
         }
 
-/// <summary>WorstSink operation.</summary>
+
         private static float WorstSink(ShipAssembly assembly, out bool flowing)
         {
             float worst = 0f;
@@ -453,7 +453,7 @@ namespace Thermodynamics.Harness
             return worst;
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(IList<Blueprints.Ship> ships, LabMode mode = LabMode.Parallel)
         {
             GameBlocks.Warm();
@@ -462,7 +462,7 @@ namespace Thermodynamics.Harness
 
         public static List<Row> LastRows { get; private set; }
 
-/// <summary>At operation.</summary>
+
         private static float At(List<float> sorted, double q)
         {
             if (sorted.Count == 0) return 0f;
@@ -472,10 +472,10 @@ namespace Thermodynamics.Harness
             return sorted[index];
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(string path, int ships, LabMode mode = LabMode.Parallel)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("RETROFIT  (cooling fitted to ships somebody built)");
@@ -493,7 +493,7 @@ namespace Thermodynamics.Harness
                 return sb.ToString();
             }
 
-/// <summary>Sample operation.</summary>
+
             List<Blueprints.Ship> usable = Sample(root, ships);
             if (usable.Count == 0)
             {
@@ -502,24 +502,24 @@ namespace Thermodynamics.Harness
             }
 
             System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
-/// <summary>Run operation.</summary>
+
             List<Row> rows = Run(usable, mode);
             clock.Stop();
             LastRows = rows;
 
-/// <summary>List operation.</summary>
+
             List<float> bolted = new List<float>();
-/// <summary>List operation.</summary>
+
             List<float> plumbed = new List<float>();
-/// <summary>List operation.</summary>
+
             List<float> carried = new List<float>();
             int noRoomBolted = 0, noRoomPlumbed = 0, measured = 0, cold = 0, flowingLoops = 0;
             float sinkPlumbed = 0f, sinkCarried = 0f;
-/// <summary>List operation.</summary>
+
             List<float> hotConductances = new List<float>();
-/// <summary>List operation.</summary>
+
             List<float> aboveHulls = new List<float>();
-/// <summary>List operation.</summary>
+
             List<float> ceilings = new List<float>();
 
             for (int i = 0; i < rows.Count; i++)
@@ -554,12 +554,12 @@ namespace Thermodynamics.Harness
             carried.Sort();
             hotConductances.Sort();
             aboveHulls.Sort();
-/// <summary>At operation.</summary>
+
             float hotConductance = At(hotConductances, 0.5);
-/// <summary>At operation.</summary>
+
             float aboveHull = At(aboveHulls, 0.5);
             ceilings.Sort();
-/// <summary>At operation.</summary>
+
             float ceiling = At(ceilings, 0.5);
 
             sb.Append("  ").Append(measured.ToString("n0")).Append(" ships measured in ")
@@ -606,7 +606,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Band operation.</summary>
+
         private static void Band(StringBuilder sb, string label, List<float> sorted, int noRoom)
         {
             sb.Append("  ").Append(label.PadRight(12));
@@ -627,14 +627,14 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
         }
 
-/// <summary>Sample operation.</summary>
+
         private static List<Blueprints.Ship> Sample(string root, int ships)
         {
             List<string> files = Blueprints.Files(root);
             files.Sort(StringComparer.Ordinal);
 
             long limit = (long)StiffnessLab.MaxMegabytes() * 1024L * 1024L;
-/// <summary>List operation.</summary>
+
             List<Blueprints.Ship> usable = new List<Blueprints.Ship>();
             int stride = ships > 0 && files.Count > ships ? files.Count / ships : 1;
 
@@ -661,16 +661,16 @@ namespace Thermodynamics.Harness
             return usable;
         }
 
-/// <summary>Cell operation.</summary>
+
         private static string Cell(float value)
         {
             return value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("ship,large,blocks,bare_k,hottest_block,bolted_n,bolted_k,plumbed_pipes,plumbed_k,transport_k");
 

@@ -33,7 +33,7 @@ namespace Thermodynamics.Presentation
         public int Received { get { return received; } }
         public bool HasFrame { get; private set; }
 
-/// <summary>ThermalVisionRayScan operation.</summary>
+
         public ThermalVisionRayScan(int sampleCount, int maxOutstanding, int queriesPerFrame)
         {
             if (sampleCount < 1 || sampleCount > 65536 || maxOutstanding < 1 || maxOutstanding > 256
@@ -48,16 +48,16 @@ namespace Thermodynamics.Presentation
             perFrame = queriesPerFrame;
         }
 
-/// <summary>Begin operation.</summary>
+
         public void Begin()
         {
             Invalidate();
-/// <summary>object operation.</summary>
+
             generation = new object();
             active = true;
         }
 
-/// <summary>Invalidate operation.</summary>
+
         public void Invalidate()
         {
             active = false;
@@ -66,7 +66,7 @@ namespace Thermodynamics.Presentation
             next = received = 0;
         }
 
-/// <summary>AdvanceFrame operation.</summary>
+
         public void AdvanceFrame(long frame)
         {
             if (frame <= lastFrame) return;
@@ -74,10 +74,10 @@ namespace Thermodynamics.Presentation
             remaining = perFrame;
         }
 
-/// <summary>TryIssue operation.</summary>
+
         public bool TryIssue(out Ticket ticket)
         {
-/// <summary>Ticket operation.</summary>
+
             ticket = new Ticket();
             if (!active || next == SampleCount || remaining == 0 || freeCount == 0) return false;
             if (serial == long.MaxValue) throw new InvalidOperationException("Sensor ticket sequence exhausted.");
@@ -88,13 +88,13 @@ namespace Thermodynamics.Presentation
             return true;
         }
 
-/// <summary>Complete operation.</summary>
+
         public bool Complete(Ticket ticket, T value)
         {
             if (ticket.Owner != this || ticket.Slot < 0 || ticket.Slot >= pending.Length) return false;
             Pending entry = pending[ticket.Slot];
             if (entry.Serial == 0 || entry.Serial != ticket.Serial) return false;
-/// <summary>Pending operation.</summary>
+
             pending[ticket.Slot] = new Pending();
             free[freeCount++] = ticket.Slot;
             if (!active || entry.Generation != generation) return false;
@@ -111,10 +111,10 @@ namespace Thermodynamics.Presentation
             return true;
         }
 
-/// <summary>TryRead operation.</summary>
+
         public bool TryRead(int pixel, out T value)
         {
-/// <summary>default operation.</summary>
+
             value = default(T);
             if (!HasFrame || pixel < 0 || pixel >= SampleCount) return false;
             value = published[pixel];

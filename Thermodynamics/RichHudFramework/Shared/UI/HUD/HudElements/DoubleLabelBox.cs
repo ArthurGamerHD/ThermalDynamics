@@ -23,16 +23,16 @@ namespace RichHudFramework.UI
 
         protected readonly Label left, right;
 
-/// <summary>DoubleLabelBox operation.</summary>
+
         public DoubleLabelBox(HudParentBase parent = null) : base(parent)
         {
-/// <summary>Label operation.</summary>
+
             left = new Label(this) { ParentAlignment = ParentAlignments.PaddedInnerLeft };
-/// <summary>Label operation.</summary>
+
             right = new Label(this) { ParentAlignment = ParentAlignments.InnerRight };
         }
 
-/// <summary>Measure operation.</summary>
+
         protected override void Measure()
         {
             if (AutoResize)
@@ -49,12 +49,12 @@ namespace RichHudFramework.UI
             base.Measure();
         }
 
-/// <summary>Layout operation.</summary>
+
         protected override void Layout()
         {
-/// <summary>Vector2 operation.</summary>
+
             left.Size = new Vector2(0.5f * CachedSize.X, CachedSize.Y);
-/// <summary>Vector2 operation.</summary>
+
             right.Size = new Vector2(0.5f * CachedSize.X, CachedSize.Y);
         }
     }

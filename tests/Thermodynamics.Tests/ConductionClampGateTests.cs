@@ -6,7 +6,7 @@ namespace Thermodynamics.Tests
 {
     public class ConductionClampGateTests
     {
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation Build(bool gate, int maxSubsteps)
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(maxSubsteps));
@@ -14,7 +14,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>AssertIdentical operation.</summary>
+
         private static void AssertIdentical(ThermalSimulation always, ThermalSimulation gated, string what)
         {
             SolverAb.AssertIdentical(
@@ -23,12 +23,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SkippingTheClampIsBitIdenticalWhenTheGridIsResolved operation.</summary>
+
         public void SkippingTheClampIsBitIdenticalWhenTheGridIsResolved()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation always = Build(gate: false, maxSubsteps: 4096);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation gated = Build(gate: true, maxSubsteps: 4096);
 
             EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
@@ -41,12 +41,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheClampStillRunsWhenTheSubstepCountWasRefused operation.</summary>
+
         public void TheClampStillRunsWhenTheSubstepCountWasRefused()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation always = Build(gate: false, maxSubsteps: 1);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation gated = Build(gate: true, maxSubsteps: 1);
 
             EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
@@ -59,12 +59,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SkippingTheClampIsBitIdenticalInVacuum operation.</summary>
+
         public void SkippingTheClampIsBitIdenticalInVacuum()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation always = Build(gate: false, maxSubsteps: 4096);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation gated = Build(gate: true, maxSubsteps: 4096);
 
             EnvironmentSample sample = Worlds.Ab.SunlitVacuum();
@@ -83,12 +83,12 @@ namespace Thermodynamics.Tests
         [InlineData(16)]
         [InlineData(24)]
         [InlineData(64)]
-/// <summary>TheGateNeverChangesTheAnswerAtAnySubstepCap operation.</summary>
+
         public void TheGateNeverChangesTheAnswerAtAnySubstepCap(int cap)
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation always = Build(gate: false, maxSubsteps: cap);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation gated = Build(gate: true, maxSubsteps: cap);
 
             EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
@@ -103,12 +103,12 @@ namespace Thermodynamics.Tests
         [InlineData(1)]
         [InlineData(97)]
         [InlineData(5000)]
-/// <summary>TheGateSurvivesTheStepBeingSpread operation.</summary>
+
         public void TheGateSurvivesTheStepBeingSpread(int budget)
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation whole = Build(gate: false, maxSubsteps: 4096);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation spread = Build(gate: true, maxSubsteps: 4096);
 
             EnvironmentState state = EnvironmentSolver.Solve(
@@ -127,12 +127,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheGateEngagesOnAResolvedGridAndNotOnAStiffOne operation.</summary>
+
         public void TheGateEngagesOnAResolvedGridAndNotOnAStiffOne()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation resolved = Build(gate: true, maxSubsteps: 4096);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation stiff = Build(gate: true, maxSubsteps: 1);
 
             EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
@@ -145,10 +145,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSettingStillWins operation.</summary>
+
         public void TheSettingStillWins()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubsteps = 1;
             settings.MaxElementVisitsPerStep = 0;

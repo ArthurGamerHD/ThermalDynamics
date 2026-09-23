@@ -12,7 +12,7 @@ namespace Thermodynamics.Harness
 
         public const int GridStepsPerRepeat = 512;
 
-/// <summary>RoundsFor operation.</summary>
+
         public static int RoundsFor(int grids)
         {
             if (grids <= 0) return 1;
@@ -48,14 +48,14 @@ namespace Thermodynamics.Harness
             public double LumpWork;
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(IList<int> fleetSizes, int nodesEach, int slices,
             Action<string> log = null)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
@@ -69,13 +69,13 @@ namespace Thermodynamics.Harness
                 EnvironmentState state =
                     EnvironmentSolver.Solve(settings, fleet[0].Planet, Worlds.Shadow());
 
-/// <summary>Row operation.</summary>
+
                 Row row = new Row();
                 row.Grids = grids;
                 row.NodesEach = fleet[0].Solver.Nodes.Count;
                 row.Slices = slices;
 
-/// <summary>RoundsFor operation.</summary>
+
                 int rounds = RoundsFor(grids);
                 row.Rounds = rounds;
 
@@ -104,7 +104,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Staggered operation.</summary>
+
         public static void Staggered(IList<ThermalSimulation> fleet, ThermalSettings settings,
             EnvironmentState state, int rounds)
         {
@@ -117,7 +117,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Spread operation.</summary>
+
         public static void Spread(IList<ThermalSimulation> fleet, ThermalSettings settings,
             EnvironmentState state, int rounds, int slices)
         {
@@ -145,16 +145,16 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Time operation.</summary>
+
         private static void Time(Action action, out double fastest, out double slowest)
         {
             LabTiming.FastestOf(Repeats, action, out fastest, out slowest);
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("grids".PadLeft(7))

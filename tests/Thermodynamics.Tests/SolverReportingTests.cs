@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
 {
     public class SolverReportingTests
     {
-/// <summary>StiffGrid operation.</summary>
+
         private static ThermalSimulation StiffGrid(float hot = 900f)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -20,10 +20,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheReportedChangeSpansTheWholeStepAndNotItsLastSubstep operation.</summary>
+
         public void TheReportedChangeSpansTheWholeStepAndNotItsLastSubstep()
         {
-/// <summary>StiffGrid operation.</summary>
+
             ThermalSimulation simulation = StiffGrid();
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
 
@@ -43,10 +43,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheReportedChangeIsTheSumOfWhatTheSubstepsDid operation.</summary>
+
         public void TheReportedChangeIsTheSumOfWhatTheSubstepsDid()
         {
-/// <summary>StiffGrid operation.</summary>
+
             ThermalSimulation simulation = StiffGrid();
             ThermalNode hottest = simulation.Solver.GetNodeAt(Vector3I.Zero);
 
@@ -66,7 +66,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASettledGridReportsNoChange operation.</summary>
+
         public void ASettledGridReportsNoChange()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -84,10 +84,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHostWriteIsTheBaselineForTheNextStepsChange operation.</summary>
+
         public void AHostWriteIsTheBaselineForTheNextStepsChange()
         {
-/// <summary>StiffGrid operation.</summary>
+
             ThermalSimulation simulation = StiffGrid();
             simulation.StepExact(1, Worlds.Shadow());
 
@@ -101,10 +101,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>ClampingIsReportedExactlyWhenTheCapBinds operation.</summary>
+
         public void ClampingIsReportedExactlyWhenTheCapBinds()
         {
-/// <summary>StiffGrid operation.</summary>
+
             ThermalSimulation simulation = StiffGrid();
             simulation.Settings.MaxSubsteps = 1;
             simulation.Settings.Derive();
@@ -117,10 +117,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGridInsideTheCapIsNotReportedAsClamped operation.</summary>
+
         public void AGridInsideTheCapIsNotReportedAsClamped()
         {
-/// <summary>StiffGrid operation.</summary>
+
             ThermalSimulation simulation = StiffGrid();
 
             float required = simulation.Solver.RequiredSubsteps(simulation.Settings.StepSeconds);
@@ -135,10 +135,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSubstepCountCoversWhatTheEstimateAskedFor operation.</summary>
+
         public void TheSubstepCountCoversWhatTheEstimateAskedFor()
         {
-/// <summary>StiffGrid operation.</summary>
+
             ThermalSimulation simulation = StiffGrid();
 
             float required = simulation.Solver.RequiredSubsteps(simulation.Settings.StepSeconds);

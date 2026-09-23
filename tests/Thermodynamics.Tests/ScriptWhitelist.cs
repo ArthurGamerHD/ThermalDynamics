@@ -83,14 +83,14 @@ namespace Thermodynamics.Tests
 
             public string Namespaces;
 
-/// <summary>ToString operation.</summary>
+
             public override string ToString()
             {
                 return File + ":" + Line + "  " + Name + "  (" + Namespaces + ")";
             }
         }
 
-/// <summary>SourceRoot operation.</summary>
+
         public static string SourceRoot()
         {
             string root = Harness.ShippedBlocks.RepoRoot();
@@ -100,27 +100,27 @@ namespace Thermodynamics.Tests
             return Directory.Exists(candidate) ? candidate : null;
         }
 
-/// <summary>FrameworkFacade operation.</summary>
+
         public static string FrameworkFacade()
         {
             string content = Harness.GameBlocks.ContentPath();
             if (content == null) return null;
 
-            DirectoryInfo install = Directory.GetParent(content);            // Content
-            if (install != null) install = install.Parent;                   // the install root
+            DirectoryInfo install = Directory.GetParent(content);
+            if (install != null) install = install.Parent;
             if (install == null) return null;
 
             string facade = Path.Combine(install.FullName, "Bin64", "netstandard.dll");
             return File.Exists(facade) ? facade : null;
         }
 
-/// <summary>ProhibitedNames operation.</summary>
+
         public static Dictionary<string, string> ProhibitedNames()
         {
             Dictionary<string, string> prohibited = new Dictionary<string, string>();
             Dictionary<string, List<string>> byName = new Dictionary<string, List<string>>();
 
-/// <summary>FrameworkFacade operation.</summary>
+
             string facade = FrameworkFacade();
             if (facade == null) return prohibited;
 
@@ -147,9 +147,9 @@ namespace Thermodynamics.Tests
                 }
             }
 
-/// <summary>GameTypeNames operation.</summary>
+
             HashSet<string> shadowed = GameTypeNames();
-/// <summary>DeclaredByTheMod operation.</summary>
+
             HashSet<string> declared = DeclaredByTheMod();
 
             foreach (KeyValuePair<string, List<string>> entry in byName)
@@ -165,14 +165,14 @@ namespace Thermodynamics.Tests
             return prohibited;
         }
 
-/// <summary>GameTypeNames operation.</summary>
+
         public static HashSet<string> GameTypeNames()
         {
             if (_gameTypeNames != null) return _gameTypeNames;
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> names = new HashSet<string>();
-/// <summary>FrameworkFacade operation.</summary>
+
             string facade = FrameworkFacade();
 
             if (facade != null)
@@ -200,7 +200,7 @@ namespace Thermodynamics.Tests
 
         private static HashSet<string> _gameTypeNames;
 
-/// <summary>CollectTypeNames operation.</summary>
+
         private static void CollectTypeNames(string file, HashSet<string> names)
         {
             try
@@ -226,10 +226,10 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>DeclaredByTheMod operation.</summary>
+
         public static HashSet<string> DeclaredByTheMod()
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> declared = new HashSet<string>();
 
             foreach (string path in Sources())
@@ -253,7 +253,7 @@ namespace Thermodynamics.Tests
             return declared;
         }
 
-/// <summary>Record operation.</summary>
+
         private static void Record(Dictionary<string, List<string>> byName, string space, string name)
         {
             if (space.Length == 0 || !(space == "System" || space.StartsWith("System."))) return;
@@ -264,7 +264,7 @@ namespace Thermodynamics.Tests
             List<string> spaces;
             if (!byName.TryGetValue(name, out spaces))
             {
-/// <summary>List operation.</summary>
+
                 spaces = new List<string>();
                 byName[name] = spaces;
             }
@@ -272,10 +272,10 @@ namespace Thermodynamics.Tests
             spaces.Add(space);
         }
 
-/// <summary>Sources operation.</summary>
+
         public static List<string> Sources()
         {
-/// <summary>SourceRoot operation.</summary>
+
             string root = SourceRoot();
             if (root == null) return new List<string>();
 
@@ -284,14 +284,14 @@ namespace Thermodynamics.Tests
                 .ToList();
         }
 
-/// <summary>Scan operation.</summary>
+
         public static List<Finding> Scan(string path, string text, Dictionary<string, string> prohibited)
         {
-/// <summary>List operation.</summary>
+
             List<Finding> findings = new List<Finding>();
 
             SyntaxNode root = CSharpSyntaxTree.ParseText(text).GetRoot();
-/// <summary>List operation.</summary>
+
             List<TypeSyntax> types = new List<TypeSyntax>();
             CollectTypes(root, types);
 
@@ -313,7 +313,7 @@ namespace Thermodynamics.Tests
                         continue;
                     }
 
-/// <summary>Finding operation.</summary>
+
                     Finding finding = new Finding();
                     finding.File = path;
                     finding.Line = name.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
@@ -326,7 +326,7 @@ namespace Thermodynamics.Tests
             return findings;
         }
 
-/// <summary>IsFrameworkQualified operation.</summary>
+
         private static bool IsFrameworkQualified(QualifiedNameSyntax qualified)
         {
             NameSyntax left = qualified.Left;
@@ -336,7 +336,7 @@ namespace Thermodynamics.Tests
             return simple != null && simple.Identifier.ValueText == "System";
         }
 
-/// <summary>CollectTypes operation.</summary>
+
         private static void CollectTypes(SyntaxNode node, List<TypeSyntax> types)
         {
             foreach (SyntaxNode child in node.DescendantNodes())
@@ -357,7 +357,7 @@ namespace Thermodynamics.Tests
                 else if (child is CatchDeclarationSyntax) Add(((CatchDeclarationSyntax)child).Type, types);
                 else if (child is TypeConstraintSyntax) Add(((TypeConstraintSyntax)child).Type, types);
                 else if (child is SimpleBaseTypeSyntax) Add(((SimpleBaseTypeSyntax)child).Type, types);
-/// <summary>if operation.</summary>
+
                 else if (child is TypeArgumentListSyntax)
                 {
                     foreach (TypeSyntax argument in ((TypeArgumentListSyntax)child).Arguments)
@@ -365,12 +365,12 @@ namespace Thermodynamics.Tests
                         Add(argument, types);
                     }
                 }
-/// <summary>if operation.</summary>
+
                 else if (child is AttributeSyntax)
                 {
                     Add(((AttributeSyntax)child).Name, types);
                 }
-/// <summary>if operation.</summary>
+
                 else if (child is BinaryExpressionSyntax)
                 {
                     BinaryExpressionSyntax binary = (BinaryExpressionSyntax)child;
@@ -382,22 +382,22 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Adds a .</summary>
+
         private static void Add(TypeSyntax type, List<TypeSyntax> types)
         {
             if (type != null) types.Add(type);
         }
 
-/// <summary>Names operation.</summary>
+
         private static IEnumerable<SimpleNameSyntax> Names(TypeSyntax type)
         {
-/// <summary>List operation.</summary>
+
             List<SimpleNameSyntax> names = new List<SimpleNameSyntax>();
             Walk(type, names);
             return names;
         }
 
-/// <summary>Walk operation.</summary>
+
         private static void Walk(SyntaxNode node, List<SimpleNameSyntax> names)
         {
             if (node == null) return;

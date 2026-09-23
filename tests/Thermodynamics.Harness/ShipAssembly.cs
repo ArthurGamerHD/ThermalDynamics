@@ -6,7 +6,7 @@ namespace Thermodynamics.Harness
 {
     public class ShipAssembly
     {
-/// <summary>List operation.</summary>
+
         public readonly List<ThermalSimulation> Simulations = new List<ThermalSimulation>();
 
         public class Bridge
@@ -16,7 +16,7 @@ namespace Thermodynamics.Harness
             public float Conductance;
         }
 
-/// <summary>List operation.</summary>
+
         public readonly List<Bridge> Bridges = new List<Bridge>();
 
         public IEnumerable<ThermalNode> Nodes
@@ -80,13 +80,13 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>CollectDiagnostics operation.</summary>
+
         public void CollectDiagnostics(bool on)
         {
             for (int i = 0; i < Simulations.Count; i++) Simulations[i].Solver.CollectDiagnostics = on;
         }
 
-/// <summary>Step operation.</summary>
+
         public void Step(EnvironmentSample environment, float seconds)
         {
             for (int i = 0; i < Simulations.Count; i++)
@@ -97,7 +97,7 @@ namespace Thermodynamics.Harness
             Exchange(seconds);
         }
 
-/// <summary>Exchange operation.</summary>
+
         public void Exchange(float seconds)
         {
             if (seconds <= 0f) return;
@@ -196,7 +196,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Hottest operation.</summary>
+
         public ThermalNode Hottest()
         {
             ThermalNode hottest = null;
@@ -209,7 +209,7 @@ namespace Thermodynamics.Harness
             return hottest;
         }
 
-/// <summary>Bridge2 operation.</summary>
+
         public void Bridge2(ThermalSimulation baseGrid, ThermalNode baseNode,
             ThermalSimulation topGrid, ThermalNode topNode)
         {
@@ -230,7 +230,7 @@ namespace Thermodynamics.Harness
     {
         private readonly ShipAssembly assembly;
 
-/// <summary>AssemblyRunner operation.</summary>
+
         public AssemblyRunner(ShipAssembly assembly)
         {
             this.assembly = assembly;
@@ -240,10 +240,10 @@ namespace Thermodynamics.Harness
 
         public float ElapsedSeconds { get; private set; }
 
-/// <summary>List operation.</summary>
+
         public readonly List<float> Hottest = new List<float>();
 
-/// <summary>List operation.</summary>
+
         public readonly List<float> Bulk = new List<float>();
 
         public bool AnyOverheating
@@ -266,7 +266,7 @@ namespace Thermodynamics.Harness
 
         private readonly Dictionary<long, float> damageTaken = new Dictionary<long, float>();
 
-/// <summary>Run operation.</summary>
+
         public void Run(float seconds)
         {
             if (assembly.Simulations.Count == 0) return;
@@ -276,7 +276,7 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < steps; i++)
             {
-/// <summary>Environment operation.</summary>
+
                 EnvironmentSample environment = Environment(ElapsedSeconds);
                 assembly.Step(environment, step);
                 ElapsedSeconds += step;
@@ -290,7 +290,7 @@ namespace Thermodynamics.Harness
             Bulk.Add(assembly.BulkKelvin);
         }
 
-/// <summary>AccumulateDamage operation.</summary>
+
         private void AccumulateDamage()
         {
             for (int i = 0; i < assembly.Simulations.Count; i++)
@@ -302,7 +302,7 @@ namespace Thermodynamics.Harness
                     BlockInstance block = events[e].Block;
                     if (block == null || block.Model == null) continue;
 
-/// <summary>Integrity operation.</summary>
+
                     float integrity = Integrity(block.Model.Name);
                     if (integrity <= 0f) continue;
 

@@ -9,10 +9,10 @@ namespace Thermodynamics.Tests
 {
     public class ThresholdTests
     {
-/// <summary>OneBlock operation.</summary>
+
         private static ThermalSimulation OneBlock(float initial, ThermalSettings settings = null)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings effective = settings ?? new ThermalSettings();
             effective.EnableEnvironment = false;
             effective.Derive();
@@ -23,10 +23,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NothingRegisteredReportsNothing operation.</summary>
+
         public void NothingRegisteredReportsNothing()
         {
-/// <summary>OneBlock operation.</summary>
+
             ThermalSimulation simulation = OneBlock(300f);
             simulation.Solver.Nodes[0].Block.PowerProducedWatts = 15e6f;
             simulation.Solver.RefreshHeatGeneration();
@@ -37,10 +37,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARisingBlockReportsOnceAsItPasses operation.</summary>
+
         public void ARisingBlockReportsOnceAsItPasses()
         {
-/// <summary>OneBlock operation.</summary>
+
             ThermalSimulation simulation = OneBlock(300f);
             int id = simulation.Thresholds.Add(400f, ThresholdDirection.Rising);
 
@@ -65,10 +65,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARisingThresholdIgnoresABlockCoolingThroughIt operation.</summary>
+
         public void ARisingThresholdIgnoresABlockCoolingThroughIt()
         {
-/// <summary>OneBlock operation.</summary>
+
             ThermalSimulation simulation = OneBlock(500f);
             simulation.Thresholds.Add(400f, ThresholdDirection.Rising);
 
@@ -87,10 +87,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFallingThresholdCatchesIt operation.</summary>
+
         public void AFallingThresholdCatchesIt()
         {
-/// <summary>OneBlock operation.</summary>
+
             ThermalSimulation simulation = OneBlock(500f);
             simulation.Thresholds.Add(400f, ThresholdDirection.Falling);
             simulation.Settings.EnableEnvironment = true;
@@ -113,14 +113,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BothCatchesEitherDirection operation.</summary>
+
         public void BothCatchesEitherDirection()
         {
-/// <summary>ThermalThresholds operation.</summary>
+
             ThermalThresholds thresholds = new ThermalThresholds();
             int id = thresholds.Add(400f, ThresholdDirection.Both);
 
-/// <summary>List operation.</summary>
+
             List<ThresholdCrossing> results = new List<ThresholdCrossing>();
             thresholds.Collect(null, 390f, 410f, results);
             thresholds.Collect(null, 410f, 390f, results);
@@ -132,14 +132,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SittingOnAThresholdDoesNotReportTwice operation.</summary>
+
         public void SittingOnAThresholdDoesNotReportTwice()
         {
-/// <summary>ThermalThresholds operation.</summary>
+
             ThermalThresholds thresholds = new ThermalThresholds();
             thresholds.Add(400f, ThresholdDirection.Both);
 
-/// <summary>List operation.</summary>
+
             List<ThresholdCrossing> results = new List<ThresholdCrossing>();
 
             thresholds.Collect(null, 399f, 400f, results);
@@ -149,10 +149,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CrossingsSurviveAMultiStepUpdate operation.</summary>
+
         public void CrossingsSurviveAMultiStepUpdate()
         {
-/// <summary>OneBlock operation.</summary>
+
             ThermalSimulation simulation = OneBlock(300f);
             simulation.Thresholds.Add(310f, ThresholdDirection.Rising);
             simulation.Thresholds.Add(320f, ThresholdDirection.Rising);
@@ -166,10 +166,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RemovingAThresholdStopsIt operation.</summary>
+
         public void RemovingAThresholdStopsIt()
         {
-/// <summary>OneBlock operation.</summary>
+
             ThermalSimulation simulation = OneBlock(300f);
             int id = simulation.Thresholds.Add(310f, ThresholdDirection.Rising);
             Assert.True(simulation.Thresholds.Remove(id));
@@ -182,10 +182,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CrossingCarriesTheBlockThatCrossed operation.</summary>
+
         public void CrossingCarriesTheBlockThatCrossed()
         {
-/// <summary>OneBlock operation.</summary>
+
             ThermalSimulation simulation = OneBlock(300f);
             simulation.Thresholds.Add(310f, ThresholdDirection.Rising);
 

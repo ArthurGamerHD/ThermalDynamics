@@ -9,10 +9,10 @@ namespace Thermodynamics.Tests
 {
     public class RoomAirPoolTests
     {
-/// <summary>Hull operation.</summary>
+
         private static ThermalSimulation Hull(int side)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableRoomAir = true;
             settings.Derive();
@@ -29,10 +29,10 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>State operation.</summary>
+
         private static string State(ThermalSimulation simulation)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             for (int i = 0; i < simulation.RoomAir.Count; i++)
             {
@@ -50,7 +50,7 @@ namespace Thermodynamics.Tests
             return text.ToString();
         }
 
-/// <summary>Rebuild operation.</summary>
+
         private static void Rebuild(ThermalSimulation simulation)
         {
             simulation.Rooms.RequestRestart(simulation.Grid);
@@ -59,20 +59,20 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RepeatedRebuildsAgreeWithASingleOne operation.</summary>
+
         public void RepeatedRebuildsAgreeWithASingleOne()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation reused = Hull(6);
             Rebuild(reused);
-/// <summary>State operation.</summary>
+
             string first = State(reused);
 
             Assert.False(string.IsNullOrEmpty(first), "the hull carried no room air, so this compared nothing");
 
             for (int i = 0; i < 4; i++) Rebuild(reused);
 
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation fresh = Hull(6);
             Rebuild(fresh);
 
@@ -81,10 +81,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFilledRoomCarriesItsTemperatureAndPressureOver operation.</summary>
+
         public void AFilledRoomCarriesItsTemperatureAndPressureOver()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(6);
             Rebuild(simulation);
 
@@ -117,10 +117,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARoomWithNoCarryOverIsNotMarkedInitialised operation.</summary>
+
         public void ARoomWithNoCarryOverIsNotMarkedInitialised()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(6);
             Rebuild(simulation);
 
@@ -144,7 +144,7 @@ namespace Thermodynamics.Tests
             Assert.True(any, "the hull carried no room air, so this tests nothing");
 
             simulation.AddBlock(
-/// <summary>BlockInstance operation.</summary>
+
                 new BlockInstance(Catalog.HeavyArmor(), anchor, BlockOrientation.Identity), 293.15f);
 
             Rebuild(simulation);
@@ -166,10 +166,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARepeatedRebuildAllocatesLess operation.</summary>
+
         public void ARepeatedRebuildAllocatesLess()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(10);
             Rebuild(simulation);
             Rebuild(simulation);
@@ -181,13 +181,13 @@ namespace Thermodynamics.Tests
             simulation.Solver.RebuildRoomAir(simulation.Rooms.Map);
             long after = GC.GetAllocatedBytesForCurrentThread() - before;
 
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation cold = Hull(10);
             Rebuild(cold);
             GC.Collect();
             GC.WaitForPendingFinalizers();
             long coldBefore = GC.GetAllocatedBytesForCurrentThread();
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation second = Hull(10);
             Rebuild(second);
             long coldCost = GC.GetAllocatedBytesForCurrentThread() - coldBefore;

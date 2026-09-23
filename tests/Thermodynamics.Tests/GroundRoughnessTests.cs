@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
         private const float WorldSetting = 0.03f;
 
         [Fact]
-/// <summary>TheOrderingMatchesTheWindEngineeringTable operation.</summary>
+
         public void TheOrderingMatchesTheWindEngineeringTable()
         {
             float ice = GroundTemperature.RoughnessFor("Ice_01", WorldSetting);
@@ -29,7 +29,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>UnknownGroundKeepsTheWorldSetting operation.</summary>
+
         public void UnknownGroundKeepsTheWorldSetting()
         {
             Assert.Equal(WorldSetting, GroundTemperature.RoughnessFor("Unobtainium", WorldSetting), 6);
@@ -38,7 +38,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RougherGroundSlowsTheWindNearIt operation.</summary>
+
         public void RougherGroundSlowsTheWindNearIt()
         {
             float snow = GroundTemperature.RoughnessFor("Snow", WorldSetting);
@@ -52,7 +52,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryClassifiedMaterialCarriesOne operation.</summary>
+
         public void EveryClassifiedMaterialCarriesOne()
         {
             string[] materials =

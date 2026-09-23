@@ -6,7 +6,7 @@ namespace Thermodynamics.Tests
 {
     public class ExposureFastPathTests
     {
-/// <summary>AssertSame operation.</summary>
+
         private static void AssertSame(ThermalSimulation simulation, string what)
         {
             SurfaceMap surfaces = simulation.Surfaces;
@@ -39,7 +39,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACensusHullCountsTheSameExposedFacesByBothPaths operation.</summary>
+
         public void ACensusHullCountsTheSameExposedFacesByBothPaths()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -48,7 +48,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AMixedGridCountsTheSameExposedFacesByBothPaths operation.</summary>
+
         public void AMixedGridCountsTheSameExposedFacesByBothPaths()
         {
             GridBuilder builder = GridBuilder.Large();

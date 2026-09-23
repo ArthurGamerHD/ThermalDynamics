@@ -7,10 +7,10 @@ namespace Thermodynamics.Tests
 {
     public class Se2RefineTests
     {
-/// <summary>Prepared operation.</summary>
+
         private static ThermalSimulation Prepared(GridBuilder builder)
         {
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -24,17 +24,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NodesAndLinksHoldWhileCellsCube operation.</summary>
+
         public void NodesAndLinksHoldWhileCellsCube()
         {
             GridBuilder source = GridBuilder.Large();
             source.PlaceCensus(LoadShapes.Build("ship", 2000));
-/// <summary>Prepared operation.</summary>
+
             ThermalSimulation coarse = Prepared(source);
 
             const int factor = 3;
             GridBuilder refined = Se2Refine.Refined(source, factor);
-/// <summary>Prepared operation.</summary>
+
             ThermalSimulation fine = Prepared(refined);
 
             Assert.Equal(coarse.Solver.Nodes.Count, fine.Solver.Nodes.Count);
@@ -48,7 +48,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RoomsSurviveRefinementWithTheirVolumesCubed operation.</summary>
+
         public void RoomsSurviveRefinementWithTheirVolumesCubed()
         {
             GridBuilder source = GridBuilder.Large();
@@ -60,22 +60,22 @@ namespace Thermodynamics.Tests
                 source.Place(armour, new Vector3I(4, y, z));
             }
 
-/// <summary>Prepared operation.</summary>
+
             ThermalSimulation coarse = Prepared(source);
             Assert.True(coarse.Rooms.Map.RoomCount > 0, "no rooms, so invariance proves nothing");
 
             const int factor = 3;
             GridBuilder refined = Se2Refine.Refined(source, factor);
-/// <summary>Prepared operation.</summary>
+
             ThermalSimulation fine = Prepared(refined);
 
             RoomMap before = coarse.Rooms.Map;
             RoomMap after = fine.Rooms.Map;
             Assert.Equal(before.RoomCount, after.RoomCount);
 
-/// <summary>List operation.</summary>
+
             List<int> coarseSizes = new List<int>();
-/// <summary>List operation.</summary>
+
             List<int> fineSizes = new List<int>();
             for (int r = 0; r < before.RoomCount; r++) coarseSizes.Add(before.CellsInRoom(r) * factor * factor * factor);
             for (int r = 0; r < after.RoomCount; r++) fineSizes.Add(after.CellsInRoom(r));
@@ -85,7 +85,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PartialSealingRefinesWithoutPhantomPockets operation.</summary>
+
         public void PartialSealingRefinesWithoutPhantomPockets()
         {
             GridBuilder source = GridBuilder.Large();
@@ -98,12 +98,12 @@ namespace Thermodynamics.Tests
             vented.SetLocalSurface(Vector3I.Zero, open);
             source.Place(vented, new Vector3I(2, 2, 2));
 
-/// <summary>Prepared operation.</summary>
+
             ThermalSimulation coarse = Prepared(source);
 
             const int factor = 3;
             GridBuilder refined = Se2Refine.Refined(source, factor);
-/// <summary>Prepared operation.</summary>
+
             ThermalSimulation fine = Prepared(refined);
 
             Assert.Equal(coarse.Rooms.Map.RoomCount, fine.Rooms.Map.RoomCount);

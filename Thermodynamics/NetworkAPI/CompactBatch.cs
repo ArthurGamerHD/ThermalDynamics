@@ -6,10 +6,10 @@ using VRage;
 
 namespace SENetworkAPI
 {
-	/// <summary>
-	/// Version 1 compact batch. Values retain their original game serialization;
-	/// only the repeated routing metadata and value envelopes are packed together.
-	/// </summary>
+
+
+
+
 	[ProtoContract]
 	internal class CompactBatch
 	{
@@ -18,11 +18,11 @@ namespace SENetworkAPI
 		[ProtoMember(3, IsPacked = true)] public List<long> EntityIds;
 		[ProtoMember(4)] public SyncType SyncType;
 		[ProtoMember(5, IsPacked = true)] public List<SyncType> SyncTypes;
-		// 0 = null; n + 1 = a non-null value containing n bytes.
+
 		[ProtoMember(6, IsPacked = true)] public List<int> Lengths;
 		[ProtoMember(7)] public byte[] Values;
 
-/// <summary>TryEncode operation.</summary>
+
 		internal static void TryEncode(Command command)
 		{
 			List<SyncData> updates = command.Properties;
@@ -38,7 +38,7 @@ namespace SENetworkAPI
 				sameEntity &= update.EntityId == first.EntityId;
 				sameType &= update.SyncType == first.SyncType;
 				hasValues |= update.Data != null;
-/// <summary>checked operation.</summary>
+
 				length = checked(length + (update.Data?.Length ?? 0));
 				legacySize += NetSync.UpdateWireSize(update);
 			}
@@ -48,13 +48,13 @@ namespace SENetworkAPI
 			var batch = new CompactBatch {
 				EntityId = sameEntity ? first.EntityId : 0,
 				SyncType = sameType ? first.SyncType : SyncType.Post,
-/// <summary>List operation.</summary>
+
 				Ids = new List<long>(updates.Count),
-/// <summary>List operation.</summary>
+
 				EntityIds = sameEntity ? null : new List<long>(updates.Count),
-/// <summary>List operation.</summary>
+
 				SyncTypes = sameType ? null : new List<SyncType>(updates.Count),
-/// <summary>List operation.</summary>
+
 				Lengths = hasValues ? new List<int>(updates.Count) : null,
 				Values = hasValues ? new byte[length] : null
 			};
@@ -84,7 +84,7 @@ namespace SENetworkAPI
 				}
 			}
 
-			// Data tag/length + version tag/value + optional compression flag.
+
 			long size = 1L + NetSync.VarintSize((ulong)data.Length) + data.Length + 2 + (compressed ? 2 : 0);
 			if (size >= legacySize) return;
 			command.Properties = null;
@@ -93,7 +93,7 @@ namespace SENetworkAPI
 			command.IsCompressed = compressed;
 		}
 
-/// <summary>Decode operation.</summary>
+
 		internal static List<SyncData> Decode(byte[] data)
 		{
 			CompactBatch batch = MyAPIGateway.Utilities.SerializeFromBinary<CompactBatch>(data);
@@ -118,8 +118,8 @@ namespace SENetworkAPI
 			if (length != (batch.Values?.Length ?? 0))
 				throw new InvalidOperationException("Invalid compact batch payload length.");
 
-			// Validate the complete batch before returning anything for dispatch.
-/// <summary>List operation.</summary>
+
+
 			var updates = new List<SyncData>(count);
 			int offset = 0;
 			for (int i = 0; i < count; i++)

@@ -2,7 +2,7 @@ namespace Thermodynamics.Core
 {
     public static class RoomPressure
     {
-/// <summary>Level operation.</summary>
+
         public static float Level(bool worldPressurised, bool sealedByGame, float reportedLevel)
         {
             if (!worldPressurised) return 0f;
@@ -15,7 +15,7 @@ namespace Thermodynamics.Core
 
         public const float AssumedWhenUnanswered = 1f;
 
-/// <summary>NeedsVentFallback operation.</summary>
+
         public static bool NeedsVentFallback(
             bool worldPressurised, bool sealedByGame, float reportedLevel)
         {
@@ -29,7 +29,7 @@ namespace Thermodynamics.Core
 
         public const float OxygenPresent = 0.001f;
 
-/// <summary>Disagrees operation.</summary>
+
         public static bool Disagrees(bool hasAir, bool vented, float gameOxygen)
         {
             if (hasAir) return false;

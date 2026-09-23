@@ -11,10 +11,10 @@ namespace Thermodynamics.Tests
         private const float ThickAir = 1f;
         private const float Speed = 120f;
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings(bool shielding)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -24,7 +24,7 @@ namespace Thermodynamics.Tests
             return settings;
         }
 
-/// <summary>Sheltered operation.</summary>
+
         private static ThermalSimulation Sheltered(bool shielding)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -36,7 +36,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>DragWatts operation.</summary>
+
         private static float DragWatts(ThermalSimulation simulation)
         {
             simulation.StepExact(8, Worlds.Flight(ThickAir, Speed));
@@ -44,12 +44,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHullBehindAnotherTakesLessWindWhenShielded operation.</summary>
+
         public void AHullBehindAnotherTakesLessWindWhenShielded()
         {
-/// <summary>DragWatts operation.</summary>
+
             float open = DragWatts(Sheltered(false));
-/// <summary>DragWatts operation.</summary>
+
             float shielded = DragWatts(Sheltered(true));
 
             Assert.True(open > 0f, "the hull took no wind at all, so this compares nothing");
@@ -58,7 +58,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDefaultIsTheHarsherAnswer operation.</summary>
+
         public void TheDefaultIsTheHarsherAnswer()
         {
             Assert.False(new ThermalSettings().EnableWindwardShielding);
@@ -66,7 +66,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHullInClearAirIsUnchangedByShielding operation.</summary>
+
         public void AHullInClearAirIsUnchangedByShielding()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -84,16 +84,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShieldingArrayIsNotAllocatedWhenItIsOff operation.</summary>
+
         public void TheShieldingArrayIsNotAllocatedWhenItIsOff()
         {
-/// <summary>Sheltered operation.</summary>
+
             ThermalSimulation off = Sheltered(false);
             off.StepExact(1, Worlds.Flight(ThickAir, Speed));
 
             Assert.Equal(0, off.Solver.WindLitLength);
 
-/// <summary>Sheltered operation.</summary>
+
             ThermalSimulation on = Sheltered(true);
             on.StepExact(1, Worlds.Flight(ThickAir, Speed));
 
@@ -101,20 +101,20 @@ namespace Thermodynamics.Tests
                 "the shielding is on and its array is empty, so it is reading nothing");
         }
         [Fact]
-/// <summary>ShieldingChangesTemperaturesAndNotOnlyDrag operation.</summary>
+
         public void ShieldingChangesTemperaturesAndNotOnlyDrag()
         {
-/// <summary>Convecting operation.</summary>
+
             ThermalSimulation open = Convecting(false);
-/// <summary>Convecting operation.</summary>
+
             ThermalSimulation shielded = Convecting(true);
 
             open.StepExact(120, Worlds.Flight(ThickAir, Speed));
             shielded.StepExact(120, Worlds.Flight(ThickAir, Speed));
 
-/// <summary>Peak operation.</summary>
+
             float openPeak = Peak(open);
-/// <summary>Peak operation.</summary>
+
             float shieldedPeak = Peak(shielded);
 
             Assert.True(openPeak > 0f && shieldedPeak > 0f);
@@ -128,10 +128,10 @@ namespace Thermodynamics.Tests
                 + shieldedPeak + " K");
         }
 
-/// <summary>Convecting operation.</summary>
+
         private static ThermalSimulation Convecting(bool shielding)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableSolarHeat = false;
             settings.EnableDamage = false;
@@ -147,7 +147,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Peak operation.</summary>
+
         private static float Peak(ThermalSimulation simulation)
         {
             float peak = 0f;

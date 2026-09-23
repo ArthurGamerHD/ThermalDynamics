@@ -10,7 +10,7 @@ namespace RichHudFramework.UI
 		private readonly Action<char> AppendAction;
 		private readonly Action BackspaceAction;
 
-/// <summary>TextInput operation.</summary>
+
 		public TextInput(Action<char> AppendAction, Action BackspaceAction, Func<char, bool> IsCharAllowedFunc = null)
 		{
 			this.AppendAction = AppendAction;
@@ -18,7 +18,7 @@ namespace RichHudFramework.UI
 			this.IsCharAllowedFunc = IsCharAllowedFunc;
 		}
 
-/// <summary>HandleInput operation.</summary>
+
 		public void HandleInput()
 		{
 			IReadOnlyList<char> input = MyAPIGateway.Input.TextInput;

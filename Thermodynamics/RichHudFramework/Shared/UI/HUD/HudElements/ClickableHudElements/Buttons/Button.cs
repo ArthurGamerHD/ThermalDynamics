@@ -19,16 +19,16 @@ namespace RichHudFramework.UI
 
 		protected Color lastBackgroundColor;
 
-/// <summary>Button operation.</summary>
+
         public Button(HudParentBase parent) : base(parent)
         {
-/// <summary>InputFocusHandler operation.</summary>
+
             FocusHandler = new InputFocusHandler(this);
-/// <summary>MouseInputElement operation.</summary>
+
             _mouseInput = new MouseInputElement(this);
             MouseInput = _mouseInput;
 
-/// <summary>Color operation.</summary>
+
             HighlightColor = new Color(125, 125, 125, 255);
             HighlightEnabled = true;
 
@@ -36,11 +36,11 @@ namespace RichHudFramework.UI
 			MouseInput.CursorExited += CursorExit;
         }
 
-/// <summary>Button operation.</summary>
+
         public Button() : this(null)
         { }
 
-/// <summary>CursorEnter operation.</summary>
+
 		protected virtual void CursorEnter(object sender, EventArgs args)
         {
             if (HighlightEnabled)
@@ -50,7 +50,7 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>CursorExit operation.</summary>
+
 		protected virtual void CursorExit(object sender, EventArgs args)
         {
             if (HighlightEnabled)

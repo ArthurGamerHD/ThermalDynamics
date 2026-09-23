@@ -16,7 +16,7 @@ namespace RichHudFramework.Internal
 
 		private bool isMsgHandlerRegistered;
 
-/// <summary>RichHudCore operation.</summary>
+
 		public RichHudCore() : base(false, true)
 		{
 			if (Instance == null)
@@ -27,14 +27,14 @@ namespace RichHudFramework.Internal
 			isMsgHandlerRegistered = false;
 		}
 
-/// <summary>MessageHandler operation.</summary>
+
 		private void MessageHandler(ulong sender, string message, ref bool sendToOthers)
 		{
 			LateMessageEntered?.Invoke(message, ref sendToOthers);
 			MessageEnteredSender?.Invoke(sender, message, ref sendToOthers);
 		}
 
-/// <summary>Draw operation.</summary>
+
 		public override void Draw()
 		{
 			BeforeUpdate();
@@ -47,7 +47,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>Close operation.</summary>
+
 		public override void Close()
 		{
 			base.Close();
@@ -59,7 +59,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>UnloadData operation.</summary>
+
 		protected override void UnloadData()
 		{
 			LateMessageEntered = null;
@@ -69,14 +69,14 @@ namespace RichHudFramework.Internal
 
 	public abstract class RichHudComponentBase : ModBase.ModuleBase
 	{
-/// <summary>RichHudComponentBase operation.</summary>
+
 		public RichHudComponentBase(bool runOnServer, bool runOnClient) : base(runOnServer, runOnClient, RichHudCore.Instance)
 		{ }
 	}
 
 	public abstract class RichHudParallelComponentBase : ModBase.ParallelModuleBase
 	{
-/// <summary>RichHudParallelComponentBase operation.</summary>
+
 		public RichHudParallelComponentBase(bool runOnServer, bool runOnClient) : base(runOnServer, runOnClient, RichHudCore.Instance)
 		{ }
 	}

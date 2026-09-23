@@ -14,10 +14,10 @@ namespace RichHudFramework.UI
 
 		string Prefix { get; }
 
-/// <summary>TryAdd operation.</summary>
+
 		bool TryAdd(string name, Action<string[]> callback = null, int argsRequired = 0);
 
-/// <summary>Adds a commands.</summary>
+
 		void AddCommands(CmdGroupInitializer newCommands);
 	}
 
@@ -37,19 +37,19 @@ namespace RichHudFramework.UI
 
 		private readonly List<MyTuple<string, Action<string[]>, int>> data;
 
-/// <summary>CmdGroupInitializer operation.</summary>
+
 		public CmdGroupInitializer(int capacity = 0)
 		{
 			data = new List<MyTuple<string, Action<string[]>, int>>(capacity);
 		}
 
-/// <summary>Adds a .</summary>
+
 		public void Add(string cmdName, Action<string[]> callback = null, int argsRequrired = 0)
 		{
 			data.Add(new MyTuple<string, Action<string[]>, int>(cmdName, callback, argsRequrired));
 		}
 
-/// <summary>Returns the enumerator.</summary>
+
 		public IEnumerator<MyTuple<string, Action<string[]>, int>> GetEnumerator() =>
 			data.GetEnumerator();
 
@@ -67,7 +67,7 @@ namespace RichHudFramework.UI
 		private readonly List<CommandGroup> commandGroups;
 		private readonly Dictionary<string, Command> commands;
 
-/// <summary>CmdManager operation.</summary>
+
 		public CmdManager()
 		{
 			if (instance == null)
@@ -75,22 +75,22 @@ namespace RichHudFramework.UI
 			else
 				throw new Exception("Only one instance of CmdManager can exist at any given time.");
 
-/// <summary>List operation.</summary>
+
 			commandGroups = new List<CommandGroup>();
 			commands = new Dictionary<string, Command>();
-/// <summary>Regex operation.</summary>
+
 			cmdParser = new Regex(@"((\s*?[\s,;|]\s*?)((\w+)|("".+"")))+");
 			RichHudCore.LateMessageEntered += MessageHandler;
 		}
 
-/// <summary>UnloadData operation.</summary>
+
 		protected override void UnloadData()
 		{
 			RichHudCore.LateMessageEntered -= MessageHandler;
 			instance = null;
 		}
 
-/// <summary>Returns the orcreategroup.</summary>
+
 		public static ICommandGroup GetOrCreateGroup(string prefix, CmdGroupInitializer groupInitializer = null)
 		{
 			prefix = prefix.ToLower();
@@ -98,7 +98,7 @@ namespace RichHudFramework.UI
 
 			if (group == null)
 			{
-/// <summary>CommandGroup operation.</summary>
+
 				group = new CommandGroup(prefix);
 				instance.commandGroups.Add(group);
 				group.AddCommands(groupInitializer);
@@ -107,7 +107,7 @@ namespace RichHudFramework.UI
 			return group;
 		}
 
-/// <summary>MessageHandler operation.</summary>
+
 		private void MessageHandler(string message, ref bool sendToOthers)
 		{
 			message = message.ToLower();
@@ -120,7 +120,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>TryParseCommand operation.</summary>
+
 		private static bool TryParseCommand(string cmd, out string[] matches)
 		{
 			Match match = instance.cmdParser.Match(cmd);
@@ -148,15 +148,15 @@ namespace RichHudFramework.UI
 
 			private readonly List<Command> commands;
 
-/// <summary>CommandGroup operation.</summary>
+
 			public CommandGroup(string prefix)
 			{
-/// <summary>List operation.</summary>
+
 				commands = new List<Command>();
 				this.Prefix = prefix;
 			}
 
-/// <summary>TryRunCommand operation.</summary>
+
 			public bool TryRunCommand(string message)
 			{
 				bool cmdFound = false, success = false;
@@ -189,7 +189,7 @@ namespace RichHudFramework.UI
 				return success;
 			}
 
-/// <summary>TryAdd operation.</summary>
+
 			public bool TryAdd(string name, Action<string[]> callback = null, int argsRequired = 0)
 			{
 				name = name.ToLower();
@@ -197,7 +197,7 @@ namespace RichHudFramework.UI
 
 				if (instance != null && !instance.commands.ContainsKey(key))
 				{
-/// <summary>Command operation.</summary>
+
 					Command command = new Command(name, argsRequired);
 					commands.Add(command);
 					instance.commands.Add(key, command);
@@ -211,7 +211,7 @@ namespace RichHudFramework.UI
 					return false;
 			}
 
-/// <summary>Adds a commands.</summary>
+
 			public void AddCommands(CmdGroupInitializer newCommands)
 			{
 				for (int n = 0; n < newCommands.Count; n++)
@@ -228,14 +228,14 @@ namespace RichHudFramework.UI
 			public string CmdName { get; }
 			public int ArgsRequired { get; }
 
-/// <summary>Command operation.</summary>
+
 			public Command(string cmdName, int argsRequired)
 			{
 				CmdName = cmdName.ToLower();
 				ArgsRequired = argsRequired;
 			}
 
-/// <summary>InvokeCommand operation.</summary>
+
 			public void InvokeCommand(string[] args) =>
 				CommandInvoked?.Invoke(args);
 		}

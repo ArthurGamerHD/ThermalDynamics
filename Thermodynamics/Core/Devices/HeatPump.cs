@@ -17,22 +17,22 @@ namespace Thermodynamics.Core
 
         public float MaxPowerWatts = 20000f;
 
-/// <summary>Along operation.</summary>
+
         public static HeatPumpShape Along(Vector3I coldDirection, float ratedWatts, float maxPowerWatts)
         {
-/// <summary>Centred operation.</summary>
+
             return Centred(coldDirection, Vector3I.One, ratedWatts, maxPowerWatts);
         }
 
-/// <summary>Centred operation.</summary>
+
         public static HeatPumpShape Centred(Vector3I coldDirection, Vector3I size, float ratedWatts, float maxPowerWatts)
         {
-/// <summary>HeatPumpShape operation.</summary>
+
             HeatPumpShape shape = new HeatPumpShape();
             shape.ColdDirection = coldDirection;
             shape.HotDirection = -coldDirection;
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I extent = new Vector3I(
                 Math.Max(1, size.X), Math.Max(1, size.Y), Math.Max(1, size.Z)) - Vector3I.One;
 
@@ -40,9 +40,9 @@ namespace Thermodynamics.Core
             Vector3I axis = Vector3I.Abs(coldDirection);
             Vector3I along = axis * extent;
 
-/// <summary>IsNegative operation.</summary>
+
             Vector3I coldEnd = IsNegative(coldDirection) ? Vector3I.Zero : along;
-/// <summary>IsNegative operation.</summary>
+
             Vector3I hotEnd = IsNegative(coldDirection) ? along : Vector3I.Zero;
             Vector3I across = (Vector3I.One - axis) * middle;
 
@@ -54,7 +54,7 @@ namespace Thermodynamics.Core
             return shape;
         }
 
-/// <summary>IsNegative operation.</summary>
+
         private static bool IsNegative(Vector3I direction)
         {
             return direction.X + direction.Y + direction.Z < 0;
@@ -114,7 +114,7 @@ namespace Thermodynamics.Core
         internal float RejectedEnergy;
         internal float DemandEnergy;
 
-/// <summary>BeginStep operation.</summary>
+
         internal void BeginStep()
         {
             LiftedEnergy = 0f;
@@ -123,7 +123,7 @@ namespace Thermodynamics.Core
             DemandEnergy = 0f;
         }
 
-/// <summary>EndStep operation.</summary>
+
         internal void EndStep(float deltaSeconds)
         {
             if (deltaSeconds <= 0f) return;
@@ -136,7 +136,7 @@ namespace Thermodynamics.Core
             LastWasLimited = Enabled && IsConnected && LastLiftedWatts < RatedWatts - 1f;
         }
 
-/// <summary>Coefficient operation.</summary>
+
         public static float Coefficient(float cold, float hot, float carnotFraction, float maxCoefficient)
         {
             if (carnotFraction <= 0f || maxCoefficient <= 0f) return 0f;
@@ -150,7 +150,7 @@ namespace Thermodynamics.Core
             return coefficient > 0f ? coefficient : 0f;
         }
 
-/// <summary>ToString operation.</summary>
+
         public override string ToString()
         {
             return "heat pump " + (Block == null ? "?" : Block.Min.ToString())

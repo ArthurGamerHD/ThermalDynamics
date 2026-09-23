@@ -21,7 +21,7 @@ namespace Thermodynamics.Harness
     public class ScenarioRunner
     {
         private readonly ThermalSimulation simulation;
-/// <summary>List operation.</summary>
+
         private readonly List<Sample> samples = new List<Sample>();
         private readonly Dictionary<string, ThermalNode> tracked = new Dictionary<string, ThermalNode>();
         private readonly Dictionary<string, CoolantLoop> trackedLoops = new Dictionary<string, CoolantLoop>();
@@ -30,7 +30,7 @@ namespace Thermodynamics.Harness
 
         public Action<ThermalSimulation> AfterStep;
 
-/// <summary>ScenarioRunner operation.</summary>
+
         public ScenarioRunner(ThermalSimulation simulation)
         {
             if (simulation == null) throw new ArgumentNullException("simulation");
@@ -49,7 +49,7 @@ namespace Thermodynamics.Harness
 
         public float ElapsedSeconds { get; private set; }
 
-/// <summary>Track operation.</summary>
+
         public ScenarioRunner Track(string name, BlockInstance block)
         {
             ThermalNode node = simulation.Solver.GetNode(block);
@@ -57,7 +57,7 @@ namespace Thermodynamics.Harness
             return this;
         }
 
-/// <summary>TrackLoop operation.</summary>
+
         public ScenarioRunner TrackLoop(string name, CoolantLoop loop)
         {
             if (loop != null) trackedLoops[name] = loop;
@@ -74,7 +74,7 @@ namespace Thermodynamics.Harness
             get { return DurationScale <= 0f ? 1f : DurationScale; }
         }
 
-/// <summary>Run operation.</summary>
+
         public ScenarioRunner Run(float seconds, float sampleIntervalSeconds = 1f)
         {
             float scale = EffectiveDurationScale;
@@ -89,7 +89,7 @@ namespace Thermodynamics.Harness
 
             for (int i = 1; i <= totalSteps; i++)
             {
-/// <summary>Environment operation.</summary>
+
                 EnvironmentSample environment = Environment(ElapsedSeconds);
 
                 environment.PreviousAmbient = simulation.Solver.Environment.AmbientTemperature;
@@ -107,10 +107,10 @@ namespace Thermodynamics.Harness
             return this;
         }
 
-/// <summary>Record operation.</summary>
+
         private void Record()
         {
-/// <summary>Sample operation.</summary>
+
             Sample sample = new Sample();
             sample.TimeSeconds = ElapsedSeconds;
             sample.AmbientTemperature = simulation.Solver.Environment.AmbientTemperature;
@@ -148,12 +148,12 @@ namespace Thermodynamics.Harness
             get { return samples.Count == 0 ? null : samples[samples.Count - 1]; }
         }
 
-/// <summary>ToCsv operation.</summary>
+
         public string ToCsv()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
-/// <summary>List operation.</summary>
+
             List<string> columns = new List<string>();
             if (samples.Count > 0)
             {
@@ -190,7 +190,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>F operation.</summary>
+
         private static string F(float value)
         {
             return value.ToString("0.###", CultureInfo.InvariantCulture);

@@ -15,7 +15,7 @@ namespace Thermodynamics.Core
 
         public const float WarmShare = 0.5f;
 
-/// <summary>Climb operation.</summary>
+
         public static float Climb(float ambientKelvin, float hottestKelvin, float criticalKelvin)
         {
             if (float.IsNaN(ambientKelvin) || float.IsNaN(hottestKelvin)
@@ -33,17 +33,17 @@ namespace Thermodynamics.Core
             return above <= 0f ? 0f : above / span;
         }
 
-/// <summary>State operation.</summary>
+
         public static Heat State(float ambientKelvin, float hottestKelvin, float criticalKelvin)
         {
-/// <summary>Climb operation.</summary>
+
             float climb = Climb(ambientKelvin, hottestKelvin, criticalKelvin);
 
             if (climb >= 1f) return Heat.Hot;
             return climb >= WarmShare ? Heat.Warm : Heat.Cool;
         }
 
-/// <summary>Word operation.</summary>
+
         public static string Word(Heat heat)
         {
             switch (heat)
@@ -54,7 +54,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Line operation.</summary>
+
         public static string Line(float ambientKelvin, float hottestKelvin, float criticalKelvin)
         {
             string air = TemperatureScale.ToCelsiusString(ambientKelvin);

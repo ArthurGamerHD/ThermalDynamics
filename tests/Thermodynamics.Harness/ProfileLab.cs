@@ -38,7 +38,7 @@ namespace Thermodynamics.Harness
             public float KelvinFromPhysical;
         }
 
-/// <summary>Rig operation.</summary>
+
         private static ThermalSimulation Rig(BalanceProfile profile, out BlockInstance source,
             out BlockInstance panel)
         {
@@ -76,10 +76,10 @@ namespace Thermodynamics.Harness
             return builder.BuildSimulation(profile.ToSettings(), 293.15f);
         }
 
-/// <summary>Measure operation.</summary>
+
         public static List<Row> Measure()
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
             foreach (BalanceProfile profile in BalanceProfile.All())
             {
@@ -98,12 +98,12 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>MeasureOne operation.</summary>
+
         private static Row MeasureOne(BalanceProfile profile)
         {
             BlockInstance source;
             BlockInstance panel;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(profile, out source, out panel);
 
             Row row = new Row
@@ -114,7 +114,7 @@ namespace Thermodynamics.Harness
                 ConductionPace = profile.ConductionPace,
             };
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner opening = new ScenarioRunner(simulation);
             opening.Environment = t => Worlds.Shadow();
             opening.Track("source", source);
@@ -127,7 +127,7 @@ namespace Thermodynamics.Harness
             float seconds = 4000f * (225f / Math.Max(1f, profile.HeatTimeScale));
             seconds = Math.Min(seconds, 120000f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -163,18 +163,18 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>N operation.</summary>
+
         private static string N(float value, int decimals = 1)
         {
             return value.ToString("n" + decimals, CultureInfo.InvariantCulture);
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
-/// <summary>Measure operation.</summary>
+
             List<Row> rows = Measure();
 
             sb.AppendLine("PROFILES  (" + N(LoadWatts / 1000f, 0)
@@ -186,10 +186,10 @@ namespace Thermodynamics.Harness
             foreach (Row row in rows)
             {
                 sb.AppendLine(string.Format("{0,-11} {1,7} {2,7} {3,9} {4,10} {5,9} {6,7} {7,10} {8,13}",
-/// <summary>N operation.</summary>
+
                     row.Name, N(row.HeatTimeScale, 0), N(row.ConductionPace, 2),
                     N(row.InitialRateKelvinPerSecond, 2), N(row.SettledKelvin, 1), N(row.PanelKelvin, 1),
-/// <summary>N operation.</summary>
+
                     row.Converged ? "yes" : "NO", N(row.SubstepsPerStep, 2),
                     N(row.LinkVisitsPerSecond, 0)));
             }
@@ -199,7 +199,7 @@ namespace Thermodynamics.Harness
             foreach (Row row in rows)
             {
                 sb.AppendLine(string.Format("  {0,-11} {1,10} K   ({2} steps over {3} simulated s)",
-/// <summary>N operation.</summary>
+
                     row.Name, N(row.KelvinFromPhysical, 1), row.Steps, N(row.SimulatedSeconds, 0)));
             }
 
@@ -214,10 +214,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Wrap operation.</summary>
+
         private static string Wrap(string text, int width, string indent)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             int line = 0;
             foreach (string word in text.Split(' '))
@@ -227,7 +227,7 @@ namespace Thermodynamics.Harness
                     sb.Append(Environment.NewLine).Append(indent);
                     line = 0;
                 }
-/// <summary>if operation.</summary>
+
                 else if (line > 0)
                 {
                     sb.Append(' ');

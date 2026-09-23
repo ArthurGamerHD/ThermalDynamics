@@ -11,41 +11,41 @@ namespace Thermodynamics.Presentation
         {
             public Vector3D Min, Max;
             public readonly ThermalVisionRegionScan Scan;
-/// <summary>List operation.</summary>
+
             internal readonly List<Region> Samples = new List<Region>();
             public bool Overflow { get; internal set; }
             public bool Applied { get; internal set; }
-/// <summary>Band operation.</summary>
+
             internal Band(Vector3D eye, double width, double cell, int capacity)
             {
-/// <summary>Vector3D operation.</summary>
+
                 Min = new Vector3D(Math.Floor((eye.X - width / 2) / cell) * cell,
                     Math.Floor((eye.Y - width / 2) / cell) * cell, Math.Floor((eye.Z - width / 2) / cell) * cell);
-/// <summary>Vector3D operation.</summary>
+
                 Max = Min + new Vector3D(width);
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
                 Scan = new ThermalVisionRegionScan(cell, capacity, 1, width);
             }
         }
         public readonly Band[] Bands;
         private bool started;
-/// <summary>ThermalVisionRegionLod operation.</summary>
+
         public ThermalVisionRegionLod(Vector3D eye)
         {
-/// <summary>Band operation.</summary>
+
             Bands = new[] { new Band(eye, 320, 40, 192), new Band(eye, 80, 10, 192), new Band(eye, 20, 2.5, 512) };
         }
-/// <summary>ThermalVisionRegionLod operation.</summary>
+
         public ThermalVisionRegionLod(Vector3D eye, Vector3D surface) : this(eye)
         {
             double factor = 1;
             double distance = Vector3D.Distance(eye, surface);
             while (distance > 40 * factor && factor < 16) factor *= 2;
             Bands[2].Scan.Dispose();
-/// <summary>Band operation.</summary>
+
             Bands[2] = new Band(surface, 20 * factor, 2.5 * factor, 512);
         }
-/// <summary>Observe operation.</summary>
+
         public void Observe(Region sample)
         {
             foreach (Band band in Bands)
@@ -65,7 +65,7 @@ namespace Thermodynamics.Presentation
                 return false;
             }
         }
-/// <summary>Advance operation.</summary>
+
         public int Advance(int work)
         {
             if (!started)
@@ -78,7 +78,7 @@ namespace Thermodynamics.Presentation
                 if (Bands[i].Scan.Running) return Bands[i].Scan.Advance(work);
             return 0;
         }
-/// <summary>TryBuild operation.</summary>
+
         public bool TryBuild(ThermalVisionRegionScan coarse, int limit, out ThermalVisionRegionOrder order)
         {
             order = null;
@@ -105,7 +105,7 @@ namespace Thermodynamics.Presentation
             }
             return false;
         }
-/// <summary>Dispose operation.</summary>
+
         public void Dispose() { foreach (Band band in Bands) band.Scan.Dispose(); }
     }
 }

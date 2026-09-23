@@ -41,16 +41,16 @@ namespace RichHudFramework.UI.Rendering
 
         Vector2I BoldItalicUnderline { get; }
 
-/// <summary>IsStyleDefined operation.</summary>
+
         bool IsStyleDefined(FontStyles styleEnum);
 
-/// <summary>IsStyleDefined operation.</summary>
+
         bool IsStyleDefined(int style);
 
-/// <summary>Returns the styleindex.</summary>
+
         Vector2I GetStyleIndex(int style);
 
-/// <summary>Returns the styleindex.</summary>
+
         Vector2I GetStyleIndex(FontStyles style);
     }
 }

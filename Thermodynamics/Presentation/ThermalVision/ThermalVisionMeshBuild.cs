@@ -11,7 +11,7 @@ namespace Thermodynamics.Presentation
     public interface IThermalVisionMeshSource
     {
         int TriangleCount { get; }
-/// <summary>TryRead operation.</summary>
+
         bool TryRead(int index, out ThermalVisionTriangle triangle);
     }
 
@@ -30,7 +30,7 @@ namespace Thermodynamics.Presentation
         public bool Complete { get { return Read == Total; } }
         public ThermalVisionTriangle[] Result { get { return Complete ? result : null; } }
 
-/// <summary>ThermalVisionMeshBuild operation.</summary>
+
         public ThermalVisionMeshBuild(IThermalVisionMeshSource source)
         {
             if (source == null) throw new ArgumentNullException("source");
@@ -43,7 +43,7 @@ namespace Thermodynamics.Presentation
             if (count == 0) { result = scratch; scratch = null; Mesh = new ThermalVisionMesh(result, batches); }
         }
 
-/// <summary>Advance operation.</summary>
+
         public int Advance(int maxSourceTriangles)
         {
             if (maxSourceTriangles <= 0 || Complete) return 0;
@@ -72,7 +72,7 @@ namespace Thermodynamics.Presentation
                 int used = (Retained + ThermalVisionMeshBatch.Size - 1) / ThermalVisionMeshBatch.Size;
                 var publishedBatches = new ThermalVisionMeshBatch[used];
                 Array.Copy(batches, publishedBatches, used);
-/// <summary>ThermalVisionMesh operation.</summary>
+
                 Mesh = new ThermalVisionMesh(result, publishedBatches);
             }
             return amount;

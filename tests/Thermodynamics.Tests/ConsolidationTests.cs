@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class ConsolidationTests
     {
-/// <summary>SourceFiles operation.</summary>
+
         private static List<KeyValuePair<string, string>> SourceFiles()
         {
             List<KeyValuePair<string, string>> files = new List<KeyValuePair<string, string>>();
@@ -42,7 +42,7 @@ namespace Thermodynamics.Tests
         {
             new Consolidation
             {
-/// <summary>Clamp01 operation.</summary>
+
                 Pattern = "float Clamp01(",
                 Owner = "Data/Scripts/Thermodynamics/Core/Util/ThermalMath.cs",
                 Why = "ten private copies were consolidated in iteration 36",
@@ -102,16 +102,16 @@ namespace Thermodynamics.Tests
         };
 
         [Fact]
-/// <summary>NoConsolidatedDefinitionHasGrownASecondCopy operation.</summary>
+
         public void NoConsolidatedDefinitionHasGrownASecondCopy()
         {
-/// <summary>SourceFiles operation.</summary>
+
             List<KeyValuePair<string, string>> files = SourceFiles();
             Assert.True(files.Count > 100,
-/// <summary>tree operation.</summary>
+
                 "the scan found almost no source files, so it is not looking at the tree (E8)");
 
-/// <summary>List operation.</summary>
+
             List<string> problems = new List<string>();
 
             foreach (Consolidation entry in Consolidations)
@@ -144,7 +144,7 @@ namespace Thermodynamics.Tests
                 if (!ownerSeen)
                 {
                     problems.Add("the owner " + entry.Owner + " no longer carries '" + entry.Pattern
-/// <summary>nothing operation.</summary>
+
                         + "', so this case is checking against nothing (E8) — update or retire it");
                 }
             }

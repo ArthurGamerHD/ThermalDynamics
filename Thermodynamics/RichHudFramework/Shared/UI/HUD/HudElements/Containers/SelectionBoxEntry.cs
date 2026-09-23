@@ -7,14 +7,14 @@
 
 		public virtual bool AllowHighlighting { get; set; }
 
-/// <summary>SelectionBoxEntry operation.</summary>
+
 		public SelectionBoxEntry()
 		{
 			Enabled = true;
 			AllowHighlighting = true;
 		}
 
-/// <summary>Reset operation.</summary>
+
 		public virtual void Reset()
 		{
 			Enabled = true;
@@ -28,12 +28,12 @@
 	{
 		public TValue AssocMember { get; set; }
 
-/// <summary>Reset operation.</summary>
+
 		public override void Reset()
 		{
 			Enabled = true;
 			AllowHighlighting = true;
-/// <summary>default operation.</summary>
+
 			AssocMember = default(TValue);
 		}
 	}

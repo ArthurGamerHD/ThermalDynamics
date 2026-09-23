@@ -64,7 +64,7 @@ namespace Thermodynamics.Core
             public float Gradient;
         }
 
-/// <summary>Burial operation.</summary>
+
         public static float Burial(float height, float depth)
         {
             if (height >= 0f) return 1f;
@@ -76,10 +76,10 @@ namespace Thermodynamics.Core
             return share > 1f ? 1f : share;
         }
 
-/// <summary>Solve operation.</summary>
+
         public static Result Solve(ref Inputs inputs)
         {
-/// <summary>Result operation.</summary>
+
             Result result = new Result();
             result.BandShare = 0f;
             result.Profile = 1f;
@@ -106,7 +106,7 @@ namespace Thermodynamics.Core
 
             float height = inputs.HeightAboveGround;
 
-/// <summary>Burial operation.</summary>
+
             result.Burial = Burial(height, inputs.BurialDepth);
             if (result.Burial <= 0f) return result;
 
@@ -121,7 +121,7 @@ namespace Thermodynamics.Core
 
             float speed = share * profile * result.Burial;
 
-/// <summary>Terrain operation.</summary>
+
             float influence = Terrain(ref inputs, height);
             if (influence > 0f && inputs.Terrain != null)
             {
@@ -195,7 +195,7 @@ namespace Thermodynamics.Core
             return result;
         }
 
-/// <summary>Terrain operation.</summary>
+
         private static float Terrain(ref Inputs inputs, float height)
         {
             float influence = inputs.TerrainInfluence;

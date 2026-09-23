@@ -10,13 +10,13 @@ namespace Thermodynamics.Presentation
         private bool batchValid;
         private float targetLow, targetHigh;
 
-/// <summary>Reset operation.</summary>
+
         public void Reset() { HasSamples = false; BeginSamples(); }
 
-/// <summary>BeginSamples operation.</summary>
+
         public void BeginSamples() { batchValid = false; }
 
-/// <summary>Observe operation.</summary>
+
         public bool Observe(float kelvin)
         {
             if (float.IsNaN(kelvin) || float.IsInfinity(kelvin) || kelvin < 0 || kelvin > 100000f)
@@ -28,7 +28,7 @@ namespace Thermodynamics.Presentation
             return true;
         }
 
-/// <summary>Update operation.</summary>
+
         public bool Update(double seconds)
         {
             if (!batchValid) return false;

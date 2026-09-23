@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
     public class ThermalVisionLabTests
     {
         [Fact]
-/// <summary>PartialFaceCullingRejectsOnlyOffscreenPatchesIncludingRenderOffset operation.</summary>
+
         public void PartialFaceCullingRejectsOnlyOffscreenPatchesIncludingRenderOffset()
         {
             var projection=MatrixD.CreatePerspectiveFieldOfView(1,1.6,.05,5000);
@@ -20,19 +20,19 @@ namespace Thermodynamics.Tests
             {
                 var camera=MatrixD.CreateFromYawPitchRoll(trial*.02,trial*.01,trial*.03);
                 var viewProjection=MatrixD.Invert(camera)*projection;
-/// <summary>BoundingFrustumD operation.</summary>
+
                 var frustum=new BoundingFrustumD(viewProjection);
                 for(int y=0;y<4;y++)for(int x=0;x<4;x++)
                 {
-/// <summary>Vector3D operation.</summary>
+
                     var a=new Vector3D(-40+x*20,-40+y*20,-10);
-/// <summary>Vector3D operation.</summary>
+
                     var c=a+new Vector3D(20,20,0);
                     bool culled=frustum.Contains(ThermalVisionGeometry.PatchBounds(a,c))==ContainmentType.Disjoint;
                     if(trial==0 && culled)rejected++;
                     for(int j=0;j<=20;j++)for(int i=0;i<=20;i++)
                     {
-/// <summary>Vector3D operation.</summary>
+
                         var point=a+new Vector3D(i,j,0)+camera.Backward*.001;
                         var clip=Vector4D.Transform(new Vector4D(point,1),viewProjection);
                         bool inside=clip.W>0 && clip.X>=-clip.W && clip.X<=clip.W
@@ -41,22 +41,22 @@ namespace Thermodynamics.Tests
                     }
                 }
             }
-            Assert.Equal(12,rejected); // 24 of 32 triangles avoided for this wide-face fixture.
-/// <summary>BoundingFrustumD operation.</summary>
+            Assert.Equal(12,rejected);
+
             var full=new BoundingFrustumD(projection);
             Assert.Equal(ContainmentType.Contains,full.Contains(ThermalVisionGeometry.PatchBounds(new Vector3D(-1,-1,-10),new Vector3D(1,1,-10))));
         }
 
         [Fact]
-/// <summary>SharedFaceNormalMatchesEverySubpatchUnderRigidMotion operation.</summary>
+
         public void SharedFaceNormalMatchesEverySubpatchUnderRigidMotion()
         {
-/// <summary>Random operation.</summary>
+
             var random=new Random(7721);
             for(int trial=0;trial<200;trial++)
             {
                 var world=MatrixD.CreateFromYawPitchRoll(random.NextDouble()*6,random.NextDouble()*6,random.NextDouble()*6);
-/// <summary>Vector3D operation.</summary>
+
                 world.Translation=new Vector3D(1e6,-2e6,3e6);
                 Vector3D u=world.Right*8,v=world.Up*5;
                 Vector3D eye=world.Translation+world.Backward*(trial%2==0?10:-10);
@@ -80,7 +80,7 @@ namespace Thermodynamics.Tests
         [InlineData(0.0)]
         [InlineData(0.7)]
         [InlineData(1.5)]
-/// <summary>NearCapMatchesRegionMembershipAcrossCameraRotation operation.</summary>
+
         public void NearCapMatchesRegionMembershipAcrossCameraRotation(double angle)
         {
             var region = new ThermalVisionRegionPartition.Region(new Vector3D(-.02, -.04, -.2), new Vector3D(.08, .03, .2), 600);
@@ -100,7 +100,7 @@ namespace Thermodynamics.Tests
             ThermalVisionDepthLayers.Plane(.0525, projection, camera, out centre, out width, out height);
             for (int y = 0; y < 31; y++) for (int x = 0; x < 47; x++)
             {
-/// <summary>Vector3D operation.</summary>
+
                 var point = new Vector3D((2 * (x + .37) / 47 - 1) * width, (2 * (y + .41) / 31 - 1) * height, -.0525);
                 bool positive = false, negative = false;
                 for (int i = 0; i < local.Length; i++)
@@ -114,10 +114,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NearCapScratchBuffersDoNotLeakPreviousPolygonsOrAllocateAfterWarmup operation.</summary>
+
         public void NearCapScratchBuffersDoNotLeakPreviousPolygonsOrAllocateAfterWarmup()
         {
-/// <summary>List operation.</summary>
+
             var a=new List<Vector3D>(16); var b=new List<Vector3D>(16);
             var projection=MatrixD.CreatePerspectiveFieldOfView(1.2,1.6,.05,5000);
             var regions=new[] {
@@ -145,7 +145,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RegionPartitionPreservesMaximumHeatAndHasNoOverlappingInteriors operation.</summary>
+
         public void RegionPartitionPreservesMaximumHeatAndHasNoOverlappingInteriors()
         {
             var inputs = new[] {
@@ -154,14 +154,14 @@ namespace Thermodynamics.Tests
                 new ThermalVisionRegionPartition.Region(new Vector3D(-3), new Vector3D(1), 400) };
             foreach (bool reverse in new[] { false, true })
             {
-/// <summary>ThermalVisionRegionPartition operation.</summary>
+
                 var field = new ThermalVisionRegionPartition(128);
                 for (int i = 0; i < inputs.Length; i++) Assert.True(field.TryAdd(inputs[reverse ? inputs.Length - 1 - i : i]));
                 for (double x = -3.25; x < 3.5; x += .5)
                 for (double y = -3.25; y < 3.5; y += .5)
                 for (double z = -3.25; z < 3.5; z += .5)
                 {
-/// <summary>Vector3D operation.</summary>
+
                     var point = new Vector3D(x, y, z);
                     float expected = 0, actual = 0;
                     int covering = 0;
@@ -173,7 +173,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Within operation.</summary>
+
         private static bool Within(ThermalVisionRegionPartition.Region region, Vector3D point)
         {
             return point.X >= region.Min.X && point.X < region.Max.X
@@ -182,10 +182,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RegionCapacityFailureKeepsPreviousFieldIntact operation.</summary>
+
         public void RegionCapacityFailureKeepsPreviousFieldIntact()
         {
-/// <summary>ThermalVisionRegionPartition operation.</summary>
+
             var field = new ThermalVisionRegionPartition(1);
             Assert.True(field.TryAdd(new ThermalVisionRegionPartition.Region(new Vector3D(-2), new Vector3D(2), 300)));
             Assert.False(field.TryAdd(new ThermalVisionRegionPartition.Region(new Vector3D(-1), new Vector3D(1), 600)));
@@ -198,7 +198,7 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData("overlap-exit")]
         [InlineData("camera-inside")]
-/// <summary>RegionOverwriteNeedsPartitioningAndNearPlaneInitialization operation.</summary>
+
         public void RegionOverwriteNeedsPartitioningAndNearPlaneInitialization(string scene)
         {
             var raw = ThermalVisionVolumeLab.RunBoundaryStress(scene, false);
@@ -210,7 +210,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AdjacentRegionsResolveSharedBoundaryBeforeEnteringNextRegion operation.</summary>
+
         public void AdjacentRegionsResolveSharedBoundaryBeforeEnteringNextRegion()
         {
             var result = ThermalVisionVolumeLab.RunBoundaryStress("adjacent", true);
@@ -219,7 +219,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OrderedRegionFacesLocalizeHeatWithoutPaintingExternalForeground operation.</summary>
+
         public void OrderedRegionFacesLocalizeHeatWithoutPaintingExternalForeground()
         {
             var isolated = ThermalVisionVolumeLab.Run("isolated", "ordered-box-faces");
@@ -235,7 +235,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ExactCellBoundariesRecoverIsolatedHeatButCannotIdentifyForeignSurfaces operation.</summary>
+
         public void ExactCellBoundariesRecoverIsolatedHeatButCannotIdentifyForeignSurfaces()
         {
             var isolated = ThermalVisionVolumeLab.Run("isolated", "exact-cell-boundary");
@@ -251,7 +251,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ExpandingCoarseSlicesRecoversHeatAtTheCostOfForegroundFalseHeat operation.</summary>
+
         public void ExpandingCoarseSlicesRecoversHeatAtTheCostOfForegroundFalseHeat()
         {
             var sparse = ThermalVisionVolumeLab.Run("isolated", "preceding-slice");
@@ -263,7 +263,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ReuseFixturePreservesAStationarySceneWithinTheDeclaredQueryBudget operation.</summary>
+
         public void ReuseFixturePreservesAStationarySceneWithinTheDeclaredQueryBudget()
         {
             var result = ThermalVisionReuseLab.Run(64, 36, false, false);
@@ -275,7 +275,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ReuseFixtureDetectsBothCameraHolesAndNewOccluderFalseHeat operation.</summary>
+
         public void ReuseFixtureDetectsBothCameraHolesAndNewOccluderFalseHeat()
         {
             var pan = ThermalVisionReuseLab.Run(64, 36, true, false);
@@ -293,7 +293,7 @@ namespace Thermodynamics.Tests
         [InlineData(1280, 720)]
         [InlineData(1920, 1080)]
         [InlineData(3440, 1440)]
-/// <summary>SurveyDockStaysOnScreenAndClearOfTheLiveCrosshair operation.</summary>
+
         public void SurveyDockStaysOnScreenAndClearOfTheLiveCrosshair(int width, int height)
         {
             Vector2 size, offset;
@@ -306,10 +306,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DetailedSurveyNeedsSeventyTwoUpdatesWithoutRaisingTheQueryAllowance operation.</summary>
+
         public void DetailedSurveyNeedsSeventyTwoUpdatesWithoutRaisingTheQueryAllowance()
         {
-/// <summary>ThermalVisionRayScan operation.</summary>
+
             var scan = new ThermalVisionRayScan<int>(128 * 72, 1, 128);
             scan.Begin();
             for (int frame = 1; frame <= 72; frame++)
@@ -331,14 +331,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SensorProjectionAccountsForAspectCameraRotationAndLensOffset operation.</summary>
+
         public void SensorProjectionAccountsForAspectCameraRotationAndLensOffset()
         {
             var projection = MatrixD.CreatePerspectiveFieldOfView(Math.PI / 2, 2, .1, 1000);
             var ray = ThermalVisionSensorOptics.Ray(0, 0, 2, 2, projection, MatrixD.Identity);
             Assert.InRange(Vector3D.Distance(ray, new Vector3D(-2d / 3, 1d / 3, -2d / 3)), 0, 1e-12);
             var world = MatrixD.CreateRotationY(.7);
-/// <summary>Vector3D operation.</summary>
+
             world.Translation = new Vector3D(100, 200, 300);
             ray = ThermalVisionSensorOptics.Ray(0, 0, 1, 1, projection, world);
             Assert.InRange(Vector3D.Distance(ray, world.Forward), 0, 1e-12);
@@ -354,7 +354,7 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData(ThermalVisionState.Mode.Cividis)]
         [InlineData(ThermalVisionState.Mode.WhiteHot)]
-/// <summary>SensorUnknownsAreHatchedAndNeverBecomeMeasuredColdPixels operation.</summary>
+
         public void SensorUnknownsAreHatchedAndNeverBecomeMeasuredColdPixels(ThermalVisionState.Mode mode)
         {
             var empty = ThermalVisionSensorOptics.Shade(false, 900, 1, 0, 0, mode, 225, 625);
@@ -373,14 +373,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SensorScanPublishesOnlyCompleteImagesUnderOutOfOrderCallbacks operation.</summary>
+
         public void SensorScanPublishesOnlyCompleteImagesUnderOutOfOrderCallbacks()
         {
-/// <summary>ThermalVisionRayScan operation.</summary>
+
             var scan = new ThermalVisionRayScan<int>(5, 3, 3);
             scan.Begin();
             ThermalVisionRayScan<int>.Ticket a, b, c, d, e;
-            Assert.False(scan.TryIssue(out a)); // No update allowance yet.
+            Assert.False(scan.TryIssue(out a));
             scan.AdvanceFrame(10);
             Assert.True(scan.TryIssue(out a));
             Assert.True(scan.TryIssue(out b));
@@ -389,7 +389,7 @@ namespace Thermodynamics.Tests
             Assert.True(scan.Complete(c, 30));
             Assert.True(scan.Complete(a, 10));
             Assert.False(scan.Complete(a, 999));
-            Assert.False(scan.TryIssue(out d)); // Completions do not replenish frame allowance.
+            Assert.False(scan.TryIssue(out d));
             scan.AdvanceFrame(10);
             Assert.False(scan.TryIssue(out d));
             int value;
@@ -400,7 +400,7 @@ namespace Thermodynamics.Tests
             Assert.False(scan.TryIssue(out a));
             Assert.True(scan.Complete(e, 50));
             Assert.True(scan.Complete(d, 40));
-            Assert.False(scan.HasFrame); // Missing pixel 1.
+            Assert.False(scan.HasFrame);
             Assert.True(scan.Complete(b, 20));
             for (int i = 0; i < 5; i++)
             {
@@ -411,10 +411,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ViewRestartsDoNotEvadeOutstandingOrPerFrameLimits operation.</summary>
+
         public void ViewRestartsDoNotEvadeOutstandingOrPerFrameLimits()
         {
-/// <summary>ThermalVisionRayScan operation.</summary>
+
             var scan = new ThermalVisionRayScan<int>(2, 1, 2);
             ThermalVisionRayScan<int>.Ticket old, fresh, extra;
             scan.Begin();
@@ -428,11 +428,11 @@ namespace Thermodynamics.Tests
             }
             Assert.False(scan.Complete(old, 999));
             Assert.True(scan.TryIssue(out fresh));
-            Assert.False(scan.Complete(old, 999)); // Old ticket cannot release the recycled slot.
+            Assert.False(scan.Complete(old, 999));
             Assert.Equal(1, scan.Outstanding);
             Assert.True(scan.Complete(fresh, 100));
             Assert.False(scan.TryIssue(out extra));
-            scan.AdvanceFrame(0); // Stale frame cannot reset allowance either.
+            scan.AdvanceFrame(0);
             Assert.False(scan.TryIssue(out extra));
             scan.AdvanceFrame(2);
             Assert.True(scan.TryIssue(out extra));
@@ -446,12 +446,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ForeignOrDefaultSensorTicketsCannotReleaseCapacity operation.</summary>
+
         public void ForeignOrDefaultSensorTicketsCannotReleaseCapacity()
         {
-/// <summary>ThermalVisionRayScan operation.</summary>
+
             var scan = new ThermalVisionRayScan<int>(1, 1, 1);
-/// <summary>ThermalVisionRayScan operation.</summary>
+
             var other = new ThermalVisionRayScan<int>(1, 1, 1);
             scan.Begin(); other.Begin();
             scan.AdvanceFrame(1); other.AdvanceFrame(1);
@@ -466,13 +466,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SensorFixtureResolvesNearestOpaqueSurfaceRegardlessOfOrder operation.</summary>
+
         public void SensorFixtureResolvesNearestOpaqueSurfaceRegardlessOfOrder()
         {
             var direction = Vector3D.Normalize(new Vector3D(-.6, -.3, -7));
             var a = ThermalVisionRayLab.Trace(direction);
             var b = ThermalVisionRayLab.Trace(direction, true);
-            Assert.Equal(2, a.Surface); // Cold plate, not the hot reactor behind it.
+            Assert.Equal(2, a.Surface);
             Assert.Equal(280f, a.Kelvin);
             Assert.Equal(a.Surface, b.Surface);
             Assert.Equal(a.Distance, b.Distance);
@@ -480,7 +480,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SensorFixturePreservesNoReturnAndEstimatedTemperatureSemantics operation.</summary>
+
         public void SensorFixturePreservesNoReturnAndEstimatedTemperatureSemantics()
         {
             var sky = ThermalVisionRayLab.Trace(Vector3D.UnitY);
@@ -502,11 +502,11 @@ namespace Thermodynamics.Tests
         [InlineData(26914)]
         [InlineData(61199)]
         [InlineData(65536)]
-/// <summary>LargeModelsFinishAcrossVariableSlicesWithoutRepeatingOrLosingTriangles operation.</summary>
+
         public void LargeModelsFinishAcrossVariableSlicesWithoutRepeatingOrLosingTriangles(int count)
         {
             var source = new ThermalVisionLab.Source(count, 7);
-/// <summary>ThermalVisionMeshBuild operation.</summary>
+
             var build = new ThermalVisionMeshBuild(source);
             int slice = 0;
             int[] budgets = { 0, 1, 64, 8192, 37 };
@@ -535,10 +535,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BatchCullingPreservesEveryFrontFaceOfADenseHullAcrossCameraDirections operation.</summary>
+
         public void BatchCullingPreservesEveryFrontFaceOfADenseHullAcrossCameraDirections()
         {
-/// <summary>ThermalVisionMeshBuild operation.</summary>
+
             var build = new ThermalVisionMeshBuild(new ThermalVisionLab.HullSource(72));
             while (!build.Complete) build.Advance(8192);
             Assert.Equal(62208, build.Retained);
@@ -548,7 +548,7 @@ namespace Thermodynamics.Tests
             for (int z = -1; z <= 1; z++)
             {
                 if (x == 0 && y == 0 && z == 0) continue;
-/// <summary>Vector3D operation.</summary>
+
                 Vector3D eye = new Vector3D(x * 5, y * 5, z * 5);
                 int candidates = 0, visible = 0;
                 foreach (var batch in build.Mesh.Batches)
@@ -564,7 +564,7 @@ namespace Thermodynamics.Tests
                     }
                 }
                 Assert.True(visible > 0);
-                Assert.Equal(visible, candidates); // This face-aligned fixture permits exact whole-group rejection.
+                Assert.Equal(visible, candidates);
                 Assert.InRange(candidates, 1, ThermalVisionScenePolicy.TriangleLimit);
                 tested++;
             }
@@ -572,10 +572,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>MixedAndDegenerateBatchesRemainConservative operation.</summary>
+
         public void MixedAndDegenerateBatchesRemainConservative()
         {
-/// <summary>ThermalVisionMeshBatch operation.</summary>
+
             var batch = new ThermalVisionMeshBatch();
             var triangle = new ThermalVisionTriangle { A = Vector3.Zero, B = Vector3.UnitX, C = Vector3.UnitY, LocalNormal = Vector3.UnitZ };
             batch.Add(0, triangle);
@@ -583,14 +583,14 @@ namespace Thermodynamics.Tests
             batch.Add(1, triangle);
             Assert.False(batch.IsEntirelyBackFacing(new Vector3D(0, 0, 5)));
             Assert.False(batch.IsEntirelyBackFacing(new Vector3D(0, 0, -5)));
-/// <summary>ThermalVisionMeshBatch operation.</summary>
+
             var degenerate = new ThermalVisionMeshBatch();
             degenerate.Add(0, new ThermalVisionTriangle());
             Assert.False(degenerate.IsEntirelyBackFacing(new Vector3D(1e8, 1e8, 1e8)));
         }
 
         [Fact]
-/// <summary>BatchAndReferenceProjectionProduceTheSameSoftwareImage operation.</summary>
+
         public void BatchAndReferenceProjectionProduceTheSameSoftwareImage()
         {
             var a = ThermalVisionLab.HullFrame(false);
@@ -600,7 +600,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OversizedSourcesAreRejectedBeforeAnyRead operation.</summary>
+
         public void OversizedSourcesAreRejectedBeforeAnyRead()
         {
             var source = new ThermalVisionLab.Source(65537);
@@ -609,7 +609,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DepthOracleOccludesRearHeatIndependentlyOfSubmissionOrder operation.</summary>
+
         public void DepthOracleOccludesRearHeatIndependentlyOfSubmissionOrder()
         {
             var first = ThermalVisionLab.OcclusionScene(false);
@@ -623,10 +623,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ProductionProjectionRejectsDegenerateAndBackFacingSurfaces operation.</summary>
+
         public void ProductionProjectionRejectsDegenerateAndBackFacingSurfaces()
         {
-/// <summary>Vector3D operation.</summary>
+
             var eye = new Vector3D(0, 0, 5);
             var triangle = new ThermalVisionTriangle { A = Vector3.Zero, B = Vector3.UnitY, C = Vector3.UnitX, LocalNormal = -Vector3.UnitZ };
             ThermalVisionWorldTriangle output;

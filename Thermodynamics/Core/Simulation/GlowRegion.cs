@@ -22,10 +22,10 @@ namespace Thermodynamics.Core
 
         public float Glow;
 
-/// <summary>Reduce operation.</summary>
+
         public static bool Reduce(IList<LitBlock> lit, out GlowRegion region)
         {
-/// <summary>GlowRegion operation.</summary>
+
             region = new GlowRegion();
             if (lit == null || lit.Count == 0) return false;
 

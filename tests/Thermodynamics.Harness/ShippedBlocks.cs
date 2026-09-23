@@ -42,51 +42,51 @@ namespace Thermodynamics.Harness
                 get { return Large ? Catalog.LargeGridSize : Catalog.SmallGridSize; }
             }
 
-/// <summary>CapacityJoulesPerKelvin operation.</summary>
+
             public float CapacityJoulesPerKelvin(float heatTimeScale)
             {
                 float scale = heatTimeScale > 0f ? heatTimeScale : 1f;
                 return Mass * Thermal.SpecificHeat / scale;
             }
 
-/// <summary>ToString operation.</summary>
+
             public override string ToString()
             {
                 return Subtype;
             }
         }
 
-/// <summary>object operation.</summary>
+
         private static readonly object Gate = new object();
         private static Dictionary<string, Definition> cache;
         private static Dictionary<string, BlockThermalProperties> byTypeCache;
         private static BlockThermalProperties fallbackCache;
         private static string repoRoot;
 
-/// <summary>RepoRoot operation.</summary>
+
         public static string RepoRoot()
         {
             lock (Gate)
             {
                 if (repoRoot != null) return repoRoot;
 
-/// <summary>Above operation.</summary>
+
                 repoRoot = Above(AppContext.BaseDirectory) ?? Above(SourceDirectory());
                 if (repoRoot != null) return repoRoot;
 
                 throw new InvalidOperationException(
                     "Could not find the repository root from " + AppContext.BaseDirectory
-/// <summary>SourceDirectory operation.</summary>
+
                     + " or from " + SourceDirectory());
             }
         }
 
-/// <summary>Above operation.</summary>
+
         private static string Above(string start)
         {
             if (string.IsNullOrEmpty(start)) return null;
 
-/// <summary>DirectoryInfo operation.</summary>
+
             DirectoryInfo directory = new DirectoryInfo(start);
             while (directory != null)
             {
@@ -99,43 +99,43 @@ namespace Thermodynamics.Harness
             return null;
         }
 
-/// <summary>SourceDirectory operation.</summary>
+
         private static string SourceDirectory([CallerFilePath] string file = "")
         {
             return string.IsNullOrEmpty(file) ? null : Path.GetDirectoryName(file);
         }
 
-/// <summary>DataRoot operation.</summary>
+
         public static string DataRoot()
         {
             return Path.Combine(ContentRoot(), "Data");
         }
         
-/// <summary>ContentRoot operation.</summary>
+
         public static string ContentRoot()
         {
             return Path.Combine(ModRoot(), "Content");
         }
         
-/// <summary>ModRoot operation.</summary>
+
         public static string ModRoot()
         {
             return Path.Combine(RepoRoot(), "Thermodynamics");
         }
 
-/// <summary>All operation.</summary>
+
         public static Dictionary<string, Definition> All()
         {
             lock (Gate)
             {
                 if (cache != null) return cache;
-/// <summary>Load operation.</summary>
+
                 cache = Load();
                 return cache;
             }
         }
 
-/// <summary>Returns the .</summary>
+
         public static Definition Get(string subtype)
         {
             Definition definition;
@@ -146,20 +146,20 @@ namespace Thermodynamics.Harness
             return definition;
         }
 
-/// <summary>Subtypes operation.</summary>
+
         public static List<string> Subtypes()
         {
-/// <summary>List operation.</summary>
+
             List<string> names = new List<string>(All().Keys);
             names.Sort(StringComparer.Ordinal);
             return names;
         }
 
 
-/// <summary>Model operation.</summary>
+
         public static BlockModel Model(string subtype)
         {
-/// <summary>Returns the .</summary>
+
             Definition definition = Get(subtype);
             BlockModel model = BlockModel.Solid(subtype, definition.Size, definition.Mass, definition.Thermal);
 
@@ -192,7 +192,7 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Load operation.</summary>
+
         private static Dictionary<string, Definition> Load()
         {
             Dictionary<string, Definition> blocks = new Dictionary<string, Definition>(StringComparer.Ordinal);
@@ -203,7 +203,7 @@ namespace Thermodynamics.Harness
                 XDocument document = XDocument.Load(file);
                 foreach (XElement element in document.Descendants("Definition"))
                 {
-/// <summary>ParseBlock operation.</summary>
+
                     Definition definition = ParseBlock(element);
                     if (definition != null) blocks[definition.Subtype] = definition;
                 }
@@ -213,7 +213,7 @@ namespace Thermodynamics.Harness
             return blocks;
         }
 
-/// <summary>ParseBlock operation.</summary>
+
         private static Definition ParseBlock(XElement element)
         {
             XElement id = element.Element("Id");
@@ -228,11 +228,11 @@ namespace Thermodynamics.Harness
                 Subtype = subtype.Value.Trim(),
                 TypeId = type.Value.Trim(),
                 Large = (string)element.Element("CubeSize") == "Large",
-/// <summary>ParseSize operation.</summary>
+
                 Size = ParseSize(element.Element("Size")),
-/// <summary>ParseInt operation.</summary>
+
                 Pcu = ParseInt(element.Element("PCU")),
-/// <summary>ParseFloat operation.</summary>
+
                 BuildSeconds = ParseFloat(element.Element("BuildTimeSeconds")),
             };
 
@@ -242,7 +242,7 @@ namespace Thermodynamics.Harness
                 foreach (XElement component in components.Elements("Component"))
                 {
                     string name = (string)component.Attribute("Subtype");
-/// <summary>ParseInt operation.</summary>
+
                     int count = ParseInt(component.Attribute("Count"));
                     if (name != null && count > 0)
                     {
@@ -257,7 +257,7 @@ namespace Thermodynamics.Harness
             {
                 foreach (XElement mount in mounts.Elements("MountPoint"))
                 {
-/// <summary>FaceOf operation.</summary>
+
                     int face = FaceOf((string)mount.Attribute("Side"));
                     if (face >= 0) definition.MountFaces[face] = true;
                 }
@@ -284,7 +284,7 @@ namespace Thermodynamics.Harness
 
         private static Dictionary<string, Function> functionCache;
 
-/// <summary>FunctionOf operation.</summary>
+
         public static Function FunctionOf(string typeId)
         {
             All();
@@ -293,27 +293,27 @@ namespace Thermodynamics.Harness
                 ? function : Ordinary;
         }
 
-/// <summary>FunctionTypes operation.</summary>
+
         public static ICollection<string> FunctionTypes()
         {
             All();
             return functionCache.Keys;
         }
 
-/// <summary>DeriveWithFunction operation.</summary>
+
         public static BlockThermalProperties DeriveWithFunction(IList<BlockComponent> components,
             string typeId)
         {
-/// <summary>DeriveWithFunction operation.</summary>
+
             return DeriveWithFunction(components, typeId, 0f);
         }
 
-/// <summary>DeriveWithFunction operation.</summary>
+
         public static BlockThermalProperties DeriveWithFunction(IList<BlockComponent> components,
             string typeId, float statedEfficiency)
         {
             BlockThermalProperties properties = BlockThermalDerivation.Derive(components);
-/// <summary>FunctionOf operation.</summary>
+
             Function function = FunctionOf(typeId);
             properties.ProducerWasteEnergy = function.ProducerWasteEnergy;
             properties.ConsumerWasteEnergy = function.ConsumerWasteEnergy;
@@ -326,7 +326,7 @@ namespace Thermodynamics.Harness
             return properties.Clamp();
         }
 
-/// <summary>Applies the thermal.</summary>
+
         private static void ApplyThermal(Dictionary<string, Definition> blocks)
         {
             Dictionary<string, BlockThermalProperties> bySubtype =
@@ -345,7 +345,7 @@ namespace Thermodynamics.Harness
 
                 string type = ((string)id.Element("TypeId") ?? "").Trim();
                 string subtype = ((string)id.Element("SubtypeId") ?? "").Trim();
-/// <summary>ParseThermal operation.</summary>
+
                 BlockThermalProperties properties = ParseThermal(element);
                 if (properties == null) continue;
 
@@ -394,14 +394,14 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>ParseThermalForTest operation.</summary>
+
         public static BlockThermalProperties ParseThermalForTest(XElement definition)
         {
-/// <summary>ParseThermal operation.</summary>
+
             return ParseThermal(definition);
         }
 
-/// <summary>ParseThermal operation.</summary>
+
         private static BlockThermalProperties ParseThermal(XElement definition)
         {
             XElement group = null;
@@ -448,7 +448,7 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>ParseSize operation.</summary>
+
         private static Vector3I ParseSize(XElement size)
         {
             if (size == null) return Vector3I.One;
@@ -458,7 +458,7 @@ namespace Thermodynamics.Harness
                 Math.Max(1, ParseInt(size.Attribute("z"))));
         }
 
-/// <summary>ParseInt operation.</summary>
+
         private static int ParseInt(XAttribute attribute)
         {
             int value;
@@ -467,7 +467,7 @@ namespace Thermodynamics.Harness
                 ? value : 0;
         }
 
-/// <summary>ParseInt operation.</summary>
+
         private static int ParseInt(XElement element)
         {
             int value;
@@ -476,7 +476,7 @@ namespace Thermodynamics.Harness
                 ? value : 0;
         }
 
-/// <summary>ParseFloat operation.</summary>
+
         private static float ParseFloat(XElement element)
         {
             float value;
@@ -485,7 +485,7 @@ namespace Thermodynamics.Harness
                 ? value : 0f;
         }
 
-/// <summary>FaceOf operation.</summary>
+
         private static int FaceOf(string side)
         {
             switch (side)

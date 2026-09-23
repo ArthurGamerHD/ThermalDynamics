@@ -32,31 +32,31 @@ namespace Thermodynamics
         private static double regionCandidateDistance;
         private static string regionPublishedDetail = "";
         private static ThermalVisionRegionOrder regionOrder;
-/// <summary>List operation.</summary>
+
         private static readonly List<RegionGrid> regionSources = new List<RegionGrid>();
-/// <summary>List operation.</summary>
+
         private static readonly List<RegionGrid> regionPublishedSources = new List<RegionGrid>();
-/// <summary>List operation.</summary>
+
         private static readonly List<Region> regionDrawOrder = new List<Region>();
-/// <summary>List operation.</summary>
+
         private static readonly List<BoundingBoxD> regionVisibleGrids = new List<BoundingBoxD>();
-/// <summary>Stopwatch operation.</summary>
+
         private static readonly Stopwatch RegionTime = new Stopwatch();
         private static double regionStarted, regionPublished, regionNext;
         private static string regionStatus = "ACQUIRING";
-/// <summary>Vector4 operation.</summary>
+
         private static readonly Vector4 RegionNeutral = new Vector4(.12f, .12f, .12f, 1);
         private static int regionDrawnCells, regionBillboards, regionCulledFaces, regionCulledPatches, regionUniformPatches;
         private static bool countUniformPatches;
-/// <summary>List operation.</summary>
+
         private static readonly List<Region> regionVisibleOrder = new List<Region>();
-/// <summary>ThermalVisionFacePlan operation.</summary>
+
         private static readonly ThermalVisionFacePlan regionFacePlan = new ThermalVisionFacePlan();
 
-/// <summary>StopRegions operation.</summary>
+
         private static void StopRegions()
         {
-/// <summary>StopBlockFleet operation.</summary>
+
             blockLabMode = false; StopBlockFleet(); blockFleetCapacity = 1400; blockFleetPressureGridCount = 0; regionRenderMatrix = MatrixD.Identity;
             if (regionScan != null) regionScan.Dispose();
             if (regionLod != null) regionLod.Dispose();
@@ -69,7 +69,7 @@ namespace Thermodynamics
             regionCellSize = 5; regionStatus = "ACQUIRING";
         }
 
-/// <summary>RegionsStillValid operation.</summary>
+
         private static bool RegionsStillValid(List<RegionGrid> sources)
         {
             foreach (RegionGrid source in sources)
@@ -85,7 +85,7 @@ namespace Thermodynamics
             return true;
         }
 
-/// <summary>ReadRegionGrid operation.</summary>
+
         private static IEnumerable<Region> ReadRegionGrid(RegionGrid source, Vector3D eye)
         {
             foreach (ThermalBlock block in source.Grid.Blocks)
@@ -100,13 +100,13 @@ namespace Thermodynamics
                 if (Vector3D.DistanceSquared(centre, eye) > 25000000) continue;
                 Vector3D extent = Vector3D.Abs(source.Matrix.Right) * half.X
                     + Vector3D.Abs(source.Matrix.Up) * half.Y + Vector3D.Abs(source.Matrix.Backward) * half.Z;
-/// <summary>Region operation.</summary>
+
                 var sample = new Region(centre - extent, centre + extent, temperature);
                 Vector3D closest = Vector3D.Max(sample.Min, Vector3D.Min(eye, sample.Max));
                 double distance = Vector3D.DistanceSquared(eye, closest);
                 if (distance < regionCandidateDistance)
                 {
-/// <summary>BoundingBoxD operation.</summary>
+
                     var bounds = new BoundingBoxD(sample.Min, sample.Max);
                     if (MyAPIGateway.Session.Camera.IsInFrustum(ref bounds))
                     { regionCandidateDistance = distance; regionCandidatePoint = closest; regionCandidateSurface = true; }
@@ -116,7 +116,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>StartRegionScan operation.</summary>
+
         private static void StartRegionScan(double now)
         {
             regionSources.Clear();
@@ -125,14 +125,14 @@ namespace Thermodynamics
             var input = new List<IEnumerable<Region>>();
             Vector3D eye = MyAPIGateway.Session.Camera.WorldMatrix.Translation;
             regionScanEye = eye;
-/// <summary>BoundingBoxD operation.</summary>
+
             var anchorBounds = new BoundingBoxD(regionSurface - new Vector3D(1), regionSurface + new Vector3D(1));
             bool useSurface = regionHasSurface && Vector3D.DistanceSquared(eye, regionSurfaceEye) < 400
                 && MyAPIGateway.Session.Camera.IsInFrustum(ref anchorBounds);
-/// <summary>ThermalVisionRegionLod operation.</summary>
+
             regionLod = useSurface ? new ThermalVisionRegionLod(eye, regionSurface) : new ThermalVisionRegionLod(eye);
             regionCandidateSurface = false; regionCandidateDistance = double.PositiveInfinity;
-/// <summary>BoundingSphereD operation.</summary>
+
             var reach = new BoundingSphereD(eye, 5000);
             foreach (ThermalGrid thermal in ThermalGrid.LiveGrids)
             {
@@ -153,15 +153,15 @@ namespace Thermodynamics
             if (regionScan == null) regionScan = new ThermalVisionRegionScan(regionCellSize, 384, 256, 5120);
             regionStarted = now;
             if (!regionScan.Start(input))
-/// <summary>RecordEvent operation.</summary>
+
             { regionStatus = "SCAN FAILED: " + regionScan.Failure; regionNext = now + 1; RecordEvent(regionStatus); }
         }
 
-/// <summary>UpdateRegionField operation.</summary>
+
         private static void UpdateRegionField(double now)
         {
             if (regionOrder != null && (now - regionPublished > 8 || !RegionsStillValid(regionPublishedSources)))
-/// <summary>RecordEvent operation.</summary>
+
             { regionOrder = null; regionStatus = "REFRESHING / movement or age"; RecordEvent("region field invalidated: movement/topology/age"); }
             if (!regionLodPending && (regionScan == null || !regionScan.Running) && now >= regionNext) StartRegionScan(now);
             if (regionScan == null || (!regionScan.Running && !regionLodPending)) return;
@@ -190,7 +190,7 @@ namespace Thermodynamics
             if (regionLod.Running) return;
             ThermalVisionRegionOrder next;
             if (!regionLod.TryBuild(regionScan, ThermalVisionScenePolicy.RegionCellLimit, out next))
-/// <summary>RecordEvent operation.</summary>
+
             { regionLodPending = false; regionStatus = "ORDER CAPACITY / field retained"; regionNext = now + 1; RecordEvent(regionStatus); return; }
             regionLodPending = false;
             regionHasSurface = regionCandidateSurface;
@@ -208,7 +208,7 @@ namespace Thermodynamics
                 + " " + regionPublishedDetail + " nearest-sample-m=" + (regionCandidateSurface ? Math.Sqrt(regionCandidateDistance) : -1) + " coarsenings=" + regionScan.Coarsenings + " scan-ms=" + (now - regionStarted) * 1000 + " adapter-ms=" + ProbeClock.Elapsed.TotalMilliseconds, false);
         }
 
-/// <summary>RegionBackdrop operation.</summary>
+
         private static void RegionBackdrop(double distance, Vector4 colour)
         {
             var camera = MyAPIGateway.Session.Camera;
@@ -220,7 +220,7 @@ namespace Thermodynamics
                 width * 1.25f, height * 1.25f, Vector2.Zero, MyBillboard.BlendTypeEnum.PostPP);
         }
 
-/// <summary>RegionTriangle operation.</summary>
+
         private static void RegionTriangle(Vector3D a, Vector3D b, Vector3D c, Vector4 colour, Vector3D eye, bool bias = true)
         {
             a = Vector3D.Transform(a, regionRenderMatrix); b = Vector3D.Transform(b, regionRenderMatrix);
@@ -238,21 +238,21 @@ namespace Thermodynamics
             regionBillboards++; drawn++; examined++;
         }
 
-/// <summary>RegionAxis operation.</summary>
+
         private static double RegionAxis(Vector3D v, int axis) { return axis == 0 ? v.X : axis == 1 ? v.Y : v.Z; }
-/// <summary>RegionFace operation.</summary>
+
         private static void RegionFace(Region region, int axis, bool upper, Vector4 colour, Vector3D eye, bool gradient = false, BoundingFrustumD patchFrustum = null)
         {
             Vector3D a = region.Min, u = Vector3D.Zero, v = Vector3D.Zero;
             if (axis == 0) { a.X = upper ? region.Max.X : region.Min.X; u.Y = region.Max.Y - region.Min.Y; v.Z = region.Max.Z - region.Min.Z; }
-/// <summary>if operation.</summary>
+
             else if (axis == 1) { a.Y = upper ? region.Max.Y : region.Min.Y; u.X = region.Max.X - region.Min.X; v.Z = region.Max.Z - region.Min.Z; }
             else { a.Z = upper ? region.Max.Z : region.Min.Z; u.X = region.Max.X - region.Min.X; v.Y = region.Max.Y - region.Min.Y; }
             Vector3D faceCentre = Vector3D.Transform(a + (u + v) * .5, regionRenderMatrix);
             Vector3D worldU=Vector3D.TransformNormal(u,regionRenderMatrix);
             Vector3D worldV=Vector3D.TransformNormal(v,regionRenderMatrix);
             Vector3D faceHalf = (Vector3D.Abs(worldU) + Vector3D.Abs(worldV)) * .5 + new Vector3D(.002);
-/// <summary>BoundingBoxD operation.</summary>
+
             var faceBounds = new BoundingBoxD(faceCentre - faceHalf, faceCentre + faceHalf);
             if (!MyAPIGateway.Session.Camera.IsInFrustum(ref faceBounds)) { regionCulledFaces++; return; }
             if (gradient)
@@ -288,7 +288,7 @@ namespace Thermodynamics
             RegionTriangle(a, a + u + v, a + v, colour, eye);
         }
 
-/// <summary>DrawRegions operation.</summary>
+
         private static void DrawRegions()
         {
             if (smoothFleet) { DrawIndependentFleet(); return; }
@@ -325,7 +325,7 @@ namespace Thermodynamics
                     Vector3D localHalf = (region.Max - region.Min) * .5;
                     Vector3D worldHalf = Vector3D.Abs(regionRenderMatrix.Right) * localHalf.X
                         + Vector3D.Abs(regionRenderMatrix.Up) * localHalf.Y + Vector3D.Abs(regionRenderMatrix.Backward) * localHalf.Z;
-/// <summary>BoundingBoxD operation.</summary>
+
                     var box = new BoundingBoxD(worldCentre - worldHalf, worldCentre + worldHalf);
                     if (!camera.IsInFrustum(ref box)) continue;
                     bool touchesVisibleGrid = false;
@@ -352,7 +352,7 @@ namespace Thermodynamics
                     else if (automaticRange) SceneRange.Observe(region.Kelvin);
                     Vector3 srgb;
                     if (!ThermalVisionPalette.TrySample(region.Kelvin, State.Current, lowKelvin, highKelvin, out srgb)) continue;
-/// <summary>Vector4 operation.</summary>
+
                     Vector4 colour = new Vector4(srgb, 1);
                     Vector3D middle = (region.Min + region.Max) * .5, half = (region.Max - region.Min) * .5;
                     double depth = Vector3D.Dot(middle - eye, localCamera.Forward);
@@ -362,14 +362,14 @@ namespace Thermodynamics
                         Vector3D[] cap = ThermalVisionRegionPartition.NearCap(region, localCamera, camera.ProjectionMatrix, near);
                         for (int i = 1; i + 1 < cap.Length; i++)
                             if(smoothFleet) SmoothTriangle(region,cap[0],cap[i],cap[i+1],eye,false);
-/// <summary>RegionTriangle operation.</summary>
+
                             else RegionTriangle(cap[0], cap[i], cap[i + 1], colour, eye, false);
                     }
                     for (int pass = 0; pass < 2; pass++)
                         for (int axis = 0; axis < 3; axis++) for (int side = 0; side < 2; side++)
                         {
                             bool upper = side == 1;
-/// <summary>RegionAxis operation.</summary>
+
                             double plane = RegionAxis(upper ? region.Max : region.Min, axis);
                             bool entering = (RegionAxis(eye, axis) - plane) * (upper ? 1 : -1) > 0;
                             if (entering == (pass == 0) && (smoothFleet || !regionFacePlan.Skip(regionIndex, axis, upper)))
@@ -378,7 +378,7 @@ namespace Thermodynamics
                     regionDrawnCells++;
                 }
             }
-/// <summary>BlockFleetViewDistance operation.</summary>
+
             double viewDistance = blockLabMode ? BlockFleetViewDistance() : 5000;
             if (drawContext) RegionBackdrop(blockLabMode ? ThermalVisionViewPolicy.BackdropDistance(viewDistance) : viewDistance, new Vector4(0, 0, 0, 1));
             incomplete = regionOrder == null;
@@ -388,7 +388,7 @@ namespace Thermodynamics
                 MyAPIGateway.Utilities.ShowNotification("Thermal: " + regionStatus, 2500);
             if (frames++ % 30 == 0)
             {
-/// <summary>RichText operation.</summary>
+
                 panel.Text = new RichText((blockLabMode ? "THERMAL LAB / BLOCKS / " : "THERMAL LAB / REGIONS / ") + (State.Current == ThermalVisionState.Mode.Cividis ? "CIVIDIS" : "WHITE HOT")
                     + (blockLabMode ? " / VIEWPORT FLEET\n" : " / GROUP ESTIMATE\n") + (lowKelvin - 273.15f).ToString("0") + " to " + (highKelvin - 273.15f).ToString("0")
                     + " C / " + (automaticRange ? "AUTO" : "LOCK") + (blockLabMode ? " / BLOCK + GROUP TEMPERATURES" : " / groups " + regionCellSize + " m")
@@ -398,7 +398,7 @@ namespace Thermodynamics
                     + (regionOrder == null ? "—" : (now - regionPublished).ToString("0.0") + " s")
                     + "\nNeutral grey: unmeasured / off to close");
                 if (blockLabMode)
-/// <summary>RichText operation.</summary>
+
                     panel.Text = new RichText("THERMAL / " + (State.Current == ThermalVisionState.Mode.Cividis ? "CIVIDIS" : "WHITE HOT")
                         + " / " + (automaticRange ? "AUTO" : "LOCK")
                         + "\n" + (lowKelvin - 273.15f).ToString("0") + " to " + (highKelvin - 273.15f).ToString("0") + " C"

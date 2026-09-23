@@ -5,7 +5,7 @@
     {
 		public virtual bool Enabled { get; set; }
 
-/// <summary>ScrollBoxEntry operation.</summary>
+
         public ScrollBoxEntry() { Enabled = true; }
     }
 

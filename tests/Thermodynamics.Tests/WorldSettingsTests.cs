@@ -21,17 +21,17 @@ namespace Thermodynamics.Tests
             "  </ExperimentalMode>\n" +
             "</MyObjectBuilder_SessionSettings>\n";
 
-/// <summary>Parsed operation.</summary>
+
         private static List<KeyValuePair<string, string>> Parsed()
         {
             return WorldSettings.Parse(Sample);
         }
 
         [Fact]
-/// <summary>FlatValuesAreReadUnderTheirOwnName operation.</summary>
+
         public void FlatValuesAreReadUnderTheirOwnName()
         {
-/// <summary>Parsed operation.</summary>
+
             List<KeyValuePair<string, string>> rows = Parsed();
 
             Assert.Equal("Creative", WorldSettings.Value(rows, "GameMode"));
@@ -40,10 +40,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSerialisedTypeIsNotAPrefixAndANestedBlockIs operation.</summary>
+
         public void TheSerialisedTypeIsNotAPrefixAndANestedBlockIs()
         {
-/// <summary>Parsed operation.</summary>
+
             List<KeyValuePair<string, string>> rows = Parsed();
 
             Assert.Contains(rows, r => r.Key == "GameMode");
@@ -52,27 +52,27 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnEmptyElementIsRecordedRatherThanDropped operation.</summary>
+
         public void AnEmptyElementIsRecordedRatherThanDropped()
         {
-/// <summary>Parsed operation.</summary>
+
             List<KeyValuePair<string, string>> rows = Parsed();
 
             Assert.Contains(rows, r => r.Key == "ScenarioName" && r.Value == "");
         }
 
         [Fact]
-/// <summary>EntitiesAreDecoded operation.</summary>
+
         public void EntitiesAreDecoded()
         {
             Assert.Equal("a & b", WorldSettings.Value(Parsed(), "Description"));
         }
 
         [Fact]
-/// <summary>EveryLeafIsKeptInDocumentOrder operation.</summary>
+
         public void EveryLeafIsKeptInDocumentOrder()
         {
-/// <summary>Parsed operation.</summary>
+
             List<KeyValuePair<string, string>> rows = Parsed();
 
             Assert.Equal(9, rows.Count);
@@ -81,7 +81,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AMalformedOrEmptyDocumentYieldsNothingRatherThanThrowing operation.</summary>
+
         public void AMalformedOrEmptyDocumentYieldsNothingRatherThanThrowing()
         {
             Assert.Empty(WorldSettings.Parse(null));
@@ -90,10 +90,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AValueSeenNowhereReadsAsItsDefault operation.</summary>
+
         public void AValueSeenNowhereReadsAsItsDefault()
         {
-/// <summary>Parsed operation.</summary>
+
             List<KeyValuePair<string, string>> rows = Parsed();
 
             Assert.Null(WorldSettings.Value(rows, "NoSuchSetting"));
@@ -102,7 +102,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LookupDoesNotMatchASuffixOfAnotherName operation.</summary>
+
         public void LookupDoesNotMatchASuffixOfAnotherName()
         {
             List<KeyValuePair<string, string>> rows = WorldSettings.Parse(
@@ -113,7 +113,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DamageIsReportedAsSilencedWhenTheWorldKeepsBlocksIndestructible operation.</summary>
+
         public void DamageIsReportedAsSilencedWhenTheWorldKeepsBlocksIndestructible()
         {
             WorldSettings.ModFeatures features = new WorldSettings.ModFeatures();
@@ -126,7 +126,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RoomAirIsReportedAsSilencedByEitherOxygenSwitch operation.</summary>
+
         public void RoomAirIsReportedAsSilencedByEitherOxygenSwitch()
         {
             WorldSettings.ModFeatures features = new WorldSettings.ModFeatures();
@@ -147,14 +147,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFeatureTheModHasOffRaisesNoConflict operation.</summary>
+
         public void AFeatureTheModHasOffRaisesNoConflict()
         {
             Assert.Empty(WorldSettings.Conflicts(Parsed(), new WorldSettings.ModFeatures()));
         }
 
         [Fact]
-/// <summary>SavingOffIsReportedAgainstPersistence operation.</summary>
+
         public void SavingOffIsReportedAgainstPersistence()
         {
             WorldSettings.ModFeatures features = new WorldSettings.ModFeatures();
@@ -167,7 +167,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoSettingsMeansNoConflicts operation.</summary>
+
         public void NoSettingsMeansNoConflicts()
         {
             WorldSettings.ModFeatures features = new WorldSettings.ModFeatures();

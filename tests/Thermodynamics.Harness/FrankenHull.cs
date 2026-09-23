@@ -10,10 +10,10 @@ namespace Thermodynamics.Harness
     {
         public class Manifest
         {
-/// <summary>List operation.</summary>
+
             public readonly List<string> Ships = new List<string>();
 
-/// <summary>List operation.</summary>
+
             public readonly List<int> Copies = new List<int>();
 
             public int Blocks;
@@ -28,7 +28,7 @@ namespace Thermodynamics.Harness
 
             public Vector3I Pitch;
 
-/// <summary>Describe operation.</summary>
+
             public string Describe()
             {
                 System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -45,7 +45,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Builds the method table.</summary>
+
         public static GridBuilder Build(IList<KeyValuePair<int, string>> ships, int targetBlocks,
             Manifest manifest, Action<string> log)
         {
@@ -53,9 +53,9 @@ namespace Thermodynamics.Harness
 
             GameBlocks.BySubtype();
 
-/// <summary>List operation.</summary>
+
             List<Blueprints.Grid> parts = new List<Blueprints.Grid>();
-/// <summary>List operation.</summary>
+
             List<string> names = new List<string>();
             int have = 0;
 
@@ -99,11 +99,11 @@ namespace Thermodynamics.Harness
                 }
             }
 
-/// <summary>Tile operation.</summary>
+
             return Tile(parts, names, targetBlocks, manifest);
         }
 
-/// <summary>Tile operation.</summary>
+
         public static GridBuilder Tile(IList<Blueprints.Grid> parts, IList<string> names,
             int targetBlocks, Manifest manifest)
         {
@@ -116,9 +116,9 @@ namespace Thermodynamics.Harness
             int perPass = 0;
             for (int i = 0; i < parts.Count; i++)
             {
-/// <summary>Extents operation.</summary>
+
                 Vector3I extents = Extents(parts[i]);
-/// <summary>Vector3I operation.</summary>
+
                 pitch = new Vector3I(
                     Math.Max(pitch.X, extents.X),
                     Math.Max(pitch.Y, extents.Y),
@@ -133,7 +133,7 @@ namespace Thermodynamics.Harness
             int side = (int)Math.Ceiling(Math.Pow(cells, 1d / 3d));
             if (side < 1) side = 1;
 
-/// <summary>Vector3I operation.</summary>
+
             manifest.Lattice = new Vector3I(side, side, side);
 
             int[] copies = new int[parts.Count];
@@ -147,7 +147,7 @@ namespace Thermodynamics.Harness
                     for (int x = 0; x < side && manifest.Blocks < targetBlocks; x++)
                     {
                         Blueprints.Grid part = parts[index % parts.Count];
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I offset = new Vector3I(x * pitch.X, y * pitch.Y, z * pitch.Z)
                             - part.Builder.Grid.Min;
 
@@ -177,14 +177,14 @@ namespace Thermodynamics.Harness
             return target;
         }
 
-/// <summary>Extents operation.</summary>
+
         private static Vector3I Extents(Blueprints.Grid part)
         {
             GridModel grid = part.Builder.Grid;
             return (grid.Max - grid.Min) + Vector3I.One;
         }
 
-/// <summary>LargestFirst operation.</summary>
+
         public static List<KeyValuePair<int, string>> LargestFirst(string shipsCsv)
         {
             List<KeyValuePair<int, string>> rows = new List<KeyValuePair<int, string>>();
@@ -200,12 +200,12 @@ namespace Thermodynamics.Harness
                 int pathAt = Array.IndexOf(columns, "path");
                 if (blocksAt < 0 || pathAt < 0) return rows;
 
-/// <summary>HashSet operation.</summary>
+
                 HashSet<string> seen = new HashSet<string>(StringComparer.Ordinal);
                 string line;
                 while ((line = reader.ReadLine()) != null)
                 {
-/// <summary>SplitCsv operation.</summary>
+
                     List<string> cells = SplitCsv(line);
                     if (cells.Count <= blocksAt || cells.Count <= pathAt) continue;
 
@@ -227,10 +227,10 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>SplitCsv operation.</summary>
+
         private static List<string> SplitCsv(string line)
         {
-/// <summary>List operation.</summary>
+
             List<string> cells = new List<string>();
             System.Text.StringBuilder cell = new System.Text.StringBuilder();
             bool quoted = false;

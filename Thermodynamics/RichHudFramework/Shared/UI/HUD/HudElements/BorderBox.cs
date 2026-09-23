@@ -15,24 +15,24 @@ namespace RichHudFramework.UI
 
 		protected readonly MatBoard hudBoard;
 
-/// <summary>BorderBox operation.</summary>
+
 		public BorderBox(HudParentBase parent) : base(parent)
         {
-/// <summary>MatBoard operation.</summary>
+
             hudBoard = new MatBoard();
             Thickness = 1f;
         }
 
-/// <summary>BorderBox operation.</summary>
+
         public BorderBox() : this(null)
         { }
 
-/// <summary>Draw operation.</summary>
+
         protected override void Draw()
         {
             if (Color.A > 0)
             {
-/// <summary>default operation.</summary>
+
                 CroppedBox box = default(CroppedBox);
                 box.mask = MaskingBox;
 
@@ -40,35 +40,35 @@ namespace RichHudFramework.UI
                     width = UnpaddedSize.X;
                 Vector2 halfSize, pos;
 
-/// <summary>Vector2 operation.</summary>
+
                 halfSize = new Vector2(Thickness, height) * .5f;
-/// <summary>Vector2 operation.</summary>
+
                 pos = Position + new Vector2((-width + Thickness) * .5f, 0f);
-/// <summary>BoundingBox2 operation.</summary>
+
                 box.bounds = new BoundingBox2(pos - halfSize, pos + halfSize);
                 hudBoard.Draw(ref box, HudSpace.PlaneToWorldRef);
 
-/// <summary>Vector2 operation.</summary>
+
                 halfSize = new Vector2(width, Thickness) * .5f;
-/// <summary>Vector2 operation.</summary>
+
                 pos = Position + new Vector2(0f, (height - Thickness) * .5f);
-/// <summary>BoundingBox2 operation.</summary>
+
                 box.bounds = new BoundingBox2(pos - halfSize, pos + halfSize);
                 hudBoard.Draw(ref box, HudSpace.PlaneToWorldRef);
 
-/// <summary>Vector2 operation.</summary>
+
                 halfSize = new Vector2(Thickness, height) * .5f;
-/// <summary>Vector2 operation.</summary>
+
                 pos = Position + new Vector2((width - Thickness) * .5f, 0f);
-/// <summary>BoundingBox2 operation.</summary>
+
                 box.bounds = new BoundingBox2(pos - halfSize, pos + halfSize);
                 hudBoard.Draw(ref box, HudSpace.PlaneToWorldRef);
 
-/// <summary>Vector2 operation.</summary>
+
                 halfSize = new Vector2(width, Thickness) * .5f;
-/// <summary>Vector2 operation.</summary>
+
                 pos = Position + new Vector2(0f, (-height + Thickness) * .5f);
-/// <summary>BoundingBox2 operation.</summary>
+
                 box.bounds = new BoundingBox2(pos - halfSize, pos + halfSize);
                 hudBoard.Draw(ref box, HudSpace.PlaneToWorldRef);
             }

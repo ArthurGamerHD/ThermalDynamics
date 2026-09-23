@@ -19,12 +19,12 @@ namespace RichHudFramework.UI
 
         protected Color oldColor;
 
-/// <summary>LabelBoxButton operation.</summary>
+
         public LabelBoxButton(HudParentBase parent) : base(parent)
         {
-/// <summary>InputFocusHandler operation.</summary>
+
 			FocusHandler = new InputFocusHandler(this);
-/// <summary>MouseInputElement operation.</summary>
+
             _mouseInput = new MouseInputElement(this)
             { 
                 CursorEnteredCallback = CursorEnter,
@@ -37,11 +37,11 @@ namespace RichHudFramework.UI
             HighlightEnabled = true;
         }
 
-/// <summary>LabelBoxButton operation.</summary>
+
         public LabelBoxButton() : this(null)
         { }
 
-/// <summary>CursorEnter operation.</summary>
+
         protected virtual void CursorEnter(object sender, EventArgs args)
         {
             if (HighlightEnabled)
@@ -51,7 +51,7 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>CursorExit operation.</summary>
+
         protected virtual void CursorExit(object sender, EventArgs args)
         {
             if (HighlightEnabled)

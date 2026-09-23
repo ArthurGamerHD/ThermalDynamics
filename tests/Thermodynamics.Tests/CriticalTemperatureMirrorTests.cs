@@ -8,10 +8,10 @@ namespace Thermodynamics.Tests
 {
     public class CriticalTemperatureMirrorTests
     {
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubsteps = 4096;
             settings.MaxElementVisitsPerStep = 0;
@@ -23,14 +23,14 @@ namespace Thermodynamics.Tests
             return settings.Derive();
         }
 
-/// <summary>Burned operation.</summary>
+
         private static List<string> Burned(ThermalSimulation simulation, float kelvin)
         {
             simulation.Solver.SetAllTemperatures(kelvin);
             simulation.Solver.Step(simulation.Settings.StepSeconds, EnvironmentSolver.Solve(
                 simulation.Settings, simulation.Planet, Worlds.Space(Vector3.UnitX)));
 
-/// <summary>List operation.</summary>
+
             List<string> names = new List<string>();
             IList<OverheatEvent> events = simulation.Solver.Overheats;
             for (int i = 0; i < events.Count; i++) names.Add(events[i].Block.Model.Name);
@@ -39,13 +39,13 @@ namespace Thermodynamics.Tests
             return names;
         }
 
-/// <summary>Between operation.</summary>
+
         private static float Between(float low, float high)
         {
             return 0.5f * (low + high);
         }
 
-/// <summary>Rating operation.</summary>
+
         private static float Rating(ThermalSimulation simulation, string name)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -57,7 +57,7 @@ namespace Thermodynamics.Tests
             throw new InvalidOperationException("no block named " + name + " on the rig");
         }
 
-/// <summary>ThreeRatings operation.</summary>
+
         private static GridBuilder ThreeRatings()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -68,18 +68,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EachBlockIsJudgedAgainstItsOwnRating operation.</summary>
+
         public void EachBlockIsJudgedAgainstItsOwnRating()
         {
-/// <summary>ThreeRatings operation.</summary>
+
             ThermalSimulation simulation = ThreeRatings().BuildSimulation(Settings(), 293.15f);
             simulation.RebuildAll();
 
-/// <summary>Rating operation.</summary>
+
             float armour = Rating(simulation, "LightArmorBlock");
-/// <summary>Rating operation.</summary>
+
             float reactor = Rating(simulation, "SmallReactor");
-/// <summary>Rating operation.</summary>
+
             float thruster = Rating(simulation, "LargeThruster");
 
             Assert.True(armour < reactor && reactor < thruster,
@@ -97,19 +97,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARatingFollowsItsBlockWhenARemovalMovesTheIndex operation.</summary>
+
         public void ARatingFollowsItsBlockWhenARemovalMovesTheIndex()
         {
-/// <summary>ThreeRatings operation.</summary>
+
             GridBuilder builder = ThreeRatings();
             ThermalSimulation simulation = builder.BuildSimulation(Settings(), 293.15f);
             simulation.RebuildAll();
 
             Burned(simulation, 293.15f);
 
-/// <summary>Rating operation.</summary>
+
             float reactor = Rating(simulation, "SmallReactor");
-/// <summary>Rating operation.</summary>
+
             float thruster = Rating(simulation, "LargeThruster");
 
             BlockInstance armour = builder.Grid.GetAtCell(new Vector3I(0, 0, 0));
@@ -124,7 +124,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARatingArrivesWithABlockPlacedIntoALiveGrid operation.</summary>
+
         public void ARatingArrivesWithABlockPlacedIntoALiveGrid()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -137,9 +137,9 @@ namespace Thermodynamics.Tests
             simulation.AddBlock(new BlockInstance(
                 Catalog.Reactor(), new Vector3I(8, 0, 0), BlockOrientation.Identity), 293.15f);
 
-/// <summary>Rating operation.</summary>
+
             float armour = Rating(simulation, "LightArmorBlock");
-/// <summary>Rating operation.</summary>
+
             float reactor = Rating(simulation, "SmallReactor");
             Assert.True(armour < reactor, "the reactor must outrank the armour for this to judge anything");
 
@@ -150,7 +150,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockWithNoRatingNeverBurns operation.</summary>
+
         public void ABlockWithNoRatingNeverBurns()
         {
             BlockThermalProperties unrated = Catalog.ReactorThermal();

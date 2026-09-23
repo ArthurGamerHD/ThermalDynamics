@@ -19,11 +19,11 @@ namespace Thermodynamics.Core
 
         public const float DecayFloor = 0.999f;
 
-/// <summary>Forecast operation.</summary>
+
         public static HeatForecast Forecast(float kelvin, float rate, float previousRate,
             float interval, float threshold)
         {
-/// <summary>HeatForecast operation.</summary>
+
             HeatForecast forecast = new HeatForecast();
             forecast.Settles = float.PositiveInfinity;
 

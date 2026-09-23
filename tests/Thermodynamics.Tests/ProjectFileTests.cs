@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
 {
     public class ProjectFileTests
     {
-/// <summary>MsBuildFiles operation.</summary>
+
         public static IEnumerable<object[]> MsBuildFiles()
         {
             string root = ShippedBlocks.RepoRoot();
@@ -28,11 +28,11 @@ namespace Thermodynamics.Tests
 
         [Theory]
         [MemberData(nameof(MsBuildFiles))]
-/// <summary>EveryMsBuildFileParses operation.</summary>
+
         public void EveryMsBuildFileParses(string relative)
         {
             string path = Path.Combine(ShippedBlocks.RepoRoot(), relative);
-/// <summary>XmlDocument operation.</summary>
+
             XmlDocument document = new XmlDocument();
 
             try
@@ -49,7 +49,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheModProjectIsAMemberOfTheTestSolution operation.</summary>
+
         public void TheModProjectIsAMemberOfTheTestSolution()
         {
             string solution = File.ReadAllText(

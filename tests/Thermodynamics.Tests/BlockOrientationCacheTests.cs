@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
     {
         private const int Reach = 3;
 
-/// <summary>Pairs operation.</summary>
+
         private static int Pairs(System.Action<BlockOrientation> body)
         {
             int pairs = 0;
@@ -23,18 +23,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RotateAgreesWithTheMatrixOnEveryVectorOfEveryPair operation.</summary>
+
         public void RotateAgreesWithTheMatrixOnEveryVectorOfEveryPair()
         {
             int checkedVectors = 0;
-/// <summary>Pairs operation.</summary>
+
             int pairs = Pairs(delegate (BlockOrientation orientation)
             {
                 for (int x = -Reach; x <= Reach; x++)
                 for (int y = -Reach; y <= Reach; y++)
                 for (int z = -Reach; z <= Reach; z++)
                 {
-/// <summary>Vector3I operation.</summary>
+
                     Vector3I local = new Vector3I(x, y, z);
                     Vector3I expected = orientation.RotateByMatrix(local);
                     Vector3I actual = orientation.Rotate(local);
@@ -50,7 +50,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>UnrotateAgreesWithTheTransposedMatrixOnEveryVectorOfEveryPair operation.</summary>
+
         public void UnrotateAgreesWithTheTransposedMatrixOnEveryVectorOfEveryPair()
         {
             Pairs(delegate (BlockOrientation orientation)
@@ -59,7 +59,7 @@ namespace Thermodynamics.Tests
                 for (int y = -Reach; y <= Reach; y++)
                 for (int z = -Reach; z <= Reach; z++)
                 {
-/// <summary>Vector3I operation.</summary>
+
                     Vector3I grid = new Vector3I(x, y, z);
                     Vector3I expected = orientation.UnrotateByMatrix(grid);
                     Vector3I actual = orientation.Unrotate(grid);
@@ -71,7 +71,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RotateFaceAgreesWithTheMatrixOnEveryFaceOfEveryPair operation.</summary>
+
         public void RotateFaceAgreesWithTheMatrixOnEveryFaceOfEveryPair()
         {
             Pairs(delegate (BlockOrientation orientation)
@@ -88,7 +88,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryLegalOrientationRotatesAndUnrotatesToWhereItStarted operation.</summary>
+
         public void EveryLegalOrientationRotatesAndUnrotatesToWhereItStarted()
         {
             int legal = 0;
@@ -99,7 +99,7 @@ namespace Thermodynamics.Tests
                 if (System.Math.Abs(Vector3.Dot(f, u)) > 0.001f) return;
                 legal++;
 
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I probe = new Vector3I(1, 2, 3);
                 Vector3I there = orientation.Rotate(probe);
                 Assert.True(there != probe || orientation.Equals(BlockOrientation.Identity)

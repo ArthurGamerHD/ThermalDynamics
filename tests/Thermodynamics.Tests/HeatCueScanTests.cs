@@ -10,11 +10,11 @@ namespace Thermodynamics.Tests
     public class HeatCueScanTests
     {
         [Fact]
-/// <summary>AColdHullProducesNoCuesAndRemembersNothing operation.</summary>
+
         public void AColdHullProducesNoCuesAndRemembersNothing()
         {
             Rig rig = Rig.Build(300f);
-/// <summary>List operation.</summary>
+
             List<HeatCue> cues = new List<HeatCue>();
 
             rig.Simulation.Solver.CollectHeatCues(rig.State, 0.25f, cues);
@@ -24,7 +24,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFloorIsTheLowerOfTheGlowStartAndTheWatchPoint operation.</summary>
+
         public void TheFloorIsTheLowerOfTheGlowStartAndTheWatchPoint()
         {
             Rig shipped = Rig.Build(300f, 900f);
@@ -42,7 +42,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheLowestCriticalTemperatureIsTheCoolestBlocks operation.</summary>
+
         public void TheLowestCriticalTemperatureIsTheCoolestBlocks()
         {
             Rig rig = Rig.Build(300f, 1400f, 700f, 1);
@@ -50,11 +50,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGlowingBlockIsReportedWithItsColourTemperature operation.</summary>
+
         public void AGlowingBlockIsReportedWithItsColourTemperature()
         {
             Rig rig = Rig.Build(1000f);
-/// <summary>List operation.</summary>
+
             List<HeatCue> cues = new List<HeatCue>();
 
             rig.Simulation.Solver.CollectHeatCues(rig.State, 0.25f, cues);
@@ -67,11 +67,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStageAnnouncesOnceRatherThanEveryScan operation.</summary>
+
         public void AStageAnnouncesOnceRatherThanEveryScan()
         {
             Rig rig = Rig.Build(1000f);
-/// <summary>List operation.</summary>
+
             List<HeatCue> cues = new List<HeatCue>();
 
             rig.Simulation.Solver.CollectHeatCues(rig.State, 0.25f, cues);
@@ -90,11 +90,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FallingBackDoesNotAnnounce operation.</summary>
+
         public void FallingBackDoesNotAnnounce()
         {
             Rig rig = Rig.Build(1000f);
-/// <summary>List operation.</summary>
+
             List<HeatCue> cues = new List<HeatCue>();
 
             rig.Simulation.Solver.CollectHeatCues(rig.State, 0.25f, cues);
@@ -111,11 +111,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockThatCoolsIsForgotten operation.</summary>
+
         public void ABlockThatCoolsIsForgotten()
         {
             Rig rig = Rig.Build(1000f);
-/// <summary>List operation.</summary>
+
             List<HeatCue> cues = new List<HeatCue>();
 
             rig.Simulation.Solver.CollectHeatCues(rig.State, 0.25f, cues);
@@ -131,11 +131,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockRatedBelowTheDraperPointStillGlows operation.</summary>
+
         public void ABlockRatedBelowTheDraperPointStillGlows()
         {
             Rig rig = Rig.Build(560f, 600f);
-/// <summary>List operation.</summary>
+
             List<HeatCue> cues = new List<HeatCue>();
 
             rig.Simulation.Solver.CollectHeatCues(rig.State, 0.25f, cues);
@@ -146,11 +146,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHullAtRoomTemperatureGlowsNothing operation.</summary>
+
         public void AHullAtRoomTemperatureGlowsNothing()
         {
             Rig rig = Rig.Build(295f, 900f, 900f, 4);
-/// <summary>List operation.</summary>
+
             List<HeatCue> cues = new List<HeatCue>();
 
             rig.Simulation.Solver.CollectHeatCues(rig.State, 0.25f, cues);
@@ -162,11 +162,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OnlyTheHotBlockIsWalkedTwice operation.</summary>
+
         public void OnlyTheHotBlockIsWalkedTwice()
         {
             Rig rig = Rig.Build(1000f, 900f, 900f, 8);
-/// <summary>List operation.</summary>
+
             List<HeatCue> cues = new List<HeatCue>();
 
             rig.Simulation.Solver.CollectHeatCues(rig.State, 0.25f, cues);
@@ -181,27 +181,27 @@ namespace Thermodynamics.Tests
         {
             public ThermalSimulation Simulation;
             public ThermalNode Hot;
-/// <summary>HeatCueState operation.</summary>
+
             public HeatCueState State = new HeatCueState();
 
-/// <summary>Builds the API method table.</summary>
+
             public static Rig Build(float kelvin)
             {
-/// <summary>Builds the API method table.</summary>
+
                 return Build(kelvin, 900f);
             }
 
-/// <summary>Builds the API method table.</summary>
+
             public static Rig Build(float kelvin, float critical)
             {
-/// <summary>Builds the API method table.</summary>
+
                 return Build(kelvin, critical, critical, 1);
             }
 
-/// <summary>Builds the API method table.</summary>
+
             public static Rig Build(float kelvin, float critical, float hullCritical, int radius)
             {
-/// <summary>ThermalSettings operation.</summary>
+
                 ThermalSettings settings = new ThermalSettings();
                 settings.EnableDamage = false;
                 settings.EnableConduction = false;
@@ -232,7 +232,7 @@ namespace Thermodynamics.Tests
                     }
                 }
 
-/// <summary>Rig operation.</summary>
+
                 Rig rig = new Rig();
                 rig.Simulation = builder.BuildSimulation(settings, 60f);
                 rig.Hot = rig.Simulation.Solver.GetNode(builder.Placed[0]);
@@ -247,7 +247,7 @@ namespace Thermodynamics.Tests
                 return rig;
             }
 
-/// <summary>Step operation.</summary>
+
             public void Step()
             {
                 Simulation.Update(Simulation.Settings.StepSeconds, Worlds.Shadow());

@@ -9,7 +9,7 @@ namespace Thermodynamics.Core
 
         public float Irradiance;
 
-/// <summary>HeatSourceState operation.</summary>
+
         public HeatSourceState(Vector3 directionLocal, float irradiance)
         {
             DirectionLocal = directionLocal;
@@ -56,10 +56,10 @@ namespace Thermodynamics.Core
 
         public int HeatSourceCount;
 
-/// <summary>Vacuum operation.</summary>
+
         public static EnvironmentState Vacuum(float vacuumTemperature)
         {
-/// <summary>EnvironmentState operation.</summary>
+
             EnvironmentState s = new EnvironmentState();
             s.SetAmbient(vacuumTemperature);
             s.SunDirectionLocal = Vector3.Zero;
@@ -68,7 +68,7 @@ namespace Thermodynamics.Core
             return s;
         }
 
-/// <summary>Sets the ambient.</summary>
+
         public void SetAmbient(float kelvin)
         {
             AmbientTemperature = kelvin;

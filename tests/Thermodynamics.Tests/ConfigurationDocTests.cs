@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
     public class ConfigurationDocTests
     {
         [Fact]
-/// <summary>TheCruiseToolScoresTheCoefficientTheModShips operation.</summary>
+
         public void TheCruiseToolScoresTheCoefficientTheModShips()
         {
             string path = Path.Combine(ShippedBlocks.RepoRoot(), "tools", "corpus", "cruise.py");
@@ -35,14 +35,14 @@ namespace Thermodynamics.Tests
         private static readonly HashSet<string> NotTunable =
             new HashSet<string> { "Version", "LegacyLoopConductivity" };
 
-/// <summary>RepoRoot operation.</summary>
+
         private static string RepoRoot()
         {
             return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
 
         [Fact]
-/// <summary>EverySettingIsOnAMenuPageThatNamesIt operation.</summary>
+
         public void EverySettingIsOnAMenuPageThatNamesIt()
         {
             string menu = File.ReadAllText(Path.Combine(
@@ -52,7 +52,7 @@ namespace Thermodynamics.Tests
             int debug = menu.IndexOf("private static readonly Leaf DebugPage", StringComparison.Ordinal);
             Assert.True(folders >= 0 && debug >= 0, "the menu's layout tables have been renamed");
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> placed = new HashSet<string>();
             foreach (Match match in Regex.Matches(
                 menu.Substring(folders, menu.IndexOf("private static readonly Dictionary<string, string> PageNotes",
@@ -62,7 +62,7 @@ namespace Thermodynamics.Tests
                 placed.Add(match.Groups[1].Value);
             }
 
-/// <summary>List operation.</summary>
+
             List<string> orphans = new List<string>();
             foreach (string name in Declared())
             {
@@ -78,13 +78,13 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", orphans.ToArray()));
         }
 
-/// <summary>Declared operation.</summary>
+
         private static HashSet<string> Declared()
         {
             string source = File.ReadAllText(Path.Combine(
                 RepoRoot(), "Thermodynamics", "Settings.cs"));
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> names = new HashSet<string>();
             foreach (Match match in Regex.Matches(source,
                 @"\[ProtoMember\(\d+\)\]\s*public\s+[A-Za-z0-9_<>\[\]]+\s+([A-Za-z0-9_]+)"))
@@ -96,12 +96,12 @@ namespace Thermodynamics.Tests
             return names;
         }
 
-/// <summary>Documented operation.</summary>
+
         private static HashSet<string> Documented()
         {
             string doc = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "configuration.md"));
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> names = new HashSet<string>();
             foreach (Match match in Regex.Matches(doc, @"(?m)^\|\s*`([A-Za-z0-9_]+)`"))
             {
@@ -112,7 +112,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryMechanismSwitchIsClassifiedInTheLadderInventory operation.</summary>
+
         public void EveryMechanismSwitchIsClassifiedInTheLadderInventory()
         {
             string doc = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "configuration.md"));
@@ -126,7 +126,7 @@ namespace Thermodynamics.Tests
 
             HashSet<string> diagnostics = new HashSet<string> { "EnableTelemetry" };
 
-/// <summary>List operation.</summary>
+
             List<string> mechanisms = new List<string>();
             foreach (string name in Declared())
             {
@@ -138,7 +138,7 @@ namespace Thermodynamics.Tests
             Assert.True(mechanisms.Count > 10, "only " + mechanisms.Count + " mechanism switches"
                 + " were found, so this test is not reading Settings.cs");
 
-/// <summary>List operation.</summary>
+
             List<string> unclassified = new List<string>();
             foreach (string name in mechanisms)
             {
@@ -152,7 +152,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryMechanismInTheLadderInventoryHasASwitchOrSaysItHasNoLadder operation.</summary>
+
         public void EveryMechanismInTheLadderInventoryHasASwitchOrSaysItHasNoLadder()
         {
             string doc = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "configuration.md"));
@@ -164,18 +164,18 @@ namespace Thermodynamics.Tests
             int end = doc.IndexOf("\n## ", start + Heading.Length, StringComparison.Ordinal);
             string inventory = end < 0 ? doc.Substring(start) : doc.Substring(start, end - start);
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> switches = new HashSet<string>(StringComparer.Ordinal);
             foreach (string name in Declared())
             {
                 if (name.StartsWith("Enable", StringComparison.Ordinal)) switches.Add(name);
             }
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> noLadder = new HashSet<string>(StringComparer.Ordinal)
                 { "1", "scalars", "—", "-" };
 
-/// <summary>List operation.</summary>
+
             List<string> switchless = new List<string>();
             int rows = 0;
 
@@ -214,7 +214,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryCoreSettingIsReachableFromAWorldsConfiguration operation.</summary>
+
         public void EveryCoreSettingIsReachableFromAWorldsConfiguration()
         {
             string core = File.ReadAllText(Path.Combine(ShippedBlocks.ModRoot(), "Core", "Settings", "ThermalSettings.cs"));
@@ -225,7 +225,7 @@ namespace Thermodynamics.Tests
                 "Version", "Revision", "StepSeconds", "StepsPerSecond",
             };
 
-/// <summary>List operation.</summary>
+
             List<string> unreachable = new List<string>();
             int fields = 0;
 
@@ -249,19 +249,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EverySettingIsInTheReference operation.</summary>
+
         public void EverySettingIsInTheReference()
         {
-/// <summary>Declared operation.</summary>
+
             HashSet<string> declared = Declared();
             Assert.True(declared.Count > 40, "only " + declared.Count
                 + " settings were found in Settings.cs, so the declaration pattern has changed and"
                 + " this test is no longer reading anything");
 
-/// <summary>Documented operation.</summary>
+
             HashSet<string> documented = Documented();
 
-/// <summary>List operation.</summary>
+
             List<string> missing = new List<string>();
             foreach (string name in declared)
             {
@@ -276,12 +276,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheReferenceDocumentsNothingThatHasBeenRemoved operation.</summary>
+
         public void TheReferenceDocumentsNothingThatHasBeenRemoved()
         {
-/// <summary>Declared operation.</summary>
+
             HashSet<string> declared = Declared();
-/// <summary>Documented operation.</summary>
+
             HashSet<string> documented = Documented();
 
             HashSet<string> profiles = new HashSet<string>
@@ -289,7 +289,7 @@ namespace Thermodynamics.Tests
                 "simulation", "optimized", "simlite", "responsive", "arcade",
             };
 
-/// <summary>List operation.</summary>
+
             List<string> stale = new List<string>();
             foreach (string name in documented)
             {
@@ -310,10 +310,10 @@ namespace Thermodynamics.Tests
         };
 
         [Fact]
-/// <summary>EverySettingIsReadBySomething operation.</summary>
+
         public void EverySettingIsReadBySomething()
         {
-/// <summary>Declared operation.</summary>
+
             HashSet<string> declared = Declared();
 
             string scripts = Path.Combine(RepoRoot(), "Thermodynamics");
@@ -339,7 +339,7 @@ namespace Thermodynamics.Tests
                 "only " + source.Length + " characters of source were read, so this test is looking"
                 + " in the wrong place and would pass whatever the code did");
 
-/// <summary>List operation.</summary>
+
             List<string> unread = new List<string>();
             foreach (string name in declared)
             {

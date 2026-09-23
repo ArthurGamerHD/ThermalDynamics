@@ -18,7 +18,7 @@ namespace Thermodynamics.Harness
             public long AllocatedKb;
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(string shape, int blocks, int steps, EnvironmentSample sample,
             bool warmProcess = false)
         {
@@ -32,14 +32,14 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = LoadBenchmarks.BuildSettled(shape, blocks);
             LoadBenchmarks.SeedSpread(simulation);
 
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
-/// <summary>Stopwatch operation.</summary>
+
             Stopwatch watch = new Stopwatch();
 
             for (int step = 1; step <= steps; step++)
             {
-/// <summary>MinorFaults operation.</summary>
+
                 long faults = MinorFaults();
                 long allocated = GC.GetAllocatedBytesForCurrentThread();
 
@@ -47,11 +47,11 @@ namespace Thermodynamics.Harness
                 simulation.StepExact(1, sample);
                 watch.Stop();
 
-/// <summary>Row operation.</summary>
+
                 Row row = new Row();
                 row.Step = step;
                 row.Ms = watch.Elapsed.TotalMilliseconds;
-/// <summary>MinorFaults operation.</summary>
+
                 row.MinorFaults = faults < 0 ? -1 : MinorFaults() - faults;
                 row.AllocatedKb = (GC.GetAllocatedBytesForCurrentThread() - allocated) / 1024;
                 rows.Add(row);
@@ -60,10 +60,10 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(List<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.Append("step".PadLeft(6))
                 .Append("ms".PadLeft(12))
@@ -84,10 +84,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(List<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder("step,ms,minor_faults,allocated_kb\n");
             for (int i = 0; i < rows.Count; i++)
             {
@@ -100,7 +100,7 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-/// <summary>MinorFaults operation.</summary>
+
         public static long MinorFaults()
         {
             try
@@ -113,7 +113,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>ParseMinorFaults operation.</summary>
+
         public static long ParseMinorFaults(string stat)
         {
             if (stat == null) return -1;

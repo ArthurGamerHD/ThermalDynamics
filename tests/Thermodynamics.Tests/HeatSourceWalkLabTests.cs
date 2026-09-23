@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
     public class HeatSourceWalkLabTests
     {
         [Fact]
-/// <summary>MoreSourcesCostMoreAndTheStepIsAlwaysTimed operation.</summary>
+
         public void MoreSourcesCostMoreAndTheStepIsAlwaysTimed()
         {
             List<HeatSourceWalkLab.Row> rows = HeatSourceWalkLab.Run("ship", 4000, 4);
@@ -25,13 +25,13 @@ namespace Thermodynamics.Tests
             foreach (HeatSourceWalkLab.Row row in rows) { if (row.Sources == 32) high = row; }
             Assert.NotNull(high);
             Assert.True(high.StepMs >= baseMs,
-/// <summary>sources operation.</summary>
+
                 "32 sources (" + high.StepMs + " ms) cost less than none (" + baseMs
                 + " ms); the sources are not reaching the solver");
         }
 
         [Fact]
-/// <summary>ARegisteredSourceActuallyHeatsANode operation.</summary>
+
         public void ARegisteredSourceActuallyHeatsANode()
         {
             GridBuilder builder = GridBuilder.Large();

@@ -46,7 +46,7 @@ namespace Thermodynamics.Harness
             public bool RunawayExpected;
         }
 
-/// <summary>Rig operation.</summary>
+
         private static ScenarioRunner Rig(ThermalSettings settings)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -75,7 +75,7 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
             simulation.SetRoomPressure(new Vector3I(2, 1, 2), 1f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.PlanetSurface(0.6f, timeOfDay: 0.3f, windSpeed: 40f);
             runner.Track("source", source);
@@ -83,10 +83,10 @@ namespace Thermodynamics.Harness
             return runner;
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run()
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             foreach (BalanceProfile profile in BalanceProfile.All())
@@ -105,7 +105,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Measure operation.</summary>
+
         private static Row Measure(BalanceProfile profile, string label, Toggle single, bool only)
         {
             Row row = new Row { Profile = profile.Name, Combination = label };
@@ -130,13 +130,13 @@ namespace Thermodynamics.Harness
             bool sink = wanted.EnableRadiation || wanted.EnableConvection;
             row.RunawayExpected = source && !sink;
 
-/// <summary>Copy operation.</summary>
+
             GridBuilder.SettingsOverride = existing => Copy(existing, wanted);
             Catalog.MaterialOverride = profile.Material;
 
             try
             {
-/// <summary>Rig operation.</summary>
+
                 ScenarioRunner runner = Rig(wanted);
                 if (runner == null || runner.Samples.Count == 0)
                 {
@@ -177,7 +177,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Copy operation.</summary>
+
         private static ThermalSettings Copy(ThermalSettings target, ThermalSettings wanted)
         {
             target.HeatTimeScale = wanted.HeatTimeScale;
@@ -204,19 +204,19 @@ namespace Thermodynamics.Harness
             return target.Derive();
         }
 
-/// <summary>N operation.</summary>
+
         private static string N(float value, int decimals = 1)
         {
             return float.IsNaN(value) || float.IsInfinity(value)
                 ? "inf" : value.ToString("n" + decimals, CultureInfo.InvariantCulture);
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report()
         {
-/// <summary>Run operation.</summary>
+
             List<Row> rows = Run();
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("FEATURE MATRIX — one rig with every mechanism on it, combinations toggled");
@@ -235,7 +235,7 @@ namespace Thermodynamics.Harness
                 if (row.RunawayExpected && !row.Failed) continue;
                 bad++;
                 sb.AppendLine(string.Format("{0,-11} {1,-18} {2,16} {3,12} {4,10}",
-/// <summary>N operation.</summary>
+
                     row.Profile, row.Combination, N(row.PeakKelvin, 0), N(row.ColdestKelvin, 1),
                     row.Failed ? row.Error : "DIVERGED"));
             }
@@ -256,16 +256,16 @@ namespace Thermodynamics.Harness
             {
                 if (row.Profile != "shipped" || row.Failed) continue;
                 sb.AppendLine(string.Format("  {0,-18} {1,12} {2,12}",
-/// <summary>N operation.</summary>
+
                     row.Combination, N(row.PeakKelvin, 1), row.Converged ? "" : "~"));
             }
             return sb.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("profile,combination,peak_k,coldest_k,converged,diverged,failed,error,substeps");
             foreach (Row row in Run())

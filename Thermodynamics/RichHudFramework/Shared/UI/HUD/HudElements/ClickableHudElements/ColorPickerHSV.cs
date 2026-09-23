@@ -5,9 +5,9 @@ namespace RichHudFramework.UI
 {
 	public class ColorPickerHSV : ColorPickerRGB, IValueControl<Vector3>
 	{
-/// <summary>Vector3 operation.</summary>
+
 		protected static readonly Vector3 HSVScale = new Vector3(360f, 100f, 100f);
-/// <summary>Vector3 operation.</summary>
+
 		protected static readonly Vector3 RcpHSVScale = 1f / new Vector3(360f, 100f, 100f);
 
 		public override Color Value
@@ -38,7 +38,7 @@ namespace RichHudFramework.UI
 
         protected Vector3 _hsvColor;
 
-/// <summary>ColorPickerHSV operation.</summary>
+
 		public ColorPickerHSV(HudParentBase parent = null) : base(parent)
 		{
 			sliders[0].Max = 360f;
@@ -46,7 +46,7 @@ namespace RichHudFramework.UI
 			sliders[2].Max = 100f;
 		}
 
-/// <summary>UpdateChannelR operation.</summary>
+
 		protected override void UpdateChannelR(object sender, EventArgs args)
 		{
 			var slider = sender as SliderBox;
@@ -57,7 +57,7 @@ namespace RichHudFramework.UI
 			display.Color = _color;
 		}
 
-/// <summary>UpdateChannelG operation.</summary>
+
 		protected override void UpdateChannelG(object sender, EventArgs args)
 		{
 			var slider = sender as SliderBox;
@@ -68,7 +68,7 @@ namespace RichHudFramework.UI
 			display.Color = _color;
 		}
 
-/// <summary>UpdateChannelB operation.</summary>
+
 		protected override void UpdateChannelB(object sender, EventArgs args)
 		{
 			var slider = sender as SliderBox;

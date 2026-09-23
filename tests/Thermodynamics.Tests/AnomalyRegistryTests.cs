@@ -10,17 +10,17 @@ namespace Thermodynamics.Tests
         private const bool Fault = true;
         private const bool Observation = false;
 
-/// <summary>Registry operation.</summary>
+
         private static AnomalyRegistry Registry(int maxKinds = 64)
         {
             return new AnomalyRegistry(maxKinds);
         }
 
         [Fact]
-/// <summary>AFaultIsRecordedWhileCollectionIsOff operation.</summary>
+
         public void AFaultIsRecordedWhileCollectionIsOff()
         {
-/// <summary>Registry operation.</summary>
+
             AnomalyRegistry registry = Registry();
 
             registry.Record("exception in ThermalGrid.Tick", "NullReferenceException", Fault, NotCollecting, 12.5d);
@@ -30,10 +30,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnObservationIsDroppedWhileCollectionIsOff operation.</summary>
+
         public void AnObservationIsDroppedWhileCollectionIsOff()
         {
-/// <summary>Registry operation.</summary>
+
             AnomalyRegistry registry = Registry();
 
             registry.Record("temperature is NaN", "grid / block", Observation, NotCollecting, 12.5d);
@@ -42,10 +42,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnObservationIsRecordedWhileCollectionIsOn operation.</summary>
+
         public void AnObservationIsRecordedWhileCollectionIsOn()
         {
-/// <summary>Registry operation.</summary>
+
             AnomalyRegistry registry = Registry();
 
             registry.Record("temperature is NaN", "grid / block", Observation, Collecting, 12.5d);
@@ -55,10 +55,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OnlyTheFirstOccurrenceOfAFaultAsksToBeLogged operation.</summary>
+
         public void OnlyTheFirstOccurrenceOfAFaultAsksToBeLogged()
         {
-/// <summary>Registry operation.</summary>
+
             AnomalyRegistry registry = Registry();
 
             Assert.True(registry.Record("exception in Tick", "first", Fault, NotCollecting, 1d));
@@ -70,20 +70,20 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnObservationNeverAsksToBeLogged operation.</summary>
+
         public void AnObservationNeverAsksToBeLogged()
         {
-/// <summary>Registry operation.</summary>
+
             AnomalyRegistry registry = Registry();
 
             Assert.False(registry.Record("temperature is NaN", "first", Observation, Collecting, 1d));
         }
 
         [Fact]
-/// <summary>TheFirstAndLastExampleOfAKindAreBothKept operation.</summary>
+
         public void TheFirstAndLastExampleOfAKindAreBothKept()
         {
-/// <summary>Registry operation.</summary>
+
             AnomalyRegistry registry = Registry();
 
             registry.Record("exception in Tick", "first", Fault, NotCollecting, 1d);
@@ -99,10 +99,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRegistryIsBoundedAndSaysWhatItDropped operation.</summary>
+
         public void TheRegistryIsBoundedAndSaysWhatItDropped()
         {
-/// <summary>Registry operation.</summary>
+
             AnomalyRegistry registry = Registry(2);
 
             registry.Record("a", "x", Fault, NotCollecting, 1d);
@@ -115,10 +115,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AKindSeenAsBothIsTreatedAsAFault operation.</summary>
+
         public void AKindSeenAsBothIsTreatedAsAFault()
         {
-/// <summary>Registry operation.</summary>
+
             AnomalyRegistry registry = Registry();
 
             registry.Record("mixed", "observation", Observation, Collecting, 1d);
@@ -128,10 +128,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThereIsNoSummaryWhenNothingFailed operation.</summary>
+
         public void ThereIsNoSummaryWhenNothingFailed()
         {
-/// <summary>Registry operation.</summary>
+
             AnomalyRegistry registry = Registry();
 
             registry.Record("temperature is NaN", "x", Observation, Collecting, 1d);
@@ -140,10 +140,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSummaryCarriesEveryFaultItsCountAndHowToGetMore operation.</summary>
+
         public void TheSummaryCarriesEveryFaultItsCountAndHowToGetMore()
         {
-/// <summary>Registry operation.</summary>
+
             AnomalyRegistry registry = Registry();
 
             for (int i = 0; i < 7; i++)
@@ -161,10 +161,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSummaryDoesNotAskForTelemetryThatIsAlreadyOn operation.</summary>
+
         public void TheSummaryDoesNotAskForTelemetryThatIsAlreadyOn()
         {
-/// <summary>Registry operation.</summary>
+
             AnomalyRegistry registry = Registry();
             registry.Record("exception in Tick", "boom", Fault, Collecting, 1d);
 
@@ -172,10 +172,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FaultsAreSummarisedInTheOrderTheyFirstAppeared operation.</summary>
+
         public void FaultsAreSummarisedInTheOrderTheyFirstAppeared()
         {
-/// <summary>Registry operation.</summary>
+
             AnomalyRegistry registry = Registry();
 
             registry.Record("second", "x", Fault, NotCollecting, 50d);
@@ -188,10 +188,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ClearingDropsEverythingIncludingTheDropCount operation.</summary>
+
         public void ClearingDropsEverythingIncludingTheDropCount()
         {
-/// <summary>Registry operation.</summary>
+
             AnomalyRegistry registry = Registry(1);
 
             registry.Record("a", "x", Fault, NotCollecting, 1d);

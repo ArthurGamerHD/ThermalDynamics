@@ -7,22 +7,22 @@ using VRageMath;
 
 namespace SENetworkAPI
 {
-	/// <summary>
-	/// Server side of the API. Adds sends addressed at one client, a list of
-	/// clients, or every client near a point in the world.
-	/// </summary>
+
+
+
+
 	public class Server : NetworkAPI
 	{
 		private Vector3D[] m_snapshotPositions = new Vector3D[16];
 		private ulong[] m_snapshotIds = new ulong[16];
 		private int m_snapshotCount;
-/// <summary>List operation.</summary>
+
 		private readonly List<IMyPlayer> m_snapshotSource = new List<IMyPlayer>();
 		private int m_snapshotFrame = int.MinValue;
 
-		// A sorted projection narrows sphere queries without allocating cells or
-		// rebuilding a tree. Small populations and broad queries use the linear path.
-		// Algorithm crossover heuristics, never limits on players or recipients.
+
+
+
 		private const int SpatialIndexMinimumPlayers = 16;
 		private const int SpatialIndexWarmupQueries = 16;
 		private double[] m_sortedCoordinates = new double[16];
@@ -40,24 +40,24 @@ namespace SENetworkAPI
 
 		private readonly Stack<List<ulong>> m_recipientPool = new Stack<List<ulong>>();
 
-		/// <summary>Use <see cref="NetworkAPI.Init"/> instead of constructing this directly.</summary>
-		/// <param name="comId">The communication channel this mod sends and listens on</param>
-		/// <param name="modName">Sender name used for chat messages the API prints</param>
-		/// <param name="keyword">Chat command prefix, or null to disable chat commands</param>
-/// <summary>Server operation.</summary>
+
+
+
+
+
 		public Server(ushort comId, string modName, string keyword = null) : base(comId, modName, keyword)
 		{
 		}
 
-		// Each caller owns its list until release, including during reentrant sends.
-/// <summary>CollectRecipients operation.</summary>
+
+
 		internal List<ulong> CollectRecipients(Vector3D point, double radius, ulong sendTo, ulong excluded)
 		{
-/// <summary>List operation.</summary>
+
 			List<ulong> recipients = m_recipientPool.Count == 0 ? new List<ulong>() : m_recipientPool.Pop();
 			try
 			{
-				// Directed sends must see players joining after this frame's snapshot.
+
 				if (sendTo != 0)
 				{
 					m_snapshotSource.Clear();
@@ -71,10 +71,10 @@ namespace SENetworkAPI
 				if (radius == 0) radius = MyAPIGateway.Session?.SessionSettings.SyncDistance ?? 0;
 				m_queryCount++;
 				double squared = radius * radius;
-				// Crowded grids often contain every player. Prove that using the
-				// snapshot bounds, then copy IDs without repeating distance tests.
+
+
 				if (m_snapshotCount >= SpatialIndexMinimumPlayers && m_queryCount >= SpatialIndexWarmupQueries &&
-/// <summary>AllPlayersInRange operation.</summary>
+
 					m_previousMatchCount >= m_snapshotCount - 1 && AllPlayersInRange(point, squared))
 				{
 					for (int i = 0; i < m_snapshotCount; i++)
@@ -83,22 +83,22 @@ namespace SENetworkAPI
 					return recipients;
 				}
 
-				// Amortize sorting only across repeated, selective queries. A scan
-				// is cheaper for the common case of players clustered around a grid.
+
+
 				bool selective = m_previousMatchCount < m_snapshotCount / 4;
 				if (m_snapshotCount >= SpatialIndexMinimumPlayers && m_queryCount >= SpatialIndexWarmupQueries && selective && !m_indexBuilt)
 					BuildSpatialIndex();
 
-/// <summary>Coordinate operation.</summary>
+
 				double center = Coordinate(point, m_indexAxis);
 				if (m_indexValid && selective && IsFinite(center) && IsFinite(radius))
 				{
 					double extent = Math.Abs(radius);
-/// <summary>LowerBound operation.</summary>
+
 					int start = LowerBound(center - extent);
-/// <summary>UpperBound operation.</summary>
+
 					int end = UpperBound(center + extent);
-					// Use contiguous snapshot arrays when the projection cannot prune much.
+
 					if (end - start < m_snapshotCount / 2)
 					{
 						int matches = 0;
@@ -107,7 +107,7 @@ namespace SENetworkAPI
 							int index = m_sortedIndices[i];
 							if (InRange(index, point, squared, excluded)) m_matches[matches++] = index;
 						}
-						// Preserve snapshot recipient order, including during nested sends.
+
 						Array.Sort(m_matches, 0, matches);
 						for (int i = 0; i < matches; i++) recipients.Add(m_snapshotIds[m_matches[i]]);
 						m_previousMatchCount = matches;
@@ -127,7 +127,7 @@ namespace SENetworkAPI
 			}
 		}
 
-/// <summary>InRange operation.</summary>
+
 		private bool InRange(int index, Vector3D point, double squared, ulong excluded)
 		{
 			Vector3D position = m_snapshotPositions[index];
@@ -135,19 +135,19 @@ namespace SENetworkAPI
 			return m_snapshotIds[index] != excluded && dx * dx + dy * dy + dz * dz < squared;
 		}
 
-/// <summary>Coordinate operation.</summary>
+
 		private static double Coordinate(Vector3D point, int axis)
 		{
 			return axis == 0 ? point.X : axis == 1 ? point.Y : point.Z;
 		}
 
-/// <summary>IsFinite operation.</summary>
+
 		private static bool IsFinite(double value)
 		{
 			return !double.IsNaN(value) && !double.IsInfinity(value);
 		}
 
-/// <summary>EnsureBounds operation.</summary>
+
 		private bool EnsureBounds()
 		{
 			if (m_boundsBuilt) return m_boundsValid;
@@ -167,7 +167,7 @@ namespace SENetworkAPI
 			return true;
 		}
 
-/// <summary>AllPlayersInRange operation.</summary>
+
 		private bool AllPlayersInRange(Vector3D point, double squared)
 		{
 			if (!EnsureBounds()) return false;
@@ -177,7 +177,7 @@ namespace SENetworkAPI
 			return dx * dx + dy * dy + dz * dz < squared;
 		}
 
-/// <summary>Builds the method table.</summary>
+
 		private void BuildSpatialIndex()
 		{
 			m_indexBuilt = true;
@@ -187,7 +187,7 @@ namespace SENetworkAPI
 			m_indexAxis = y > x ? (z > y ? 2 : 1) : (z > x ? 2 : 0);
 			for (int i = 0; i < m_snapshotCount; i++)
 			{
-/// <summary>Coordinate operation.</summary>
+
 				m_sortedCoordinates[i] = Coordinate(m_snapshotPositions[i], m_indexAxis);
 				m_sortedIndices[i] = i;
 			}
@@ -195,7 +195,7 @@ namespace SENetworkAPI
 			m_indexValid = true;
 		}
 
-/// <summary>LowerBound operation.</summary>
+
 		private int LowerBound(double value)
 		{
 			int low = 0, high = m_snapshotCount;
@@ -208,7 +208,7 @@ namespace SENetworkAPI
 			return low;
 		}
 
-/// <summary>UpperBound operation.</summary>
+
 		private int UpperBound(double value)
 		{
 			int low = 0, high = m_snapshotCount;
@@ -221,26 +221,26 @@ namespace SENetworkAPI
 			return low;
 		}
 
-/// <summary>ReleaseRecipients operation.</summary>
+
 		internal void ReleaseRecipients(List<ulong> recipients)
 		{
 			recipients.Clear();
 			m_recipientPool.Push(recipients);
 		}
 
-/// <summary>SendPrepared operation.</summary>
+
 		internal void SendPrepared(Command cmd, List<ulong> recipients, bool isReliable)
 		{
 			if (recipients.Count == 0) return;
 			Compress(cmd);
-/// <summary>Encode operation.</summary>
+
 			byte[] packet = Encode(cmd);
 			for (int i = 0; i < recipients.Count; i++) Send(packet, recipients[i], isReliable);
 			if (LogNetworkTraffic)
 				MyLog.Default.Info($"[NetworkAPI] TRANSMITTING Bytes: {packet.Length} To: {recipients.Count} Users");
 		}
 
-/// <summary>RefreshSnapshot operation.</summary>
+
 		private void RefreshSnapshot()
 		{
 			IMySession session = MyAPIGateway.Session;
@@ -286,45 +286,45 @@ namespace SENetworkAPI
 			m_snapshotSource.Clear();
 		}
 
-		/// <summary>Sends a command to one client, or to all of them.</summary>
-		/// <param name="commandString">Command name, plus any arguments delimited with spaces</param>
-		/// <param name="message">Text to display in chat on arrival, and on the host</param>
-		/// <param name="data">Serialized payload</param>
-		/// <param name="sent">Send timestamp. Defaults to now</param>
-		/// <param name="steamId">Recipient, or 0 for all clients</param>
-		/// <param name="isReliable">False permits the unreliable channel for small packets</param>
-/// <summary>SendCommand operation.</summary>
+
+
+
+
+
+
+
+
 		public override void SendCommand(string commandString, string message = null, byte[] data = null, DateTime? sent = null, ulong steamId = ulong.MinValue, bool isReliable = true)
 		{
 			SendCommand(new Command() { SteamId = steamId, CommandString = commandString, Message = message, Data = data, Timestamp = (sent == null) ? DateTime.UtcNow.Ticks : sent.Value.Ticks }, steamId, isReliable);
 		}
 
-		/// <summary>
-		/// Sends a command to clients within a radius of a point. The player
-		/// identified by the packet's steam id is excluded.
-		/// </summary>
-		/// <param name="commandString">Command name, plus any arguments delimited with spaces</param>
-		/// <param name="point">Center of the send sphere, in world space</param>
-		/// <param name="radius">Radius of the send sphere. 0 uses the world's sync distance</param>
-		/// <param name="message">Text to display in chat on arrival, and on the host</param>
-		/// <param name="data">Serialized payload</param>
-		/// <param name="sent">Send timestamp. Defaults to now</param>
-		/// <param name="steamId">Recipient, ignoring the radius, or 0 for everyone in range</param>
-		/// <param name="isReliable">False permits the unreliable channel for small packets</param>
-/// <summary>SendCommand operation.</summary>
+
+
+
+
+
+
+
+
+
+
+
+
+
 		public override void SendCommand(string commandString, Vector3D point, double radius = 0, string message = null, byte[] data = null, DateTime? sent = null, ulong steamId = ulong.MinValue, bool isReliable = true)
 		{
 			SendCommand(new Command() { SteamId = steamId, CommandString = commandString, Message = message, Data = data, Timestamp = (sent == null) ? DateTime.UtcNow.Ticks : sent.Value.Ticks }, point, radius, steamId, isReliable);
 		}
 
-		/// <summary>Sends one command to each of several clients.</summary>
-		/// <param name="steamIds">The recipients</param>
-		/// <param name="commandString">Command name, plus any arguments delimited with spaces</param>
-		/// <param name="message">Text to display in chat on arrival, and once on the host</param>
-		/// <param name="data">Serialized payload</param>
-		/// <param name="sent">Send timestamp. Defaults to now</param>
-		/// <param name="isReliable">False permits the unreliable channel for small packets</param>
-/// <summary>SendCommandTo operation.</summary>
+
+
+
+
+
+
+
+
 		public void SendCommandTo(ulong[] steamIds, string commandString, string message = null, byte[] data = null, DateTime? sent = null, bool isReliable = true)
 		{
 			if (steamIds == null || steamIds.Length == 0)
@@ -332,7 +332,7 @@ namespace SENetworkAPI
 				return;
 			}
 
-/// <summary>Command operation.</summary>
+
 			Command cmd = new Command() { CommandString = commandString, Message = message, Data = data, Timestamp = (sent == null) ? DateTime.UtcNow.Ticks : sent.Value.Ticks };
 			Compress(cmd);
 
@@ -341,7 +341,7 @@ namespace SENetworkAPI
 			for (int i = 0; i < steamIds.Length; i++)
 			{
 				cmd.SteamId = steamIds[i];
-/// <summary>Encode operation.</summary>
+
 				byte[] packet = Encode(cmd);
 
 				if (LogNetworkTraffic)
@@ -353,7 +353,7 @@ namespace SENetworkAPI
 			}
 		}
 
-/// <summary>SendCommand operation.</summary>
+
 		internal override void SendCommand(Command cmd, ulong steamId = ulong.MinValue, bool isReliable = true)
 		{
 			Compress(cmd);
@@ -361,7 +361,7 @@ namespace SENetworkAPI
 
 			byte[] packet = MyAPIGateway.Utilities.SerializeToBinary(cmd);
 
-/// <summary>ResolveReliability operation.</summary>
+
 			isReliable = ResolveReliability(packet, isReliable);
 
 			if (LogNetworkTraffic)
@@ -379,19 +379,19 @@ namespace SENetworkAPI
 			}
 		}
 
-/// <summary>SendCommand operation.</summary>
+
 		internal override void SendCommand(Command cmd, Vector3D point, double radius = 0, ulong steamId = ulong.MinValue, bool isReliable = true)
 		{
 			ShowLocally(cmd.Message);
-/// <summary>CollectRecipients operation.</summary>
+
 			List<ulong> recipients = CollectRecipients(point, radius, steamId, cmd.SteamId);
-/// <summary>SendPrepared operation.</summary>
+
 			try { SendPrepared(cmd, recipients, isReliable); }
-/// <summary>ReleaseRecipients operation.</summary>
+
 			finally { ReleaseRecipients(recipients); }
 		}
 
-/// <summary>ShowLocally operation.</summary>
+
 		private void ShowLocally(string message)
 		{
 			if (!string.IsNullOrWhiteSpace(message) && MyAPIGateway.Multiplayer.IsServer && MyAPIGateway.Session != null)
@@ -400,7 +400,7 @@ namespace SENetworkAPI
 			}
 		}
 
-/// <summary>Encode operation.</summary>
+
 		private static byte[] Encode(Command cmd)
 		{
 			if (cmd.Timestamp == 0)
@@ -411,14 +411,14 @@ namespace SENetworkAPI
 			return MyAPIGateway.Utilities.SerializeToBinary(cmd);
 		}
 
-/// <summary>Send operation.</summary>
+
 		private void Send(byte[] packet, ulong steamId, bool isReliable)
 		{
 			MyAPIGateway.Multiplayer.SendMessageTo(ComId, packet, steamId, ResolveReliability(packet, isReliable));
 		}
 
-		/// <summary>Posts a line of chat to every client, and shows it on the host.</summary>
-		/// <param name="message">The text to post</param>
+
+
 		public override void Say(string message)
 		{
 			SendCommand(null, message);

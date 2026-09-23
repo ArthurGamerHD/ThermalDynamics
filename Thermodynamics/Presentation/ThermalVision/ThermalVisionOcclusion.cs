@@ -5,7 +5,7 @@ namespace Thermodynamics.Presentation
 {
     public static class ThermalVisionOcclusion
     {
-/// <summary>Hidden operation.</summary>
+
         public static bool Hidden(Vector3D eye, BoundingBoxD targetWorld, MatrixD worldToBlocker,
             BoundingBoxD solid)
         {
@@ -13,7 +13,7 @@ namespace Thermodynamics.Presentation
             if(solid.Contains(localEye)!=ContainmentType.Disjoint) return false;
             for(int i=0;i<8;i++)
             {
-/// <summary>Vector3D operation.</summary>
+
                 var corner=new Vector3D((i&1)==0?targetWorld.Min.X:targetWorld.Max.X,
                     (i&2)==0?targetWorld.Min.Y:targetWorld.Max.Y,
                     (i&4)==0?targetWorld.Min.Z:targetWorld.Max.Z);
@@ -28,13 +28,13 @@ namespace Thermodynamics.Presentation
             }
             return true;
         }
-/// <summary>HiddenLocal operation.</summary>
+
         public static bool HiddenLocal(Vector3D eye,BoundingBoxD target,BoundingBoxD solid)
         {
             if(solid.Contains(eye)!=ContainmentType.Disjoint) return false;
             for(int i=0;i<8;i++)
             {
-/// <summary>Vector3D operation.</summary>
+
                 var end=new Vector3D((i&1)==0?target.Min.X:target.Max.X,
                     (i&2)==0?target.Min.Y:target.Max.Y,(i&4)==0?target.Min.Z:target.Max.Z);
                 if(solid.Contains(end)!=ContainmentType.Disjoint) return false;
@@ -46,7 +46,7 @@ namespace Thermodynamics.Presentation
             }
             return true;
         }
-/// <summary>Slab operation.</summary>
+
         private static bool Slab(double origin,double delta,double min,double max,ref double enter,ref double exit)
         {
             if(Math.Abs(delta)<1e-12) return origin>min && origin<max;

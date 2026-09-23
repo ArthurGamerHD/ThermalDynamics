@@ -14,7 +14,7 @@ namespace Thermodynamics.Tests
     [Collection("alone")]
     public class PerformanceReportTests
     {
-/// <summary>Small operation.</summary>
+
         private static List<ReportRow> Small()
         {
             PerformanceReport.Repeats = 1;
@@ -22,14 +22,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryTimedCaseInTheReportIsRepeated operation.</summary>
+
         public void EveryTimedCaseInTheReportIsRepeated()
         {
             string path = Path.Combine(ShippedBlocks.RepoRoot(),
                 "tests", "Thermodynamics.Harness", "PerformanceReport.cs");
 
             SyntaxNode root = CSharpSyntaxTree.ParseText(File.ReadAllText(path)).GetRoot();
-/// <summary>List operation.</summary>
+
             List<string> single = new List<string>();
 
             foreach (InvocationExpressionSyntax call in root.DescendantNodes()
@@ -54,7 +54,7 @@ namespace Thermodynamics.Tests
                 + " in the report it lands in");
         }
 
-/// <summary>InsideARepeatLoop operation.</summary>
+
         private static bool InsideARepeatLoop(SyntaxNode node)
         {
             for (SyntaxNode up = node.Parent; up != null; up = up.Parent)
@@ -77,7 +77,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheLaddersBuildColumnIsTheFastestOfSeveralBuilds operation.</summary>
+
         public void TheLaddersBuildColumnIsTheFastestOfSeveralBuilds()
         {
             int repeats = PerformanceReport.Repeats;
@@ -116,15 +116,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheClampComparisonMeasuresBothRegimes operation.</summary>
+
         public void TheClampComparisonMeasuresBothRegimes()
         {
-/// <summary>Small operation.</summary>
+
             List<ReportRow> rows = Small();
 
-/// <summary>Value operation.</summary>
+
             double resolved = Value(rows, "overshoot clamp", "resolved", "clamp live");
-/// <summary>Value operation.</summary>
+
             double refused = Value(rows, "overshoot clamp", "refused", "clamp live");
 
             Assert.Equal(0.0, resolved);
@@ -137,10 +137,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDiagnosticsRowMeasuresBothConfigurations operation.</summary>
+
         public void TheDiagnosticsRowMeasuresBothConfigurations()
         {
-/// <summary>Small operation.</summary>
+
             List<ReportRow> rows = Small();
 
             Assert.True(Value(rows, "diagnostics", "per-mechanism watts", "step, off") > 0.0);
@@ -152,7 +152,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(1.0, Value(rows, "diagnostics", "per-mechanism watts", "written, every substep"));
         }
 
-/// <summary>Value operation.</summary>
+
         private static double Value(IList<ReportRow> rows, string section, string name, string metric)
         {
             for (int i = 0; i < rows.Count; i++)
@@ -166,15 +166,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheReportCoversEverySectionAndEveryFeature operation.</summary>
+
         public void TheReportCoversEverySectionAndEveryFeature()
         {
-/// <summary>Small operation.</summary>
+
             List<ReportRow> rows = Small();
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> sections = new HashSet<string>();
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> features = new HashSet<string>();
 
             for (int i = 0; i < rows.Count; i++)
@@ -203,12 +203,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryFigureHasAUniqueKey operation.</summary>
+
         public void EveryFigureHasAUniqueKey()
         {
-/// <summary>Small operation.</summary>
+
             List<ReportRow> rows = Small();
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> keys = new HashSet<string>();
 
             for (int i = 0; i < rows.Count; i++)
@@ -219,10 +219,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCsvRoundTrips operation.</summary>
+
         public void TheCsvRoundTrips()
         {
-/// <summary>Small operation.</summary>
+
             List<ReportRow> rows = Small();
             List<ReportRow> read = PerformanceReport.ParseCsv(PerformanceReport.Csv(rows));
 
@@ -239,10 +239,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ComparingAReportAgainstItselfFindsNothing operation.</summary>
+
         public void ComparingAReportAgainstItselfFindsNothing()
         {
-/// <summary>Small operation.</summary>
+
             List<ReportRow> rows = Small();
             string diff = PerformanceReport.Compare(rows, rows);
 
@@ -252,7 +252,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWorseNumberIsReportedAsARegressionAndABetterOneIsNot operation.</summary>
+
         public void AWorseNumberIsReportedAsARegressionAndABetterOneIsNot()
         {
             List<ReportRow> baseline = new List<ReportRow>
@@ -275,7 +275,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AChangeInsideTheThresholdIsNotReported operation.</summary>
+
         public void AChangeInsideTheThresholdIsNotReported()
         {
             List<ReportRow> baseline = new List<ReportRow>
@@ -293,10 +293,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheExpensiveFeaturesCostSomething operation.</summary>
+
         public void TheExpensiveFeaturesCostSomething()
         {
-/// <summary>Small operation.</summary>
+
             List<ReportRow> rows = Small();
 
             foreach (string feature in new string[] { "conduction", "radiation", "solar" })

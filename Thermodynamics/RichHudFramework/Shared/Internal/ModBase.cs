@@ -22,16 +22,16 @@ namespace RichHudFramework.Internal
 		private readonly List<ModuleBase> modules;
 		private bool _canUpdate, closing;
 
-/// <summary>ModBase operation.</summary>
+
 		protected ModBase(bool runOnServer, bool runOnClient)
 		{
-/// <summary>List operation.</summary>
+
 			modules = new List<ModuleBase>();
 			RunOnServer = runOnServer;
 			RunOnClient = runOnClient;
 		}
 
-/// <summary>LoadData operation.</summary>
+
 		public sealed override void LoadData()
 		{
 			if (!Loaded && !ExceptionHandler.Unloading && !closing)
@@ -44,10 +44,10 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>AfterLoadData operation.</summary>
+
 		protected new virtual void AfterLoadData() { }
 
-/// <summary>Init operation.</summary>
+
 		public sealed override void Init(MyObjectBuilder_SessionComponent sessionComponent)
 		{
 			if (!Loaded && !ExceptionHandler.Unloading && !closing)
@@ -59,10 +59,10 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>AfterInit operation.</summary>
+
 		protected virtual void AfterInit() { }
 
-/// <summary>ManualStart operation.</summary>
+
 		public void ManualStart()
 		{
 			if (!Loaded && !ExceptionHandler.Unloading && !closing)
@@ -72,7 +72,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>Draw operation.</summary>
+
 		public override void Draw()
 		{
 			if (Loaded && CanUpdate)
@@ -91,7 +91,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>HandleInput operation.</summary>
+
 		public override void HandleInput()
 		{
 			if (Loaded && CanUpdate)
@@ -110,19 +110,19 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>UpdateBeforeSimulation operation.</summary>
+
 		public sealed override void UpdateBeforeSimulation() =>
 			BeforeUpdate();
 
-/// <summary>Simulate operation.</summary>
+
 		public sealed override void Simulate() =>
 			BeforeUpdate();
 
-/// <summary>UpdateAfterSimulation operation.</summary>
+
 		public sealed override void UpdateAfterSimulation() =>
 			BeforeUpdate();
 
-/// <summary>BeforeUpdate operation.</summary>
+
 		protected virtual void BeforeUpdate()
 		{
 			if (Loaded && CanUpdate)
@@ -143,13 +143,13 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>Update operation.</summary>
+
 		protected virtual void Update() { }
 
-/// <summary>BeforeClose operation.</summary>
+
 		public virtual void BeforeClose() { }
 
-/// <summary>Close operation.</summary>
+
 		public virtual void Close()
 		{
 			if (!closing)
@@ -165,10 +165,10 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>CloseModules operation.</summary>
+
 		private void CloseModules()
 		{
-/// <summary>Returns the type.</summary>
+
 			string typeName = GetType().Name;
 
 			for (int n = modules.Count - 1; n >= 0; n--)
@@ -192,7 +192,7 @@ namespace RichHudFramework.Internal
 			}
 		}
 
-/// <summary>UnloadData operation.</summary>
+
 		protected override void UnloadData()
 		{ }
 
@@ -202,7 +202,7 @@ namespace RichHudFramework.Internal
 
 			public readonly bool runOnServer, runOnClient;
 
-/// <summary>ModuleBase operation.</summary>
+
 			protected ModuleBase(bool runOnServer, bool runOnClient, ModBase parent)
 			{
 				this.runOnServer = runOnServer;
@@ -211,7 +211,7 @@ namespace RichHudFramework.Internal
 				RegisterComponent(parent);
 			}
 
-/// <summary>Registers the API and message handler.</summary>
+
 			public void RegisterComponent(ModBase parent)
 			{
 				if (Parent == null)
@@ -223,7 +223,7 @@ namespace RichHudFramework.Internal
 				}
 			}
 
-/// <summary>Unregisters the API and cleans resources.</summary>
+
 			public void UnregisterComponent()
 			{
 				if (Parent != null)
@@ -235,7 +235,7 @@ namespace RichHudFramework.Internal
 				}
 			}
 
-/// <summary>Unregisters the API and cleans resources.</summary>
+
 			public void UnregisterComponent(int index)
 			{
 				if (Parent != null && index < Parent.modules.Count && Parent.modules[index] == this)
@@ -247,16 +247,16 @@ namespace RichHudFramework.Internal
 				}
 			}
 
-/// <summary>Draw operation.</summary>
+
 			public virtual void Draw() { }
 
-/// <summary>HandleInput operation.</summary>
+
 			public virtual void HandleInput() { }
 
-/// <summary>Update operation.</summary>
+
 			public virtual void Update() { }
 
-/// <summary>Close operation.</summary>
+
 			public virtual void Close() { }
 		}
 
@@ -264,14 +264,14 @@ namespace RichHudFramework.Internal
 		{
 			private readonly TaskPool taskPool;
 
-/// <summary>ParallelModuleBase operation.</summary>
+
 			protected ParallelModuleBase(bool runOnServer, bool runOnClient, ModBase parent) : base(runOnServer, runOnClient, parent)
 			{
-/// <summary>TaskPool operation.</summary>
+
 				taskPool = new TaskPool(ErrorCallback);
 			}
 
-/// <summary>ErrorCallback operation.</summary>
+
 			protected virtual void ErrorCallback(List<KnownException> knownExceptions, AggregateException aggregate)
 			{
 				if (knownExceptions.Count > 0)
@@ -281,11 +281,11 @@ namespace RichHudFramework.Internal
 					ExceptionHandler.ReportException(aggregate);
 			}
 
-/// <summary>EnqueueTask operation.</summary>
+
 			protected void EnqueueTask(Action action) =>
 				taskPool.EnqueueTask(action);
 
-/// <summary>EnqueueAction operation.</summary>
+
 			protected void EnqueueAction(Action action) =>
 				taskPool.EnqueueAction(action);
 		}

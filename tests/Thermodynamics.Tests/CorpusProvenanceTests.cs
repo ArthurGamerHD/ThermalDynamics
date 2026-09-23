@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
     public class CorpusProvenanceTests
     {
         [Fact]
-/// <summary>AWalkWritesWhatBuildItRanOn operation.</summary>
+
         public void AWalkWritesWhatBuildItRanOn()
         {
             string directory = Path.Combine(Path.GetTempPath(),
@@ -68,7 +68,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Occurrences operation.</summary>
+
         private static int Occurrences(string text, string needle)
         {
             int count = 0;

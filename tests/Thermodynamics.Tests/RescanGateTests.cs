@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
     {
         private const int Interval = 240;
 
-/// <summary>Run operation.</summary>
+
         private static int Run(RescanGate gate, int version, int steps)
         {
             int scans = 0;
@@ -20,10 +20,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFirstCheckScans operation.</summary>
+
         public void TheFirstCheckScans()
         {
-/// <summary>RescanGate operation.</summary>
+
             RescanGate gate = new RescanGate(Interval);
 
             Assert.True(gate.Due(0, 1));
@@ -31,10 +31,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NothingScansAgainUntilTheIntervalHasPassed operation.</summary>
+
         public void NothingScansAgainUntilTheIntervalHasPassed()
         {
-/// <summary>RescanGate operation.</summary>
+
             RescanGate gate = new RescanGate(Interval);
             gate.Due(0, 1);
 
@@ -43,10 +43,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUnchangedSubjectIsNeverScannedTwice operation.</summary>
+
         public void AnUnchangedSubjectIsNeverScannedTwice()
         {
-/// <summary>RescanGate operation.</summary>
+
             RescanGate gate = new RescanGate(Interval);
 
             Assert.Equal(1, Run(gate, 7, Interval * 20));
@@ -54,10 +54,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AChangedSubjectIsScannedAtTheNextInterval operation.</summary>
+
         public void AChangedSubjectIsScannedAtTheNextInterval()
         {
-/// <summary>RescanGate operation.</summary>
+
             RescanGate gate = new RescanGate(Interval);
             Run(gate, 7, Interval * 4);
 
@@ -65,10 +65,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASubjectChangingConstantlyIsStillHeldToTheCadence operation.</summary>
+
         public void ASubjectChangingConstantlyIsStillHeldToTheCadence()
         {
-/// <summary>RescanGate operation.</summary>
+
             RescanGate gate = new RescanGate(Interval);
 
             int scans = 0;
@@ -81,10 +81,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>GoingIdleMakesTheNextReaderWaitForNothing operation.</summary>
+
         public void GoingIdleMakesTheNextReaderWaitForNothing()
         {
-/// <summary>RescanGate operation.</summary>
+
             RescanGate gate = new RescanGate(Interval);
             Run(gate, 3, Interval * 2);
 
@@ -95,10 +95,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AForcedScanSatisfiesTheCadence operation.</summary>
+
         public void AForcedScanSatisfiesTheCadence()
         {
-/// <summary>RescanGate operation.</summary>
+
             RescanGate gate = new RescanGate(Interval);
             gate.Mark(12);
 
@@ -107,10 +107,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AMultiStepTickAdvancesByAllOfIt operation.</summary>
+
         public void AMultiStepTickAdvancesByAllOfIt()
         {
-/// <summary>RescanGate operation.</summary>
+
             RescanGate gate = new RescanGate(Interval);
             gate.Due(0, 1);
 
@@ -119,10 +119,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnIntervalOfZeroScansEveryChange operation.</summary>
+
         public void AnIntervalOfZeroScansEveryChange()
         {
-/// <summary>RescanGate operation.</summary>
+
             RescanGate gate = new RescanGate(0);
 
             Assert.True(gate.Due(1, 1));

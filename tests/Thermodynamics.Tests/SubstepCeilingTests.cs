@@ -11,14 +11,14 @@ namespace Thermodynamics.Tests
 
         private const int Steps = 120;
 
-/// <summary>Ladder operation.</summary>
+
         private static List<LoadBenchmarks.CeilingRow> Ladder(int frequency, int steps = Steps)
         {
             return LoadBenchmarks.SubstepCeiling("ship", Blocks, steps, null,
                 null, false, frequency);
         }
 
-/// <summary>Nearest operation.</summary>
+
         private static LoadBenchmarks.CeilingRow Nearest(
             IList<LoadBenchmarks.CeilingRow> rows, float oversubscription)
         {
@@ -38,10 +38,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSweepRefusesADemandItFirstMeasured operation.</summary>
+
         public void TheSweepRefusesADemandItFirstMeasured()
         {
-/// <summary>Ladder operation.</summary>
+
             List<LoadBenchmarks.CeilingRow> rows = Ladder(4);
             Assert.True(rows.Count >= 4, "the ladder produced " + rows.Count + " rows");
 
@@ -59,10 +59,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RefusingTheShippedBreachMovesNothingThatIsRead operation.</summary>
+
         public void RefusingTheShippedBreachMovesNothingThatIsRead()
         {
-/// <summary>Nearest operation.</summary>
+
             LoadBenchmarks.CeilingRow row = Nearest(Ladder(4), 1.15f);
 
             Assert.InRange(row.Oversubscription, 1.05f, 1.30f);
@@ -73,10 +73,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RefusingNineTimesTheDemandBreaksIt operation.</summary>
+
         public void RefusingNineTimesTheDemandBreaksIt()
         {
-/// <summary>Nearest operation.</summary>
+
             LoadBenchmarks.CeilingRow row = Nearest(Ladder(4), 9f);
 
             Assert.InRange(row.Oversubscription, 7f, 11f);
@@ -86,7 +86,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRingsLadderIsAnApproximationRatherThanACliff operation.</summary>
+
         public void TheRingsLadderIsAnApproximationRatherThanACliff()
         {
             List<LoadBenchmarks.CeilingRow> rows = LoadBenchmarks.SubstepCeiling(
@@ -97,7 +97,7 @@ namespace Thermodynamics.Tests
 
             Assert.False(granted.Bound, "the reference run was itself capped");
             Assert.True(granted.CoolantLoops > 0,
-/// <summary>blocks operation.</summary>
+
                 "the fixture built no ring, so this is a ladder about blocks (`E8`)");
             Assert.True(granted.RequiredSubsteps > 8f,
                 "the fixture demands " + granted.RequiredSubsteps + " substeps, too few for a"
@@ -120,12 +120,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheErrorFollowsTheOversubscriptionRatherThanTheSubstepCount operation.</summary>
+
         public void TheErrorFollowsTheOversubscriptionRatherThanTheSubstepCount()
         {
-/// <summary>Ladder operation.</summary>
+
             List<LoadBenchmarks.CeilingRow> quarter = Ladder(4, Steps);
-/// <summary>Ladder operation.</summary>
+
             List<LoadBenchmarks.CeilingRow> half = Ladder(2, Steps / 2);
 
             Assert.True(half[0].RequiredSubsteps > quarter[0].RequiredSubsteps * 1.8f,
@@ -135,9 +135,9 @@ namespace Thermodynamics.Tests
             int judged = 0;
             foreach (float ratio in LoadBenchmarks.Oversubscriptions)
             {
-/// <summary>Nearest operation.</summary>
+
                 LoadBenchmarks.CeilingRow a = Nearest(quarter, ratio);
-/// <summary>Nearest operation.</summary>
+
                 LoadBenchmarks.CeilingRow b = Nearest(half, ratio);
 
                 if (a.MaxError < 0.5f && b.MaxError < 0.5f) continue;
@@ -152,7 +152,7 @@ namespace Thermodynamics.Tests
             }
 
             Assert.True(judged > 0,
-/// <summary>nothing operation.</summary>
+
                 "no rung of the ladder produced an error worth comparing, so this judged nothing (`E8`)");
         }
     }

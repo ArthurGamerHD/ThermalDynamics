@@ -13,23 +13,23 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>BlockDialReachTests operation.</summary>
+
         public BlockDialReachTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubsteps = 4096;
             settings.MaxElementVisitsPerStep = 0;
             return settings.Derive();
         }
 
-/// <summary>Read operation.</summary>
+
         private static void Read(ThermalSimulation simulation, BlockInstance subject,
             List<float> into)
         {
@@ -64,14 +64,14 @@ namespace Thermodynamics.Tests
             into.Add(damage);
         }
 
-/// <summary>Rig operation.</summary>
+
         private static void Rig(BlockThermalProperties properties, EnvironmentSample world,
             float watts, bool exposed, List<float> into)
         {
             Rig(properties, world, watts, exposed, false, into);
         }
 
-/// <summary>Rig operation.</summary>
+
         private static void Rig(BlockThermalProperties properties, EnvironmentSample world,
             float watts, bool exposed, bool consuming, List<float> into)
         {
@@ -104,10 +104,10 @@ namespace Thermodynamics.Tests
             Read(simulation, instance, into);
         }
 
-/// <summary>Fingerprint operation.</summary>
+
         private static List<float> Fingerprint(BlockThermalProperties properties)
         {
-/// <summary>List operation.</summary>
+
             List<float> readings = new List<float>();
 
             Rig(properties, Worlds.Shadow(), 0f, false, readings);
@@ -125,7 +125,7 @@ namespace Thermodynamics.Tests
             return readings;
         }
 
-/// <summary>Levels operation.</summary>
+
         private static object[] Levels(FieldInfo field, BlockThermalProperties shipped)
         {
             if (field.FieldType == typeof(bool))
@@ -140,7 +140,7 @@ namespace Thermodynamics.Tests
             return new object[] { value * 0.25f, value * 4f };
         }
 
-/// <summary>Same operation.</summary>
+
         private static bool Same(List<float> a, List<float> b)
         {
             if (a.Count != b.Count) return false;
@@ -156,10 +156,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryBlockDialReachesTheSimulation operation.</summary>
+
         public void EveryBlockDialReachesTheSimulation()
         {
-/// <summary>List operation.</summary>
+
             List<FieldInfo> fields = new List<FieldInfo>();
 
             foreach (FieldInfo field in typeof(BlockThermalProperties)
@@ -173,10 +173,10 @@ namespace Thermodynamics.Tests
                 "only " + fields.Count + " block properties were found, so this test would pass on"
                 + " a definition that had lost most of them");
 
-/// <summary>Fingerprint operation.</summary>
+
             List<float> shipped = Fingerprint(Catalog.DefaultThermal());
 
-/// <summary>List operation.</summary>
+
             List<string> inert = new List<string>();
 
             foreach (FieldInfo field in fields)

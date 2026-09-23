@@ -12,7 +12,7 @@ namespace Thermodynamics.Core
         private readonly RoomMapper rooms;
         private readonly ThermalSolver solver;
         private readonly SimulationScheduler scheduler;
-/// <summary>SimulationWork operation.</summary>
+
         private readonly SimulationWork work = new SimulationWork();
 
         private LoopThermalProperties loopProperties = LoopThermalProperties.Default();
@@ -27,7 +27,7 @@ namespace Thermodynamics.Core
 
         public ISimulationProfiler Profiler;
 
-/// <summary>ThermalSimulation operation.</summary>
+
         public ThermalSimulation(ThermalSettings settings, GridModel grid)
         {
             if (settings == null) throw new ArgumentNullException("settings");
@@ -36,13 +36,13 @@ namespace Thermodynamics.Core
             this.settings = settings;
             this.grid = grid;
 
-/// <summary>SurfaceMap operation.</summary>
+
             surfaces = new SurfaceMap();
-/// <summary>RoomMapper operation.</summary>
+
             rooms = new RoomMapper(surfaces);
-/// <summary>ThermalSolver operation.</summary>
+
             solver = new ThermalSolver(settings, grid, surfaces);
-/// <summary>SimulationScheduler operation.</summary>
+
             scheduler = new SimulationScheduler(settings);
 
             solver.Work = work;
@@ -59,7 +59,7 @@ namespace Thermodynamics.Core
         public RoomMapper Rooms { get { return rooms; } }
         public ThermalSolver Solver { get { return solver; } }
 
-/// <summary>EnsureCapacity operation.</summary>
+
         public void EnsureCapacity(int blocks)
         {
             grid.EnsureCellCapacity(blocks);
@@ -98,9 +98,9 @@ namespace Thermodynamics.Core
             get { return solver.Thresholds; }
         }
 
-/// <summary>List operation.</summary>
+
         private readonly List<OverheatEvent> overheats = new List<OverheatEvent>();
-/// <summary>List operation.</summary>
+
         private readonly List<ThresholdCrossing> crossings = new List<ThresholdCrossing>();
 
         public double SimulatedSecondsSkipped { get; private set; }
@@ -161,14 +161,14 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>AffordableStepSeconds operation.</summary>
+
         public float AffordableStepSeconds(float seconds)
         {
             float required;
             return AffordableStepSeconds(seconds, solver.RequiredSubsteps(seconds), out required);
         }
 
-/// <summary>AffordableStepSeconds operation.</summary>
+
         private float AffordableStepSeconds(float seconds, float required, out float demand)
         {
             demand = required;
@@ -207,7 +207,7 @@ namespace Thermodynamics.Core
         private double exposureCredit;
         private double shapeNormalCredit;
 
-/// <summary>Share operation.</summary>
+
         private static int Share(ref double credit, int perTick, float frameSeconds)
         {
             credit += perTick * (frameSeconds / (double)BudgetReferenceSeconds);
@@ -231,7 +231,7 @@ namespace Thermodynamics.Core
             get { return solver.StepInFlight; }
         }
 
-/// <summary>RunSteps operation.</summary>
+
         private void RunSteps(int steps, ref EnvironmentState state)
         {
             overheats.Clear();
@@ -240,7 +240,7 @@ namespace Thermodynamics.Core
             for (int i = 0; i < steps; i++)
             {
                 float demand;
-/// <summary>AffordableStepSeconds operation.</summary>
+
                 float seconds = AffordableStepSeconds(settings.StepSeconds,
                     solver.RequiredSubsteps(settings.StepSeconds, state), out demand);
 
@@ -269,14 +269,14 @@ namespace Thermodynamics.Core
         }
 
 
-/// <summary>Adds a block.</summary>
+
         public ThermalNode AddBlock(BlockInstance block)
         {
-/// <summary>Adds a block.</summary>
+
             return AddBlock(block, DefaultTemperature);
         }
 
-/// <summary>Adds a block.</summary>
+
         public ThermalNode AddBlock(BlockInstance block, float initialTemperature)
         {
             grid.Add(block);
@@ -286,7 +286,7 @@ namespace Thermodynamics.Core
             return node;
         }
 
-/// <summary>Removes the block.</summary>
+
         public void RemoveBlock(BlockInstance block)
         {
             solver.RemoveBlock(block);
@@ -295,7 +295,7 @@ namespace Thermodynamics.Core
             MarkTopologyDirty();
         }
 
-/// <summary>RefreshBlock operation.</summary>
+
         public void RefreshBlock(BlockInstance block)
         {
             if (block == null) return;
@@ -339,7 +339,7 @@ namespace Thermodynamics.Core
             End(SimulationPhase.Exposure);
         }
 
-/// <summary>SameSurfaces operation.</summary>
+
         private static bool SameSurfaces(int[] before, int[] after)
         {
             if (before == null || after == null) return false;
@@ -352,7 +352,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>RefreshBlockSealing operation.</summary>
+
         public void RefreshBlockSealing(BlockInstance block)
         {
             if (block == null) return;
@@ -390,13 +390,13 @@ namespace Thermodynamics.Core
             get { return solver.RoomAir; }
         }
 
-/// <summary>Sets the roompressure.</summary>
+
         public bool SetRoomPressure(Vector3I cell, float pressure)
         {
             return solver.SetRoomPressure(rooms.Map, cell, pressure);
         }
 
-/// <summary>Returns the roomair.</summary>
+
         public RoomAirNode GetRoomAir(Vector3I cell)
         {
             return solver.GetRoomAir(rooms.Map, cell);
@@ -407,26 +407,26 @@ namespace Thermodynamics.Core
             get { return solver.HeatPumps; }
         }
 
-/// <summary>Returns the heatpump.</summary>
+
         public HeatPumpDevice GetHeatPump(BlockInstance block)
         {
             return solver.GetHeatPump(block);
         }
 
-/// <summary>MarkTopologyDirty operation.</summary>
+
         public void MarkTopologyDirty()
         {
             topologyDirty = true;
             roomsDirty = true;
         }
 
-/// <summary>MarkLayoutDirty operation.</summary>
+
         public void MarkLayoutDirty()
         {
             topologyDirty = true;
         }
 
-/// <summary>RebuildAll operation.</summary>
+
         public void RebuildAll()
         {
             Begin(SimulationPhase.Topology);
@@ -458,7 +458,7 @@ namespace Thermodynamics.Core
             appliedRevision = settings.Revision;
         }
 
-/// <summary>Applies the settingsifchanged.</summary>
+
         private void ApplySettingsIfChanged()
         {
             if (appliedRevision == settings.Revision) return;
@@ -505,19 +505,19 @@ namespace Thermodynamics.Core
         private float appliedRoomConvection = float.NaN;
         private float appliedRoomDensity = float.NaN;
 
-/// <summary>Begin operation.</summary>
+
         private void Begin(SimulationPhase phase)
         {
             if (Profiler != null) Profiler.Begin(phase);
         }
 
-/// <summary>End operation.</summary>
+
         private void End(SimulationPhase phase)
         {
             if (Profiler != null) Profiler.End(phase);
         }
 
-/// <summary>RebuildLoops operation.</summary>
+
         private void RebuildLoops()
         {
             if (!settings.EnableCoolantLoops)
@@ -531,23 +531,23 @@ namespace Thermodynamics.Core
             solver.SetLoops(found);
         }
 
-/// <summary>AuditRooms operation.</summary>
+
         public RoomAudit AuditRooms(int exampleLimit = RoomAuditor.DefaultExampleLimit)
         {
             return RoomAuditor.Audit(grid, surfaces, rooms.Map, exampleLimit);
         }
 
-/// <summary>DiagnoseLoops operation.</summary>
+
         public CoolantLoopDiagnostics DiagnoseLoops(
             int exampleLimit = CoolantLoopDiagnostics.DefaultExampleLimit)
         {
-/// <summary>CoolantLoopDiagnostics operation.</summary>
+
             CoolantLoopDiagnostics diagnostics = new CoolantLoopDiagnostics(exampleLimit);
             CoolantLoopBuilder.FindLoops(grid, loopProperties, DefaultTemperature, null, diagnostics);
             return diagnostics;
         }
 
-/// <summary>DiagnoseBlock operation.</summary>
+
         public CoolantFault DiagnoseBlock(BlockInstance block)
         {
             if (block == null || block.Model.Coolant == null) return CoolantFault.None;
@@ -558,7 +558,7 @@ namespace Thermodynamics.Core
             return fault;
         }
 
-/// <summary>FindLoopContaining operation.</summary>
+
         public CoolantLoop FindLoopContaining(BlockInstance block)
         {
             if (block == null) return null;
@@ -571,14 +571,14 @@ namespace Thermodynamics.Core
             return null;
         }
 
-/// <summary>OnRoomsCompleted operation.</summary>
+
         private void OnRoomsCompleted()
         {
             exposureDirty = true;
         }
 
 
-/// <summary>Update operation.</summary>
+
         public void Update(float frameSeconds, EnvironmentSample sample)
         {
             ApplySettingsIfChanged();
@@ -608,7 +608,7 @@ namespace Thermodynamics.Core
                 Begin(SimulationPhase.RoomMapping);
                 Vector3I extents = (grid.Max - grid.Min) + Vector3I.One;
                 int volume = Math.Max(1, extents.X * extents.Y * extents.Z);
-/// <summary>Share operation.</summary>
+
                 int cells = Share(ref roomCredit,
                     SimulationScheduler.RoomMappingBudget(volume), frameSeconds);
                 if (cells > 0) rooms.Step(cells);
@@ -644,7 +644,7 @@ namespace Thermodynamics.Core
             End(SimulationPhase.Solver);
         }
 
-/// <summary>AdvanceSolver operation.</summary>
+
         private void AdvanceSolver(float frameSeconds, EnvironmentSample sample)
         {
             if (frameSeconds <= 0f) return;
@@ -654,7 +654,7 @@ namespace Thermodynamics.Core
                 EnvironmentState state = EnvironmentSolver.Solve(settings, planet, sample);
 
                 float demand;
-/// <summary>AffordableStepSeconds operation.</summary>
+
                 float seconds = AffordableStepSeconds(settings.StepSeconds,
                     solver.RequiredSubsteps(settings.StepSeconds, state), out demand);
 
@@ -697,7 +697,7 @@ namespace Thermodynamics.Core
             CollectStepOutput();
         }
 
-/// <summary>RefillLoops operation.</summary>
+
         private void RefillLoops(float seconds)
         {
             IList<CoolantLoop> all = solver.Loops;
@@ -723,7 +723,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>CollectStepOutput operation.</summary>
+
         private void CollectStepOutput()
         {
             StepsCompleted++;
@@ -736,7 +736,7 @@ namespace Thermodynamics.Core
             for (int c = 0; c < stepCrossings.Count; c++) crossings.Add(stepCrossings[c]);
         }
 
-/// <summary>StepExact operation.</summary>
+
         public void StepExact(int steps, EnvironmentSample sample)
         {
             ApplySettingsIfChanged();
@@ -750,10 +750,10 @@ namespace Thermodynamics.Core
 
         public int RoomsRestored { get; private set; }
 
-/// <summary>Save operation.</summary>
+
         public string Save()
         {
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> blocks = new List<StoredTemperature>(solver.Nodes.Count);
 
             List<StoredHeldCoolant> held = null;
@@ -768,7 +768,7 @@ namespace Thermodynamics.Core
                 held.Add(new StoredHeldCoolant(node.Block.Position, node.HeldCoolantCapacity));
             }
 
-/// <summary>List operation.</summary>
+
             List<StoredLoop> loops = new List<StoredLoop>(solver.Loops.Count);
 
             List<StoredLoopFill> fills = null;
@@ -784,7 +784,7 @@ namespace Thermodynamics.Core
             }
 
             IList<RoomAirNode> air = solver.RoomAir;
-/// <summary>List operation.</summary>
+
             List<StoredRoom> rooms = new List<StoredRoom>(air.Count);
             for (int i = 0; i < air.Count; i++)
             {
@@ -795,20 +795,20 @@ namespace Thermodynamics.Core
             return ThermalStorageCodec.Encode(blocks, loops, rooms, held, fills);
         }
 
-/// <summary>Load operation.</summary>
+
         public int Load(string data)
         {
             RoomsRestored = 0;
 
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> blocks = new List<StoredTemperature>();
-/// <summary>List operation.</summary>
+
             List<StoredLoop> storedLoops = new List<StoredLoop>();
-/// <summary>List operation.</summary>
+
             List<StoredLoopFill> storedFills = new List<StoredLoopFill>();
-/// <summary>List operation.</summary>
+
             List<StoredRoom> storedRooms = new List<StoredRoom>();
-/// <summary>List operation.</summary>
+
             List<StoredHeldCoolant> storedHeld = new List<StoredHeldCoolant>();
 
             if (!ThermalStorageCodec.TryDecode(
@@ -869,7 +869,7 @@ namespace Thermodynamics.Core
             return restored;
         }
 
-/// <summary>IsInALoop operation.</summary>
+
         private bool IsInALoop(BlockInstance block)
         {
             IList<CoolantLoop> live = solver.Loops;
@@ -880,13 +880,13 @@ namespace Thermodynamics.Core
             return false;
         }
 
-/// <summary>ExportHotTail operation.</summary>
+
         public int ExportHotTail(float bandKelvin, int budget, List<StoredTemperature> results)
         {
             return HotTailCodec.Select(solver.Nodes, bandKelvin, budget, results);
         }
 
-/// <summary>ImportHotTail operation.</summary>
+
         public int ImportHotTail(IList<StoredTemperature> tail)
         {
             if (tail == null) return 0;

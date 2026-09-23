@@ -10,7 +10,7 @@ namespace Thermodynamics.Harness
         {
             get
             {
-/// <summary>ThermalSettings operation.</summary>
+
                 float clock = new ThermalSettings().HeatTimeScale;
                 return clock > 0f ? clock : 1f;
             }
@@ -21,13 +21,13 @@ namespace Thermodynamics.Harness
             get { return TunedAt / Shipped; }
         }
 
-/// <summary>Seconds operation.</summary>
+
         public static float Seconds(float seconds)
         {
             return seconds * Stretch;
         }
 
-/// <summary>Steps operation.</summary>
+
         public static int Steps(int steps)
         {
             int stretched = (int)(steps * Stretch);

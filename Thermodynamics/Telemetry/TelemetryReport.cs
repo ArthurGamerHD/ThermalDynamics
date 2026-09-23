@@ -13,17 +13,17 @@ namespace Thermodynamics
     {
         private const int DetailedGridLimit = 25;
 
-/// <summary>Write operation.</summary>
+
         public static void Write(string reason)
         {
             string stamp = Telemetry.StartedUtc.ToString("yyyyMMdd_HHmmss");
 
-/// <summary>Builds the method table.</summary>
+
             string report = BuildReport(reason);
 
             MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] " + BuildLogSummary(reason));
 
-/// <summary>TryWrite operation.</summary>
+
             bool wrote = TryWrite("Thermodynamics_Telemetry_" + stamp + ".log", report);
             TryWrite("Thermodynamics_BlockTypes_" + stamp + ".csv", BuildBlockTypeCsv());
             TryWrite("Thermodynamics_Grids_" + stamp + ".csv", BuildGridCsv());
@@ -42,7 +42,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>TryWrite operation.</summary>
+
         private static bool TryWrite(string filename, string content)
         {
             try
@@ -63,7 +63,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static string BuildLogSummary(string reason)
         {
             long liveGrids = 0;
@@ -73,7 +73,7 @@ namespace Thermodynamics
             }
 
             return "session ended (" + reason + ") after " + Telemetry.SessionSeconds.ToString("n1")
-/// <summary>grids operation.</summary>
+
                 + "s: " + Telemetry.GridsSeen + " grids (" + liveGrids + " alive at close), "
                 + Telemetry.BlockTypes.Count + " block types, "
                 + Telemetry.CellUpdatesObserved.ToString("n0") + " cell updates, "
@@ -81,10 +81,10 @@ namespace Thermodynamics
         }
 
 
-/// <summary>Builds the API method table.</summary>
+
         private static string BuildReport(string reason)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder(64 * 1024);
 
             WriteHeader(sb, reason);
@@ -106,7 +106,7 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
-/// <summary>AppendCoolantAndPumps operation.</summary>
+
         private static void AppendCoolantAndPumps(StringBuilder sb, GridTelemetry g)
         {
             bool loops = g.LoopTemperature.Count > 0;
@@ -176,27 +176,27 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Percent operation.</summary>
+
         private static string Percent(long part, long whole)
         {
             if (whole <= 0) return "-";
             return (100.0 * part / whole).ToString("n1") + " %";
         }
 
-/// <summary>Section operation.</summary>
+
         private static void Section(StringBuilder sb, string title)
         {
             sb.Append('\n').Append(title).Append('\n');
             sb.Append(new string('=', title.Length)).Append('\n');
         }
 
-/// <summary>Field operation.</summary>
+
         private static void Field(StringBuilder sb, string name, object value)
         {
             sb.Append("  ").Append(name.PadRight(30)).Append(name.Length >= 30 ? " " : "").Append(value).Append('\n');
         }
 
-/// <summary>WriteRoomMapping operation.</summary>
+
         private static void WriteRoomMapping(StringBuilder sb, GridTelemetry g)
         {
             sb.Append("\n    room mapping (min / mean / max)\n");
@@ -236,7 +236,7 @@ namespace Thermodynamics
             WriteRooms(sb, g);
         }
 
-/// <summary>WriteRooms operation.</summary>
+
         private static void WriteRooms(StringBuilder sb, GridTelemetry g)
         {
             if (!g.RoomScanRan && g.Rooms.Count == 0) return;
@@ -322,7 +322,7 @@ namespace Thermodynamics
 
         private const int MaxRoomsReported = 60;
 
-/// <summary>DescribeRooms operation.</summary>
+
         private static string DescribeRooms(Core.RoomAudit audit)
         {
             if (audit.RoomCount == 0) return "none";
@@ -331,7 +331,7 @@ namespace Thermodynamics
                 return audit.RoomCount + " (" + audit.RoomCells + " cells)";
             }
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append(audit.RoomCount).Append(audit.RoomCount == 1 ? " room, cells: " : " rooms, cells: ");
             for (int i = 0; i < audit.RoomSizes.Count; i++)
@@ -343,12 +343,12 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
-/// <summary>FaceFractions operation.</summary>
+
         private static string FaceFractions(float[] byFace)
         {
             if (byFace == null) return "-";
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             for (int face = 0; face < Core.Face.Count && face < byFace.Length; face++)
             {
@@ -358,7 +358,7 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
-/// <summary>WriteHeader operation.</summary>
+
         private static void WriteHeader(StringBuilder sb, string reason)
         {
             sb.Append("Thermodynamics telemetry report\n");
@@ -382,7 +382,7 @@ namespace Thermodynamics
             Field(sb, "sample stride", "1 in " + Telemetry.SampleStride + " cell updates");
         }
 
-/// <summary>WriteWorld operation.</summary>
+
         private static void WriteWorld(StringBuilder sb)
         {
             Section(sb, "World");
@@ -394,7 +394,7 @@ namespace Thermodynamics
                 Field(sb, "  " + (i + 1).ToString("n0"), Telemetry.Mods[i]);
             }
 
-/// <summary>WorldConflicts operation.</summary>
+
             List<string> conflicts = WorldConflicts();
             for (int i = 0; i < conflicts.Count; i++)
             {
@@ -415,7 +415,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>WorldConflicts operation.</summary>
+
         private static List<string> WorldConflicts()
         {
             Settings s = Telemetry.SettingsSnapshot;
@@ -428,7 +428,7 @@ namespace Thermodynamics
             return WorldSettings.Conflicts(Telemetry.WorldSettingsRows, features);
         }
 
-/// <summary>WriteSettings operation.</summary>
+
         private static void WriteSettings(StringBuilder sb)
         {
             Section(sb, "Settings in force");
@@ -450,12 +450,12 @@ namespace Thermodynamics
                 float value = s.GetValue(name);
 
                 if (Settings.IsFlag(name)) Field(sb, name, value != 0f);
-/// <summary>Field operation.</summary>
+
                 else Field(sb, name, value);
             }
         }
 
-/// <summary>WriteSessionTotals operation.</summary>
+
         private static void WriteSessionTotals(StringBuilder sb)
         {
             Section(sb, "Session totals");
@@ -538,7 +538,7 @@ namespace Thermodynamics
                 Field(sb, "anomaly kinds dropped", Telemetry.AnomalyKindsDropped);
         }
 
-/// <summary>WriteAnomalies operation.</summary>
+
         private static void WriteAnomalies(StringBuilder sb)
         {
             Section(sb, "Anomalies");
@@ -549,7 +549,7 @@ namespace Thermodynamics
                 return;
             }
 
-/// <summary>List operation.</summary>
+
             List<AnomalyRecord> records = new List<AnomalyRecord>(Telemetry.Anomalies.Values);
 
             records.Sort(delegate (AnomalyRecord a, AnomalyRecord b)
@@ -575,46 +575,46 @@ namespace Thermodynamics
         private static double costMilliseconds;
         private static long costSteps;
 
-/// <summary>WritePerformance operation.</summary>
+
         private static void WritePerformance(StringBuilder sb)
         {
             Section(sb, "Cost");
 
-/// <summary>TimingStat operation.</summary>
+
             TimingStat simulation = new TimingStat("  of which grid simulation");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat topology = new TimingStat("    of which topology rebuild");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat mapping = new TimingStat("    of which room mapping");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat exposure = new TimingStat("    of which exposure refresh");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat sample = new TimingStat("    of which environment sample");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat solar = new TimingStat("      of which solar occlusion");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat solver = new TimingStat("    of which solver");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat after = new TimingStat("    of which after step");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat pressure = new TimingStat("      of which room pressure");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat damage = new TimingStat("      of which overheat damage");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat massSweep = new TimingStat("      of which mass sweep");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat lostRooms = new TimingStat("      of which lost-room scan");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat health = new TimingStat("      of which hottest and health");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat sampling = new TimingStat("      of which telemetry sampling");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat save = new TimingStat("save");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat load = new TimingStat("load");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat build = new TimingStat("build");
-/// <summary>TimingStat operation.</summary>
+
             TimingStat blockEvents = new TimingStat("block events");
 
             costRecords = 0;
@@ -717,7 +717,7 @@ namespace Thermodynamics
             solar.WriteDistribution(sb, "    ");
         }
 
-/// <summary>WriteFrames operation.</summary>
+
         private static void WriteFrames(StringBuilder sb)
         {
             int throttled = 0;
@@ -778,16 +778,16 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>SortedGrids operation.</summary>
+
         private static List<GridTelemetry> SortedGrids()
         {
-/// <summary>List operation.</summary>
+
             List<GridTelemetry> grids = new List<GridTelemetry>(Telemetry.Grids);
             grids.Sort(delegate (GridTelemetry a, GridTelemetry b) { return b.PeakCellCount.CompareTo(a.PeakCellCount); });
             return grids;
         }
 
-/// <summary>WriteGridTable operation.</summary>
+
         private static void WriteGridTable(StringBuilder sb)
         {
             Section(sb, "Grids");
@@ -809,7 +809,7 @@ namespace Thermodynamics
               .Append("life s".PadLeft(9))
               .Append("  state\n");
 
-/// <summary>SortedGrids operation.</summary>
+
             List<GridTelemetry> grids = SortedGrids();
             for (int i = 0; i < grids.Count; i++)
             {
@@ -829,7 +829,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>WriteOverlay operation.</summary>
+
         private static void WriteOverlay(StringBuilder sb)
         {
             if (Telemetry.Overlay.Frames == 0) return;
@@ -838,7 +838,7 @@ namespace Thermodynamics
             Telemetry.Overlay.Write(sb);
         }
 
-/// <summary>WritePlanetProperties operation.</summary>
+
         private static void WritePlanetProperties(StringBuilder sb)
         {
             if (Telemetry.PlanetProperties.Count == 0) return;
@@ -851,7 +851,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>WriteSubsteps operation.</summary>
+
         private static void WriteSubsteps(StringBuilder sb)
         {
             Section(sb, "Substeps");
@@ -860,7 +860,7 @@ namespace Thermodynamics
             sb.Append("  other element pays for all of them. Demand figures are computed from real heat\n");
             sb.Append("  capacities, so they describe the grids rather than the settings in force.\n");
 
-/// <summary>SortedGrids operation.</summary>
+
             List<GridTelemetry> grids = SortedGrids();
 
             double passes = 0;
@@ -868,7 +868,7 @@ namespace Thermodynamics
             double elementPasses = 0;
             long stepping = 0;
 
-/// <summary>Histogram operation.</summary>
+
             Histogram granted = new Histogram(new float[] { 1.5f, 2.5f, 4.5f, 6.5f, 8.5f, 12.5f, 16.5f, 32.5f, 64.5f });
             long[] grantedCells = new long[granted.Counts.Length];
 
@@ -922,10 +922,10 @@ namespace Thermodynamics
             WriteSubstepProjection(sb, grids);
         }
 
-/// <summary>WriteStiffestBlockTypes operation.</summary>
+
         private static void WriteStiffestBlockTypes(StringBuilder sb)
         {
-/// <summary>List operation.</summary>
+
             List<BlockTypeTelemetry> types = new List<BlockTypeTelemetry>();
             foreach (BlockTypeTelemetry type in Telemetry.BlockTypes.Values)
             {
@@ -960,10 +960,10 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>WriteSubstepDrivers operation.</summary>
+
         private static void WriteSubstepDrivers(StringBuilder sb, IList<GridTelemetry> grids)
         {
-/// <summary>List operation.</summary>
+
             List<GridTelemetry> profiled = new List<GridTelemetry>();
             for (int i = 0; i < grids.Count; i++)
             {
@@ -1002,7 +1002,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>WriteSubstepProjection operation.</summary>
+
         private static void WriteSubstepProjection(StringBuilder sb, IList<GridTelemetry> grids)
         {
             int[] caps = ThermalSolver.SubstepProfile.ProjectedCaps;
@@ -1077,7 +1077,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>WriteConsistency operation.</summary>
+
         private static void WriteConsistency(StringBuilder sb)
         {
             Section(sb, "Consistency");
@@ -1169,7 +1169,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>WriteGridSubsteps operation.</summary>
+
         private static void WriteGridSubsteps(StringBuilder sb, GridTelemetry g)
         {
             ThermalSolver.SubstepProfile p = g.Profile;
@@ -1184,14 +1184,14 @@ namespace Thermodynamics
             if (p.WorstRoomAirDemand > 0f)
             {
                 Field(sb, "  stiffest room air", p.WorstRoomAirDemand.ToString("n2")
-/// <summary>substeps operation.</summary>
+
                     + " substeps (room " + p.WorstRoomAirIndex + ")");
             }
 
             if (p.WorstLoopDemand > 0f)
             {
                 Field(sb, "  stiffest coolant loop", p.WorstLoopDemand.ToString("n2")
-/// <summary>substeps operation.</summary>
+
                     + " substeps (loop " + p.WorstLoopIndex + ")");
             }
 
@@ -1234,10 +1234,10 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>WriteGridDetails operation.</summary>
+
         private static void WriteGridDetails(StringBuilder sb)
         {
-/// <summary>SortedGrids operation.</summary>
+
             List<GridTelemetry> grids = SortedGrids();
             int limit = Math.Min(grids.Count, DetailedGridLimit);
 
@@ -1351,7 +1351,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>WriteBlockTypes operation.</summary>
+
         private static void WriteBlockTypes(StringBuilder sb)
         {
             Section(sb, "Block types (" + Telemetry.BlockTypes.Count + ")");
@@ -1362,7 +1362,7 @@ namespace Thermodynamics
                 return;
             }
 
-/// <summary>SortedBlockTypes operation.</summary>
+
             List<BlockTypeTelemetry> types = SortedBlockTypes();
 
             sb.Append("  ")
@@ -1461,10 +1461,10 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>SortedBlockTypes operation.</summary>
+
         private static List<BlockTypeTelemetry> SortedBlockTypes()
         {
-/// <summary>List operation.</summary>
+
             List<BlockTypeTelemetry> types = new List<BlockTypeTelemetry>(Telemetry.BlockTypes.Values);
             types.Sort(delegate (BlockTypeTelemetry a, BlockTypeTelemetry b)
             {
@@ -1475,10 +1475,10 @@ namespace Thermodynamics
         }
 
 
-/// <summary>Builds the API method table.</summary>
+
         private static string BuildBlockTypeCsv()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder(16 * 1024);
             sb.Append("subtype,type,placed,removed,live,peak_live,updates,sampled,");
             sb.Append("conductivity,specific_heat,emissivity,surface_area_scaler,");
@@ -1490,7 +1490,7 @@ namespace Thermodynamics
             sb.Append("critical_updates,total_damage,");
             sb.Append("substep_demand_mean,substep_demand_max,substep_demand_peak,substep_demand_where\n");
 
-/// <summary>SortedBlockTypes operation.</summary>
+
             List<BlockTypeTelemetry> types = SortedBlockTypes();
             for (int i = 0; i < types.Count; i++)
             {
@@ -1552,10 +1552,10 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static string BuildRoomCsv()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("grid,grid_id,kind,index,anchor_x,anchor_y,anchor_z,cells,volume_m3,");
@@ -1567,7 +1567,7 @@ namespace Thermodynamics
             for (int g = 0; g < grids.Count; g++)
             {
                 GridTelemetry record = grids[g];
-/// <summary>Truncate operation.</summary>
+
                 string name = Truncate(record.Name, 40);
 
                 for (int i = 0; i < record.Rooms.Count; i++)
@@ -1606,10 +1606,10 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static string BuildSurfaceCsv()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("grid,grid_id,block,subtype,cell_x,cell_y,cell_z,size_x,size_y,size_z,");
@@ -1621,7 +1621,7 @@ namespace Thermodynamics
             for (int g = 0; g < grids.Count; g++)
             {
                 GridTelemetry record = grids[g];
-/// <summary>Truncate operation.</summary>
+
                 string gridName = Truncate(record.Name, 40);
 
                 for (int i = 0; i < record.Surfaces.Count; i++)
@@ -1658,7 +1658,7 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
-/// <summary>AppendClimate operation.</summary>
+
         private static void AppendClimate(StringBuilder sb)
         {
             Dictionary<string, ClimateSummary> planets = new Dictionary<string, ClimateSummary>();
@@ -1676,7 +1676,7 @@ namespace Thermodynamics
                     ClimateSummary summary;
                     if (!planets.TryGetValue(planet, out summary))
                     {
-/// <summary>ClimateSummary operation.</summary>
+
                         summary = new ClimateSummary();
                         planets[planet] = summary;
                     }
@@ -1700,37 +1700,37 @@ namespace Thermodynamics
 
         private class ClimateSummary
         {
-/// <summary>RunningStat operation.</summary>
+
             private readonly RunningStat ambient = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
             private readonly RunningStat density = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
             private readonly RunningStat altitude = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
             private readonly RunningStat solar = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
             private readonly RunningStat wind = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
             private readonly RunningStat game = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
             private readonly RunningStat convection = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
             private readonly RunningStat depth = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
             private readonly RunningStat weatherOffset = new RunningStat();
 
             private readonly Dictionary<string, int> weathers = new Dictionary<string, int>();
 
-/// <summary>RunningStat operation.</summary>
+
             private readonly RunningStat day = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
             private readonly RunningStat night = new RunningStat();
 
             private readonly Dictionary<string, int> materials = new Dictionary<string, int>();
 
-/// <summary>Adds a .</summary>
+
             public void Add(ref EnvironmentRow row)
             {
                 ambient.Add(row.AmbientKelvin);
@@ -1762,7 +1762,7 @@ namespace Thermodynamics
                 materials[row.SurfaceMaterial] = count + 1;
             }
 
-/// <summary>Write operation.</summary>
+
             public void Write(StringBuilder sb)
             {
                 Field(sb, "    ambient C", Celsius(ambient));
@@ -1791,10 +1791,10 @@ namespace Thermodynamics
                 Field(sb, "    ground", Counted(materials));
             }
 
-/// <summary>Counted operation.</summary>
+
             private static string Counted(Dictionary<string, int> counts)
             {
-/// <summary>StringBuilder operation.</summary>
+
                 StringBuilder seen = new StringBuilder();
                 foreach (KeyValuePair<string, int> pair in counts)
                 {
@@ -1805,7 +1805,7 @@ namespace Thermodynamics
                 return seen.ToString();
             }
 
-/// <summary>Celsius operation.</summary>
+
             private static string Celsius(RunningStat stat)
             {
                 if (stat.Count == 0) return "-";
@@ -1817,10 +1817,10 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static string BuildEnvironmentCsv()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("time_s,grid,grid_id,planet,altitude_surface_m,altitude_sealevel_m,latitude_deg,");
@@ -1835,7 +1835,7 @@ namespace Thermodynamics
             for (int g = 0; g < grids.Count; g++)
             {
                 GridTelemetry record = grids[g];
-/// <summary>Truncate operation.</summary>
+
                 string name = Truncate(record.Name, 40);
 
                 for (int i = 0; i < record.Environment.Count; i++)
@@ -1890,10 +1890,10 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static string BuildGridCsv()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder(8 * 1024);
             sb.Append("entity_id,name,grid_size,is_static,closed,lifetime_s,");
             sb.Append("peak_cells,mean_cells,peak_links,peak_rooms,peak_loops,");
@@ -1922,7 +1922,7 @@ namespace Thermodynamics
                 sb.Append(c == capColumns.Length - 1 ? "\n" : ",");
             }
 
-/// <summary>SortedGrids operation.</summary>
+
             List<GridTelemetry> grids = SortedGrids();
             for (int i = 0; i < grids.Count; i++)
             {
@@ -2026,7 +2026,7 @@ namespace Thermodynamics
                 for (int c = 0; c < caps.Length; c++)
                 {
                     if (c == caps.Length - 1) CsvLast(sb, p == null ? 0 : p.CapNodesFloored[c]);
-/// <summary>Csv operation.</summary>
+
                     else Csv(sb, p == null ? 0 : p.CapNodesFloored[c]);
                 }
             }
@@ -2034,49 +2034,49 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         private static void Csv(StringBuilder sb, string value)
         {
             TelemetryFormat.AppendCsv(sb, value);
         }
 
-/// <summary>Csv operation.</summary>
+
         private static void Csv(StringBuilder sb, long value)
         {
             TelemetryFormat.AppendCsv(sb, value);
         }
 
-/// <summary>Csv operation.</summary>
+
         private static void Csv(StringBuilder sb, double value)
         {
             TelemetryFormat.AppendCsv(sb, value);
         }
 
-/// <summary>CsvLast operation.</summary>
+
         private static void CsvLast(StringBuilder sb, double value)
         {
             TelemetryFormat.AppendCsvLast(sb, value);
         }
 
-/// <summary>CsvLast operation.</summary>
+
         private static void CsvLast(StringBuilder sb, long value)
         {
             TelemetryFormat.AppendCsvLast(sb, value);
         }
 
-/// <summary>CsvLast operation.</summary>
+
         private static void CsvLast(StringBuilder sb, string value)
         {
             TelemetryFormat.AppendCsvLast(sb, value);
         }
 
-/// <summary>Truncate operation.</summary>
+
         private static string Truncate(string value, int length)
         {
             return TelemetryFormat.Truncate(value, length);
         }
 
-/// <summary>FormatPeak operation.</summary>
+
         private static string FormatPeak(float value)
         {
             return TelemetryFormat.Peak(value);

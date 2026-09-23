@@ -12,7 +12,7 @@ namespace Thermodynamics.Tests
         private static readonly string[] ProducerTypes = { "Reactor", "HydrogenEngine", "BatteryBlock" };
 
         [Fact]
-/// <summary>EveryPowerProducerConvertsSomeOfItsOutputToHeat operation.</summary>
+
         public void EveryPowerProducerConvertsSomeOfItsOutputToHeat()
         {
             foreach (string typeId in ProducerTypes)
@@ -26,7 +26,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoReactorDestroysItselfWithEveryFaceOnOpenSpace operation.</summary>
+
         public void NoReactorDestroysItselfWithEveryFaceOnOpenSpace()
         {
             foreach (ReactorLab.Row row in Shipped())
@@ -39,10 +39,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BuryingALargeReactorCostsItRatherThanCookingIt operation.</summary>
+
         public void BuryingALargeReactorCostsItRatherThanCookingIt()
         {
-/// <summary>Shipped operation.</summary>
+
             ReactorLab.Row row = Shipped()
                 .First(r => r.Subtype == "LargeBlockLargeGenerator" && r.LoadFraction == 1f);
 
@@ -60,10 +60,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>HowAReactorIsInstalledStillDecidesWhetherItSurvivesSomewhere operation.</summary>
+
         public void HowAReactorIsInstalledStillDecidesWhetherItSurvivesSomewhere()
         {
-/// <summary>Shipped operation.</summary>
+
             ReactorLab.Row shipped = Shipped()
                 .First(r => r.Subtype == "LargeBlockLargeGenerator" && r.LoadFraction == 1f);
 
@@ -84,7 +84,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnIdlingReactorNeedsNoCoolingHoweverItIsBuiltIn operation.</summary>
+
         public void AnIdlingReactorNeedsNoCoolingHoweverItIsBuiltIn()
         {
             foreach (ReactorLab.Row row in Shipped().Where(r => r.LoadFraction == 0.1f))
@@ -95,7 +95,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Shipped operation.</summary>
+
         private static List<ReactorLab.Row> Shipped()
         {
             List<ReactorLab.Row> rows = ReactorLab.Shipped();

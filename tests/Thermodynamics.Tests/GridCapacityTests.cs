@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
 {
     public class GridCapacityTests
     {
-/// <summary>Hull operation.</summary>
+
         private static GridBuilder Hull()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -16,10 +16,10 @@ namespace Thermodynamics.Tests
             return builder;
         }
 
-/// <summary>Built operation.</summary>
+
         private static GridModel Built(GridBuilder source, int capacity)
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(source.Grid.GridSize);
             if (capacity > 0) grid.EnsureCellCapacity(capacity);
 
@@ -33,15 +33,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SizingTheTableChangesNothingAboutTheGrid operation.</summary>
+
         public void SizingTheTableChangesNothingAboutTheGrid()
         {
-/// <summary>Hull operation.</summary>
+
             GridBuilder source = Hull();
 
-/// <summary>Built operation.</summary>
+
             GridModel plain = Built(source, 0);
-/// <summary>Built operation.</summary>
+
             GridModel sized = Built(source, source.Placed.Count);
 
             Assert.Equal(plain.BlockCount, sized.BlockCount);
@@ -59,15 +59,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SizingTheTableRemovesTheRegrowth operation.</summary>
+
         public void SizingTheTableRemovesTheRegrowth()
         {
-/// <summary>Hull operation.</summary>
+
             GridBuilder source = Hull();
 
-/// <summary>Allocated operation.</summary>
+
             long plain = Allocated(source, 0);
-/// <summary>Allocated operation.</summary>
+
             long sized = Allocated(source, source.Placed.Count);
 
             Assert.True(plain > 0, "the unsized build allocated nothing, so this compares nothing");
@@ -75,18 +75,18 @@ namespace Thermodynamics.Tests
                 "sizing the table saved little: " + sized + " B against " + plain + " B");
         }
 
-/// <summary>Allocated operation.</summary>
+
         private static long Allocated(GridBuilder source, int capacity)
         {
             BlockInstance[] blocks = new BlockInstance[source.Placed.Count];
             for (int i = 0; i < blocks.Length; i++)
             {
                 BlockInstance block = source.Placed[i];
-/// <summary>BlockInstance operation.</summary>
+
                 blocks[i] = new BlockInstance(block.Model, block.Min, block.Orientation);
             }
 
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(source.Grid.GridSize);
             if (capacity > 0) grid.EnsureCellCapacity(capacity);
 
@@ -99,26 +99,26 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SizingTheNodeListsRemovesTheirRegrowth operation.</summary>
+
         public void SizingTheNodeListsRemovesTheirRegrowth()
         {
-/// <summary>Hull operation.</summary>
+
             GridBuilder source = Hull();
 
-/// <summary>Registers and opens communication.</summary>
+
             long plain = Registered(source, 0);
-/// <summary>Registers and opens communication.</summary>
+
             long sized = Registered(source, source.Placed.Count);
 
             Assert.True(plain > sized,
                 "sizing the node lists saved nothing: " + sized + " B against " + plain + " B");
         }
 
-/// <summary>Registers the API and message handler.</summary>
+
         private static long Registered(GridBuilder source, int capacity)
         {
             ThermalSimulation simulation =
-/// <summary>ThermalSimulation operation.</summary>
+
                 new ThermalSimulation(new ThermalSettings().Derive(), source.Grid);
 
             if (capacity > 0) simulation.EnsureCapacity(capacity);
@@ -136,15 +136,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheGridModelsOwnTableIsOrderIndependentWhereItIsEnumerated operation.</summary>
+
         public void TheGridModelsOwnTableIsOrderIndependentWhereItIsEnumerated()
         {
-/// <summary>Hull operation.</summary>
+
             GridBuilder source = Hull();
 
-/// <summary>Built operation.</summary>
+
             GridModel plain = Built(source, 0);
-/// <summary>Built operation.</summary>
+
             GridModel sized = Built(source, source.Placed.Count);
 
             Assert.Equal(plain.Min, sized.Min);
@@ -152,12 +152,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SizingAfterTheFirstBlockIsIgnoredAndLosesNothing operation.</summary>
+
         public void SizingAfterTheFirstBlockIsIgnoredAndLosesNothing()
         {
-/// <summary>Hull operation.</summary>
+
             GridBuilder source = Hull();
-/// <summary>Built operation.</summary>
+
             GridModel grid = Built(source, 0);
 
             int before = grid.BlockCount;
@@ -168,10 +168,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACountItDoesNotHaveIsIgnored operation.</summary>
+
         public void ACountItDoesNotHaveIsIgnored()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(Catalog.LargeGridSize);
 
             grid.EnsureCellCapacity(0);

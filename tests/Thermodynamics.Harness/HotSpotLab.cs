@@ -26,10 +26,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(string path, string shipMatch, string scenarioName, int top)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             string root = path ?? Blueprints.DefaultPath();
@@ -74,12 +74,12 @@ namespace Thermodynamics.Harness
             assembly.CollectDiagnostics(true);
             float applied = ShipLoad.Apply(assembly, scenario.Load);
 
-/// <summary>AssemblyRunner operation.</summary>
+
             AssemblyRunner runner = new AssemblyRunner(assembly);
             runner.Environment = scenario.Environment;
             runner.Run(scenario.Seconds);
 
-/// <summary>Rows operation.</summary>
+
             List<Row> rows = Rows(assembly);
             rows.Sort(delegate (Row a, Row b) { return b.Kelvin.CompareTo(a.Kelvin); });
 
@@ -124,10 +124,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>NodesTouchingAir operation.</summary>
+
         public static HashSet<int> NodesTouchingAir(ThermalSolver solver)
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<int> touching = new HashSet<int>();
             if (solver == null) return touching;
 
@@ -141,7 +141,7 @@ namespace Thermodynamics.Harness
             return touching;
         }
 
-/// <summary>IsSealed operation.</summary>
+
         public static bool IsSealed(ThermalSolver solver, int index, HashSet<int> touchingAir)
         {
             if (solver == null || index < 0 || index >= solver.Nodes.Count) return false;
@@ -151,10 +151,10 @@ namespace Thermodynamics.Harness
             return touchingAir == null || !touchingAir.Contains(index);
         }
 
-/// <summary>SealedReport operation.</summary>
+
         public static string SealedReport(string path)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             string root = path ?? Blueprints.DefaultPath();
@@ -162,7 +162,7 @@ namespace Thermodynamics.Harness
 
             CorpusLab.Summary corpus = CorpusLab.Scan(root);
             Dictionary<string, int> counts = new Dictionary<string, int>();
-/// <summary>List operation.</summary>
+
             List<string> examples = new List<string>();
             int total = 0;
             int incomplete = 0;
@@ -182,7 +182,7 @@ namespace Thermodynamics.Harness
                 for (int g = 0; g < assembly.Simulations.Count; g++)
                 {
                     ThermalSolver solver = assembly.Simulations[g].Solver;
-/// <summary>NodesTouchingAir operation.</summary>
+
                     HashSet<int> touchingAir = NodesTouchingAir(solver);
 
                     IList<RoomAirNode> air = solver.RoomAir;
@@ -242,11 +242,11 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Explain operation.</summary>
+
         private static void Explain(List<string> examples, Blueprints.Ship ship,
             ThermalSimulation simulation, ThermalNode node)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append("    ").Append(node.Block.Name).Append(" at ").Append(node.Block.Position)
                 .Append("  faces ").Append(node.TotalExposedFaces)
@@ -277,7 +277,7 @@ namespace Thermodynamics.Harness
             examples.Add(sb.ToString().TrimEnd());
         }
 
-/// <summary>FaceName operation.</summary>
+
         private static string FaceName(int face)
         {
             switch (face)
@@ -291,10 +291,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Rows operation.</summary>
+
         private static List<Row> Rows(ShipAssembly assembly)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>(assembly.NodeCount);
 
             for (int g = 0; g < assembly.Simulations.Count; g++)
@@ -322,7 +322,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Trim operation.</summary>
+
         private static string Trim(string text, int width)
         {
             if (text == null) return "";

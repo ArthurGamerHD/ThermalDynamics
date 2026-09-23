@@ -7,10 +7,10 @@ namespace RichHudFramework
 	{
 		public static class Color
 		{
-/// <summary>Regex operation.</summary>
+
 			private static readonly Regex colorParser = new Regex(@"(\s*,?(\d{1,3})\s*,?){3,4}");
 
-/// <summary>CanParseColor operation.</summary>
+
 			public static bool CanParseColor(string colorData)
 			{
 				if (string.IsNullOrEmpty(colorData))
@@ -33,12 +33,12 @@ namespace RichHudFramework
 				return true;
 			}
 
-/// <summary>TryParseColor operation.</summary>
+
 			public static bool TryParseColor(string colorData, out VRageMath.Color value, bool ignoreAlpha = false)
 			{
 				try
 				{
-/// <summary>ParseColor operation.</summary>
+
 					value = ParseColor(colorData, ignoreAlpha);
 					return true;
 				}
@@ -49,7 +49,7 @@ namespace RichHudFramework
 				}
 			}
 
-/// <summary>ParseColor operation.</summary>
+
 			public static VRageMath.Color ParseColor(string colorData, bool ignoreAlpha = false)
 			{
 				if (string.IsNullOrEmpty(colorData))
@@ -70,14 +70,14 @@ namespace RichHudFramework
 
 				if (captures.Count > 3)
 					value.A = byte.Parse(captures[3].Value);
-/// <summary>if operation.</summary>
+
 				else if (!ignoreAlpha)
-					value.A = 255; // default opaque when alpha omitted
+					value.A = 255;
 
 				return value;
 			}
 
-/// <summary>Returns the colorstring.</summary>
+
 			public static string GetColorString(VRageMath.Color color, bool includeAlpha = true)
 			{
 				return includeAlpha

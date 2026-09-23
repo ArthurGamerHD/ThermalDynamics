@@ -23,11 +23,11 @@ namespace Thermodynamics.Core
 
         public long Capacity
         {
-/// <summary>return operation.</summary>
+
             get { return (long)sizeX * sizeY * sizeZ; }
         }
 
-/// <summary>Reset operation.</summary>
+
         public void Reset(Vector3I boxMin, Vector3I boxMaxExclusive)
         {
             min = boxMin;
@@ -59,13 +59,13 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>IndexStep operation.</summary>
+
         public long IndexStep(int face)
         {
             return indexByFace[face];
         }
 
-/// <summary>Clear operation.</summary>
+
         public void Clear()
         {
             Array.Clear(words, 0, words.Length);
@@ -73,7 +73,7 @@ namespace Thermodynamics.Core
             ranked = false;
         }
 
-/// <summary>Builds the API method table.</summary>
+
         public void BuildRanks()
         {
             int wordCount = (int)((Capacity + 63) / 64);
@@ -85,7 +85,7 @@ namespace Thermodynamics.Core
             for (int w = 0; w < wordCount; w++)
             {
                 setsBefore[w] = running;
-/// <summary>PopCount operation.</summary>
+
                 running += PopCount(words[w]);
             }
 
@@ -97,7 +97,7 @@ namespace Thermodynamics.Core
             get { return ranked; }
         }
 
-/// <summary>RankOfIndex operation.</summary>
+
         public int RankOfIndex(long index)
         {
             int word = (int)(index >> 6);
@@ -107,7 +107,7 @@ namespace Thermodynamics.Core
             return setsBefore[word] + PopCount(below);
         }
 
-/// <summary>PopCount operation.</summary>
+
         private static int PopCount(long value)
         {
             ulong v = (ulong)value;
@@ -117,7 +117,7 @@ namespace Thermodynamics.Core
             return (int)((v * 0x0101010101010101UL) >> 56);
         }
 
-/// <summary>IndexOf operation.</summary>
+
         public long IndexOf(Vector3I cell)
         {
             int x = cell.X - min.X;
@@ -132,7 +132,7 @@ namespace Thermodynamics.Core
             return (((long)z * sizeY) + y) * sizeX + x;
         }
 
-/// <summary>NextClearIndex operation.</summary>
+
         public long NextClearIndex(long index, long endExclusive, out int wordsExamined)
         {
             wordsExamined = 0;
@@ -168,7 +168,7 @@ namespace Thermodynamics.Core
             return endExclusive;
         }
 
-/// <summary>ContainsIndex operation.</summary>
+
         public bool ContainsIndex(long index)
         {
             if (index < 0) return false;
@@ -179,7 +179,7 @@ namespace Thermodynamics.Core
             return (words[word] & (1L << (int)(index & 63))) != 0L;
         }
 
-/// <summary>Adds a index.</summary>
+
         public bool AddIndex(long index)
         {
             if (index < 0) return false;
@@ -196,10 +196,10 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>Contains operation.</summary>
+
         public bool Contains(Vector3I cell)
         {
-/// <summary>IndexOf operation.</summary>
+
             long index = IndexOf(cell);
             if (index < 0) return false;
 
@@ -209,10 +209,10 @@ namespace Thermodynamics.Core
             return (words[word] & (1L << (int)(index & 63))) != 0L;
         }
 
-/// <summary>Adds a .</summary>
+
         public bool Add(Vector3I cell)
         {
-/// <summary>IndexOf operation.</summary>
+
             long index = IndexOf(cell);
             if (index < 0) return false;
 

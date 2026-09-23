@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class StepBudgetTests
     {
-/// <summary>Grid operation.</summary>
+
         private static ThermalSimulation Grid(int blocks, int budget)
         {
             ThermalSettings settings = new ThermalSettings
@@ -25,10 +25,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASubstepIsChargedForItsNodesAsWellAsItsLinks operation.</summary>
+
         public void ASubstepIsChargedForItsNodesAsWellAsItsLinks()
         {
-/// <summary>Grid operation.</summary>
+
             ThermalSimulation simulation = Grid(20, 1000000);
 
             int nodes = simulation.Solver.Nodes.Count;
@@ -42,10 +42,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheBudgetIsTheAllowanceDividedByWhatOneSubstepCosts operation.</summary>
+
         public void TheBudgetIsTheAllowanceDividedByWhatOneSubstepCosts()
         {
-/// <summary>Grid operation.</summary>
+
             ThermalSimulation simulation = Grid(20, 1000);
 
             long expected = 1000 / simulation.SubstepCost;
@@ -55,17 +55,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ZeroRemovesTheBoundEntirely operation.</summary>
+
         public void ZeroRemovesTheBoundEntirely()
         {
             Assert.Equal(int.MaxValue, Grid(20, 0).SubstepBudget);
         }
 
         [Fact]
-/// <summary>AGridTooLargeForItsAllowanceStillTakesOneSubstep operation.</summary>
+
         public void AGridTooLargeForItsAllowanceStillTakesOneSubstep()
         {
-/// <summary>Grid operation.</summary>
+
             ThermalSimulation simulation = Grid(200, 1);
 
             Assert.Equal(1, simulation.SubstepBudget);
@@ -73,10 +73,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStepBeyondTheBudgetIsShortenedRatherThanCoarsened operation.</summary>
+
         public void AStepBeyondTheBudgetIsShortenedRatherThanCoarsened()
         {
-/// <summary>Grid operation.</summary>
+
             ThermalSimulation simulation = Grid(200, 1000);
 
             float full = 0.25f;
@@ -87,17 +87,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStepWithinTheBudgetIsNotShortened operation.</summary>
+
         public void AStepWithinTheBudgetIsNotShortened()
         {
-/// <summary>Grid operation.</summary>
+
             ThermalSimulation simulation = Grid(20, 100000000);
 
             Assert.Equal(0.25f, simulation.AffordableStepSeconds(0.25f));
         }
 
         [Fact]
-/// <summary>TwoGridsWithEqualLinksAreChargedByTheirNodeCounts operation.</summary>
+
         public void TwoGridsWithEqualLinksAreChargedByTheirNodeCounts()
         {
             ThermalSettings settings = new ThermalSettings

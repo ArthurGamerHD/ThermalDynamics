@@ -9,7 +9,7 @@ namespace Thermodynamics.Core
         public int NodeIndex;
         public float Conductance;
 
-/// <summary>RoomLink operation.</summary>
+
         public RoomLink(int nodeIndex, float conductance)
         {
             NodeIndex = nodeIndex;
@@ -33,7 +33,7 @@ namespace Thermodynamics.Core
 
         public float ThermalMass { get; private set; }
 
-/// <summary>List operation.</summary>
+
         public readonly List<RoomLink> Links = new List<RoomLink>();
 
         public bool Initialised;
@@ -77,14 +77,14 @@ namespace Thermodynamics.Core
             get { return Temperature * ThermalMass; }
         }
 
-/// <summary>RefreshThermalMass operation.</summary>
+
         public void RefreshThermalMass()
         {
             float capacity = (AirMass * ThermalConstants.AirSpecificHeat) / heatTimeScale;
             ThermalMass = Math.Max(ThermalConstants.MinimumThermalMass, capacity);
         }
 
-/// <summary>ToString operation.</summary>
+
         public override string ToString()
         {
             return "room " + RoomIndex + " " + Volume.ToString("n1") + "m3 "
@@ -97,7 +97,7 @@ namespace Thermodynamics.Core
         public int RoomIndex;
         public int Faces;
 
-/// <summary>RoomContact operation.</summary>
+
         public RoomContact(int roomIndex, int faces)
         {
             RoomIndex = roomIndex;

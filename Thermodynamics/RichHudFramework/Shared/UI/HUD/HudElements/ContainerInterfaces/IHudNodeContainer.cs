@@ -4,7 +4,7 @@
 	{
 		TElement Element { get; }
 
-/// <summary>Sets the element.</summary>
+
 		void SetElement(TElement Element);
 	}
 

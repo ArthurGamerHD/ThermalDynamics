@@ -22,19 +22,19 @@
 
 				public float AnalogValue => (float)(_instance.GetControlMember(Index, (int)ControlAccessors.AnalogValue) ?? 0f);
 
-/// <summary>Control operation.</summary>
+
 				public Control(int index)
 				{
 					this.Index = index;
 				}
 
-/// <summary>Equals operation.</summary>
+
 				public override bool Equals(object obj)
 				{
 					return (obj as Control).Index == Index;
 				}
 
-/// <summary>Returns the hashcode.</summary>
+
 				public override int GetHashCode()
 				{
 					return Index.GetHashCode();

@@ -7,16 +7,16 @@ namespace Thermodynamics.Tests
 {
     public class WindCompassTests
     {
-/// <summary>Vector3 operation.</summary>
+
         private static readonly Vector3 Up = new Vector3(0f, 1f, 0f);
 
-/// <summary>Vector3 operation.</summary>
+
         private static readonly Vector3 North = new Vector3(0f, 0f, -1f);
 
-/// <summary>Vector3 operation.</summary>
+
         private static readonly Vector3 East = new Vector3(1f, 0f, 0f);
 
-/// <summary>BearingOf operation.</summary>
+
         private static float BearingOf(Vector3 wind, Vector3 forward)
         {
             float degrees;
@@ -26,35 +26,35 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WindGoingTheWayYouFaceReadsDeadAhead operation.</summary>
+
         public void WindGoingTheWayYouFaceReadsDeadAhead()
         {
             Assert.Equal(0f, BearingOf(North * 12f, North), 3);
         }
 
         [Fact]
-/// <summary>WindGoingRightOfYouReadsNinetyDegrees operation.</summary>
+
         public void WindGoingRightOfYouReadsNinetyDegrees()
         {
             Assert.Equal(90f, BearingOf(East * 12f, North), 3);
         }
 
         [Fact]
-/// <summary>WindInYourFaceReadsAstern operation.</summary>
+
         public void WindInYourFaceReadsAstern()
         {
             Assert.Equal(180f, BearingOf(-North * 12f, North), 3);
         }
 
         [Fact]
-/// <summary>WindGoingLeftOfYouReadsTwoSeventy operation.</summary>
+
         public void WindGoingLeftOfYouReadsTwoSeventy()
         {
             Assert.Equal(270f, BearingOf(-East * 12f, North), 3);
         }
 
         [Fact]
-/// <summary>TheBearingIsRelativeToTheFacingRatherThanToTheWorld operation.</summary>
+
         public void TheBearingIsRelativeToTheFacingRatherThanToTheWorld()
         {
             Assert.Equal(0f, BearingOf(North * 5f, North), 3);
@@ -62,16 +62,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LookingUpOrDownDoesNotSwingTheNeedle operation.</summary>
+
         public void LookingUpOrDownDoesNotSwingTheNeedle()
         {
             Vector3 wind = East * 9f;
 
-/// <summary>BearingOf operation.</summary>
+
             float level = BearingOf(wind, North);
-/// <summary>BearingOf operation.</summary>
+
             float pitched = BearingOf(wind, Vector3.Normalize(North + (Up * 4f)));
-/// <summary>BearingOf operation.</summary>
+
             float steep = BearingOf(wind, Vector3.Normalize(North - (Up * 9f)));
 
             Assert.Equal(level, pitched, 2);
@@ -79,7 +79,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AViewerLookingStraightUpHasNoBearingToGive operation.</summary>
+
         public void AViewerLookingStraightUpHasNoBearingToGive()
         {
             float degrees;
@@ -88,7 +88,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>StillAirHasNoBearingToGive operation.</summary>
+
         public void StillAirHasNoBearingToGive()
         {
             float degrees;
@@ -96,7 +96,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AVerticalWindHasNoBearingEitherAlthoughTheFieldMakesNone operation.</summary>
+
         public void AVerticalWindHasNoBearingEitherAlthoughTheFieldMakesNone()
         {
             float degrees;
@@ -104,7 +104,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>HeadAndCrossComponentsSplitTheWindBetweenThem operation.</summary>
+
         public void HeadAndCrossComponentsSplitTheWindBetweenThem()
         {
             Vector3 wind = Vector3.Normalize(North + East) * 20f;
@@ -118,14 +118,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHeadwindIsNegativeAlongTheFacing operation.</summary>
+
         public void AHeadwindIsNegativeAlongTheFacing()
         {
             Assert.True(WindCompass.Along(-North * 15f, North, Up) < 0f);
         }
 
         [Fact]
-/// <summary>TheVerticalPartOfTheWindIsIgnoredByBothComponents operation.</summary>
+
         public void TheVerticalPartOfTheWindIsIgnoredByBothComponents()
         {
             Vector3 flat = East * 10f;
@@ -136,7 +136,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASectorIsCentredOnItsOwnBearingRatherThanStartingAtIt operation.</summary>
+
         public void ASectorIsCentredOnItsOwnBearingRatherThanStartingAtIt()
         {
             Assert.Equal(0, WindCompass.Sector(0f));
@@ -148,7 +148,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EverySectorHasAName operation.</summary>
+
         public void EverySectorHasAName()
         {
             for (int i = 0; i < 8; i++)
@@ -163,7 +163,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnAngleIsAlwaysFoldedIntoOneTurn operation.</summary>
+
         public void AnAngleIsAlwaysFoldedIntoOneTurn()
         {
             Assert.Equal(10f, WindCompass.Normalise(370f), 3);
@@ -172,10 +172,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFieldsOwnWindReadsAsABearingWhereverItBlows operation.</summary>
+
         public void TheFieldsOwnWindReadsAsABearingWhereverItBlows()
         {
-/// <summary>Vector3 operation.</summary>
+
             Vector3 axis = new Vector3(0f, 1f, 0f);
             int read = 0;
             int calm = 0;

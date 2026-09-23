@@ -4,8 +4,8 @@ using ApiMemberAccessor = System.Func<object, int, object>;
 namespace RichHudFramework
 {
 	using ControlMembers = MyTuple<
-		ApiMemberAccessor, // GetOrSetMember
-		object // ID
+		ApiMemberAccessor,
+		object
 	>;
 
 	namespace UI
@@ -19,7 +19,7 @@ namespace RichHudFramework
 
 		public interface ITerminalPage : IModRootMember
 		{
-/// <summary>Returns the apidata.</summary>
+
 			ControlMembers GetApiData();
 		}
 	}

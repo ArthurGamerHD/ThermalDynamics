@@ -17,15 +17,15 @@ namespace Thermodynamics.Harness
             public int TriangleCount { get; }
             public int Reads { get; private set; }
             private readonly int unsupportedEvery;
-/// <summary>Source operation.</summary>
+
             public Source(int count, int unsupportedEvery = 0) { TriangleCount = count; this.unsupportedEvery = unsupportedEvery; }
-/// <summary>TryRead operation.</summary>
+
             public bool TryRead(int index, out ThermalVisionTriangle triangle)
             {
                 if (index != Reads) throw new InvalidOperationException("Extraction skipped or repeated a source index.");
                 Reads++;
                 float x = (index % 16) * .1f;
-/// <summary>Vector3 operation.</summary>
+
                 triangle = new ThermalVisionTriangle { A = new Vector3(x, 0, 0), B = new Vector3(x + .1f, 0, 0), C = new Vector3(x, .1f, 0) };
                 return unsupportedEvery == 0 || index % unsupportedEvery != 0;
             }
@@ -35,9 +35,9 @@ namespace Thermodynamics.Harness
         {
             private readonly int divisions;
             public int TriangleCount { get { return 12 * divisions * divisions; } }
-/// <summary>HullSource operation.</summary>
+
             public HullSource(int divisions) { this.divisions = divisions; }
-/// <summary>TryRead operation.</summary>
+
             public bool TryRead(int index, out ThermalVisionTriangle triangle)
             {
                 int faceCount = 2 * divisions * divisions;
@@ -45,17 +45,17 @@ namespace Thermodynamics.Harness
                 Vector3 origin, u, v;
                 switch (face)
                 {
-/// <summary>Vector3 operation.</summary>
+
                     case 0: origin = new Vector3(-1, -1, 1); u = Vector3.UnitX; v = Vector3.UnitY; break;
-/// <summary>Vector3 operation.</summary>
+
                     case 1: origin = new Vector3(1, -1, -1); u = -Vector3.UnitX; v = Vector3.UnitY; break;
-/// <summary>Vector3 operation.</summary>
+
                     case 2: origin = new Vector3(1, -1, 1); u = -Vector3.UnitZ; v = Vector3.UnitY; break;
-/// <summary>Vector3 operation.</summary>
+
                     case 3: origin = new Vector3(-1, -1, -1); u = Vector3.UnitZ; v = Vector3.UnitY; break;
-/// <summary>Vector3 operation.</summary>
+
                     case 4: origin = new Vector3(-1, 1, 1); u = Vector3.UnitX; v = -Vector3.UnitZ; break;
-/// <summary>Vector3 operation.</summary>
+
                     default: origin = new Vector3(-1, -1, -1); u = Vector3.UnitX; v = Vector3.UnitZ; break;
                 }
                 float step = 2f / divisions;
@@ -67,7 +67,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>BatchCandidates operation.</summary>
+
         public static int BatchCandidates(ThermalVisionMesh mesh, Vector3D eye)
         {
             int count = 0;
@@ -80,12 +80,12 @@ namespace Thermodynamics.Harness
             public const int Width = 96, Height = 64;
             public readonly float[] Temperature = new float[Width * Height];
             private readonly double[] depth = new double[Width * Height];
-/// <summary>Frame operation.</summary>
+
             public Frame()
             {
                 for (int i = 0; i < depth.Length; i++) { depth[i] = double.NegativeInfinity; Temperature[i] = float.NaN; }
             }
-/// <summary>Raster operation.</summary>
+
             public void Raster(ThermalVisionWorldTriangle triangle, float kelvin)
             {
                 Vector3D a = triangle.A, b = triangle.B, c = triangle.C;
@@ -104,10 +104,10 @@ namespace Thermodynamics.Harness
                     if (z > depth[index]) { depth[index] = z; Temperature[index] = kelvin; }
                 }
             }
-/// <summary>Svg operation.</summary>
+
             public string Svg(ThermalVisionState.Mode mode)
             {
-/// <summary>StringBuilder operation.</summary>
+
                 var sb = new StringBuilder("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 64' shape-rendering='crispEdges'><rect width='96' height='64' fill='#18212b'/>");
                 for (int i = 0; i < Temperature.Length; i++)
                 {
@@ -120,16 +120,16 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>HullFrame operation.</summary>
+
         public static Frame HullFrame(bool batched)
         {
-/// <summary>ThermalVisionMeshBuild operation.</summary>
+
             var build = new ThermalVisionMeshBuild(new HullSource(8));
             build.Advance(ThermalVisionMeshBuild.ModelLimit);
-/// <summary>Frame operation.</summary>
+
             var frame = new Frame();
             var world = MatrixD.CreateRotationY(.6) * MatrixD.CreateRotationX(.25);
-/// <summary>Vector3D operation.</summary>
+
             var eye = new Vector3D(0, 0, 5);
             Vector3D localEye;
             bool localCull = ThermalVisionGeometry.TryGetLocalEye(world, eye, out localEye);
@@ -146,10 +146,10 @@ namespace Thermodynamics.Harness
             return frame;
         }
 
-/// <summary>OcclusionScene operation.</summary>
+
         public static Frame OcclusionScene(bool reverse)
         {
-/// <summary>Frame operation.</summary>
+
             var frame = new Frame();
             if (reverse) { Quad(frame, 300, 0); Quad(frame, 750, -1); }
             else { Quad(frame, 750, -1); Quad(frame, 300, 0); }
@@ -157,36 +157,36 @@ namespace Thermodynamics.Harness
             return frame;
         }
 
-/// <summary>Quad operation.</summary>
+
         private static void Quad(Frame frame, float kelvin, float z)
         {
             Submit(frame, new Vector3(-1, -1, z), new Vector3(1, -1, z), new Vector3(1, 1, z), kelvin);
             Submit(frame, new Vector3(-1, -1, z), new Vector3(1, 1, z), new Vector3(-1, 1, z), kelvin);
         }
-/// <summary>Submit operation.</summary>
+
         private static void Submit(Frame frame, Vector3 a, Vector3 b, Vector3 c, float kelvin)
         {
             var triangle = new ThermalVisionTriangle { A = a, B = b, C = c, LocalNormal = Vector3.Cross(b - a, c - a) };
             ThermalVisionWorldTriangle projected;
-/// <summary>Vector3D operation.</summary>
+
             var eye = new Vector3D(0, 0, 5);
             if (ThermalVisionGeometry.Project(triangle, MatrixD.Identity, eye, true, eye, out projected) == ThermalVisionProjection.Visible)
                 frame.Raster(projected, kelvin);
         }
 
-/// <summary>WriteReport operation.</summary>
+
         public static string WriteReport(string directory)
         {
             Directory.CreateDirectory(directory);
-/// <summary>StringBuilder operation.</summary>
+
             var sb = new StringBuilder("# Thermal vision synthetic lab\n\nScope: production extraction, projection, palettes and exposure; synthetic source triangles and an independent software depth oracle. No game GPU, shader, material, occlusion-query or exact camera-trace replay.\n\n");
             sb.Append("Machine: ").Append(Environment.MachineName).Append("; runtime: ").Append(Environment.Version)
                 .Append("; OS: ").Append(Environment.OSVersion).Append(". Timings are this offline process, include cold/JIT effects and do not estimate engine frame time.\n\n");
-/// <summary>ThermalVisionAutoRange operation.</summary>
+
             var exposure = new ThermalVisionAutoRange();
-/// <summary>ThermalVisionState operation.</summary>
+
             var optics = new ThermalVisionState();
-/// <summary>StringBuilder operation.</summary>
+
             var trace = new StringBuilder("frame,viewpoint,mode,low_kelvin,high_kelvin\n");
             optics.Enable(ThermalVisionState.Mode.Cividis, 42);
             for (int frame = 0; frame < 360; frame++)
@@ -208,9 +208,9 @@ namespace Thermodynamics.Harness
             sb.Append("Model counts include the 26,914 and 61,199 source-triangle cases from the September 18 game dumps; their geometry is synthetic.\n\n| Source triangles | Build slices | Retained | Offline build ms |\n| --- | --- | --- | --- |\n");
             foreach (int count in new[] { 12, 8192, 8193, 26914, 61199, 65536 })
             {
-/// <summary>Source operation.</summary>
+
                 var source = new Source(count, 7);
-/// <summary>ThermalVisionMeshBuild operation.</summary>
+
                 var build = new ThermalVisionMeshBuild(source);
                 int slices = 0;
                 var watch = Stopwatch.StartNew();
@@ -223,23 +223,23 @@ namespace Thermodynamics.Harness
                 if (source.Reads != count || build.Retained + build.Unsupported != count) throw new InvalidOperationException("Lost triangles.");
                 sb.AppendFormat(CultureInfo.InvariantCulture, "| {0} | {1} | {2} | {3:0.000} |\n", count, slices, build.Retained, watch.Elapsed.TotalMilliseconds);
             }
-/// <summary>ThermalVisionMeshBuild operation.</summary>
+
             var hull = new ThermalVisionMeshBuild(new HullSource(72));
             while (!hull.Complete) hull.Advance(ThermalVisionScenePolicy.BuildTriangleLimit);
-/// <summary>BatchCandidates operation.</summary>
+
             int hullCandidates = BatchCandidates(hull.Mesh, new Vector3D(0, 0, 5));
             if (hullCandidates >= hull.Total || hullCandidates > ThermalVisionScenePolicy.TriangleLimit)
                 throw new InvalidOperationException("Dense closed-hull fixture did not fit after conservative batch rejection.");
             sb.Append("\nDense closed-hull fixture: ").Append(hull.Total).Append(" retained triangles, ")
                 .Append(hull.Mesh.Batches.Length).Append(" batch tests, ").Append(hullCandidates)
                 .Append(" candidate triangles from an axial view; no surfaces approximated. This fixture fits the scene triangle cap after batch rejection. Fully front-facing dense meshes can still exceed it.\n");
-/// <summary>HullFrame operation.</summary>
+
             var hullReference = HullFrame(false); var hullBatched = HullFrame(true);
             for (int i = 0; i < hullReference.Temperature.Length; i++)
                 if (!hullReference.Temperature[i].Equals(hullBatched.Temperature[i])) throw new InvalidOperationException("Batched hull differs from reference raster.");
             File.WriteAllText(Path.Combine(directory, "hull.svg"), hullBatched.Svg(ThermalVisionState.Mode.Cividis));
             sb.Append("Batched rotated-hull raster equals the unbatched reference at every pixel (hull.svg).\n");
-/// <summary>OcclusionScene operation.</summary>
+
             var first = OcclusionScene(false); var second = OcclusionScene(true);
             int visible = 0;
             for (int i = 0; i < first.Temperature.Length; i++)

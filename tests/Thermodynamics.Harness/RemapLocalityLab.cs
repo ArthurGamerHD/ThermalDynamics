@@ -20,22 +20,22 @@ namespace Thermodynamics.Harness
             public int SettleTicks;
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(int blocks, Action<string> log = null)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", blocks));
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
             simulation.RebuildAll();
 
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             rows.Add(Measure(simulation, "skin add", log, sim =>
             {
-/// <summary>ExternalNeighbourOfAnExposedBlock operation.</summary>
+
                 Vector3I cell = ExternalNeighbourOfAnExposedBlock(sim);
                 sim.AddBlock(new BlockInstance(Catalog.LightArmor(), cell, BlockOrientation.Identity), 293.15f);
             }));
@@ -58,13 +58,13 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Measure operation.</summary>
+
         private static Row Measure(ThermalSimulation simulation, string mutation,
             Action<string> log, Action<ThermalSimulation> change)
         {
             if (log != null) log(mutation);
 
-/// <summary>Take operation.</summary>
+
             Snapshot before = Take(simulation);
             change(simulation);
 
@@ -78,10 +78,10 @@ namespace Thermodynamics.Harness
             }
             visited = simulation.Work.RoomCellsVisited - visited;
 
-/// <summary>Take operation.</summary>
+
             Snapshot after = Take(simulation);
 
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Mutation = mutation;
             row.CellsVisited = visited;
@@ -93,7 +93,7 @@ namespace Thermodynamics.Harness
             if (row.CellsChanged == 0)
             {
                 throw new InvalidOperationException(
-/// <summary>nothing operation.</summary>
+
                     mutation + ": a sealing change moved no cell's classification, so this instrument saw nothing (E8)");
             }
 
@@ -105,20 +105,20 @@ namespace Thermodynamics.Harness
         {
             public Vector3I Min;
             public Vector3I MaxExclusive;
-            public long[] Category;   // -2 solid, -1 external, otherwise the room's smallest cell key
+            public long[] Category;
             public int Rooms;
         }
 
-/// <summary>Take operation.</summary>
+
         private static Snapshot Take(ThermalSimulation simulation)
         {
             RoomMap map = simulation.Rooms.Map;
             GridModel grid = simulation.Grid;
 
-/// <summary>Snapshot operation.</summary>
+
             Snapshot snapshot = new Snapshot();
             snapshot.Min = grid.Min - Vector3I.One;
-/// <summary>Vector3I operation.</summary>
+
             snapshot.MaxExclusive = grid.Max + new Vector3I(2, 2, 2);
             snapshot.Rooms = map.RoomCount;
 
@@ -145,7 +145,7 @@ namespace Thermodynamics.Harness
             for (int y = snapshot.Min.Y; y < snapshot.MaxExclusive.Y; y++)
             for (int x = snapshot.Min.X; x < snapshot.MaxExclusive.X; x++, at++)
             {
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I cell = new Vector3I(x, y, z);
                 if (map.IsSolid(cell))
                 {
@@ -159,7 +159,7 @@ namespace Thermodynamics.Harness
             return snapshot;
         }
 
-/// <summary>Diff operation.</summary>
+
         private static void Diff(Snapshot before, Snapshot after, Row row)
         {
             Vector3I min = Vector3I.Min(before.Min, after.Min);
@@ -173,7 +173,7 @@ namespace Thermodynamics.Harness
             for (int x = min.X; x < maxExclusive.X; x++)
             {
                 boxCells++;
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I cell = new Vector3I(x, y, z);
                 if (At(before, cell) != At(after, cell)) changed++;
             }
@@ -182,7 +182,7 @@ namespace Thermodynamics.Harness
             row.CellsChanged = changed;
         }
 
-/// <summary>At operation.</summary>
+
         private static long At(Snapshot snapshot, Vector3I cell)
         {
             if (cell.X < snapshot.Min.X || cell.X >= snapshot.MaxExclusive.X
@@ -201,7 +201,7 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>ExternalNeighbourOfAnExposedBlock operation.</summary>
+
         private static Vector3I ExternalNeighbourOfAnExposedBlock(ThermalSimulation simulation)
         {
             RoomMap map = simulation.Rooms.Map;
@@ -225,7 +225,7 @@ namespace Thermodynamics.Harness
             throw new InvalidOperationException("no exposed block with an external neighbour; the fixture is not a hull");
         }
 
-/// <summary>ExposedBlock operation.</summary>
+
         private static BlockInstance ExposedBlock(ThermalSimulation simulation, bool awayFromRooms)
         {
             RoomMap map = simulation.Rooms.Map;
@@ -241,7 +241,7 @@ namespace Thermodynamics.Harness
             throw new InvalidOperationException("no exposed one-cell block found; the fixture is not a hull");
         }
 
-/// <summary>BuriedBlock operation.</summary>
+
         private static BlockInstance BuriedBlock(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -254,7 +254,7 @@ namespace Thermodynamics.Harness
             throw new InvalidOperationException("no buried one-cell block found; the fixture has no interior");
         }
 
-/// <summary>RoomBoundaryBlock operation.</summary>
+
         private static BlockInstance RoomBoundaryBlock(ThermalSimulation simulation)
         {
             RoomMap map = simulation.Rooms.Map;
@@ -268,7 +268,7 @@ namespace Thermodynamics.Harness
             throw new InvalidOperationException("no block bounds a room; the fixture has no compartments (E8)");
         }
 
-/// <summary>TouchesARoom operation.</summary>
+
         private static bool TouchesARoom(RoomMap map, BlockInstance block)
         {
             Vector3I[] cells = block.Cells;
@@ -283,16 +283,16 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Report operation.</summary>
+
         public static string Report(int blocks, Action<string> log = null)
         {
             return Table(Run(blocks, log));
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(List<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.Append("mutation".PadRight(24))
                 .Append("box cells".PadLeft(12))

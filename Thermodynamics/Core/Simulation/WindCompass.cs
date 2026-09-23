@@ -7,7 +7,7 @@ namespace Thermodynamics.Core
     {
         private const float MinimumLengthSquared = 1e-4f;
 
-/// <summary>Bearing operation.</summary>
+
         public static bool Bearing(Vector3 wind, Vector3 forward, Vector3 up, out float degrees)
         {
             degrees = 0f;
@@ -15,9 +15,9 @@ namespace Thermodynamics.Core
             if (up.LengthSquared() < MinimumLengthSquared) return false;
             up = Vector3.Normalize(up);
 
-/// <summary>Flatten operation.</summary>
+
             Vector3 windFlat = Flatten(wind, up);
-/// <summary>Flatten operation.</summary>
+
             Vector3 faceFlat = Flatten(forward, up);
 
             if (windFlat.LengthSquared() < MinimumLengthSquared) return false;
@@ -31,31 +31,31 @@ namespace Thermodynamics.Core
             right = Vector3.Normalize(right);
 
             double angle = Math.Atan2(Vector3.Dot(windFlat, right), Vector3.Dot(windFlat, faceFlat));
-/// <summary>Normalise operation.</summary>
+
             degrees = Normalise((float)(angle * 180d / Math.PI));
             return true;
         }
 
-/// <summary>Along operation.</summary>
+
         public static float Along(Vector3 wind, Vector3 forward, Vector3 up)
         {
             if (up.LengthSquared() < MinimumLengthSquared) return 0f;
             up = Vector3.Normalize(up);
 
-/// <summary>Flatten operation.</summary>
+
             Vector3 faceFlat = Flatten(forward, up);
             if (faceFlat.LengthSquared() < MinimumLengthSquared) return 0f;
 
             return Vector3.Dot(Flatten(wind, up), Vector3.Normalize(faceFlat));
         }
 
-/// <summary>Across operation.</summary>
+
         public static float Across(Vector3 wind, Vector3 forward, Vector3 up)
         {
             if (up.LengthSquared() < MinimumLengthSquared) return 0f;
             up = Vector3.Normalize(up);
 
-/// <summary>Flatten operation.</summary>
+
             Vector3 faceFlat = Flatten(forward, up);
             if (faceFlat.LengthSquared() < MinimumLengthSquared) return 0f;
 
@@ -65,16 +65,16 @@ namespace Thermodynamics.Core
             return Vector3.Dot(Flatten(wind, up), Vector3.Normalize(right));
         }
 
-/// <summary>Sector operation.</summary>
+
         public static int Sector(float degrees)
         {
-/// <summary>Normalise operation.</summary>
+
             degrees = Normalise(degrees);
 
             return ((int)((degrees + 22.5f) / 45f)) & 7;
         }
 
-/// <summary>SectorName operation.</summary>
+
         public static string SectorName(int sector)
         {
             switch (sector & 7)
@@ -90,13 +90,13 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Flatten operation.</summary>
+
         private static Vector3 Flatten(Vector3 vector, Vector3 up)
         {
             return vector - (up * Vector3.Dot(vector, up));
         }
 
-/// <summary>Normalise operation.</summary>
+
         public static float Normalise(float degrees)
         {
             if (float.IsNaN(degrees) || float.IsInfinity(degrees)) return 0f;

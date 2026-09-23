@@ -6,12 +6,12 @@ namespace Thermodynamics.Tests
     [Trait("speed", "slow")]
     public class CoolingLadderTests
     {
-/// <summary>object operation.</summary>
+
         private static readonly object Gate = new object();
         private static List<CoolingLadder.Row> rows;
         private static float bareKelvin;
 
-/// <summary>Rows operation.</summary>
+
         private static List<CoolingLadder.Row> Rows(out float bare)
         {
             lock (Gate)
@@ -22,10 +22,10 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Of operation.</summary>
+
         private static List<CoolingLadder.Row> Of(string block, out float bare)
         {
-/// <summary>List operation.</summary>
+
             List<CoolingLadder.Row> mine = new List<CoolingLadder.Row>();
             foreach (CoolingLadder.Row row in Rows(out bare))
             {
@@ -35,13 +35,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheBareReactorRunsHotEnoughForTheComparisonToMeanAnything operation.</summary>
+
         public void TheBareReactorRunsHotEnoughForTheComparisonToMeanAnything()
         {
             if (!GameBlocks.IsInstalled) return;
 
             float bare;
-/// <summary>Rows operation.</summary>
+
             List<CoolingLadder.Row> all = Rows(out bare);
 
             Assert.NotEmpty(all);
@@ -51,13 +51,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BoltingTheRadiatorToAReactorSavesAFewPercentOfIt operation.</summary>
+
         public void BoltingTheRadiatorToAReactorSavesAFewPercentOfIt()
         {
             if (!GameBlocks.IsInstalled) return;
 
             float bare;
-/// <summary>Of operation.</summary>
+
             List<CoolingLadder.Row> radiator = Of("Gauge_LG_Radiator", out bare);
             Assert.NotEmpty(radiator);
 
@@ -75,13 +75,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoBoltedBlockInTheGameSolvesTheReactor operation.</summary>
+
         public void NoBoltedBlockInTheGameSolvesTheReactor()
         {
             if (!GameBlocks.IsInstalled) return;
 
             float bare;
-/// <summary>Rows operation.</summary>
+
             List<CoolingLadder.Row> all = Rows(out bare);
 
             foreach (CoolingLadder.Row row in all)
@@ -94,15 +94,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheBlockWithNoSurfaceAdvantageIsWorthAFractionOfOneBuiltForIt operation.</summary>
+
         public void TheBlockWithNoSurfaceAdvantageIsWorthAFractionOfOneBuiltForIt()
         {
             if (!GameBlocks.IsInstalled) return;
 
             float bare;
-/// <summary>Of operation.</summary>
+
             List<CoolingLadder.Row> armour = Of("LargeBlockArmorBlock", out bare);
-/// <summary>Of operation.</summary>
+
             List<CoolingLadder.Row> radiator = Of("Gauge_LG_Radiator", out bare);
 
             Assert.NotEmpty(armour);
@@ -119,13 +119,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStackOfCoolersSaturates operation.</summary>
+
         public void AStackOfCoolersSaturates()
         {
             if (!GameBlocks.IsInstalled) return;
 
             float bare;
-/// <summary>Of operation.</summary>
+
             List<CoolingLadder.Row> radiator = Of("Gauge_LG_Radiator", out bare);
             Assert.True(radiator.Count >= 3);
 
@@ -140,13 +140,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFarEndSaysWhetherHeatEverReachedIt operation.</summary>
+
         public void TheFarEndSaysWhetherHeatEverReachedIt()
         {
             if (!GameBlocks.IsInstalled) return;
 
             float bare;
-/// <summary>Of operation.</summary>
+
             List<CoolingLadder.Row> radiator = Of("Gauge_LG_Radiator", out bare);
             Assert.NotEmpty(radiator);
 

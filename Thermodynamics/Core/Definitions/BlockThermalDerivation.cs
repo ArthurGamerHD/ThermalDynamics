@@ -15,7 +15,7 @@ namespace Thermodynamics.Core
             get { return Count * MassEach; }
         }
 
-/// <summary>BlockComponent operation.</summary>
+
         public BlockComponent(string component, int count, float massEach)
         {
             Component = component;
@@ -26,7 +26,7 @@ namespace Thermodynamics.Core
 
     public static class BlockThermalDerivation
     {
-/// <summary>WasteFromEfficiency operation.</summary>
+
         public static float WasteFromEfficiency(float efficiency)
         {
             if (efficiency <= 0f || efficiency > 1f) return -1f;
@@ -34,13 +34,13 @@ namespace Thermodynamics.Core
             return 1f - efficiency;
         }
 
-/// <summary>Derive operation.</summary>
+
         public static BlockThermalProperties Derive(IList<BlockComponent> components)
         {
             return Material(components).Clamp();
         }
 
-/// <summary>Material operation.</summary>
+
         public static BlockThermalProperties Material(IList<BlockComponent> components)
         {
             BlockThermalProperties properties = BlockThermalProperties.Default();

@@ -21,13 +21,13 @@ namespace Thermodynamics.Core
 
         public const float UndergroundContactDepth = 5f;
 
-/// <summary>KelvinToCelsius operation.</summary>
+
         public static float KelvinToCelsius(float kelvin)
         {
             return kelvin - KelvinOffset;
         }
 
-/// <summary>CelsiusToKelvin operation.</summary>
+
         public static float CelsiusToKelvin(float celsius)
         {
             return celsius + KelvinOffset;

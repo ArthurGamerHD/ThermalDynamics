@@ -14,13 +14,13 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>Sets the tingsdialreachtests.</summary>
+
         public SettingsDialReachTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>HashSet operation.</summary>
+
         private static readonly HashSet<string> Caps = new HashSet<string>(StringComparer.Ordinal)
         {
             "MaxSubsteps", "MaxElementVisitsPerStep", "MaxSubstepsPerBlock",
@@ -46,10 +46,10 @@ namespace Thermodynamics.Tests
                 + " halving it halves the force" },
         };
 
-/// <summary>Fingerprint operation.</summary>
+
         private static List<float> Fingerprint(Action<ThermalSettings> apply)
         {
-/// <summary>List operation.</summary>
+
             List<float> readings = new List<float>();
 
             BuriedSource(apply, readings);
@@ -70,16 +70,16 @@ namespace Thermodynamics.Tests
             return readings;
         }
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings(Action<ThermalSettings> apply)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             if (apply != null) apply(settings);
             return settings.Derive();
         }
 
-/// <summary>Read operation.</summary>
+
         private static void Read(ThermalSimulation simulation, List<float> into)
         {
             float hottest = 0f;
@@ -114,7 +114,7 @@ namespace Thermodynamics.Tests
             into.Add(overheats == null ? 0f : overheats.Count);
         }
 
-/// <summary>BuriedSource operation.</summary>
+
         private static void BuriedSource(Action<ThermalSettings> apply, List<float> into)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -127,7 +127,7 @@ namespace Thermodynamics.Tests
             Read(simulation, into);
         }
 
-/// <summary>OnAPlanet operation.</summary>
+
         private static void OnAPlanet(Action<ThermalSettings> apply, List<float> into)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -140,7 +140,7 @@ namespace Thermodynamics.Tests
             Read(simulation, into);
         }
 
-/// <summary>InTheSun operation.</summary>
+
         private static void InTheSun(Action<ThermalSettings> apply, List<float> into)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -154,7 +154,7 @@ namespace Thermodynamics.Tests
             Read(simulation, into);
         }
 
-/// <summary>NearAStar operation.</summary>
+
         private static void NearAStar(Action<ThermalSettings> apply, List<float> into)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -163,7 +163,7 @@ namespace Thermodynamics.Tests
             EnvironmentSample sample = Worlds.Shadow();
             sample.HeatSources = new HeatSourceState[]
             {
-/// <summary>HeatSourceState operation.</summary>
+
                 new HeatSourceState(Vector3.Normalize(new Vector3(1f, 0.2f, 0.1f)), 4000f),
             };
             sample.HeatSourceCount = 1;
@@ -174,7 +174,7 @@ namespace Thermodynamics.Tests
             Read(simulation, into);
         }
 
-/// <summary>Cooking operation.</summary>
+
         private static void Cooking(Action<ThermalSettings> apply, List<float> into)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -188,7 +188,7 @@ namespace Thermodynamics.Tests
             Read(simulation, into);
         }
 
-/// <summary>Paced operation.</summary>
+
         private static void Paced(Action<ThermalSettings> apply, List<float> into)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -205,10 +205,10 @@ namespace Thermodynamics.Tests
             into.Add(simulation.StepsCompleted);
         }
 
-/// <summary>Starved operation.</summary>
+
         private static void Starved(Action<ThermalSettings> apply, List<float> into)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             if (apply != null) apply(settings);
 
@@ -223,10 +223,10 @@ namespace Thermodynamics.Tests
             into.Add(simulation.Solver.ConductionClampLive ? 1f : 0f);
         }
 
-/// <summary>OverBudget operation.</summary>
+
         private static void OverBudget(Action<ThermalSettings> apply, List<float> into)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             if (apply != null) apply(settings);
 
@@ -241,7 +241,7 @@ namespace Thermodynamics.Tests
             into.Add(simulation.Solver.LastSubsteps);
         }
 
-/// <summary>Flying operation.</summary>
+
         private static void Flying(Action<ThermalSettings> apply, List<float> into)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -252,7 +252,7 @@ namespace Thermodynamics.Tests
             Read(simulation, into);
         }
 
-/// <summary>FlyingInTrail operation.</summary>
+
         private static void FlyingInTrail(Action<ThermalSettings> apply, List<float> into)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -265,7 +265,7 @@ namespace Thermodynamics.Tests
             Read(simulation, into);
         }
 
-/// <summary>Plumbed operation.</summary>
+
         private static void Plumbed(Action<ThermalSettings> apply, List<float> into)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -288,7 +288,7 @@ namespace Thermodynamics.Tests
             into.Add(loops[0].ColdestSegment);
         }
 
-/// <summary>Pumped operation.</summary>
+
         private static void Pumped(Action<ThermalSettings> apply, List<float> into)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -315,7 +315,7 @@ namespace Thermodynamics.Tests
             Read(simulation, into);
         }
 
-/// <summary>Sealed operation.</summary>
+
         private static void Sealed(Action<ThermalSettings> apply, List<float> into)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -336,10 +336,10 @@ namespace Thermodynamics.Tests
             into.Add(air.Count == 0 ? 0f : air[0].ThermalMass);
         }
 
-/// <summary>Suit operation.</summary>
+
         private static void Suit(Action<ThermalSettings> apply, List<float> into)
         {
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings(apply);
 
             float interior = SuitThermal.ComfortKelvin;
@@ -365,7 +365,7 @@ namespace Thermodynamics.Tests
             into.Add(SuitThermal.SurvivableKelvin(settings, true));
         }
 
-/// <summary>Levels operation.</summary>
+
         private static object[] Levels(FieldInfo field, ThermalSettings shipped)
         {
             if (field.FieldType == typeof(bool))
@@ -391,7 +391,7 @@ namespace Thermodynamics.Tests
             return new object[] { number * 0.25f, number * 4f };
         }
 
-/// <summary>Same operation.</summary>
+
         private static bool Same(List<float> a, List<float> b)
         {
             if (a.Count != b.Count) return false;
@@ -407,10 +407,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EverySettingReachesTheSimulation operation.</summary>
+
         public void EverySettingReachesTheSimulation()
         {
-/// <summary>List operation.</summary>
+
             List<FieldInfo> fields = new List<FieldInfo>();
 
             foreach (FieldInfo field in typeof(ThermalSettings)
@@ -425,15 +425,15 @@ namespace Thermodynamics.Tests
                 "only " + fields.Count + " settings were found on ThermalSettings, so this test"
                 + " would pass on a class that had lost most of them");
 
-/// <summary>Fingerprint operation.</summary>
+
             List<float> shipped = Fingerprint(null);
 
             Assert.True(shipped.Count > 40,
                 "the rigs produced only " + shipped.Count + " readings between them");
 
-/// <summary>List operation.</summary>
+
             List<string> inert = new List<string>();
-/// <summary>List operation.</summary>
+
             List<string> unexpectedlyLive = new List<string>();
             int judged = 0;
 
@@ -446,7 +446,7 @@ namespace Thermodynamics.Tests
                     FieldInfo captured = field;
                     object value = level;
 
-/// <summary>Fingerprint operation.</summary>
+
                     List<float> readings = Fingerprint(s => captured.SetValue(s, value));
                     judged++;
 

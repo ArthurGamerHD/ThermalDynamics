@@ -24,7 +24,7 @@ namespace RichHudFramework.UI
 
 		protected readonly Dictionary<IBind, BindEventProxy> binds;
 
-/// <summary>BindInputElement operation.</summary>
+
 		public BindInputElement(HudParentBase parent = null) : base(parent)
 		{
 			FocusHandler = (parent as IFocusableElement)?.FocusHandler;
@@ -32,7 +32,7 @@ namespace RichHudFramework.UI
 			binds = new Dictionary<IBind, BindEventProxy>();
 		}
 
-/// <summary>Adds a .</summary>
+
 		public void Add(IBind bind, EventHandler NewPressed = null, EventHandler PressedAndHeld = null, EventHandler Released = null)
 		{
 			if (!binds.ContainsKey(bind))
@@ -53,14 +53,14 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>Reset operation.</summary>
+
 		public void Reset() { binds.Clear(); }
 
-/// <summary>Returns the hasbind.</summary>
+
 		public bool GetHasBind(IBind bind) =>
 			binds.ContainsKey(bind);
 
-/// <summary>HandleInput operation.</summary>
+
 		protected override void HandleInput(Vector2 cursorPos)
 		{
 			FocusHandler = (Parent as IFocusableElement)?.FocusHandler;
@@ -89,7 +89,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>Returns the enumerator.</summary>
+
 		public IEnumerator<IBindEventProxy> GetEnumerator() =>
 			binds.Values.GetEnumerator();
 
@@ -103,19 +103,19 @@ namespace RichHudFramework.UI
 
 			public event EventHandler Released;
 
-/// <summary>InvokeNewPressed operation.</summary>
+
 			public void InvokeNewPressed(object sender, EventArgs args) =>
 				NewPressed?.Invoke(sender, args);
 
-/// <summary>InvokePressedAndHeld operation.</summary>
+
 			public void InvokePressedAndHeld(object sender, EventArgs args) =>
 				PressedAndHeld?.Invoke(sender, args);
 
-/// <summary>InvokeReleased operation.</summary>
+
 			public void InvokeReleased(object sender, EventArgs args) =>
 				Released?.Invoke(sender, args);
 
-/// <summary>ClearSubscribers operation.</summary>
+
 			public void ClearSubscribers()
 			{
 				NewPressed = null;

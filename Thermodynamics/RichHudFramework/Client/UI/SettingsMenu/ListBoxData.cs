@@ -31,17 +31,17 @@ namespace RichHudFramework.UI
 
 		private readonly ApiMemberAccessor GetOrSetMemberFunc;
 
-/// <summary>ListBoxData operation.</summary>
+
 		public ListBoxData(ApiMemberAccessor GetOrSetMemberFunc) : base(GetListData(GetOrSetMemberFunc))
 		{
 			this.GetOrSetMemberFunc = GetOrSetMemberFunc;
 		}
 
-/// <summary>Returns the listdata.</summary>
+
 		private static MyTuple<Func<int, EntryData<T>>, Func<int>> GetListData(ApiMemberAccessor GetOrSetMemberFunc)
 		{
 			var listData = (CollectionData)GetOrSetMemberFunc(null, (int)ListBoxAccessors.ListMembers);
-/// <summary>EntryData operation.</summary>
+
 			Func<int, EntryData<T>> GetEntryFunc = x => new EntryData<T>(listData.Item1(x));
 
 			return new MyTuple<Func<int, EntryData<T>>, Func<int>>()
@@ -51,7 +51,7 @@ namespace RichHudFramework.UI
 			};
 		}
 
-/// <summary>Adds a .</summary>
+
 		public void Add(RichText text, T assocObject)
 		{
 			var data = new MyTuple<List<RichStringMembers>, object>()
@@ -63,7 +63,7 @@ namespace RichHudFramework.UI
 			GetOrSetMemberFunc(data, (int)ListBoxAccessors.Add);
 		}
 
-/// <summary>Insert operation.</summary>
+
 		public void Insert(int index, RichText text, T assocObject)
 		{
 			var data = new MyTuple<int, List<RichStringMembers>, object>()
@@ -76,27 +76,27 @@ namespace RichHudFramework.UI
 			GetOrSetMemberFunc(data, (int)ListBoxAccessors.Insert);
 		}
 
-/// <summary>Removes the .</summary>
+
 		public bool Remove(EntryData<T> entry) =>
 			(bool)GetOrSetMemberFunc(entry.ID, (int)ListBoxAccessors.Remove);
 
-/// <summary>Removes the at.</summary>
+
 		public void RemoveAt(int index) =>
 			GetOrSetMemberFunc(index, (int)ListBoxAccessors.RemoveAt);
 
-/// <summary>Clear operation.</summary>
+
 		public void Clear() =>
 			GetOrSetMemberFunc(null, (int)ListBoxAccessors.ClearEntries);
 
-/// <summary>Sets the selection.</summary>
+
 		public void SetSelection(EntryData<T> entry) =>
 			GetOrSetMemberFunc(entry.ID, (int)ListBoxAccessors.Selection);
 
-/// <summary>Sets the selection.</summary>
+
 		public void SetSelection(T assocMember) =>
 			GetOrSetMemberFunc(assocMember, (int)ListBoxAccessors.SetSelectionAtData);
 
-/// <summary>Sets the selection.</summary>
+
 		public void SetSelection(int index) =>
 			GetOrSetMemberFunc(index, (int)ListBoxAccessors.SelectionIndex);
 	}
@@ -105,34 +105,34 @@ namespace RichHudFramework.UI
 	{
 		public RichText Text
 		{
-/// <summary>RichText operation.</summary>
+
 			get { return new RichText(GetOrSetMemberFunc(null, (int)ListBoxEntryAccessors.Name) as List<RichStringMembers>); }
-/// <summary>Returns the orsetmemberfunc.</summary>
+
 			set { GetOrSetMemberFunc(value.apiData, (int)ListBoxEntryAccessors.Name); }
 		}
 
 		public bool Enabled
 		{
-/// <summary>return operation.</summary>
+
 			get { return (bool)GetOrSetMemberFunc(null, (int)ListBoxEntryAccessors.Enabled); }
-/// <summary>Returns the orsetmemberfunc.</summary>
+
 			set { GetOrSetMemberFunc(value, (int)ListBoxEntryAccessors.Enabled); }
 		}
 
 		public T AssocObject
 		{
-/// <summary>return operation.</summary>
+
 			get { return (T)GetOrSetMemberFunc(null, (int)ListBoxEntryAccessors.AssocObject); }
-/// <summary>Returns the orsetmemberfunc.</summary>
+
 			set { GetOrSetMemberFunc(value, (int)ListBoxEntryAccessors.AssocObject); }
 		}
 
-/// <summary>Returns the orsetmemberfunc.</summary>
+
 		public object ID => GetOrSetMemberFunc(null, (int)ListBoxEntryAccessors.ID);
 
 		private readonly ApiMemberAccessor GetOrSetMemberFunc;
 
-/// <summary>EntryData operation.</summary>
+
 		public EntryData(ApiMemberAccessor GetOrSetMemberFunc)
 		{
 			this.GetOrSetMemberFunc = GetOrSetMemberFunc;

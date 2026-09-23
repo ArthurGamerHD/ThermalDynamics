@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class FieldDumpTests
     {
-/// <summary>Fixture operation.</summary>
+
         private static string Fixture()
         {
             string folder = Path.Combine(
@@ -18,7 +18,7 @@ namespace Thermodynamics.Tests
             return path;
         }
 
-/// <summary>Check operation.</summary>
+
         private static DumpAudit.CheckResult Check(DumpAudit.Result result, string name)
         {
             foreach (DumpAudit.CheckResult check in result.Checks)
@@ -30,15 +30,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheComfortColumnIsReadableUnderEitherName operation.</summary>
+
         public void TheComfortColumnIsReadableUnderEitherName()
         {
-/// <summary>Fixture operation.</summary>
+
             string path = Fixture();
             string[] lines = File.ReadAllLines(path);
             Assert.True(lines.Length > 1, "the fixture has no rows");
 
-/// <summary>List operation.</summary>
+
             List<string> header = new List<string>(lines[0].Split(','));
             int column = header.IndexOf("game_comfort");
             if (column < 0) column = header.IndexOf("game_temperature");
@@ -73,7 +73,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryCheckReachesTheFixture operation.</summary>
+
         public void EveryCheckReachesTheFixture()
         {
             DumpAudit.Result result = DumpAudit.Run(Fixture());
@@ -89,12 +89,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFixtureStillCarriesTheCensusTearItCaught operation.</summary>
+
         public void TheFixtureStillCarriesTheCensusTearItCaught()
         {
             DumpAudit.Result result = DumpAudit.Run(Fixture());
 
-/// <summary>Check operation.</summary>
+
             DumpAudit.CheckResult census = Check(result, "live blocks");
             Assert.Equal(1, census.Hits);
             Assert.Contains("SmallBlockArmorBlock", census.Worst);
@@ -107,21 +107,21 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFixtureCarriesTheOpenObservations operation.</summary>
+
         public void TheFixtureCarriesTheOpenObservations()
         {
             DumpAudit.Result result = DumpAudit.Run(Fixture());
 
-/// <summary>Check operation.</summary>
+
             DumpAudit.CheckResult ceiling = Check(result, "wind stays under");
             Assert.Equal(23, ceiling.Hits);
             Assert.Contains("103.94", ceiling.Worst);
 
-/// <summary>Check operation.</summary>
+
             DumpAudit.CheckResult slope = Check(result, "slope wind");
             Assert.Equal(112, slope.Hits);
 
-/// <summary>Check operation.</summary>
+
             DumpAudit.CheckResult decomposes = Check(result, "wind decomposes");
             Assert.True(decomposes.Observation);
             Assert.Equal(20, decomposes.Hits);

@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
         private const float BoostCeiling = 140f;
 
         [Fact]
-/// <summary>TurningBoostOffChangesWhereTheShipIsHeld operation.</summary>
+
         public void TurningBoostOffChangesWhereTheShipIsHeld()
         {
             float on = TopSpeedForce.Ceiling(true, 80f, BoostCeiling);
@@ -26,14 +26,14 @@ namespace Thermodynamics.Tests
         [InlineData(60f)]
         [InlineData(140f)]
         [InlineData(1000f)]
-/// <summary>WithBoostOffTheBoostDialDoesNothing operation.</summary>
+
         public void WithBoostOffTheBoostDialDoesNothing(float boostCeiling)
         {
             Assert.Equal(110f, TopSpeedForce.Ceiling(false, 110f, boostCeiling));
         }
 
         [Fact]
-/// <summary>ABoostCeilingBelowCruiseDoesNotHoldAShipUnderItsOwnCruise operation.</summary>
+
         public void ABoostCeilingBelowCruiseDoesNotHoldAShipUnderItsOwnCruise()
         {
             Assert.Equal(110f, TopSpeedForce.Ceiling(true, 110f, 60f));
@@ -45,21 +45,21 @@ namespace Thermodynamics.Tests
         [InlineData(40f)]
         [InlineData(79.9f)]
         [InlineData(80f)]
-/// <summary>NoForceAtOrBelowCruise operation.</summary>
+
         public void NoForceAtOrBelowCruise(float speed)
         {
             Assert.Equal(0f, TopSpeedForce.Newtons(Resistance, 1000000f, 80f, speed));
         }
 
         [Fact]
-/// <summary>TheForceIsTheOriginalsAtAWorkedPoint operation.</summary>
+
         public void TheForceIsTheOriginalsAtAWorkedPoint()
         {
             Assert.Equal(300000f, TopSpeedForce.Newtons(1.5f, 1000000f, 80f, 100f), 1);
         }
 
         [Fact]
-/// <summary>TheForceRisesWithTheOverspeedAndApproachesItsAsymptote operation.</summary>
+
         public void TheForceRisesWithTheOverspeedAndApproachesItsAsymptote()
         {
             float previous = -1f;
@@ -75,7 +75,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>GarbageInputsProduceNoForceRatherThanGarbageForce operation.</summary>
+
         public void GarbageInputsProduceNoForceRatherThanGarbageForce()
         {
             Assert.Equal(0f, TopSpeedForce.Newtons(Resistance, 1000f, 80f, float.NaN));

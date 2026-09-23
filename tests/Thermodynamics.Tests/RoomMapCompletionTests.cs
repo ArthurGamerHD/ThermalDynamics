@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class RoomMapCompletionTests
     {
-/// <summary>SparseAcrossAHugeVolume operation.</summary>
+
         private static ThermalSimulation SparseAcrossAHugeVolume(int span)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -17,7 +17,7 @@ namespace Thermodynamics.Tests
             builder.Place(Catalog.LightArmor(), 0, 0, span);
             builder.Place(Catalog.LightArmor(), span, span, span);
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
@@ -26,10 +26,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APassOverAVolumeTheOldLimitCouldNotWalkStillCompletes operation.</summary>
+
         public void APassOverAVolumeTheOldLimitCouldNotWalkStillCompletes()
         {
-/// <summary>SparseAcrossAHugeVolume operation.</summary>
+
             ThermalSimulation simulation = SparseAcrossAHugeVolume(280);
 
             simulation.Rooms.RequestRestart(simulation.Grid);
@@ -44,17 +44,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APassThatGivesUpSaysSoAndPublishesNothing operation.</summary>
+
         public void APassThatGivesUpSaysSoAndPublishesNothing()
         {
-/// <summary>SparseAcrossAHugeVolume operation.</summary>
+
             ThermalSimulation simulation = SparseAcrossAHugeVolume(80);
 
-/// <summary>SurfaceMap operation.</summary>
+
             SurfaceMap surfaces = new SurfaceMap();
             surfaces.Rebuild(simulation.Grid);
 
-/// <summary>RoomMapper operation.</summary>
+
             RoomMapper mapper = new RoomMapper(surfaces);
             mapper.RequestRestart(simulation.Grid);
 
@@ -67,7 +67,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUnfinishedPassLeavesTheMapItHadInPlace operation.</summary>
+
         public void AnUnfinishedPassLeavesTheMapItHadInPlace()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -86,7 +86,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnOrdinaryHullMapsAtLoadAndReportsIt operation.</summary>
+
         public void AnOrdinaryHullMapsAtLoadAndReportsIt()
         {
             GridBuilder builder = GridBuilder.Large();

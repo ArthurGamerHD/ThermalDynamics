@@ -10,13 +10,13 @@ namespace Thermodynamics.Tests
 {
     public class CustomHeatSourceTests
     {
-/// <summary>Isolated operation.</summary>
+
         private static ThermalSettings Isolated()
         {
             return Isolation.DeadWorld();
         }
 
-/// <summary>Smouldering operation.</summary>
+
         private static BlockModel Smouldering(float watts)
         {
             BlockThermalProperties thermal = Catalog.DefaultThermal();
@@ -24,7 +24,7 @@ namespace Thermodynamics.Tests
             return BlockModel.Solid("Smoulder", Vector3I.One, 1000f, thermal);
         }
 
-/// <summary>Rig operation.</summary>
+
         private static ThermalSimulation Rig(float watts, int steps)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -38,7 +38,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>DeclaredWattsHeatTheBlockAndNoneLeavesItAlone operation.</summary>
+
         public void DeclaredWattsHeatTheBlockAndNoneLeavesItAlone()
         {
             Assert.True(Rig(50000f, 200).Solver.Nodes[0].Temperature > 293.15f);
@@ -46,17 +46,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWattsAreTakenLiterallyRatherThanAsAFraction operation.</summary>
+
         public void TheWattsAreTakenLiterallyRatherThanAsAFraction()
         {
-/// <summary>Rig operation.</summary>
+
             ThermalNode node = Rig(50000f, 1).Solver.Nodes[0];
             Assert.Equal(50000f, node.HeatGenerationWatts, 1);
         }
 
 
         [Fact]
-/// <summary>TheEnergyDeliveredIsWattsTimesSeconds operation.</summary>
+
         public void TheEnergyDeliveredIsWattsTimesSeconds()
         {
             const float Watts = 50000f;
@@ -65,7 +65,7 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Smouldering(Watts), Vector3I.Zero);
 
-/// <summary>Isolated operation.</summary>
+
             ThermalSettings settings = Isolated();
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
 
@@ -85,12 +85,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TwiceTheWattsIsTwiceTheRise operation.</summary>
+
         public void TwiceTheWattsIsTwiceTheRise()
         {
-/// <summary>Rig operation.</summary>
+
             float one = Rig(25000f, 100).Solver.Nodes[0].Temperature - 293.15f;
-/// <summary>Rig operation.</summary>
+
             float two = Rig(50000f, 100).Solver.Nodes[0].Temperature - 293.15f;
 
             Assert.True(one > 0f);
@@ -99,7 +99,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>IntrinsicHeatAddsToWasteHeatRatherThanReplacingIt operation.</summary>
+
         public void IntrinsicHeatAddsToWasteHeatRatherThanReplacingIt()
         {
             BlockThermalProperties thermal = Catalog.DefaultThermal();
@@ -117,10 +117,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASourceWithNoPowerAtAllStillMakesHeat operation.</summary>
+
         public void ASourceWithNoPowerAtAllStillMakesHeat()
         {
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(50000f, 1);
             BlockInstance block = simulation.Solver.Nodes[0].Block;
 
@@ -132,7 +132,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheHeatConductsIntoNeighbouringBlocks operation.</summary>
+
         public void TheHeatConductsIntoNeighbouringBlocks()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -153,7 +153,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHullCarryingASourceSettlesWhereMadeEqualsVented operation.</summary>
+
         public void AHullCarryingASourceSettlesWhereMadeEqualsVented()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -175,7 +175,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheOfflineParserReadsTheProperty operation.</summary>
+
         public void TheOfflineParserReadsTheProperty()
         {
             BlockThermalProperties properties = BlockThermalProperties.Default();
@@ -194,14 +194,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BothParsersKnowTheSamePropertyNames operation.</summary>
+
         public void BothParsersKnowTheSamePropertyNames()
         {
             string source = System.IO.File.ReadAllText(System.IO.Path.Combine(
                 ShippedBlocks.RepoRoot(), "Thermodynamics",
                 "Definitions", "ThermalCellDefinition.cs"));
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> inGame = new HashSet<string>();
             foreach (System.Text.RegularExpressions.Match match in
                 System.Text.RegularExpressions.Regex.Matches(source, "GetOrCompute\\(\"(\\w+)\"\\)"))
@@ -218,7 +218,7 @@ namespace Thermodynamics.Tests
             string offline = System.IO.File.ReadAllText(System.IO.Path.Combine(
                 ShippedBlocks.RepoRoot(), "tests", "Thermodynamics.Harness", "ShippedBlocks.cs"));
 
-/// <summary>List operation.</summary>
+
             List<string> unknown = new List<string>();
             foreach (string name in inGame)
             {
@@ -230,7 +230,7 @@ namespace Thermodynamics.Tests
                 "properties the game reads and the harness does not:\n  "
                 + string.Join("\n  ", unknown.ToArray()));
 
-/// <summary>List operation.</summary>
+
             List<string> ungame = new List<string>();
             foreach (System.Text.RegularExpressions.Match match in
                 System.Text.RegularExpressions.Regex.Matches(offline, "case \"(\\w+)\":\\s*properties\\."))
@@ -246,7 +246,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ANegativeDeclarationCannotCoolABlock operation.</summary>
+
         public void ANegativeDeclarationCannotCoolABlock()
         {
             BlockThermalProperties properties = BlockThermalProperties.Default();

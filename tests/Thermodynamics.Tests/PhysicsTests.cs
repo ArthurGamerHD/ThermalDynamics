@@ -9,10 +9,10 @@ namespace Thermodynamics.Tests
 {
     public static class Fixture
     {
-/// <summary>ConductionOnly operation.</summary>
+
         public static ThermalSettings ConductionOnly(int frequency = 4)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -22,10 +22,10 @@ namespace Thermodynamics.Tests
             return settings.Derive();
         }
 
-/// <summary>EnvironmentOnly operation.</summary>
+
         public static ThermalSettings EnvironmentOnly(int frequency = 4)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableSolarHeat = false;
             settings.EnableFriction = false;
@@ -34,7 +34,7 @@ namespace Thermodynamics.Tests
             return settings.Derive();
         }
 
-/// <summary>Foil operation.</summary>
+
         public static BlockModel Foil(float mass = 10f)
         {
             BlockThermalProperties thermal = Catalog.DefaultThermal();
@@ -46,7 +46,7 @@ namespace Thermodynamics.Tests
     public class ConductionTests
     {
         [Fact]
-/// <summary>ConductanceMatchesTheSeriesFormula operation.</summary>
+
         public void ConductanceMatchesTheSeriesFormula()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -65,7 +65,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ConductanceIsSymmetricWhicheverWayItIsBuilt operation.</summary>
+
         public void ConductanceIsSymmetricWhicheverWayItIsBuilt()
         {
             GridBuilder forwards = GridBuilder.Large();
@@ -83,7 +83,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ContactAreaScalesWithSharedFaces operation.</summary>
+
         public void ContactAreaScalesWithSharedFaces()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -98,7 +98,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BlocksWithoutMountSurfacesDoNotConduct operation.</summary>
+
         public void BlocksWithoutMountSurfacesDoNotConduct()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -111,7 +111,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>HeatFlowsFromHotToColdAndStops operation.</summary>
+
         public void HeatFlowsFromHotToColdAndStops()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -132,12 +132,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EquilibriumIsWeightedByThermalMass operation.</summary>
+
         public void EquilibriumIsWeightedByThermalMass()
         {
             GridBuilder builder = GridBuilder.Large();
-            builder.Place(Catalog.LightArmor(), Vector3I.Zero);      // 500 kg
-            builder.Place(Catalog.HeavyArmor(), new Vector3I(1, 0, 0)); // 3300 kg
+            builder.Place(Catalog.LightArmor(), Vector3I.Zero);
+            builder.Place(Catalog.HeavyArmor(), new Vector3I(1, 0, 0));
 
             ThermalSimulation simulation = builder.BuildSimulation(Fixture.ConductionOnly());
             ThermalNode light = simulation.Solver.GetNodeAt(Vector3I.Zero);
@@ -156,7 +156,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ConductionConservesEnergyExactly operation.</summary>
+
         public void ConductionConservesEnergyExactly()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -174,7 +174,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EnergyIsNotConservedWhenTheBlockPopulationChanges operation.</summary>
+
         public void EnergyIsNotConservedWhenTheBlockPopulationChanges()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -202,7 +202,7 @@ namespace Thermodynamics.Tests
                 simulation.Solver.GetNodeAt(new Vector3I(1, 0, 0)).Temperature, 4);
 
             float beforeWeld = simulation.Solver.TotalEnergy;
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance welded = new BlockInstance(
                 Catalog.LightArmor(), Vector3I.Zero, BlockOrientation.Identity);
             ThermalNode arriving = simulation.AddBlock(welded);
@@ -212,7 +212,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ConductionResultDoesNotDependOnBlockOrder operation.</summary>
+
         public void ConductionResultDoesNotDependOnBlockOrder()
         {
             float[] results = new float[2];
@@ -240,7 +240,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OriginalConductionIgnoredThermalMass operation.</summary>
+
         public void OriginalConductionIgnoredThermalMass()
         {
             LegacyFormulas.Cell light = new LegacyFormulas.Cell
@@ -278,7 +278,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OriginalConductionDidNotConserveEnergy operation.</summary>
+
         public void OriginalConductionDidNotConserveEnergy()
         {
             LegacyFormulas.Cell small = new LegacyFormulas.Cell
@@ -289,7 +289,7 @@ namespace Thermodynamics.Tests
             LegacyFormulas.Cell large = new LegacyFormulas.Cell
             {
                 Conductivity = 1f, SpecificHeat = 2f, Mass = 10000f, GridSize = 2.5f,
-/// <summary>Vector3I operation.</summary>
+
                 Extents = new Vector3I(3, 3, 4), Temperature = 400f
             };
 
@@ -303,7 +303,7 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
             builder.Place(BlockModel.Solid("Bulk", new Vector3I(3, 3, 4), 10000f, Catalog.DefaultThermal()),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(1, 0, 0));
 
             ThermalSimulation simulation = builder.BuildSimulation(Fixture.ConductionOnly());
@@ -323,7 +323,7 @@ namespace Thermodynamics.Tests
     public class StabilityTests
     {
         [Fact]
-/// <summary>ASmallStepNeedsNoSubstepping operation.</summary>
+
         public void ASmallStepNeedsNoSubstepping()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -337,7 +337,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStiffGridAutomaticallySubsteps operation.</summary>
+
         public void AStiffGridAutomaticallySubsteps()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -354,7 +354,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnAbsurdStepStaysBoundedAndConservesEnergy operation.</summary>
+
         public void AnAbsurdStepStaysBoundedAndConservesEnergy()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -383,7 +383,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WithoutTheClampAnAbsurdStepBlowsUp operation.</summary>
+
         public void WithoutTheClampAnAbsurdStepBlowsUp()
         {
             GridBuilder builder = GridBuilder.Large();

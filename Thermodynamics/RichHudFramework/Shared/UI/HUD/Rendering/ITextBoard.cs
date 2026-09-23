@@ -44,13 +44,13 @@ namespace RichHudFramework
 
                 bool VertCenterText { get; set; }
 
-/// <summary>MoveToChar operation.</summary>
+
 				void MoveToChar(Vector2I index);
 
-/// <summary>Returns the charatoffset.</summary>
+
                 Vector2I GetCharAtOffset(Vector2 localPos);
 
-/// <summary>Draw operation.</summary>
+
                 void Draw(BoundingBox2 box, BoundingBox2 mask, MatrixD[] matrix);
             }
         }

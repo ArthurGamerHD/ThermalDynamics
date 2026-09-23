@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
     public class ProfileSuiteTests
     {
         [Fact]
-/// <summary>TheSettingsHookReachesAScenario operation.</summary>
+
         public void TheSettingsHookReachesAScenario()
         {
             try
@@ -35,7 +35,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheMaterialHookIsAppliedExactlyOnce operation.</summary>
+
         public void TheMaterialHookIsAppliedExactlyOnce()
         {
             try
@@ -64,7 +64,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AProfilePaceLandsOnTheEffectiveConductivity operation.</summary>
+
         public void AProfilePaceLandsOnTheEffectiveConductivity()
         {
             BalanceProfile physical = BalanceProfile.Physical();
@@ -79,10 +79,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheProfilesThatDescribeTheShippingWorldReadItRatherThanRestateIt operation.</summary>
+
         public void TheProfilesThatDescribeTheShippingWorldReadItRatherThanRestateIt()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings shipped = new ThermalSettings();
 
             BalanceProfile[] follow = { BalanceProfile.Shipped(), BalanceProfile.Candidate() };
@@ -107,12 +107,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUnsetProfileInheritsTheShippingWorld operation.</summary>
+
         public void AnUnsetProfileInheritsTheShippingWorld()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings shipped = new ThermalSettings();
-/// <summary>BalanceProfile operation.</summary>
+
             BalanceProfile bare = new BalanceProfile();
 
             Assert.Equal(shipped.HeatTimeScale, bare.HeatTimeScale, 4);
@@ -122,7 +122,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryProfileDiffersFromEveryOther operation.</summary>
+
         public void EveryProfileDiffersFromEveryOther()
         {
             List<BalanceProfile> profiles = BalanceProfile.All();
@@ -146,7 +146,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASourceWithNoSinkIsNotCountedAsBreakage operation.</summary>
+
         public void ASourceWithNoSinkIsNotCountedAsBreakage()
         {
             List<FeatureMatrix.Row> rows = FeatureMatrix.Run();
@@ -166,7 +166,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ArcadeNoLongerDivergesOnTheEverythingRig operation.</summary>
+
         public void ArcadeNoLongerDivergesOnTheEverythingRig()
         {
             List<FeatureMatrix.Row> rows = FeatureMatrix.Run();
@@ -185,7 +185,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheBurningShipSettlesRatherThanDiverging operation.</summary>
+
         public void TheBurningShipSettlesRatherThanDiverging()
         {
             ThermalSettings settings = BalanceProfile.Shipped().ToSettings();
@@ -193,7 +193,7 @@ namespace Thermodynamics.Tests
 
             built.Simulation.Solver.CollectDiagnostics = true;
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(built.Simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Run(1800f, 60f);
@@ -228,13 +228,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheHottestBlockOnTheBurningShipHasNoFaceToRadiateFrom operation.</summary>
+
         public void TheHottestBlockOnTheBurningShipHasNoFaceToRadiateFrom()
         {
             ThermalSettings settings = BalanceProfile.Shipped().ToSettings();
             WorstCases.Built built = WorstCases.Burning("ship", 4000, settings);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(built.Simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Run(1800f, 60f);

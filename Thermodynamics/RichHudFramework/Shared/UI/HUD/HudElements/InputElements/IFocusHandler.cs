@@ -16,10 +16,10 @@
 
 			bool HasFocus { get; }
 
-/// <summary>Returns the inputfocus.</summary>
+
 			void GetInputFocus();
 
-/// <summary>ReleaseFocus operation.</summary>
+
 			void ReleaseFocus();
 		}
 

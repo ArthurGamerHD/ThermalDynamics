@@ -13,10 +13,10 @@ namespace Thermodynamics.Tests
     [Trait("speed", "slow")]
     public class UncalledCodeTests
     {
-/// <summary>SourceFiles operation.</summary>
+
         private static List<string> SourceFiles()
         {
-/// <summary>List operation.</summary>
+
             List<string> files = new List<string>();
             string root = ShippedBlocks.RepoRoot();
 
@@ -34,18 +34,18 @@ namespace Thermodynamics.Tests
             return files;
         }
 
-/// <summary>IsVendored operation.</summary>
+
         private static bool IsVendored(string relative)
         {
             return relative.Contains("/RichHudFramework/");
         }
 
         [Fact]
-/// <summary>NoPrivateHelperInTheTreeIsCalledByNothing operation.</summary>
+
         public void NoPrivateHelperInTheTreeIsCalledByNothing()
         {
             string root = ShippedBlocks.RepoRoot();
-/// <summary>SourceFiles operation.</summary>
+
             List<string> files = SourceFiles();
 
             Dictionary<string, int> mentions = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -66,7 +66,7 @@ namespace Thermodynamics.Tests
                 }
             }
 
-/// <summary>List operation.</summary>
+
             List<string> uncalled = new List<string>();
 
             foreach (string path in files)
@@ -90,12 +90,12 @@ namespace Thermodynamics.Tests
 
             Assert.True(uncalled.Count == 0,
                 "these are declared and mentioned nowhere else, so nothing calls"
-/// <summary>for operation.</summary>
+
                 + " them — delete them, or give them the caller they were written for (`D2`): "
                 + string.Join(", ", uncalled.ToArray()));
         }
 
-/// <summary>IsPrivateOrInternalStatic operation.</summary>
+
         private static bool IsPrivateOrInternalStatic(MethodDeclarationSyntax method)
         {
             bool isStatic = false;

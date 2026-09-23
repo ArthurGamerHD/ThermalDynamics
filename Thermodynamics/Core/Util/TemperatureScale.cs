@@ -9,7 +9,7 @@ namespace Thermodynamics.Core
         public const float DefaultLow = 267f;
         public const float DefaultHigh = 500f;
 
-/// <summary>ToHsv operation.</summary>
+
         public static Vector3 ToHsv(float value, float max = DefaultMax, float low = DefaultLow, float high = DefaultHigh)
         {
             if (!(max > 0f)) max = 1f;
@@ -27,7 +27,7 @@ namespace Thermodynamics.Core
             {
                 v = (1.5f * (t / low)) - 1f;
             }
-/// <summary>if operation.</summary>
+
             else if (t < high)
             {
                 h = (240f - ((t - low) / (high - low) * 240f)) / 360f;
@@ -41,7 +41,7 @@ namespace Thermodynamics.Core
             return new Vector3(h, s, v);
         }
 
-/// <summary>ToCelsiusString operation.</summary>
+
         public static string ToCelsiusString(float kelvin)
         {
             return ThermalConstants.KelvinToCelsius(kelvin).ToString("n2") + "°C";

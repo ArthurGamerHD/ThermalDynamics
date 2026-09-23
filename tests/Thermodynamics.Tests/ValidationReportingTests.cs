@@ -7,21 +7,21 @@ namespace Thermodynamics.Tests
     [Collection("ThermalValidation")]
     public class ValidationReportingTests
     {
-/// <summary>Capture operation.</summary>
+
         private static List<string> Capture()
         {
             ThermalValidation.Reset();
-/// <summary>List operation.</summary>
+
             List<string> written = new List<string>();
             ThermalValidation.Writer = written.Add;
             return written;
         }
 
         [Fact]
-/// <summary>AnUnphysicalBlockPropertyIsNamedWithTheBlockThatCarriesIt operation.</summary>
+
         public void AnUnphysicalBlockPropertyIsNamedWithTheBlockThatCarriesIt()
         {
-/// <summary>Capture operation.</summary>
+
             List<string> written = Capture();
             try
             {
@@ -47,10 +47,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSameProblemIsSaidOnceHoweverOftenItIsFound operation.</summary>
+
         public void TheSameProblemIsSaidOnceHoweverOftenItIsFound()
         {
-/// <summary>Capture operation.</summary>
+
             List<string> written = Capture();
             try
             {
@@ -74,10 +74,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NothingIsSaidAboutValuesThatAreFine operation.</summary>
+
         public void NothingIsSaidAboutValuesThatAreFine()
         {
-/// <summary>Capture operation.</summary>
+
             List<string> written = Capture();
             try
             {
@@ -95,14 +95,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASettingsFaultIsReportedAfterItHasBeenDerived operation.</summary>
+
         public void ASettingsFaultIsReportedAfterItHasBeenDerived()
         {
-/// <summary>Capture operation.</summary>
+
             List<string> written = Capture();
             try
             {
-/// <summary>ThermalSettings operation.</summary>
+
                 ThermalSettings settings = new ThermalSettings();
                 settings.Frequency = 2;
                 settings.HeatTimeScale = 20000f;
@@ -122,7 +122,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AProblemFoundBeforeAnybodyIsListeningIsStillRecorded operation.</summary>
+
         public void AProblemFoundBeforeAnybodyIsListeningIsStillRecorded()
         {
             ThermalValidation.Reset();
@@ -139,7 +139,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWriterThatThrowsIsNotTheReasonAWorldFailsToLoad operation.</summary>
+
         public void AWriterThatThrowsIsNotTheReasonAWorldFailsToLoad()
         {
             ThermalValidation.Reset();

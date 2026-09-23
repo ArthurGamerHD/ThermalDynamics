@@ -21,7 +21,7 @@ namespace Thermodynamics.Harness
 
         public const float StepSeconds = 1200f;
 
-/// <summary>Sets the tled.</summary>
+
         public static float Settled(Vanilla.Block block, BlockThermalProperties thermal,
             float watts, Power power, bool skinned)
         {
@@ -44,7 +44,7 @@ namespace Thermodynamics.Harness
             }
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("subject", instance);
@@ -54,7 +54,7 @@ namespace Thermodynamics.Harness
             return runner.Final.Tracked.TryGetValue("subject", out value) ? value : 0f;
         }
 
-/// <summary>Clone operation.</summary>
+
         public static BlockThermalProperties Clone(BlockThermalProperties source)
         {
             return source.Clone();

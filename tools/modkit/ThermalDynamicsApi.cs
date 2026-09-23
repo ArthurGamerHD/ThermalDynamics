@@ -80,7 +80,7 @@ namespace ThermalDynamics.Client
 
         public IReadOnlyList<string> MissingKeys { get { return missing; } }
 
-/// <summary>List operation.</summary>
+
         private readonly List<string> missing = new List<string>();
         private bool registered;
         private Action onReady;
@@ -110,7 +110,7 @@ namespace ThermalDynamics.Client
         private Func<List<string>> listSettings;
 
 
-/// <summary>Init operation.</summary>
+
         public void Init(Action ready = null)
         {
             if (registered) return;
@@ -122,7 +122,7 @@ namespace ThermalDynamics.Client
             MyAPIGateway.Utilities.SendModMessage(Channel, null);
         }
 
-/// <summary>Dispose operation.</summary>
+
         public void Dispose()
         {
             if (!registered) return;
@@ -158,13 +158,13 @@ namespace ThermalDynamics.Client
             missing.Clear();
         }
 
-/// <summary>OnMessage operation.</summary>
+
         private void OnMessage(object payload)
         {
             if (IsReady) return;
 
             var table = payload as Dictionary<string, Delegate>;
-            if (table == null) return;   // our own request echoing back, or another mod's traffic
+            if (table == null) return;
 
             Delegate versionDelegate;
             var version = table.TryGetValue("ApiVersion", out versionDelegate)
@@ -179,7 +179,7 @@ namespace ThermalDynamics.Client
             if (callback != null) callback();
         }
 
-/// <summary>Bind operation.</summary>
+
         private void Bind(Dictionary<string, Delegate> table)
         {
             missing.Clear();
@@ -209,7 +209,7 @@ namespace ThermalDynamics.Client
             listSettings = Get<Func<List<string>>>(table, "ListSettings");
         }
 
-/// <summary>Returns the .</summary>
+
         private T Get<T>(Dictionary<string, Delegate> table, string name) where T : class
         {
             Delegate entry;
@@ -219,20 +219,20 @@ namespace ThermalDynamics.Client
         }
 
 
-/// <summary>Returns the blocktemperature.</summary>
+
         public float GetBlockTemperature(IMySlimBlock block)
         {
             return getBlockTemperature == null || block == null ? 0f : getBlockTemperature(block);
         }
 
-/// <summary>Returns the blockthermals.</summary>
+
         public BlockThermals GetBlockThermals(IMySlimBlock block)
         {
-/// <summary>BlockThermals operation.</summary>
+
             BlockThermals result = new BlockThermals();
             if (getBlockThermals == null || block == null) return result;
 
-/// <summary>getBlockThermals operation.</summary>
+
             MyTuple<float, float, float, int> t = getBlockThermals(block);
             result.Temperature = t.Item1;
             result.HeatCapacity = t.Item2;
@@ -241,14 +241,14 @@ namespace ThermalDynamics.Client
             return result;
         }
 
-/// <summary>Returns the gridsummary.</summary>
+
         public GridSummary GetGridSummary(IMyCubeGrid grid)
         {
-/// <summary>GridSummary operation.</summary>
+
             GridSummary result = new GridSummary();
             if (getGridSummary == null || grid == null) return result;
 
-/// <summary>getGridSummary operation.</summary>
+
             MyTuple<float, float, int, int> t = getGridSummary(grid);
             result.HottestBlock = t.Item1;
             result.Ambient = t.Item2;
@@ -257,14 +257,14 @@ namespace ThermalDynamics.Client
             return result;
         }
 
-/// <summary>Returns the room.</summary>
+
         public RoomInfo GetRoom(IMyCubeGrid grid, Vector3I cell)
         {
-/// <summary>RoomInfo operation.</summary>
+
             RoomInfo result = new RoomInfo();
             if (getRoom == null || grid == null) return result;
 
-/// <summary>getRoom operation.</summary>
+
             MyTuple<bool, float, float, float> t = getRoom(grid, cell);
             result.IsRoom = t.Item1;
             result.Temperature = t.Item2;
@@ -273,48 +273,48 @@ namespace ThermalDynamics.Client
             return result;
         }
 
-/// <summary>Returns the gridheatbalance.</summary>
+
         public GridHeatBalance GetGridHeatBalance(IMyCubeGrid grid)
         {
-/// <summary>GridHeatBalance operation.</summary>
+
             GridHeatBalance result = new GridHeatBalance();
             if (getGridHeatBalance == null || grid == null) return result;
 
-/// <summary>getGridHeatBalance operation.</summary>
+
             MyTuple<float, float> t = getGridHeatBalance(grid);
             result.VentedWatts = t.Item1;
             result.GeneratedWatts = t.Item2;
             return result;
         }
 
-/// <summary>Returns the gridfrictionwatts.</summary>
+
         public float GetGridFrictionWatts(IMyCubeGrid grid)
         {
             return getGridFrictionWatts == null || grid == null ? 0f : getGridFrictionWatts(grid);
         }
 
-/// <summary>Returns the gridaeroforces.</summary>
+
         public AeroForces GetGridAeroForces(IMyCubeGrid grid)
         {
-/// <summary>AeroForces operation.</summary>
+
             AeroForces result = new AeroForces();
             if (getGridAeroForces == null || grid == null) return result;
 
-/// <summary>getGridAeroForces operation.</summary>
+
             MyTuple<Vector3, Vector3> t = getGridAeroForces(grid);
             result.Drag = t.Item1;
             result.Lift = t.Item2;
             return result;
         }
 
-/// <summary>Returns the coolantloop.</summary>
+
         public CoolantLoopInfo GetCoolantLoop(IMySlimBlock pipeBlock)
         {
-/// <summary>CoolantLoopInfo operation.</summary>
+
             CoolantLoopInfo result = new CoolantLoopInfo();
             if (getCoolantLoop == null || pipeBlock == null) return result;
 
-/// <summary>getCoolantLoop operation.</summary>
+
             MyTuple<bool, float, float, float, int> t = getCoolantLoop(pipeBlock);
             result.Found = t.Item1;
             result.MeanTemperature = t.Item2;
@@ -324,73 +324,73 @@ namespace ThermalDynamics.Client
             return result;
         }
 
-/// <summary>Sets the blockdragprofile.</summary>
+
         public bool SetBlockDragProfile(IMySlimBlock block, float[] faceMultipliers)
         {
             return setBlockDragProfile != null && block != null
-/// <summary>setBlockDragProfile operation.</summary>
+
                 && setBlockDragProfile(block, faceMultipliers);
         }
 
-/// <summary>ClearBlockDragProfile operation.</summary>
+
         public bool ClearBlockDragProfile(IMySlimBlock block)
         {
             return clearBlockDragProfile != null && block != null && clearBlockDragProfile(block);
         }
 
 
-/// <summary>Sets the blocktemperature.</summary>
+
         public bool SetBlockTemperature(IMySlimBlock block, float kelvin)
         {
             return setBlockTemperature != null && block != null && setBlockTemperature(block, kelvin);
         }
 
-/// <summary>Adds a blockheat.</summary>
+
         public bool AddBlockHeat(IMySlimBlock block, float joules)
         {
             return addBlockHeat != null && block != null && addBlockHeat(block, joules);
         }
 
-/// <summary>Sets the roompressure.</summary>
+
         public bool SetRoomPressure(IMyCubeGrid grid, Vector3I cell, float pressure)
         {
             return setRoomPressure != null && grid != null && setRoomPressure(grid, cell, pressure);
         }
 
 
-/// <summary>Adds a heatsource.</summary>
+
         public int AddHeatSource(IMyEntity entity, float watts, float range)
         {
             return addHeatSource == null || entity == null ? 0 : addHeatSource(entity, watts, range);
         }
 
-/// <summary>Adds a heatsourceat.</summary>
+
         public int AddHeatSourceAt(Vector3D worldPosition, float watts, float range)
         {
             return addHeatSourceAt == null ? 0 : addHeatSourceAt(worldPosition, watts, range);
         }
 
-/// <summary>UpdateHeatSource operation.</summary>
+
         public bool UpdateHeatSource(int id, float watts)
         {
             return updateHeatSource != null && updateHeatSource(id, watts);
         }
 
-/// <summary>Removes the heatsource.</summary>
+
         public bool RemoveHeatSource(int id)
         {
             return removeHeatSource != null && removeHeatSource(id);
         }
 
 
-/// <summary>Adds a threshold.</summary>
+
         public int AddThreshold(float temperature, ThresholdDirection direction, Action<ThresholdEvent> callback)
         {
             if (addThreshold == null || callback == null) return 0;
 
             return addThreshold(temperature, (int)direction, (block, id, threshold, reached, rising) =>
             {
-/// <summary>ThresholdEvent operation.</summary>
+
                 ThresholdEvent crossing = new ThresholdEvent();
                 crossing.Block = block;
                 crossing.ThresholdId = id;
@@ -401,26 +401,26 @@ namespace ThermalDynamics.Client
             });
         }
 
-/// <summary>Removes the threshold.</summary>
+
         public bool RemoveThreshold(int id)
         {
             return removeThreshold != null && removeThreshold(id);
         }
 
 
-/// <summary>ListSettings operation.</summary>
+
         public List<string> ListSettings()
         {
             return listSettings == null ? new List<string>() : (listSettings() ?? new List<string>());
         }
 
-/// <summary>Returns the setting.</summary>
+
         public float GetSetting(string name)
         {
             return getSetting == null ? float.NaN : getSetting(name);
         }
 
-/// <summary>Sets the setting.</summary>
+
         public bool SetSetting(string name, float value)
         {
             return setSetting != null && setSetting(name, value);

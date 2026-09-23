@@ -5,7 +5,7 @@
 	{
 		bool AllowHighlighting { get; set; }
 
-/// <summary>Reset operation.</summary>
+
 		void Reset();
 	}
 

@@ -77,7 +77,7 @@ namespace Thermodynamics.Core
 
         public int HeatSourceCount;
 
-/// <summary>ComposeRelativeWind operation.</summary>
+
         public void ComposeRelativeWind(Vector3 windDirection, float windSpeed, Matrix worldToLocal)
         {
             WindSpeed = windSpeed;
@@ -97,10 +97,10 @@ namespace Thermodynamics.Core
                 : Vector3.Zero;
         }
 
-/// <summary>Vacuum operation.</summary>
+
         public static EnvironmentSample Vacuum(Vector3 sunDirectionLocal)
         {
-/// <summary>EnvironmentSample operation.</summary>
+
             EnvironmentSample s = new EnvironmentSample();
             s.HasPlanet = false;
             s.AirDensity = 0f;
@@ -121,10 +121,10 @@ namespace Thermodynamics.Core
             return s;
         }
 
-/// <summary>DarkVacuum operation.</summary>
+
         public static EnvironmentSample DarkVacuum()
         {
-/// <summary>Vacuum operation.</summary>
+
             EnvironmentSample s = Vacuum(Vector3.Zero);
             s.IsSolarOccluded = true;
             s.SolarOcclusion = 1f;

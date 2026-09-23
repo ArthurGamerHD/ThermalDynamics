@@ -23,27 +23,27 @@ namespace Thermodynamics.Core
 
         public const float FullChannelSlope = 0.33f;
 
-/// <summary>BearingDirection operation.</summary>
+
         public static Vector3 BearingDirection(int bearing, Vector3 north, Vector3 east)
         {
             double angle = (bearing % Bearings) * (2d * Math.PI / Bearings);
             return (north * (float)Math.Cos(angle)) + (east * (float)Math.Sin(angle));
         }
 
-/// <summary>Index operation.</summary>
+
         public static int Index(int radius, int bearing)
         {
             return (radius * Bearings) + (bearing % Bearings);
         }
 
-/// <summary>Saturate operation.</summary>
+
         public static float Saturate(float value, float bound)
         {
             if (bound <= 0f) return 0f;
             return bound * (float)Math.Tanh(value / bound);
         }
 
-/// <summary>Relief operation.</summary>
+
         public static float Relief(float[] heights, float radius)
         {
             if (heights == null || heights.Length < SampleCount || radius <= 0f) return 0f;
@@ -57,20 +57,20 @@ namespace Thermodynamics.Core
             return -(total / Bearings) / radius;
         }
 
-/// <summary>SpeedUp operation.</summary>
+
         public static float SpeedUp(float relief)
         {
             float change = SpeedUpPerSlope * relief;
 
             change = change >= 0f
-/// <summary>Saturate operation.</summary>
+
                 ? Saturate(change, MaximumSpeedUp)
                 : -Saturate(-change, MaximumSlowDown);
 
             return 1f + change;
         }
 
-/// <summary>Shelter operation.</summary>
+
         public static float Shelter(
             float[] heights, float innerRadius, float outerRadius,
             Vector3 wind, Vector3 north, Vector3 east)
@@ -81,13 +81,13 @@ namespace Thermodynamics.Core
 
             Vector3 upwind = -Vector3.Normalize(wind);
 
-/// <summary>Bearing operation.</summary>
+
             double bearing = Bearing(upwind, north, east);
             float steepest = 0f;
 
             for (int radius = 0; radius < Radii; radius++)
             {
-/// <summary>Interpolate operation.</summary>
+
                 float height = Interpolate(heights, radius, bearing);
                 if (height <= 0f) continue;
 
@@ -99,13 +99,13 @@ namespace Thermodynamics.Core
 
             if (steepest <= 0f) return 1f;
 
-/// <summary>Saturate operation.</summary>
+
             float share = Saturate(steepest / FullShelterDegrees, 1f);
 
             return 1f - (MaximumShelter * share);
         }
 
-/// <summary>Channel operation.</summary>
+
         public static Vector3 Channel(
             float[] heights, float radius, Vector3 wind, Vector3 north, Vector3 east, float strength)
         {
@@ -133,7 +133,7 @@ namespace Thermodynamics.Core
             double amplitude = Math.Sqrt((cosine * cosine) + (sine * sine));
             if (amplitude < 1e-4d) return direction;
 
-/// <summary>Saturate operation.</summary>
+
             float confinement = Saturate((float)(amplitude / radius) / FullChannelSlope, 1f);
             confinement *= strength > 1f ? 1f : strength;
 
@@ -152,7 +152,7 @@ namespace Thermodynamics.Core
             return turned.LengthSquared() < 1e-8f ? direction : Vector3.Normalize(turned);
         }
 
-/// <summary>Downhill operation.</summary>
+
         public static Vector3 Downhill(
             float[] heights, float radius, Vector3 north, Vector3 east, out float slope)
         {
@@ -188,7 +188,7 @@ namespace Thermodynamics.Core
             return direction.LengthSquared() < 1e-8f ? Vector3.Zero : Vector3.Normalize(direction);
         }
 
-/// <summary>Bearing operation.</summary>
+
         private static double Bearing(Vector3 direction, Vector3 north, Vector3 east)
         {
             double angle = Math.Atan2(Vector3.Dot(direction, east), Vector3.Dot(direction, north));
@@ -196,7 +196,7 @@ namespace Thermodynamics.Core
             return angle;
         }
 
-/// <summary>Interpolate operation.</summary>
+
         private static float Interpolate(float[] heights, int radius, double bearing)
         {
             double step = 2d * Math.PI / Bearings;

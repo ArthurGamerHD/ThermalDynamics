@@ -7,20 +7,20 @@ namespace Thermodynamics.Tests
 {
     public class BlockDerivationTests
     {
-/// <summary>Of operation.</summary>
+
         private static List<BlockComponent> Of(params BlockComponent[] components)
         {
             return new List<BlockComponent>(components);
         }
 
-/// <summary>Part operation.</summary>
+
         private static BlockComponent Part(string component, int count, float massEach)
         {
             return new BlockComponent(component, count, massEach);
         }
 
         [Fact]
-/// <summary>SpecificHeatIsTheMassWeightedMeanExactly operation.</summary>
+
         public void SpecificHeatIsTheMassWeightedMeanExactly()
         {
             BlockThermalProperties p = BlockThermalDerivation.Material(Of(
@@ -31,7 +31,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AMassiveComponentDominatesALightOne operation.</summary>
+
         public void AMassiveComponentDominatesALightOne()
         {
             BlockThermalProperties p = BlockThermalDerivation.Material(Of(
@@ -43,7 +43,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWindowIsGlassAndAnArmourBlockIsSteel operation.</summary>
+
         public void AWindowIsGlassAndAnArmourBlockIsSteel()
         {
             BlockThermalProperties window = BlockThermalDerivation.Material(Of(
@@ -60,7 +60,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EmissivityComesFromTheHeaviestComponentRatherThanTheBlend operation.</summary>
+
         public void EmissivityComesFromTheHeaviestComponentRatherThanTheBlend()
         {
             BlockThermalProperties p = BlockThermalDerivation.Material(Of(
@@ -71,7 +71,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CriticalTemperatureSeparatesABatteryFromAReactor operation.</summary>
+
         public void CriticalTemperatureSeparatesABatteryFromAReactor()
         {
             BlockThermalProperties battery = BlockThermalDerivation.Material(Of(
@@ -87,7 +87,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APlushieIsFabricRatherThanSteel operation.</summary>
+
         public void APlushieIsFabricRatherThanSteel()
         {
             BlockThermalProperties p = BlockThermalDerivation.Material(Of(
@@ -98,13 +98,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockWithNoComponentsIsSteel operation.</summary>
+
         public void ABlockWithNoComponentsIsSteel()
         {
             foreach (List<BlockComponent> components in new List<BlockComponent>[]
             {
                 null,
-/// <summary>List operation.</summary>
+
                 new List<BlockComponent>(),
                 Of(Part("SteelPlate", 0, 20f)),
             })
@@ -118,7 +118,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUnknownComponentIsTreatedAsSteel operation.</summary>
+
         public void AnUnknownComponentIsTreatedAsSteel()
         {
             BlockThermalProperties p = BlockThermalDerivation.Material(Of(
@@ -128,10 +128,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FunctionComesFromTheTypeAndNotFromTheComponents operation.</summary>
+
         public void FunctionComesFromTheTypeAndNotFromTheComponents()
         {
-/// <summary>Of operation.</summary>
+
             List<BlockComponent> same = Of(Part("SteelPlate", 10, 20f));
 
             BlockThermalProperties thruster = ShippedBlocks.DeriveWithFunction(same, "Thrust");
@@ -146,7 +146,7 @@ namespace Thermodynamics.Tests
         [InlineData("Reactor")]
         [InlineData("HydrogenEngine")]
         [InlineData("BatteryBlock")]
-/// <summary>EveryProducerTypeConvertsSomeOfItsOutput operation.</summary>
+
         public void EveryProducerTypeConvertsSomeOfItsOutput(string typeId)
         {
             Assert.True(ShippedBlocks.FunctionOf(typeId).ProducerWasteEnergy > 0f,
@@ -154,7 +154,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACombustionEngineRunsHotterThanAReactorPerWatt operation.</summary>
+
         public void ACombustionEngineRunsHotterThanAReactorPerWatt()
         {
             Assert.True(
@@ -163,7 +163,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoFunctionCreatesEnergyFromNothing operation.</summary>
+
         public void NoFunctionCreatesEnergyFromNothing()
         {
             foreach (string typeId in ShippedBlocks.FunctionTypes())
@@ -178,7 +178,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryMaterialProducesAValidBlock operation.</summary>
+
         public void EveryMaterialProducesAValidBlock()
         {
             foreach (string component in BlockMaterials.Names)
@@ -193,7 +193,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryInventedMaterialSitsInsideTheRangeOfTheRealOnes operation.</summary>
+
         public void EveryInventedMaterialSitsInsideTheRangeOfTheRealOnes()
         {
             CheckInsideRealRange(delegate (BlockMaterial m) { return m.Conductivity; }, "conductivity");
@@ -202,7 +202,7 @@ namespace Thermodynamics.Tests
             CheckInsideRealRange(delegate (BlockMaterial m) { return m.ServiceLimit; }, "service limit");
         }
 
-/// <summary>CheckInsideRealRange operation.</summary>
+
         private static void CheckInsideRealRange(System.Func<BlockMaterial, float> property, string name)
         {
             float lowest, highest;
@@ -213,7 +213,7 @@ namespace Thermodynamics.Tests
                 BlockMaterial material = BlockMaterials.Get(component);
                 if (!material.Invented) continue;
 
-/// <summary>property operation.</summary>
+
                 float value = property(material);
                 Assert.True(value >= lowest && value <= highest,
                     component + " invents a " + name + " of " + value

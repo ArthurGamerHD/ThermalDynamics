@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
 {
     public class BlueprintTests
     {
-/// <summary>WriteBlueprint operation.</summary>
+
         private static string WriteBlueprint(string blocks, bool large = true)
         {
             string path = Path.Combine(Path.GetTempPath(),
@@ -37,7 +37,7 @@ namespace Thermodynamics.Tests
             return file;
         }
 
-/// <summary>BlueprintText operation.</summary>
+
         private static string BlueprintText(string blocks)
         {
             return "<?xml version=\"1.0\"?>\n" +
@@ -57,7 +57,7 @@ namespace Thermodynamics.Tests
                 "</Definitions>\n";
         }
 
-/// <summary>Block operation.</summary>
+
         private static string Block(string subtype, int x, int y, int z, string orientation = null)
         {
             return "<MyObjectBuilder_CubeBlock xsi:type=\"MyObjectBuilder_CubeBlock\">" +
@@ -68,12 +68,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AShipIsReadWithItsNameAndItsBlocks operation.</summary>
+
         public void AShipIsReadWithItsNameAndItsBlocks()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>WriteBlueprint operation.</summary>
+
             string file = WriteBlueprint(
                 Block("LargeBlockArmorBlock", 0, 0, 0) +
                 Block("LargeBlockArmorBlock", 1, 0, 0) +
@@ -89,7 +89,7 @@ namespace Thermodynamics.Tests
             Assert.True(ships[0].IsVanilla);
         }
 
-/// <summary>Typed operation.</summary>
+
         private static string Typed(string typeId, string subtype, int x, int y, int z)
         {
             return "<MyObjectBuilder_CubeBlock xsi:type=\"MyObjectBuilder_" + typeId + "\">" +
@@ -99,12 +99,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockWithNoSubtypeNameIsItsOwnTypesBaseVariantRatherThanArmour operation.</summary>
+
         public void ABlockWithNoSubtypeNameIsItsOwnTypesBaseVariantRatherThanArmour()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>WriteBlueprint operation.</summary>
+
             string file = WriteBlueprint(Typed("OxygenGenerator", null, 0, 0, 0));
             Blueprints.Ship ship = Blueprints.Read(file)[0];
 
@@ -119,14 +119,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASubtypeClaimedByTwoTypesResolvesByTheTypeTheBlueprintStates operation.</summary>
+
         public void ASubtypeClaimedByTwoTypesResolvesByTheTypeTheBlueprintStates()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>WriteBlueprint operation.</summary>
+
             string extended = WriteBlueprint(Typed("ExtendedPistonBase", "LargePistonBase", 0, 0, 0));
-/// <summary>WriteBlueprint operation.</summary>
+
             string plain = WriteBlueprint(Typed("PistonBase", "LargePistonBase", 0, 0, 0));
 
             BlockModel extendedModel = Blueprints.Read(extended)[0].Grids[0].Builder.Placed[0].Model;
@@ -137,13 +137,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoBaseVariantsTypeIdIsAlsoSomeOtherBlocksSubtype operation.</summary>
+
         public void NoBaseVariantsTypeIdIsAlsoSomeOtherBlocksSubtype()
         {
             if (!GameBlocks.IsInstalled) return;
 
             Dictionary<string, GameBlocks.Definition> bySubtype = GameBlocks.BySubtype();
-/// <summary>List operation.</summary>
+
             List<string> collided = new List<string>();
 
             foreach (GameBlocks.Definition variant in GameBlocks.BaseVariants().Values)
@@ -163,12 +163,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABaseVariantOfTheWrongGridSizeIsNotBuilt operation.</summary>
+
         public void ABaseVariantOfTheWrongGridSizeIsNotBuilt()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>WriteBlueprint operation.</summary>
+
             string file = WriteBlueprint(
                 Block("LargeBlockArmorBlock", 0, 0, 0) + Typed("SmallGatlingGun", null, 1, 0, 0));
             Blueprints.Ship ship = Blueprints.Read(file)[0];
@@ -179,12 +179,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockWithNoSubtypeNameIsTheBaseArmourCube operation.</summary>
+
         public void ABlockWithNoSubtypeNameIsTheBaseArmourCube()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>WriteBlueprint operation.</summary>
+
             string file = WriteBlueprint(Block(null, 0, 0, 0) + Block(null, 1, 0, 0));
             Blueprints.Ship ship = Blueprints.Read(file)[0];
 
@@ -193,12 +193,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OneModdedBlockDisqualifiesTheShip operation.</summary>
+
         public void OneModdedBlockDisqualifiesTheShip()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>WriteBlueprint operation.</summary>
+
             string file = WriteBlueprint(
                 Block("LargeBlockArmorBlock", 0, 0, 0) +
                 Block("SomeoneElsesRailgunMkIV", 1, 0, 0));
@@ -211,12 +211,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ALargeGridBlockIsNotAcceptedOnASmallGridShip operation.</summary>
+
         public void ALargeGridBlockIsNotAcceptedOnASmallGridShip()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>WriteBlueprint operation.</summary>
+
             string file = WriteBlueprint(
                 Block("SmallBlockArmorBlock", 0, 0, 0) +
                 Block("LargeBlockArmorBlock", 1, 0, 0), false);
@@ -229,12 +229,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnOrientedBlockKeepsItsOrientation operation.</summary>
+
         public void AnOrientedBlockKeepsItsOrientation()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>WriteBlueprint operation.</summary>
+
             string file = WriteBlueprint(Block("LargeBlockArmorBlock", 0, 0, 0,
                 "<BlockOrientation Forward=\"Right\" Up=\"Up\" />"));
 
@@ -246,7 +246,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUnreadableFileYieldsNoShips operation.</summary>
+
         public void AnUnreadableFileYieldsNoShips()
         {
             string path = Path.Combine(Path.GetTempPath(),
@@ -260,12 +260,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlueprintWithTwoBlocksInOneCellIsSkippedRatherThanThrown operation.</summary>
+
         public void ABlueprintWithTwoBlocksInOneCellIsSkippedRatherThanThrown()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>WriteBlueprint operation.</summary>
+
             string file = WriteBlueprint(
                 Block("LargeBlockArmorBlock", 0, 0, 0) +
                 Block("LargeHeavyBlockArmorBlock", 0, 0, 0));
@@ -278,7 +278,7 @@ namespace Thermodynamics.Tests
         [InlineData("244850/1415550344", 1415550344L)]
         [InlineData("244850/1415550344/T.N.F. Orbital Station 'Charlie'", 1415550344L)]
         [InlineData("244850/413269248/T.N.F. Strike Carrier Class 'Tigershark' Mk.II", 413269248L)]
-/// <summary>AWorkshopIdIsReadThroughACollectionFolder operation.</summary>
+
         public void AWorkshopIdIsReadThroughACollectionFolder(string under, long expected)
         {
             string root = Path.Combine(Path.GetTempPath(),
@@ -302,7 +302,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlueprintOutsideTheWorkshopHasNoId operation.</summary>
+
         public void ABlueprintOutsideTheWorkshopHasNoId()
         {
             string root = Path.Combine(Path.GetTempPath(),

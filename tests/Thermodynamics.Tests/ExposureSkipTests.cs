@@ -6,7 +6,7 @@ namespace Thermodynamics.Tests
 {
     public class ExposureSkipTests
     {
-/// <summary>RewriteEveryNodeTheOldWay operation.</summary>
+
         private static void RewriteEveryNodeTheOldWay(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -21,7 +21,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Step operation.</summary>
+
         private static void Step(ThermalSimulation simulation, int steps)
         {
             EnvironmentState state = EnvironmentSolver.Solve(
@@ -35,7 +35,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SkippingAnUnchangedNodeProducesTheSameStepAsWritingIt operation.</summary>
+
         public void SkippingAnUnchangedNodeProducesTheSameStepAsWritingIt()
         {
             ThermalSimulation skipping = Hulls.Driven(Hulls.Uncapped());
@@ -68,7 +68,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASecondRefreshOverAnUnchangedHullWritesNothing operation.</summary>
+
         public void ASecondRefreshOverAnUnchangedHullWritesNothing()
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped());
@@ -91,7 +91,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFaceThatMovedIsStillWritten operation.</summary>
+
         public void AFaceThatMovedIsStillWritten()
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped());
@@ -99,7 +99,7 @@ namespace Thermodynamics.Tests
             Step(simulation, 1);
             Assert.Equal(0, DirtyNodes(simulation));
 
-/// <summary>FirstExposedNode operation.</summary>
+
             ThermalNode node = FirstExposedNode(simulation);
             int[] counts = new int[Face.Count];
             for (int f = 0; f < Face.Count; f++) counts[f] = node.GetExposedFaces(f) + 1;
@@ -117,7 +117,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>DirtyNodes operation.</summary>
+
         private static int DirtyNodes(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -129,7 +129,7 @@ namespace Thermodynamics.Tests
             return dirty;
         }
 
-/// <summary>FirstExposedNode operation.</summary>
+
         private static ThermalNode FirstExposedNode(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;

@@ -13,8 +13,8 @@ namespace RichHudFramework.Client
 
 	public sealed class RichHudClient : RichHudComponentBase
 	{
-/// <summary>Vector4I operation.</summary>
-		internal static readonly Vector4I versionID = new Vector4I(1, 3, 0, 0); // Major, Minor, Rev, Hotfix
+
+		internal static readonly Vector4I versionID = new Vector4I(1, 3, 0, 0);
 		internal const ClientSubtypes subtype = ClientSubtypes.Full;
 		private const long modID = 1965654081, queueID = 1314086443;
 		private const int vID = (int)APIVersionTable.Latest;
@@ -30,7 +30,7 @@ namespace RichHudFramework.Client
 		private Func<int, object> GetApiDataFunc;
 		private Action UnregisterAction;
 
-/// <summary>RichHudClient operation.</summary>
+
 		private RichHudClient(string modName, Action InitCallback, Action ResetCallback) : base(false, true)
 		{
 			InitAction = InitCallback;
@@ -38,18 +38,18 @@ namespace RichHudFramework.Client
 
 			ExceptionHandler.ModName = modName;
 
-/// <summary>ClientData operation.</summary>
+
 			var clientData = new ClientData(modName, MessageHandler, RemoteReset, vID);
-/// <summary>ExtendedClientData operation.</summary>
+
 			regMessage = new ExtendedClientData(clientData, ExceptionHandler.Run, GetOrSetMember);
 		}
 
-/// <summary>Init operation.</summary>
+
 		public static void Init(string modName, Action InitCallback, Action ResetCallback)
 		{
 			if (Instance == null)
 			{
-/// <summary>RichHudClient operation.</summary>
+
 				Instance = new RichHudClient(modName, InitCallback, ResetCallback);
 				Instance.RequestRegistration();
 
@@ -60,14 +60,14 @@ namespace RichHudFramework.Client
 			}
 		}
 
-/// <summary>Reset operation.</summary>
+
 		public static void Reset()
 		{
 			if (Registered)
 				ExceptionHandler.ReloadClients();
 		}
 
-/// <summary>MessageHandler operation.</summary>
+
 		private void MessageHandler(int typeValue, object message)
 		{
 			MsgTypes msgType = (MsgTypes)typeValue;
@@ -87,7 +87,7 @@ namespace RichHudFramework.Client
 						ExceptionHandler.Run(InitAction);
 						ExceptionHandler.WriteToLog($"[RHF] Successfully registered with Rich HUD Master.");
 					}
-/// <summary>if operation.</summary>
+
 					else if (msgType == MsgTypes.RegistrationFailed)
 					{
 						if (message is string)
@@ -101,7 +101,7 @@ namespace RichHudFramework.Client
 			}
 		}
 
-/// <summary>Returns the orsetmember.</summary>
+
 		private object GetOrSetMember(object data, int memberEnum)
 		{
 			switch ((ClientDataAccessors)memberEnum)
@@ -119,19 +119,19 @@ namespace RichHudFramework.Client
 			return null;
 		}
 
-/// <summary>RequestRegistration operation.</summary>
+
 		private void RequestRegistration() =>
 			MyAPIUtilities.Static.SendModMessage(modID, regMessage);
 
-/// <summary>EnterQueue operation.</summary>
+
 		private void EnterQueue() =>
 			MyAPIUtilities.Static.RegisterMessageHandler(queueID, QueueHandler);
 
-/// <summary>ExitQueue operation.</summary>
+
 		private void ExitQueue() =>
 			MyAPIUtilities.Static.UnregisterMessageHandler(queueID, QueueHandler);
 
-/// <summary>QueueHandler operation.</summary>
+
 		private void QueueHandler(object message)
 		{
 			if (!(registered || regFail))
@@ -141,7 +141,7 @@ namespace RichHudFramework.Client
 			}
 		}
 
-/// <summary>Update operation.</summary>
+
 		public override void Update()
 		{
 			if (registered && inQueue)
@@ -151,7 +151,7 @@ namespace RichHudFramework.Client
 			}
 		}
 
-/// <summary>Close operation.</summary>
+
 		public override void Close()
 		{
 			ExitQueue();
@@ -159,7 +159,7 @@ namespace RichHudFramework.Client
 			Instance = null;
 		}
 
-/// <summary>RemoteReset operation.</summary>
+
 		private void RemoteReset()
 		{
 			ExceptionHandler.Run(() =>
@@ -172,7 +172,7 @@ namespace RichHudFramework.Client
 			});
 		}
 
-/// <summary>Unregisters the API and cleans resources.</summary>
+
 		private void Unregister()
 		{
 			if (registered)
@@ -186,7 +186,7 @@ namespace RichHudFramework.Client
 		{
 			protected readonly ApiModuleTypes componentType;
 
-/// <summary>ApiModule operation.</summary>
+
 			public ApiModule(ApiModuleTypes componentType, bool runOnServer, bool runOnClient) : base(runOnServer, runOnClient)
 			{
 				if (!Registered)
@@ -195,7 +195,7 @@ namespace RichHudFramework.Client
 				this.componentType = componentType;
 			}
 
-/// <summary>Returns the apidata.</summary>
+
 			protected object GetApiData()
 			{
 				return Instance?.GetApiDataFunc((int)componentType);

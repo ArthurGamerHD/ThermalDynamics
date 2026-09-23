@@ -24,10 +24,10 @@ namespace Thermodynamics.Core
         public static readonly Reference SodaLimeGlass =
             new Reference { Conductivity = 1.0f, SpecificHeat = 840f };
 
-/// <summary>Builds the method table.</summary>
+
         private static readonly Dictionary<string, Reference> Table = Build();
 
-/// <summary>Builds the method table.</summary>
+
         private static Dictionary<string, Reference> Build()
         {
             Dictionary<string, Reference> t =
@@ -50,13 +50,13 @@ namespace Thermodynamics.Core
             get { return Table.Keys; }
         }
 
-/// <summary>IsKnown operation.</summary>
+
         public static bool IsKnown(string material)
         {
             return material != null && Table.ContainsKey(material);
         }
 
-/// <summary>Returns the .</summary>
+
         public static Reference Get(string material)
         {
             Reference reference;

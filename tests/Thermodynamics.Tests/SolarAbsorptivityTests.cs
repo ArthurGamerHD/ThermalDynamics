@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
     public class SolarAbsorptivityTests
     {
         [Fact]
-/// <summary>UndeclaredAbsorptivityFollowsTheEmissivity operation.</summary>
+
         public void UndeclaredAbsorptivityFollowsTheEmissivity()
         {
             BlockThermalProperties properties = new BlockThermalProperties { Emissivity = 0.42f };
@@ -24,7 +24,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ADeclaredAbsorptivityIsUsedAndBoundedWithoutTouchingTheEmissivity operation.</summary>
+
         public void ADeclaredAbsorptivityIsUsedAndBoundedWithoutTouchingTheEmissivity()
         {
             BlockThermalProperties properties = new BlockThermalProperties
@@ -53,7 +53,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASelectiveSurfaceSettlesCoolerInSunlightThanABlackOne operation.</summary>
+
         public void ASelectiveSurfaceSettlesCoolerInSunlightThanABlackOne()
         {
             Assert.True(Settled(0.9f, 0.1f) < Settled(0.9f, 0.9f) - 5f,
@@ -62,7 +62,7 @@ namespace Thermodynamics.Tests
             float previous = 0f;
             for (float absorptivity = 0.1f; absorptivity <= 0.9f; absorptivity += 0.2f)
             {
-/// <summary>Sets the tled.</summary>
+
                 float settled = Settled(0.9f, absorptivity);
                 Assert.True(settled > previous, "more absorptive must never be cooler");
                 previous = settled;
@@ -70,7 +70,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RaisingTheEmissivityAloneCools operation.</summary>
+
         public void RaisingTheEmissivityAloneCools()
         {
             Assert.True(Settled(0.9f, 0.3f) < Settled(0.3f, 0.3f) - 5f,
@@ -78,13 +78,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockThatDeclaresNothingIsUnchanged operation.</summary>
+
         public void ABlockThatDeclaresNothingIsUnchanged()
         {
             Assert.Equal(Settled(0.35f, -1f), Settled(0.35f, 0.35f), 4);
         }
 
-/// <summary>Sets the tled.</summary>
+
         private static float Settled(float emissivity, float absorptivity)
         {
             BlockThermalProperties thermal = Catalog.DefaultThermal();
@@ -92,7 +92,7 @@ namespace Thermodynamics.Tests
             thermal.SolarAbsorptivity = absorptivity;
             thermal.Clamp();
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableDamage = false;
             settings.EnableFriction = false;

@@ -8,30 +8,30 @@ namespace Thermodynamics.Tests
 {
     public class RoomMapRecyclingTests
     {
-/// <summary>Shell operation.</summary>
+
         private static ThermalSimulation Shell()
         {
             GridBuilder builder = RoomFixtures.DooredShell();
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
             simulation.RebuildAll();
             return simulation;
         }
 
-/// <summary>Census operation.</summary>
+
         private static ThermalSimulation Census()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", 8000));
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
             simulation.RebuildAll();
             return simulation;
         }
 
-/// <summary>RunPass operation.</summary>
+
         private static RoomMap RunPass(ThermalSimulation simulation)
         {
             simulation.Rooms.RequestRestart(simulation.Grid);
@@ -40,13 +40,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheMapperRotatesThreeMapsAndAllocatesNoFourth operation.</summary>
+
         public void TheMapperRotatesThreeMapsAndAllocatesNoFourth()
         {
-/// <summary>Shell operation.</summary>
+
             ThermalSimulation simulation = Shell();
 
-/// <summary>List operation.</summary>
+
             List<RoomMap> published = new List<RoomMap>();
             published.Add(simulation.Rooms.Map);
             Assert.True(published[0].RoomCount > 0, "the shell mapped no rooms, so the rotation would cycle empty maps");
@@ -64,10 +64,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APublishedMapAnswersUntilThePublishAfterNext operation.</summary>
+
         public void APublishedMapAnswersUntilThePublishAfterNext()
         {
-/// <summary>Shell operation.</summary>
+
             ThermalSimulation simulation = Shell();
             RoomMap held = simulation.Rooms.Map;
 
@@ -103,10 +103,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARecycledMapIsCellForCellIdenticalToAFreshOne operation.</summary>
+
         public void ARecycledMapIsCellForCellIdenticalToAFreshOne()
         {
-/// <summary>Census operation.</summary>
+
             ThermalSimulation recycled = Census();
             RoomMap firstMap = recycled.Rooms.Map;
 
@@ -115,31 +115,31 @@ namespace Thermodynamics.Tests
 
             Assert.Same(firstMap, current);
 
-/// <summary>Census operation.</summary>
+
             ThermalSimulation fresh = Census();
             RoomMapAssert.SameMap(fresh.Rooms.Map, current, "census hull, recycled against fresh");
         }
 
         [Fact]
-/// <summary>AWarmPassAllocatesAnOrderLessThanAColdOne operation.</summary>
+
         public void AWarmPassAllocatesAnOrderLessThanAColdOne()
         {
-/// <summary>Census operation.</summary>
+
             ThermalSimulation simulation = Census();
 
-/// <summary>AllocatedBy operation.</summary>
+
             long cold = AllocatedBy(() => RunPass(simulation));
 
             RunPass(simulation);
             RunPass(simulation);
-/// <summary>AllocatedBy operation.</summary>
+
             long warm = AllocatedBy(() => RunPass(simulation));
 
             Assert.True(cold > 100_000, "the cold pass allocated " + cold + " B — too little for the ratio below to mean anything");
             Assert.True(warm * 10 < cold, "a warm pass allocated " + warm + " B against the cold pass's " + cold + " B; recycling is not recycling");
         }
 
-/// <summary>AllocatedBy operation.</summary>
+
         private static long AllocatedBy(Action pass)
         {
             long before = GC.GetAllocatedBytesForCurrentThread();

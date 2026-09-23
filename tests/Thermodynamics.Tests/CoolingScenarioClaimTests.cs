@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     public class CoolingScenarioClaimTests
     {
         [Fact]
-/// <summary>TheWholeCoolingPlantBeatsTheSameShipWithoutIt operation.</summary>
+
         public void TheWholeCoolingPlantBeatsTheSameShipWithoutIt()
         {
             ScenarioResult result = Scenarios.Run("cooling-plant");
@@ -37,7 +37,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryWayARingCanFailIsNamedRatherThanCountedAsAbsent operation.</summary>
+
         public void EveryWayARingCanFailIsNamedRatherThanCountedAsAbsent()
         {
             ScenarioResult result = Scenarios.Run("loop-faults");
@@ -58,7 +58,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ALoopWithNoSinkFaceStillLooksHealthy operation.</summary>
+
         public void ALoopWithNoSinkFaceStillLooksHealthy()
         {
             ScenarioResult result = Scenarios.Run("loop-dry");
@@ -74,7 +74,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APumpInstalledBackwardsMakesThingsWorse operation.</summary>
+
         public void APumpInstalledBackwardsMakesThingsWorse()
         {
             string summary = Scenarios.Run("heatpump-backwards").Summary;
@@ -88,7 +88,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCoefficientFallsAsTheGapWidensAndTheRatingBindsOnlyWhenItIsNarrow operation.</summary>
+
         public void TheCoefficientFallsAsTheGapWidensAndTheRatingBindsOnlyWhenItIsNarrow()
         {
             string summary = Scenarios.Run("heatpump-limits").Summary;
@@ -104,7 +104,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PastItsHeadroomThePlantOverheatsRatherThanHolding operation.</summary>
+
         public void PastItsHeadroomThePlantOverheatsRatherThanHolding()
         {
             ScenarioResult result = Scenarios.Run("cooling-runaway");
@@ -126,7 +126,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ALongRingCostsNoMorePerParcelThanAShortOne operation.</summary>
+
         public void ALongRingCostsNoMorePerParcelThanAShortOne()
         {
             ScenarioResult result = Scenarios.Run("loop-stiffness");
@@ -158,7 +158,7 @@ namespace Thermodynamics.Tests
         }
     
         [Fact]
-/// <summary>SplittingARingBuysNothingButSpreadingTheSourcesDoes operation.</summary>
+
         public void SplittingARingBuysNothingButSpreadingTheSourcesDoes()
         {
             string summary = Scenarios.Run("loop-layout").Summary;
@@ -171,13 +171,13 @@ namespace Thermodynamics.Tests
                 "spreading the sources should be worth a lot: " + bunched + " C then " + spread + " C");
 
             Assert.True(Math.Abs(spread - split) < 5f,
-/// <summary>sources operation.</summary>
+
                 "one ring with spread sources (" + spread + " C) and four rings (" + split
                 + " C) should be within a few kelvin; splitting is not what helps");
         }
     
         [Fact]
-/// <summary>AHeatPumpOnAWallCoolsTheRoomBehindIt operation.</summary>
+
         public void AHeatPumpOnAWallCoolsTheRoomBehindIt()
         {
             ScenarioResult result = Scenarios.Run("air-conditioning");

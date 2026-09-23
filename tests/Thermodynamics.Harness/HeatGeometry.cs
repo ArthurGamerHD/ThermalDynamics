@@ -39,10 +39,10 @@ namespace Thermodynamics.Harness
             public double HottestSourceConductance;
         }
 
-/// <summary>Measure operation.</summary>
+
         public static Result Measure(ShipAssembly assembly, bool large)
         {
-/// <summary>Result operation.</summary>
+
             Result result = new Result();
             float cell = large ? LargeCell : SmallCell;
 
@@ -51,7 +51,7 @@ namespace Thermodynamics.Harness
             double weightedDepth = 0d;
             double weightedSpread = 0d;
 
-/// <summary>List operation.</summary>
+
             List<double> allWatts = new List<double>();
 
             for (int g = 0; g < assembly.Simulations.Count; g++)
@@ -60,12 +60,12 @@ namespace Thermodynamics.Harness
                 IList<ThermalNode> nodes = solver.Nodes;
                 if (nodes.Count == 0) continue;
 
-/// <summary>Depths operation.</summary>
+
                 int[] depth = Depths(solver);
 
                 Dictionary<Vector3I, float> wattsAt = new Dictionary<Vector3I, float>();
                 Dictionary<Vector3I, float> areaAt = new Dictionary<Vector3I, float>();
-/// <summary>List operation.</summary>
+
                 List<int> sources = new List<int>();
 
                 for (int i = 0; i < nodes.Count; i++)
@@ -102,7 +102,7 @@ namespace Thermodynamics.Harness
                     ThermalNode node = nodes[sources[s]];
                     double w = node.HeatGenerationWatts;
                     Vector3I p = node.Block.Position;
-/// <summary>Vector3D operation.</summary>
+
                     centroid += new Vector3D(p.X, p.Y, p.Z) * w;
                     weight += w;
                 }
@@ -114,7 +114,7 @@ namespace Thermodynamics.Harness
                     {
                         ThermalNode node = nodes[sources[s]];
                         Vector3I p = node.Block.Position;
-/// <summary>Vector3D operation.</summary>
+
                         Vector3D d = new Vector3D(p.X, p.Y, p.Z) - centroid;
                         sum += node.HeatGenerationWatts * d.LengthSquared();
                     }
@@ -134,7 +134,7 @@ namespace Thermodynamics.Harness
                     for (int y = -Window; y <= Window; y++)
                     for (int z = -Window; z <= Window; z++)
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I probe = new Vector3I(at.X + x, at.Y + y, at.Z + z);
                         float w, a;
                         if (wattsAt.TryGetValue(probe, out w)) localWatts += w;
@@ -154,7 +154,7 @@ namespace Thermodynamics.Harness
                     }
                 }
 
-/// <summary>ClarkEvans operation.</summary>
+
                 double clumping = ClarkEvans(nodes, sources, nodes.Count, cell);
                 if (clumping > 0d)
                 {
@@ -170,12 +170,12 @@ namespace Thermodynamics.Harness
             result.WattsPerSquareMetre = totalArea > 0.01d ? totalWatts / totalArea : 0d;
             result.HeatDepthMean = totalWatts > 0d ? weightedDepth / totalWatts : 0d;
             result.SpreadMetres = totalWatts > 0d ? weightedSpread / totalWatts : 0d;
-/// <summary>Gini operation.</summary>
+
             result.Gini = Gini(allWatts);
             return result;
         }
 
-/// <summary>Depths operation.</summary>
+
         private static int[] Depths(ThermalSolver solver)
         {
             IList<ThermalNode> nodes = solver.Nodes;
@@ -193,7 +193,7 @@ namespace Thermodynamics.Harness
                 (neighbours[b] ?? (neighbours[b] = new List<int>())).Add(a);
             }
 
-/// <summary>Queue operation.</summary>
+
             Queue<int> queue = new Queue<int>();
             for (int i = 0; i < count; i++)
             {
@@ -226,7 +226,7 @@ namespace Thermodynamics.Harness
             return depth;
         }
 
-/// <summary>ClarkEvans operation.</summary>
+
         private static double ClarkEvans(IList<ThermalNode> nodes, List<int> sources,
             int occupiedCells, float cell)
         {
@@ -236,7 +236,7 @@ namespace Thermodynamics.Harness
             List<int> sample = sources;
             if (n > NearestNeighbourCap)
             {
-/// <summary>List operation.</summary>
+
                 sample = new List<int>(NearestNeighbourCap);
                 int stride = n / NearestNeighbourCap;
                 for (int i = 0; i < n && sample.Count < NearestNeighbourCap; i += stride) sample.Add(sources[i]);
@@ -268,7 +268,7 @@ namespace Thermodynamics.Harness
             return expected > 0d ? observed / expected : 0d;
         }
 
-/// <summary>Gini operation.</summary>
+
         private static double Gini(List<double> values)
         {
             if (values.Count < 2) return 0d;

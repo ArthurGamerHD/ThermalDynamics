@@ -10,14 +10,14 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>LinkSpanProbe operation.</summary>
+
         public LinkSpanProbe(ITestOutputHelper output)
         {
             this.output = output;
         }
 
         [Fact]
-/// <summary>TheNodesAreNumberedLocallyEnoughForConductionToGatherFromCache operation.</summary>
+
         public void TheNodesAreNumberedLocallyEnoughForConductionToGatherFromCache()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -27,7 +27,7 @@ namespace Thermodynamics.Tests
             GridModel grid = simulation.Grid;
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
 
-/// <summary>List operation.</summary>
+
             List<BlockInstance> scratch = new List<BlockInstance>();
             long total = 0;
             long links = 0;

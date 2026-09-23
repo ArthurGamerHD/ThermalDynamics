@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
 {
     public class FeatureToggleTests
     {
-/// <summary>TwoBlocks operation.</summary>
+
         private static ThermalSimulation TwoBlocks(ThermalSettings settings, float hot, float cold)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -22,16 +22,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ConductionOffLeavesNeighboursAlone operation.</summary>
+
         public void ConductionOffLeavesNeighboursAlone()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableConduction = false;
             settings.Derive();
 
-/// <summary>TwoBlocks operation.</summary>
+
             ThermalSimulation simulation = TwoBlocks(settings, 500f, 300f);
             simulation.StepExact(20, Worlds.Shadow());
 
@@ -40,15 +40,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ConductionOnEqualisesThem operation.</summary>
+
         public void ConductionOnEqualisesThem()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
 
-/// <summary>TwoBlocks operation.</summary>
+
             ThermalSimulation simulation = TwoBlocks(settings, 500f, 300f);
             simulation.StepExact(1000, Worlds.Shadow());
 
@@ -59,15 +59,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RadiationOffStopsAHotBlockCoolingIntoSpace operation.</summary>
+
         public void RadiationOffStopsAHotBlockCoolingIntoSpace()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableRadiation = false;
             settings.Derive();
 
-/// <summary>TwoBlocks operation.</summary>
+
             ThermalSimulation simulation = TwoBlocks(settings, 900f, 900f);
             simulation.StepExact(50, Worlds.Shadow());
 
@@ -75,10 +75,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RadiationOnCoolsIt operation.</summary>
+
         public void RadiationOnCoolsIt()
         {
-/// <summary>TwoBlocks operation.</summary>
+
             ThermalSimulation simulation = TwoBlocks(new ThermalSettings(), 900f, 900f);
             simulation.StepExact(50, Worlds.Shadow());
 
@@ -86,15 +86,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RadiationShedsWhatTheLawSays operation.</summary>
+
         public void RadiationShedsWhatTheLawSays()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableConduction = false;
             settings.Derive();
 
-/// <summary>TwoBlocks operation.</summary>
+
             ThermalSimulation simulation = TwoBlocks(settings, 900f, 900f);
             simulation.Solver.CollectDiagnostics = true;
 
@@ -116,19 +116,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ConvectionOffLeavesOnlyRadiationInAtmosphere operation.</summary>
+
         public void ConvectionOffLeavesOnlyRadiationInAtmosphere()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableConvection = false;
             settings.Derive();
 
-/// <summary>TwoBlocks operation.</summary>
+
             ThermalSimulation withoutConvection = TwoBlocks(settings, 600f, 600f);
             withoutConvection.StepExact(20, Worlds.PlanetSurface(1f, 0.5f));
 
-/// <summary>TwoBlocks operation.</summary>
+
             ThermalSimulation withConvection = TwoBlocks(new ThermalSettings(), 600f, 600f);
             withConvection.StepExact(20, Worlds.PlanetSurface(1f, 0.5f));
 
@@ -137,20 +137,20 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ConvectionOffLeavesTheRadiativeShareUntouched operation.</summary>
+
         public void ConvectionOffLeavesTheRadiativeShareUntouched()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings off = new ThermalSettings();
             off.EnableConvection = false;
             off.Derive();
 
-/// <summary>TwoBlocks operation.</summary>
+
             ThermalSimulation without = TwoBlocks(off, 600f, 600f);
             without.Solver.CollectDiagnostics = true;
             without.StepExact(1, ThinAir());
 
-/// <summary>TwoBlocks operation.</summary>
+
             ThermalSimulation with = TwoBlocks(new ThermalSettings(), 600f, 600f);
             with.Solver.CollectDiagnostics = true;
             with.StepExact(1, ThinAir());
@@ -164,17 +164,17 @@ namespace Thermodynamics.Tests
                 without.Solver.Nodes[0].LastRadiationWatts, 3);
         }
 
-/// <summary>ThinAir operation.</summary>
+
         private static EnvironmentSample ThinAir()
         {
             return Worlds.PlanetSurface(0.3f, 0.5f);
         }
 
         [Fact]
-/// <summary>TheEnvironmentSwitchRemovesRadiationAndConvectionAndLeavesSourcesAlone operation.</summary>
+
         public void TheEnvironmentSwitchRemovesRadiationAndConvectionAndLeavesSourcesAlone()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
@@ -202,10 +202,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WasteHeatOffStopsAReactorHeatingItself operation.</summary>
+
         public void WasteHeatOffStopsAReactorHeatingItself()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableWasteHeat = false;
@@ -221,10 +221,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SwitchingASettingTakesEffectWithoutARebuild operation.</summary>
+
         public void SwitchingASettingTakesEffectWithoutARebuild()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
@@ -245,10 +245,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ChangingHeatTimeScaleMidSessionRescalesCapacity operation.</summary>
+
         public void ChangingHeatTimeScaleMidSessionRescalesCapacity()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.HeatTimeScale = 1f;
@@ -268,10 +268,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CoolantLoopsSwitchOffMidSession operation.</summary>
+
         public void CoolantLoopsSwitchOffMidSession()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
@@ -291,12 +291,12 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>FrictionOffLeavesAHullAtSpeedCold operation.</summary>
+
         public void FrictionOffLeavesAHullAtSpeedCold()
         {
-/// <summary>HullAtSpeed operation.</summary>
+
             ThermalNode cold = HullAtSpeed(false);
-/// <summary>HullAtSpeed operation.</summary>
+
             ThermalNode hot = HullAtSpeed(true);
 
             Assert.Equal(0f, cold.LastFrictionWatts, 5);
@@ -306,10 +306,10 @@ namespace Thermodynamics.Tests
             Assert.True(hot.Temperature > 293.15f);
         }
 
-/// <summary>HullAtSpeed operation.</summary>
+
         private static ThermalNode HullAtSpeed(bool friction)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -329,13 +329,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SolarOffLeavesNoSolarWattsOnASunwardNode operation.</summary>
+
         public void SolarOffLeavesNoSolarWattsOnASunwardNode()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings off = new ThermalSettings();
             off.EnableSolarHeat = false;
             off.Derive();
@@ -344,7 +344,7 @@ namespace Thermodynamics.Tests
             dark.Solver.CollectDiagnostics = true;
             dark.StepExact(1, Worlds.Space(new Vector3(1f, 0f, 0f)));
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings on = new ThermalSettings();
             on.EnableSolarHeat = true;
             on.Derive();
@@ -359,12 +359,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CoolantLoopsOffStopTheRingCarryingHeat operation.</summary>
+
         public void CoolantLoopsOffStopTheRingCarryingHeat()
         {
-/// <summary>HotBlockBesideARing operation.</summary>
+
             float withLoops = HotBlockBesideARing(true);
-/// <summary>HotBlockBesideARing operation.</summary>
+
             float withoutLoops = HotBlockBesideARing(false);
 
             Assert.True(withLoops < withoutLoops - 1f,
@@ -372,10 +372,10 @@ namespace Thermodynamics.Tests
                 + withLoops + " K, without them " + withoutLoops + " K");
         }
 
-/// <summary>HotBlockBesideARing operation.</summary>
+
         private static float HotBlockBesideARing(bool loops)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -404,12 +404,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RoomAirOffStopsTheAirCarryingHeatAcrossARoom operation.</summary>
+
         public void RoomAirOffStopsTheAirCarryingHeatAcrossARoom()
         {
-/// <summary>FarWallOfASealedBox operation.</summary>
+
             float withAir = FarWallOfASealedBox(true);
-/// <summary>FarWallOfASealedBox operation.</summary>
+
             float withoutAir = FarWallOfASealedBox(false);
 
             Assert.Equal(293.15f, withoutAir, 3);
@@ -418,10 +418,10 @@ namespace Thermodynamics.Tests
                 + withoutAir + " K");
         }
 
-/// <summary>FarWallOfASealedBox operation.</summary>
+
         private static float FarWallOfASealedBox(bool air)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableConduction = false;

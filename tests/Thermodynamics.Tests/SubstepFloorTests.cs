@@ -11,19 +11,19 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>SubstepFloorTests operation.</summary>
+
         public SubstepFloorTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>LightFitting operation.</summary>
+
         private static BlockModel LightFitting()
         {
             return BlockModel.Solid("LightFitting", Vector3I.One, 16f, Catalog.DefaultThermal());
         }
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings(int cap)
         {
             ThermalSettings settings = new ThermalSettings { Frequency = 4 };
@@ -34,7 +34,7 @@ namespace Thermodynamics.Tests
             return settings.Derive();
         }
 
-/// <summary>Hull operation.</summary>
+
         private static ThermalSimulation Hull(ThermalSettings settings, float temperature, BlockModel centre)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -46,7 +46,7 @@ namespace Thermodynamics.Tests
                 {
                     for (int z = 0; z < 3; z++)
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I cell = new Vector3I(x, y, z);
                         bool middle = x == 1 && y == 1 && z == 1;
                         builder.Place(middle ? centre : armour, cell);
@@ -59,19 +59,19 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Hull operation.</summary>
+
         private static ThermalSimulation Hull(ThermalSettings settings, float temperature)
         {
             return Hull(settings, temperature, LightFitting());
         }
 
         [Fact]
-/// <summary>OneLightBlockSetsTheSubstepCountForTheWholeGrid operation.</summary>
+
         public void OneLightBlockSetsTheSubstepCountForTheWholeGrid()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation armourOnly = Hull(Settings(0), 300f, Catalog.LightArmor());
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation withFitting = Hull(Settings(0), 300f);
 
             float plain = armourOnly.Solver.RequiredSubsteps(armourOnly.Settings.StepSeconds);
@@ -83,16 +83,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCapBoundsTheEstimateExactly operation.</summary>
+
         public void TheCapBoundsTheEstimateExactly()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation uncapped = Hull(Settings(0), 300f);
             float before = uncapped.Solver.RequiredSubsteps(uncapped.Settings.StepSeconds);
 
             foreach (int cap in new int[] { 8, 4, 2, 1 })
             {
-/// <summary>Hull operation.</summary>
+
                 ThermalSimulation capped = Hull(Settings(cap), 300f);
                 float after = capped.Solver.RequiredSubsteps(capped.Settings.StepSeconds);
 
@@ -105,7 +105,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCapReachesBlocksMadeStiffByTheSkyRatherThanByTheirNeighbours operation.</summary>
+
         public void TheCapReachesBlocksMadeStiffByTheSkyRatherThanByTheirNeighbours()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -135,12 +135,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ANodeAlreadyAboveTheFloorIsNotMoved operation.</summary>
+
         public void ANodeAlreadyAboveTheFloorIsNotMoved()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation uncapped = Hull(Settings(0), 300f);
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation capped = Hull(Settings(4), 300f);
 
             EnvironmentSample sample = Worlds.Shadow();
@@ -163,24 +163,24 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDifferenceIsATransientAndDecaysAsTheGridSettles operation.</summary>
+
         public void TheDifferenceIsATransientAndDecaysAsTheGridSettles()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation uncapped = Hull(Settings(0), 700f);
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation capped = Hull(Settings(2), 700f);
 
             EnvironmentSample sample = Worlds.Shadow();
 
             uncapped.StepExact(40, sample);
             capped.StepExact(40, sample);
-/// <summary>WorstDifference operation.</summary>
+
             float early = WorstDifference(uncapped, capped);
 
             uncapped.StepExact(LabClock.Steps(4000), sample);
             capped.StepExact(LabClock.Steps(4000), sample);
-/// <summary>WorstDifference operation.</summary>
+
             float late = WorstDifference(uncapped, capped);
 
             Assert.True(early > 0f, "the floor changed nothing at all, so the test is not testing it");
@@ -189,7 +189,7 @@ namespace Thermodynamics.Tests
                 + " K; the floor's error is supposed to decay as the grid settles, not persist");
         }
 
-/// <summary>WorstDifference operation.</summary>
+
         private static float WorstDifference(ThermalSimulation a, ThermalSimulation b)
         {
             IList<ThermalNode> left = a.Solver.Nodes;
@@ -206,10 +206,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFlooredCountHoldsForAsLongAsTheFloorDoes operation.</summary>
+
         public void TheFlooredCountHoldsForAsLongAsTheFloorDoes()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(Settings(3), 900f);
             EnvironmentSample sample = Worlds.Shadow();
 
@@ -221,13 +221,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFlooredGridDemandsExactlyItsCapAndNotLess operation.</summary>
+
         public void AFlooredGridDemandsExactlyItsCapAndNotLess()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.HeavyArmor(), Vector3I.Zero, new Vector3I(3, 3, 3));
             builder.Place(BlockModel.Solid("Interior", Vector3I.One, 20f, Catalog.DefaultThermal()),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(3, 0, 0));
 
             ThermalSimulation simulation = builder.BuildSimulation(Settings(3), 900f);
@@ -251,10 +251,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheBlockKeepsItsRealHeatCapacity operation.</summary>
+
         public void TheBlockKeepsItsRealHeatCapacity()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation capped = Hull(Settings(1), 300f);
             capped.StepExact(5, Worlds.Shadow());
 
@@ -272,10 +272,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheProfileAgreesWithTheEstimateAndNamesTheBlock operation.</summary>
+
         public void TheProfileAgreesWithTheEstimateAndNamesTheBlock()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation sim = Hull(Settings(0), 300f);
             ThermalSolver.SubstepProfile profile = sim.Solver.ProfileSubsteps();
 
@@ -297,12 +297,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheProfileDescribesTheGridRatherThanTheSettings operation.</summary>
+
         public void TheProfileDescribesTheGridRatherThanTheSettings()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSolver.SubstepProfile off = Hull(Settings(0), 300f).Solver.ProfileSubsteps();
-/// <summary>Hull operation.</summary>
+
             ThermalSolver.SubstepProfile on = Hull(Settings(1), 300f).Solver.ProfileSubsteps();
 
             Assert.Equal(off.RequiredSubsteps, on.RequiredSubsteps, 3);
@@ -318,16 +318,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheProjectionPredictsWhatTheCapDoes operation.</summary>
+
         public void TheProjectionPredictsWhatTheCapDoes()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSolver.SubstepProfile profile = Hull(Settings(0), 300f).Solver.ProfileSubsteps();
             int[] caps = ThermalSolver.SubstepProfile.ProjectedCaps;
 
             for (int c = 0; c < caps.Length; c++)
             {
-/// <summary>Hull operation.</summary>
+
                 ThermalSimulation capped = Hull(Settings(caps[c]), 300f);
                 float actual = capped.Solver.RequiredSubsteps(capped.Settings.StepSeconds);
 
@@ -339,16 +339,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCapReachesRoomAirAndNotOnlyBlocks operation.</summary>
+
         public void TheCapReachesRoomAirAndNotOnlyBlocks()
         {
-/// <summary>Sealed operation.</summary>
+
             ThermalSimulation open = Sealed(SealedSettings(0));
             float before = open.Solver.RequiredSubsteps(open.Settings.StepSeconds);
 
             Assert.True(open.Solver.RoomAir.Count > 0, "the test hull holds no air");
 
-/// <summary>Sealed operation.</summary>
+
             ThermalSimulation capped = Sealed(SealedSettings(1));
             float after = capped.Solver.RequiredSubsteps(capped.Settings.StepSeconds);
 
@@ -359,7 +359,7 @@ namespace Thermodynamics.Tests
                 + " reach is still setting the count");
         }
 
-/// <summary>SealedSettings operation.</summary>
+
         private static ThermalSettings SealedSettings(int cap)
         {
             ThermalSettings settings = new ThermalSettings { Frequency = 2 };
@@ -369,7 +369,7 @@ namespace Thermodynamics.Tests
             return settings.Derive();
         }
 
-/// <summary>Sealed operation.</summary>
+
         private static ThermalSimulation Sealed(ThermalSettings settings)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -394,12 +394,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCapIsInertWhenItIsOff operation.</summary>
+
         public void TheCapIsInertWhenItIsOff()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation a = Hull(Settings(0), 500f);
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation b = Hull(Settings(0), 500f);
 
             EnvironmentSample sample = Worlds.Space(new Vector3(0f, 1f, 0f));
@@ -413,19 +413,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFloorTakesTheWholeGridsDemandDownToItsCap operation.</summary>
+
         public void TheFloorTakesTheWholeGridsDemandDownToItsCap()
         {
             const int Cap = 6;
 
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings uncapped = Settings(0);
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings capped = Settings(Cap);
 
-/// <summary>DemandInAir operation.</summary>
+
             float demanded = DemandInAir(uncapped);
-/// <summary>DemandInAir operation.</summary>
+
             float bounded = DemandInAir(capped);
 
             output.WriteLine("demand {0:n2} uncapped, {1:n2} at a cap of {2}", demanded, bounded, Cap);
@@ -438,7 +438,7 @@ namespace Thermodynamics.Tests
                 "the cap left the grid demanding " + bounded + " against a cap of " + Cap);
         }
 
-/// <summary>DemandInAir operation.</summary>
+
         private static float DemandInAir(ThermalSettings settings)
         {
             GridBuilder builder = GridBuilder.Large();

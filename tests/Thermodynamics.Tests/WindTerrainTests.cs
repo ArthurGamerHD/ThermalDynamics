@@ -7,21 +7,21 @@ namespace Thermodynamics.Tests
 {
     public class WindTerrainTests
     {
-/// <summary>Vector3 operation.</summary>
+
         private static readonly Vector3 North = new Vector3(0f, 0f, -1f);
-/// <summary>Vector3 operation.</summary>
+
         private static readonly Vector3 East = new Vector3(1f, 0f, 0f);
 
         private const float Inner = 150f;
         private const float Outer = 300f;
 
-/// <summary>Flat operation.</summary>
+
         private static float[] Flat()
         {
             return new float[WindTerrain.SampleCount];
         }
 
-/// <summary>Hill operation.</summary>
+
         private static float[] Hill(float fall)
         {
             float[] heights = new float[WindTerrain.SampleCount];
@@ -33,16 +33,16 @@ namespace Thermodynamics.Tests
             return heights;
         }
 
-/// <summary>Hollow operation.</summary>
+
         private static float[] Hollow(float rise)
         {
-/// <summary>Hill operation.</summary>
+
             float[] heights = Hill(rise);
             for (int i = 0; i < heights.Length; i++) heights[i] = -heights[i];
             return heights;
         }
 
-/// <summary>Slope operation.</summary>
+
         private static float[] Slope(int towards, float rise)
         {
             float[] heights = new float[WindTerrain.SampleCount];
@@ -59,7 +59,7 @@ namespace Thermodynamics.Tests
             return heights;
         }
 
-/// <summary>Valley operation.</summary>
+
         private static float[] Valley(int axis, float wallHeight)
         {
             float[] heights = new float[WindTerrain.SampleCount];
@@ -77,7 +77,7 @@ namespace Thermodynamics.Tests
             return heights;
         }
 
-/// <summary>Wall operation.</summary>
+
         private static float[] Wall(int bearing, float height)
         {
             float[] heights = new float[WindTerrain.SampleCount];
@@ -88,7 +88,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>FlatGroundChangesNothing operation.</summary>
+
         public void FlatGroundChangesNothing()
         {
             Assert.Equal(0f, WindTerrain.Relief(Flat(), Outer), 5);
@@ -96,7 +96,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASummitIsWindierThanThePlainBelowIt operation.</summary>
+
         public void ASummitIsWindierThanThePlainBelowIt()
         {
             float relief = WindTerrain.Relief(Hill(100f), Outer);
@@ -107,21 +107,21 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHollowIsSheltered operation.</summary>
+
         public void AHollowIsSheltered()
         {
             Assert.True(WindTerrain.SpeedUp(WindTerrain.Relief(Hollow(100f), Outer)) < 0.8f);
         }
 
         [Fact]
-/// <summary>AHillsideIsNeither operation.</summary>
+
         public void AHillsideIsNeither()
         {
             Assert.Equal(0f, WindTerrain.Relief(Slope(0, 200f), Outer), 4);
         }
 
         [Fact]
-/// <summary>NeitherSpeedUpNorSlowDownRunsAway operation.</summary>
+
         public void NeitherSpeedUpNorSlowDownRunsAway()
         {
             Assert.Equal(1f + WindTerrain.MaximumSpeedUp, WindTerrain.SpeedUp(10f), 4);
@@ -131,10 +131,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>AWallUpwindTakesTheWindAway operation.</summary>
+
         public void AWallUpwindTakesTheWindAway()
         {
-/// <summary>Wall operation.</summary>
+
             float[] terrain = Wall(0, 120f);
             Vector3 fromTheNorth = -North;
 
@@ -143,20 +143,20 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSameWallDoesNothingToAWindComingTheOtherWay operation.</summary>
+
         public void TheSameWallDoesNothingToAWindComingTheOtherWay()
         {
-/// <summary>Wall operation.</summary>
+
             float[] terrain = Wall(0, 120f);
 
             Assert.Equal(1f, WindTerrain.Shelter(terrain, Inner, Outer, North, North, East), 4);
         }
 
         [Fact]
-/// <summary>ShelterTurnsWithTheWind operation.</summary>
+
         public void ShelterTurnsWithTheWind()
         {
-/// <summary>Wall operation.</summary>
+
             float[] terrain = Wall(2, 120f);
 
             float worst = 2f;
@@ -178,7 +178,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ANearObstructionSheltersMoreThanAFarOneOfTheSameHeight operation.</summary>
+
         public void ANearObstructionSheltersMoreThanAFarOneOfTheSameHeight()
         {
             float[] near = new float[WindTerrain.SampleCount];
@@ -195,7 +195,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SaturationKeepsTheGradientAndTheBound operation.</summary>
+
         public void SaturationKeepsTheGradientAndTheBound()
         {
             const float Bound = 0.6f;
@@ -223,7 +223,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASteeperRidgeIsStillWindierThanASteepOne operation.</summary>
+
         public void ASteeperRidgeIsStillWindierThanASteepOne()
         {
             float previous = 0f;
@@ -255,12 +255,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OpenGroundShelltersNothingAndTheFloorHolds operation.</summary>
+
         public void OpenGroundShelltersNothingAndTheFloorHolds()
         {
             Assert.Equal(1f, WindTerrain.Shelter(Flat(), Inner, Outer, North, North, East), 4);
 
-/// <summary>Wall operation.</summary>
+
             float[] cliff = Wall(0, 100000f);
             float least = WindTerrain.Shelter(cliff, Inner, Outer, -North, North, East);
 
@@ -274,7 +274,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>GroundThatFallsAwayUpwindDoesNotShelter operation.</summary>
+
         public void GroundThatFallsAwayUpwindDoesNotShelter()
         {
             Assert.Equal(1f, WindTerrain.Shelter(Hill(100f), Inner, Outer, -North, North, East), 4);
@@ -282,10 +282,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>AValleySteersTheWindAlongItself operation.</summary>
+
         public void AValleySteersTheWindAlongItself()
         {
-/// <summary>Valley operation.</summary>
+
             float[] terrain = Valley(0, 150f);
 
             Vector3 channelled = WindTerrain.Channel(terrain, Outer, East, North, East, 1f);
@@ -296,10 +296,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ItPicksTheEndTheWindWasAlreadyHeadingFor operation.</summary>
+
         public void ItPicksTheEndTheWindWasAlreadyHeadingFor()
         {
-/// <summary>Valley operation.</summary>
+
             float[] terrain = Valley(0, 150f);
 
             Vector3 leaning = Vector3.Normalize(East + (North * 0.3f));
@@ -312,7 +312,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FlatGroundSteersNothing operation.</summary>
+
         public void FlatGroundSteersNothing()
         {
             Vector3 channelled = WindTerrain.Channel(Flat(), Outer, East, North, East, 1f);
@@ -321,7 +321,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AShallowValleySteersLessThanADeepOne operation.</summary>
+
         public void AShallowValleySteersLessThanADeepOne()
         {
             Vector3 shallow = WindTerrain.Channel(Valley(0, 20f), Outer, East, North, East, 1f);
@@ -331,10 +331,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TurningItDownTurnsItDown operation.</summary>
+
         public void TurningItDownTurnsItDown()
         {
-/// <summary>Valley operation.</summary>
+
             float[] terrain = Valley(0, 150f);
 
             Vector3 full = WindTerrain.Channel(terrain, Outer, East, North, East, 1f);
@@ -346,7 +346,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AChannelledWindIsStillAUnitVector operation.</summary>
+
         public void AChannelledWindIsStillAUnitVector()
         {
             for (int axis = 0; axis < WindTerrain.Bearings; axis++)
@@ -359,17 +359,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWindWithNoDirectionStaysThatWay operation.</summary>
+
         public void AWindWithNoDirectionStaysThatWay()
         {
             Assert.Equal(Vector3.Zero, WindTerrain.Channel(Valley(0, 150f), Outer, Vector3.Zero, North, East, 1f));
         }
 
         [Fact]
-/// <summary>AWindOnARidgeCrestIsSteeredOverItRatherThanAlongIt operation.</summary>
+
         public void AWindOnARidgeCrestIsSteeredOverItRatherThanAlongIt()
         {
-/// <summary>Valley operation.</summary>
+
             float[] valley = Valley(0, 150f);
 
             float[] ridge = new float[WindTerrain.SampleCount];
@@ -385,12 +385,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRuleIsThatWindTurnsTowardTheLowestGround operation.</summary>
+
         public void TheRuleIsThatWindTurnsTowardTheLowestGround()
         {
             for (int axis = 0; axis < WindTerrain.Bearings; axis++)
             {
-/// <summary>Valley operation.</summary>
+
                 float[] terrain = Valley(axis, 150f);
 
                 Vector3 low = WindTerrain.BearingDirection(axis, North, East);
@@ -407,7 +407,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>BearingsRunClockwiseFromNorth operation.</summary>
+
         public void BearingsRunClockwiseFromNorth()
         {
             Assert.Equal(North.Z, WindTerrain.BearingDirection(0, North, East).Z, 4);
@@ -417,7 +417,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EverySampleHasItsOwnSlot operation.</summary>
+
         public void EverySampleHasItsOwnSlot()
         {
             bool[] seen = new bool[WindTerrain.SampleCount];
@@ -434,7 +434,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AShortSampleIsRefusedRatherThanRead operation.</summary>
+
         public void AShortSampleIsRefusedRatherThanRead()
         {
             float[] stunted = new float[WindTerrain.SampleCount - 1];

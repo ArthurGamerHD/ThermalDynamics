@@ -19,10 +19,10 @@ namespace Thermodynamics.Tests
             public string[] Fields;
         }
 
-/// <summary>Read operation.</summary>
+
         public static List<Entry> Read(string variable, string fallback)
         {
-/// <summary>List operation.</summary>
+
             List<Entry> entries = new List<Entry>();
 
             string path = Environment.GetEnvironmentVariable(variable);
@@ -34,7 +34,7 @@ namespace Thermodynamics.Tests
             {
                 if (lines[i].Length == 0) continue;
 
-/// <summary>Split operation.</summary>
+
                 List<string> fields = Split(lines[i]);
                 if (fields.Count < 3) continue;
 
@@ -50,12 +50,12 @@ namespace Thermodynamics.Tests
             return entries;
         }
 
-/// <summary>Load operation.</summary>
+
         public static List<Blueprints.Ship> Load(List<Entry> entries, Action<string> progress)
         {
-/// <summary>List operation.</summary>
+
             List<Blueprints.Ship> found = new List<Blueprints.Ship>();
-/// <summary>object operation.</summary>
+
             object gate = new object();
             int unresolved = 0;
 
@@ -109,13 +109,13 @@ namespace Thermodynamics.Tests
             return found;
         }
 
-/// <summary>Split operation.</summary>
+
         public static List<string> Split(string line)
         {
             return CsvLine.Split(line);
         }
 
-/// <summary>Find operation.</summary>
+
         public static string Find(string relative)
         {
             try
@@ -133,26 +133,26 @@ namespace Thermodynamics.Tests
         {
             private readonly string label;
 
-/// <summary>Resume operation.</summary>
+
             public Resume(string label)
             {
                 this.label = label;
             }
 
-/// <summary>PathOrNull operation.</summary>
+
             private string PathOrNull()
             {
                 string directory = CorpusRecord.Directory();
                 return directory == null ? null : Path.Combine(directory, "done-" + label + ".txt");
             }
 
-/// <summary>Done operation.</summary>
+
             public HashSet<string> Done()
             {
-/// <summary>HashSet operation.</summary>
+
                 HashSet<string> done = new HashSet<string>(StringComparer.Ordinal);
 
-/// <summary>PathOrNull operation.</summary>
+
                 string path = PathOrNull();
                 if (path == null || !File.Exists(path)) return done;
 
@@ -171,10 +171,10 @@ namespace Thermodynamics.Tests
                 return done;
             }
 
-/// <summary>Mark operation.</summary>
+
             public void Mark(string mark)
             {
-/// <summary>PathOrNull operation.</summary>
+
                 string path = PathOrNull();
                 if (path == null) return;
 
@@ -189,7 +189,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Progress operation.</summary>
+
         public static void Progress(string sweep, string line)
         {
             string path = Environment.GetEnvironmentVariable("THERMAL_CORPUS_PROGRESS");

@@ -10,7 +10,7 @@ namespace Thermodynamics.Core
 
         private Vector3I searchMin;
         private Vector3I searchMaxExclusive;
-/// <summary>CellBitset operation.</summary>
+
         private readonly CellBitset solid = new CellBitset();
         private Vector3I[] roomCellStore = EmptyCells;
         private int[] roomStarts = EmptyRanges;
@@ -21,7 +21,7 @@ namespace Thermodynamics.Core
         private static readonly int[] EmptyRanges = new int[0];
         private int roomCellCount;
 
-/// <summary>CellBitset operation.</summary>
+
         private readonly CellBitset roomCells = new CellBitset();
 
 
@@ -29,19 +29,19 @@ namespace Thermodynamics.Core
 
         private bool frozen;
 
-/// <summary>List operation.</summary>
+
         private readonly List<RoomPortal> portals = new List<RoomPortal>();
 
         private bool[] vented = new bool[0];
 
         private int[] parent = new int[0];
 
-/// <summary>List operation.</summary>
+
         private readonly List<int> changedRooms = new List<int>();
 
         public const int ExternalRegion = -1;
 
-/// <summary>RoomMap operation.</summary>
+
         public static readonly RoomMap AllExternal = new RoomMap();
 
         public int RoomCount
@@ -74,14 +74,14 @@ namespace Thermodynamics.Core
             get { return externalCount == 0 && solid.Count == 0 && RoomCellCount == 0; }
         }
 
-/// <summary>CellsOf operation.</summary>
+
         public RoomCells CellsOf(int roomIndex)
         {
             if (roomIndex < 0 || roomIndex >= roomCount) return new RoomCells(EmptyCells, 0, 0);
             return new RoomCells(roomCellStore, roomStarts[roomIndex], roomLengths[roomIndex]);
         }
 
-/// <summary>CellsInRoom operation.</summary>
+
         public int CellsInRoom(int roomIndex)
         {
             if (roomIndex < 0 || roomIndex >= roomCount) return 0;
@@ -94,7 +94,7 @@ namespace Thermodynamics.Core
             private readonly int start;
             private readonly int count;
 
-/// <summary>RoomCells operation.</summary>
+
             internal RoomCells(Vector3I[] store, int start, int count)
             {
                 this.store = store;
@@ -112,7 +112,7 @@ namespace Thermodynamics.Core
                 get { return store[start + index]; }
             }
 
-/// <summary>Returns the enumerator.</summary>
+
             public Enumerator GetEnumerator()
             {
                 return new Enumerator(store, start, count);
@@ -125,7 +125,7 @@ namespace Thermodynamics.Core
                 private readonly int count;
                 private int at;
 
-/// <summary>Enumerator operation.</summary>
+
                 internal Enumerator(Vector3I[] store, int start, int count)
                 {
                     this.store = store;
@@ -139,7 +139,7 @@ namespace Thermodynamics.Core
                     get { return store[start + at]; }
                 }
 
-/// <summary>MoveNext operation.</summary>
+
                 public bool MoveNext()
                 {
                     at++;
@@ -150,7 +150,7 @@ namespace Thermodynamics.Core
 
         public IEnumerable<Vector3I> ExternalCells
         {
-/// <summary>EnumerateExternal operation.</summary>
+
             get { return EnumerateExternal(); }
         }
 
@@ -159,7 +159,7 @@ namespace Thermodynamics.Core
             get { return portals; }
         }
 
-/// <summary>IsVented operation.</summary>
+
         public bool IsVented(int roomIndex)
         {
             if (roomIndex < 0 || roomIndex >= vented.Length) return false;
@@ -184,21 +184,21 @@ namespace Thermodynamics.Core
             get { return changedRooms; }
         }
 
-/// <summary>RegionOf operation.</summary>
+
         public int RegionOf(Vector3I cell)
         {
-/// <summary>RoomAt operation.</summary>
+
             int index = RoomAt(cell);
             return index >= 0 ? index : ExternalRegion;
         }
 
-/// <summary>RoomAt operation.</summary>
+
         private int RoomAt(Vector3I cell)
         {
             return RoomAtIndex(roomCells.IndexOf(cell));
         }
 
-/// <summary>RoomAtIndex operation.</summary>
+
         private int RoomAtIndex(long index)
         {
             if (!frozen) return -1;
@@ -210,7 +210,7 @@ namespace Thermodynamics.Core
             return roomByRank[rank];
         }
 
-/// <summary>Freeze operation.</summary>
+
         private void Freeze()
         {
             roomCells.BuildRanks();
@@ -231,7 +231,7 @@ namespace Thermodynamics.Core
             frozen = true;
         }
 
-/// <summary>IsExternal operation.</summary>
+
         public bool IsExternal(Vector3I cell)
         {
             long index = solid.IndexOf(cell);
@@ -239,40 +239,40 @@ namespace Thermodynamics.Core
 
             if (!roomCells.ContainsIndex(index)) return true;
 
-/// <summary>RoomAtIndex operation.</summary>
+
             int room = RoomAtIndex(index);
             if (room < 0) return true;
 
-/// <summary>IsVented operation.</summary>
+
             return IsVented(room);
         }
 
-/// <summary>RoomIndexOf operation.</summary>
+
         public int RoomIndexOf(Vector3I cell)
         {
-/// <summary>RoomAt operation.</summary>
+
             return RoomAt(cell);
         }
 
-/// <summary>IsSolid operation.</summary>
+
         public bool IsSolid(Vector3I cell)
         {
             return solid.Contains(cell);
         }
 
-/// <summary>Adds a external.</summary>
+
         internal void AddExternal(Vector3I cell)
         {
             externalCount++;
         }
 
-/// <summary>Adds a externalrun.</summary>
+
         internal void AddExternalRun(int count)
         {
             externalCount += count;
         }
 
-/// <summary>Reset operation.</summary>
+
         internal void Reset()
         {
             externalCount = 0;
@@ -283,7 +283,7 @@ namespace Thermodynamics.Core
             changedRooms.Clear();
         }
 
-/// <summary>Sets the searchbounds.</summary>
+
         internal void SetSearchBounds(Vector3I min, Vector3I maxExclusive)
         {
             searchMin = min;
@@ -292,7 +292,7 @@ namespace Thermodynamics.Core
             roomCells.Reset(min, maxExclusive);
         }
 
-/// <summary>EnumerateExternal operation.</summary>
+
         private IEnumerable<Vector3I> EnumerateExternal()
         {
             for (int z = searchMin.Z; z < searchMaxExclusive.Z; z++)
@@ -301,7 +301,7 @@ namespace Thermodynamics.Core
                 {
                     for (int x = searchMin.X; x < searchMaxExclusive.X; x++)
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I cell = new Vector3I(x, y, z);
                         if (solid.Contains(cell)) continue;
                         if (RoomAt(cell) >= 0) continue;
@@ -311,13 +311,13 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Adds a solid.</summary>
+
         internal void AddSolid(Vector3I cell)
         {
             solid.Add(cell);
         }
 
-/// <summary>BeginRoom operation.</summary>
+
         internal int BeginRoom()
         {
             if (roomCount == roomStarts.Length)
@@ -337,14 +337,14 @@ namespace Thermodynamics.Core
             return roomCount - 1;
         }
 
-/// <summary>HintRoomCells operation.</summary>
+
         internal void HintRoomCells(int expected)
         {
             if (roomCellCount != 0 || expected <= roomCellStore.Length) return;
             roomCellStore = new Vector3I[expected];
         }
 
-/// <summary>Adds a toroom.</summary>
+
         internal void AddToRoom(int roomIndex, Vector3I cell)
         {
             frozen = false;
@@ -370,13 +370,13 @@ namespace Thermodynamics.Core
             roomCellCount++;
         }
 
-/// <summary>Adds a portal.</summary>
+
         internal void AddPortal(RoomPortal portal)
         {
             portals.Add(portal);
         }
 
-/// <summary>RefreshVenting operation.</summary>
+
         public bool RefreshVenting()
         {
             changedRooms.Clear();
@@ -395,13 +395,13 @@ namespace Thermodynamics.Core
                 Union(Slot(portal.RegionA, count), Slot(portal.RegionB, count));
             }
 
-/// <summary>Find operation.</summary>
+
             int air = Find(count);
             bool changed = false;
 
             for (int i = 0; i < count; i++)
             {
-/// <summary>Find operation.</summary>
+
                 bool now = Find(i) == air;
                 if (now == vented[i]) continue;
 
@@ -413,43 +413,43 @@ namespace Thermodynamics.Core
             return changed;
         }
 
-/// <summary>Slot operation.</summary>
+
         private static int Slot(int region, int roomCount)
         {
             return region == ExternalRegion ? roomCount : region;
         }
 
-/// <summary>Find operation.</summary>
+
         private int Find(int node)
         {
             while (parent[node] != node)
             {
-                parent[node] = parent[parent[node]];   // path halving
+                parent[node] = parent[parent[node]];
                 node = parent[node];
             }
             return node;
         }
 
-/// <summary>Union operation.</summary>
+
         private void Union(int a, int b)
         {
-/// <summary>Find operation.</summary>
+
             int rootA = Find(a);
-/// <summary>Find operation.</summary>
+
             int rootB = Find(b);
             if (rootA == rootB) return;
 
             parent[rootA] = rootB;
         }
 
-/// <summary>IsKnown operation.</summary>
+
         internal bool IsKnown(Vector3I cell)
         {
             if (solid.Contains(cell) || RoomAt(cell) >= 0) return true;
             return GridMath.Contains(searchMin, searchMaxExclusive, cell);
         }
 
-/// <summary>DropEmptyRooms operation.</summary>
+
         internal void DropEmptyRooms()
         {
             int kept = 0;

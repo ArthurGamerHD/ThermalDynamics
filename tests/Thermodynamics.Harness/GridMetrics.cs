@@ -30,12 +30,12 @@ namespace Thermodynamics.Harness
             get { return NodeCount == 0 ? 0f : LinkCount / (float)NodeCount; }
         }
 
-/// <summary>Measure operation.</summary>
+
         public static GridMetrics Measure(ThermalSimulation simulation)
         {
             if (simulation == null) throw new ArgumentNullException("simulation");
 
-/// <summary>GridMetrics operation.</summary>
+
             GridMetrics m = new GridMetrics();
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             IList<ThermalLink> links = simulation.Solver.Links;
@@ -53,7 +53,7 @@ namespace Thermodynamics.Harness
                 if (nodes[i].TotalExposedFaces > 0) m.ExposedNodeCount++;
             }
 
-/// <summary>Builds the method table.</summary>
+
             List<int>[] adjacency = BuildAdjacency(nodes.Count, links);
 
             for (int i = 0; i < adjacency.Length; i++)
@@ -61,14 +61,14 @@ namespace Thermodynamics.Harness
                 if (adjacency[i].Count == 0) m.IsolatedNodeCount++;
             }
 
-/// <summary>CountComponents operation.</summary>
+
             m.ComponentCount = CountComponents(adjacency);
-/// <summary>ApproximateDiameter operation.</summary>
+
             m.Diameter = ApproximateDiameter(adjacency);
             return m;
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static List<int>[] BuildAdjacency(int nodeCount, IList<ThermalLink> links)
         {
             List<int>[] adjacency = new List<int>[nodeCount];
@@ -83,7 +83,7 @@ namespace Thermodynamics.Harness
             return adjacency;
         }
 
-/// <summary>CountComponents operation.</summary>
+
         private static int CountComponents(List<int>[] adjacency)
         {
             bool[] seen = new bool[adjacency.Length];
@@ -98,10 +98,10 @@ namespace Thermodynamics.Harness
             return components;
         }
 
-/// <summary>Flood operation.</summary>
+
         private static void Flood(List<int>[] adjacency, int start, bool[] seen)
         {
-/// <summary>Queue operation.</summary>
+
             Queue<int> queue = new Queue<int>();
             seen[start] = true;
             queue.Enqueue(start);
@@ -119,7 +119,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>ApproximateDiameter operation.</summary>
+
         private static int ApproximateDiameter(List<int>[] adjacency)
         {
             int best = 0;
@@ -129,7 +129,7 @@ namespace Thermodynamics.Harness
             {
                 if (seen[start]) continue;
 
-/// <summary>FurthestFrom operation.</summary>
+
                 int far = FurthestFrom(adjacency, start, seen, true);
                 int distance = 0;
                 FurthestFrom(adjacency, far, null, false, out distance);
@@ -138,23 +138,23 @@ namespace Thermodynamics.Harness
             return best;
         }
 
-/// <summary>FurthestFrom operation.</summary>
+
         private static int FurthestFrom(List<int>[] adjacency, int start, bool[] mark, bool recordMark)
         {
             int distance;
-/// <summary>FurthestFrom operation.</summary>
+
             int furthest = FurthestFrom(adjacency, start, mark, recordMark, out distance);
             return furthest;
         }
 
-/// <summary>FurthestFrom operation.</summary>
+
         private static int FurthestFrom(
             List<int>[] adjacency, int start, bool[] mark, bool recordMark, out int furthestDistance)
         {
             int[] depth = new int[adjacency.Length];
             for (int i = 0; i < depth.Length; i++) depth[i] = -1;
 
-/// <summary>Queue operation.</summary>
+
             Queue<int> queue = new Queue<int>();
             depth[start] = 0;
             queue.Enqueue(start);
@@ -187,11 +187,11 @@ namespace Thermodynamics.Harness
             return furthest;
         }
 
-/// <summary>ToString operation.</summary>
+
         public override string ToString()
         {
             return string.Format(
-/// <summary>links operation.</summary>
+
                 "{0} nodes, {1} links ({2:F2}/node), bbox {3} ({4:P1} full), {5:P1} exposed, diameter {6}, {7} component(s)",
                 NodeCount, LinkCount, LinksPerNode, BoundingVolume, BoundingFillRatio,
                 ExposedFraction, Diameter, ComponentCount);

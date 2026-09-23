@@ -11,10 +11,10 @@ namespace Thermodynamics.Tests
         private const float ThickAir = 1f;
         private const float Speed = 200f;
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings(bool lift, bool shape = true)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
             return settings;
         }
 
-/// <summary>Built operation.</summary>
+
         private static ThermalSimulation Built(GridBuilder builder, bool lift, bool shape = true)
         {
             ThermalSimulation simulation = builder.BuildSimulation(Settings(lift, shape), 293.15f);
@@ -34,16 +34,16 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Cube operation.</summary>
+
         private static ThermalSimulation Cube(bool lift)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.HeavyArmor(), Vector3I.Zero, new Vector3I(6, 6, 6));
-/// <summary>Built operation.</summary>
+
             return Built(builder, lift);
         }
 
-/// <summary>Ramp operation.</summary>
+
         private static ThermalSimulation Ramp(bool lift)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -58,17 +58,17 @@ namespace Thermodynamics.Tests
                 }
             }
 
-/// <summary>Built operation.</summary>
+
             return Built(builder, lift);
         }
 
-/// <summary>Wind operation.</summary>
+
         private static Vector3 Wind()
         {
             return Vector3.Backward * Speed;
         }
 
-/// <summary>Lift operation.</summary>
+
         private static Vector3 Lift(ThermalSimulation simulation)
         {
             return LiftForce.Vector(simulation.Solver.LastPressureWatts, Wind(),
@@ -76,10 +76,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASymmetricHullMakesNoLift operation.</summary>
+
         public void ASymmetricHullMakesNoLift()
         {
-/// <summary>Lift operation.</summary>
+
             Vector3 lift = Lift(Cube(true));
 
             Assert.True(lift.Length() < 1f,
@@ -88,10 +88,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARampIsPushedAwayFromItsSlopedFace operation.</summary>
+
         public void ARampIsPushedAwayFromItsSlopedFace()
         {
-/// <summary>Lift operation.</summary>
+
             Vector3 lift = Lift(Ramp(true));
 
             Assert.True(lift.Length() > 1f,
@@ -102,10 +102,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LiftCarriesNoComponentAlongTheFlow operation.</summary>
+
         public void LiftCarriesNoComponentAlongTheFlow()
         {
-/// <summary>Lift operation.</summary>
+
             Vector3 lift = Lift(Ramp(true));
             Vector3 flow = Vector3.Normalize(Wind());
 
@@ -114,22 +114,22 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LiftDoesNotChangeDrag operation.</summary>
+
         public void LiftDoesNotChangeDrag()
         {
-/// <summary>Ramp operation.</summary>
+
             float without = Ramp(false).Solver.LastFrictionWatts;
-/// <summary>Ramp operation.</summary>
+
             float with = Ramp(true).Solver.LastFrictionWatts;
 
             Assert.Equal(without, with, 4);
         }
 
         [Fact]
-/// <summary>LiftIsRefusedWithoutTheShapeTerm operation.</summary>
+
         public void LiftIsRefusedWithoutTheShapeTerm()
         {
-/// <summary>Built operation.</summary>
+
             ThermalSimulation ramp = Built(RampBuilder(), true, false);
 
             Assert.Equal(Vector3.Zero, ramp.Solver.LastPressureWatts);
@@ -137,14 +137,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCoefficientScalesTheForce operation.</summary>
+
         public void TheCoefficientScalesTheForce()
         {
-/// <summary>Ramp operation.</summary>
+
             ThermalSimulation ramp = Ramp(true);
 
             ThermalSettings half = ramp.Solver.Settings;
-/// <summary>Lift operation.</summary>
+
             float full = Lift(ramp).Length();
 
             half.LiftCoefficient = 0.5f;
@@ -156,7 +156,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(Vector3.Zero, LiftForce.Vector(ramp.Solver.LastPressureWatts, Wind(), half));
         }
 
-/// <summary>RampBuilder operation.</summary>
+
         private static GridBuilder RampBuilder()
         {
             GridBuilder builder = GridBuilder.Large();

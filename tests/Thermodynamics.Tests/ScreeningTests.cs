@@ -7,12 +7,12 @@ namespace Thermodynamics.Tests
     public class ScreeningTests
     {
         [Fact]
-/// <summary>ThrustIsTheStrongestDirectionRatherThanTheSumOfAllOfThem operation.</summary>
+
         public void ThrustIsTheStrongestDirectionRatherThanTheSumOfAllOfThem()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>Measure operation.</summary>
+
             ShipProfile balanced = Measure(new string[]
             {
                 "LargeBlockArmorBlock:Forward:0",
@@ -29,12 +29,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OnlyAThrusterCarriesThrust operation.</summary>
+
         public void OnlyAThrusterCarriesThrust()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
 
             foreach (GameBlocks.Definition definition in GameBlocks.All())
@@ -50,7 +50,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGyroIsRatedByItsDrawAndNotByItsTorque operation.</summary>
+
         public void AGyroIsRatedByItsDrawAndNotByItsTorque()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -65,7 +65,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockThatDeclaresNoMountPointsStillConducts operation.</summary>
+
         public void ABlockThatDeclaresNoMountPointsStillConducts()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -75,7 +75,7 @@ namespace Thermodynamics.Tests
 
             Assert.False(battery.HasDeclaredMounts);
 
-/// <summary>Measure operation.</summary>
+
             ShipProfile profile = Measure(new string[]
             {
                 "LargeBlockBatteryBlock:Forward:0",
@@ -90,7 +90,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStoreIsNotBothChargingAndDischarging operation.</summary>
+
         public void AStoreIsNotBothChargingAndDischarging()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -102,7 +102,7 @@ namespace Thermodynamics.Tests
                 "the premise has changed: a battery no longer rates both ways");
             Assert.True(ShipLoad.IsStore(battery.TypeId));
 
-/// <summary>Measure operation.</summary>
+
             ShipProfile profile = Measure(new string[]
             {
                 "LargeBlockBatteryBlock:Forward:0",
@@ -115,7 +115,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThermalStressIsWattsOverExposedArea operation.</summary>
+
         public void ThermalStressIsWattsOverExposedArea()
         {
             ShipProfile profile = new ShipProfile { WasteWatts = 5000f, ExposedArea = 100f };
@@ -125,7 +125,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheEquilibriumEstimateInvertsStefanBoltzmann operation.</summary>
+
         public void TheEquilibriumEstimateInvertsStefanBoltzmann()
         {
             ShipProfile profile = new ShipProfile { WasteWatts = 8500f, ExposedArea = 1f };
@@ -136,10 +136,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThePanelAlwaysHoldsTheExtremesOfEveryAxis operation.</summary>
+
         public void ThePanelAlwaysHoldsTheExtremesOfEveryAxis()
         {
-/// <summary>Corpus operation.</summary>
+
             List<ShipProfile> corpus = Corpus();
             List<Specimens.Scored> panel = Specimens.Select(corpus, 8);
 
@@ -159,10 +159,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACrowdOfNearDuplicatesDoesNotCrowdOutTheOutlier operation.</summary>
+
         public void ACrowdOfNearDuplicatesDoesNotCrowdOutTheOutlier()
         {
-/// <summary>List operation.</summary>
+
             List<ShipProfile> corpus = new List<ShipProfile>();
 
             for (int i = 0; i < 20; i++)
@@ -202,10 +202,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NearDuplicatesAreReportedAsRedundantAndTheOutlierIsNot operation.</summary>
+
         public void NearDuplicatesAreReportedAsRedundantAndTheOutlierIsNot()
         {
-/// <summary>List operation.</summary>
+
             List<ShipProfile> corpus = new List<ShipProfile>();
 
             for (int i = 0; i < 5; i++)
@@ -242,10 +242,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FidelityImprovesAsThePanelGrows operation.</summary>
+
         public void FidelityImprovesAsThePanelGrows()
         {
-/// <summary>Corpus operation.</summary>
+
             List<ShipProfile> corpus = Corpus();
 
             double small = Specimens.Fidelity(corpus, Specimens.Select(corpus, 3));
@@ -256,10 +256,10 @@ namespace Thermodynamics.Tests
             Assert.Equal(0d, whole, 6);
         }
 
-/// <summary>Corpus operation.</summary>
+
         private static List<ShipProfile> Corpus()
         {
-/// <summary>List operation.</summary>
+
             List<ShipProfile> corpus = new List<ShipProfile>();
 
             for (int i = 0; i < 24; i++)
@@ -280,7 +280,7 @@ namespace Thermodynamics.Tests
             return corpus;
         }
 
-/// <summary>Measure operation.</summary>
+
         private static ShipProfile Measure(string[] entries)
         {
             Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();

@@ -9,10 +9,10 @@ namespace Thermodynamics.Tests
         private const float Floor = 2f * Battery.Chunk;
 
         [Fact]
-/// <summary>ATraceThatNeverMovedReportsTheFloor operation.</summary>
+
         public void ATraceThatNeverMovedReportsTheFloor()
         {
-/// <summary>List operation.</summary>
+
             List<float> flat = new List<float>();
             for (int i = 0; i < 30; i++) flat.Add(293.15f);
 
@@ -20,10 +20,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ATraceThatDriftedLessThanTheToleranceAlsoReportsTheFloor operation.</summary>
+
         public void ATraceThatDriftedLessThanTheToleranceAlsoReportsTheFloor()
         {
-/// <summary>List operation.</summary>
+
             List<float> creeping = new List<float>();
             for (int i = 0; i < 120; i++) creeping.Add(297.0f - i * (4f / 120f));
 
@@ -34,10 +34,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ATraceThatSettledReportsWhereItSettled operation.</summary>
+
         public void ATraceThatSettledReportsWhereItSettled()
         {
-/// <summary>List operation.</summary>
+
             List<float> cooling = new List<float>();
             for (int i = 0; i < 30; i++)
             {
@@ -53,10 +53,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ATraceStillClimbingAtTheEndReportsNothing operation.</summary>
+
         public void ATraceStillClimbingAtTheEndReportsNothing()
         {
-/// <summary>List operation.</summary>
+
             List<float> climbing = new List<float>();
             for (int i = 0; i < 30; i++) climbing.Add(293.15f + i * 20f);
 

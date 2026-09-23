@@ -24,7 +24,7 @@ namespace Thermodynamics.Harness
             public Sample[] Pixels;
         }
 
-/// <summary>Direction operation.</summary>
+
         public static Vector3D Direction(int x, int y, int width, int height)
         {
             double tangent = Math.Tan(Math.PI / 6);
@@ -32,12 +32,12 @@ namespace Thermodynamics.Harness
                 (1 - 2 * (y + .5) / height) * tangent, -1));
         }
 
-/// <summary>Trace operation.</summary>
+
         public static Sample Trace(Vector3D direction, bool reverse = false)
         {
             var hit = new Sample { Distance = double.PositiveInfinity, Kelvin = float.NaN };
             if (direction.Y < 0)
-                Consider(ref hit, -1.8 / direction.Y, 1, 265, true); // Estimated ground plane.
+                Consider(ref hit, -1.8 / direction.Y, 1, 265, true);
             if (reverse)
             {
                 Plate(ref hit, direction);
@@ -54,22 +54,22 @@ namespace Thermodynamics.Harness
             return hit;
         }
 
-/// <summary>Plate operation.</summary>
+
         private static void Plate(ref Sample hit, Vector3D ray)
         { Box(ref hit, ray, new Vector3D(-.6, -.3, -7), new Vector3D(.7, 1.5, .2), 2, 280, false); }
 
-/// <summary>Reactor operation.</summary>
+
         private static void Reactor(ref Sample hit, Vector3D ray)
         { Box(ref hit, ray, new Vector3D(-.4, -.2, -11), new Vector3D(1.6, 1.6, .7), 3, 420, false); }
 
-/// <summary>Consider operation.</summary>
+
         private static void Consider(ref Sample hit, double distance, int surface, float kelvin, bool estimated)
         {
             if (distance <= 0 || distance >= hit.Distance) return;
             hit = new Sample { Distance = distance, Surface = surface, Kelvin = kelvin, Estimated = estimated };
         }
 
-/// <summary>Box operation.</summary>
+
         private static void Box(ref Sample hit, Vector3D ray, Vector3D centre, Vector3D half,
             int surface, float kelvin, bool estimated)
         {
@@ -88,7 +88,7 @@ namespace Thermodynamics.Harness
             Consider(ref hit, near, surface, kelvin, estimated);
         }
 
-/// <summary>Sphere operation.</summary>
+
         private static void Sphere(ref Sample hit, Vector3D ray, Vector3D centre, double radius, float kelvin, bool estimated)
         {
             double b = Vector3D.Dot(ray, centre);
@@ -96,7 +96,7 @@ namespace Thermodynamics.Harness
             if (discriminant >= 0) Consider(ref hit, b - Math.Sqrt(discriminant), 6, kelvin, estimated);
         }
 
-/// <summary>Render operation.</summary>
+
         public static Frame Render(int width, int height)
         {
             if (width <= 0 || height <= 0 || width > 640 || height > 360)
@@ -107,27 +107,27 @@ namespace Thermodynamics.Harness
             return frame;
         }
 
-/// <summary>Colour operation.</summary>
+
         private static string Colour(Sample sample, ThermalVisionState.Mode mode)
         {
             Vector3 colour;
             if (sample.Surface == 0 || !ThermalVisionPalette.TrySample(sample.Kelvin, mode, 225, 625, out colour))
-                return "#080c12"; // Background/no return, deliberately not a measured temperature.
+                return "#080c12";
             return string.Format(CultureInfo.InvariantCulture, "#{0:x2}{1:x2}{2:x2}",
                 (int)(colour.X * 255), (int)(colour.Y * 255), (int)(colour.Z * 255));
         }
 
-/// <summary>Svg operation.</summary>
+
         public static string Svg(Frame frame, ThermalVisionState.Mode mode)
         {
-/// <summary>StringBuilder operation.</summary>
+
             var text = new StringBuilder();
             text.AppendFormat(CultureInfo.InvariantCulture,
                 "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {0} {1}' shape-rendering='crispEdges'>", frame.Width, frame.Height);
             for (int y = 0; y < frame.Height; y++)
                 for (int x = 0; x < frame.Width;)
                 {
-/// <summary>Colour operation.</summary>
+
                     string colour = Colour(frame.Pixels[y * frame.Width + x], mode);
                     int end = x + 1;
                     while (end < frame.Width && Colour(frame.Pixels[y * frame.Width + end], mode) == colour) end++;
@@ -138,22 +138,22 @@ namespace Thermodynamics.Harness
             return text.Append("</svg>").ToString();
         }
 
-/// <summary>WriteReport operation.</summary>
+
         public static string WriteReport(string directory)
         {
             Directory.CreateDirectory(directory);
-/// <summary>Render operation.</summary>
+
             var reference = Render(640, 360);
-/// <summary>StringBuilder operation.</summary>
+
             var report = new StringBuilder("# Reconstructed thermal sensor: feasibility study\n\n"
                 + "Synthetic analytic geometry, not game captures or measured engine performance. "
                 + "Production Cividis/white-hot palettes with a common locked 225–625 K window. "
                 + "Ground, rock and character-shaped box temperatures are explicitly illustrative estimates; "
                 + "block/pole temperatures are fixture values. Background is no-return, not cold.\n\n"
-/// <summary>detected operation.</summary>
+
                 + "| Samples | Queries/image | Queries/s at 10 Hz | Mean query ceiling with 2 ms/frame at 60 FPS | Surface mismatch vs 640×360 | Thin hot pole pixels detected (reference pixels) |\n"
                 + "| --- | ---: | ---: | ---: | ---: | ---: |\n");
-/// <summary>StringBuilder operation.</summary>
+
             var html = new StringBuilder("<!doctype html><meta charset='utf-8'><title>Thermal sensor feasibility</title>"
                 + "<style>body{background:#101923;color:#dce7f0;font:16px system-ui;margin:30px auto;max-width:1280px}"
                 + "img{width:49%;image-rendering:pixelated}p{max-width:1000px;line-height:1.5}</style>"
@@ -163,7 +163,7 @@ namespace Thermodynamics.Harness
             foreach (int width in new[] { 64, 96, 160, 640 })
             {
                 int height = width * 9 / 16;
-/// <summary>Render operation.</summary>
+
                 var frame = width == 640 ? reference : Render(width, height);
                 int mismatch = 0, pole = 0, poleDetected = 0;
                 for (int y = 0; y < reference.Height; y++)
@@ -191,7 +191,7 @@ namespace Thermodynamics.Harness
                 + "Reprojection cannot recover newly revealed surfaces or unseen moving objects.\n\n"
                 + "Closest analytic hits pass occlusion tests here; game collision shapes, glass, ragdolls, deformed armour, non-colliding effects, "
                 + "physics streaming range and native HUD composition remain unverified. Full-scene product readiness remains INCOMPLETE.\n");
-/// <summary>Render operation.</summary>
+
             var surveyFrame = Render(64, 36);
             File.WriteAllText(Path.Combine(directory, "survey-colour.svg"), SurveySvg(surveyFrame, ThermalVisionState.Mode.Cividis));
             File.WriteAllText(Path.Combine(directory, "survey-grey.svg"), SurveySvg(surveyFrame, ThermalVisionState.Mode.WhiteHot));
@@ -203,10 +203,10 @@ namespace Thermodynamics.Harness
             return report.ToString();
         }
 
-/// <summary>SurveySvg operation.</summary>
+
         private static string SurveySvg(Frame frame, ThermalVisionState.Mode mode)
         {
-/// <summary>ThermalVisionAutoRange operation.</summary>
+
             var range = new ThermalVisionAutoRange();
             int measured = 0, unknown = 0;
             foreach (var sample in frame.Pixels)
@@ -216,7 +216,7 @@ namespace Thermodynamics.Harness
                     else { measured++; range.Observe(sample.Kelvin); }
                 }
             range.Update(0);
-/// <summary>StringBuilder operation.</summary>
+
             var svg = new StringBuilder("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 540'>"
                 + "<rect width='720' height='540' fill='#101922'/><g font-family='sans-serif' fill='#dcebf2'>"
                 + "<text x='32' y='34' font-size='20'>THERMAL SURVEY / "

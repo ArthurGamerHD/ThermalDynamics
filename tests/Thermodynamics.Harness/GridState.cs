@@ -6,7 +6,7 @@ namespace Thermodynamics.Harness
 {
     public static class GridState
     {
-/// <summary>Temperatures operation.</summary>
+
         public static float[] Temperatures(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -15,7 +15,7 @@ namespace Thermodynamics.Harness
             return values;
         }
 
-/// <summary>Restore operation.</summary>
+
         public static void Restore(ThermalSimulation simulation, float[] temperatures)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;

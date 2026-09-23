@@ -6,7 +6,7 @@ namespace Thermodynamics.Tests
     public class HeatSourceBlockTests
     {
         [Fact]
-/// <summary>TheDefaultDialSitsInsideItsOwnLimits operation.</summary>
+
         public void TheDefaultDialSitsInsideItsOwnLimits()
         {
             HeatSourceBlockSetting setting = HeatSourceBlockSetting.Default();
@@ -19,39 +19,39 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheBlockAndTheChatCommandAgreeOnWhatAHeatSourceReaches operation.</summary>
+
         public void TheBlockAndTheChatCommandAgreeOnWhatAHeatSourceReaches()
         {
             Assert.Equal(HeatSourceCommand.DefaultRange, HeatSourceBlockSetting.DefaultRange);
         }
 
         [Fact]
-/// <summary>BothDialsAreHeldInsideTheirLimits operation.</summary>
+
         public void BothDialsAreHeldInsideTheirLimits()
         {
-/// <summary>HeatSourceBlockSetting operation.</summary>
+
             HeatSourceBlockSetting low = new HeatSourceBlockSetting(-5f, -5f).Clamped();
             Assert.Equal(HeatSourceBlockSetting.MinWatts, low.Watts);
             Assert.Equal(HeatSourceBlockSetting.MinRange, low.Range);
             Assert.Equal(0f, low.Watts);
 
-/// <summary>HeatSourceBlockSetting operation.</summary>
+
             HeatSourceBlockSetting high = new HeatSourceBlockSetting(1e12f, 1e12f).Clamped();
             Assert.Equal(HeatSourceBlockSetting.MaxWatts, high.Watts);
             Assert.Equal(HeatSourceBlockSetting.MaxRange, high.Range);
 
-/// <summary>HeatSourceBlockSetting operation.</summary>
+
             HeatSourceBlockSetting inside = new HeatSourceBlockSetting(2.5e6f, 350f).Clamped();
             Assert.Equal(2.5e6f, inside.Watts);
             Assert.Equal(350f, inside.Range);
         }
 
         [Fact]
-/// <summary>ANotANumberIsRejectedRatherThanPassedThrough operation.</summary>
+
         public void ANotANumberIsRejectedRatherThanPassedThrough()
         {
             HeatSourceBlockSetting setting =
-/// <summary>HeatSourceBlockSetting operation.</summary>
+
                 new HeatSourceBlockSetting(float.NaN, float.NaN).Clamped();
 
             Assert.False(float.IsNaN(setting.Watts));
@@ -62,7 +62,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>ADialAtZeroAsksForNoSourceAtAll operation.</summary>
+
         public void ADialAtZeroAsksForNoSourceAtAll()
         {
             Assert.False(new HeatSourceBlockSetting(0f, 200f).HasOutput);
@@ -74,7 +74,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheOutputDialReachesZeroAndItsMaximumExactly operation.</summary>
+
         public void TheOutputDialReachesZeroAndItsMaximumExactly()
         {
             Assert.Equal(0f, HeatSourceBlockSetting.WattsAtPosition(0f));
@@ -96,7 +96,7 @@ namespace Thermodynamics.Tests
         [InlineData(0.75f)]
         [InlineData(0.9f)]
         [InlineData(1f)]
-/// <summary>APositionSurvivesBeingTurnedIntoWattsAndBack operation.</summary>
+
         public void APositionSurvivesBeingTurnedIntoWattsAndBack(float position)
         {
             float watts = HeatSourceBlockSetting.WattsAtPosition(position);
@@ -105,7 +105,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDialSpendsItsTravelWhereTheUsefulOutputsAre operation.</summary>
+
         public void TheDialSpendsItsTravelWhereTheUsefulOutputsAre()
         {
             float previous = -1f;
@@ -130,10 +130,10 @@ namespace Thermodynamics.Tests
         [InlineData(5000000f, 200f)]
         [InlineData(5371234.5f, 337f)]
         [InlineData(1000000000f, 1000f)]
-/// <summary>TheDialSurvivesASaveAndReload operation.</summary>
+
         public void TheDialSurvivesASaveAndReload(float watts, float range)
         {
-/// <summary>HeatSourceBlockSetting operation.</summary>
+
             HeatSourceBlockSetting saved = new HeatSourceBlockSetting(watts, range);
 
             HeatSourceBlockSetting loaded;
@@ -150,7 +150,7 @@ namespace Thermodynamics.Tests
         [InlineData("2|5000000|200")]
         [InlineData("1|5000000")]
         [InlineData("1|not-a-number|200")]
-/// <summary>AnUnreadableSaveLeavesTheBlockAtItsDefault operation.</summary>
+
         public void AnUnreadableSaveLeavesTheBlockAtItsDefault(string stored)
         {
             HeatSourceBlockSetting loaded;
@@ -161,7 +161,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASaveFromOutsideTheDialLoadsClamped operation.</summary>
+
         public void ASaveFromOutsideTheDialLoadsClamped()
         {
             HeatSourceBlockSetting loaded;
@@ -172,10 +172,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheReadoutsIrradianceIsTheSolversOwn operation.</summary>
+
         public void TheReadoutsIrradianceIsTheSolversOwn()
         {
-/// <summary>HeatSourceBlockSetting operation.</summary>
+
             HeatSourceBlockSetting setting = new HeatSourceBlockSetting(5e6f, 200f);
 
             Assert.Equal(
@@ -186,10 +186,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AMegawattIsTwoWattsPerSquareMetreAtTwoHundredMetres operation.</summary>
+
         public void AMegawattIsTwoWattsPerSquareMetreAtTwoHundredMetres()
         {
-/// <summary>HeatSourceBlockSetting operation.</summary>
+
             HeatSourceBlockSetting setting = new HeatSourceBlockSetting(1e6f, 1000f);
 
             Assert.Equal(2f, setting.IrradianceAt(200f), 1);

@@ -44,29 +44,29 @@ namespace Thermodynamics.Harness
 
             public bool IsShipped;
 
-/// <summary>Sets the tings.</summary>
+
             public ThermalSettings Settings()
             {
-/// <summary>ThermalSettings operation.</summary>
+
                 ThermalSettings settings = new ThermalSettings();
                 if (Knob.World != null) Knob.World(settings, Level);
                 return settings.Derive();
             }
 
-/// <summary>Material operation.</summary>
+
             public Func<string, string, BlockThermalProperties, BlockThermalProperties> Material()
             {
                 return Knob.Material == null ? null : Knob.Material(Level);
             }
 
-/// <summary>ToString operation.</summary>
+
             public override string ToString()
             {
                 return Knob.Name + "=" + Level.ToString("0.###");
             }
         }
 
-/// <summary>Block operation.</summary>
+
         private static Func<float, Func<string, string, BlockThermalProperties, BlockThermalProperties>> Block(
             Action<BlockThermalProperties, float> set)
         {
@@ -78,7 +78,7 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>OnlyOn operation.</summary>
+
         private static Func<float, Func<string, string, BlockThermalProperties, BlockThermalProperties>> OnlyOn(
             string typeId, Action<BlockThermalProperties, float> set)
         {
@@ -94,10 +94,10 @@ namespace Thermodynamics.Harness
 
         private static readonly float[] Quarters = { 0.25f, 0.5f, 1f, 2f, 4f };
 
-/// <summary>Knobs operation.</summary>
+
         public static List<Knob> Knobs()
         {
-/// <summary>List operation.</summary>
+
             List<Knob> knobs = new List<Knob>();
 
 
@@ -106,7 +106,7 @@ namespace Thermodynamics.Harness
                 Name = "specific-heat",
                 Intent = "how long a block takes to move — the time constant",
                 Multiplier = true, Shipped = 1f, Levels = Quarters, Scenarios = Core,
-/// <summary>Block operation.</summary>
+
                 Material = Block((p, x) => p.SpecificHeat *= x),
             });
 
@@ -115,7 +115,7 @@ namespace Thermodynamics.Harness
                 Name = "emissivity",
                 Intent = "radiating strength, and solar absorption with it",
                 Multiplier = true, Shipped = 1f, Levels = Quarters, Scenarios = CoreAndSun,
-/// <summary>Block operation.</summary>
+
                 Material = Block((p, x) => p.Emissivity = Math.Min(1f, p.Emissivity * x)),
             });
 
@@ -124,7 +124,7 @@ namespace Thermodynamics.Harness
                 Name = "conductivity",
                 Intent = "how fast heat leaves the block that made it",
                 Multiplier = true, Shipped = 1f, Levels = Quarters, Scenarios = Core,
-/// <summary>Block operation.</summary>
+
                 Material = Block((p, x) => p.Conductivity *= x),
             });
 
@@ -134,7 +134,7 @@ namespace Thermodynamics.Harness
                 Intent = "radiating area per block, apart from emissivity",
                 Multiplier = true, Shipped = 1f, Levels = new[] { 0.5f, 1f, 2f, 4f },
                 Scenarios = Core,
-/// <summary>Block operation.</summary>
+
                 Material = Block((p, x) => p.ExposedSurfaceMultiplier *= x),
             });
 
@@ -143,7 +143,7 @@ namespace Thermodynamics.Harness
                 Name = "producer-waste",
                 Intent = "share of generated power that becomes heat",
                 Multiplier = true, Shipped = 1f, Levels = Quarters, Scenarios = Core,
-/// <summary>Block operation.</summary>
+
                 Material = Block((p, x) => p.ProducerWasteEnergy *= x),
             });
 
@@ -152,7 +152,7 @@ namespace Thermodynamics.Harness
                 Name = "consumer-waste",
                 Intent = "share of drawn power that becomes heat",
                 Multiplier = true, Shipped = 1f, Levels = Quarters, Scenarios = Core,
-/// <summary>Block operation.</summary>
+
                 Material = Block((p, x) => p.ConsumerWasteEnergy *= x),
             });
 
@@ -162,7 +162,7 @@ namespace Thermodynamics.Harness
                 Intent = "where damage begins — moves the verdict, not the heat",
                 Multiplier = true, Shipped = 1f, Levels = new[] { 0.5f, 0.75f, 1f, 1.5f, 2f },
                 Scenarios = Core,
-/// <summary>Block operation.</summary>
+
                 Material = Block((p, x) => p.CriticalTemperature *= x),
             });
 
@@ -175,7 +175,7 @@ namespace Thermodynamics.Harness
                 Intent = "waste fraction of jump drives alone — 67 % of the corpus's load heat",
                 Multiplier = true, Shipped = 1f, Levels = cuts, Scenarios = Core,
                 OnlyType = "JumpDrive",
-/// <summary>OnlyOn operation.</summary>
+
                 Material = OnlyOn("JumpDrive", (p, x) => p.ConsumerWasteEnergy *= x),
             });
 
@@ -185,7 +185,7 @@ namespace Thermodynamics.Harness
                 Intent = "heat capacity of jump drives alone — how long one takes to cook",
                 Multiplier = true, Shipped = 1f, Levels = new[] { 1f, 2f, 4f, 8f }, Scenarios = Core,
                 OnlyType = "JumpDrive",
-/// <summary>OnlyOn operation.</summary>
+
                 Material = OnlyOn("JumpDrive", (p, x) => p.SpecificHeat *= x),
             });
 
@@ -195,7 +195,7 @@ namespace Thermodynamics.Harness
                 Intent = "waste fraction of hydrogen engines alone — ships at 0.60",
                 Multiplier = true, Shipped = 1f, Levels = cuts, Scenarios = Core,
                 OnlyType = "HydrogenEngine",
-/// <summary>OnlyOn operation.</summary>
+
                 Material = OnlyOn("HydrogenEngine", (p, x) => p.ProducerWasteEnergy *= x),
             });
 
@@ -205,7 +205,7 @@ namespace Thermodynamics.Harness
                 Intent = "how fast a hydrogen engine sheds into its neighbours",
                 Multiplier = true, Shipped = 1f, Levels = new[] { 1f, 2f, 4f, 8f }, Scenarios = Core,
                 OnlyType = "HydrogenEngine",
-/// <summary>OnlyOn operation.</summary>
+
                 Material = OnlyOn("HydrogenEngine", (p, x) => p.Conductivity *= x),
             });
 
@@ -215,7 +215,7 @@ namespace Thermodynamics.Harness
                 Intent = "waste fraction of thrusters alone — charged against thrust, not draw",
                 Multiplier = true, Shipped = 1f, Levels = cuts, Scenarios = Core,
                 OnlyType = "Thrust",
-/// <summary>OnlyOn operation.</summary>
+
                 Material = OnlyOn("Thrust", (p, x) => p.ConsumerWasteEnergy *= x),
             });
 
@@ -226,7 +226,7 @@ namespace Thermodynamics.Harness
                 Multiplier = true, Shipped = 1f, Levels = new[] { 0.5f, 1f, 1.5f, 2f },
                 Scenarios = Core,
                 OnlyType = "OxygenGenerator",
-/// <summary>OnlyOn operation.</summary>
+
                 Material = OnlyOn("OxygenGenerator", (p, x) => p.ConsumerWasteEnergy *= x),
             });
 
@@ -237,7 +237,7 @@ namespace Thermodynamics.Harness
                 Multiplier = true, Shipped = 1f, Levels = new[] { 0.5f, 1f, 2f, 4f, 8f },
                 Scenarios = Core,
                 OnlyType = "Reactor",
-/// <summary>OnlyOn operation.</summary>
+
                 Material = OnlyOn("Reactor", (p, x) => p.ProducerWasteEnergy *= x),
             });
 
@@ -297,10 +297,10 @@ namespace Thermodynamics.Harness
             "surface-cold-night", "surface-windy", "underground", "storm-parked", "reentry",
         };
 
-/// <summary>All operation.</summary>
+
         public static List<Configuration> All()
         {
-/// <summary>List operation.</summary>
+
             List<Configuration> configurations = new List<Configuration>();
 
             foreach (Knob knob in Knobs())

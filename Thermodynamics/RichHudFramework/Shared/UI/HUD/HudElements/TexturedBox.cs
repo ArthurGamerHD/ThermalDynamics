@@ -13,29 +13,29 @@ namespace RichHudFramework.UI
 
 		protected readonly MatBoard hudBoard;
 
-/// <summary>TexturedBox operation.</summary>
+
 		public TexturedBox(HudParentBase parent) : base(parent)
 		{
-/// <summary>MatBoard operation.</summary>
+
 			hudBoard = new MatBoard();
-/// <summary>Vector2 operation.</summary>
+
 			Size = new Vector2(50f);
 		}
 
-/// <summary>TexturedBox operation.</summary>
+
 		public TexturedBox() : this(null)
 		{ }
 
-/// <summary>Draw operation.</summary>
+
 		protected override void Draw()
 		{
 			if (hudBoard.Color.A > 0)
 			{
-/// <summary>default operation.</summary>
+
 				CroppedBox box = default(CroppedBox);
 				Vector2 halfSize = (UnpaddedSize) * .5f;
 
-/// <summary>BoundingBox2 operation.</summary>
+
 				box.bounds = new BoundingBox2(Position - halfSize, Position + halfSize);
 				box.mask = MaskingBox;
 				hudBoard.Draw(ref box, HudSpace.PlaneToWorldRef);

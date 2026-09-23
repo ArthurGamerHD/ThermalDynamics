@@ -12,13 +12,13 @@ namespace RichHudFramework.UI
 		HudChain<TContainer, TElement>,
 		TContainer,
 		TElement>
-/// <summary>new operation.</summary>
+
 		where TContainer : class, ISelectionBoxEntry<TElement>, new()
 		where TElement : HudElementBase, IMinLabelElement
 	{
-/// <summary>TreeBoxBase operation.</summary>
+
 		public TreeBoxBase(HudParentBase parent) : base(parent) { }
-/// <summary>TreeBoxBase operation.</summary>
+
 		public TreeBoxBase() : base(null) { }
 
 		public class TreeChainSelectionBox : ChainSelectionBoxBase<TContainer, TElement>
@@ -28,11 +28,11 @@ namespace RichHudFramework.UI
 	public abstract class TreeBoxBase<TSelectionBox, TChain, TContainer, TElement>
 		: LabelElementBase, IEntryBox<TContainer, TElement>, IClickableElement
 		where TElement : HudElementBase, IMinLabelElement
-/// <summary>new operation.</summary>
+
 		where TContainer : class, ISelectionBoxEntry<TElement>, new()
-/// <summary>new operation.</summary>
+
 		where TChain : HudChain<TContainer, TElement>, new()
-/// <summary>new operation.</summary>
+
 		where TSelectionBox : SelectionBoxBase<TChain, TContainer, TElement>, new()
 	{
 		public event EventHandler ValueChanged
@@ -129,17 +129,17 @@ namespace RichHudFramework.UI
 
 		protected readonly TreeBoxDisplay labelButton;
 
-/// <summary>TreeBoxBase operation.</summary>
+
         protected TreeBoxBase(HudParentBase parent) : base(parent)
 		{
-/// <summary>TreeBoxDisplay operation.</summary>
+
 			labelButton = new TreeBoxDisplay(this)
 			{
 				ParentAlignment = ParentAlignments.PaddedInnerTop,
 				DimAlignment = DimAlignments.UnpaddedWidth
 			};
 
-/// <summary>TSelectionBox operation.</summary>
+
 			selectionBox = new TSelectionBox()
 			{
 				Visible = false,
@@ -162,19 +162,19 @@ namespace RichHudFramework.UI
 			labelButton.MouseInput.LeftClicked += ToggleList;
 		}
 
-/// <summary>TreeBoxBase operation.</summary>
+
         protected TreeBoxBase() : this(null) { }
 
-/// <summary>Sets the selection.</summary>
+
 		public void SetSelection(TContainer member) => selectionBox.SetSelection(member);
 
-/// <summary>Sets the selectionat.</summary>
+
 		public void SetSelectionAt(int index) => selectionBox.SetSelectionAt(index);
 
-/// <summary>ClearSelection operation.</summary>
+
 		public void ClearSelection() => selectionBox.ClearSelection();
 
-/// <summary>ToggleList operation.</summary>
+
         protected virtual void ToggleList(object sender, EventArgs args)
 		{
 			if (!ListOpen)
@@ -183,21 +183,21 @@ namespace RichHudFramework.UI
 				CloseList();
 		}
 
-/// <summary>OpenList operation.</summary>
+
 		public void OpenList()
 		{
 			labelButton.Open = true;
 			ListOpen = true;
 		}
 
-/// <summary>CloseList operation.</summary>
+
 		public void CloseList()
 		{
 			labelButton.Open = false;
 			ListOpen = false;
 		}
 
-/// <summary>Measure operation.</summary>
+
         protected override void Measure()
 		{
 			selectionBox.Visible = ListOpen;
@@ -206,7 +206,7 @@ namespace RichHudFramework.UI
 			{
 				Height = selectionBox.GetRangeSize().Y + labelButton.Height + Padding.Y;
 				selectionBox.Width = Size.X - Padding.X - 2f * IndentSize;
-/// <summary>Vector2 operation.</summary>
+
 				selectionBox.Offset = new Vector2(IndentSize, 0f);
 				selectionBox.Height = Size.Y - labelButton.Height - Padding.Y;
 			}
@@ -216,7 +216,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>Returns the enumerator.</summary>
+
 		public IEnumerator<TContainer> GetEnumerator() => selectionBox.GetEnumerator();
 		IEnumerator IEnumerable.GetEnumerator() => selectionBox.GetEnumerator();
 
@@ -259,54 +259,54 @@ namespace RichHudFramework.UI
 			private readonly TexturedBox arrow, divider, background;
 			private readonly MouseInputElement mouseInput;
 
-/// <summary>Material operation.</summary>
+
 			private static readonly Material downArrow = new Material("RichHudDownArrow", new Vector2(64f, 64f));
-/// <summary>Material operation.</summary>
+
 			private static readonly Material rightArrow = new Material("RichHudRightArrow", new Vector2(64f, 64f));
 
-/// <summary>TreeBoxDisplay operation.</summary>
+
 			public TreeBoxDisplay(HudParentBase parent) : base(parent)
 			{
-/// <summary>TexturedBox operation.</summary>
+
 				background = new TexturedBox(this)
 				{
 					Color = TerminalFormatting.EbonyClay,
 					DimAlignment = DimAlignments.Size,
 				};
 
-/// <summary>Label operation.</summary>
+
 				nameLabel = new Label()
 				{
 					AutoResize = false,
-/// <summary>Vector2 operation.</summary>
+
 					Padding = new Vector2(10f, 0f),
 					Format = GlyphFormat.Blueish.WithSize(1.1f),
 				};
 
-/// <summary>TexturedBox operation.</summary>
+
 				divider = new TexturedBox()
 				{
-/// <summary>Vector2 operation.</summary>
+
 					Padding = new Vector2(2f, 6f),
-/// <summary>Vector2 operation.</summary>
+
 					Size = new Vector2(2f, 39f),
-/// <summary>Color operation.</summary>
+
 					Color = new Color(104, 113, 120),
 				};
 
-/// <summary>TexturedBox operation.</summary>
+
 				arrow = new TexturedBox()
 				{
 					Width = 20f,
-/// <summary>Vector2 operation.</summary>
+
 					Padding = new Vector2(8f, 0f),
 					MatAlignment = MaterialAlignment.FitHorizontal,
-/// <summary>Color operation.</summary>
+
 					Color = new Color(227, 230, 233),
 					Material = rightArrow,
 				};
 
-/// <summary>HudChain operation.</summary>
+
 				var layout = new HudChain(false, this)
 				{
 					SizingMode = HudChainSizingModes.FitMembersOffAxis,
@@ -314,9 +314,9 @@ namespace RichHudFramework.UI
 					CollectionContainer = { arrow, divider, { nameLabel, 1f } }
 				};
 
-/// <summary>InputFocusHandler operation.</summary>
+
 				FocusHandler = new InputFocusHandler(this);
-/// <summary>MouseInputElement operation.</summary>
+
 				mouseInput = new MouseInputElement(this)
 				{
 					DimAlignment = DimAlignments.Size

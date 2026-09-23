@@ -24,20 +24,20 @@ namespace Thermodynamics.Tests
             get { return states.Keys; }
         }
 
-/// <summary>Returns the state.</summary>
+
         public int GetState(Vector3I cell)
         {
             int state;
             return states.TryGetValue(cell, out state) ? state : 0;
         }
 
-/// <summary>HasCell operation.</summary>
+
         public bool HasCell(Vector3I cell)
         {
             return states.ContainsKey(cell);
         }
 
-/// <summary>Adds a block.</summary>
+
         public void AddBlock(BlockInstance block)
         {
             if (block == null) return;
@@ -60,7 +60,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Removes the block.</summary>
+
         public void RemoveBlock(BlockInstance block)
         {
             if (block == null) return;
@@ -78,7 +78,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Rebuild operation.</summary>
+
         public void Rebuild(GridModel grid)
         {
             states.Clear();
@@ -99,7 +99,7 @@ namespace Thermodynamics.Tests
                 }
             }
 
-/// <summary>List operation.</summary>
+
             List<Vector3I> keys = new List<Vector3I>(states.Keys);
             for (int i = 0; i < keys.Count; i++)
             {
@@ -107,14 +107,14 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>RefreshCell operation.</summary>
+
         public void RefreshCell(Vector3I cell)
         {
             Refresh(states, cell);
             Refresh(structure, cell);
         }
 
-/// <summary>Refresh operation.</summary>
+
         private static void Refresh(Dictionary<Vector3I, int> layer, Vector3I cell)
         {
             int state;
@@ -132,7 +132,7 @@ namespace Thermodynamics.Tests
             layer[cell] = state;
         }
 
-/// <summary>RefreshNeighboursOf operation.</summary>
+
         private void RefreshNeighboursOf(Vector3I cell)
         {
             for (int face = 0; face < Face.Count; face++)
@@ -141,50 +141,50 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>IsFaceSealed operation.</summary>
+
         public bool IsFaceSealed(Vector3I cell, int face)
         {
-/// <summary>Returns the state.</summary>
+
             int state = GetState(cell);
             if (CellSurface.SelfAirtight(state, face)) return true;
 
-/// <summary>Returns the state.</summary>
+
             int neighbourState = GetState(cell + Face.Offsets[face]);
             return CellSurface.SelfAirtight(neighbourState, Face.Opposite(face));
         }
 
-/// <summary>IsFullySealed operation.</summary>
+
         public bool IsFullySealed(Vector3I cell)
         {
             return CellSurface.IsFullySealed(GetState(cell));
         }
 
-/// <summary>Returns the structuralstate.</summary>
+
         public int GetStructuralState(Vector3I cell)
         {
             int state;
             return structure.TryGetValue(cell, out state) ? state : 0;
         }
 
-/// <summary>IsFaceSealedStructurally operation.</summary>
+
         public bool IsFaceSealedStructurally(Vector3I cell, int face)
         {
-/// <summary>Returns the structuralstate.</summary>
+
             int state = GetStructuralState(cell);
             if (CellSurface.SelfAirtight(state, face)) return true;
 
-/// <summary>Returns the structuralstate.</summary>
+
             int neighbourState = GetStructuralState(cell + Face.Offsets[face]);
             return CellSurface.SelfAirtight(neighbourState, Face.Opposite(face));
         }
 
-/// <summary>IsFullySealedStructurally operation.</summary>
+
         public bool IsFullySealedStructurally(Vector3I cell)
         {
             return CellSurface.IsFullySealed(GetStructuralState(cell));
         }
 
-/// <summary>Returns the exposedfaces.</summary>
+
         public void GetExposedFaces(BlockInstance block, RoomMap rooms, int[] resultsByFace)
         {
             if (resultsByFace == null || resultsByFace.Length < Face.Count)
@@ -221,7 +221,7 @@ namespace Thermodynamics.Tests
                         cell = BoxGeometry.WithComponent(cell, u, a);
                         cell = BoxGeometry.WithComponent(cell, v, b);
 
-/// <summary>Returns the state.</summary>
+
                         int state = GetState(cell);
                         Vector3I neighbour = cell + offset;
 
@@ -237,7 +237,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Returns the roomcontacts.</summary>
+
         public void GetRoomContacts(BlockInstance block, RoomMap rooms, List<RoomContact> results)
         {
             if (results == null || block == null || rooms == null) return;
@@ -279,20 +279,20 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Accumulate operation.</summary>
+
         private static void Accumulate(List<RoomContact> results, int room)
         {
             for (int i = 0; i < results.Count; i++)
             {
                 if (results[i].RoomIndex != room) continue;
-/// <summary>RoomContact operation.</summary>
+
                 results[i] = new RoomContact(room, results[i].Faces + 1);
                 return;
             }
             results.Add(new RoomContact(room, 1));
         }
 
-/// <summary>Returns the exposedfaces.</summary>
+
         public int[] GetExposedFaces(BlockInstance block, RoomMap rooms)
         {
             int[] result = new int[Face.Count];
@@ -300,7 +300,7 @@ namespace Thermodynamics.Tests
             return result;
         }
 
-/// <summary>Clear operation.</summary>
+
         public void Clear()
         {
             states.Clear();
@@ -308,13 +308,13 @@ namespace Thermodynamics.Tests
         }
     }
 
-/// <summary>Shell operation.</summary>
+
         private static GridBuilder Shell()
         {
             return RoomFixtures.DooredShell();
         }
 
-/// <summary>Census operation.</summary>
+
         private static GridBuilder Census()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -322,7 +322,7 @@ namespace Thermodynamics.Tests
             return builder;
         }
 
-/// <summary>AssertSame operation.</summary>
+
         private static void AssertSame(TwoDictionarySurfaceMap expected, SurfaceMap actual, bool layersDiffer, string what)
         {
             Assert.True(expected.CellCount > 0, what + ": the reference map is empty, so agreement proves nothing");
@@ -362,14 +362,14 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData("shell")]
         [InlineData("census")]
-/// <summary>ARebuiltMapAnswersEveryQuestionAsTheTwoDictionariesDid operation.</summary>
+
         public void ARebuiltMapAnswersEveryQuestionAsTheTwoDictionariesDid(string which)
         {
-/// <summary>Shell operation.</summary>
+
             GridBuilder builder = which == "shell" ? Shell() : Census();
-/// <summary>TwoDictionarySurfaceMap operation.</summary>
+
             TwoDictionarySurfaceMap expected = new TwoDictionarySurfaceMap();
-/// <summary>SurfaceMap operation.</summary>
+
             SurfaceMap actual = new SurfaceMap();
             expected.Rebuild(builder.Grid);
             actual.Rebuild(builder.Grid);
@@ -379,14 +379,14 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData("shell")]
         [InlineData("census")]
-/// <summary>AMapBuiltAndThenEditedBlockByBlockAnswersAsTheTwoDictionariesDid operation.</summary>
+
         public void AMapBuiltAndThenEditedBlockByBlockAnswersAsTheTwoDictionariesDid(string which)
         {
-/// <summary>Shell operation.</summary>
+
             GridBuilder builder = which == "shell" ? Shell() : Census();
-/// <summary>TwoDictionarySurfaceMap operation.</summary>
+
             TwoDictionarySurfaceMap expected = new TwoDictionarySurfaceMap();
-/// <summary>SurfaceMap operation.</summary>
+
             SurfaceMap actual = new SurfaceMap();
 
             IList<BlockInstance> placed = builder.Placed;

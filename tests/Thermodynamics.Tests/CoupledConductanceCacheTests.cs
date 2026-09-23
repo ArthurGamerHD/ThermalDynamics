@@ -8,17 +8,17 @@ namespace Thermodynamics.Tests
 {
     public class CoupledConductanceCacheTests
     {
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubsteps = 4096;
             settings.MaxElementVisitsPerStep = 0;
             return settings.Derive();
         }
 
-/// <summary>Sealed operation.</summary>
+
         private static ThermalSimulation Sealed()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -42,10 +42,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PressurisingARoomIsSeenByTheStabilityEstimate operation.</summary>
+
         public void PressurisingARoomIsSeenByTheStabilityEstimate()
         {
-/// <summary>Sealed operation.</summary>
+
             ThermalSimulation simulation = Sealed();
 
             simulation.StepExact(4, Worlds.Shadow());
@@ -63,10 +63,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DepressurisingARoomIsSeenToo operation.</summary>
+
         public void DepressurisingARoomIsSeenToo()
         {
-/// <summary>Sealed operation.</summary>
+
             ThermalSimulation simulation = Sealed();
             simulation.SetRoomPressure(new Vector3I(1, 1, 1), 1f);
             simulation.StepExact(4, Worlds.Shadow());
@@ -83,10 +83,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheProfileAndTheEstimateReadTheSameTotals operation.</summary>
+
         public void TheProfileAndTheEstimateReadTheSameTotals()
         {
-/// <summary>Sealed operation.</summary>
+
             ThermalSimulation simulation = Sealed();
             simulation.SetRoomPressure(new Vector3I(1, 1, 1), 1f);
             simulation.StepExact(4, Worlds.Shadow());
@@ -102,10 +102,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ReplacingTheLoopsDoesNotLeaveTotalsBehind operation.</summary>
+
         public void ReplacingTheLoopsDoesNotLeaveTotalsBehind()
         {
-/// <summary>Sealed operation.</summary>
+
             ThermalSimulation simulation = Sealed();
             simulation.StepExact(2, Worlds.Shadow());
 
@@ -117,10 +117,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>GrowingTheGridDoesNotLeaveTotalsBehind operation.</summary>
+
         public void GrowingTheGridDoesNotLeaveTotalsBehind()
         {
-/// <summary>Sealed operation.</summary>
+
             ThermalSimulation simulation = Sealed();
             simulation.SetRoomPressure(new Vector3I(1, 1, 1), 1f);
             simulation.StepExact(4, Worlds.Shadow());

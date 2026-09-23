@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
     {
         private const float Frame = 1f / 60f;
 
-/// <summary>Ship operation.</summary>
+
         private static ThermalSimulation Ship(int side)
         {
             ThermalSettings settings = new ThermalSettings
@@ -29,7 +29,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>RunSeconds operation.</summary>
+
         private static SimulationWork RunSeconds(ThermalSimulation simulation, int seconds)
         {
             simulation.Work.Reset();
@@ -45,20 +45,20 @@ namespace Thermodynamics.Tests
         [InlineData(1)]
         [InlineData(3)]
         [InlineData(8)]
-/// <summary>TheStepRateIsWhatFrequencySays operation.</summary>
+
         public void TheStepRateIsWhatFrequencySays(int side)
         {
-/// <summary>RunSeconds operation.</summary>
+
             SimulationWork work = RunSeconds(Ship(side), 4);
 
             Assert.InRange(work.SolverSteps, 15, 17);
         }
 
         [Fact]
-/// <summary>ASmallGridsStepArrivesInOnePiece operation.</summary>
+
         public void ASmallGridsStepArrivesInOnePiece()
         {
-/// <summary>RunSeconds operation.</summary>
+
             SimulationWork work = RunSeconds(Ship(1), 4);
 
             Assert.True(work.SolverSteps > 0);
@@ -67,10 +67,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ALargeGridsStepIsStillSpreadOverItsWindow operation.</summary>
+
         public void ALargeGridsStepIsStillSpreadOverItsWindow()
         {
-/// <summary>RunSeconds operation.</summary>
+
             SimulationWork work = RunSeconds(Ship(16), 4);
 
             Assert.True(work.SolverSteps > 0);
@@ -79,12 +79,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BankedCreditIsSpentRatherThanLost operation.</summary>
+
         public void BankedCreditIsSpentRatherThanLost()
         {
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation small = Ship(1);
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation large = Ship(8);
 
             RunSeconds(small, 4);

@@ -3,7 +3,7 @@ using System;
 
 namespace RichHudFramework
 {
-/// <summary>EventHandler operation.</summary>
+
 	public delegate void EventHandler(object sender, EventArgs e);
 
 	namespace UI

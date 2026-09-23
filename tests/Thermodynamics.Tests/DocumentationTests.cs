@@ -10,20 +10,20 @@ namespace Thermodynamics.Tests
     [Trait("speed", "slow")]
     public class DocumentationTests
     {
-/// <summary>RepoRoot operation.</summary>
+
         private static string RepoRoot()
         {
             return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
 
-/// <summary>MarkdownFiles operation.</summary>
+
         private static List<string> MarkdownFiles()
         {
-/// <summary>List operation.</summary>
+
             List<string> files = new List<string>();
             foreach (string file in Directory.GetFiles(RepoRoot(), "*.md", SearchOption.AllDirectories))
             {
-/// <summary>Relative operation.</summary>
+
                 string relative = Relative(file);
                 if (relative.StartsWith("out/", StringComparison.Ordinal)) continue;
                 if (relative.Contains("/bin/") || relative.Contains("/obj/")) continue;
@@ -34,20 +34,20 @@ namespace Thermodynamics.Tests
             return files;
         }
 
-/// <summary>Relative operation.</summary>
+
         private static string Relative(string file)
         {
             return file.Substring(RepoRoot().Length).TrimStart('/', '\\').Replace('\\', '/');
         }
 
-/// <summary>Slug operation.</summary>
+
         private static string Slug(string heading)
         {
-            string text = Regex.Replace(heading, @"\[([^\]]*)\]\([^)]*\)", "$1");   // links to their text
+            string text = Regex.Replace(heading, @"\[([^\]]*)\]\([^)]*\)", "$1");
             text = text.Replace("`", "").Replace("*", "").Replace("_", "");
             text = text.ToLowerInvariant().Trim();
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder slug = new StringBuilder();
             foreach (char c in text)
             {
@@ -58,10 +58,10 @@ namespace Thermodynamics.Tests
             return slug.ToString();
         }
 
-/// <summary>Anchors operation.</summary>
+
         private static HashSet<string> Anchors(string file)
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> anchors = new HashSet<string>(StringComparer.Ordinal);
             Dictionary<string, int> seen = new Dictionary<string, int>(StringComparer.Ordinal);
 
@@ -74,7 +74,7 @@ namespace Thermodynamics.Tests
                 Match heading = Regex.Match(line, @"^#{1,6}\s+(.*?)\s*$");
                 if (!heading.Success) continue;
 
-/// <summary>Slug operation.</summary>
+
                 string slug = Slug(heading.Groups[1].Value);
                 if (slug.Length == 0) continue;
 
@@ -82,7 +82,7 @@ namespace Thermodynamics.Tests
                 if (seen.TryGetValue(slug, out count))
                 {
                     seen[slug] = count + 1;
-                    anchors.Add(slug + "-" + count);      // GitHub disambiguates repeats with -1, -2
+                    anchors.Add(slug + "-" + count);
                 }
                 else
                 {
@@ -95,16 +95,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryRelativeLinkResolves operation.</summary>
+
         public void EveryRelativeLinkResolves()
         {
-/// <summary>MarkdownFiles operation.</summary>
+
             List<string> files = MarkdownFiles();
             Assert.True(files.Count > 25,
                 "only " + files.Count + " markdown files were found, so this test is looking in the"
                 + " wrong place and would pass whatever the documentation said");
 
-/// <summary>List operation.</summary>
+
             List<string> broken = new List<string>();
             int checked_ = 0;
 
@@ -139,11 +139,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryAnchorNamesAHeading operation.</summary>
+
         public void EveryAnchorNamesAHeading()
         {
             Dictionary<string, HashSet<string>> anchors = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
-/// <summary>List operation.</summary>
+
             List<string> broken = new List<string>();
             int checked_ = 0;
 
@@ -164,12 +164,12 @@ namespace Thermodynamics.Tests
                     string path = target.Substring(0, hash);
                     string full = path.Length == 0 ? file : Path.GetFullPath(Path.Combine(folder, path));
                     if (!full.EndsWith(".md", StringComparison.OrdinalIgnoreCase)) continue;
-                    if (!File.Exists(full)) continue;         // the other test reports that
+                    if (!File.Exists(full)) continue;
 
                     HashSet<string> headings;
                     if (!anchors.TryGetValue(full, out headings))
                     {
-/// <summary>Anchors operation.</summary>
+
                         headings = Anchors(full);
                         anchors[full] = headings;
                     }
@@ -191,7 +191,7 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", broken.ToArray()));
         }
 
-/// <summary>TestCaseCount operation.</summary>
+
         private static int TestCaseCount()
         {
             int count = 0;
@@ -221,16 +221,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryQuotedSuiteSizeIsCurrent operation.</summary>
+
         public void EveryQuotedSuiteSizeIsCurrent()
         {
-/// <summary>TestCaseCount operation.</summary>
+
             int actual = TestCaseCount();
             Assert.True(actual > 1000,
                 "only " + actual + " test cases were counted by reflection, so this test is not"
                 + " seeing the suite and would pass whatever a page claimed");
 
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
 
             foreach (string file in MarkdownFiles())
@@ -239,7 +239,7 @@ namespace Thermodynamics.Tests
                     @"([\d][\d,]*)\s+tests\b"))
                 {
                     int quoted = int.Parse(match.Groups[1].Value.Replace(",", ""));
-                    if (quoted < 500) continue;          // not a suite size — a count of something else
+                    if (quoted < 500) continue;
 
                     if (quoted > actual || quoted < actual - actual / 10)
                     {
@@ -251,7 +251,7 @@ namespace Thermodynamics.Tests
 
             wrong.Sort(StringComparer.Ordinal);
             Assert.True(wrong.Count == 0,
-/// <summary>true operation.</summary>
+
                 "pages quoting a suite size that is no longer true (the current count is "
                 + actual + "):\n  " + string.Join("\n  ", wrong.ToArray()));
         }
@@ -264,7 +264,7 @@ namespace Thermodynamics.Tests
             public float Tolerance;
         }
 
-/// <summary>QuotedCounts operation.</summary>
+
         private static List<QuotedCount> QuotedCounts()
         {
             return new List<QuotedCount>
@@ -296,7 +296,7 @@ namespace Thermodynamics.Tests
             };
         }
 
-/// <summary>PanelShipCount operation.</summary>
+
         private static int PanelShipCount()
         {
             string path = Path.Combine(RepoRoot(), "tools", "corpus", "panel.csv");
@@ -308,10 +308,10 @@ namespace Thermodynamics.Tests
                 if (line.Trim().Length > 0) rows++;
             }
 
-            return rows - 1;                                   // the header is not a ship
+            return rows - 1;
         }
 
-/// <summary>AuthoredValueCount operation.</summary>
+
         private static int AuthoredValueCount()
         {
             string path = Path.Combine(ShippedBlocks.DataRoot(), "Cubes.xml");
@@ -320,7 +320,7 @@ namespace Thermodynamics.Tests
             return Regex.Matches(File.ReadAllText(path), @"<(?:Decimal|Bool)\s+Name=").Count;
         }
 
-/// <summary>WasteFractionCount operation.</summary>
+
         private static int WasteFractionCount()
         {
             string path = Path.Combine(ShippedBlocks.DataRoot(), "Cubes.xml");
@@ -330,7 +330,7 @@ namespace Thermodynamics.Tests
                 "<Decimal\\s+Name=\"(?:Producer|Consumer)WasteEnergy\"").Count;
         }
 
-/// <summary>TestClassCount operation.</summary>
+
         private static int TestClassCount()
         {
             int count = 0;
@@ -347,10 +347,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryQuotedDatasetCountIsCurrent operation.</summary>
+
         public void EveryQuotedDatasetCountIsCurrent()
         {
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
             int judged = 0;
 
@@ -362,7 +362,7 @@ namespace Thermodynamics.Tests
                     + " page claimed about them");
 
                 int slack = (int)(actual * quoted.Tolerance);
-/// <summary>Regex operation.</summary>
+
                 Regex pattern = new Regex(@"([\d][\d,]*)\s+" + Regex.Escape(quoted.Noun));
 
                 foreach (string file in Documented())
@@ -387,7 +387,7 @@ namespace Thermodynamics.Tests
 
             Assert.True(judged > 0,
                 "no page quoted any of the counts this test knows how to check, so it judged"
-/// <summary>nothing operation.</summary>
+
                 + " nothing (`E8`)");
 
             wrong.Sort(StringComparer.Ordinal);
@@ -396,13 +396,13 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", wrong.ToArray()));
         }
 
-/// <summary>Documented operation.</summary>
+
         private static IEnumerable<string> Documented()
         {
             foreach (string file in MarkdownFiles()) yield return file;
             foreach (string file in SourceFiles())
             {
-/// <summary>Relative operation.</summary>
+
                 string relative = Relative(file);
                 if (relative.Contains("RichHudFramework")) continue;
                 if (relative.Contains("NetworkAPI")) continue;
@@ -411,14 +411,14 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>PresentTense operation.</summary>
+
         private static string PresentTense(string page)
         {
             Match log = Regex.Match(page, @"(?m)^##+\s+Change log\s*$");
             return log.Success ? page.Substring(0, log.Index) : page;
         }
 
-/// <summary>Sentences operation.</summary>
+
         private static IEnumerable<string> Sentences(string text)
         {
             return Regex.Split(text, @"(?<=[.!?])\s+|\n\s*\n");
@@ -427,7 +427,7 @@ namespace Thermodynamics.Tests
         private const string TestClassPattern =
             @"(?m)^[ \t]*public\s+(?:sealed\s+|static\s+|partial\s+)*class\s+(\w+)";
 
-/// <summary>HoldsCases operation.</summary>
+
         private static bool HoldsCases(string name)
         {
             return name.EndsWith("Tests", StringComparison.Ordinal)
@@ -438,15 +438,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryTestClassIsInTheIndex operation.</summary>
+
         public void EveryTestClassIsInTheIndex()
         {
             string index = File.ReadAllText(Path.Combine(RepoRoot(), "tests", "README.md"));
             string folder = Path.Combine(RepoRoot(), "tests", "Thermodynamics.Tests");
 
-/// <summary>List operation.</summary>
+
             List<string> missing = new List<string>();
-/// <summary>List operation.</summary>
+
             List<string> names = new List<string>();
 
             foreach (string file in Directory.GetFiles(folder, "*.cs"))
@@ -471,7 +471,7 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", missing.ToArray()));
         }
 
-/// <summary>CamelPrefix operation.</summary>
+
         private static string CamelPrefix(string name, int words)
         {
             MatchCollection parts = Regex.Matches(name, @"[A-Z][a-z0-9]*");
@@ -483,12 +483,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoPageNamesATestThatHasBeenRenamed operation.</summary>
+
         public void NoPageNamesATestThatHasBeenRenamed()
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> declared = new HashSet<string>(StringComparer.Ordinal);
-/// <summary>List operation.</summary>
+
             List<string> testNames = new List<string>();
 
             foreach (string file in Directory.GetFiles(
@@ -516,12 +516,12 @@ namespace Thermodynamics.Tests
             Dictionary<string, string> byPrefix = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (string name in testNames)
             {
-/// <summary>CamelPrefix operation.</summary>
+
                 string prefix = CamelPrefix(name, 3);
                 if (prefix != null && !byPrefix.ContainsKey(prefix)) byPrefix[prefix] = name;
             }
 
-/// <summary>List operation.</summary>
+
             List<string> renamed = new List<string>();
 
             foreach (string file in MarkdownFiles())
@@ -532,7 +532,7 @@ namespace Thermodynamics.Tests
                     string cited = match.Groups[1].Value;
                     if (declared.Contains(cited)) continue;
 
-/// <summary>CamelPrefix operation.</summary>
+
                     string prefix = CamelPrefix(cited, 3);
                     string actual;
                     if (prefix == null || !byPrefix.TryGetValue(prefix, out actual)) continue;
@@ -548,7 +548,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryTestClassSaysWhatItIsFor operation.</summary>
+
         public void EveryTestClassSaysWhatItIsFor()
         {
             string folder = Path.Combine(RepoRoot(), "tests", "Thermodynamics.Tests");
@@ -558,7 +558,7 @@ namespace Thermodynamics.Tests
                 "only " + files.Length + " test sources were found, so this test is looking in the"
                 + " wrong place and would pass whatever the suite did");
 
-/// <summary>List operation.</summary>
+
             List<string> undocumented = new List<string>();
             int classes = 0;
 
@@ -602,13 +602,13 @@ namespace Thermodynamics.Tests
         [InlineData("ThermalCellDefinition.cs", "ThermalBlockProperties", 8)]
         [InlineData("PlanetDefinition.cs", "ThermalPlanetProperties", 8)]
         [InlineData("ThermalLoopDefinition.cs", "ThermalLoopProperties", 8)]
-/// <summary>EveryPropertyTheGameReadsIsInTheReference operation.</summary>
+
         public void EveryPropertyTheGameReadsIsInTheReference(string file, string group, int least)
         {
             string reader = File.ReadAllText(Path.Combine(RepoRoot(),
                 "Thermodynamics", "Definitions", file));
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> read = new HashSet<string>(StringComparer.Ordinal);
             foreach (Match match in Regex.Matches(reader, @"GetOrCompute\(""(\w+)""\)"))
             {
@@ -623,14 +623,14 @@ namespace Thermodynamics.Tests
 
             string doc = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "definitions.md"));
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> documented = new HashSet<string>(StringComparer.Ordinal);
             foreach (Match match in Regex.Matches(doc, @"(?m)^\|\s*`(\w+)`"))
             {
                 documented.Add(match.Groups[1].Value);
             }
 
-/// <summary>List operation.</summary>
+
             List<string> missing = new List<string>();
             foreach (string name in read)
             {
@@ -644,13 +644,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryModApiEntryIsDocumented operation.</summary>
+
         public void EveryModApiEntryIsDocumented()
         {
             string api = File.ReadAllText(Path.Combine(RepoRoot(),
                 "Thermodynamics", "ThermalApi.cs"));
 
-/// <summary>List operation.</summary>
+
             List<string> keys = new List<string>();
             foreach (Match match in Regex.Matches(api, @"methods\[""(\w+)""\]"))
             {
@@ -663,7 +663,7 @@ namespace Thermodynamics.Tests
 
             string doc = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "api.md"));
 
-/// <summary>List operation.</summary>
+
             List<string> missing = new List<string>();
             foreach (string key in keys)
             {
@@ -677,18 +677,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryPageHasAChangeLog operation.</summary>
+
         public void EveryPageHasAChangeLog()
         {
-/// <summary>List operation.</summary>
+
             List<string> missing = new List<string>();
-/// <summary>List operation.</summary>
+
             List<string> undated = new List<string>();
             int checked_ = 0;
 
             foreach (string file in MarkdownFiles())
             {
-/// <summary>Relative operation.</summary>
+
                 string relative = Relative(file);
 
                 if (relative.Contains("RichHudFramework")) continue;
@@ -718,7 +718,7 @@ namespace Thermodynamics.Tests
             undated.Sort(StringComparer.Ordinal);
 
             Assert.True(missing.Count == 0,
-/// <summary>section operation.</summary>
+
                 "pages with no \"## Change log\" section (see docs/development.md, Documentation"
                 + " conventions):\n  " + string.Join("\n  ", missing.ToArray()));
 
@@ -728,7 +728,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoDocCommentDescribesSomethingThatIsNotThere operation.</summary>
+
         public void NoDocCommentDescribesSomethingThatIsNotThere()
         {
             string[] roots =
@@ -737,7 +737,7 @@ namespace Thermodynamics.Tests
                 Path.Combine(RepoRoot(), "tests"),
             };
 
-/// <summary>List operation.</summary>
+
             List<string> orphans = new List<string>();
             int files = 0;
 
@@ -745,7 +745,7 @@ namespace Thermodynamics.Tests
             {
                 foreach (string file in Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories))
                 {
-/// <summary>Relative operation.</summary>
+
                     string relative = Relative(file);
 
                     if (relative.Contains("RichHudFramework")) continue;
@@ -810,17 +810,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryDocumentIsInTheIndex operation.</summary>
+
         public void EveryDocumentIsInTheIndex()
         {
             string index = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "README.md"));
 
-/// <summary>List operation.</summary>
+
             List<string> missing = new List<string>();
             foreach (string file in Directory.GetFiles(Path.Combine(RepoRoot(), "docs"), "*.md"))
             {
                 string name = Path.GetFileName(file);
-                if (name == "README.md") continue;              // the index does not index itself
+                if (name == "README.md") continue;
 
                 if (index.IndexOf("(" + name + ")", StringComparison.Ordinal) < 0) missing.Add(name);
             }
@@ -831,16 +831,16 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", missing.ToArray()));
         }
 
-/// <summary>RulesPage operation.</summary>
+
         private static string RulesPage()
         {
             return File.ReadAllText(Path.Combine(RepoRoot(), "docs", "rules.md"));
         }
 
-/// <summary>StatedRules operation.</summary>
+
         private static HashSet<string> StatedRules()
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> rules = new HashSet<string>(StringComparer.Ordinal);
             foreach (Match m in Regex.Matches(RulesPage(), @"(?m)^#{3,4}\s+([EMDCROJW]\d{1,2})\s+—"))
             {
@@ -851,22 +851,22 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryRuleCitedByAPageExists operation.</summary>
+
         public void EveryRuleCitedByAPageExists()
         {
-/// <summary>StatedRules operation.</summary>
+
             HashSet<string> stated = StatedRules();
             Assert.True(stated.Count > 40,
                 "only " + stated.Count + " rules were read out of docs/rules.md, so this test is"
                 + " parsing the page wrongly and would pass whatever any page cited");
 
-/// <summary>List operation.</summary>
+
             List<string> dangling = new List<string>();
             int banners = 0;
 
             foreach (string file in MarkdownFiles())
             {
-/// <summary>Relative operation.</summary>
+
                 string relative = Relative(file);
                 if (relative == "docs/rules.md") continue;
 
@@ -875,7 +875,7 @@ namespace Thermodynamics.Tests
                 {
                     if (lines[i].IndexOf("stated canonically in", StringComparison.Ordinal) < 0) continue;
 
-/// <summary>StringBuilder operation.</summary>
+
                     StringBuilder banner = new StringBuilder(lines[i]);
                     for (int j = i + 1; j < lines.Length && lines[j].StartsWith(">", StringComparison.Ordinal); j++)
                     {
@@ -911,10 +911,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryCitedIdentifierResolves operation.</summary>
+
         public void EveryCitedIdentifierResolves()
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> known = new HashSet<string>(StatedRules(), StringComparer.Ordinal);
             foreach (Match m in Regex.Matches(BacklogPage(), @"(?m)^\|\s*([A-Z]\d{1,2})\s*\|"))
             {
@@ -925,13 +925,13 @@ namespace Thermodynamics.Tests
                 "only " + known.Count + " identifiers were read out of the two pages, so this test"
                 + " is parsing them wrongly and would pass on any citation at all");
 
-/// <summary>List operation.</summary>
+
             List<string> dangling = new List<string>();
             int cited = 0;
 
             foreach (string file in SourceFiles())
             {
-/// <summary>Relative operation.</summary>
+
                 string relative = Relative(file);
 
                 if (relative.Contains("RichHudFramework")) continue;
@@ -958,19 +958,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheTwoPagesShareNoIdentifierTheyDidNotAlreadyShare operation.</summary>
+
         public void TheTwoPagesShareNoIdentifierTheyDidNotAlreadyShare()
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> allowed = new HashSet<string>(new[]
             {
                 "C3", "C7", "C8", "D1", "D2", "D3", "D4", "D5", "D6", "E2", "E4",
             }, StringComparer.Ordinal);
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> rules = new HashSet<string>(StatedRules(), StringComparer.Ordinal);
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> rows = new HashSet<string>(StringComparer.Ordinal);
             foreach (Match m in Regex.Matches(BacklogPage(), @"(?m)^\|\s*([A-Z]\d{1,2})\s*\|"))
             {
@@ -982,14 +982,14 @@ namespace Thermodynamics.Tests
             Assert.True(rows.Count > 40,
                 "only " + rows.Count + " rows were read out of docs/backlog.md");
 
-/// <summary>List operation.</summary>
+
             List<string> shared = new List<string>();
             foreach (string identifier in rules)
             {
                 if (rows.Contains(identifier)) shared.Add(identifier);
             }
 
-/// <summary>List operation.</summary>
+
             List<string> added = new List<string>();
             foreach (string identifier in shared)
             {
@@ -998,23 +998,23 @@ namespace Thermodynamics.Tests
 
             added.Sort(StringComparer.Ordinal);
             Assert.True(added.Count == 0,
-/// <summary>identifier operation.</summary>
+
                 added.Count + " identifier(s) now mean one thing in docs/rules.md and another in"
                 + " docs/backlog.md that did not before. Pick a letter the other page does not use:"
                 + "\n  " + string.Join("\n  ", added.ToArray()));
         }
 
         [Fact]
-/// <summary>NoPointerInCodeIsWrittenAsALink operation.</summary>
+
         public void NoPointerInCodeIsWrittenAsALink()
         {
-/// <summary>List operation.</summary>
+
             List<string> links = new List<string>();
             int files = 0;
 
             foreach (string file in SourceFiles())
             {
-/// <summary>Relative operation.</summary>
+
                 string relative = Relative(file);
                 if (!relative.EndsWith(".cs", StringComparison.Ordinal)) continue;
                 if (relative.Contains("RichHudFramework")) continue;
@@ -1042,13 +1042,13 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", links.ToArray()));
         }
 
-/// <summary>BacklogPage operation.</summary>
+
         private static string BacklogPage()
         {
             return File.ReadAllText(Path.Combine(RepoRoot(), "docs", "backlog.md"));
         }
 
-/// <summary>SourceFiles operation.</summary>
+
         private static IEnumerable<string> SourceFiles()
         {
             string[] patterns = { "*.cs", "*.py" };
@@ -1056,7 +1056,7 @@ namespace Thermodynamics.Tests
             {
                 foreach (string file in Directory.GetFiles(RepoRoot(), pattern, SearchOption.AllDirectories))
                 {
-/// <summary>Relative operation.</summary>
+
                     string relative = Relative(file);
                     if (relative.Contains("/bin/") || relative.Contains("/obj/")) continue;
                     if (relative.StartsWith("out/", StringComparison.Ordinal)) continue;
@@ -1067,17 +1067,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRulesPageIndexesEveryRuleItStates operation.</summary>
+
         public void TheRulesPageIndexesEveryRuleItStates()
         {
-/// <summary>RulesPage operation.</summary>
+
             string page = RulesPage();
 
-/// <summary>StatedRules operation.</summary>
+
             HashSet<string> stated = StatedRules();
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> indexed = new HashSet<string>(StringComparer.Ordinal);
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> lowValue = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (Match m in Regex.Matches(page, @"(?m)^\|\s*\*\*([EMDCROJW]\d{1,2})\*\*\s*\|([^|]*)\|([^|]*)\|"))
@@ -1093,7 +1093,7 @@ namespace Thermodynamics.Tests
                 "only " + indexed.Count + " rules were read out of the index, so this test is"
                 + " parsing the page wrongly");
 
-/// <summary>List operation.</summary>
+
             List<string> unstated = new List<string>(indexed);
             unstated.RemoveAll(stated.Contains);
             unstated.Sort(StringComparer.Ordinal);
@@ -1101,7 +1101,7 @@ namespace Thermodynamics.Tests
                 "rules the index lists that the page never states:\n  "
                 + string.Join("\n  ", unstated.ToArray()));
 
-/// <summary>List operation.</summary>
+
             List<string> unindexed = new List<string>(stated);
             unindexed.RemoveAll(indexed.Contains);
             unindexed.Sort(StringComparer.Ordinal);
@@ -1109,7 +1109,7 @@ namespace Thermodynamics.Tests
                 "rules the page states that the index does not list:\n  "
                 + string.Join("\n  ", unindexed.ToArray()));
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> underAPrinciple = new HashSet<string>(StringComparer.Ordinal);
             foreach (Match row in Regex.Matches(page, @"(?m)^\|\s*\*\*(P\d{1,2})\*\*\s*\|(.*)$"))
             {
@@ -1119,7 +1119,7 @@ namespace Thermodynamics.Tests
                 }
             }
 
-/// <summary>List operation.</summary>
+
             List<string> orphaned = new List<string>();
             foreach (string rule in stated)
             {
@@ -1133,19 +1133,19 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", orphaned.ToArray()));
         }
 
-/// <summary>CodeText operation.</summary>
+
         private static string CodeText()
         {
             if (_codeText != null) return _codeText;
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder all = new StringBuilder();
             string[] patterns = { "*.cs", "*.csproj", "*.props", "*.json", "*.py", "*.sh" };
             foreach (string pattern in patterns)
             {
                 foreach (string file in Directory.GetFiles(RepoRoot(), pattern, SearchOption.AllDirectories))
                 {
-/// <summary>Relative operation.</summary>
+
                     string relative = Relative(file);
                     if (relative.Contains("/bin/") || relative.Contains("/obj/")) continue;
                     if (relative.StartsWith("out/", StringComparison.Ordinal)) continue;
@@ -1159,16 +1159,16 @@ namespace Thermodynamics.Tests
 
         private static string _codeText;
 
-/// <summary>LiveCases operation.</summary>
+
         private static HashSet<string> LiveCases()
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> cases = new HashSet<string>(StringComparer.Ordinal);
             string tests = Path.Combine(RepoRoot(), "tests");
 
             foreach (string file in Directory.GetFiles(tests, "*.cs", SearchOption.AllDirectories))
             {
-/// <summary>Relative operation.</summary>
+
                 string relative = Relative(file);
                 if (relative.Contains("/bin/") || relative.Contains("/obj/")) continue;
 
@@ -1183,11 +1183,11 @@ namespace Thermodynamics.Tests
                     {
                         current = m.Groups[1].Value;
                     }
-/// <summary>if operation.</summary>
+
                     else if (m.Groups[2].Success)
                     {
                         cases.Add(m.Groups[2].Value);
-                        if (current != null) cases.Add(current);       // the class runs too
+                        if (current != null) cases.Add(current);
                     }
                 }
             }
@@ -1196,34 +1196,34 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryClaimAPageSaysIsPinnedNamesSomethingThatExists operation.</summary>
+
         public void EveryClaimAPageSaysIsPinnedNamesSomethingThatExists()
         {
-/// <summary>LiveCases operation.</summary>
+
             HashSet<string> live = LiveCases();
-/// <summary>CodeText operation.</summary>
+
             string code = CodeText();
 
             Assert.True(live.Count > 500,
                 "only " + live.Count + " live test names were found, so this test is not reading"
                 + " the suite and would pass on a citation to nothing");
 
-/// <summary>Regex operation.</summary>
+
             Regex citation = new Regex(
                 "\\b(?:[Pp]inned|[Cc]hecked|[Aa]sserted|[Mm]easured) by(.{0,400}?)"
                 + "(?:\\r?\\n\\r?\\n|\\z)",
                 RegexOptions.Singleline);
 
-/// <summary>Regex operation.</summary>
+
             Regex identifier = new Regex(@"^[A-Z][A-Za-z0-9]*[a-z][A-Za-z0-9]*$");
 
-/// <summary>List operation.</summary>
+
             List<string> unresolved = new List<string>();
             int cited = 0;
 
             foreach (string file in MarkdownFiles())
             {
-                if (Relative(file) == "docs/rules.md") continue;      // its own, stricter check
+                if (Relative(file) == "docs/rules.md") continue;
 
                 foreach (Match match in citation.Matches(File.ReadAllText(file)))
                 {
@@ -1255,20 +1255,20 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryCheckCitedByTheRulesPageResolves operation.</summary>
+
         public void EveryCheckCitedByTheRulesPageResolves()
         {
             string[] lines = File.ReadAllLines(Path.Combine(RepoRoot(), "docs", "rules.md"));
-/// <summary>LiveCases operation.</summary>
+
             HashSet<string> live = LiveCases();
-/// <summary>CodeText operation.</summary>
+
             string code = CodeText();
 
             Assert.True(live.Count > 500,
                 "only " + live.Count + " live test names were found, so this test is not reading"
                 + " the suite and would pass on a citation to nothing");
 
-/// <summary>List operation.</summary>
+
             List<string> unresolved = new List<string>();
             int cited = 0;
 
@@ -1276,7 +1276,7 @@ namespace Thermodynamics.Tests
             {
                 if (!lines[i].StartsWith("*Checked by:*", StringComparison.Ordinal)) continue;
 
-/// <summary>StringBuilder operation.</summary>
+
                 StringBuilder field = new StringBuilder(lines[i]);
                 for (int j = i + 1; j < lines.Length; j++)
                 {
@@ -1318,23 +1318,23 @@ namespace Thermodynamics.Tests
 
             unresolved.Sort(StringComparer.Ordinal);
             Assert.True(unresolved.Count == 0,
-/// <summary>runs operation.</summary>
+
                 "checks docs/rules.md cites that do not resolve to anything that runs (R11):\n  "
                 + string.Join("\n  ", unresolved.ToArray()));
         }
 
         [Fact]
-/// <summary>EveryCorpusWalkDeclaresThatItRunsAlone operation.</summary>
+
         public void EveryCorpusWalkDeclaresThatItRunsAlone()
         {
             string tests = Path.Combine(RepoRoot(), "tests");
-/// <summary>List operation.</summary>
+
             List<string> offenders = new List<string>();
             int walks = 0;
 
             foreach (string file in Directory.GetFiles(tests, "*.cs", SearchOption.AllDirectories))
             {
-/// <summary>Relative operation.</summary>
+
                 string relative = Relative(file);
                 if (relative.Contains("/bin/") || relative.Contains("/obj/")) continue;
 
@@ -1353,16 +1353,16 @@ namespace Thermodynamics.Tests
 
             offenders.Sort(StringComparer.Ordinal);
             Assert.True(offenders.Count == 0,
-/// <summary>alone operation.</summary>
+
                 "corpus walks that do not declare the collection that runs alone (O4):\n  "
                 + string.Join("\n  ", offenders.ToArray()));
         }
         [Fact]
-/// <summary>NoCommittedFileCarriesAConflictMarker operation.</summary>
+
         public void NoCommittedFileCarriesAConflictMarker()
         {
             string[] markers = { "<" + "<<<<<< ", "=" + "======", ">" + ">>>>>> " };
-/// <summary>List operation.</summary>
+
             List<string> found = new List<string>();
 
             foreach (string file in TextFiles())
@@ -1385,11 +1385,11 @@ namespace Thermodynamics.Tests
                 "these files carry unresolved merge conflicts:\n  " + string.Join("\n  ", found));
         }
 
-/// <summary>TextFiles operation.</summary>
+
         private static List<string> TextFiles()
         {
             string[] extensions = { "*.md", "*.xml", "*.py", "*.sh", "*.cs", "*.csproj", "*.sln" };
-/// <summary>List operation.</summary>
+
             List<string> files = new List<string>();
 
             foreach (string pattern in extensions)
@@ -1397,7 +1397,7 @@ namespace Thermodynamics.Tests
                 foreach (string file in Directory.GetFiles(RepoRoot(), pattern,
                     SearchOption.AllDirectories))
                 {
-/// <summary>Relative operation.</summary>
+
                     string relative = Relative(file);
                     if (relative.StartsWith("out/", StringComparison.Ordinal)) continue;
                     if (relative.StartsWith(".git/", StringComparison.Ordinal)) continue;

@@ -4,7 +4,7 @@ using Region=Thermodynamics.Presentation.ThermalVisionRegionPartition.Region;
 namespace ThermalPerformance.Baseline;
 internal static class NearPlane
 {
-/// <summary>Cap operation.</summary>
+
     internal static Vector3D[] Cap(Region region,MatrixD world,MatrixD projection,double near)
     {
         ThermalVisionDepthLayers.Plane(near,projection,world,out var centre,out var width,out var height);
@@ -17,7 +17,7 @@ internal static class NearPlane
         {
             if(polygon.Count==0)return new Vector3D[0];
             double plane=Coordinate(side==0?region.Min:region.Max,axis);
-/// <summary>List operation.</summary>
+
             var clipped=new List<Vector3D>();
             Vector3D previous=polygon[polygon.Count-1];
             double previousDistance=(Coordinate(previous,axis)-plane)*(side==0?1:-1);
@@ -33,6 +33,6 @@ internal static class NearPlane
         }
         return polygon.ToArray();
     }
-/// <summary>Coordinate operation.</summary>
+
     static double Coordinate(Vector3D p,int axis)=>axis==0?p.X:axis==1?p.Y:p.Z;
 }

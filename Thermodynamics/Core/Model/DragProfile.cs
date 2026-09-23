@@ -8,14 +8,14 @@ namespace Thermodynamics.Core
 
         public readonly bool IsSet;
 
-/// <summary>DragProfile operation.</summary>
+
         private DragProfile(float a, float b, float c, float d, float e, float f)
         {
             f0 = a; f1 = b; f2 = c; f3 = d; f4 = e; f5 = f;
             IsSet = true;
         }
 
-/// <summary>Of operation.</summary>
+
         public static DragProfile Of(float a, float b, float c, float d, float e, float f)
         {
             return new DragProfile(Clamp(a), Clamp(b), Clamp(c), Clamp(d), Clamp(e), Clamp(f));
@@ -39,7 +39,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Clamp operation.</summary>
+
         private static float Clamp(float value)
         {
             if (!(value >= 0f)) return 1f;

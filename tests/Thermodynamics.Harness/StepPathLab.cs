@@ -33,11 +33,11 @@ namespace Thermodynamics.Harness
 
         public static readonly int[] DefaultCaps = { 1, 3, 64 };
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(string shape, IList<int> ladder, IList<int> caps, int steps,
             Action<string> log)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             for (int i = 0; i < ladder.Count; i++)
@@ -55,10 +55,10 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Measure operation.</summary>
+
         private static Row Measure(string shape, int blocks, int cap, int steps)
         {
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Cap = cap;
 
@@ -81,7 +81,7 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < 3; i++) simulation.Solver.Step(step, state);
             simulation.StepExact(3, sample);
 
-/// <summary>Stopwatch operation.</summary>
+
             Stopwatch watch = new Stopwatch();
             row.SolverMs = double.MaxValue;
             row.HostMs = double.MaxValue;
@@ -117,10 +117,10 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("     blocks     links   cap  substeps   solver ms     host ms"
                 + "   overhead   syncs   estimates");
@@ -143,10 +143,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("blocks,links,cap,substeps,solver_ms,host_ms,overhead_ms,overhead_share,"
                 + "syncs_per_step,estimates_per_step");

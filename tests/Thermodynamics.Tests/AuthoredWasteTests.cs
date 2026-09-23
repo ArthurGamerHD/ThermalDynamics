@@ -12,52 +12,52 @@ namespace Thermodynamics.Tests
     {
         private static readonly string[] Waste = { "ProducerWasteEnergy", "ConsumerWasteEnergy" };
 
-/// <summary>Read operation.</summary>
+
         private static List<AuthoredValues.Entry> Read()
         {
             return AuthoredValues.Read(Waste);
         }
 
-/// <summary>Claimed operation.</summary>
+
         private static string Claimed(string note)
         {
             Match match = Regex.Match(note ?? "", @"^waste:\s*([^.,\n]+)", RegexOptions.IgnoreCase);
             return match.Success ? match.Groups[1].Value.Trim() : null;
         }
 
-/// <summary>Derived operation.</summary>
+
         private static string Derived(string note)
         {
             Match match = Regex.Match(note ?? "", @"^derived:\s*([A-Za-z]+)", RegexOptions.IgnoreCase);
             return match.Success ? match.Groups[1].Value.Trim() : null;
         }
 
-/// <summary>Unreachable operation.</summary>
+
         private static bool Unreachable(string note)
         {
             return Regex.IsMatch(note ?? "", @"^no producer\s*:", RegexOptions.IgnoreCase);
         }
 
-/// <summary>Invented operation.</summary>
+
         private static bool Invented(string note)
         {
             return (note ?? "").TrimStart().StartsWith("invented", StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]
-/// <summary>EveryWasteFractionSaysWhereItCameFrom operation.</summary>
+
         public void EveryWasteFractionSaysWhereItCameFrom()
         {
-/// <summary>Read operation.</summary>
+
             List<AuthoredValues.Entry> authored = Read();
             Assert.NotEmpty(authored);
 
-/// <summary>List operation.</summary>
+
             List<string> unexplained = new List<string>();
 
             foreach (AuthoredValues.Entry entry in authored)
             {
-/// <summary>Claimed operation.</summary>
+
                 string conversion = Claimed(entry.Note);
 
                 if (conversion != null && ReferenceEfficiencies.IsKnown(conversion)) continue;
@@ -74,20 +74,20 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryFractionThatNamesAConversionIsInsideItsBand operation.</summary>
+
         public void EveryFractionThatNamesAConversionIsInsideItsBand()
         {
-/// <summary>Read operation.</summary>
+
             List<AuthoredValues.Entry> authored = Read();
             Assert.NotEmpty(authored);
 
             int judged = 0;
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
 
             foreach (AuthoredValues.Entry entry in authored)
             {
-/// <summary>Claimed operation.</summary>
+
                 string name = Claimed(entry.Note);
                 if (name == null || !ReferenceEfficiencies.IsKnown(name)) continue;
 
@@ -107,7 +107,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryUnreachableFractionIsOnATypeThatProducesNothing operation.</summary>
+
         public void EveryUnreachableFractionIsOnATypeThatProducesNothing()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -123,7 +123,7 @@ namespace Thermodynamics.Tests
             }
 
             int judged = 0, verified = 0;
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
 
             foreach (AuthoredValues.Entry entry in Read())
@@ -162,28 +162,28 @@ namespace Thermodynamics.Tests
             }
 
             Assert.True(judged > 0,
-/// <summary>nothing operation.</summary>
+
                 "no fraction claims to be unreachable, so this test judged nothing (`E8`)");
             Assert.True(verified > 100,
                 "only " + verified + " of " + judged + " unreachable claims name a type the game"
-/// <summary>anything operation.</summary>
+
                 + " knows, so most of them were not checked against anything (`E8`)");
             Assert.True(wrong.Count == 0, string.Join("\n  ", wrong));
         }
 
         [Fact]
-/// <summary>EveryDerivedFractionMatchesTheEfficiencyTheGameStates operation.</summary>
+
         public void EveryDerivedFractionMatchesTheEfficiencyTheGameStates()
         {
             if (!GameBlocks.IsInstalled) return;
 
             int judged = 0;
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
 
             foreach (AuthoredValues.Entry entry in Read())
             {
-/// <summary>Derived operation.</summary>
+
                 string field = Derived(entry.Note);
                 if (field == null) continue;
 
@@ -229,16 +229,16 @@ namespace Thermodynamics.Tests
             }
 
             Assert.True(judged > 0,
-/// <summary>nothing operation.</summary>
+
                 "no fraction claims to be derived, so this test judged nothing (`E8`)");
             Assert.True(wrong.Count == 0, string.Join("\n  ", wrong));
         }
 
         [Fact]
-/// <summary>TheProvenanceOfEveryFractionIsCounted operation.</summary>
+
         public void TheProvenanceOfEveryFractionIsCounted()
         {
-/// <summary>Read operation.</summary>
+
             List<AuthoredValues.Entry> authored = Read();
 
             int sourced = 0, derived = 0, unreachable = 0, invented = 0;
@@ -260,7 +260,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFractionThatDisagreesWithItsConversionIsCaught operation.</summary>
+
         public void AFractionThatDisagreesWithItsConversionIsCaught()
         {
             ReferenceEfficiencies.Reference motor = ReferenceEfficiencies.Get("electric motor");

@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     public class RetestSetTests
     {
         [Fact]
-/// <summary>TheRetestSetIsReadableAndCarriesAPathPerShip operation.</summary>
+
         public void TheRetestSetIsReadableAndCarriesAPathPerShip()
         {
             List<ShipSet.Entry> rows = ShipSet.Read("THERMAL_RETEST", "tools/corpus/typical.csv");
@@ -28,12 +28,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRetestSetSpansBothGridSizesAndEveryBand operation.</summary>
+
         public void TheRetestSetSpansBothGridSizesAndEveryBand()
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> large = new HashSet<string>(StringComparer.Ordinal);
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> bands = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (ShipSet.Entry entry in
@@ -49,10 +49,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryScenarioTheRetestAsksForExists operation.</summary>
+
         public void EveryScenarioTheRetestAsksForExists()
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> known = new HashSet<string>(StringComparer.Ordinal);
             foreach (Battery.Scenario scenario in Battery.All()) known.Add(scenario.Name);
 
@@ -70,7 +70,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThePreConversionTableHasTheShapeTheOldFileHeld operation.</summary>
+
         public void ThePreConversionTableHasTheShapeTheOldFileHeld()
         {
             Assert.Equal(ConductanceRetest.PreDefault,
@@ -91,7 +91,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EachArmRewritesOnlyWhatItNames operation.</summary>
+
         public void EachArmRewritesOnlyWhatItNames()
         {
             Dictionary<string, ConductanceRetest.World> worlds =
@@ -103,7 +103,7 @@ namespace Thermodynamics.Tests
 
             Assert.Null(worlds["shipped"].Material());
 
-/// <summary>Conductivity operation.</summary>
+
             float armour = Conductivity(worlds["vanilla-flat"], "CubeBlock", "LargeBlockArmorBlock");
             Assert.Equal(ConductanceRetest.Authored(ConductanceRetest.PreDefault), armour, 3);
 
@@ -126,7 +126,7 @@ namespace Thermodynamics.Tests
                 Conductivity(worlds["pre-units"], "Thrust", "LargeBlockLargeThrust"), 3);
         }
 
-/// <summary>Conductivity operation.</summary>
+
         private static float Conductivity(ConductanceRetest.World world, string typeId, string subtype)
         {
             BlockThermalProperties source = new BlockThermalProperties { Conductivity = 12.5f };

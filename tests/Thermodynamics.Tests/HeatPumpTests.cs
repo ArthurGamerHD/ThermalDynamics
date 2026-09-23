@@ -9,16 +9,16 @@ namespace Thermodynamics.Tests
 {
     public class HeatPumpTests
     {
-/// <summary>Rig operation.</summary>
+
         private static ThermalSimulation Rig(out ThermalNode cold, out ThermalNode hot, out HeatPumpDevice pump)
         {
             return Rig(Catalog.HeatPump(), out cold, out hot, out pump);
         }
 
-/// <summary>Rig operation.</summary>
+
         private static ThermalSimulation Rig(BlockModel pumpModel, out ThermalNode cold, out ThermalNode hot, out HeatPumpDevice pump)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableConduction = false;
@@ -40,7 +40,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>ConductingRig operation.</summary>
+
         private static ThermalSimulation ConductingRig(out BlockInstance cold, out BlockInstance hot,
             out HeatPumpDevice pump)
         {
@@ -48,13 +48,13 @@ namespace Thermodynamics.Tests
             builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
             cold = builder.Last;
             builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
-/// <summary>BlockOrientation operation.</summary>
+
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
             BlockInstance pumpBlock = builder.Last;
             builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
             hot = builder.Last;
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableDamage = false;
@@ -66,12 +66,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APumpBindsToTheBlocksEitherSideOfIt operation.</summary>
+
         public void APumpBindsToTheBlocksEitherSideOfIt()
         {
             ThermalNode cold, hot;
             HeatPumpDevice pump;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(out cold, out hot, out pump);
 
             Assert.NotNull(pump);
@@ -82,10 +82,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APumpWithNothingOnOneFaceIsNotConnected operation.</summary>
+
         public void APumpWithNothingOnOneFaceIsNotConnected()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
@@ -107,12 +107,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARunningPumpMovesHeatAgainstTheGradient operation.</summary>
+
         public void ARunningPumpMovesHeatAgainstTheGradient()
         {
             ThermalNode cold, hot;
             HeatPumpDevice pump;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(out cold, out hot, out pump);
 
             cold.Temperature = 300f;
@@ -128,12 +128,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APumpThatIsOffDoesNothing operation.</summary>
+
         public void APumpThatIsOffDoesNothing()
         {
             ThermalNode cold, hot;
             HeatPumpDevice pump;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(out cold, out hot, out pump);
 
             cold.Temperature = 300f;
@@ -148,12 +148,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSwitchTurnsTheMechanismOff operation.</summary>
+
         public void TheSwitchTurnsTheMechanismOff()
         {
             ThermalNode cold, hot;
             HeatPumpDevice pump;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(out cold, out hot, out pump);
 
             simulation.Settings.EnableHeatPumps = false;
@@ -170,12 +170,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheHotSideGetsTheLiftPlusTheWork operation.</summary>
+
         public void TheHotSideGetsTheLiftPlusTheWork()
         {
             ThermalNode cold, hot;
             HeatPumpDevice pump;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(out cold, out hot, out pump);
 
             cold.Temperature = 300f;
@@ -194,12 +194,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheEnergyTheGridGainsIsTheWorkDrawn operation.</summary>
+
         public void TheEnergyTheGridGainsIsTheWorkDrawn()
         {
             ThermalNode cold, hot;
             HeatPumpDevice pump;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(out cold, out hot, out pump);
 
             cold.Temperature = 300f;
@@ -215,12 +215,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LiftingAcrossAWiderGapCostsMorePerWatt operation.</summary>
+
         public void LiftingAcrossAWiderGapCostsMorePerWatt()
         {
             ThermalNode cold, hot;
             HeatPumpDevice pump;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation narrow = Rig(out cold, out hot, out pump);
             cold.Temperature = 300f;
             hot.Temperature = 310f;
@@ -230,7 +230,7 @@ namespace Thermodynamics.Tests
 
             ThermalNode cold2, hot2;
             HeatPumpDevice pump2;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation wide = Rig(out cold2, out hot2, out pump2);
             cold2.Temperature = 300f;
             hot2.Temperature = 800f;
@@ -245,10 +245,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCoefficientIsCappedWhenThereIsNoGapToPumpAgainst operation.</summary>
+
         public void TheCoefficientIsCappedWhenThereIsNoGapToPumpAgainst()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
 
             Assert.Equal(
@@ -261,12 +261,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APumpCannotDriveItsColdSideToAbsoluteZero operation.</summary>
+
         public void APumpCannotDriveItsColdSideToAbsoluteZero()
         {
             ThermalNode cold, hot;
             HeatPumpDevice pump;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(out cold, out hot, out pump);
 
             cold.Temperature = 300f;
@@ -284,12 +284,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABrownedOutPumpLiftsProportionallyLess operation.</summary>
+
         public void ABrownedOutPumpLiftsProportionallyLess()
         {
             ThermalNode cold, hot;
             HeatPumpDevice pump;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation full = Rig(out cold, out hot, out pump);
             cold.Temperature = 300f;
             hot.Temperature = 500f;
@@ -300,7 +300,7 @@ namespace Thermodynamics.Tests
 
             ThermalNode cold2, hot2;
             HeatPumpDevice pump2;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation half = Rig(out cold2, out hot2, out pump2);
             cold2.Temperature = 300f;
             hot2.Temperature = 500f;
@@ -313,12 +313,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DemandIsWhatItWouldDrawNotWhatItGot operation.</summary>
+
         public void DemandIsWhatItWouldDrawNotWhatItGot()
         {
             ThermalNode cold, hot;
             HeatPumpDevice pump;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(out cold, out hot, out pump);
 
             cold.Temperature = 300f;
@@ -337,12 +337,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRatingBindsWhenTheGapIsSmall operation.</summary>
+
         public void TheRatingBindsWhenTheGapIsSmall()
         {
             ThermalNode cold, hot;
             HeatPumpDevice pump;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(Catalog.HeatPump(10000f, 20000f), out cold, out hot, out pump);
 
             cold.Temperature = 300f;
@@ -357,12 +357,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ReportedWattsDescribeTheWholeStepNotTheLastSubstep operation.</summary>
+
         public void ReportedWattsDescribeTheWholeStepNotTheLastSubstep()
         {
             ThermalNode cold, hot;
             HeatPumpDevice pump;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(Catalog.HeatPump(10000f, 20000f), out cold, out hot, out pump);
 
             cold.Temperature = 300f;
@@ -378,12 +378,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RemovingTheBlockOnTheColdFaceDisconnectsThePump operation.</summary>
+
         public void RemovingTheBlockOnTheColdFaceDisconnectsThePump()
         {
             ThermalNode cold, hot;
             HeatPumpDevice pump;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(out cold, out hot, out pump);
             pump.Enabled = true;
 
@@ -397,7 +397,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWidePumpsFacesSitOnTheMiddleOfItsEndCaps operation.</summary>
+
         public void AWidePumpsFacesSitOnTheMiddleOfItsEndCaps()
         {
             HeatPumpShape wide = HeatPumpShape.Centred(Vector3I.Forward, new Vector3I(3, 3, 1), 1f, 1f);
@@ -412,10 +412,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWidePumpBindsToTheBlocksOffItsMiddle operation.</summary>
+
         public void AWidePumpBindsToTheBlocksOffItsMiddle()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableConduction = false;
@@ -438,10 +438,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheColdFaceFollowsTheBlocksOrientation operation.</summary>
+
         public void TheColdFaceFollowsTheBlocksOrientation()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableConduction = false;
@@ -450,7 +450,7 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), new Vector3I(-1, 0, 0));
             builder.Place(Catalog.HeatPump(), Vector3I.Zero,
-/// <summary>BlockOrientation operation.</summary>
+
                 new BlockOrientation(Base6Directions.Direction.Left, Base6Directions.Direction.Up));
             builder.Place(Catalog.LightArmor(), new Vector3I(1, 0, 0));
 
@@ -468,12 +468,12 @@ namespace Thermodynamics.Tests
         [InlineData(1f)]
         [InlineData(0.5f)]
         [InlineData(0.25f)]
-/// <summary>TheThrottleCapsWhatThePumpDraws operation.</summary>
+
         public void TheThrottleCapsWhatThePumpDraws(float setting)
         {
             BlockInstance cold, hot;
             HeatPumpDevice pump;
-/// <summary>ConductingRig operation.</summary>
+
             ThermalSimulation simulation = ConductingRig(out cold, out hot, out pump);
             pump.Enabled = true;
             pump.PowerAvailable = 1f;
@@ -498,18 +498,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AThrottleOfZeroMovesNothingAndDrawsNothing operation.</summary>
+
         public void AThrottleOfZeroMovesNothingAndDrawsNothing()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
             builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
-/// <summary>BlockOrientation operation.</summary>
+
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
             BlockInstance pumpBlock = builder.Last;
             builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
@@ -530,7 +530,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>APumpRunningDownhillSaturatesItsCoefficientAndAchievesLittle operation.</summary>
+
         public void APumpRunningDownhillSaturatesItsCoefficientAndAchievesLittle()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -538,13 +538,13 @@ namespace Thermodynamics.Tests
             BlockInstance hotBlock = builder.Last;
 
             builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
-/// <summary>BlockOrientation operation.</summary>
+
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
             BlockInstance pumpBlock = builder.Last;
             builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
             BlockInstance coldBlock = builder.Last;
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableDamage = false;
@@ -576,14 +576,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CascadingPumpsHelpsByABoundedAmount operation.</summary>
+
         public void CascadingPumpsHelpsByABoundedAmount()
         {
-/// <summary>CascadeCoefficient operation.</summary>
+
             float one = CascadeCoefficient(1);
-/// <summary>CascadeCoefficient operation.</summary>
+
             float four = CascadeCoefficient(4);
-/// <summary>CascadeCoefficient operation.</summary>
+
             float eight = CascadeCoefficient(8);
 
             Assert.True(four > one, "four stages " + four + " should beat one stage " + one);
@@ -594,11 +594,11 @@ namespace Thermodynamics.Tests
                 "no arrangement should lift more heat than the work it spends across a gap this wide");
         }
 
-/// <summary>CascadeCoefficient operation.</summary>
+
         private static float CascadeCoefficient(int stages)
         {
             GridBuilder builder = GridBuilder.Large();
-/// <summary>List operation.</summary>
+
             List<BlockInstance> blocks = new List<BlockInstance>();
 
             builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
@@ -608,13 +608,13 @@ namespace Thermodynamics.Tests
             {
                 int z = (i * 2) + 1;
                 builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, z),
-/// <summary>BlockOrientation operation.</summary>
+
                     new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
                 builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, z + 1));
                 blocks.Add(builder.Last);
             }
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableDamage = false;
@@ -649,15 +649,15 @@ namespace Thermodynamics.Tests
         }
     
         [Theory]
-        [InlineData(310f, 30f)]     // a 10 K gap against a 40 K allowance: 30 K spare
-        [InlineData(340f, 0f)]      // exactly at the limit
-        [InlineData(400f, -60f)]    // 100 K gap: sixty degrees too wide
-/// <summary>TheOptimalMarginSaysHowFarTheGapIsFromFullOutput operation.</summary>
+        [InlineData(310f, 30f)]
+        [InlineData(340f, 0f)]
+        [InlineData(400f, -60f)]
+
         public void TheOptimalMarginSaysHowFarTheGapIsFromFullOutput(float hotSide, float expected)
         {
             BlockInstance cold, hot;
             HeatPumpDevice pump;
-/// <summary>ConductingRig operation.</summary>
+
             ThermalSimulation simulation = ConductingRig(out cold, out hot, out pump);
             pump.Enabled = true;
             pump.PowerAvailable = 1f;
@@ -679,12 +679,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThrottlingShrinksTheOptimalMargin operation.</summary>
+
         public void ThrottlingShrinksTheOptimalMargin()
         {
             BlockInstance cold, hot;
             HeatPumpDevice pump;
-/// <summary>ConductingRig operation.</summary>
+
             ThermalSimulation simulation = ConductingRig(out cold, out hot, out pump);
             pump.Enabled = true;
             pump.PowerAvailable = 1f;

@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     public class HeatWarningTests
     {
         [Fact]
-/// <summary>AlreadyCrossedReadsZeroSeconds operation.</summary>
+
         public void AlreadyCrossedReadsZeroSeconds()
         {
             HeatForecast forecast = HeatWarning.Forecast(950f, 1f, 1f, 1f, 900f);
@@ -20,7 +20,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACoolingBlockIsNeverWarnedAbout operation.</summary>
+
         public void ACoolingBlockIsNeverWarnedAbout()
         {
             Assert.False(HeatWarning.Forecast(800f, -1f, 5f, 1f, 900f).WillCross);
@@ -28,7 +28,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OneSampleGivesTheStraightLine operation.</summary>
+
         public void OneSampleGivesTheStraightLine()
         {
             HeatForecast forecast = HeatWarning.Forecast(800f, 10f, 0f, 1f, 900f);
@@ -38,7 +38,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockLevellingOffShortOfItsRatingIsNotWarnedAbout operation.</summary>
+
         public void ABlockLevellingOffShortOfItsRatingIsNotWarnedAbout()
         {
             const float tau = 10f;
@@ -58,7 +58,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockHeadingPastItsRatingIsTimedOnTheCurveNotTheLine operation.</summary>
+
         public void ABlockHeadingPastItsRatingIsTimedOnTheCurveNotTheLine()
         {
             const float tau = 20f;
@@ -79,7 +79,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnAcceleratingBlockFallsBackToTheStraightLineAndWarnsEarly operation.</summary>
+
         public void AnAcceleratingBlockFallsBackToTheStraightLineAndWarnsEarly()
         {
             HeatForecast forecast = HeatWarning.Forecast(800f, 20f, 10f, 1f, 900f);
@@ -90,7 +90,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NonsenseNumbersDoNotEscapeAsAWarning operation.</summary>
+
         public void NonsenseNumbersDoNotEscapeAsAWarning()
         {
             Assert.False(HeatWarning.Forecast(float.NaN, 1f, 1f, 1f, 900f).WillCross);
@@ -103,10 +103,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheForecastNeverCriesWolfOnABlockThatSettlesShortOfCritical operation.</summary>
+
         public void TheForecastNeverCriesWolfOnABlockThatSettlesShortOfCritical()
         {
-/// <summary>March operation.</summary>
+
             Sampled run = March(700f);
 
             Assert.True(run.Peak < run.Critical,
@@ -128,10 +128,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCueArrivesBeforeTheCrossing operation.</summary>
+
         public void TheCueArrivesBeforeTheCrossing()
         {
-/// <summary>March operation.</summary>
+
             Sampled run = March(1200f);
 
             Assert.True(run.Peak >= run.Critical,
@@ -161,13 +161,13 @@ namespace Thermodynamics.Tests
 
         private const float Resting = 600f;
 
-/// <summary>March operation.</summary>
+
         private static Sampled March(float settlesAt)
         {
             const float seconds = 120f;
             const float mass = 1000f;
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableDamage = false;
             settings.Derive();
@@ -196,7 +196,7 @@ namespace Thermodynamics.Tests
             source.HeatSourceWatts = (float)(block.RadiationCoefficient * gap);
             block.RefreshHeatGeneration();
 
-/// <summary>Sampled operation.</summary>
+
             Sampled run = new Sampled();
             run.Critical = Critical;
             run.CrossedAt = float.PositiveInfinity;

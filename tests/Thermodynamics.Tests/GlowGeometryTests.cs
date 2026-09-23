@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
     public class GlowGeometryTests
     {
         [Fact]
-/// <summary>EveryFacesTangentsSpanIt operation.</summary>
+
         public void EveryFacesTangentsSpanIt()
         {
             for (int face = 0; face < Face.Count; face++)
@@ -27,7 +27,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AQuadCoversTheFaceItIsDrawnOn operation.</summary>
+
         public void AQuadCoversTheFaceItIsDrawnOn()
         {
             Vector3 half = FaceQuad.HalfExtents(Vector3I.Zero, new Vector3I(0, 1, 2), 2.5f);
@@ -57,10 +57,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnExtentIsADistanceAndNeverNegative operation.</summary>
+
         public void AnExtentIsADistanceAndNeverNegative()
         {
-/// <summary>Vector3 operation.</summary>
+
             Vector3 half = new Vector3(1.25f, 2.5f, 3.75f);
 
             for (int face = 0; face < Face.Count; face++)
@@ -71,7 +71,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NothingGlowingIsNotARegion operation.</summary>
+
         public void NothingGlowingIsNotARegion()
         {
             GlowRegion region;
@@ -87,7 +87,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCentreFollowsTheBlocksThatAreFailing operation.</summary>
+
         public void TheCentreFollowsTheBlocksThatAreFailing()
         {
             List<LitBlock> lit = new List<LitBlock>
@@ -99,7 +99,7 @@ namespace Thermodynamics.Tests
             {
                 lit.Add(new LitBlock
                 {
-/// <summary>Vector3I operation.</summary>
+
                     Position = new Vector3I(10, 0, 0),
                     Kelvin = 820f,
                     Glow = 0.05f,
@@ -117,16 +117,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRadiusReachesTheFurthestGlowingBlock operation.</summary>
+
         public void TheRadiusReachesTheFurthestGlowingBlock()
         {
             List<LitBlock> lit = new List<LitBlock>
             {
-/// <summary>Vector3I operation.</summary>
+
                 new LitBlock { Position = new Vector3I(-4, 0, 0), Kelvin = 900f, Glow = 0.5f },
-/// <summary>Vector3I operation.</summary>
+
                 new LitBlock { Position = new Vector3I(4, 0, 0), Kelvin = 900f, Glow = 0.5f },
-/// <summary>Vector3I operation.</summary>
+
                 new LitBlock { Position = new Vector3I(0, 0, 0), Kelvin = 900f, Glow = 0f },
             };
 
@@ -138,12 +138,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OneGlowingBlockIsARegionOnIt operation.</summary>
+
         public void OneGlowingBlockIsARegionOnIt()
         {
             List<LitBlock> lit = new List<LitBlock>
             {
-/// <summary>Vector3I operation.</summary>
+
                 new LitBlock { Position = new Vector3I(3, -2, 7), Kelvin = 1000f, Glow = 0.4f },
             };
 

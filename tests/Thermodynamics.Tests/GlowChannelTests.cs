@@ -11,14 +11,14 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>GlowChannelTests operation.</summary>
+
         public GlowChannelTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
         [Fact]
-/// <summary>TheColourConversionAgreesWithKnownValues operation.</summary>
+
         public void TheColourConversionAgreesWithKnownValues()
         {
             double[] white = GlowChannelLab.Lab(new VRageMath.Vector3(1f, 1f, 1f));
@@ -39,7 +39,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoBlockMovesMoreThanAFewDeltaEAcrossItsWholeGlowBand operation.</summary>
+
         public void NoBlockMovesMoreThanAFewDeltaEAcrossItsWholeGlowBand()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -79,7 +79,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheChannelIsBestInTheMiddleOfTheTableAndEvenThereItIsSmall operation.</summary>
+
         public void TheChannelIsBestInTheMiddleOfTheTableAndEvenThereItIsSmall()
         {
             double low = GlowChannelLab.DeltaE(
@@ -106,7 +106,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BetweenTheCoolestAndHottestRatedBlocksTheColourIsPlainlyDifferent operation.</summary>
+
         public void BetweenTheCoolestAndHottestRatedBlocksTheColourIsPlainlyDifferent()
         {
             if (!GameBlocks.IsInstalled) return;

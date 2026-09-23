@@ -12,20 +12,20 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>KnobBaselineTests operation.</summary>
+
         public KnobBaselineTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
         [Fact]
-/// <summary>EveryWorldKnobsShippedValueIsTheShippedValue operation.</summary>
+
         public void EveryWorldKnobsShippedValueIsTheShippedValue()
         {
             List<KnobLab.Knob> knobs = KnobLab.Knobs();
             Assert.True(knobs.Count > 5, "only " + knobs.Count + " knobs, so this checked nothing");
 
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
             int checkedKnobs = 0;
 
@@ -35,11 +35,11 @@ namespace Thermodynamics.Tests
 
                 checkedKnobs++;
 
-/// <summary>ThermalSettings operation.</summary>
+
                 ThermalSettings applied = new ThermalSettings();
                 knob.World(applied, knob.Shipped);
 
-/// <summary>ThermalSettings operation.</summary>
+
                 ThermalSettings untouched = new ThermalSettings();
 
                 foreach (string field in Differences(untouched, applied))
@@ -61,10 +61,10 @@ namespace Thermodynamics.Tests
                 + "nobody runs:\n  " + string.Join("\n  ", wrong.ToArray()));
         }
 
-/// <summary>Differences operation.</summary>
+
         private static List<string> Differences(ThermalSettings before, ThermalSettings after)
         {
-/// <summary>List operation.</summary>
+
             List<string> moved = new List<string>();
 
             foreach (FieldInfo field in typeof(ThermalSettings).GetFields(

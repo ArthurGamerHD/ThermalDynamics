@@ -11,7 +11,7 @@ namespace Thermodynamics.Core
 
             public float Roughness;
 
-/// <summary>Ground operation.</summary>
+
             public Ground(float offset, float swing, float roughness = 0f)
             {
                 Offset = offset;
@@ -43,7 +43,7 @@ namespace Thermodynamics.Core
             new KeyValuePair<string, Ground>("forest", new Ground(-3f, 0.85f, 0.5f)),
         };
 
-/// <summary>For operation.</summary>
+
         public static Ground For(string material)
         {
             if (string.IsNullOrEmpty(material)) return Neutral;
@@ -58,19 +58,19 @@ namespace Thermodynamics.Core
             return Neutral;
         }
 
-/// <summary>Ground operation.</summary>
+
         public static readonly Ground Neutral = new Ground(0f, 1f);
 
-/// <summary>OffsetFor operation.</summary>
+
         public static float OffsetFor(string material)
         {
             return For(material).Offset;
         }
 
-/// <summary>RoughnessFor operation.</summary>
+
         public static float RoughnessFor(string material, float fallback)
         {
-/// <summary>For operation.</summary>
+
             float roughness = For(material).Roughness;
             return roughness > 0f ? roughness : fallback;
         }

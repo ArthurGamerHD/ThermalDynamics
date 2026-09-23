@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class SimCommandTests
     {
-/// <summary>Source operation.</summary>
+
         private static string Source()
         {
             return File.ReadAllText(Path.Combine(
@@ -15,7 +15,7 @@ namespace Thermodynamics.Tests
                 "tests", "Thermodynamics.Sim", "Program.cs"));
         }
 
-/// <summary>CasesOf operation.</summary>
+
         private static List<string> CasesOf(string source, string switchHeader)
         {
             int start = source.IndexOf(switchHeader, StringComparison.Ordinal);
@@ -29,7 +29,7 @@ namespace Thermodynamics.Tests
             while (i < source.Length)
             {
                 if (source[i] == '{') depth++;
-/// <summary>if operation.</summary>
+
                 else if (source[i] == '}')
                 {
                     depth--;
@@ -38,7 +38,7 @@ namespace Thermodynamics.Tests
                 i++;
             }
 
-/// <summary>List operation.</summary>
+
             List<string> cases = new List<string>();
             foreach (Match match in Regex.Matches(source.Substring(open, i - open),
                 "case \"([a-z0-9\\-]+)\":"))
@@ -50,19 +50,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryTopLevelCommandIsInTheUsageText operation.</summary>
+
         public void EveryTopLevelCommandIsInTheUsageText()
         {
-/// <summary>Source operation.</summary>
+
             string source = Source();
             string usage = source.Substring(source.IndexOf("private static void PrintUsage", StringComparison.Ordinal));
 
-/// <summary>CasesOf operation.</summary>
+
             List<string> commands = CasesOf(source, "switch (args[0])");
             Assert.True(commands.Count > 15,
                 "only " + commands.Count + " commands were found, so the dispatch has changed shape");
 
-/// <summary>List operation.</summary>
+
             List<string> hidden = new List<string>();
             foreach (string command in commands)
             {
@@ -76,19 +76,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryBenchmarkIsInTheUsageText operation.</summary>
+
         public void EveryBenchmarkIsInTheUsageText()
         {
-/// <summary>Source operation.</summary>
+
             string source = Source();
             string usage = source.Substring(source.IndexOf("private static void PrintUsage", StringComparison.Ordinal));
 
-/// <summary>CasesOf operation.</summary>
+
             List<string> benchmarks = CasesOf(source, "private static int BenchCommand");
             Assert.True(benchmarks.Count > 10,
                 "only " + benchmarks.Count + " benchmarks were found, so the dispatch has changed shape");
 
-/// <summary>List operation.</summary>
+
             List<string> hidden = new List<string>();
             foreach (string benchmark in benchmarks)
             {
@@ -102,11 +102,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryToolIsNamedByItsReadme operation.</summary>
+
         public void EveryToolIsNamedByItsReadme()
         {
             string tools = Path.Combine(Harness.ShippedBlocks.RepoRoot(), "tools");
-/// <summary>List operation.</summary>
+
             List<string> orphans = new List<string>();
             int seen = 0;
 
@@ -141,13 +141,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryLabThatProducesAReportIsReachable operation.</summary>
+
         public void EveryLabThatProducesAReportIsReachable()
         {
             string harness = Path.Combine(Thermodynamics.Harness.ShippedBlocks.RepoRoot(),
                 "tests", "Thermodynamics.Harness");
 
-/// <summary>Source operation.</summary>
+
             string front = Source();
             string tests = "";
             foreach (string file in Directory.GetFiles(Path.Combine(
@@ -156,7 +156,7 @@ namespace Thermodynamics.Tests
                 tests += File.ReadAllText(file);
             }
 
-/// <summary>List operation.</summary>
+
             List<string> orphans = new List<string>();
             int labs = 0;
 

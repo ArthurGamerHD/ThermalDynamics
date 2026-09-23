@@ -31,24 +31,24 @@ namespace Thermodynamics.Harness
 
         public class Result
         {
-/// <summary>List operation.</summary>
+
             public List<Row> Rows = new List<Row>();
-/// <summary>List operation.</summary>
+
             public List<WavefrontRow> Wavefront = new List<WavefrontRow>();
             public int WavefrontNodes;
         }
 
         public static readonly int[] DefaultMarks = { 10, 50, 200, 2000, 20000 };
 
-/// <summary>Run operation.</summary>
+
         public static Result Run(int blocks, Action<string> log = null, int[] marks = null)
         {
-/// <summary>Result operation.</summary>
+
             Result result = new Result();
             if (marks == null) marks = DefaultMarks;
 
             if (log != null) log("parked in air");
-/// <summary>Census operation.</summary>
+
             ThermalSimulation parked = Census(blocks);
             LoadBenchmarks.SeedSpread(parked);
             MeasureAtMarks(parked, Worlds.PlanetSurface(1f, 0.5f), "parked in air", marks, result.Rows);
@@ -74,7 +74,7 @@ namespace Thermodynamics.Harness
                 {
                     if (Math.Abs(nodes[i].Temperature - before[i]) >= 0.001f) active++;
                 }
-/// <summary>WavefrontRow operation.</summary>
+
                 WavefrontRow row = new WavefrontRow();
                 row.Step = step;
                 row.ActiveNodes = active;
@@ -84,19 +84,19 @@ namespace Thermodynamics.Harness
             return result;
         }
 
-/// <summary>Census operation.</summary>
+
         private static ThermalSimulation Census(int blocks)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", blocks));
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
             simulation.RebuildAll();
             return simulation;
         }
 
-/// <summary>MeasureAtMarks operation.</summary>
+
         private static void MeasureAtMarks(ThermalSimulation simulation, EnvironmentSample sample,
             string scenario, int[] marks, List<Row> rows)
         {
@@ -119,20 +119,20 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Record operation.</summary>
+
         private static void Record(ThermalSimulation simulation, float[] before)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             for (int i = 0; i < nodes.Count; i++) before[i] = nodes[i].Temperature;
         }
 
-/// <summary>Judge operation.</summary>
+
         private static Row Judge(ThermalSimulation simulation, float[] before, string scenario, int step)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             IList<ThermalLink> links = simulation.Solver.Links;
 
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Scenario = scenario;
             row.AtStep = step;
@@ -163,16 +163,16 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Report operation.</summary>
+
         public static string Report(int blocks, Action<string> log = null)
         {
             return Table(Run(blocks, log));
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(Result result)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.Append("scenario".PadRight(20)).Append("step".PadLeft(6));
             foreach (float threshold in Thresholds)

@@ -20,14 +20,14 @@ namespace Thermodynamics.Core
         private int frontierHead;
         private int frontierCount;
 
-/// <summary>FrontierClear operation.</summary>
+
         private void FrontierClear()
         {
             frontierHead = 0;
             frontierCount = 0;
         }
 
-/// <summary>FrontierEnqueue operation.</summary>
+
         private void FrontierEnqueue(Vector3I cell)
         {
             if (frontierCount == frontier.Length)
@@ -47,7 +47,7 @@ namespace Thermodynamics.Core
             frontierCount++;
         }
 
-/// <summary>FrontierDequeue operation.</summary>
+
         private Vector3I FrontierDequeue()
         {
             Vector3I cell = frontier[frontierHead];
@@ -56,7 +56,7 @@ namespace Thermodynamics.Core
             frontierCount--;
             return cell;
         }
-/// <summary>CellBitset operation.</summary>
+
         private readonly CellBitset visited = new CellBitset();
 
         private byte[] sealing = new byte[0];
@@ -70,7 +70,7 @@ namespace Thermodynamics.Core
 
         private readonly long[] faceDelta = new long[Face.Count];
 
-/// <summary>HashSet operation.</summary>
+
         private readonly HashSet<long> doorCells = new HashSet<long>();
 
         private RoomMap working;
@@ -97,10 +97,10 @@ namespace Thermodynamics.Core
 
         public event Action Completed;
 
-/// <summary>SimulationWork operation.</summary>
+
         public SimulationWork Work = new SimulationWork();
 
-/// <summary>RoomMapper operation.</summary>
+
         public RoomMapper(SurfaceMap surfaces)
         {
             if (surfaces == null) throw new ArgumentNullException("surfaces");
@@ -124,7 +124,7 @@ namespace Thermodynamics.Core
 
         public int CompletedPasses { get; private set; }
 
-/// <summary>Knows operation.</summary>
+
         public bool Knows(BlockInstance block)
         {
             if (block == null || !block.HasStateDependentSealing) return false;
@@ -139,7 +139,7 @@ namespace Thermodynamics.Core
             return knownDoors.Contains(block);
         }
 
-/// <summary>HashSet operation.</summary>
+
         private readonly HashSet<BlockInstance> knownDoors = new HashSet<BlockInstance>();
 
         public int PendingCells
@@ -147,17 +147,17 @@ namespace Thermodynamics.Core
             get { return frontierCount; }
         }
 
-/// <summary>RequestRestart operation.</summary>
+
         public void RequestRestart(Vector3I gridMin, Vector3I gridMax)
         {
             pendingMin = gridMin - Vector3I.One;
-/// <summary>Vector3I operation.</summary>
+
             pendingMaxExclusive = gridMax + new Vector3I(2, 2, 2);
             hasPendingBounds = true;
             restartRequested = true;
         }
 
-/// <summary>RequestRestart operation.</summary>
+
         public void RequestRestart(GridModel grid)
         {
             pendingGrid = grid;
@@ -173,10 +173,10 @@ namespace Thermodynamics.Core
             RequestRestart(grid.Min, grid.Max);
         }
 
-/// <summary>RunToCompletion operation.</summary>
+
         public bool RunToCompletion(int safetyLimit = 0)
         {
-/// <summary>SafetyLimitFromBounds operation.</summary>
+
             long limit = safetyLimit > 0 ? safetyLimit : SafetyLimitFromBounds();
 
             long spent = 0;
@@ -189,7 +189,7 @@ namespace Thermodynamics.Core
             return !HasWorkPending;
         }
 
-/// <summary>SafetyLimitFromBounds operation.</summary>
+
         private long SafetyLimitFromBounds()
         {
             Vector3I min = hasPendingBounds ? pendingMin : searchMin;
@@ -205,7 +205,7 @@ namespace Thermodynamics.Core
             return (volume * 4) + 4096;
         }
 
-/// <summary>Step operation.</summary>
+
         public bool Step(int cellBudget)
         {
             if (cellBudget <= 0) return false;
@@ -230,7 +230,7 @@ namespace Thermodynamics.Core
                     }
                     if (RunWalkLive)
                     {
-/// <summary>StepExternalRun operation.</summary>
+
                         int cells = StepExternalRun(cellBudget - spent);
                         spent += cells;
                         Work.RoomCellsVisited += cells;
@@ -241,14 +241,14 @@ namespace Thermodynamics.Core
                     spent++;
                     Work.RoomCellsVisited++;
                 }
-/// <summary>if operation.</summary>
+
                 else if (phase == Phase.Interior)
                 {
                     if (frontierCount > 0)
                     {
                         if (RunWalkLive)
                         {
-/// <summary>StepInteriorRun operation.</summary>
+
                             int cells = StepInteriorRun(cellBudget - spent);
                             spent += cells;
                             Work.RoomCellsVisited += cells;
@@ -261,7 +261,7 @@ namespace Thermodynamics.Core
                         continue;
                     }
 
-/// <summary>AdvanceScanToNextUnvisited operation.</summary>
+
                     ScanResult result = AdvanceScanToNextUnvisited(ref spent, cellBudget);
                     if (result == ScanResult.Exhausted)
                     {
@@ -280,7 +280,7 @@ namespace Thermodynamics.Core
             return completed;
         }
 
-/// <summary>BeginPass operation.</summary>
+
         private void BeginPass()
         {
             Work.RoomPassesBegun++;
@@ -301,7 +301,7 @@ namespace Thermodynamics.Core
             }
             else
             {
-/// <summary>RoomMap operation.</summary>
+
                 working = new RoomMap();
             }
 
@@ -339,7 +339,7 @@ namespace Thermodynamics.Core
             get { return SpanFlood && snapshotLive; }
         }
 
-/// <summary>TakeSealingSnapshot operation.</summary>
+
         private void TakeSealingSnapshot()
         {
             snapshotLive = SnapshotSealing;
@@ -371,14 +371,14 @@ namespace Thermodynamics.Core
 
         public bool SpanFlood = true;
 
-/// <summary>FaceAlong operation.</summary>
+
         private static readonly int MinusX = FaceAlong(-1, 0, 0);
-/// <summary>FaceAlong operation.</summary>
+
         private static readonly int PlusX = FaceAlong(1, 0, 0);
-/// <summary>Builds the method table.</summary>
+
         private static readonly int[] LateralFaces = BuildLateralFaces();
 
-/// <summary>FaceAlong operation.</summary>
+
         private static int FaceAlong(int x, int y, int z)
         {
             for (int face = 0; face < Face.Count; face++)
@@ -389,7 +389,7 @@ namespace Thermodynamics.Core
             return -1;
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static int[] BuildLateralFaces()
         {
             int[] faces = new int[Face.Count - 2];
@@ -402,13 +402,13 @@ namespace Thermodynamics.Core
             return faces;
         }
 
-/// <summary>StepExternalRun operation.</summary>
+
         private int StepExternalRun(int most)
         {
-/// <summary>FrontierDequeue operation.</summary>
+
             Vector3I seed = FrontierDequeue();
 
-/// <summary>SealingIndex operation.</summary>
+
             long index = SealingIndex(seed);
             if (index < 0 || visited.ContainsIndex(index)) return 1;
 
@@ -485,13 +485,13 @@ namespace Thermodynamics.Core
             return length;
         }
 
-/// <summary>StepInteriorRun operation.</summary>
+
         private int StepInteriorRun(int most)
         {
-/// <summary>FrontierDequeue operation.</summary>
+
             Vector3I seed = FrontierDequeue();
 
-/// <summary>SealingIndex operation.</summary>
+
             long index = SealingIndex(seed);
             if (index < 0 || visited.ContainsIndex(index)) return 1;
 
@@ -562,7 +562,7 @@ namespace Thermodynamics.Core
                     }
 
                     int x = low + (int)(i - lowIndex);
-/// <summary>Vector3I operation.</summary>
+
                     Vector3I cell = new Vector3I(x, y, z);
 
                     if (TakeIfStructure(neighbour, cell))
@@ -581,7 +581,7 @@ namespace Thermodynamics.Core
             return taken;
         }
 
-/// <summary>TakeIfStructure operation.</summary>
+
         private bool TakeIfStructure(long index, Vector3I cell)
         {
             if (!IsStructureAt(index, cell)) return false;
@@ -591,7 +591,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>ReachesLow operation.</summary>
+
         private bool ReachesLow(int x, long index)
         {
             return x > searchMin.X
@@ -600,7 +600,7 @@ namespace Thermodynamics.Core
                 && (sealing[index - 1] & (1 << PlusX)) == 0;
         }
 
-/// <summary>ReachesHigh operation.</summary>
+
         private bool ReachesHigh(int x, long index)
         {
             return x < searchMaxExclusive.X - 1
@@ -609,7 +609,7 @@ namespace Thermodynamics.Core
                 && (sealing[index + 1] & (1 << MinusX)) == 0;
         }
 
-/// <summary>Reaches operation.</summary>
+
         private bool Reaches(long index, int sealingHere, Vector3I neighbour, int face, out long neighbourIndex)
         {
             neighbourIndex = -1;
@@ -623,7 +623,7 @@ namespace Thermodynamics.Core
             return (sealing[neighbourIndex] & (1 << Face.Opposite(face))) == 0;
         }
 
-/// <summary>SealingIndex operation.</summary>
+
         private long SealingIndex(Vector3I cell)
         {
             int x = cell.X - searchMin.X;
@@ -638,39 +638,39 @@ namespace Thermodynamics.Core
             return (((long)z * sealingSizeY) + y) * sealingSizeX + x;
         }
 
-/// <summary>IsFaceSealed operation.</summary>
+
         private bool IsFaceSealed(Vector3I cell, int face, Vector3I neighbour)
         {
             if (!snapshotLive) return surfaces.IsFaceSealedStructurally(cell, face);
 
-/// <summary>SealingIndex operation.</summary>
+
             long here = SealingIndex(cell);
             if (here >= 0 && (sealing[here] & (1 << face)) != 0) return true;
 
-/// <summary>SealingIndex operation.</summary>
+
             long there = SealingIndex(neighbour);
             return there >= 0 && (sealing[there] & (1 << Face.Opposite(face))) != 0;
         }
 
-/// <summary>IsFullySealed operation.</summary>
+
         private bool IsFullySealed(Vector3I cell)
         {
             if (!snapshotLive) return surfaces.IsFullySealedStructurally(cell);
 
-/// <summary>SealingIndex operation.</summary>
+
             long index = SealingIndex(cell);
             return index >= 0 && (sealing[index] & CellSurface.SelfAirtightMask) == CellSurface.SelfAirtightMask;
         }
 
-/// <summary>StepExternal operation.</summary>
+
         private void StepExternal()
         {
-/// <summary>FrontierDequeue operation.</summary>
+
             Vector3I cell = FrontierDequeue();
 
             if (snapshotLive)
             {
-/// <summary>SealingIndex operation.</summary>
+
                 long index = SealingIndex(cell);
                 int sealingHere = sealing[index];
 
@@ -703,15 +703,15 @@ namespace Thermodynamics.Core
 
         private int currentRoom = -1;
 
-/// <summary>StepInterior operation.</summary>
+
         private void StepInterior()
         {
-/// <summary>FrontierDequeue operation.</summary>
+
             Vector3I cell = FrontierDequeue();
 
             if (snapshotLive)
             {
-/// <summary>SealingIndex operation.</summary>
+
                 long index = SealingIndex(cell);
                 int sealingHere = sealing[index];
 
@@ -765,7 +765,7 @@ namespace Thermodynamics.Core
             BudgetSpent
         }
 
-/// <summary>AdvanceScanToNextUnvisited operation.</summary>
+
         private ScanResult AdvanceScanToNextUnvisited(ref int spent, int budget)
         {
             while (true)
@@ -830,14 +830,14 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>IsStructure operation.</summary>
+
         private bool IsStructure(Vector3I cell)
         {
             if (!IsFullySealed(cell)) return false;
             return !IsDoorCell(cell);
         }
 
-/// <summary>IsStructureAt operation.</summary>
+
         private bool IsStructureAt(long index, Vector3I cell)
         {
             if (index < 0 || (sealing[index] & CellSurface.SelfAirtightMask) != CellSurface.SelfAirtightMask)
@@ -848,13 +848,13 @@ namespace Thermodynamics.Core
             return !IsDoorCell(cell);
         }
 
-/// <summary>IsDoorCell operation.</summary>
+
         private bool IsDoorCell(Vector3I cell)
         {
             return doorCells.Count > 0 && doorCells.Contains(GridMath.Key(cell));
         }
 
-/// <summary>CollectDoorCells operation.</summary>
+
         private void CollectDoorCells()
         {
             doorCells.Clear();
@@ -874,10 +874,10 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>HashSet operation.</summary>
+
         private readonly HashSet<BlockInstance> passDoors = new HashSet<BlockInstance>();
 
-/// <summary>BeginInteriorScan operation.</summary>
+
         private void BeginInteriorScan()
         {
             scanCursor = searchMin;
@@ -886,17 +886,17 @@ namespace Thermodynamics.Core
 
         private long sealingCells
         {
-/// <summary>return operation.</summary>
+
             get { return (long)sealingSizeX * sealingSizeY * sealingSizeZ; }
         }
 
-/// <summary>MoveScanTo operation.</summary>
+
         private void MoveScanTo(long index)
         {
             scanIndex = index;
             if (index >= sealingCells)
             {
-/// <summary>Vector3I operation.</summary>
+
                 scanCursor = new Vector3I(searchMin.X, searchMin.Y, searchMaxExclusive.Z);
                 return;
             }
@@ -906,11 +906,11 @@ namespace Thermodynamics.Core
             long rest = index - (z * plane);
             int y = (int)(rest / sealingSizeX);
             int x = (int)(rest - ((long)y * sealingSizeX));
-/// <summary>Vector3I operation.</summary>
+
             scanCursor = new Vector3I(searchMin.X + x, searchMin.Y + y, searchMin.Z + z);
         }
 
-/// <summary>AdvanceCursor operation.</summary>
+
         private void AdvanceCursor()
         {
             scanIndex++;
@@ -926,7 +926,7 @@ namespace Thermodynamics.Core
             scanCursor.Z++;
         }
 
-/// <summary>Publishes the API table to other mods.</summary>
+
         private void Publish()
         {
             Work.RoomPassesCompleted++;
@@ -954,7 +954,7 @@ namespace Thermodynamics.Core
             if (handler != null) handler();
         }
 
-/// <summary>FindPortals operation.</summary>
+
         private void FindPortals(RoomMap map)
         {
             if (pendingGrid == null) return;
@@ -976,9 +976,9 @@ namespace Thermodynamics.Core
 
                         if (pendingGrid.GetAtCell(outside) == door) continue;
 
-/// <summary>RegionAt operation.</summary>
+
                         int inner = RegionAt(map, cells[i]);
-/// <summary>RegionAt operation.</summary>
+
                         int outer = RegionAt(map, outside);
                         if (inner == outer) continue;
 
@@ -990,7 +990,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>RegionAt operation.</summary>
+
         private static int RegionAt(RoomMap map, Vector3I cell)
         {
             if (map.IsSolid(cell)) return SolidRegion;

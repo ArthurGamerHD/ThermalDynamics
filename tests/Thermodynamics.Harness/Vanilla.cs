@@ -42,7 +42,7 @@ namespace Thermodynamics.Harness
             { "PrototechCoolingUnit", 250f },
         };
 
-/// <summary>MassOf operation.</summary>
+
         public static float MassOf(IEnumerable<KeyValuePair<string, int>> components)
         {
             float total = 0f;
@@ -79,7 +79,7 @@ namespace Thermodynamics.Harness
             {
                 get
                 {
-/// <summary>List operation.</summary>
+
                     List<BlockComponent> components = new List<BlockComponent>();
 
                     for (int i = 0; i < ComponentNames.Length && i < ComponentCounts.Length; i++)
@@ -110,14 +110,14 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Row operation.</summary>
+
         private static Block Row(string subtype, string typeId, bool large, int x, int y, int z,
             float mass, int pcu, float buildSeconds, float outputMw, float drawMw,
             string components = "", float standbyMw = 0f)
         {
-/// <summary>List operation.</summary>
+
             List<string> names = new List<string>();
-/// <summary>List operation.</summary>
+
             List<int> counts = new List<int>();
 
             foreach (string part in components.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
@@ -138,7 +138,7 @@ namespace Thermodynamics.Harness
                 Subtype = subtype,
                 TypeId = typeId,
                 Large = large,
-/// <summary>Vector3I operation.</summary>
+
                 Size = new Vector3I(x, y, z),
                 Mass = mass,
                 Pcu = pcu,
@@ -196,7 +196,7 @@ namespace Thermodynamics.Harness
                 "SteelPlate:6 Construction:8 LargeTube:2 Motor:1 Computer:3 BulletproofGlass:3", 0.001f),
         };
 
-/// <summary>Find operation.</summary>
+
         public static Block Find(string subtype)
         {
             foreach (Block block in Reference)

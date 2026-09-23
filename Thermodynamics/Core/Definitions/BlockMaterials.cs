@@ -26,7 +26,7 @@ namespace Thermodynamics.Core
             ServiceLimit = 900f,
         };
 
-/// <summary>Builds the method table.</summary>
+
         private static readonly Dictionary<string, BlockMaterial> Table = Build();
 
         public static ICollection<string> Names
@@ -34,20 +34,20 @@ namespace Thermodynamics.Core
             get { return Table.Keys; }
         }
 
-/// <summary>Returns the .</summary>
+
         public static BlockMaterial Get(string component)
         {
             BlockMaterial material;
             return component != null && Table.TryGetValue(component, out material) ? material : Steel;
         }
 
-/// <summary>IsKnown operation.</summary>
+
         public static bool IsKnown(string component)
         {
             return component != null && Table.ContainsKey(component);
         }
 
-/// <summary>Adds a .</summary>
+
         private static void Add(Dictionary<string, BlockMaterial> table, string component,
             float conductivity, float specificHeat, float emissivity, float serviceLimit,
             bool invented = false)
@@ -62,7 +62,7 @@ namespace Thermodynamics.Core
             };
         }
 
-/// <summary>Adds a of.</summary>
+
         private static void AddOf(Dictionary<string, BlockMaterial> table, string component,
             ReferenceMaterials.Reference material, float emissivity, float serviceLimit)
         {
@@ -70,7 +70,7 @@ namespace Thermodynamics.Core
                 emissivity, serviceLimit);
         }
 
-/// <summary>Builds the method table.</summary>
+
         private static Dictionary<string, BlockMaterial> Build()
         {
             Dictionary<string, BlockMaterial> t = new Dictionary<string, BlockMaterial>();
@@ -125,7 +125,7 @@ namespace Thermodynamics.Core
             return t;
         }
 
-/// <summary>RealRange operation.</summary>
+
         public static void RealRange(Func<BlockMaterial, float> property, out float lowest, out float highest)
         {
             lowest = float.MaxValue;
@@ -135,7 +135,7 @@ namespace Thermodynamics.Core
             {
                 if (material.Invented) continue;
 
-/// <summary>property operation.</summary>
+
                 float value = property(material);
                 if (value < lowest) lowest = value;
                 if (value > highest) highest = value;

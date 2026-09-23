@@ -14,34 +14,34 @@ namespace RichHudFramework
 	{
 		using ApiMemberAccessor = System.Func<object, int, object>;
 		using FlatTriangleBillboardData = MyTuple<
-			BlendTypeEnum, // blendType
-			Vector2I, // bbID + matrixID
-			MyStringId, // material
-			MyTuple<Vector4, BoundingBox2?>, // color + mask
-			MyTuple<Vector2, Vector2, Vector2>, // texCoords
-			MyTuple<Vector2, Vector2, Vector2> // flat pos
+			BlendTypeEnum,
+			Vector2I,
+			MyStringId,
+			MyTuple<Vector4, BoundingBox2?>,
+			MyTuple<Vector2, Vector2, Vector2>,
+			MyTuple<Vector2, Vector2, Vector2>
 		>;
 		using TriangleBillboardData = MyTuple<
-			BlendTypeEnum, // blendType
-			Vector2I, // bbID + matrixID
-			MyStringId, // material
-			Vector4, // color
-			MyTuple<Vector2, Vector2, Vector2>, // texCoords
-			MyTuple<Vector3D, Vector3D, Vector3D> // vertexPos
+			BlendTypeEnum,
+			Vector2I,
+			MyStringId,
+			Vector4,
+			MyTuple<Vector2, Vector2, Vector2>,
+			MyTuple<Vector3D, Vector3D, Vector3D>
 		>;
 
 		namespace Rendering
 		{
 			using BbUtilData = MyTuple<
-				ApiMemberAccessor, // GetOrSetMember - 1
-				List<MyTriangleBillboard>[], // triPoolBack - 2
-				List<MyTriangleBillboard>[], // flatTriPoolBack - 3
-				List<TriangleBillboardData>, // triangleList - 4
-				List<FlatTriangleBillboardData>, // flatTriangleList - 5
+				ApiMemberAccessor,
+				List<MyTriangleBillboard>[],
+				List<MyTriangleBillboard>[],
+				List<TriangleBillboardData>,
+				List<FlatTriangleBillboardData>,
 				MyTuple<
-					List<MatrixD>, // matrixBuf - 6.1
-					Dictionary<MatrixD[], int>, // matrixTable - 6.2
-					List<MyTriangleBillboard> // bbBuf - 6.3
+					List<MatrixD>,
+					Dictionary<MatrixD[], int>,
+					List<MyTriangleBillboard>
 				>
 			>;
 
@@ -60,7 +60,7 @@ namespace RichHudFramework
 
 				private readonly ApiMemberAccessor GetOrSetMember;
 
-/// <summary>BillBoardUtils operation.</summary>
+
 				private BillBoardUtils() : base(ApiModuleTypes.BillBoardUtils, false, true)
 				{
 					if (instance != null)
@@ -77,17 +77,17 @@ namespace RichHudFramework
 					bbBuf = data[0].Item6.Item3;
 				}
 
-/// <summary>Init operation.</summary>
+
 				public static void Init()
 				{
 					if (instance == null)
 					{
-/// <summary>BillBoardUtils operation.</summary>
+
 						instance = new BillBoardUtils();
 					}
 				}
 
-/// <summary>Close operation.</summary>
+
 				public override void Close()
 				{
 					if (ExceptionHandler.Unloading)

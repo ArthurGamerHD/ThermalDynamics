@@ -18,14 +18,14 @@ namespace RichHudFramework
         { }
 
 		public interface IControlPage<TCategory, TMember> : ITerminalPage, IEnumerable<TCategory>
-/// <summary>new operation.</summary>
+
             where TCategory : IControlCategory<TMember>, new()
         {
             IReadOnlyList<TCategory> Categories { get; }
 
             IControlPage<TCategory, TMember> CategoryContainer { get; }
 
-/// <summary>Adds a .</summary>
+
             void Add(TCategory category);
         }
     }

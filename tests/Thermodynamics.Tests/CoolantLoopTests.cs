@@ -9,14 +9,14 @@ namespace Thermodynamics.Tests
 {
     public class CoolantLoopTests
     {
-/// <summary>Isolated operation.</summary>
+
         private static ThermalSettings Isolated()
         {
             return Isolation.DeadWorld();
         }
 
         [Fact]
-/// <summary>AClosedPumpedRingIsDetected operation.</summary>
+
         public void AClosedPumpedRingIsDetected()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -30,7 +30,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARingWithoutAPumpIsStillALoop operation.</summary>
+
         public void ARingWithoutAPumpIsStillALoop()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -47,7 +47,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnOpenRunIsNotALoop operation.</summary>
+
         public void AnOpenRunIsNotALoop()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -63,7 +63,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BreakingTheRingDestroysTheLoop operation.</summary>
+
         public void BreakingTheRingDestroysTheLoop()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -79,7 +79,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ClosingTheRingCreatesTheLoop operation.</summary>
+
         public void ClosingTheRingCreatesTheLoop()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -100,7 +100,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARingIsFoundOnlyOnceNoMatterWhereTheSearchStarts operation.</summary>
+
         public void ARingIsFoundOnlyOnceNoMatterWhereTheSearchStarts()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -113,7 +113,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TwoSeparateRingsAreBothFound operation.</summary>
+
         public void TwoSeparateRingsAreBothFound()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -125,12 +125,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AMultiCellPumpIsWalkedEndToEnd operation.</summary>
+
         public void AMultiCellPumpIsWalkedEndToEnd()
         {
             GridBuilder builder = GridBuilder.Large();
 
-/// <summary>List operation.</summary>
+
             List<Vector3I> path = new List<Vector3I>();
             for (int z = 0; z < 5; z++) path.Add(new Vector3I(0, 0, z));
             for (int z = 4; z >= 0; z--) path.Add(new Vector3I(1, 0, z));
@@ -162,7 +162,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LoopSignatureIsStableAcrossRebuilds operation.</summary>
+
         public void LoopSignatureIsStableAcrossRebuilds()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -179,7 +179,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ALoopKeepsItsIdentityWhateverOrderItsPipesArrivedIn operation.</summary>
+
         public void ALoopKeepsItsIdentityWhateverOrderItsPipesArrivedIn()
         {
             GridBuilder ordered = GridBuilder.Large();
@@ -198,7 +198,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARingOnePipeLongerIsADifferentLoopAndDoesNotTakeTheOldOnesTemperature operation.</summary>
+
         public void ARingOnePipeLongerIsADifferentLoopAndDoesNotTakeTheOldOnesTemperature()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -228,7 +228,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARebuildKeepsTheCoolantTemperature operation.</summary>
+
         public void ARebuildKeepsTheCoolantTemperature()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -243,12 +243,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASinkFaceCarriesMoreThanThePipesAlone operation.</summary>
+
         public void ASinkFaceCarriesMoreThanThePipesAlone()
         {
-/// <summary>HeatDrawnFromABlockUnderTheRing operation.</summary>
+
             float withSink = HeatDrawnFromABlockUnderTheRing(true);
-/// <summary>HeatDrawnFromABlockUnderTheRing operation.</summary>
+
             float withoutSink = HeatDrawnFromABlockUnderTheRing(false);
 
             Assert.True(withSink > withoutSink * 1.2f,
@@ -256,7 +256,7 @@ namespace Thermodynamics.Tests
                 + " W from the pipes alone; a sink that adds nothing is a sink that is not there");
         }
 
-/// <summary>HeatDrawnFromABlockUnderTheRing operation.</summary>
+
         private static float HeatDrawnFromABlockUnderTheRing(bool sink)
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -279,7 +279,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CoolantMovesHeatFromASinkFaceIntoTheFluid operation.</summary>
+
         public void CoolantMovesHeatFromASinkFaceIntoTheFluid()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -306,7 +306,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CoolantTransportConservesEnergy operation.</summary>
+
         public void CoolantTransportConservesEnergy()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -330,12 +330,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWorkingLoopReportsGrossFlowNotItsNearZeroNet operation.</summary>
+
         public void AWorkingLoopReportsGrossFlowNotItsNearZeroNet()
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
-            sinks[1] = Vector3I.Down;   // reactor
-            sinks[5] = Vector3I.Up;     // radiator
+            sinks[1] = Vector3I.Down;
+            sinks[5] = Vector3I.Up;
 
             GridBuilder builder = GridBuilder.Large();
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 5, 5);
@@ -344,7 +344,7 @@ namespace Thermodynamics.Tests
             builder.Place(Catalog.Reactor(), cells[1] + Vector3I.Down).Producing(200000f);
             builder.Place(Catalog.Radiator(), cells[5] + Vector3I.Up);
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableSolarHeat = false;
             settings.EnableFriction = false;
@@ -381,7 +381,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheReportedFlowAccountsForTheFluidsChangeInHeat operation.</summary>
+
         public void TheReportedFlowAccountsForTheFluidsChangeInHeat()
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -407,7 +407,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ALoopInBalanceWithItsSurroundingsReportsNothing operation.</summary>
+
         public void ALoopInBalanceWithItsSurroundingsReportsNothing()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -423,7 +423,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ALongerRingHoldsMoreCoolantAndCostsTheSamePerPipe operation.</summary>
+
         public void ALongerRingHoldsMoreCoolantAndCostsTheSamePerPipe()
         {
             CoolantLoop small, large;
@@ -438,20 +438,20 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(small.ThermalMass * 4f, large.ThermalMass, 1);
 
-/// <summary>TotalConductance operation.</summary>
+
             float perLink = TotalConductance(small) / small.Links.Count;
             Assert.Equal(perLink, TotalConductance(large) / large.Links.Count, 1);
         }
 
         [Fact]
-/// <summary>RingLengthDoesNotChangeWhatTheSolverPaysPerParcel operation.</summary>
+
         public void RingLengthDoesNotChangeWhatTheSolverPaysPerParcel()
         {
             CoolantLoop small, large;
             ThermalNode smallSink, largeSink;
-/// <summary>RingOverOneHotBlock operation.</summary>
+
             ThermalSimulation a = RingOverOneHotBlock(3, 3, out small, out smallSink);
-/// <summary>RingOverOneHotBlock operation.</summary>
+
             ThermalSimulation b = RingOverOneHotBlock(20, 20, out large, out largeSink);
 
             Assert.Equal(8, small.PipeCount);
@@ -463,7 +463,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(a.Solver.LastRequiredSubsteps, b.Solver.LastRequiredSubsteps, 2);
         }
 
-/// <summary>TotalConductance operation.</summary>
+
         private static float TotalConductance(CoolantLoop loop)
         {
             float total = 0f;
@@ -471,7 +471,7 @@ namespace Thermodynamics.Tests
             return total;
         }
 
-/// <summary>RingOverOneHotBlock operation.</summary>
+
         private static ThermalSimulation RingOverOneHotBlock(int width, int depth,
             out CoolantLoop loop, out ThermalNode sink)
         {
@@ -495,10 +495,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DisablingLoopsRemovesThemFromTheSolver operation.</summary>
+
         public void DisablingLoopsRemovesThemFromTheSolver()
         {
-/// <summary>Isolated operation.</summary>
+
             ThermalSettings settings = Isolated();
             settings.EnableCoolantLoops = false;
 
@@ -510,10 +510,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PipeAndPlateConductanceRespectTheirScalers operation.</summary>
+
         public void PipeAndPlateConductanceRespectTheirScalers()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(2.5f);
             BlockInstance pipe = grid.Add(Catalog.CoolantPipeStraight(), Vector3I.Zero);
 

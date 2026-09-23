@@ -22,19 +22,19 @@ namespace Thermodynamics.Tests
 
         private readonly ITestOutputHelper output;
 
-/// <summary>LoadTests operation.</summary>
+
         public LoadTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation Build(int blocks, string shape = "ship")
         {
             return LoadBenchmarks.BuildSettled(shape, blocks);
         }
 
-/// <summary>Space operation.</summary>
+
         private static EnvironmentSample Space()
         {
             return Worlds.Space(new Vector3(0f, 1f, 0f));
@@ -42,10 +42,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>ASettledGridRebuildsNothing operation.</summary>
+
         public void ASettledGridRebuildsNothing()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Small);
 
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
@@ -74,12 +74,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SolverCostPerLinkStaysProportional operation.</summary>
+
         public void SolverCostPerLinkStaysProportional()
         {
-/// <summary>BestNanosecondsPerLinkVisit operation.</summary>
+
             double small = BestNanosecondsPerLinkVisit(Small);
-/// <summary>BestNanosecondsPerLinkVisit operation.</summary>
+
             double large = BestNanosecondsPerLinkVisit(Large);
 
             double ratio = small <= 0d ? 0d : large / small;
@@ -92,28 +92,28 @@ namespace Thermodynamics.Tests
                 + "the conduction pass should be close to linear in link count");
         }
 
-/// <summary>BestNanosecondsPerLinkVisit operation.</summary>
+
         private static double BestNanosecondsPerLinkVisit(int blocks)
         {
             double best = double.MaxValue;
             for (int i = 0; i < 3; i++)
             {
-/// <summary>NanosecondsPerLinkVisit operation.</summary>
+
                 double sample = NanosecondsPerLinkVisit(blocks);
                 if (sample > 0d && sample < best) best = sample;
             }
             return best == double.MaxValue ? 0d : best;
         }
 
-/// <summary>NanosecondsPerLinkVisit operation.</summary>
+
         private static double NanosecondsPerLinkVisit(int blocks)
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(blocks);
             LoadBenchmarks.SeedSpread(simulation);
 
             EnvironmentState state = EnvironmentSolver.Solve(
-/// <summary>Space operation.</summary>
+
                 simulation.Settings, simulation.Planet, Space());
 
             float step = simulation.Settings.StepSeconds;
@@ -132,24 +132,24 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>ManyPlacementsInOneTickCoalesceIntoOneRebuild operation.</summary>
+
         public void ManyPlacementsInOneTickCoalesceIntoOneRebuild()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Small);
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
             simulation.Work.Reset();
 
             BlockModel armour = Catalog.HeavyArmor();
-/// <summary>Vector3I operation.</summary>
+
             Vector3I start = simulation.Grid.Min - new Vector3I(2, 0, 0);
 
             const int placed = 100;
             for (int i = 0; i < placed; i++)
             {
                 simulation.AddBlock(
-/// <summary>BlockInstance operation.</summary>
+
                     new BlockInstance(armour, start + new Vector3I(0, 0, i), BlockOrientation.Identity),
                     293.15f);
             }
@@ -175,10 +175,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SearchesForPlumbingSkipAGridThatHasNone operation.</summary>
+
         public void SearchesForPlumbingSkipAGridThatHasNone()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Small);
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
@@ -188,7 +188,7 @@ namespace Thermodynamics.Tests
             simulation.Work.Reset();
 
             simulation.AddBlock(
-/// <summary>BlockInstance operation.</summary>
+
                 new BlockInstance(Catalog.HeavyArmor(), simulation.Grid.Min - new Vector3I(2, 0, 0),
                     BlockOrientation.Identity),
                 293.15f);
@@ -208,20 +208,20 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARebuildIsBilledToTopologyAndNotToTheSolver operation.</summary>
+
         public void ARebuildIsBilledToTopologyAndNotToTheSolver()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Small);
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
-/// <summary>StageTimings operation.</summary>
+
             StageTimings timings = new StageTimings();
             simulation.Profiler = timings;
 
             simulation.Work.Reset();
             simulation.AddBlock(
-/// <summary>BlockInstance operation.</summary>
+
                 new BlockInstance(Catalog.HeavyArmor(), simulation.Grid.Min - new Vector3I(2, 0, 0),
                     BlockOrientation.Identity),
                 293.15f);
@@ -240,15 +240,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ReadingTheLinkCountDoesNotRebuildTheGraph operation.</summary>
+
         public void ReadingTheLinkCountDoesNotRebuildTheGraph()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Small);
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
             simulation.AddBlock(
-/// <summary>BlockInstance operation.</summary>
+
                 new BlockInstance(Catalog.HeavyArmor(), simulation.Grid.Min - new Vector3I(2, 0, 0),
                     BlockOrientation.Identity),
                 293.15f);
@@ -265,10 +265,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PlacingOneBlockLinksTheBlockAndNotTheGrid operation.</summary>
+
         public void PlacingOneBlockLinksTheBlockAndNotTheGrid()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Large);
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
@@ -276,7 +276,7 @@ namespace Thermodynamics.Tests
             simulation.Work.Reset();
 
             simulation.AddBlock(
-/// <summary>BlockInstance operation.</summary>
+
                 new BlockInstance(Catalog.HeavyArmor(), simulation.Grid.Min - new Vector3I(2, 0, 0),
                     BlockOrientation.Identity),
                 293.15f);
@@ -293,10 +293,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WeldingABurstCostsTheBurstAndNotTheGrid operation.</summary>
+
         public void WeldingABurstCostsTheBurstAndNotTheGrid()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Large);
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
@@ -304,14 +304,14 @@ namespace Thermodynamics.Tests
             simulation.Work.Reset();
 
             BlockModel armour = Catalog.HeavyArmor();
-/// <summary>Vector3I operation.</summary>
+
             Vector3I start = simulation.Grid.Min - new Vector3I(2, 0, 0);
 
             const int placed = 100;
             for (int i = 0; i < placed; i++)
             {
                 simulation.AddBlock(
-/// <summary>BlockInstance operation.</summary>
+
                     new BlockInstance(armour, start + new Vector3I(0, 0, i), BlockOrientation.Identity),
                     293.15f);
             }
@@ -328,10 +328,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>GrindingOneBlockUnpicksTheBlockAndNotTheGrid operation.</summary>
+
         public void GrindingOneBlockUnpicksTheBlockAndNotTheGrid()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Large);
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
@@ -369,10 +369,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>GrindingABurstCostsTheBurstAndNotTheGrid operation.</summary>
+
         public void GrindingABurstCostsTheBurstAndNotTheGrid()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Large);
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
@@ -398,10 +398,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PressurisingEveryRoomCostsOnePassNotOnePerRoom operation.</summary>
+
         public void PressurisingEveryRoomCostsOnePassNotOnePerRoom()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Large);
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
@@ -428,10 +428,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>RoomMappingNeverExceedsItsBudgetInOneTick operation.</summary>
+
         public void RoomMappingNeverExceedsItsBudgetInOneTick()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Large);
 
             Vector3I extents = (simulation.Grid.Max - simulation.Grid.Min) + Vector3I.One;
@@ -461,10 +461,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RoomMapConvergenceIsTheBoxDividedByItsBudget operation.</summary>
+
         public void RoomMapConvergenceIsTheBoxDividedByItsBudget()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Large);
 
             Vector3I extents = (simulation.Grid.Max - simulation.Grid.Min) + Vector3I.One;
@@ -496,10 +496,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ExposureRefreshNeverExceedsItsBudgetInOneTick operation.</summary>
+
         public void ExposureRefreshNeverExceedsItsBudgetInOneTick()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Large);
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
@@ -534,10 +534,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>AStepNeverExceedsItsLinkVisitBudget operation.</summary>
+
         public void AStepNeverExceedsItsLinkVisitBudget()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Large);
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
@@ -567,10 +567,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AShortenedStepLosesTimeAndNotAccuracy operation.</summary>
+
         public void AShortenedStepLosesTimeAndNotAccuracy()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Small);
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
 
@@ -599,10 +599,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGridUnderTheBudgetIsUnaffected operation.</summary>
+
         public void AGridUnderTheBudgetIsUnaffected()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Small);
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
             LoadBenchmarks.SeedSpread(simulation);
@@ -628,10 +628,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShippedAllowanceFitsAGridAndAHalvedOneDoesNot operation.</summary>
+
         public void TheShippedAllowanceFitsAGridAndAHalvedOneDoesNot()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation shipped = Build(Covered);
             while (shipped.HasPendingWork) shipped.Update(LoadBenchmarks.TickSeconds, Space());
             LoadBenchmarks.SeedSpread(shipped);
@@ -652,7 +652,7 @@ namespace Thermodynamics.Tests
             Assert.True(shipped.SubstepCost > shipped.Solver.LinkCount * 2);
             Assert.Equal(1d, shipped.SimulationRate, 6);
 
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation tighter = Build(Covered);
             while (tighter.HasPendingWork) tighter.Update(LoadBenchmarks.TickSeconds, Space());
             LoadBenchmarks.SeedSpread(tighter);
@@ -678,17 +678,17 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>ASettledTickFitsInAFrame operation.</summary>
+
         public void ASettledTickFitsInAFrame()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(Large);
             while (simulation.HasPendingWork) simulation.Update(LoadBenchmarks.TickSeconds, Space());
             LoadBenchmarks.SeedSpread(simulation);
 
-/// <summary>FrameTrace operation.</summary>
+
             FrameTrace trace = new FrameTrace("settled " + Large.ToString("n0"));
-/// <summary>Stopwatch operation.</summary>
+
             Stopwatch watch = new Stopwatch();
 
             for (int tick = 0; tick < 120; tick++)

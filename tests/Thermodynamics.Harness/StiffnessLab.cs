@@ -31,16 +31,16 @@ namespace Thermodynamics.Harness
 
         public static readonly int[] Caps = { 8, 4, 2, 1 };
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.Frequency = FieldFrequency;
             return settings.Derive();
         }
 
-/// <summary>MeasureSolver operation.</summary>
+
         public static void MeasureSolver(ThermalSolver solver, ref EnvironmentState air,
             ref float vacuum, ref float inAir, ref string stiffest, int[] flooredAtCap, ref int nodes,
             ref int stiffestFaces, ref float stiffestDry)
@@ -69,17 +69,17 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>SeaLevelAir operation.</summary>
+
         private static EnvironmentState SeaLevelAir(ThermalSettings settings)
         {
             return EnvironmentSolver.Solve(
                 settings, PlanetThermalProperties.Default(), Worlds.PlanetSurface(1f, 0.5f));
         }
 
-/// <summary>Census operation.</summary>
+
         public static Row Census(int blocks)
         {
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
@@ -90,7 +90,7 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
             simulation.RebuildAll();
 
-/// <summary>SeaLevelAir operation.</summary>
+
             EnvironmentState air = SeaLevelAir(settings);
             float vacuum = 0f, inAir = 0f;
             string stiffest = "";
@@ -115,14 +115,14 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>Measure operation.</summary>
+
         public static Row Measure(Blueprints.Ship ship)
         {
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
             ShipAssembly assembly = ship.Build(settings);
 
-/// <summary>SeaLevelAir operation.</summary>
+
             EnvironmentState air = SeaLevelAir(settings);
             float vacuum = 0f, inAir = 0f;
             string stiffest = "";
@@ -151,14 +151,14 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(IList<Blueprints.Ship> ships, LabMode mode = LabMode.Parallel)
         {
             GameBlocks.Warm();
             return LabRun.Map(ships, Measure, mode);
         }
 
-/// <summary>ShareBelow operation.</summary>
+
         private static double ShareBelow(List<float> sorted, float value)
         {
             int below = 0;
@@ -169,7 +169,7 @@ namespace Thermodynamics.Harness
             return sorted.Count == 0 ? 0d : (double)below / sorted.Count;
         }
 
-/// <summary>At operation.</summary>
+
         private static float At(List<float> sorted, double q)
         {
             if (sorted.Count == 0) return 0f;
@@ -179,10 +179,10 @@ namespace Thermodynamics.Harness
             return sorted[index];
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(string path, LabMode mode = LabMode.Parallel)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("STIFFNESS AGAINST REAL SHIPS  (nothing stepped)");
@@ -203,9 +203,9 @@ namespace Thermodynamics.Harness
             }
 
             System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
-/// <summary>Walk operation.</summary>
+
             Walk walk = new Walk();
-/// <summary>Stream operation.</summary>
+
             List<Row> rows = Stream(root, walk, mode);
             clock.Stop();
             LastRows = rows;
@@ -216,9 +216,9 @@ namespace Thermodynamics.Harness
                 return sb.ToString();
             }
 
-/// <summary>List operation.</summary>
+
             List<float> vacuum = new List<float>();
-/// <summary>List operation.</summary>
+
             List<float> air = new List<float>();
             Dictionary<string, List<float>> byBlock = new Dictionary<string, List<float>>();
 
@@ -236,11 +236,11 @@ namespace Thermodynamics.Harness
             vacuum.Sort();
             air.Sort();
 
-/// <summary>List operation.</summary>
+
             List<float> ratios = new List<float>();
             for (int i = 0; i < rows.Count; i++)
             {
-/// <summary>Ratio operation.</summary>
+
                 float ratio = Ratio(rows[i]);
                 if (ratio > 0f) ratios.Add(ratio);
             }
@@ -274,7 +274,7 @@ namespace Thermodynamics.Harness
             int[] sizes = { 2000, 4000, 32000 };
             for (int i = 0; i < sizes.Length; i++)
             {
-/// <summary>Census operation.</summary>
+
                 Row hull = Census(sizes[i]);
                 sb.Append("  ").Append(Trim(hull.Ship, 28).PadRight(30));
                 sb.Append(hull.Vacuum.ToString("n2").PadLeft(7));
@@ -361,7 +361,7 @@ namespace Thermodynamics.Harness
             public int Failed;
         }
 
-/// <summary>MaxMegabytes operation.</summary>
+
         public static int MaxMegabytes()
         {
             string configured = Environment.GetEnvironmentVariable("THERMAL_CORPUS_MAX_MB");
@@ -372,12 +372,12 @@ namespace Thermodynamics.Harness
             return 64;
         }
 
-/// <summary>Stream operation.</summary>
+
         public static List<Row> Stream(string root, Walk walk, LabMode mode = LabMode.Parallel)
         {
             GameBlocks.Warm();
 
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
             List<string> files = Blueprints.Files(root);
             walk.Files = files.Count;
@@ -387,7 +387,7 @@ namespace Thermodynamics.Harness
 
             for (int start = 0; start < files.Count; start += Batch)
             {
-/// <summary>List operation.</summary>
+
                 List<Blueprints.Ship> batch = new List<Blueprints.Ship>();
 
                 for (int i = start; i < files.Count && i < start + Batch; i++)
@@ -422,10 +422,10 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("ship,large,blocks,vacuum,air,stiffest_in_air,stiffest_faces,stiffest_vacuum");
 
@@ -450,14 +450,14 @@ namespace Thermodynamics.Harness
 
         public static List<Row> LastRows { get; private set; }
 
-/// <summary>Ratio operation.</summary>
+
         public static float Ratio(Row row)
         {
             if (row == null || row.StiffestInVacuum <= 0f) return 0f;
             return row.Air / row.StiffestInVacuum;
         }
 
-/// <summary>Band operation.</summary>
+
         private static void Band(StringBuilder sb, string label, List<float> sorted)
         {
             sb.Append("  ").Append(label.PadRight(10));
@@ -469,7 +469,7 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
         }
 
-/// <summary>Trim operation.</summary>
+
         private static string Trim(string value, int length)
         {
             if (value == null) return "";

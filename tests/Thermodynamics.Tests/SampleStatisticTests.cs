@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
     public class SampleStatisticTests
     {
         [Fact]
-/// <summary>AQuantileIsAReadingThatWasActuallyTaken operation.</summary>
+
         public void AQuantileIsAReadingThatWasActuallyTaken()
         {
             double[] sorted = new double[101];
@@ -36,7 +36,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSpreadIsBetweenRunsForOneStatistic operation.</summary>
+
         public void TheSpreadIsBetweenRunsForOneStatistic()
         {
             List<SampleStatisticLab.Series> series = new List<SampleStatisticLab.Series>
@@ -50,14 +50,14 @@ namespace Thermodynamics.Tests
 
             Assert.Empty(dropped);
 
-/// <summary>Find operation.</summary>
+
             SampleStatisticLab.Row min = Find(rows, "links", 0d);
             Assert.Equal(2, min.Runs);
             Assert.Equal(1d, min.Lowest);
             Assert.Equal(3d, min.Highest);
             Assert.Equal(200d, min.SpreadPercent, 6);
 
-/// <summary>Find operation.</summary>
+
             SampleStatisticLab.Row median = Find(rows, "links", 0.50d);
             Assert.Equal(10d, median.Lowest);
             Assert.Equal(11d, median.Highest);
@@ -65,7 +65,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStageMissingFromARunIsDroppedAndSaidSo operation.</summary>
+
         public void AStageMissingFromARunIsDroppedAndSaidSo()
         {
             List<SampleStatisticLab.Series> series = new List<SampleStatisticLab.Series>
@@ -86,7 +86,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARunThatParsedToNothingIsLoud operation.</summary>
+
         public void ARunThatParsedToNothingIsLoud()
         {
             string path = Path.GetTempFileName();
@@ -102,7 +102,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheStageLabsSamplesFileIsWhatThisLabReads operation.</summary>
+
         public void TheStageLabsSamplesFileIsWhatThisLabReads()
         {
             int repeats = StageLab.Repeats;
@@ -146,7 +146,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RunsAreOneWindowOnlyIfTheyWereTakenInsideOne operation.</summary>
+
         public void RunsAreOneWindowOnlyIfTheyWereTakenInsideOne()
         {
             List<SampleStatisticLab.Series> inside = new List<SampleStatisticLab.Series>
@@ -162,11 +162,11 @@ namespace Thermodynamics.Tests
             Assert.Equal("2026-08-27T10:59:00Z", span.Latest);
             Assert.Equal(59d, span.Elapsed.TotalMinutes);
 
-/// <summary>Stamped operation.</summary>
+
             inside[1] = Stamped("run2", "2026-08-27T11:00:00Z");
             Assert.True(SampleStatisticLab.Window(inside).IsOneWindow);
 
-/// <summary>Stamped operation.</summary>
+
             inside[1] = Stamped("run2", "2026-08-27T11:01:00Z");
             Assert.False(SampleStatisticLab.Window(inside).IsOneWindow);
 
@@ -176,7 +176,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARunWithNoReadableStampIsNotOneWindowWithAnything operation.</summary>
+
         public void ARunWithNoReadableStampIsNotOneWindowWithAnything()
         {
             List<SampleStatisticLab.Series> runs = new List<SampleStatisticLab.Series>
@@ -189,7 +189,7 @@ namespace Thermodynamics.Tests
             Assert.False(span.IsOneWindow);
             Assert.Equal(1, span.Unstamped);
 
-/// <summary>Stamped operation.</summary>
+
             runs[1] = Stamped("run2", "not a time");
             Assert.False(SampleStatisticLab.Window(runs).IsOneWindow);
             Assert.Equal(1, SampleStatisticLab.Window(runs).Unstamped);
@@ -203,7 +203,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheStampIsWrittenToTheArtefactAndReadBackFromIt operation.</summary>
+
         public void TheStampIsWrittenToTheArtefactAndReadBackFromIt()
         {
             StageLab.Row row = new StageLab.Row();
@@ -230,7 +230,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Stamped operation.</summary>
+
         private static SampleStatisticLab.Series Stamped(string run, string takenUtc, string stage = "exposure")
         {
             SampleStatisticLab.Series series = new SampleStatisticLab.Series();
@@ -240,7 +240,7 @@ namespace Thermodynamics.Tests
             return series;
         }
 
-/// <summary>Series operation.</summary>
+
         private static SampleStatisticLab.Series Series(string run, string stage, double[] samples)
         {
             SampleStatisticLab.Series series = new SampleStatisticLab.Series();
@@ -250,7 +250,7 @@ namespace Thermodynamics.Tests
             return series;
         }
 
-/// <summary>Find operation.</summary>
+
         private static SampleStatisticLab.Row Find(IList<SampleStatisticLab.Row> rows, string stage, double quantile)
         {
             foreach (SampleStatisticLab.Row row in rows)

@@ -15,7 +15,7 @@ namespace Thermodynamics.Tests
         [InlineData("5g", 5e9f)]
         [InlineData("5G", 5e9f)]
         [InlineData("2.5M", 2.5e6f)]
-/// <summary>SuffixesScaleTheNumber operation.</summary>
+
         public void SuffixesScaleTheNumber(string text, float expected)
         {
             float watts;
@@ -28,7 +28,7 @@ namespace Thermodynamics.Tests
         [InlineData("M")]
         [InlineData("bonfire")]
         [InlineData("5x")]
-/// <summary>NonsenseIsRefusedRatherThanReadAsZero operation.</summary>
+
         public void NonsenseIsRefusedRatherThanReadAsZero(string text)
         {
             float watts;
@@ -37,7 +37,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>ABareNumberPlacesASteadySource operation.</summary>
+
         public void ABareNumberPlacesASteadySource()
         {
             HeatSourceCommand.Parsed parsed = HeatSourceCommand.Parse("5M");
@@ -49,7 +49,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARangeMayFollowTheWatts operation.</summary>
+
         public void ARangeMayFollowTheWatts()
         {
             HeatSourceCommand.Parsed parsed = HeatSourceCommand.Parse("5M 500");
@@ -60,7 +60,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APulseIsWattsThenSeconds operation.</summary>
+
         public void APulseIsWattsThenSeconds()
         {
             HeatSourceCommand.Parsed parsed = HeatSourceCommand.Parse("pulse 5M 30");
@@ -71,7 +71,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APulseTakesAnOptionalRange operation.</summary>
+
         public void APulseTakesAnOptionalRange()
         {
             HeatSourceCommand.Parsed parsed = HeatSourceCommand.Parse("pulse 5M 30 750");
@@ -79,7 +79,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>Sets the carriesanidandawattage.</summary>
+
         public void SetCarriesAnIdAndAWattage()
         {
             HeatSourceCommand.Parsed parsed = HeatSourceCommand.Parse("set 3 250k");
@@ -95,7 +95,7 @@ namespace Thermodynamics.Tests
         [InlineData("clear", HeatSourceCommand.Verb.Clear)]
         [InlineData("", HeatSourceCommand.Verb.Help)]
         [InlineData("help", HeatSourceCommand.Verb.Help)]
-/// <summary>TheOtherVerbsAreRecognised operation.</summary>
+
         public void TheOtherVerbsAreRecognised(string argument, HeatSourceCommand.Verb expected)
         {
             Assert.Equal(expected, HeatSourceCommand.Parse(argument).Verb);
@@ -114,7 +114,7 @@ namespace Thermodynamics.Tests
         [InlineData("pulse 5M 0")]
         [InlineData("0")]
         [InlineData("-5M")]
-/// <summary>AMalformedCommandFallsBackToHelpWithAReason operation.</summary>
+
         public void AMalformedCommandFallsBackToHelpWithAReason(string argument)
         {
             HeatSourceCommand.Parsed parsed = HeatSourceCommand.Parse(argument);
@@ -125,7 +125,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUnreadableRangeFallsBackRatherThanZeroing operation.</summary>
+
         public void AnUnreadableRangeFallsBackRatherThanZeroing()
         {
             HeatSourceCommand.Parsed parsed = HeatSourceCommand.Parse("5M nearby");
@@ -138,7 +138,7 @@ namespace Thermodynamics.Tests
         [InlineData(5e3f, "5.00 kW")]
         [InlineData(5e6f, "5.00 MW")]
         [InlineData(5e9f, "5.00 GW")]
-/// <summary>WattsAreReportedInTheUnitAPersonWouldSay operation.</summary>
+
         public void WattsAreReportedInTheUnitAPersonWouldSay(float watts, string expected)
         {
             Assert.Equal(expected, HeatSourceCommand.Describe(watts));

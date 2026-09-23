@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
     public class PumpPowerTests
     {
         [Fact]
-/// <summary>APumpAsksForPowerInProportionToItsSpeed operation.</summary>
+
         public void APumpAsksForPowerInProportionToItsSpeed()
         {
             CoolantPump pump = new CoolantPump { MaxPowerWatts = 50000f };
@@ -24,7 +24,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStoppedPumpAsksForNothing operation.</summary>
+
         public void AStoppedPumpAsksForNothing()
         {
             CoolantPump pump = new CoolantPump { MaxPowerWatts = 50000f, Enabled = false };
@@ -34,7 +34,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUnderSuppliedPumpCirculatesSlowerRatherThanStopping operation.</summary>
+
         public void AnUnderSuppliedPumpCirculatesSlowerRatherThanStopping()
         {
             CoolantPump pump = new CoolantPump { MaxPowerWatts = 50000f };
@@ -49,10 +49,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACirculatorIsFarCheaperPerWattMovedThanAHeatPump operation.</summary>
+
         public void ACirculatorIsFarCheaperPerWattMovedThanAHeatPump()
         {
-/// <summary>LoopThermalProperties operation.</summary>
+
             LoopThermalProperties loop = new LoopThermalProperties();
 
             const float ParcelMetres = 2.5f;

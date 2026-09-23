@@ -19,59 +19,59 @@ namespace RichHudFramework
 
             private ObjectPool<StringBuilder> sbPool;
 
-/// <summary>RichText operation.</summary>
+
             public RichText(GlyphFormat? defaultFormat = null)
             {
                 this.defaultFormat = defaultFormat ?? GlyphFormat.Empty;
-/// <summary>List operation.</summary>
+
                 apiData = new List<RichStringMembers>();
             }
 
-/// <summary>RichText operation.</summary>
+
             public RichText(List<RichStringMembers> apiData, bool copy = false)
             {
-/// <summary>Returns the datacopy.</summary>
+
                 this.apiData = copy ? GetDataCopy(apiData) : apiData;
                 defaultFormat = GlyphFormat.Empty;
             }
 
-/// <summary>RichText operation.</summary>
+
             public RichText(RichText original)
             {
-/// <summary>List operation.</summary>
+
                 apiData = new List<RichStringMembers>();
                 defaultFormat = original.defaultFormat;
                 Add(original);
             }
 
-/// <summary>RichText operation.</summary>
+
             public RichText(string text, GlyphFormat? defaultFormat = null)
             {
                 this.defaultFormat = defaultFormat ?? GlyphFormat.Empty;
-/// <summary>List operation.</summary>
+
                 apiData = new List<RichStringMembers>();
                 apiData.Add(new RichStringMembers(new StringBuilder(text), this.defaultFormat.Value.Data));
             }
 
-/// <summary>RichText operation.</summary>
+
             public RichText(StringBuilder text, GlyphFormat? defaultFormat = null)
             {
                 this.defaultFormat = defaultFormat ?? GlyphFormat.Empty;
-/// <summary>List operation.</summary>
+
                 apiData = new List<RichStringMembers>();
                 Add(text);
             }
 
-/// <summary>Returns the enumerator.</summary>
+
             public IEnumerator<RichStringMembers> GetEnumerator() => apiData.GetEnumerator();
 
             IEnumerator IEnumerable.GetEnumerator() => apiData.GetEnumerator();
 
-/// <summary>Adds a .</summary>
+
             public void Add(RichText text)
             {
                 if (sbPool == null)
-/// <summary>ObjectPool operation.</summary>
+
                     sbPool = new ObjectPool<StringBuilder>(new StringBuilderPoolPolicy());
 
                 List<RichStringMembers> currentStrings = apiData,
@@ -115,11 +115,11 @@ namespace RichHudFramework
                 }
             }
 
-/// <summary>Adds a .</summary>
+
             public void Add(StringBuilder text, GlyphFormat? newFormat = null)
             {
                 if (sbPool == null)
-/// <summary>ObjectPool operation.</summary>
+
                     sbPool = new ObjectPool<StringBuilder>(new StringBuilderPoolPolicy());
 
                 List<RichStringMembers> richStrings = apiData;
@@ -131,7 +131,7 @@ namespace RichHudFramework
 
                 if (!formatEqual)
                 {
-/// <summary>RichStringMembers operation.</summary>
+
                     var richString = new RichStringMembers(sb, format);
                     richStrings.Add(richString);
                 }
@@ -142,15 +142,15 @@ namespace RichHudFramework
                     sb.Append(text[i]);
             }
 
-/// <summary>Adds a .</summary>
+
             public void Add(GlyphFormat newFormat, StringBuilder text) =>
                 Add(text, newFormat);
 
-/// <summary>Adds a .</summary>
+
             public void Add(string text, GlyphFormat? newFormat = null)
             {
                 if (sbPool == null)
-/// <summary>ObjectPool operation.</summary>
+
                     sbPool = new ObjectPool<StringBuilder>(new StringBuilderPoolPolicy());
 
                 List<RichStringMembers> richStrings = apiData;
@@ -162,7 +162,7 @@ namespace RichHudFramework
 
                 if (!formatEqual)
                 {
-/// <summary>RichStringMembers operation.</summary>
+
                     var richString = new RichStringMembers(sb, format);
                     richStrings.Add(richString);
                 }
@@ -170,14 +170,14 @@ namespace RichHudFramework
                 sb.Append(text);
             }
 
-/// <summary>Adds a .</summary>
+
             public void Add(GlyphFormat newFormat, string text) => Add(text, newFormat);
 
-/// <summary>Adds a .</summary>
+
             public void Add(char ch, GlyphFormat? newFormat = null)
             {
                 if (sbPool == null)
-/// <summary>ObjectPool operation.</summary>
+
                     sbPool = new ObjectPool<StringBuilder>(new StringBuilderPoolPolicy());
 
                 List<RichStringMembers> richStrings = apiData;
@@ -189,7 +189,7 @@ namespace RichHudFramework
 
                 if (!formatEqual)
                 {
-/// <summary>RichStringMembers operation.</summary>
+
                     var richString = new RichStringMembers(sb, format);
                     richStrings.Add(richString);
                 }
@@ -197,7 +197,7 @@ namespace RichHudFramework
                 sb.Append(ch);
             }
 
-/// <summary>Returns the nextstringbuilder.</summary>
+
             private void GetNextStringBuilder(GlyphFormatMembers newFormat, out StringBuilder sb, out bool formatEqual)
             {
                 List<RichStringMembers> richStrings = apiData;
@@ -216,11 +216,11 @@ namespace RichHudFramework
                 sb = formatEqual ? richStrings[last].Item1 : sbPool.Get();
             }
 
-/// <summary>TrimExcess operation.</summary>
+
             public void TrimExcess()
             {
                 if (sbPool == null)
-/// <summary>ObjectPool operation.</summary>
+
                     sbPool = new ObjectPool<StringBuilder>(new StringBuilderPoolPolicy());
 
                 List<RichStringMembers> text = apiData;
@@ -232,11 +232,11 @@ namespace RichHudFramework
                 text.TrimExcess();
             }
 
-/// <summary>Clear operation.</summary>
+
             public void Clear()
             {
                 if (sbPool == null)
-/// <summary>ObjectPool operation.</summary>
+
                     sbPool = new ObjectPool<StringBuilder>(new StringBuilderPoolPolicy());
 
                 List<RichStringMembers> text = apiData;
@@ -244,13 +244,13 @@ namespace RichHudFramework
                 text.Clear();
             }
 
-/// <summary>Returns the hashcode.</summary>
+
             public override int GetHashCode()
             {
                 return base.GetHashCode();
             }
 
-/// <summary>Equals operation.</summary>
+
             public override bool Equals(object obj)
             {
                 RichText other = obj as RichText;
@@ -258,13 +258,13 @@ namespace RichHudFramework
                 if (apiData == other?.apiData)
                     return true;
                 if (other != null)
-/// <summary>Equals operation.</summary>
+
                     return Equals(other);
                 else
                     return false;
             }
 
-/// <summary>Equals operation.</summary>
+
             public bool Equals(RichText other)
             {
                 bool isFormatEqual = true,
@@ -273,10 +273,10 @@ namespace RichHudFramework
 
                 if (other == null)
                     return false;
-/// <summary>if operation.</summary>
+
                 else if (apiData == other.apiData)
                     return true;
-/// <summary>if operation.</summary>
+
                 else if (apiData.Count == other.apiData.Count)
                 {
                     for (int i = 0; i < apiData.Count; i++)
@@ -329,10 +329,10 @@ namespace RichHudFramework
                 return isLengthEqual && isFormatEqual && isTextEqual;
             }
 
-/// <summary>ToString operation.</summary>
+
             public override string ToString()
             {
-/// <summary>StringBuilder operation.</summary>
+
                 StringBuilder rawText = new StringBuilder();
                 List<RichStringMembers> richText = apiData;
                 int charCount = 0;
@@ -351,21 +351,21 @@ namespace RichHudFramework
                 return rawText.ToString();
             }
 
-/// <summary>Returns the copy.</summary>
+
             public RichText GetCopy() =>
-/// <summary>RichText operation.</summary>
+
                 new RichText(GetDataCopy(apiData));
 
-/// <summary>Returns the datacopy.</summary>
+
             public static List<RichStringMembers> GetDataCopy(List<RichStringMembers> original)
             {
-/// <summary>List operation.</summary>
+
                 var newData = new List<RichStringMembers>(original.Count);
 
                 for (int i = 0; i < original.Count; i++)
                 {
                     StringBuilder oldSb = original[i].Item1,
-/// <summary>StringBuilder operation.</summary>
+
                         sb = new StringBuilder(oldSb.Length);
 
                     for (int j = 0; j < oldSb.Length; j++)
@@ -397,13 +397,13 @@ namespace RichHudFramework
                 return left;
             }
 
-/// <summary>RichText operation.</summary>
+
             public static implicit operator RichText(string text) => new RichText(text);
 
-/// <summary>RichText operation.</summary>
+
             public static implicit operator RichText(StringBuilder text) => new RichText(text);
 
-/// <summary>RichText operation.</summary>
+
             public static implicit operator RichText(List<RichStringMembers> text) => new RichText(text);
 
             #endregion

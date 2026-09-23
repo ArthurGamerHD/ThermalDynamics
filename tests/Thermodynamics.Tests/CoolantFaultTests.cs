@@ -8,14 +8,14 @@ namespace Thermodynamics.Tests
 {
     public class CoolantFaultTests
     {
-/// <summary>Isolated operation.</summary>
+
         private static ThermalSettings Isolated()
         {
             return Isolation.DeadWorld();
         }
 
         [Fact]
-/// <summary>AWorkingRingReportsNoFaultAtAll operation.</summary>
+
         public void AWorkingRingReportsNoFaultAtAll()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -30,7 +30,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AClosedRingWithNoPumpIsALoopThatCirculatesNothing operation.</summary>
+
         public void AClosedRingWithNoPumpIsALoopThatCirculatesNothing()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -51,7 +51,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARingBrokenOpenReportsAnOpenEnd operation.</summary>
+
         public void ARingBrokenOpenReportsAnOpenEnd()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -68,21 +68,21 @@ namespace Thermodynamics.Tests
             Assert.Equal(0, diagnostics.Loops);
             Assert.Equal(7, diagnostics.PipesAdrift);
             Assert.True(diagnostics.CountOf(CoolantFault.OpenEnd) > 0,
-/// <summary>Reasons operation.</summary>
+
                 "a broken ring should report an open end, not " + Reasons(diagnostics));
         }
 
         [Fact]
-/// <summary>PipesTouchingAtTheWrongRotationSayTheirPortsDoNotMeet operation.</summary>
+
         public void PipesTouchingAtTheWrongRotationSayTheirPortsDoNotMeet()
         {
             GridBuilder builder = GridBuilder.Large();
 
             builder.Place(Catalog.CoolantPump(), Vector3I.Zero,
-/// <summary>BlockOrientation operation.</summary>
+
                 new BlockOrientation(Base6Directions.Direction.Backward, Base6Directions.Direction.Left));
             builder.Place(Catalog.CoolantPipeStraight(), new Vector3I(0, 0, 1),
-/// <summary>BlockOrientation operation.</summary>
+
                 new BlockOrientation(Base6Directions.Direction.Left, Base6Directions.Direction.Up));
 
             CoolantLoopDiagnostics diagnostics = builder.BuildSimulation(Isolated()).DiagnoseLoops();
@@ -92,13 +92,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APipeRunningIntoOrdinaryArmourNamesTheBlockingBlock operation.</summary>
+
         public void APipeRunningIntoOrdinaryArmourNamesTheBlockingBlock()
         {
             GridBuilder builder = GridBuilder.Large();
 
             builder.Place(Catalog.CoolantPump(), Vector3I.Zero,
-/// <summary>BlockOrientation operation.</summary>
+
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
             builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 1));
             builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, -1));
@@ -111,12 +111,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnExampleNamesACellThePlayerCanWalkTo operation.</summary>
+
         public void AnExampleNamesACellThePlayerCanWalkTo()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.CoolantPump(), new Vector3I(4, 5, 6),
-/// <summary>BlockOrientation operation.</summary>
+
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
 
             CoolantLoopDiagnostics diagnostics = builder.BuildSimulation(Isolated()).DiagnoseLoops();
@@ -127,14 +127,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ExamplesAreCappedButCountsAreNot operation.</summary>
+
         public void ExamplesAreCappedButCountsAreNot()
         {
             GridBuilder builder = GridBuilder.Large();
             for (int i = 0; i < 30; i++)
             {
                 builder.Place(Catalog.CoolantPump(), new Vector3I(i * 2, 0, 0),
-/// <summary>BlockOrientation operation.</summary>
+
                     new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
             }
 
@@ -146,14 +146,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheOrdinarySearchDoesNotBuildDiagnostics operation.</summary>
+
         public void TheOrdinarySearchDoesNotBuildDiagnostics()
         {
             GridBuilder builder = GridBuilder.Large();
             PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
             GridModel grid = builder.Grid;
 
-/// <summary>SimulationWork operation.</summary>
+
             SimulationWork work = new SimulationWork();
             List<CoolantLoop> loops = CoolantLoopBuilder.FindLoops(
                 grid, LoopThermalProperties.Default(), 293.15f, work);
@@ -163,7 +163,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryCoolantBlockIsAccountedForExactlyOnce operation.</summary>
+
         public void EveryCoolantBlockIsAccountedForExactlyOnce()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -174,7 +174,7 @@ namespace Thermodynamics.Tests
             PipeFitter.BuildPumplessRing(builder, pumpless);
 
             builder.Place(Catalog.CoolantPump(), new Vector3I(0, 20, 0),
-/// <summary>BlockOrientation operation.</summary>
+
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
 
             ThermalSimulation simulation = builder.BuildSimulation(Isolated());
@@ -197,7 +197,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DiagnosingOneBlockAgreesWithDiagnosingTheGrid operation.</summary>
+
         public void DiagnosingOneBlockAgreesWithDiagnosingTheGrid()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -208,7 +208,7 @@ namespace Thermodynamics.Tests
             PipeFitter.BuildPumplessRing(builder, pumpless);
 
             builder.Place(Catalog.CoolantPump(), new Vector3I(0, 20, 0),
-/// <summary>BlockOrientation operation.</summary>
+
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
 
             ThermalSimulation simulation = builder.BuildSimulation(Isolated());
@@ -232,7 +232,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockInAWorkingLoopReportsItsLoopAndNoFault operation.</summary>
+
         public void ABlockInAWorkingLoopReportsItsLoopAndNoFault()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -249,7 +249,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockWithNoPlumbingIsNotDiagnosedAtAll operation.</summary>
+
         public void ABlockWithNoPlumbingIsNotDiagnosedAtAll()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -262,7 +262,7 @@ namespace Thermodynamics.Tests
             Assert.Null(simulation.FindLoopContaining(armour));
         }
 
-/// <summary>Reasons operation.</summary>
+
         private static string Reasons(CoolantLoopDiagnostics diagnostics)
         {
             string text = "";

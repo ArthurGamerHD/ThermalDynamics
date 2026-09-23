@@ -4,7 +4,7 @@ namespace Thermodynamics.Tests
 {
     internal static class RoomMapAssert
     {
-/// <summary>SameMap operation.</summary>
+
         internal static void SameMap(RoomMap expected, RoomMap actual, string what)
         {
             Assert.True(expected.RoomCount > 0, what + ": the reference map found no rooms, so agreement proves nothing");

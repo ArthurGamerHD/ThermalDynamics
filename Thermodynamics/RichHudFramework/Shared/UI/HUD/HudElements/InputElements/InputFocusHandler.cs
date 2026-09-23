@@ -21,13 +21,13 @@ namespace RichHudFramework
 
 			public EventHandler LostInputFocusCallback { set { LostInputFocus += value; } }
 
-/// <summary>InputFocusHandler operation.</summary>
+
 			public InputFocusHandler(IFocusableElement inputOwner)
 			{
 				InputOwner = inputOwner;
 			}
 
-/// <summary>Returns the inputfocus.</summary>
+
 			public virtual void GetInputFocus()
 			{
 				if (!HasFocus)
@@ -38,7 +38,7 @@ namespace RichHudFramework
 				}
 			}
 
-/// <summary>ReleaseFocus operation.</summary>
+
 			public virtual void ReleaseFocus()
 			{
 				if (HasFocus)

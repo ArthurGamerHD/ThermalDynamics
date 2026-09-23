@@ -11,23 +11,23 @@ namespace Thermodynamics.Tests
     public class ThermalVisionRegionOrderTests
     {
         [Fact]
-/// <summary>SolidBlockersPruneHiddenRegionsAndImmediatelyRevealOnRemoval operation.</summary>
+
         public void SolidBlockersPruneHiddenRegionsAndImmediatelyRevealOnRemoval()
         {
-/// <summary>List operation.</summary>
+
             var cells=new List<Region>();
             for(int x=-8;x<8;x++)for(int y=-8;y<8;y++)for(int z=10;z<14;z++)
-/// <summary>Vector3D operation.</summary>
+
             {var p=new Vector3D(x,y,z);cells.Add(new Region(p,p+Vector3D.One,300));}
             ThermalVisionRegionOrder order;Assert.True(ThermalVisionRegionOrder.TryBuild(cells,2048,out order));
             var eye=Vector3D.Zero;
-/// <summary>BoundingFrustumD operation.</summary>
+
             var frustum=new BoundingFrustumD(MatrixD.CreateLookAt(eye,new Vector3D(0,0,1),Vector3D.Up)
                 *MatrixD.CreatePerspectiveFieldOfView(1.5,1.8,.1,100));
-/// <summary>List operation.</summary>
+
             var all=new List<Region>();var visible=new List<Region>();
             order.WriteVisibleNearToFar(eye,all,frustum);
-/// <summary>BoundingBoxD operation.</summary>
+
             var blocker=new BoundingBoxD(new Vector3D(-1,-1,2),new Vector3D(1,1,3));
             var blockers=new List<BoundingBoxD>{blocker};int hidden;
             order.WriteVisibleNearToFar(eye,visible,frustum,blockers,out hidden);
@@ -38,39 +38,39 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>HierarchicalFrustumTraversalMatchesOrderedLeafFilteringForMovingViews operation.</summary>
+
         public void HierarchicalFrustumTraversalMatchesOrderedLeafFilteringForMovingViews()
         {
-/// <summary>List operation.</summary>
+
             var cells=new List<Region>();
             for(int x=0;x<8;x++) for(int y=0;y<8;y++) for(int z=0;z<8;z++)
-/// <summary>Vector3D operation.</summary>
+
             { var p=new Vector3D(x,y,z); cells.Add(new Region(p,p+Vector3D.One,300+x)); }
             ThermalVisionRegionOrder order;
             Assert.True(ThermalVisionRegionOrder.TryBuild(cells,1024,out order));
-/// <summary>List operation.</summary>
+
             var all=new List<Region>();var visible=new List<Region>();
             for(int i=0;i<80;i++)
             {
                 var grid=MatrixD.CreateFromYawPitchRoll(i*.13,i*.03,i*.07);
-/// <summary>Vector3D operation.</summary>
+
                 grid.Translation=new Vector3D(10000,-1000,4000);
-/// <summary>Vector3D operation.</summary>
+
                 var localEye=new Vector3D(4+Math.Sin(i)*15,4,4+Math.Cos(i)*15);
                 var worldEye=Vector3D.Transform(localEye,grid);
                 var target=Vector3D.Transform(i%3==0?new Vector3D(50):new Vector3D(4),grid);
                 var view=MatrixD.CreateLookAt(worldEye,target,grid.Up);
-/// <summary>BoundingFrustumD operation.</summary>
+
                 var frustum=new BoundingFrustumD(grid*view*MatrixD.CreatePerspectiveFieldOfView(.7,1.8,.1,100));
                 order.WriteNearToFar(localEye,all);
                 var expected=all.FindAll(r=>frustum.Contains(new BoundingBoxD(r.Min,r.Max))!=ContainmentType.Disjoint);
                 order.WriteVisibleNearToFar(localEye,visible,frustum);
                 Assert.Equal(expected,visible);
-/// <summary>BoundingFrustumD operation.</summary>
+
                 var worldFrustum=new BoundingFrustumD(view*MatrixD.CreatePerspectiveFieldOfView(.7,1.8,.1,100));
                 foreach(var cell in visible)
                 {
-/// <summary>Vector3D operation.</summary>
+
                     var lo=new Vector3D(double.PositiveInfinity);var hi=new Vector3D(double.NegativeInfinity);
                     for(int corner=0;corner<8;corner++)
                     {
@@ -84,7 +84,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>InteriorOccupancyRemovesCoarseRoomAirButKeepsWallsAndDistantCoverage operation.</summary>
+
         public void InteriorOccupancyRemovesCoarseRoomAirButKeepsWallsAndDistantCoverage()
         {
             using(var coarse=new ThermalVisionRegionScan(20,8,1))
@@ -93,9 +93,9 @@ namespace Thermodynamics.Tests
                 coarse.Start(new List<IEnumerable<Region>> { new[] { new Region(new Vector3D(-10),new Vector3D(10),700) } });
                 while(coarse.Running) coarse.Advance(128);
                 fine.Start(new List<IEnumerable<Region>> { new[] {
-/// <summary>Region operation.</summary>
+
                     new Region(new Vector3D(-3,-3,-3),new Vector3D(3,-2,3),300),
-/// <summary>Region operation.</summary>
+
                     new Region(new Vector3D(-3,-2,-3),new Vector3D(-2,3,3),900) } });
                 while(fine.Running) fine.Advance(128);
                 ThermalVisionRegionPartition focused;
@@ -110,19 +110,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SnapshotPointLookupMatchesLinearScanIncludingBoundariesAndGaps operation.</summary>
+
         public void SnapshotPointLookupMatchesLinearScanIncludingBoundariesAndGaps()
         {
-/// <summary>List operation.</summary>
+
             var cells=new List<Region>();
             for(int x=-3;x<=3;x++) for(int y=-2;y<=2;y++)
                 if(x!=0 || y!=0) cells.Add(new Region(new Vector3D(x,y,0),new Vector3D(x+1,y+1,1),300+10*x+y));
             ThermalVisionRegionOrder order; Assert.True(ThermalVisionRegionOrder.TryBuild(cells,256,out order));
-/// <summary>List operation.</summary>
+
             var sorted=new List<Region>(); order.WriteNearToFar(Vector3D.Zero,sorted);
             for(int x=-8;x<=10;x++) for(int y=-6;y<=8;y++) for(int z=-1;z<=3;z++)
             {
-/// <summary>Vector3D operation.</summary>
+
                 var p=new Vector3D(x*.5,y*.5,z*.5); Region expected=default(Region); bool found=false;
                 foreach(var cell in sorted)
                     if(p.X>=cell.Min.X && p.Y>=cell.Min.Y && p.Z>=cell.Min.Z && p.X<=cell.Max.X && p.Y<=cell.Max.Y && p.Z<=cell.Max.Z)
@@ -133,25 +133,25 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AdjacencySkipsOnlyExactOpposingFaces operation.</summary>
+
         public void AdjacencySkipsOnlyExactOpposingFaces()
         {
             var paired=ThermalVisionFacePlan.PairedFaces(new[] {
-/// <summary>Region operation.</summary>
+
                 new Region(Vector3D.Zero,Vector3D.One,300),
-/// <summary>Region operation.</summary>
+
                 new Region(new Vector3D(1,0,0),new Vector3D(2,1,1),900) });
             Assert.Equal(2,paired[0]); Assert.Equal(1,paired[1]);
             var partial=ThermalVisionFacePlan.PairedFaces(new[] {
-/// <summary>Region operation.</summary>
+
                 new Region(Vector3D.Zero,new Vector3D(2),300),
-/// <summary>Region operation.</summary>
+
                 new Region(new Vector3D(2,0,0),new Vector3D(3,1,1),900) });
             Assert.Equal(0,partial[0]); Assert.Equal(0,partial[1]);
         }
 
         [Fact]
-/// <summary>DenseViewportBudgetDoesNotStickWhenReturningToFourShips operation.</summary>
+
         public void DenseViewportBudgetDoesNotStickWhenReturningToFourShips()
         {
             Assert.Equal(1400, ThermalVisionFleetBudget.ForViewport(68, 68, 4));
@@ -161,17 +161,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SharedFacePlanPreservesHeatAndCoolingAlongIndependentRays operation.</summary>
+
         public void SharedFacePlanPreservesHeatAndCoolingAlongIndependentRays()
         {
-/// <summary>List operation.</summary>
+
             var cells = new List<Region>();
             for (int x = 0; x < 4; x++) for (int y = 0; y < 4; y++) for (int z = 0; z < 4; z++)
                 cells.Add(new Region(new Vector3D(x,y,z), new Vector3D(x+1,y+1,z+1),
                     x == 2 && y == 2 && z == 2 ? 900 : x == 1 && y == 1 ? 250 : 500));
             ThermalVisionRegionOrder order;
             Assert.True(ThermalVisionRegionOrder.TryBuild(cells, 256, out order));
-/// <summary>List operation.</summary>
+
             var sorted = new List<Region>(); var plan = new ThermalVisionFacePlan(); var random = new Random(391);
             foreach (var eye in new[] {new Vector3D(-3,2,5), new Vector3D(6,5,-2), new Vector3D(1.3,1.2,1.1)})
             {
@@ -180,7 +180,7 @@ namespace Thermodynamics.Tests
                 var paired=ThermalVisionFacePlan.PairedFaces(sorted);
                 for (int sample = 0; sample < 1000; sample++)
                 {
-/// <summary>Vector3D operation.</summary>
+
                     var point = new Vector3D(random.NextDouble()*6-1, random.NextDouble()*6-1, random.NextDouble()*6-1);
                     float expected = -1;
                     foreach (var cell in cells) if (Contains(cell, point)) expected = cell.Kelvin;
@@ -194,48 +194,48 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>UniformThousandCellFieldNeedsOnlyItsOuterSixHundredFaces operation.</summary>
+
         public void UniformThousandCellFieldNeedsOnlyItsOuterSixHundredFaces()
         {
-/// <summary>List operation.</summary>
+
             var cells = new List<Region>();
             for (int x = 0; x < 10; x++) for (int y = 0; y < 10; y++) for (int z = 0; z < 10; z++)
                 cells.Add(new Region(new Vector3D(x,y,z), new Vector3D(x+1,y+1,z+1), 500));
-/// <summary>ThermalVisionFacePlan operation.</summary>
+
             var plan = new ThermalVisionFacePlan(); plan.Build(cells, new Vector3D(-10));
             Assert.Equal(5400, plan.Removed);
             int skippedExits=0;
             foreach(int mask in ThermalVisionFacePlan.PairedFaces(cells))
                 for(int axis=0;axis<3;axis++) if((mask & (1<<(axis*2+1)))!=0) skippedExits++;
-            Assert.Equal(2700,skippedExits); // Neutral exits removed; all thermal entry faces retained.
+            Assert.Equal(2700,skippedExits);
             plan.Build(new[] {new Region(Vector3D.Zero, new Vector3D(2), 500),
-/// <summary>Region operation.</summary>
+
                 new Region(new Vector3D(2,0,0),new Vector3D(3,1,1),500)}, new Vector3D(-10));
             Assert.Equal(0, plan.Removed);
         }
 
-/// <summary>FaceRay operation.</summary>
+
         private static float FaceRay(IList<Region> cells, ThermalVisionFacePlan plan, Vector3D eye, Vector3D surface, int[] paired=null)
         {
             float result = -1; Vector3D ray = surface-eye;
             for (int i = 0; i < cells.Count; i++)
             {
                 var cell = cells[i];
-                if (Contains(cell, eye)) result = cell.Kelvin; // retained near cap
+                if (Contains(cell, eye)) result = cell.Kelvin;
                 for (int pass = 0; pass < 2; pass++)
                     for (int axis = 0; axis < 3; axis++) for (int side = 0; side < 2; side++)
                     {
-/// <summary>Axis operation.</summary>
+
                         double plane = Axis(side == 0 ? cell.Min : cell.Max, axis);
                         bool entry = (Axis(eye,axis)-plane)*(side == 1 ? 1 : -1)>0;
                         if (entry != (pass == 0) || (plan != null && plan.Skip(i,axis,side == 1))) continue;
                         if(!entry && paired!=null && (paired[i] & (1<<(axis*2+side)))!=0) continue;
-/// <summary>Axis operation.</summary>
+
                         double direction = Axis(ray,axis); if (Math.Abs(direction)<1e-12) continue;
                         double t = (plane-Axis(eye,axis))/direction; if (t<=0 || t>=1) continue;
                         Vector3D hit = eye+ray*t; bool onFace = true;
                         for (int a = 0; a < 3; a++) if (a != axis)
-/// <summary>Axis operation.</summary>
+
                             onFace &= Axis(hit,a)>=Axis(cell.Min,a) && Axis(hit,a)<Axis(cell.Max,a);
                         if (onFace) result = entry ? cell.Kelvin : -1;
                     }
@@ -244,7 +244,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CapacityFailuresConvergeWithoutDroppingGridReservations operation.</summary>
+
         public void CapacityFailuresConvergeWithoutDroppingGridReservations()
         {
             int capacity = 1400;
@@ -260,7 +260,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FullScreenContextSurvivesAcquisitionAndEmptyViewportButYieldsToChat operation.</summary>
+
         public void FullScreenContextSurvivesAcquisitionAndEmptyViewportButYieldsToChat()
         {
             foreach (bool hasField in new[] {true, false, false, true})
@@ -276,7 +276,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SmallGridReturnsUnusedFleetCapacity operation.</summary>
+
         public void SmallGridReturnsUnusedFleetCapacity()
         {
             int[] budgets = ThermalVisionFleetBudget.Allocate(new[] {1.0, .1, .1}, new[] {20, 1400, 1400}, 1400);
@@ -294,17 +294,17 @@ namespace Thermodynamics.Tests
         [InlineData(240)]
         [InlineData(256)]
         [InlineData(512)]
-/// <summary>MixedDetailRestoresCoolNearBlocksWithoutLosingDistantCoverage operation.</summary>
+
         public void MixedDetailRestoresCoolNearBlocksWithoutLosingDistantCoverage(int budget)
         {
-/// <summary>List operation.</summary>
+
             var blocks = new List<Region>();
             for (int i = 0; i < 1000; i++)
                 blocks.Add(new Region(new Vector3D(i, 0, 0), new Vector3D(i+1, 1, 1), i % 2 == 0 ? 300 : 800));
-/// <summary>ThermalVisionBlockDetail operation.</summary>
+
             var detail = new ThermalVisionBlockDetail(budget, new Vector3D(-1, .5, .5));
             foreach (var block in blocks) detail.Observe(block, true);
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
             var scan = new ThermalVisionRegionScan(1, detail.CoarseCapacity, 1, 4096);
             scan.Start(new List<IEnumerable<Region>> {blocks});
             while (scan.Running) scan.Advance(1024);
@@ -329,10 +329,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FailedCoolOverwriteLeavesOldFieldIntact operation.</summary>
+
         public void FailedCoolOverwriteLeavesOldFieldIntact()
         {
-/// <summary>ThermalVisionRegionPartition operation.</summary>
+
             var field = new ThermalVisionRegionPartition(1);
             Assert.True(field.TryAdd(new Region(Vector3D.Zero, new Vector3D(10), 800)));
             Assert.False(field.TryOverwrite(new Region(new Vector3D(2), new Vector3D(3), 300)));
@@ -342,13 +342,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>MeanCellsUseIntersectionVolumeAndRemainOrderIndependent operation.</summary>
+
         public void MeanCellsUseIntersectionVolumeAndRemainOrderIndependent()
         {
             var blocks = new List<Region> {
-/// <summary>Region operation.</summary>
+
                 new Region(Vector3D.Zero, new Vector3D(1, 1, 1), 300),
-/// <summary>Region operation.</summary>
+
                 new Region(new Vector3D(1, 0, 0), new Vector3D(4, 1, 1), 700)
             };
             for (int pass = 0; pass < 2; pass++)
@@ -367,10 +367,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SmallestGridBudgetCoversBlocksAcrossLocalOrigin operation.</summary>
+
         public void SmallestGridBudgetCoversBlocksAcrossLocalOrigin()
         {
-/// <summary>Region operation.</summary>
+
             var block = new Region(new Vector3D(-.5), new Vector3D(.5), 600);
             using (var scan = new ThermalVisionRegionScan(1, 1, 1, 1024, origin: block.Min))
             {
@@ -391,7 +391,7 @@ namespace Thermodynamics.Tests
         [InlineData(double.NaN, 20000, 20000)]
         [InlineData(double.PositiveInfinity, 20000, 20000)]
         [InlineData(0, 0, 15000)]
-/// <summary>FleetReachFollowsActiveCameraAndOnlyFallsBackWhenInvalid operation.</summary>
+
         public void FleetReachFollowsActiveCameraAndOnlyFallsBackWhenInvalid(double camera, double session, double expected)
         {
             double far = ThermalVisionViewPolicy.FarDistance(camera, session, .1);
@@ -401,7 +401,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FleetBudgetReservesEveryGridBeforeNearbyDetail operation.</summary>
+
         public void FleetBudgetReservesEveryGridBeforeNearbyDetail()
         {
             int[] budgets = ThermalVisionFleetBudget.Allocate(new[] {400.0, 1.0, 1.0}, 1400);
@@ -416,47 +416,47 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThreeGridFieldKeepsNearBlockTemperaturesAndBothDistantGrids operation.</summary>
+
         public void ThreeGridFieldKeepsNearBlockTemperaturesAndBothDistantGrids()
         {
             int[] budgets = ThermalVisionFleetBudget.Allocate(new[] {400.0, 1.0, 1.0}, 1400);
-/// <summary>ThermalVisionRegionPartition operation.</summary>
+
             var field = new ThermalVisionRegionPartition(1536);
-/// <summary>List operation.</summary>
+
             var checks = new List<Region>();
             for (int grid = 0; grid < 3; grid++)
             {
-/// <summary>List operation.</summary>
+
                 var input = new List<Region>();
                 for (int x = 0; x < 10; x++) for (int y = 0; y < 10; y++) for (int z = 0; z < 10; z++)
                 {
-/// <summary>Vector3D operation.</summary>
+
                     Vector3D lo = new Vector3D(x*2.5, y*2.5, z*2.5);
                     input.Add(new Region(lo, lo+new Vector3D(2.5), 300+x*30));
                 }
                 var cells = input;
                 if (grid > 0)
                 {
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
                     var scan = new ThermalVisionRegionScan(2.5, budgets[grid]/2, 1, 5120);
                     scan.Start(new List<IEnumerable<Region>> {input});
                     while (scan.Running) scan.Advance(128);
                     Assert.Null(scan.Failure);
-/// <summary>List operation.</summary>
+
                     cells = new List<Region>();
                     for (int i = 0; i < scan.Count; i++) cells.Add(scan[i]);
                     Assert.True(cells.Count > 1);
                 }
                 foreach (var cell in cells)
                 {
-/// <summary>Region operation.</summary>
+
                     var shifted = new Region(cell.Min+new Vector3D(grid*100,0,0), cell.Max+new Vector3D(grid*100,0,0), cell.Kelvin);
                     Assert.True(field.TryAdd(shifted)); checks.Add(shifted);
                 }
             }
             ThermalVisionRegionOrder order;
             Assert.True(ThermalVisionRegionOrder.TryBuild(field, 1536, out order));
-/// <summary>List operation.</summary>
+
             var output = new List<Region>();
             order.WriteNearToFar(new Vector3D(-20), output);
             foreach (var cell in checks)
@@ -468,10 +468,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ExactBlockOrderingPreservesTemperaturesAndRejectsPartialCapacity operation.</summary>
+
         public void ExactBlockOrderingPreservesTemperaturesAndRejectsPartialCapacity()
         {
-/// <summary>List operation.</summary>
+
             var blocks = new List<Region>();
             for (int x = 0; x < 40; x++)
                 blocks.Add(new Region(new Vector3D(x * 2, 0, 0), new Vector3D(x * 2 + 2, 3, 1), 300 + x * 7));
@@ -479,7 +479,7 @@ namespace Thermodynamics.Tests
             Assert.False(ThermalVisionRegionOrder.TryBuild(blocks, 10, out order));
             Assert.Null(order);
             Assert.True(ThermalVisionRegionOrder.TryBuild(blocks, 1536, out order));
-/// <summary>List operation.</summary>
+
             var output = new List<Region>();
             order.WriteNearToFar(new Vector3D(-10, 4, 9), output);
             foreach (var block in blocks)
@@ -492,15 +492,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SurfaceAnchoredDetailReachesShipOutsideCameraFineBox operation.</summary>
+
         public void SurfaceAnchoredDetailReachesShipOutsideCameraFineBox()
         {
             var eye = Vector3D.Zero;
-/// <summary>Region operation.</summary>
+
             var input = new[] { new Region(new Vector3D(30, 1, 1), new Vector3D(31, 2, 2), 300),
-/// <summary>Region operation.</summary>
+
                 new Region(new Vector3D(35, 1, 1), new Vector3D(36, 2, 2), 700) };
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
             var coarse = new ThermalVisionRegionScan(80, 384, 1);
             coarse.Start(new List<IEnumerable<Region>> { input });
             while (coarse.Running) coarse.Advance(128);
@@ -512,7 +512,7 @@ namespace Thermodynamics.Tests
                 Assert.True(lod.TryBuild(coarse, 1536, out order));
                 Assert.True(lod.Bands[2].Applied);
                 Assert.True(lod.Bands[2].Scan.Count > 0);
-/// <summary>List operation.</summary>
+
                 var regions = new List<Region>();
                 order.WriteNearToFar(eye, regions);
                 foreach (var sample in input)
@@ -530,7 +530,7 @@ namespace Thermodynamics.Tests
         [InlineData(120, 10)]
         [InlineData(240, 20)]
         [InlineData(1000, 40)]
-/// <summary>SurfaceDetailScalesWithApproach operation.</summary>
+
         public void SurfaceDetailScalesWithApproach(double distance, double expectedCell)
         {
             using (var lod = new ThermalVisionRegionLod(Vector3D.Zero, new Vector3D(distance, 0, 0)))
@@ -538,16 +538,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DistanceLodRefinesHotAndColdNeighboursOnApproach operation.</summary>
+
         public void DistanceLodRefinesHotAndColdNeighboursOnApproach()
         {
-/// <summary>Region operation.</summary>
+
             var input = new[] { new Region(new Vector3D(1), new Vector3D(2), 300),
-/// <summary>Region operation.</summary>
+
                 new Region(new Vector3D(6, 1, 1), new Vector3D(7, 2, 2), 700) };
             foreach (double distance in new[] { 100.0, 30.0, 3.0 })
             {
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
                 var coarse = new ThermalVisionRegionScan(80, 384, 1);
                 coarse.Start(new List<IEnumerable<Region>> { input });
                 while (coarse.Running) coarse.Advance(128);
@@ -557,7 +557,7 @@ namespace Thermodynamics.Tests
                     while (lod.Running) lod.Advance(128);
                     ThermalVisionRegionOrder order;
                     Assert.True(lod.TryBuild(coarse, 1536, out order));
-/// <summary>List operation.</summary>
+
                     var output = new List<Region>();
                     order.WriteNearToFar(new Vector3D(distance, 0, 0), output);
                     foreach (var target in new[] { new Vector3D(1.5), new Vector3D(6.5, 1.5, 1.5) })
@@ -572,12 +572,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DenseDistanceLodCoarsensWithinEachBudgetAndPreservesCoverage operation.</summary>
+
         public void DenseDistanceLodCoarsensWithinEachBudgetAndPreservesCoverage()
         {
-/// <summary>Region operation.</summary>
+
             var input = new Region(new Vector3D(-500), new Vector3D(500), 420);
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
             var coarse = new ThermalVisionRegionScan(40, 384, 1, 5120);
             coarse.Start(new List<IEnumerable<Region>> { new[] { input } });
             while (coarse.Running) coarse.Advance(4096);
@@ -589,12 +589,12 @@ namespace Thermodynamics.Tests
                 Assert.True(lod.TryBuild(coarse, 1536, out order));
                 Assert.True(lod.Bands[2].Applied);
                 Assert.InRange(order.LeafCount, 1, 1536);
-/// <summary>List operation.</summary>
+
                 var output = new List<Region>();
                 order.WriteNearToFar(new Vector3D(-1), output);
                 for (int z = -450; z < 500; z += 37)
                 {
-/// <summary>Vector3D operation.</summary>
+
                     var point = new Vector3D(z + .123, z / 2.0 + .321, -1.234);
                     var owners = output.FindAll(r => Contains(r, point));
                     Assert.Single(owners);
@@ -604,19 +604,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FineFocusReplacesCoarseHeatIncludingCooledTargets operation.</summary>
+
         public void FineFocusReplacesCoarseHeatIncludingCooledTargets()
         {
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
             var coarse = new ThermalVisionRegionScan(40, 8, 1);
             coarse.Start(new List<IEnumerable<Region>> { new[] { new Region(Vector3D.Zero, new Vector3D(40), 700) } });
             while (coarse.Running) coarse.Advance(128);
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
             var fine = new ThermalVisionRegionScan(2.5, 512, 1);
             fine.Start(new List<IEnumerable<Region>> { new[] {
-/// <summary>Region operation.</summary>
+
                 new Region(new Vector3D(10), new Vector3D(12.5), 300),
-/// <summary>Region operation.</summary>
+
                 new Region(new Vector3D(15), new Vector3D(17.5), 600) } });
             while (fine.Running) fine.Advance(128);
             ThermalVisionRegionPartition focused;
@@ -635,14 +635,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FocusCapacityFailureDoesNotPublishPartialFieldOrAlterSources operation.</summary>
+
         public void FocusCapacityFailureDoesNotPublishPartialFieldOrAlterSources()
         {
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
             var coarse = new ThermalVisionRegionScan(40, 8, 1);
             coarse.Start(new List<IEnumerable<Region>> { new[] { new Region(new Vector3D(-40), Vector3D.Zero, 700) } });
             while (coarse.Running) coarse.Advance(128);
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
             var fine = new ThermalVisionRegionScan(2.5, 512, 1);
             fine.Start(new List<IEnumerable<Region>> { new[] { new Region(new Vector3D(-20), new Vector3D(-17.5), 300) } });
             while (fine.Running) fine.Advance(128);
@@ -656,22 +656,22 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DenseFocusFitsBesideCoarseContextWithoutLosingEitherField operation.</summary>
+
         public void DenseFocusFitsBesideCoarseContextWithoutLosingEitherField()
         {
-/// <summary>List operation.</summary>
+
             var background = new List<Region>();
             for (int z = 0; z < 8; z++) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++)
             {
-/// <summary>Vector3D operation.</summary>
+
                 Vector3D lo = new Vector3D(x * 40, y * 40, z * 40);
                 background.Add(new Region(lo, lo + new Vector3D(40), 700));
             }
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
             var coarse = new ThermalVisionRegionScan(40, 896, 1);
             coarse.Start(new List<IEnumerable<Region>> { background });
             while (coarse.Running) coarse.Advance(4096);
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
             var fine = new ThermalVisionRegionScan(2.5, 512, 1);
             fine.Start(new List<IEnumerable<Region>> { new[] { new Region(new Vector3D(110), new Vector3D(130), 300) } });
             while (fine.Running) fine.Advance(4096);
@@ -682,21 +682,21 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CompletedScanConnectsToSpatialOrderingWithinNativeBillboardCeiling operation.</summary>
+
         public void CompletedScanConnectsToSpatialOrderingWithinNativeBillboardCeiling()
         {
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
             var scan = new ThermalVisionRegionScan(5, ThermalVisionScenePolicy.RegionCellLimit, 2);
             Assert.True(scan.Start(new List<IEnumerable<Region>> { new[] {
-/// <summary>Region operation.</summary>
+
                 new Region(new Vector3D(-1), new Vector3D(1), 600),
-/// <summary>Region operation.</summary>
+
                 new Region(new Vector3D(10), new Vector3D(11), 300) } }));
             while (scan.Running) scan.Advance(32);
             ThermalVisionRegionOrder order;
             Assert.True(ThermalVisionRegionOrder.TryBuild(scan, ThermalVisionScenePolicy.RegionCellLimit, out order));
             Assert.Equal(scan.Count, order.LeafCount);
-/// <summary>List operation.</summary>
+
             var ordered = new List<Region>();
             order.WriteNearToFar(new Vector3D(-20), ordered);
             Assert.Equal(9, ordered.Count);
@@ -704,14 +704,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AlignedSceneDoesNotMultiplyRegionCountDuringOrdering operation.</summary>
+
         public void AlignedSceneDoesNotMultiplyRegionCountDuringOrdering()
         {
-/// <summary>ThermalVisionRegionPartition operation.</summary>
+
             var field = new ThermalVisionRegionPartition(512);
             for (int z = 0; z < 8; z++) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++)
             {
-/// <summary>Vector3D operation.</summary>
+
                 var lo = new Vector3D(x * 3, y * 3, z * 3);
                 Assert.True(field.TryAdd(new Region(lo, lo + new Vector3D(2), 300 + x * 20)));
             }
@@ -722,19 +722,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SpatialTraversalAgreesWithIndependentRayIntervalsAndFieldSamples operation.</summary>
+
         public void SpatialTraversalAgreesWithIndependentRayIntervalsAndFieldSamples()
         {
-/// <summary>ThermalVisionRegionPartition operation.</summary>
+
             var field = new ThermalVisionRegionPartition(256);
             Assert.True(field.TryAdd(new Region(new Vector3D(-4, -3, -2), new Vector3D(4, 3, 2), 300)));
             Assert.True(field.TryAdd(new Region(new Vector3D(-3, -1, -4), new Vector3D(1, 4, 4), 600)));
             Assert.True(field.TryAdd(new Region(new Vector3D(0, -4, -3), new Vector3D(3, 2, 3), 450)));
             ThermalVisionRegionOrder order;
             Assert.True(ThermalVisionRegionOrder.TryBuild(field, 4096, out order));
-/// <summary>List operation.</summary>
+
             var sorted = new List<Region>();
-/// <summary>Random operation.</summary>
+
             var random = new Random(81243);
             foreach (Vector3D eye in new[] { new Vector3D(-8, 2, 3), Vector3D.Zero, new Vector3D(8, -4, -6) })
             {
@@ -743,7 +743,7 @@ namespace Thermodynamics.Tests
                 Assert.InRange(order.NodeCount, 1, order.LeafCount * 2 - 1);
                 for (int ray = 0; ray < 400; ray++)
                 {
-/// <summary>Vector3D operation.</summary>
+
                     var direction = new Vector3D(random.NextDouble() * 2 - 1, random.NextDouble() * 2 - 1, random.NextDouble() * 2 - 1);
                     double previousExit = 0;
                     foreach (Region region in sorted)
@@ -769,10 +769,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FailedPreparationReturnsNoPartialTreeAndEmptyFieldIsValid operation.</summary>
+
         public void FailedPreparationReturnsNoPartialTreeAndEmptyFieldIsValid()
         {
-/// <summary>ThermalVisionRegionPartition operation.</summary>
+
             var field = new ThermalVisionRegionPartition(8);
             Assert.True(field.TryAdd(new Region(new Vector3D(-2), new Vector3D(-1), 300)));
             Assert.True(field.TryAdd(new Region(new Vector3D(1), new Vector3D(2), 400)));
@@ -785,20 +785,20 @@ namespace Thermodynamics.Tests
             Assert.Empty(result);
         }
 
-/// <summary>Contains operation.</summary>
+
         private static bool Contains(Region r, Vector3D p)
         { return p.X >= r.Min.X && p.X < r.Max.X && p.Y >= r.Min.Y && p.Y < r.Max.Y && p.Z >= r.Min.Z && p.Z < r.Max.Z; }
-/// <summary>Axis operation.</summary>
+
         private static double Axis(Vector3D v, int axis) { return axis == 0 ? v.X : axis == 1 ? v.Y : v.Z; }
-/// <summary>Intersect operation.</summary>
+
         private static bool Intersect(Region region, Vector3D eye, Vector3D ray, out double enter, out double exit)
         {
             enter = 0; exit = double.PositiveInfinity;
             for (int axis = 0; axis < 3; axis++)
             {
-/// <summary>Axis operation.</summary>
+
                 double d = Axis(ray, axis), origin = Axis(eye, axis);
-/// <summary>Axis operation.</summary>
+
                 double lo = Axis(region.Min, axis), hi = Axis(region.Max, axis);
                 if (Math.Abs(d) < 1e-12) { if (origin < lo || origin >= hi) return false; continue; }
                 double a = (lo - origin) / d, b = (hi - origin) / d;

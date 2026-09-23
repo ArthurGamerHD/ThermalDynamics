@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>CellSizeTests operation.</summary>
+
         public CellSizeTests(ITestOutputHelper output)
         {
             this.output = output;
@@ -20,17 +20,17 @@ namespace Thermodynamics.Tests
 
         private const int RoutedFaces = 3;
 
-/// <summary>Coefficient operation.</summary>
+
         private static float Coefficient()
         {
             return LoopThermalProperties.Default().HeatTransferCoefficient;
         }
 
-/// <summary>WithNoAnswer operation.</summary>
+
         private static List<string> WithNoAnswer(IList<CellSizeLab.Pair> pairs, bool large,
             int faces, float coefficient)
         {
-/// <summary>List operation.</summary>
+
             List<string> names = new List<string>();
 
             for (int i = 0; i < pairs.Count; i++)
@@ -50,7 +50,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheGameShipsEnoughPairedBlocksToMeasure operation.</summary>
+
         public void TheGameShipsEnoughPairedBlocksToMeasure()
         {
             List<CellSizeLab.Pair> pairs = CellSizeLab.Pairs();
@@ -80,7 +80,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFourTermsDoNotScaleTogether operation.</summary>
+
         public void TheFourTermsDoNotScaleTogether()
         {
             List<CellSizeLab.Pair> pairs = CellSizeLab.Pairs();
@@ -113,11 +113,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AtTheFaceCountARoutedRingGivesTheTwoSizesAgree operation.</summary>
+
         public void AtTheFaceCountARoutedRingGivesTheTwoSizesAgree()
         {
             List<CellSizeLab.Pair> pairs = CellSizeLab.Pairs();
-/// <summary>Coefficient operation.</summary>
+
             float h = Coefficient();
 
             output.WriteLine("  faces    small    large");
@@ -128,9 +128,9 @@ namespace Thermodynamics.Tests
                     WithNoAnswer(pairs, true, faces, h).Count);
             }
 
-/// <summary>WithNoAnswer operation.</summary>
+
             List<string> small = WithNoAnswer(pairs, false, RoutedFaces, h);
-/// <summary>WithNoAnswer operation.</summary>
+
             List<string> large = WithNoAnswer(pairs, true, RoutedFaces, h);
 
             output.WriteLine("at {0} faces, small: {1}", RoutedFaces, string.Join(", ", small));
@@ -146,14 +146,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ADialLargeEnoughToCloseItWouldOvershootEveryOtherBlock operation.</summary>
+
         public void ADialLargeEnoughToCloseItWouldOvershootEveryOtherBlock()
         {
             List<CellSizeLab.Pair> pairs = CellSizeLab.Pairs();
-/// <summary>Coefficient operation.</summary>
+
             float h = Coefficient();
 
-/// <summary>WithNoAnswer operation.</summary>
+
             int target = WithNoAnswer(pairs, true, RoutedFaces, h).Count;
 
             float needed = 0f;
@@ -195,23 +195,23 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheBoreDerivedCoefficientIsRealPhysicsAndChangesNothing operation.</summary>
+
         public void TheBoreDerivedCoefficientIsRealPhysicsAndChangesNothing()
         {
             List<CellSizeLab.Pair> pairs = CellSizeLab.Pairs();
-/// <summary>Coefficient operation.</summary>
+
             float h = Coefficient();
 
             double ratio = Catalog.SmallGridSize / (double)Catalog.LargeGridSize;
             float bore = (float)System.Math.Pow(ratio, -0.2);
 
-/// <summary>WithNoAnswer operation.</summary>
+
             int oneFaceShipped = WithNoAnswer(pairs, false, 1, h).Count;
-/// <summary>WithNoAnswer operation.</summary>
+
             int oneFaceBore = WithNoAnswer(pairs, false, 1, h * bore).Count;
-/// <summary>WithNoAnswer operation.</summary>
+
             int routedShipped = WithNoAnswer(pairs, false, RoutedFaces, h).Count;
-/// <summary>WithNoAnswer operation.</summary>
+
             int routedBore = WithNoAnswer(pairs, false, RoutedFaces, h * bore).Count;
 
             output.WriteLine("bore-derived small-grid coefficient x{0:n3}", bore);

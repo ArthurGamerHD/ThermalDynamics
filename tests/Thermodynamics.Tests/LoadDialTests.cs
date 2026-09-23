@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
 {
     public class LoadDialTests
     {
-/// <summary>Applies the .</summary>
+
         private static BlockThermalProperties Apply(PairLab.Cell cell, BlockThermalProperties source)
         {
             Func<string, string, BlockThermalProperties, BlockThermalProperties> material =
@@ -17,7 +17,7 @@ namespace Thermodynamics.Tests
             return material == null ? source : material("TypeId", "Subtype", source);
         }
 
-/// <summary>Sample operation.</summary>
+
         private static BlockThermalProperties Sample()
         {
             BlockThermalProperties properties = BlockThermalProperties.Default();
@@ -31,13 +31,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheLoadDialMovesBothWasteFractionsAndNothingElse operation.</summary>
+
         public void TheLoadDialMovesBothWasteFractionsAndNothingElse()
         {
             PairLab.Cell cell = new PairLab.Cell { Conductivity = 1f, Clock = 100f, Waste = 0.5f };
-/// <summary>Sample operation.</summary>
+
             BlockThermalProperties source = Sample();
-/// <summary>Applies the .</summary>
+
             BlockThermalProperties moved = Apply(cell, source);
 
             Assert.Equal(0.2f, moved.ProducerWasteEnergy, 4);
@@ -52,7 +52,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACellThatMovesNothingInstallsNoOverrideAtAll operation.</summary>
+
         public void ACellThatMovesNothingInstallsNoOverrideAtAll()
         {
             PairLab.Cell control = new PairLab.Cell { Conductivity = 1f, Clock = 225f, Waste = 1f };
@@ -63,7 +63,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryStateThatExistedPutsTheDriveWhereItAlwaysWas operation.</summary>
+
         public void EveryStateThatExistedPutsTheDriveWhereItAlwaysWas()
         {
             Assert.Equal(0f, ShipLoad.State.Idle.Drives, 4);
@@ -81,7 +81,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ADriveIsNotATool operation.</summary>
+
         public void ADriveIsNotATool()
         {
             Assert.True(ShipLoad.IsDrive("JumpDrive"));
@@ -92,7 +92,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ADriveChargesForAsLongAsItsOwnDefinitionSays operation.</summary>
+
         public void ADriveChargesForAsLongAsItsOwnDefinitionSays()
         {
             Dictionary<string, GameBlocks.Definition> byType = GameBlocks.BySubtype();
@@ -113,7 +113,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockThatDoesNotChargeCarriesNoChargeAtAll operation.</summary>
+
         public void ABlockThatDoesNotChargeCarriesNoChargeAtAll()
         {
             Dictionary<string, GameBlocks.Definition> byType = GameBlocks.BySubtype();
@@ -132,7 +132,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheLoadGridHasExactlyOneControlAndItRunsFirst operation.</summary>
+
         public void TheLoadGridHasExactlyOneControlAndItRunsFirst()
         {
             List<PairLab.Cell> cells = PairLab.Load();
@@ -147,7 +147,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShippedPairIsNotAWasteMultiplierAwayFromItself operation.</summary>
+
         public void TheShippedPairIsNotAWasteMultiplierAwayFromItself()
         {
             PairLab.Cell halved = new PairLab.Cell

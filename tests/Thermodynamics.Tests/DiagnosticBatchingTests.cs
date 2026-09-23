@@ -6,7 +6,7 @@ namespace Thermodynamics.Tests
 {
     public class DiagnosticBatchingTests
     {
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation Build(bool everySubstep, int maxSubsteps)
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(maxSubsteps));
@@ -15,7 +15,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>AssertIdentical operation.</summary>
+
         private static void AssertIdentical(ThermalSimulation every, ThermalSimulation last, string what)
         {
             SolverAb.AssertIdentical(
@@ -29,12 +29,12 @@ namespace Thermodynamics.Tests
         [InlineData(2)]
         [InlineData(4)]
         [InlineData(4096)]
-/// <summary>OnlyTheLastSubstepIsPublishedAndItIsTheSameOne operation.</summary>
+
         public void OnlyTheLastSubstepIsPublishedAndItIsTheSameOne(int maxSubsteps)
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation every = Build(everySubstep: true, maxSubsteps: maxSubsteps);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation last = Build(everySubstep: false, maxSubsteps: maxSubsteps);
 
             EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
@@ -46,12 +46,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSameHoldsInVacuum operation.</summary>
+
         public void TheSameHoldsInVacuum()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation every = Build(everySubstep: true, maxSubsteps: 4096);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation last = Build(everySubstep: false, maxSubsteps: 4096);
 
             EnvironmentSample sample = Worlds.Ab.SunlitVacuum();
@@ -66,12 +66,12 @@ namespace Thermodynamics.Tests
         [InlineData(1)]
         [InlineData(97)]
         [InlineData(5000)]
-/// <summary>BatchingSurvivesTheStepBeingSpread operation.</summary>
+
         public void BatchingSurvivesTheStepBeingSpread(int budget)
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation whole = Build(everySubstep: true, maxSubsteps: 4096);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation spread = Build(everySubstep: false, maxSubsteps: 4096);
 
             EnvironmentState state = EnvironmentSolver.Solve(
@@ -90,10 +90,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NothingIsPublishedWhenDiagnosticsAreOff operation.</summary>
+
         public void NothingIsPublishedWhenDiagnosticsAreOff()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(everySubstep: false, maxSubsteps: 4096);
             simulation.Solver.CollectDiagnostics = false;
 

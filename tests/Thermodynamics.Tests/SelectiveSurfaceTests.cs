@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>SelectiveSurfaceTests operation.</summary>
+
         public SelectiveSurfaceTests(ITestOutputHelper output)
         {
             this.output = output;
@@ -18,7 +18,7 @@ namespace Thermodynamics.Tests
 
         private const int Radiators = 4;
 
-/// <summary>Find operation.</summary>
+
         private static SelectiveSurfaceLab.Row Find(IList<SelectiveSurfaceLab.Row> rows, string surface)
         {
             for (int i = 0; i < rows.Count; i++)
@@ -31,7 +31,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShippedRadiatorDeclaresASelectiveSurface operation.</summary>
+
         public void TheShippedRadiatorDeclaresASelectiveSurface()
         {
             foreach (string subtype in new[] { "Gauge_LG_Radiator", "Gauge_SG_Radiator" })
@@ -46,14 +46,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASelectiveFinishHelpsInSunlightAndNowhereElse operation.</summary>
+
         public void ASelectiveFinishHelpsInSunlightAndNowhereElse()
         {
             List<SelectiveSurfaceLab.Row> rows = SelectiveSurfaceLab.Run(Radiators);
 
-/// <summary>Find operation.</summary>
+
             SelectiveSurfaceLab.Row shipped = Find(rows, "shipped");
-/// <summary>Find operation.</summary>
+
             SelectiveSurfaceLab.Row selective = Find(rows, "selective");
 
             output.WriteLine("sunlit {0:n1} K -> {1:n1} K, shadow {2:n1} K -> {3:n1} K",
@@ -69,16 +69,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RaisingEmissivityAloneGivesBackMostOfWhatItGainsInSunlight operation.</summary>
+
         public void RaisingEmissivityAloneGivesBackMostOfWhatItGainsInSunlight()
         {
             List<SelectiveSurfaceLab.Row> rows = SelectiveSurfaceLab.Run(Radiators);
 
-/// <summary>Find operation.</summary>
+
             SelectiveSurfaceLab.Row shipped = Find(rows, "shipped");
-/// <summary>Find operation.</summary>
+
             SelectiveSurfaceLab.Row emissive = Find(rows, "emissive only");
-/// <summary>Find operation.</summary>
+
             SelectiveSurfaceLab.Row both = Find(rows, "second-surface mirror");
 
             float inShadow = shipped.ShadowKelvin - emissive.ShadowKelvin;

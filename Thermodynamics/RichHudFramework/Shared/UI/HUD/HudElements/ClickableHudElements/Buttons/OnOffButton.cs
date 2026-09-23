@@ -65,73 +65,73 @@ namespace RichHudFramework.UI
 
 		protected bool lastValue;
 
-/// <summary>OnOffButton operation.</summary>
+
 		public OnOffButton(HudParentBase parent) : base(parent)
 		{
-/// <summary>InputFocusHandler operation.</summary>
+
 			FocusHandler = new InputFocusHandler(this);
-/// <summary>MouseInputElement operation.</summary>
+
 			_mouseInput = new MouseInputElement(this);
 			MouseInput = _mouseInput;
 
-/// <summary>TexturedBox operation.</summary>
+
 			background = new TexturedBox(this)
 			{
 				DimAlignment = DimAlignments.UnpaddedSize,
 			};
 
-/// <summary>BorderBox operation.</summary>
+
 			bgBorder = new BorderBox(background)
 			{
 				DimAlignment = DimAlignments.UnpaddedSize,
 			};
 
-/// <summary>LabelBox operation.</summary>
+
 			on = new LabelBox()
 			{
 				AutoResize = false,
-/// <summary>Vector2 operation.</summary>
+
 				Size = new Vector2(71f, 49f),
 				Format = TerminalFormatting.ControlFormat.WithAlignment(TextAlignment.Center),
 				Text = "On"
 			};
 
-/// <summary>BorderBox operation.</summary>
+
 			onBorder = new BorderBox(on)
 			{
 				Thickness = 2f,
 				DimAlignment = DimAlignments.UnpaddedSize,
 			};
 
-/// <summary>LabelBox operation.</summary>
+
 			off = new LabelBox()
 			{
 				AutoResize = false,
-/// <summary>Vector2 operation.</summary>
+
 				Size = new Vector2(71f, 49f),
 				Format = TerminalFormatting.ControlFormat.WithAlignment(TextAlignment.Center),
 				Text = "Off"
 			};
 
-/// <summary>BorderBox operation.</summary>
+
 			offBorder = new BorderBox(off)
 			{
 				Thickness = 2f,
 				DimAlignment = DimAlignments.UnpaddedSize,
 			};
 
-/// <summary>HudChain operation.</summary>
+
 			buttonChain = new HudChain(false, bgBorder)
 			{
 				DimAlignment = DimAlignments.Size,
 				SizingMode = HudChainSizingModes.FitMembersOffAxis,
-/// <summary>Vector2 operation.</summary>
+
 				Padding = new Vector2(20f, 10f),
 				Spacing = 9f,
 				CollectionContainer = { { on, 1f }, { off, 1f } }
 			};
 
-/// <summary>Vector2 operation.</summary>
+
 			Size = new Vector2(166f, 59f);
 
 			BackgroundColor = TerminalFormatting.Cinder.SetAlphaPct(0.8f);
@@ -149,14 +149,14 @@ namespace RichHudFramework.UI
 			lastValue = Value;
 		}
 
-/// <summary>OnOffButton operation.</summary>
+
 		public OnOffButton() : this(null)
 		{ }
 
-/// <summary>LeftClick operation.</summary>
+
 		protected virtual void LeftClick(object sender, EventArgs args) => Value = !Value;
 
-/// <summary>Layout operation.</summary>
+
 		protected override void Layout()
 		{
 			if (Value)
@@ -172,14 +172,14 @@ namespace RichHudFramework.UI
 
 			if (HighlightEnabled && _mouseInput.IsMousedOver)
 				background.Color = HighlightColor;
-/// <summary>if operation.</summary>
+
 			else if (UseFocusFormatting && FocusHandler.HasFocus)
 				background.Color = FocusColor;
 			else
 				background.Color = BackgroundColor;
 		}
 
-/// <summary>HandleInput operation.</summary>
+
 		protected override void HandleInput(Vector2 cursorPos)
 		{
 			if (lastValue != Value)

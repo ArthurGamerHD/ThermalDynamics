@@ -5,7 +5,7 @@ namespace RichHudFramework
 {
 	public static class MathUtils
     {
-/// <summary>FloatToInt32Bits operation.</summary>
+
         public static uint FloatToInt32Bits(float value, bool invertSignBit = false)
         {
             ulong bits = (ulong)BitConverter.DoubleToInt64Bits(value);
@@ -27,7 +27,7 @@ namespace RichHudFramework
             return singleBits;
         }
 
-/// <summary>Int32ToFloat operation.</summary>
+
         public static float Int32ToFloat(uint bits, bool isSignInverted = false)
         {
             ulong sign = (ulong)(bits >> 31);

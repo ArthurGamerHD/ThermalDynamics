@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class StepFixedCostTests
     {
-/// <summary>Ship operation.</summary>
+
         private static ThermalSimulation Ship(int blocks, int budgetVisits)
         {
             ThermalSettings settings = new ThermalSettings
@@ -24,7 +24,7 @@ namespace Thermodynamics.Tests
             return builder.BuildSimulation(settings);
         }
 
-/// <summary>RunOneStep operation.</summary>
+
         private static void RunOneStep(ThermalSimulation simulation)
         {
             while (simulation.HasPendingWork) simulation.Update(1f / 60f, Worlds.Shadow());
@@ -41,10 +41,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStepEstimatesItsStiffnessOnce operation.</summary>
+
         public void AStepEstimatesItsStiffnessOnce()
         {
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation simulation = Ship(16, 1000000);
 
             RunOneStep(simulation);
@@ -53,10 +53,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStepMirrorsTheNodeObjectsOnce operation.</summary>
+
         public void AStepMirrorsTheNodeObjectsOnce()
         {
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation simulation = Ship(16, 1000000);
 
             RunOneStep(simulation);
@@ -65,10 +65,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCountDoesNotDependOnTheVisitBudget operation.</summary>
+
         public void TheCountDoesNotDependOnTheVisitBudget()
         {
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation unbounded = Ship(16, 0);
 
             RunOneStep(unbounded);
@@ -78,12 +78,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStepHandedItsEstimateIntegratesTheSameFloats operation.</summary>
+
         public void AStepHandedItsEstimateIntegratesTheSameFloats()
         {
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation given = Ship(12, 1000000);
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation taken = Ship(12, 1000000);
 
             while (given.HasPendingWork) given.Update(1f / 60f, Worlds.Shadow());
@@ -111,7 +111,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheMassFloorSeesTheEnvironmentTheStepWillRunIn operation.</summary>
+
         public void TheMassFloorSeesTheEnvironmentTheStepWillRunIn()
         {
             ThermalSettings settings = new ThermalSettings
@@ -145,10 +145,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStepSpreadOverManyFramesStillEstimatesOnce operation.</summary>
+
         public void AStepSpreadOverManyFramesStillEstimatesOnce()
         {
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation simulation = Ship(64, 4000);
 
             RunOneStep(simulation);

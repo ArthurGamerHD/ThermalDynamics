@@ -76,22 +76,22 @@ namespace RichHudFramework.UI
         
         protected Color lastTextColor;
 
-/// <summary>TextField operation.</summary>
+
         public TextField(HudParentBase parent) : base(parent)
         {
-/// <summary>BorderBox operation.</summary>
+
             border = new BorderBox(Background)
             {
                 Thickness = 1f,
                 DimAlignment = DimAlignments.Size,
             };
 
-/// <summary>TextBox operation.</summary>
+
             textBox = new TextBox(Background)
             {
                 AutoResize = false,
                 DimAlignment = DimAlignments.UnpaddedSize,
-/// <summary>Vector2 operation.</summary>
+
                 Padding = new Vector2(24f, 0f),
                 MoveToEndOnGainFocus = true,
                 ClearSelectionOnLoseFocus = true,
@@ -120,23 +120,23 @@ namespace RichHudFramework.UI
             UseFocusFormatting = true;
             HighlightEnabled = true;
 
-/// <summary>Vector2 operation.</summary>
+
             Size = new Vector2(250f, 40);
         }
 
-/// <summary>TextField operation.</summary>
+
         public TextField() : this(null)
         { }
 
-/// <summary>OpenInput operation.</summary>
+
 		public void OpenInput() =>
             textBox.OpenInput();
 
-/// <summary>CloseInput operation.</summary>
+
 		public void CloseInput() =>
             textBox.CloseInput();
 
-/// <summary>CursorEnter operation.</summary>
+
         protected virtual void CursorEnter(object sender, EventArgs args)
         {
             if (HighlightEnabled)
@@ -158,7 +158,7 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>CursorExit operation.</summary>
+
         protected virtual void CursorExit(object sender, EventArgs args)
         {
             if (HighlightEnabled)
@@ -178,7 +178,7 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>GainFocus operation.</summary>
+
         protected virtual void GainFocus(object sender, EventArgs args)
         {
             if (UseFocusFormatting)
@@ -194,7 +194,7 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>LoseFocus operation.</summary>
+
         protected virtual void LoseFocus(object sender, EventArgs args)
         {
             if (UseFocusFormatting)

@@ -11,7 +11,7 @@ namespace Thermodynamics.Presentation
         private double minPlane;
         private bool unsafeBound;
 
-/// <summary>Adds a .</summary>
+
         public void Add(int index, ThermalVisionTriangle triangle)
         {
             Vector3 normal = triangle.LocalNormal;
@@ -30,7 +30,7 @@ namespace Thermodynamics.Presentation
             Count++;
         }
 
-/// <summary>IsEntirelyBackFacing operation.</summary>
+
         public bool IsEntirelyBackFacing(Vector3D eye)
         {
             if (Count == 0 || unsafeBound) return false;
@@ -47,7 +47,7 @@ namespace Thermodynamics.Presentation
     {
         public readonly ThermalVisionTriangle[] Triangles;
         public readonly ThermalVisionMeshBatch[] Batches;
-/// <summary>ThermalVisionMesh operation.</summary>
+
         public ThermalVisionMesh(ThermalVisionTriangle[] triangles, ThermalVisionMeshBatch[] batches)
         { Triangles = triangles; Batches = batches; }
     }

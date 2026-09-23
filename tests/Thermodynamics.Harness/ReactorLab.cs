@@ -37,39 +37,39 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Sweep operation.</summary>
+
         public static List<Row> Sweep()
         {
-/// <summary>SweepAt operation.</summary>
+
             return SweepAt(Fractions);
         }
 
-/// <summary>Shipped operation.</summary>
+
         public static List<Row> Shipped()
         {
             return SweepAt(new float[] { ShippedBlocks.FunctionOf("Reactor").ProducerWasteEnergy });
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(float fraction)
         {
-/// <summary>SweepAt operation.</summary>
+
             return SweepAt(new float[] { fraction });
         }
 
-/// <summary>FractionCache operation.</summary>
+
         private static readonly FractionCache<Row> Cache = new FractionCache<Row>(At);
 
-/// <summary>SweepAt operation.</summary>
+
         private static List<Row> SweepAt(float[] fractions)
         {
             return Cache.SweepAt(fractions);
         }
 
-/// <summary>At operation.</summary>
+
         private static List<Row> At(float fraction)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             foreach (Vanilla.Block reactor in Vanilla.Reference)
@@ -89,9 +89,9 @@ namespace Thermodynamics.Harness
                         WasteFraction = fraction,
                         LoadFraction = load,
                         WasteWatts = watts * fraction,
-/// <summary>Sets the tled.</summary>
+
                         BareKelvin = Settled(reactor, shipped, fraction, watts, false),
-/// <summary>Sets the tled.</summary>
+
                         SkinnedKelvin = Settled(reactor, shipped, fraction, watts, true),
                         CriticalKelvin = shipped.CriticalTemperature,
                     });
@@ -101,7 +101,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Sets the tled.</summary>
+
         private static float Settled(Vanilla.Block reactor, BlockThermalProperties shipped,
             float fraction, float producedWatts, bool skinned)
         {
@@ -112,10 +112,10 @@ namespace Thermodynamics.Harness
                 SoloBlockRig.Power.Produced, skinned);
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("REACTOR WASTE HEAT  (one reactor, shadow, 4 h to steady state)");
             sb.AppendLine("  bare     alone on the grid, every face radiating: the best case there is");

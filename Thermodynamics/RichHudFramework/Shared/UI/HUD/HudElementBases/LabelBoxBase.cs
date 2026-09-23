@@ -18,10 +18,10 @@ namespace RichHudFramework
 
 			public readonly TexturedBox Background;
 
-/// <summary>LabelBoxBase operation.</summary>
+
 			public LabelBoxBase(HudParentBase parent) : base(parent)
 			{
-/// <summary>TexturedBox operation.</summary>
+
 				Background = new TexturedBox(this)
 				{
 					DimAlignment = DimAlignments.UnpaddedSize,
@@ -29,11 +29,11 @@ namespace RichHudFramework
 
 				FitToTextElement = true;
 				Color = Color.Gray;
-/// <summary>Vector2 operation.</summary>
+
 				UnpaddedSize = new Vector2(50f);
 			}
 
-/// <summary>Measure operation.</summary>
+
 			protected override void Measure()
 			{
 				if (AutoResize)
@@ -45,7 +45,7 @@ namespace RichHudFramework
 				}
 			}
 
-/// <summary>Layout operation.</summary>
+
 			protected override void Layout()
 			{
 				if (!AutoResize)

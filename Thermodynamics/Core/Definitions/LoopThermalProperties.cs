@@ -8,7 +8,7 @@ namespace Thermodynamics.Core
 
         public float CoolantMassPerPipe = 0f;
 
-/// <summary>MassPerPipe operation.</summary>
+
         public float MassPerPipe(float cellSizeMetres)
         {
             if (CoolantMassPerPipe > 0f) return CoolantMassPerPipe;
@@ -27,7 +27,7 @@ namespace Thermodynamics.Core
 
         public float RefillEquivalentKelvin = 100f;
 
-/// <summary>RefillWattsAt operation.</summary>
+
         public float RefillWattsAt(float heatTimeScale)
         {
             if (heatTimeScale <= 0f) heatTimeScale = 1f;
@@ -42,7 +42,7 @@ namespace Thermodynamics.Core
 
         public float SmallGridFlowRate = 10f;
 
-/// <summary>FlowRateFor operation.</summary>
+
         public float FlowRateFor(float cellSizeMetres)
         {
             return cellSizeMetres < LargeGridCellThresholdMetres ? SmallGridFlowRate : LargeGridFlowRate;
@@ -56,13 +56,13 @@ namespace Thermodynamics.Core
 
         public float StagnantTransferFraction = 0.16f;
 
-/// <summary>Default operation.</summary>
+
         public static LoopThermalProperties Default()
         {
             return new LoopThermalProperties();
         }
 
-/// <summary>Clamp operation.</summary>
+
         public LoopThermalProperties Clamp()
         {
             CoolantMassPerPipe = Math.Max(0f, CoolantMassPerPipe);
@@ -79,7 +79,7 @@ namespace Thermodynamics.Core
             return this;
         }
 
-/// <summary>Clone operation.</summary>
+
         public LoopThermalProperties Clone()
         {
             return (LoopThermalProperties)MemberwiseClone();

@@ -2,13 +2,13 @@ namespace Thermodynamics.Presentation
 {
     public static class ThermalVisionPreparationBudget
     {
-/// <summary>PreferBackground operation.</summary>
+
         public static bool PreferBackground(double priorityMilliseconds,double backgroundMilliseconds)
         {
             return priorityMilliseconds>4*backgroundMilliseconds;
         }
 
-/// <summary>CanAdvance operation.</summary>
+
         public static bool CanAdvance(double elapsedMilliseconds, double preparationStart,
             int visited, int visibleGrids, int idle)
         {

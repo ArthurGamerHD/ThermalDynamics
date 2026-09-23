@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     public class BlockOrientationTests
     {
         [Fact]
-/// <summary>IdentityLeavesDirectionsAlone operation.</summary>
+
         public void IdentityLeavesDirectionsAlone()
         {
             BlockOrientation identity = BlockOrientation.Identity;
@@ -22,7 +22,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RotateAndUnrotateAreInverses operation.</summary>
+
         public void RotateAndUnrotateAreInverses()
         {
             foreach (BlockOrientation orientation in PipeFitter.AllOrientations())
@@ -36,12 +36,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryOrientationPermutesTheSixFaces operation.</summary>
+
         public void EveryOrientationPermutesTheSixFaces()
         {
             foreach (BlockOrientation orientation in PipeFitter.AllOrientations())
             {
-/// <summary>HashSet operation.</summary>
+
                 HashSet<int> mapped = new HashSet<int>();
                 for (int face = 0; face < Face.Count; face++)
                 {
@@ -53,7 +53,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RotationPreservesOppositePairs operation.</summary>
+
         public void RotationPreservesOppositePairs()
         {
             foreach (BlockOrientation orientation in PipeFitter.AllOrientations())
@@ -68,7 +68,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThereAreExactlyTwentyFourOrientations operation.</summary>
+
         public void ThereAreExactlyTwentyFourOrientations()
         {
             int count = 0;
@@ -80,10 +80,10 @@ namespace Thermodynamics.Tests
     public class BlockInstanceTests
     {
         [Fact]
-/// <summary>SingleCellBlockOccupiesOneCell operation.</summary>
+
         public void SingleCellBlockOccupiesOneCell()
         {
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance block = new BlockInstance(Catalog.LightArmor(), new Vector3I(3, 4, 5), BlockOrientation.Identity);
 
             Assert.Single(block.Cells);
@@ -93,16 +93,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>MultiCellBlockOccupiesEveryCellExactlyOnce operation.</summary>
+
         public void MultiCellBlockOccupiesEveryCellExactlyOnce()
         {
             BlockModel model = BlockModel.Solid("Slab", new Vector3I(1, 5, 2), 900f, Catalog.DefaultThermal());
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance block = new BlockInstance(model, Vector3I.Zero, BlockOrientation.Identity);
 
             Assert.Equal(10, block.CellCount);
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> seen = new HashSet<Vector3I>(Vector3I.Comparer);
             foreach (Vector3I cell in block.Cells)
             {
@@ -112,14 +112,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RotatedBlockStillStartsAtItsMinimumCorner operation.</summary>
+
         public void RotatedBlockStillStartsAtItsMinimumCorner()
         {
             BlockModel model = BlockModel.Solid("Slab", new Vector3I(1, 5, 2), 900f, Catalog.DefaultThermal());
 
             foreach (BlockOrientation orientation in PipeFitter.AllOrientations())
             {
-/// <summary>BlockInstance operation.</summary>
+
                 BlockInstance block = new BlockInstance(model, new Vector3I(10, 20, 30), orientation);
 
                 Assert.Equal(10, block.CellCount);
@@ -135,17 +135,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RotationCarriesSurfaceBitsWithIt operation.</summary>
+
         public void RotationCarriesSurfaceBitsWithIt()
         {
             BlockModel model = BlockModel.Solid("Capped", Vector3I.One, 100f, Catalog.DefaultThermal());
             model.SetLocalSurface(Vector3I.Zero, CellSurface.WithSelfMount(0, Face.Up, true));
 
-/// <summary>BlockOrientation operation.</summary>
+
             BlockOrientation upsideDown = new BlockOrientation(
                 Base6Directions.Direction.Forward, Base6Directions.Direction.Down);
 
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance block = new BlockInstance(model, Vector3I.Zero, upsideDown);
 
             Assert.False(CellSurface.SelfMount(block.SelfSurfaces[0], Face.Up));
@@ -153,10 +153,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OpenModelsSealNothing operation.</summary>
+
         public void OpenModelsSealNothing()
         {
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance grating = new BlockInstance(Catalog.Grating(), Vector3I.Zero, BlockOrientation.Identity);
 
             for (int face = 0; face < Face.Count; face++)
@@ -167,10 +167,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OpeningADoorClearsItsSeal operation.</summary>
+
         public void OpeningADoorClearsItsSeal()
         {
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance door = new BlockInstance(Catalog.AirtightDoor(), Vector3I.Zero, BlockOrientation.Identity);
             Assert.True(CellSurface.SelfAirtight(door.SelfSurfaces[0], Face.Up));
 
@@ -185,10 +185,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>StructuralSurfacesDoNotMoveWhenADoorOpens operation.</summary>
+
         public void StructuralSurfacesDoNotMoveWhenADoorOpens()
         {
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance door = new BlockInstance(Catalog.AirtightDoor(), Vector3I.Zero, BlockOrientation.Identity);
             int shut = door.StructuralSurfaces[0];
 
@@ -203,10 +203,10 @@ namespace Thermodynamics.Tests
     public class GridModelTests
     {
         [Fact]
-/// <summary>BlocksAreFoundByAnyOfTheirCells operation.</summary>
+
         public void BlocksAreFoundByAnyOfTheirCells()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(2.5f);
             BlockModel model = BlockModel.Solid("Slab", new Vector3I(1, 3, 1), 300f, Catalog.DefaultThermal());
             BlockInstance block = grid.Add(model, Vector3I.Zero);
@@ -217,10 +217,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LookupByKeySurvivesARemovalFromTheMiddle operation.</summary>
+
         public void LookupByKeySurvivesARemovalFromTheMiddle()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(2.5f);
 
             BlockInstance[] placed = new BlockInstance[5];
@@ -243,10 +243,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OverlappingPlacementIsRejected operation.</summary>
+
         public void OverlappingPlacementIsRejected()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(2.5f);
             grid.Add(Catalog.LightArmor(), Vector3I.Zero);
 
@@ -254,10 +254,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RemovingFreesEveryCell operation.</summary>
+
         public void RemovingFreesEveryCell()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(2.5f);
             BlockModel model = BlockModel.Solid("Slab", new Vector3I(1, 3, 1), 300f, Catalog.DefaultThermal());
             BlockInstance block = grid.Add(model, Vector3I.Zero);
@@ -270,10 +270,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NeighboursAreDistinctEvenWhenTheyTouchOnManyFaces operation.</summary>
+
         public void NeighboursAreDistinctEvenWhenTheyTouchOnManyFaces()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(2.5f);
             BlockModel wall = BlockModel.Solid("Wall", new Vector3I(1, 3, 1), 300f, Catalog.DefaultThermal());
 
@@ -287,10 +287,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>Retrieves a thermal object; returns null if none.</summary>
+
         public void BoundsCoverEveryOccupiedCell()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(2.5f);
             grid.Add(Catalog.LightArmor(), new Vector3I(-3, 0, 2));
             grid.Add(Catalog.LightArmor(), new Vector3I(5, 4, -1));
@@ -300,10 +300,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockCarriesItsSlotAndTheGridChecksItBeforeBelievingIt operation.</summary>
+
         public void ABlockCarriesItsSlotAndTheGridChecksItBeforeBelievingIt()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(2.5f);
             BlockModel armour = Catalog.LightArmor();
             BlockInstance[] placed = new BlockInstance[5];
@@ -321,7 +321,7 @@ namespace Thermodynamics.Tests
             Assert.Same(last, grid.GetByKey(last.Key));
             Assert.Null(grid.GetByKey(placed[1].Key));
 
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance stranger = new BlockInstance(armour, new Vector3I(99, 0, 0), BlockOrientation.Identity);
             Assert.False(grid.Remove(stranger));
             stranger.GridSlot = 0;

@@ -17,10 +17,10 @@ namespace Thermodynamics.Tests
 
         private const float BaseConductivity = 120f;
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings(float clock, int frequency = 0)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.HeatTimeScale = clock;
             if (frequency > 0) settings.Frequency = frequency;
@@ -30,7 +30,7 @@ namespace Thermodynamics.Tests
             return settings.Derive();
         }
 
-/// <summary>Block operation.</summary>
+
         private static BlockModel Block(float conductivity, float mass, bool radiates = true)
         {
             BlockThermalProperties thermal = Catalog.DefaultThermal();
@@ -41,14 +41,14 @@ namespace Thermodynamics.Tests
             return BlockModel.Solid("rig", Vector3I.One, mass, thermal);
         }
 
-/// <summary>Demand operation.</summary>
+
         private static float Demand(ThermalSimulation simulation, EnvironmentSample world)
         {
             for (int i = 0; i < 40; i++) simulation.StepExact(1, world);
             return simulation.Solver.LastRequiredSubsteps;
         }
 
-/// <summary>Conduction operation.</summary>
+
         private static ThermalSimulation Conduction(float conductivity, float clock)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -60,7 +60,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Convection operation.</summary>
+
         private static ThermalSimulation Convection(float conductivity, float clock, int frequency = 0)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -72,12 +72,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AConductionLimitedBlockCostsConductivityTimesTheClock operation.</summary>
+
         public void AConductionLimitedBlockCostsConductivityTimesTheClock()
         {
-/// <summary>Demand operation.</summary>
+
             float shipped = Demand(Conduction(1f, ShippedClock), Worlds.Shadow());
-/// <summary>Demand operation.</summary>
+
             float candidate = Demand(Conduction(CandidateConductivity, CandidateClock),
                 Worlds.Shadow());
 
@@ -87,14 +87,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AConvectionLimitedBlockCostsTheClockAloneAndTheRetuneMakesItCheaper operation.</summary>
+
         public void AConvectionLimitedBlockCostsTheClockAloneAndTheRetuneMakesItCheaper()
         {
             EnvironmentSample air = Worlds.Flight(ThickAir, 200f);
 
-/// <summary>Demand operation.</summary>
+
             float shipped = Demand(Convection(1f, ShippedClock), air);
-/// <summary>Demand operation.</summary>
+
             float candidate = Demand(Convection(CandidateConductivity, CandidateClock), air);
 
             Assert.True(shipped > 0f);
@@ -106,26 +106,26 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ConductivityDoesNotReachTheConvectiveTermAtAll operation.</summary>
+
         public void ConductivityDoesNotReachTheConvectiveTermAtAll()
         {
             EnvironmentSample air = Worlds.Flight(ThickAir, 200f);
 
-/// <summary>Demand operation.</summary>
+
             float plain = Demand(Convection(1f, ShippedClock), air);
-/// <summary>Demand operation.</summary>
+
             float conductive = Demand(Convection(CandidateConductivity, ShippedClock), air);
 
             Assert.Equal(plain, conductive, 3);
         }
 
         [Fact]
-/// <summary>AirIsWhereTheSubstepBudgetGoes operation.</summary>
+
         public void AirIsWhereTheSubstepBudgetGoes()
         {
-/// <summary>Demand operation.</summary>
+
             float vacuum = Demand(Convection(1f, ShippedClock), Worlds.Shadow());
-/// <summary>Demand operation.</summary>
+
             float air = Demand(Convection(1f, ShippedClock), Worlds.Flight(ThickAir, 200f));
 
             Assert.True(air > vacuum * 4f,
@@ -135,16 +135,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShippedClockSpendsMostOfTheCapOnAirAndTheRetunePullsItBack operation.</summary>
+
         public void TheShippedClockSpendsMostOfTheCapOnAirAndTheRetunePullsItBack()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings shipped = new ThermalSettings().Derive();
             EnvironmentSample air = Worlds.Flight(ThickAir, 200f);
 
-/// <summary>Demand operation.</summary>
+
             float before = Demand(Convection(1f, ShippedClock), air);
-/// <summary>Demand operation.</summary>
+
             float after = Demand(Convection(CandidateConductivity, CandidateClock), air);
 
             Assert.True(before > shipped.MaxSubsteps / 4f,
@@ -158,14 +158,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DemandIsExactlyProportionalToTheStep operation.</summary>
+
         public void DemandIsExactlyProportionalToTheStep()
         {
             EnvironmentSample air = Worlds.Flight(ThickAir, 200f);
 
-/// <summary>Demand operation.</summary>
+
             float quarterSecond = Demand(Convection(1f, ShippedClock, 4), air);
-/// <summary>Demand operation.</summary>
+
             float eighthSecond = Demand(Convection(1f, ShippedClock, 8), air);
 
             Assert.True(eighthSecond > 0f);
@@ -173,13 +173,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShippedPairIsNotOverTheCapInVacuum operation.</summary>
+
         public void TheShippedPairIsNotOverTheCapInVacuum()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings shipped = new ThermalSettings().Derive();
 
-/// <summary>Demand operation.</summary>
+
             float vacuum = Demand(Convection(1f, ShippedClock), Worlds.Shadow());
 
             Assert.True(vacuum < shipped.MaxSubsteps / 4f,

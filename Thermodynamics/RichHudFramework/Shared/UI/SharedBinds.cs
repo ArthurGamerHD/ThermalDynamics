@@ -40,14 +40,14 @@ namespace RichHudFramework.UI
 
         private static SharedBinds Instance
         {
-/// <summary>Init operation.</summary>
+
             get { Init(); return instance; }
             set { instance = value; }
         }
         private static SharedBinds instance;
         private readonly IBindGroup sharedMain, sharedModifiers;
 
-/// <summary>SharedBinds operation.</summary>
+
         private SharedBinds() : base(false, true)
         {
             sharedMain = BindManager.GetOrCreateGroup("SharedBinds");
@@ -89,15 +89,15 @@ namespace RichHudFramework.UI
             });
         }
 
-/// <summary>Init operation.</summary>
+
         private static void Init()
         {
             if (instance == null)
-/// <summary>SharedBinds operation.</summary>
+
                 instance = new SharedBinds();
         }
 
-/// <summary>Close operation.</summary>
+
         public override void Close()
         {
             Instance = null;

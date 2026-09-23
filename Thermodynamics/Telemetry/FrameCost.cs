@@ -37,10 +37,10 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Describe operation.</summary>
+
         public string Describe()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("frame ").Append(Frame)
@@ -76,10 +76,10 @@ namespace Thermodynamics
 
         public double HitchThresholdMs = 4d;
 
-/// <summary>TimingStat operation.</summary>
+
         public readonly TimingStat Frame = new TimingStat("mod, all grids, per frame");
 
-/// <summary>List operation.</summary>
+
         private readonly List<FrameSample> worst = new List<FrameSample>();
 
         public long FramesWithWork;
@@ -104,7 +104,7 @@ namespace Thermodynamics
         private long exposureVisits;
         private long roomCells;
 
-/// <summary>Adds a grid.</summary>
+
         public void AddGrid(string name, double milliseconds, int blocks)
         {
             if (double.IsNaN(milliseconds) || double.IsInfinity(milliseconds)) return;
@@ -118,7 +118,7 @@ namespace Thermodynamics
             worstGridBlocks = blocks;
         }
 
-/// <summary>Adds a stage.</summary>
+
         public void AddStage(int phase, double milliseconds)
         {
             if (double.IsNaN(milliseconds) || double.IsInfinity(milliseconds)) return;
@@ -132,21 +132,21 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Adds a sample.</summary>
+
         public void AddSample(double milliseconds)
         {
             if (double.IsNaN(milliseconds) || double.IsInfinity(milliseconds)) return;
             sample += milliseconds;
         }
 
-/// <summary>Adds a afterstep.</summary>
+
         public void AddAfterStep(double milliseconds)
         {
             if (double.IsNaN(milliseconds) || double.IsInfinity(milliseconds)) return;
             afterStep += milliseconds;
         }
 
-/// <summary>Adds a work.</summary>
+
         public void AddWork(long topologyNodes, long exposureNodes, long cellsFlooded)
         {
             topologyVisits += topologyNodes;
@@ -154,7 +154,7 @@ namespace Thermodynamics
             roomCells += cellsFlooded;
         }
 
-/// <summary>EndFrame operation.</summary>
+
         public void EndFrame(long frame, double sessionSeconds)
         {
             if (total <= 0d)
@@ -172,10 +172,10 @@ namespace Thermodynamics
             Reset();
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private FrameSample BuildSample(long frame, double sessionSeconds)
         {
-/// <summary>FrameSample operation.</summary>
+
             FrameSample sample = new FrameSample();
             sample.Frame = frame;
             sample.SessionSeconds = sessionSeconds;
@@ -196,7 +196,7 @@ namespace Thermodynamics
             return sample;
         }
 
-/// <summary>Offer operation.</summary>
+
         private void Offer(FrameSample sample)
         {
             if (worst.Count < Keep)
@@ -212,13 +212,13 @@ namespace Thermodynamics
             worst.Sort(Compare);
         }
 
-/// <summary>Compare operation.</summary>
+
         private static int Compare(FrameSample a, FrameSample b)
         {
             return b.TotalMs.CompareTo(a.TotalMs);
         }
 
-/// <summary>Reset operation.</summary>
+
         private void Reset()
         {
             total = 0d;
@@ -252,7 +252,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Clear operation.</summary>
+
         public void Clear()
         {
             worst.Clear();

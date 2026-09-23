@@ -31,25 +31,25 @@ namespace RichHudFramework
 
             event EventHandler Released;
 
-/// <summary>Returns the combo.</summary>
+
             List<ControlHandle> GetCombo(int alias = 0);
 
-/// <summary>Returns the conids.</summary>
+
             List<int> GetConIDs(int alias = 0);
 
-/// <summary>TrySetCombo operation.</summary>
+
             bool TrySetCombo(IReadOnlyList<ControlHandle> combo, int alias = 0, bool isStrict = true, bool isSilent = true);
 
-/// <summary>TrySetCombo operation.</summary>
+
             bool TrySetCombo(IReadOnlyList<int> combo, int alias = 0, bool isStrict = true, bool isSilent = true);
 
-/// <summary>TrySetCombo operation.</summary>
+
             bool TrySetCombo(IReadOnlyList<string> combo, int alias = 0, bool isStrict = true, bool isSilent = true);
 
-/// <summary>ClearCombo operation.</summary>
+
             void ClearCombo(int alias = 0);
 
-/// <summary>ClearSubscribers operation.</summary>
+
             void ClearSubscribers();
         }
 

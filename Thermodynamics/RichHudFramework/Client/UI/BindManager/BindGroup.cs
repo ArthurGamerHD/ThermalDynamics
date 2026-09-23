@@ -17,7 +17,7 @@ namespace RichHudFramework
                 { 
                     get 
                     {
-/// <summary>Returns the bind.</summary>
+
                         IBind bind = GetBind(name);
 
                         if (bind == null)
@@ -33,36 +33,36 @@ namespace RichHudFramework
 
                 public object ID => _instance.GetOrSetGroupMemberFunc(Index, null, (int)BindGroupAccessors.ID);
 
-/// <summary>BindGroup operation.</summary>
+
                 public BindGroup(int index) 
                     : base(x => new Bind(new Vector2I(index, x)), () => _instance.GetBindCountFunc(index))
                 {
                     Index = index;
                 }
 
-/// <summary>DoesBindExist operation.</summary>
+
                 public bool DoesBindExist(string name) =>
                     (bool)_instance.GetOrSetGroupMemberFunc(Index, name, (int)BindGroupAccessors.DoesBindExist);
 
-/// <summary>DoesComboConflict operation.</summary>
+
                 public bool DoesComboConflict(IReadOnlyList<ControlHandle> newCombo, IBind currentBind = null, int alias = 0)
                 {
                     var data = new MyTuple<IReadOnlyList<int>, int, int>(GetComboIndicesTemp(newCombo), currentBind?.Index ?? -1, alias);
                     return (bool)_instance.GetOrSetGroupMemberFunc(Index, data, (int)BindGroupAccessors.DoesComboConflict);
                 }
 
-/// <summary>DoesComboConflict operation.</summary>
+
                 public bool DoesComboConflict(IReadOnlyList<int> newCombo, IBind currentBind = null, int alias = 0)
                 {
                     var data = new MyTuple<IReadOnlyList<int>, int, int>(newCombo, currentBind?.Index ?? -1, alias);
                     return (bool)_instance.GetOrSetGroupMemberFunc(Index, data, (int)BindGroupAccessors.DoesComboConflict);
                 }
 
-/// <summary>TryLoadBindData operation.</summary>
+
                 public bool TryLoadBindData(IReadOnlyList<BindDefinitionData> bindData) =>
                     (bool)_instance.GetOrSetGroupMemberFunc(Index, bindData, (int)BindGroupAccessors.TryLoadBindData);
 
-/// <summary>TryLoadBindData operation.</summary>
+
                 public bool TryLoadBindData(IReadOnlyList<BindDefinition> bindData)
                 {
                     var defData = new BindDefinitionData[bindData.Count];
@@ -79,32 +79,32 @@ namespace RichHudFramework
                                 aliasData[j] = bindData[i].aliases[j];
                         }
 
-/// <summary>BindDefinitionData operation.</summary>
+
                         defData[i] = new BindDefinitionData(bindData[i].name, bindData[i].controlNames, aliasData);
                     }
 
                     return (bool)_instance.GetOrSetGroupMemberFunc(Index, defData, (int)BindGroupAccessors.TryLoadBindData);
                 }
 
-/// <summary>Registers the API and message handler.</summary>
+
                 public void RegisterBinds(BindGroupInitializer bindData)
                 {
                     foreach (var bind in bindData)
                         _instance.GetOrSetGroupMemberFunc(Index, bind, (int)BindGroupAccessors.AddBindWithIndices);
                 }
 
-/// <summary>Registers and opens communication.</summary>
+
                 public void RegisterBinds(IReadOnlyList<string> bindNames) =>
                     _instance.GetOrSetGroupMemberFunc(Index, bindNames, (int)BindGroupAccessors.RegisterBindNames);
 
-/// <summary>Returns the bind.</summary>
+
                 public IBind GetBind(string name)
                 {
                     var index = (Vector2I)_instance.GetOrSetGroupMemberFunc(Index, name, (int)BindGroupAccessors.GetBindFromName);
                     return index.Y != -1 ? this[index.Y] : null;
                 }
 
-/// <summary>Adds a bind.</summary>
+
                 public IBind AddBind(string bindName, IReadOnlyList<int> newConIDs, IReadOnlyList<IReadOnlyList<int>> aliases = null)
                 {
                     var bindData = new MyTuple<string, IReadOnlyList<int>, IReadOnlyList<IReadOnlyList<int>>>();
@@ -116,12 +116,12 @@ namespace RichHudFramework
                     return this[index.Y];
                 }
 
-/// <summary>Adds a bind.</summary>
+
                 public IBind AddBind(string bindName, IReadOnlyList<ControlHandle> combo, IReadOnlyList<IReadOnlyList<ControlHandle>> aliases = null)
                 {
                     var bindData = new MyTuple<string, IReadOnlyList<int>, IReadOnlyList<IReadOnlyList<int>>>();
                     bindData.Item1 = bindName;
-/// <summary>Returns the comboindicestemp.</summary>
+
                     bindData.Item2 = GetComboIndicesTemp(combo);
 
                     var aliasData = (aliases.Count > 0) ? new List<int>[aliases.Count] : null;
@@ -132,7 +132,7 @@ namespace RichHudFramework
                         for (int i = 0; i < aliases.Count; i++)
                         {
                             var alias = aliases[i];
-/// <summary>List operation.</summary>
+
                             aliasData[i] = new List<int>();
                             GetComboIndices(alias, aliasData[i]);
                         }
@@ -142,7 +142,7 @@ namespace RichHudFramework
                     return this[index.Y];
                 }
 
-/// <summary>TryRegisterBind operation.</summary>
+
                 public bool TryRegisterBind(string bindName, out IBind newBind)
                 {
                     int index = (int)_instance.GetOrSetGroupMemberFunc(Index, bindName, (int)BindGroupAccessors.TryRegisterBindName);
@@ -159,7 +159,7 @@ namespace RichHudFramework
                     }
                 }
 
-/// <summary>TryRegisterBind operation.</summary>
+
                 public bool TryRegisterBind(string bindName, out IBind newBind, IReadOnlyList<int> combo, IReadOnlyList<IReadOnlyList<int>> aliases = null)
                 {
                     var bindData = new MyTuple<string, IReadOnlyList<int>, IReadOnlyList<IReadOnlyList<int>>>();
@@ -181,12 +181,12 @@ namespace RichHudFramework
                     }
                 }
 
-/// <summary>TryRegisterBind operation.</summary>
+
                 public bool TryRegisterBind(string bindName, out IBind newBind, IReadOnlyList<ControlHandle> combo, IReadOnlyList<IReadOnlyList<ControlHandle>> aliases = null)
                 {
                     var bindData = new MyTuple<string, IReadOnlyList<int>, IReadOnlyList<IReadOnlyList<int>>>();
                     bindData.Item1 = bindName;
-/// <summary>Returns the comboindicestemp.</summary>
+
                     bindData.Item2 = GetComboIndicesTemp(combo);
 
                     var aliasData = (aliases.Count > 0) ? new List<int>[aliases.Count] : null;
@@ -206,7 +206,7 @@ namespace RichHudFramework
                     }
                 }
 
-/// <summary>Returns the binddefinitions.</summary>
+
                 public BindDefinition[] GetBindDefinitions()
                 {
                     var bindData = _instance.GetOrSetGroupMemberFunc(Index, null, (int)BindGroupAccessors.GetBindData) as BindDefinitionData[];
@@ -218,21 +218,21 @@ namespace RichHudFramework
                     return definitions;
                 }
 
-/// <summary>Returns the binddata.</summary>
+
                 public BindDefinitionData[] GetBindData() =>
                     _instance.GetOrSetGroupMemberFunc(Index, null, (int)BindGroupAccessors.GetBindData) as BindDefinitionData[];
 
-/// <summary>ClearSubscribers operation.</summary>
+
                 public void ClearSubscribers() =>
                     _instance.GetOrSetGroupMemberFunc(Index, null, (int)BindGroupAccessors.ClearSubscribers);
 
-/// <summary>Equals operation.</summary>
+
                 public override bool Equals(object obj)
                 {
                     return Index.Equals(obj);
                 }
 
-/// <summary>Returns the hashcode.</summary>
+
                 public override int GetHashCode()
                 {
                     return Index.GetHashCode();

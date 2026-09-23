@@ -6,25 +6,25 @@ namespace Thermodynamics.Core
     {
         public const int Radius = 1;
 
-/// <summary>Of operation.</summary>
+
         public static Vector3 Of(CellBitset occupancy, BlockInstance block)
         {
-/// <summary>Of operation.</summary>
+
             return Of(occupancy, block, Radius);
         }
 
-/// <summary>Of operation.</summary>
+
         public static Vector3 Of(CellBitset occupancy, BlockInstance block, int radius)
         {
             if (occupancy == null || block == null || radius < 1) return Vector3.Zero;
 
             if (radius == 1 && block.CellCount == 1) return OneCell(occupancy, block.Min);
 
-/// <summary>Walking operation.</summary>
+
             return Walking(occupancy, block, radius);
         }
 
-/// <summary>Walking operation.</summary>
+
         public static Vector3 Walking(CellBitset occupancy, BlockInstance block, int radius)
         {
             if (occupancy == null || block == null || radius < 1) return Vector3.Zero;
@@ -32,7 +32,7 @@ namespace Thermodynamics.Core
             Vector3I min = block.Min;
             Vector3I maxExclusive = block.MaxExclusive;
 
-/// <summary>Vector3 operation.</summary>
+
             Vector3 centre = new Vector3(
                 (min.X + maxExclusive.X - 1) * 0.5f,
                 (min.Y + maxExclusive.Y - 1) * 0.5f,
@@ -55,7 +55,7 @@ namespace Thermodynamics.Core
 
                         if (!occupancy.Contains(new Vector3I(x, y, z))) continue;
 
-/// <summary>Vector3 operation.</summary>
+
                         Vector3 offset = new Vector3(x - centre.X, y - centre.Y, z - centre.Z);
                         float length = offset.Length();
                         if (length <= 0f) continue;
@@ -73,13 +73,13 @@ namespace Thermodynamics.Core
 
         private const float Epsilon = 1e-4f;
 
-/// <summary>Builds the method table.</summary>
+
         private static readonly Vector3I[] OneCellOffsets = BuildOneCellOffsets();
 
-/// <summary>Builds the method table.</summary>
+
         private static readonly Vector3[] OneCellUnits = BuildOneCellUnits();
 
-/// <summary>Builds the API method table.</summary>
+
         private static Vector3I[] BuildOneCellOffsets()
         {
             Vector3I[] offsets = new Vector3I[26];
@@ -92,7 +92,7 @@ namespace Thermodynamics.Core
                     for (int z = -1; z <= 1; z++)
                     {
                         if (x == 0 && y == 0 && z == 0) continue;
-/// <summary>Vector3I operation.</summary>
+
                         offsets[i++] = new Vector3I(x, y, z);
                     }
                 }
@@ -101,16 +101,16 @@ namespace Thermodynamics.Core
             return offsets;
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static Vector3[] BuildOneCellUnits()
         {
-/// <summary>Builds the method table.</summary>
+
             Vector3I[] offsets = BuildOneCellOffsets();
             Vector3[] units = new Vector3[offsets.Length];
 
             for (int i = 0; i < offsets.Length; i++)
             {
-/// <summary>Vector3 operation.</summary>
+
                 Vector3 offset = new Vector3(offsets[i].X, offsets[i].Y, offsets[i].Z);
                 units[i] = offset / offset.Length();
             }
@@ -118,7 +118,7 @@ namespace Thermodynamics.Core
             return units;
         }
 
-/// <summary>OneCell operation.</summary>
+
         private static Vector3 OneCell(CellBitset occupancy, Vector3I min)
         {
             Vector3 sum = Vector3.Zero;
@@ -136,7 +136,7 @@ namespace Thermodynamics.Core
             return sum / magnitude;
         }
 
-/// <summary>Factor operation.</summary>
+
         public static float Factor(Vector3 normal, Vector3 wind)
         {
             if (normal.X == 0f && normal.Y == 0f && normal.Z == 0f) return 1f;

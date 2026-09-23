@@ -11,13 +11,13 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>RoomMapFreezeTests operation.</summary>
+
         public RoomMapFreezeTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>TwoRooms operation.</summary>
+
         private static ThermalSimulation TwoRooms()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -28,16 +28,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSolidAndRoomSetsIndexACellTheSameWay operation.</summary>
+
         public void TheSolidAndRoomSetsIndexACellTheSameWay()
         {
-/// <summary>CellBitset operation.</summary>
+
             CellBitset solid = new CellBitset();
-/// <summary>CellBitset operation.</summary>
+
             CellBitset roomCells = new CellBitset();
-/// <summary>Vector3I operation.</summary>
+
             Vector3I min = new Vector3I(-9, 4, -2);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I max = min + new Vector3I(11, 7, 5);
             solid.Reset(min, max);
             roomCells.Reset(min, max);
@@ -47,7 +47,7 @@ namespace Thermodynamics.Tests
             for (int y = min.Y - 2; y < max.Y + 2; y++)
             for (int z = min.Z - 2; z < max.Z + 2; z++)
             {
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I cell = new Vector3I(x, y, z);
                 Assert.Equal(solid.IndexOf(cell), roomCells.IndexOf(cell));
                 if (solid.IndexOf(cell) >= 0) inside++; else outside++;
@@ -56,7 +56,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(11 * 7 * 5, inside);
             Assert.True(outside > 0, "no cell outside the box, so the refusal is untested");
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I probe = min + new Vector3I(3, 2, 1);
             Assert.True(roomCells.Add(probe));
             Assert.True(roomCells.ContainsIndex(roomCells.IndexOf(probe)));
@@ -64,7 +64,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>MembershipAgreesWithTheSearchOverEveryCellOfTheBox operation.</summary>
+
         public void MembershipAgreesWithTheSearchOverEveryCellOfTheBox()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -73,9 +73,9 @@ namespace Thermodynamics.Tests
             RoomMap map = simulation.Rooms.Map;
             Assert.True(map.RoomCount > 3, "the hull mapped only " + map.RoomCount + " rooms");
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I min = simulation.Grid.Min - new Vector3I(2, 2, 2);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I max = simulation.Grid.Max + new Vector3I(2, 2, 2);
 
             int inRoom = 0, external = 0, solid = 0;
@@ -83,7 +83,7 @@ namespace Thermodynamics.Tests
             for (int y = min.Y; y <= max.Y; y++)
             for (int z = min.Z; z <= max.Z; z++)
             {
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I cell = new Vector3I(x, y, z);
                 int room = map.RoomIndexOf(cell);
 
@@ -103,10 +103,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryRoomCellStillResolvesToItsOwnRoom operation.</summary>
+
         public void EveryRoomCellStillResolvesToItsOwnRoom()
         {
-/// <summary>TwoRooms operation.</summary>
+
             ThermalSimulation simulation = TwoRooms();
             RoomMap map = simulation.Rooms.Map;
 
@@ -132,21 +132,21 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACellInNoRoomResolvesToNothing operation.</summary>
+
         public void ACellInNoRoomResolvesToNothing()
         {
-/// <summary>TwoRooms operation.</summary>
+
             ThermalSimulation simulation = TwoRooms();
             RoomMap map = simulation.Rooms.Map;
 
             Vector3I[] outside =
             {
-/// <summary>Vector3I operation.</summary>
-                new Vector3I(4, 0, 0),          // the gap between the two boxes
-/// <summary>Vector3I operation.</summary>
-                new Vector3I(-40, -40, -40),    // far outside the search box
-/// <summary>Vector3I operation.</summary>
-                new Vector3I(2, 0, 0),          // structure: a wall of the first box
+
+                new Vector3I(4, 0, 0),
+
+                new Vector3I(-40, -40, -40),
+
+                new Vector3I(2, 0, 0),
             };
 
             for (int i = 0; i < outside.Length; i++)
@@ -160,10 +160,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThePublishedLookupAgreesWithTheDictionaryItReplaced operation.</summary>
+
         public void ThePublishedLookupAgreesWithTheDictionaryItReplaced()
         {
-/// <summary>TwoRooms operation.</summary>
+
             ThermalSimulation simulation = TwoRooms();
             RoomMap map = simulation.Rooms.Map;
 

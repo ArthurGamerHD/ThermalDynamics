@@ -62,40 +62,40 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Sweep operation.</summary>
+
         public static List<Row> Sweep()
         {
-/// <summary>SweepAt operation.</summary>
+
             return SweepAt(Fractions);
         }
 
-/// <summary>Shipped operation.</summary>
+
         public static List<Row> Shipped()
         {
             return SweepAt(new float[]
                 { ShippedBlocks.FunctionOf("OxygenGenerator").ConsumerWasteEnergy });
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(float fraction)
         {
-/// <summary>SweepAt operation.</summary>
+
             return SweepAt(new float[] { fraction });
         }
 
-/// <summary>FractionCache operation.</summary>
+
         private static readonly FractionCache<Row> Cache = new FractionCache<Row>(At);
 
-/// <summary>SweepAt operation.</summary>
+
         private static List<Row> SweepAt(float[] fractions)
         {
             return Cache.SweepAt(fractions);
         }
 
-/// <summary>At operation.</summary>
+
         private static List<Row> At(float fraction)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             foreach (Vanilla.Block generator in Vanilla.Reference)
@@ -106,13 +106,13 @@ namespace Thermodynamics.Harness
 
                 foreach (Draw load in Draws)
                 {
-/// <summary>DrawWattsOf operation.</summary>
+
                     float watts = DrawWattsOf(generator, load);
 
                     rows.Add(new Row
                     {
                         Subtype = generator.Subtype,
-/// <summary>NameOf operation.</summary>
+
                         Name = NameOf(generator),
                         Large = generator.Large,
                         Cells = generator.CellCount,
@@ -121,9 +121,9 @@ namespace Thermodynamics.Harness
                         Load = load,
                         DrawWatts = watts,
                         WasteWatts = watts * fraction,
-/// <summary>Sets the tled.</summary>
+
                         BareKelvin = Settled(generator, shipped, fraction, watts, false),
-/// <summary>Sets the tled.</summary>
+
                         SkinnedKelvin = Settled(generator, shipped, fraction, watts, true),
                         CriticalKelvin = shipped.CriticalTemperature,
                     });
@@ -133,7 +133,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>DrawWattsOf operation.</summary>
+
         public static float DrawWattsOf(Vanilla.Block generator, Draw load)
         {
             float operational = generator.PowerDrawMegawatts * ThermalConstants.MegawattsToWatts;
@@ -149,7 +149,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>NameOf operation.</summary>
+
         public static string NameOf(Vanilla.Block generator)
         {
             return generator.Subtype.Length > 0
@@ -157,7 +157,7 @@ namespace Thermodynamics.Harness
                 : generator.TypeId + " (no subtype)";
         }
 
-/// <summary>Sets the tled.</summary>
+
         private static float Settled(Vanilla.Block generator, BlockThermalProperties shipped,
             float fraction, float drawnWatts, bool skinned)
         {
@@ -168,7 +168,7 @@ namespace Thermodynamics.Harness
                 SoloBlockRig.Power.Consumed, skinned);
         }
 
-/// <summary>LabelOf operation.</summary>
+
         private static string LabelOf(Draw load)
         {
             switch (load)
@@ -179,10 +179,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("OXYGEN GENERATOR WASTE HEAT  (one generator, shadow, 4 h to steady state)");
             sb.AppendLine("  bare     alone on the grid, every face radiating: the best case there is");

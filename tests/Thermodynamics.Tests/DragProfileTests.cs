@@ -9,10 +9,10 @@ namespace Thermodynamics.Tests
     {
         private const float ThickAir = 1f;
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings(bool solar = false)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
 
             settings.EnableEnvironment = solar;
@@ -22,7 +22,7 @@ namespace Thermodynamics.Tests
             return settings;
         }
 
-/// <summary>Hull operation.</summary>
+
         private static ThermalSimulation Hull(bool solar = false)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -35,7 +35,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Profile operation.</summary>
+
         private static void Profile(ThermalSimulation simulation, DragProfile profile)
         {
             for (int i = 0; i < simulation.Solver.Nodes.Count; i++)
@@ -44,7 +44,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>DragWatts operation.</summary>
+
         private static float DragWatts(ThermalSimulation simulation)
         {
             simulation.StepExact(1, Worlds.Flight(ThickAir, 120f));
@@ -52,13 +52,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AProfileReducesTheDrag operation.</summary>
+
         public void AProfileReducesTheDrag()
         {
-/// <summary>DragWatts operation.</summary>
+
             float plain = DragWatts(Hull());
 
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation slippery = Hull();
             Profile(slippery, DragProfile.Of(0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f));
 
@@ -67,23 +67,23 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OnlyTheFacesTheWindIsOnMatter operation.</summary>
+
         public void OnlyTheFacesTheWindIsOnMatter()
         {
-/// <summary>DragWatts operation.</summary>
+
             float plain = DragWatts(Hull());
 
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation sides = Hull();
             Profile(sides, DragProfile.Of(0f, 0f, 1f, 1f, 0f, 0f));
 
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation windward = Hull();
             Profile(windward, DragProfile.Of(1f, 1f, 0f, 0f, 1f, 1f));
 
-/// <summary>DragWatts operation.</summary>
+
             float sidesWatts = DragWatts(sides);
-/// <summary>DragWatts operation.</summary>
+
             float windwardWatts = DragWatts(windward);
 
             Assert.True(sidesWatts == plain || windwardWatts == plain,
@@ -92,13 +92,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AProfileCannotAddDrag operation.</summary>
+
         public void AProfileCannotAddDrag()
         {
-/// <summary>DragWatts operation.</summary>
+
             float plain = DragWatts(Hull());
 
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation greedy = Hull();
             Profile(greedy, DragProfile.Of(5f, 5f, 5f, 5f, 5f, 5f));
 
@@ -106,13 +106,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NonsenseReadsAsNoChange operation.</summary>
+
         public void NonsenseReadsAsNoChange()
         {
-/// <summary>DragWatts operation.</summary>
+
             float plain = DragWatts(Hull());
 
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation nonsense = Hull();
             Profile(nonsense, DragProfile.Of(
                 float.NaN, float.NegativeInfinity, -1f, float.PositiveInfinity, float.NaN, -0.5f));
@@ -121,13 +121,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUnsetProfileChangesNothing operation.</summary>
+
         public void AnUnsetProfileChangesNothing()
         {
             Assert.False(default(DragProfile).IsSet);
             for (int f = 0; f < Face.Count; f++) Assert.Equal(1f, default(DragProfile)[f]);
 
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation cleared = Hull();
             Profile(cleared, default(DragProfile));
 
@@ -135,12 +135,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AProfileDoesNotDimTheSun operation.</summary>
+
         public void AProfileDoesNotDimTheSun()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation plain = Hull(solar: true);
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation slippery = Hull(solar: true);
             Profile(slippery, DragProfile.Of(0f, 0f, 0f, 0f, 0f, 0f));
 

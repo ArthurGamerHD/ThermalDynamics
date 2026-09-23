@@ -27,10 +27,10 @@ namespace Thermodynamics.Harness
         private const float ThickAir = 1f;
         private const float ThinAir = 0.4f;
 
-/// <summary>All operation.</summary>
+
         public static List<Scenario> All()
         {
-/// <summary>List operation.</summary>
+
             List<Scenario> scenarios = new List<Scenario>();
 
 
@@ -219,23 +219,23 @@ namespace Thermodynamics.Harness
             return scenarios;
         }
 
-/// <summary>Run operation.</summary>
+
         public static ScenarioOutcome Run(Blueprints.Ship ship, Scenario scenario,
             ThermalSettings settings = null)
         {
-/// <summary>Run operation.</summary>
+
             return Run(ship, scenario, settings, -1f);
         }
 
-/// <summary>RunForSeconds operation.</summary>
+
         public static ScenarioOutcome RunForSeconds(Blueprints.Ship ship, Scenario scenario,
             float seconds, ThermalSettings settings = null)
         {
-/// <summary>Run operation.</summary>
+
             return Run(ship, scenario, settings, seconds);
         }
 
-/// <summary>Run operation.</summary>
+
         private static ScenarioOutcome Run(Blueprints.Ship ship, Scenario scenario,
             ThermalSettings settings, float fixedSeconds)
         {
@@ -244,7 +244,7 @@ namespace Thermodynamics.Harness
 
             ShipLoad.Apply(assembly, scenario.Load);
 
-/// <summary>AssemblyRunner operation.</summary>
+
             AssemblyRunner runner = new AssemblyRunner(assembly);
             runner.Environment = scenario.Environment;
             runner.Integrity = GameBlocks.IntegrityOf;
@@ -257,7 +257,7 @@ namespace Thermodynamics.Harness
                 Advance(runner, fixedSeconds > 0f ? fixedSeconds - half : scenario.Seconds,
                     fixedSeconds);
             }
-/// <summary>if operation.</summary>
+
             else if (scenario.Then != null)
             {
                 float first = scenario.ThenAfterSeconds == null
@@ -290,7 +290,7 @@ namespace Thermodynamics.Harness
 
         public const float Chunk = 60f;
 
-/// <summary>Advance operation.</summary>
+
         private static void Advance(AssemblyRunner runner, float seconds, float fixedSeconds)
         {
             if (seconds <= 0f) return;
@@ -311,7 +311,7 @@ namespace Thermodynamics.Harness
             RunUntilSettled(runner, seconds);
         }
 
-/// <summary>RunUntilSettled operation.</summary>
+
         private static void RunUntilSettled(AssemblyRunner runner, float ceiling)
         {
             float previous = float.NaN;
@@ -337,7 +337,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Converged operation.</summary>
+
         public static bool Converged(float step, float lastStep)
         {
             if (float.IsNaN(lastStep) || lastStep == 0f || step == 0f) return false;
@@ -359,7 +359,7 @@ namespace Thermodynamics.Harness
 
         public const float SettledWithinOfFinal = 5f;
 
-/// <summary>Sets the tleseconds.</summary>
+
         public static float SettleSeconds(IList<float> samples, float final)
         {
             if (samples == null || samples.Count < 2) return -1f;
@@ -372,7 +372,7 @@ namespace Thermodynamics.Harness
             return -1f;
         }
 
-/// <summary>Sets the tle.</summary>
+
         private static void Settle(ScenarioOutcome outcome, AssemblyRunner runner)
         {
             List<float> samples = runner.Hottest;
@@ -386,7 +386,7 @@ namespace Thermodynamics.Harness
                 if (rate > fastest) fastest = rate;
             }
 
-/// <summary>Sets the tleseconds.</summary>
+
             outcome.SecondsToSettle = SettleSeconds(samples, outcome.PeakKelvin);
             outcome.PeakRateKelvinPerSecond = fastest;
 
@@ -395,7 +395,7 @@ namespace Thermodynamics.Harness
 
         public const int BulkWindow = 3;
 
-/// <summary>BulkDrift operation.</summary>
+
         private static void BulkDrift(ScenarioOutcome outcome, AssemblyRunner runner)
         {
             List<float> samples = runner.Bulk;

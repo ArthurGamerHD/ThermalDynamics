@@ -8,18 +8,18 @@ namespace RichHudFramework.UI
 {
 	public abstract class ChainSelectionBoxBase<TContainer, TElement>
 		: SelectionBoxBase<HudChain<TContainer, TElement>, TContainer, TElement>
-/// <summary>new operation.</summary>
+
 		where TContainer : class, ISelectionBoxEntry<TElement>, new()
 		where TElement : HudElementBase, IMinLabelElement
 	{
-/// <summary>ChainSelectionBoxBase operation.</summary>
+
 		public ChainSelectionBoxBase(HudParentBase parent = null) : base(parent) { }
 	}
 
 	public abstract class ScrollSelectionBoxBase<TContainer, TElement>
 		: SelectionBoxBase<ScrollBox<TContainer, TElement>, TContainer, TElement>
 		where TElement : HudElementBase, IMinLabelElement
-/// <summary>new operation.</summary>
+
 		where TContainer : class, ISelectionBoxEntry<TElement>, new()
 	{
 		public Color Color { get { return EntryChain.Color; } set { EntryChain.Color = value; } }
@@ -31,17 +31,17 @@ namespace RichHudFramework.UI
 		protected override float HighlightWidth =>
 			EntryChain.Size.X - Padding.X - EntryChain.ScrollBar.Width - EntryChain.Padding.X - HighlightPadding.X;
 
-/// <summary>ScrollSelectionBoxBase operation.</summary>
+
 		public ScrollSelectionBoxBase(HudParentBase parent = null) : base(parent) { }
 
-/// <summary>HandleInput operation.</summary>
+
 		protected override void HandleInput(Vector2 cursorPos)
 		{
 			if (listInput.KeyboardScroll)
 			{
 				if (listInput.HighlightIndex > EntryChain.End)
 					EntryChain.End = listInput.HighlightIndex;
-/// <summary>if operation.</summary>
+
 				else if (listInput.HighlightIndex < EntryChain.Start)
 					EntryChain.Start = listInput.HighlightIndex;
 			}
@@ -51,9 +51,9 @@ namespace RichHudFramework.UI
 	public abstract class SelectionBoxBase<TChain, TContainer, TElement>
 		: HudElementBase, IEntryBox<TContainer, TElement>, IClickableElement
 		where TElement : HudElementBase, IMinLabelElement
-/// <summary>new operation.</summary>
+
 		where TChain : HudChain<TContainer, TElement>, new()
-/// <summary>new operation.</summary>
+
 		where TContainer : class, ISelectionBoxEntry<TElement>, new()
 	{
 		public event EventHandler ValueChanged
@@ -100,7 +100,7 @@ namespace RichHudFramework.UI
 
 		public override bool IsMousedOver => listInput.IsMousedOver;
 
-/// <summary>Vector2I operation.</summary>
+
         protected virtual Vector2I ListRange => new Vector2I(0, EntryChain.Count - 1);
 
         protected virtual Vector2 ListSize => EntryChain.Size;
@@ -119,7 +119,7 @@ namespace RichHudFramework.UI
 
         protected MyTuple<TContainer, GlyphFormat> lastSelection;
 
-/// <summary>SelectionBoxBase operation.</summary>
+
         protected SelectionBoxBase(HudParentBase parent = null) : base(parent)
 		{
 			EntryChain = new TChain
@@ -132,12 +132,12 @@ namespace RichHudFramework.UI
 
 			chainHidesDisabled = EntryChain is ScrollBox<TContainer, TElement>;
 
-/// <summary>HighlightBox operation.</summary>
+
 			selectionBox = new HighlightBox(EntryChain) { Visible = false };
-/// <summary>HighlightBox operation.</summary>
+
 			highlightBox = new HighlightBox(EntryChain) { Visible = false, CanDrawTab = false };
 
-/// <summary>InputFocusHandler operation.</summary>
+
 			FocusHandler = new InputFocusHandler(this);
 			listInput = new ListInputElement<TContainer, TElement>(this, EntryChain) { ZOffset = 1 };
 
@@ -146,37 +146,37 @@ namespace RichHudFramework.UI
 			Format = TerminalFormatting.ControlFormat;
 			FocusTextColor = TerminalFormatting.Charcoal;
 
-/// <summary>Vector2 operation.</summary>
+
 			Size = new Vector2(335f, 203f);
-/// <summary>Vector2 operation.</summary>
+
 			HighlightPadding = new Vector2(8f, 0f);
 		}
 
-/// <summary>Returns the enumerator.</summary>
+
 		public IEnumerator<TContainer> GetEnumerator() => EntryChain.Collection.GetEnumerator();
 
 		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-/// <summary>Sets the selectionat.</summary>
+
 		public void SetSelectionAt(int index) =>
 			listInput.SetSelectionAt(index);
 
-/// <summary>OffsetSelectionIndex operation.</summary>
+
 		public void OffsetSelectionIndex(int offset, bool wrap = false) =>
 			listInput.OffsetSelectionIndex(offset, wrap);
 
-/// <summary>Sets the selection.</summary>
+
 		public void SetSelection(TContainer member) =>
 			listInput.SetSelection(member);
 
-/// <summary>ClearSelection operation.</summary>
+
 		public void ClearSelection() =>
 			listInput.ClearSelection();
 
-/// <summary>Returns the rangesize.</summary>
+
 		public virtual Vector2 GetRangeSize(int start = 0, int end = -1) => EntryChain.GetRangeSize(start, end);
 
-/// <summary>Layout operation.</summary>
+
         protected override void Layout()
 		{
 			if (!chainHidesDisabled)
@@ -196,14 +196,14 @@ namespace RichHudFramework.UI
 			listInput.ListRange = ListRange;
 		}
 
-/// <summary>UpdateSelection operation.</summary>
+
         protected virtual void UpdateSelection()
 		{
 			UpdateSelectionPositions();
 			UpdateSelectionFormatting();
 		}
 
-/// <summary>UpdateSelectionPositions operation.</summary>
+
         protected virtual void UpdateSelectionPositions()
 		{
 			float entryWidth = HighlightWidth;
@@ -234,7 +234,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>UpdateSelectionFormatting operation.</summary>
+
         protected virtual void UpdateSelectionFormatting()
 		{
 			if (lastSelection.Item1 != null)
@@ -279,7 +279,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>Sets the focusformat.</summary>
+
 		protected void SetFocusFormat(int index)
 		{
 			var entry = EntryChain[index];
@@ -299,24 +299,24 @@ namespace RichHudFramework.UI
 
 			private readonly MatBoard tabBoard;
 
-/// <summary>HighlightBox operation.</summary>
+
             public HighlightBox(HudParentBase parent = null) : base(parent)
 			{
-/// <summary>MatBoard operation.</summary>
+
 				tabBoard = new MatBoard() { Color = TerminalFormatting.Mercury };
 				Color = TerminalFormatting.Atomic;
 				IsSelectivelyMasked = true;
 			}
 
-/// <summary>Draw operation.</summary>
+
             protected override void Draw()
 			{
-/// <summary>default operation.</summary>
+
 				var box = default(CroppedBox);
 				Vector2 size = UnpaddedSize,
 						halfSize = size * 0.5f;
 
-/// <summary>BoundingBox2 operation.</summary>
+
 				box.bounds = new BoundingBox2(Position - halfSize, Position + halfSize);
 				box.mask = MaskingBox;
 
@@ -326,11 +326,11 @@ namespace RichHudFramework.UI
 				if (CanDrawTab && tabBoard.Color.A > 0)
 				{
 					Vector2 tabPos = Position;
-/// <summary>Vector2 operation.</summary>
-					Vector2 tabSize = new Vector2(4f, size.Y - Padding.Y) * 0.5f;
-					tabPos.X += (-size.X + tabSize.X) * 0.5f; // left align
 
-/// <summary>BoundingBox2 operation.</summary>
+					Vector2 tabSize = new Vector2(4f, size.Y - Padding.Y) * 0.5f;
+					tabPos.X += (-size.X + tabSize.X) * 0.5f;
+
+
 					box.bounds = new BoundingBox2(tabPos - tabSize, tabPos + tabSize);
 					tabBoard.Draw(ref box, HudSpace.PlaneToWorldRef);
 				}

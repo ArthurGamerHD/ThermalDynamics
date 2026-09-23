@@ -4,7 +4,7 @@ namespace Thermodynamics.Core
 {
     public static class CruiseCurve
     {
-/// <summary>Speed operation.</summary>
+
         public static float Speed(float mass, float minMass, float midMass, float maxMass,
             float lightSpeed, float midSpeed, float heavySpeed)
         {
@@ -56,7 +56,7 @@ namespace Thermodynamics.Core
             return interp;
         }
 
-/// <summary>Interpolate operation.</summary>
+
         public static double Interpolate(double x, double y0, double m0, double y1, double m1)
         {
             double x2 = x * x;

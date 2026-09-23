@@ -32,7 +32,7 @@ namespace Thermodynamics.Harness
 
             public long WorkshopId;
 
-/// <summary>List operation.</summary>
+
             public readonly List<Grid> Grids = new List<Grid>();
 
             public bool Large
@@ -59,7 +59,7 @@ namespace Thermodynamics.Harness
 
             public int AmbiguousBlocks;
 
-/// <summary>List operation.</summary>
+
             public List<string> UnknownSubtypes = new List<string>();
 
             public bool IsVanilla
@@ -67,12 +67,12 @@ namespace Thermodynamics.Harness
                 get { return UnknownBlocks == 0 && Blocks > 0; }
             }
 
-/// <summary>Builds the API method table.</summary>
+
             public ShipAssembly Build(ThermalSettings settings = null, float kelvin = 293.15f)
             {
-/// <summary>ThermalSettings operation.</summary>
+
                 ThermalSettings effective = settings ?? new ThermalSettings();
-/// <summary>ShipAssembly operation.</summary>
+
                 ShipAssembly assembly = new ShipAssembly();
 
                 for (int i = 0; i < Grids.Count; i++)
@@ -84,7 +84,7 @@ namespace Thermodynamics.Harness
                 return assembly;
             }
 
-/// <summary>LinkJoints operation.</summary>
+
             private void LinkJoints(ShipAssembly assembly)
             {
                 for (int i = 0; i < Grids.Count; i++)
@@ -104,9 +104,9 @@ namespace Thermodynamics.Harness
                             if (!Grids[j].BlocksById.TryGetValue(topId, out topCell)) continue;
 
                             assembly.Bridge2(
-/// <summary>NodeAt operation.</summary>
+
                                 assembly.Simulations[i], NodeAt(assembly.Simulations[i], baseCell),
-/// <summary>NodeAt operation.</summary>
+
                                 assembly.Simulations[j], NodeAt(assembly.Simulations[j], topCell));
                             break;
                         }
@@ -114,7 +114,7 @@ namespace Thermodynamics.Harness
                 }
             }
 
-/// <summary>NodeAt operation.</summary>
+
             private static ThermalNode NodeAt(ThermalSimulation simulation, Vector3I cell)
             {
                 IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -125,24 +125,24 @@ namespace Thermodynamics.Harness
                 return null;
             }
 
-/// <summary>Reload operation.</summary>
+
             public Ship Reload()
             {
                 if (Path == null) return this;
 
-/// <summary>Read operation.</summary>
+
                 List<Ship> ships = Read(Path);
                 return ships.Count > 0 ? ships[0] : this;
             }
 
-/// <summary>ToString operation.</summary>
+
             public override string ToString()
             {
                 return Name + " (" + Blocks + " blocks, " + Grids.Count + " grids)";
             }
         }
 
-/// <summary>CorpusPath operation.</summary>
+
         public static string CorpusPath()
         {
             string configured = Environment.GetEnvironmentVariable("THERMAL_CORPUS");
@@ -160,31 +160,31 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>IsLegacyBlueprintEntry operation.</summary>
+
         public static bool IsLegacyBlueprintEntry(string name)
         {
             return !string.IsNullOrEmpty(name)
                 && name.EndsWith(".sbc", StringComparison.OrdinalIgnoreCase);
         }
 
-/// <summary>DefaultPath operation.</summary>
+
         public static string DefaultPath()
         {
-/// <summary>CorpusPath operation.</summary>
+
             string corpus = CorpusPath();
             if (Directory.Exists(corpus) && Files(corpus).Count > 0) return corpus;
 
-/// <summary>WorkshopPath operation.</summary>
+
             return WorkshopPath();
         }
 
-/// <summary>WorkshopPath operation.</summary>
+
         public static string WorkshopPath()
         {
             string content = GameBlocks.ContentPath();
             if (content == null) return null;
 
-/// <summary>DirectoryInfo operation.</summary>
+
             DirectoryInfo directory = new DirectoryInfo(content);
             for (int i = 0; i < 4 && directory != null; i++) directory = directory.Parent;
             if (directory == null) return null;
@@ -193,10 +193,10 @@ namespace Thermodynamics.Harness
             return Directory.Exists(workshop) ? workshop : null;
         }
 
-/// <summary>Files operation.</summary>
+
         public static List<string> Files(string root)
         {
-/// <summary>List operation.</summary>
+
             List<string> files = new List<string>();
             if (root == null || !Directory.Exists(root)) return files;
 
@@ -204,7 +204,7 @@ namespace Thermodynamics.Harness
             return files;
         }
 
-/// <summary>PrefabPath operation.</summary>
+
         public static string PrefabPath()
         {
             string content = GameBlocks.ContentPath();
@@ -214,13 +214,13 @@ namespace Thermodynamics.Harness
             return Directory.Exists(prefabs) ? prefabs : null;
         }
 
-/// <summary>PrefabFiles operation.</summary>
+
         public static List<string> PrefabFiles(string root = null)
         {
-/// <summary>List operation.</summary>
+
             List<string> files = new List<string>();
 
-/// <summary>PrefabPath operation.</summary>
+
             string path = root ?? PrefabPath();
             if (path == null || !Directory.Exists(path)) return files;
 
@@ -229,10 +229,10 @@ namespace Thermodynamics.Harness
             return files;
         }
 
-/// <summary>PrefabCategory operation.</summary>
+
         public static string PrefabCategory(string path)
         {
-/// <summary>PrefabPath operation.</summary>
+
             string root = PrefabPath();
             if (path == null || root == null) return "";
 
@@ -244,12 +244,12 @@ namespace Thermodynamics.Harness
             return slash < 0 ? "" : relative.Substring(0, slash);
         }
 
-/// <summary>Read operation.</summary>
+
         public static List<Ship> Read(string path)
         {
             try
             {
-/// <summary>ReadFile operation.</summary>
+
                 return ReadFile(path);
             }
             catch (Exception error)
@@ -263,13 +263,13 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>object operation.</summary>
+
         private static readonly object UnreadableGate = new object();
 
         private static readonly Dictionary<string, string> unreadable =
             new Dictionary<string, string>(StringComparer.Ordinal);
 
-/// <summary>Unreadable operation.</summary>
+
         public static Dictionary<string, string> Unreadable()
         {
             lock (UnreadableGate)
@@ -278,32 +278,32 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>ReadFile operation.</summary>
+
         private static List<Ship> ReadFile(string path)
         {
-/// <summary>List operation.</summary>
+
             List<Ship> ships = new List<Ship>();
 
-/// <summary>Load operation.</summary>
+
             XDocument document = Load(path);
             if (document == null) return ships;
 
             Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
 
-/// <summary>NameOf operation.</summary>
+
             string name = NameOf(document, "ShipBlueprint") ?? NameOf(document, "Prefab");
 
             Ship ship = new Ship
             {
                 Path = path,
-/// <summary>WorkshopIdOf operation.</summary>
+
                 WorkshopId = WorkshopIdOf(path),
                 Name = name,
             };
 
             foreach (XElement grid in document.Descendants("CubeGrid"))
             {
-/// <summary>ReadGrid operation.</summary>
+
                 Grid part = ReadGrid(grid, definitions, ship);
                 if (part != null && part.Blocks > 0) ship.Grids.Add(part);
             }
@@ -318,13 +318,13 @@ namespace Thermodynamics.Harness
             return ships;
         }
 
-/// <summary>Probe operation.</summary>
+
         public static Ship Probe(string path)
         {
-/// <summary>WorkshopIdOf operation.</summary>
+
             Ship ship = new Ship { Path = path, WorkshopId = WorkshopIdOf(path) };
 
-/// <summary>Load operation.</summary>
+
             XDocument document = Load(path);
             if (document == null) return ship;
 
@@ -332,7 +332,7 @@ namespace Thermodynamics.Harness
 
             foreach (XElement grid in document.Descendants("CubeGrid"))
             {
-/// <summary>ReadGrid operation.</summary>
+
                 Grid part = ReadGrid(grid, definitions, ship);
                 if (part != null && part.Blocks > 0) ship.Grids.Add(part);
             }
@@ -340,7 +340,7 @@ namespace Thermodynamics.Harness
             return ship;
         }
 
-/// <summary>WorkshopIdOf operation.</summary>
+
         private static long WorkshopIdOf(string path)
         {
             long id;
@@ -368,7 +368,7 @@ namespace Thermodynamics.Harness
 
         private const string AppId = "244850";
 
-/// <summary>ReadGrid operation.</summary>
+
         private static Grid ReadGrid(XElement grid,
             Dictionary<string, GameBlocks.Definition> definitions, Ship ship)
         {
@@ -392,9 +392,9 @@ namespace Thermodynamics.Harness
 
                 if (string.IsNullOrEmpty(subtype))
                 {
-/// <summary>TypeOf operation.</summary>
+
                     named = TypeOf(block);
-/// <summary>BaseVariantOf operation.</summary>
+
                     definition = BaseVariantOf(named, large);
 
                     if (definition == null && named == "CubeBlock")
@@ -405,7 +405,7 @@ namespace Thermodynamics.Harness
                 }
                 else
                 {
-/// <summary>TypeOf operation.</summary>
+
                     string typeId = TypeOf(block);
                     if (typeId == null
                         || !GameBlocks.ByTypeAndSubtype().TryGetValue(
@@ -427,19 +427,19 @@ namespace Thermodynamics.Harness
                     continue;
                 }
 
-/// <summary>ParseCell operation.</summary>
+
                 Vector3I cell = ParseCell(block.Element("Min"));
                 part.Builder.Place(Model(definition), cell, Orientation(block));
                 part.Blocks++;
 
-/// <summary>ParseLong operation.</summary>
+
                 long entityId = ParseLong(block.Element("EntityId"));
                 if (entityId != 0L && !part.BlocksById.ContainsKey(entityId))
                 {
                     part.BlocksById[entityId] = cell;
                 }
 
-/// <summary>ParseLong operation.</summary>
+
                 long topId = ParseLong(block.Element("TopBlockId"));
                 if (topId != 0L) part.Mechanical.Add(new KeyValuePair<Vector3I, long>(cell, topId));
             }
@@ -447,7 +447,7 @@ namespace Thermodynamics.Harness
             return part;
         }
 
-/// <summary>Load operation.</summary>
+
         private static XDocument Load(string path)
         {
             try
@@ -472,7 +472,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>NameOf operation.</summary>
+
         private static string NameOf(XDocument document, string element)
         {
             foreach (XElement definition in document.Descendants(element))
@@ -486,7 +486,7 @@ namespace Thermodynamics.Harness
             return null;
         }
 
-/// <summary>ParseLong operation.</summary>
+
         private static long ParseLong(XElement element)
         {
             long value;
@@ -494,7 +494,7 @@ namespace Thermodynamics.Harness
                 NumberStyles.Integer, CultureInfo.InvariantCulture, out value) ? value : 0L;
         }
 
-/// <summary>BaseVariantOf operation.</summary>
+
         private static GameBlocks.Definition BaseVariantOf(string typeId, bool large)
         {
             GameBlocks.Definition definition;
@@ -502,7 +502,7 @@ namespace Thermodynamics.Harness
                 GameBlocks.BaseVariantKey(typeId, large), out definition) ? definition : null;
         }
 
-/// <summary>TypeOf operation.</summary>
+
         private static string TypeOf(XElement block)
         {
             XAttribute type = block.Attribute(
@@ -529,7 +529,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Model operation.</summary>
+
         public static BlockModel Model(GameBlocks.Definition definition)
         {
             string key = GameBlocks.TypeAndSubtypeKey(definition.TypeId, definition.SubtypeId);
@@ -573,7 +573,7 @@ namespace Thermodynamics.Harness
             return Models.GetOrAdd(key, model);
         }
 
-/// <summary>ParseCell operation.</summary>
+
         private static Vector3I ParseCell(XElement element)
         {
             if (element == null) return Vector3I.Zero;
@@ -584,7 +584,7 @@ namespace Thermodynamics.Harness
                 ParseInt(element.Attribute("z")));
         }
 
-/// <summary>ParseInt operation.</summary>
+
         private static int ParseInt(XAttribute attribute)
         {
             int value;
@@ -592,7 +592,7 @@ namespace Thermodynamics.Harness
                 NumberStyles.Integer, CultureInfo.InvariantCulture, out value) ? value : 0;
         }
 
-/// <summary>Orientation operation.</summary>
+
         private static BlockOrientation Orientation(XElement block)
         {
             XElement element = block.Element("BlockOrientation");
@@ -603,7 +603,7 @@ namespace Thermodynamics.Harness
                 DirectionOf((string)element.Attribute("Up"), Base6Directions.Direction.Up));
         }
 
-/// <summary>DirectionOf operation.</summary>
+
         private static Base6Directions.Direction DirectionOf(string name, Base6Directions.Direction fallback)
         {
             switch (name)

@@ -8,12 +8,12 @@ namespace Thermodynamics.Tests
     public class MaterialOverrideTests
     {
         [Fact]
-/// <summary>AnOverrideReachesABlockBuiltTheCorpusWay operation.</summary>
+
         public void AnOverrideReachesABlockBuiltTheCorpusWay()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>Pick operation.</summary>
+
             GameBlocks.Definition definition = Pick();
             if (definition == null) return;
 
@@ -49,7 +49,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ADialAimedAtOneTypeLeavesTheRestAlone operation.</summary>
+
         public void ADialAimedAtOneTypeLeavesTheRestAlone()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -93,7 +93,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Pick operation.</summary>
+
         private static GameBlocks.Definition Pick()
         {
             Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();

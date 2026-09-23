@@ -16,19 +16,19 @@ namespace Thermodynamics.Tests
 
         private const int Steps = 8;
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxElementVisitsPerStep = 0;
             return settings.Derive();
         }
 
-/// <summary>Run operation.</summary>
+
         private static float[][] Run(bool parallel)
         {
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
             List<ThermalSimulation> fleet = FleetParallelLab.Fleet(Grids, NodesEach, settings);
 
@@ -50,12 +50,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SteppingAFleetInParallelIsIdenticalToSteppingItInOrder operation.</summary>
+
         public void SteppingAFleetInParallelIsIdenticalToSteppingItInOrder()
         {
-/// <summary>Run operation.</summary>
+
             float[][] sequential = Run(false);
-/// <summary>Run operation.</summary>
+
             float[][] parallel = Run(true);
 
             Assert.Equal(sequential.Length, parallel.Length);
@@ -78,15 +78,15 @@ namespace Thermodynamics.Tests
             }
 
             Assert.True(judged > Grids * NodesEach / 2,
-/// <summary>nothing operation.</summary>
+
                 "only " + judged + " nodes were compared, so this agreed about almost nothing (`E8`)");
         }
 
         [Fact]
-/// <summary>TheFleetTheComparisonRunsOnActuallyMoves operation.</summary>
+
         public void TheFleetTheComparisonRunsOnActuallyMoves()
         {
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
             List<ThermalSimulation> fleet = FleetParallelLab.Fleet(2, NodesEach, settings);
 
@@ -114,10 +114,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryPieceOfStaticStateInTheCoreSaysWhyTwoGridsMayShareIt operation.</summary>
+
         public void EveryPieceOfStaticStateInTheCoreSaysWhyTwoGridsMayShareIt()
         {
-/// <summary>typeof operation.</summary>
+
             Assembly core = typeof(ThermalSolver).Assembly;
 
             Dictionary<string, string> reasons = new Dictionary<string, string>
@@ -176,7 +176,7 @@ namespace Thermodynamics.Tests
                 { "Thermodynamics.Core.ThermalValidation.Writer", "mutable, off the stepping path" },
             };
 
-/// <summary>List operation.</summary>
+
             List<string> unexplained = new List<string>();
             int judged = 0;
             int explained = 0;
@@ -214,7 +214,7 @@ namespace Thermodynamics.Tests
             }
 
             Assert.True(judged > 15,
-/// <summary>nothing operation.</summary>
+
                 "only " + judged + " static fields were looked at, so this judged nothing (`E8`)");
             Assert.True(explained > 10,
                 "only " + explained + " of the listed fields were found, so the list has gone stale"

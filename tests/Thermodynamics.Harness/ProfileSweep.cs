@@ -67,7 +67,7 @@ namespace Thermodynamics.Harness
             "x-plumbed-ship", "x-pressurised-ship", "x-burning-ship",
         };
 
-/// <summary>HullWithSource operation.</summary>
+
         private static GridBuilder HullWithSource(float watts, out BlockInstance source)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -83,7 +83,7 @@ namespace Thermodynamics.Harness
             return builder;
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static ScenarioRunner BuildExtra(string rig, BalanceProfile profile)
         {
             ThermalSettings settings = profile.ToSettings();
@@ -93,11 +93,11 @@ namespace Thermodynamics.Harness
                 case "x-shock":
                 {
                     BlockInstance source;
-/// <summary>HullWithSource operation.</summary>
+
                     GridBuilder builder = HullWithSource(4000000f, out source);
                     ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
                     ScenarioRunner runner = new ScenarioRunner(simulation);
                     runner.Environment = t => Worlds.Shadow();
                     runner.Track("source", source);
@@ -130,7 +130,7 @@ namespace Thermodynamics.Harness
                     BlockInstance source = builder.Last;
                     source.PowerConsumedWatts = 2000000f;
 
-/// <summary>ScenarioRunner operation.</summary>
+
                     ScenarioRunner runner = new ScenarioRunner(builder.BuildSimulation(settings, 293.15f));
                     runner.Environment = t => Worlds.Shadow();
                     runner.Track("source", source);
@@ -156,7 +156,7 @@ namespace Thermodynamics.Harness
                             PipeFitter.RectangleXZ(new Vector3I(0, 1 + ring, 0), 5, 4));
                     }
 
-/// <summary>ScenarioRunner operation.</summary>
+
                     ScenarioRunner runner = new ScenarioRunner(builder.BuildSimulation(settings, 293.15f));
                     runner.Environment = t => Worlds.Shadow();
                     runner.Track("source", source);
@@ -167,10 +167,10 @@ namespace Thermodynamics.Harness
                 case "x-overloaded":
                 {
                     BlockInstance source;
-/// <summary>HullWithSource operation.</summary>
+
                     GridBuilder builder = HullWithSource(40000000f, out source);
 
-/// <summary>ScenarioRunner operation.</summary>
+
                     ScenarioRunner runner = new ScenarioRunner(builder.BuildSimulation(settings, 293.15f));
                     runner.Environment = t => Worlds.Shadow();
                     runner.Track("source", source);
@@ -192,7 +192,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Sets the tled.</summary>
+
         public static bool Settled(IList<Sample> samples)
         {
             if (samples == null || samples.Count < 2) return false;
@@ -213,10 +213,10 @@ namespace Thermodynamics.Harness
             return true;
         }
 
-/// <summary>FromBuilt operation.</summary>
+
         private static ScenarioRunner FromBuilt(WorstCases.Built built)
         {
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(built.Simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Run(1800f, 60f);
@@ -224,10 +224,10 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Run operation.</summary>
+
         public static List<Cell> Run()
         {
-/// <summary>List operation.</summary>
+
             List<Cell> cells = new List<Cell>();
 
             foreach (BalanceProfile profile in BalanceProfile.All())
@@ -245,7 +245,7 @@ namespace Thermodynamics.Harness
             return cells;
         }
 
-/// <summary>MeasureAtItsOwnClock operation.</summary>
+
         public static Cell MeasureAtItsOwnClock(BalanceProfile profile, string rig, bool extra)
         {
             float shipped = BalanceProfile.Shipped().HeatTimeScale;
@@ -254,7 +254,7 @@ namespace Thermodynamics.Harness
             ScenarioRunner.DurationScale = scale;
             try
             {
-/// <summary>Measure operation.</summary>
+
                 return Measure(profile, rig, extra);
             }
             finally
@@ -263,13 +263,13 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Measure operation.</summary>
+
         private static Cell Measure(BalanceProfile profile, string rig, bool extra)
         {
             Cell cell = new Cell { Rig = rig, Profile = profile.Name };
 
             ThermalSettings wanted = profile.ToSettings();
-/// <summary>Merge operation.</summary>
+
             GridBuilder.SettingsOverride = existing => Merge(existing, wanted);
             Catalog.MaterialOverride = profile.Material;
 
@@ -278,7 +278,7 @@ namespace Thermodynamics.Harness
                 Stopwatch clock = Stopwatch.StartNew();
 
                 ScenarioRunner runner = extra
-/// <summary>Builds the method table.</summary>
+
                     ? BuildExtra(rig, profile)
                     : Scenarios.Run(rig).Runner;
 
@@ -321,11 +321,11 @@ namespace Thermodynamics.Harness
 
                 cell.PeakKelvin = last.HottestTemperature;
                 cell.MeanKelvin = last.MeanTemperature;
-/// <summary>Coldest operation.</summary>
+
                 cell.ColdestKelvin = Coldest(solver);
                 cell.OverCritical = last.OverheatingBlocks;
 
-/// <summary>Sets the tled.</summary>
+
                 cell.Converged = Settled(runner.Samples);
 
                 if (first.TotalEnergy > 0f)
@@ -350,13 +350,13 @@ namespace Thermodynamics.Harness
             return cell;
         }
 
-/// <summary>IsFinite operation.</summary>
+
         private static bool IsFinite(float value)
         {
             return !float.IsNaN(value) && !float.IsInfinity(value);
         }
 
-/// <summary>Coldest operation.</summary>
+
         private static float Coldest(ThermalSolver solver)
         {
             float coldest = float.MaxValue;
@@ -368,7 +368,7 @@ namespace Thermodynamics.Harness
             return coldest == float.MaxValue ? 0f : coldest;
         }
 
-/// <summary>Merge operation.</summary>
+
         private static ThermalSettings Merge(ThermalSettings scenario, ThermalSettings profile)
         {
             scenario.HeatTimeScale = profile.HeatTimeScale;
@@ -384,21 +384,21 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>N operation.</summary>
+
         private static string N(float value, int decimals = 1)
         {
             return IsFinite(value) ? value.ToString("n" + decimals, CultureInfo.InvariantCulture) : "inf";
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report()
         {
-/// <summary>Run operation.</summary>
+
             List<Cell> cells = Run();
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
-/// <summary>List operation.</summary>
+
             List<string> profiles = new List<string>();
             foreach (BalanceProfile profile in BalanceProfile.All()) profiles.Add(profile.Name);
 
@@ -414,7 +414,7 @@ namespace Thermodynamics.Harness
                 bad++;
                 string why = cell.Failed ? cell.Error : cell.Diverged ? "DIVERGED" : "not settled";
                 sb.AppendLine(string.Format("{0,-11} {1,-22} {2,14} {3,9} {4,10} {5,12}",
-/// <summary>N operation.</summary>
+
                     cell.Profile, cell.Rig, N(cell.PeakKelvin, 0),
                     N(cell.StarvedShare * 100f, 0) + "%", cell.OverCritical, why));
             }
@@ -451,7 +451,7 @@ namespace Thermodynamics.Harness
                 if (count == 0) continue;
 
                 sb.AppendLine(string.Format("{0,-11} {1,10} {2,7} {3,10} {4,14} {5,11} {6,10}",
-/// <summary>N operation.</summary>
+
                     profile, N(substeps / count, 2), max, N(wantedMax, 0),
                     N(visits / count, 0), N((float)(ms / count), 3), diverged));
             }
@@ -460,26 +460,26 @@ namespace Thermodynamics.Harness
             sb.AppendLine("WORST-CASE RIGS — peak K, and what each grid was");
             sb.AppendLine();
             sb.AppendLine(string.Format("{0,-20} {1,7} {2,7} {3,6} {4,5}",
-/// <summary>Header operation.</summary>
+
                 "rig", "nodes", "links", "loops", "air") + Header(profiles));
 
             foreach (string rig in ExtraRigs)
             {
-/// <summary>Find operation.</summary>
+
                 Cell shape = Find(cells, rig, "shipped");
                 if (shape == null) continue;
 
-/// <summary>StringBuilder operation.</summary>
+
                 StringBuilder line = new StringBuilder(string.Format("{0,-20} {1,7} {2,7} {3,6} {4,5}",
                     rig, shape.Nodes, shape.Links, shape.Loops, shape.RoomsWithAir));
 
                 foreach (string profile in profiles)
                 {
-/// <summary>Find operation.</summary>
+
                     Cell cell = Find(cells, rig, profile);
                     line.Append(string.Format("{0,15}", cell == null ? "-"
                         : cell.Failed ? cell.Error
-/// <summary>N operation.</summary>
+
                         : N(cell.PeakKelvin, 0) + (cell.Diverged ? "!" : cell.Converged ? "" : "~")));
                 }
                 sb.AppendLine(line.ToString());
@@ -491,7 +491,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Find operation.</summary>
+
         private static Cell Find(List<Cell> cells, string rig, string profile)
         {
             foreach (Cell cell in cells)
@@ -501,19 +501,19 @@ namespace Thermodynamics.Harness
             return null;
         }
 
-/// <summary>Header operation.</summary>
+
         private static string Header(List<string> profiles)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             foreach (string profile in profiles) sb.Append(string.Format("{0,15}", profile));
             return sb.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("rig,profile,nodes,links,loops,rooms_with_air,peak_k,mean_k,coldest_k,"
                 + "converged,diverged,failed,error,energy_drift,substeps_mean,substeps_max,"
@@ -530,7 +530,7 @@ namespace Thermodynamics.Harness
                     cell.RoomsWithAir.ToString(CultureInfo.InvariantCulture),
                     F(cell.PeakKelvin), F(cell.MeanKelvin), F(cell.ColdestKelvin),
                     cell.Converged ? "1" : "0", cell.Diverged ? "1" : "0", cell.Failed ? "1" : "0",
-/// <summary>F operation.</summary>
+
                     cell.Error ?? "", F(cell.EnergyDriftFraction),
                     F(cell.SubstepsMean), cell.SubstepsMax.ToString(CultureInfo.InvariantCulture),
                     F(cell.SubstepsWanted), F(cell.StarvedShare), F(cell.LinkVisitsPerSecond),
@@ -542,7 +542,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>F operation.</summary>
+
         private static string F(float value)
         {
             return IsFinite(value) ? value.ToString("r", CultureInfo.InvariantCulture) : "inf";

@@ -27,11 +27,11 @@ namespace Thermodynamics.Harness
             public double PartialTests;
         }
 
-/// <summary>Sweep operation.</summary>
+
         public static List<Rung> Sweep(double[] lengths, int[] samples,
             int occlusionInterval, float frequency)
         {
-/// <summary>List operation.</summary>
+
             List<Rung> rungs = new List<Rung>();
 
             double testSeconds = occlusionInterval / (double)frequency;
@@ -41,7 +41,7 @@ namespace Thermodynamics.Harness
                 double ignoredError;
                 int ignoredPartial;
 
-/// <summary>Energy operation.</summary>
+
                 double truth = Energy(length, SolarOcclusionSampler.MaxSamples, Tick, testSeconds,
                     0d, out ignoredError, out ignoredPartial);
 
@@ -61,7 +61,7 @@ namespace Thermodynamics.Harness
 
                         double worst;
                         int partial;
-/// <summary>Energy operation.</summary>
+
                         total += Energy(length, count, testSeconds, testSeconds, phase,
                             out worst, out partial);
 
@@ -85,7 +85,7 @@ namespace Thermodynamics.Harness
 
         private const int Phases = 24;
 
-/// <summary>Energy operation.</summary>
+
         private static double Energy(double length, int samples, double testSeconds,
             double spanSeconds, double phase, out double worstError, out int partialTests)
         {
@@ -93,9 +93,9 @@ namespace Thermodynamics.Harness
             partialTests = 0;
 
             double radius = PlanetRadius + Altitude;
-            double omega = Speed / radius;                      // radians a second
+            double omega = Speed / radius;
 
-/// <summary>Terminator operation.</summary>
+
             double terminator = Terminator(radius);
 
             double halfSpan = ((length / radius) * 0.5d) + (omega * spanSeconds * 6d);
@@ -111,21 +111,21 @@ namespace Thermodynamics.Harness
                 if (first)
                 {
                     first = false;
-/// <summary>OccludedShare operation.</summary>
+
                     reported = 1d - OccludedShare(angle, length, samples);
                     sinceTest = phase;
                     if (reported > 0d && reported < 1d) partialTests++;
                 }
-/// <summary>if operation.</summary>
+
                 else if (sinceTest >= testSeconds)
                 {
-/// <summary>OccludedShare operation.</summary>
+
                     reported = 1d - OccludedShare(angle, length, samples);
                     sinceTest = 0d;
                     if (reported > 0d && reported < 1d) partialTests++;
                 }
 
-/// <summary>OccludedShare operation.</summary>
+
                 double actual = 1d - OccludedShare(angle, length, SolarOcclusionSampler.MaxSamples);
                 double error = Math.Abs(reported - actual);
                 if (error > worstError) worstError = error;
@@ -137,7 +137,7 @@ namespace Thermodynamics.Harness
             return energy;
         }
 
-/// <summary>Terminator operation.</summary>
+
         public static double Terminator(double radius)
         {
             double lo = 0d;
@@ -152,25 +152,25 @@ namespace Thermodynamics.Harness
             return 0.5d * (lo + hi);
         }
 
-/// <summary>IsOccluded operation.</summary>
+
         private static bool IsOccluded(double angle, double radius)
         {
-/// <summary>Vector3D operation.</summary>
+
             Vector3D point = new Vector3D(Math.Cos(angle) * radius, 0d, Math.Sin(angle) * radius);
             return OcclusionMath.IsOccludedBySphere(point, Vector3D.Zero, PlanetRadius,
-/// <summary>Vector3 operation.</summary>
+
                 new Vector3(1f, 0f, 0f));
         }
 
-/// <summary>OccludedShare operation.</summary>
+
         private static double OccludedShare(double angle, double length, int samples)
         {
             double radius = PlanetRadius + Altitude;
             double halfAngle = (length / radius) * 0.5d;
 
-/// <summary>Point operation.</summary>
+
             Vector3D lead = Point(angle - halfAngle, radius);
-/// <summary>Point operation.</summary>
+
             Vector3D tail = Point(angle + halfAngle, radius);
 
             double girth = length * 0.05d;
@@ -181,11 +181,11 @@ namespace Thermodynamics.Harness
             bounds.Include(tail - new Vector3D(0d, girth, 0d));
             bounds.Include(tail + new Vector3D(0d, girth, 0d));
 
-/// <summary>List operation.</summary>
+
             List<Vector3D> points = new List<Vector3D>();
             SolarOcclusionSampler.Points(bounds, samples, points);
 
-/// <summary>Vector3 operation.</summary>
+
             Vector3 sun = new Vector3(1f, 0f, 0f);
 
             int occluded = 0;
@@ -200,7 +200,7 @@ namespace Thermodynamics.Harness
             return points.Count == 0 ? 0d : occluded / (double)points.Count;
         }
 
-/// <summary>Point operation.</summary>
+
         private static Vector3D Point(double angle, double radius)
         {
             return new Vector3D(Math.Cos(angle) * radius, 0d, Math.Sin(angle) * radius);
@@ -212,10 +212,10 @@ namespace Thermodynamics.Harness
 
         public static readonly int[] Intervals = { 1, 2, 4, 8, 12, 24, 48 };
 
-/// <summary>IntervalReport operation.</summary>
+
         public static string IntervalReport(float frequency)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             const double Length = 600d;
@@ -229,7 +229,7 @@ namespace Thermodynamics.Harness
 
             foreach (int interval in Intervals)
             {
-/// <summary>Sweep operation.</summary>
+
                 List<Rung> one = Sweep(new[] { Length },
                     new[] { SolarOcclusionSampler.MaxSamples }, interval, frequency);
 
@@ -262,7 +262,7 @@ namespace Thermodynamics.Harness
             public double DeficitKelvin;
         }
 
-/// <summary>KelvinPerLitSecond operation.</summary>
+
         public static double KelvinPerLitSecond(ThermalSettings settings)
         {
             const double LargeGridCell = 2.5d;
@@ -277,11 +277,11 @@ namespace Thermodynamics.Harness
                 : settings.SolarEnergy * face * steel.Emissivity / capacity;
         }
 
-/// <summary>Extremities operation.</summary>
+
         public static List<Extremity> Extremities(double[] lengths, int samples,
             int occlusionInterval, float frequency, double kelvinPerSecond)
         {
-/// <summary>List operation.</summary>
+
             List<Extremity> found = new List<Extremity>();
             double testSeconds = occlusionInterval / (double)frequency;
 
@@ -300,7 +300,7 @@ namespace Thermodynamics.Harness
                     deficit += low;
                 }
 
-/// <summary>Extremity operation.</summary>
+
                 Extremity row = new Extremity();
                 row.LengthMetres = length;
                 row.SurplusSeconds = surplus / Phases;
@@ -313,7 +313,7 @@ namespace Thermodynamics.Harness
             return found;
         }
 
-/// <summary>BlockError operation.</summary>
+
         private static void BlockError(double length, int samples, double testSeconds, double phase,
             out double worstSurplus, out double worstDeficit)
         {
@@ -321,7 +321,7 @@ namespace Thermodynamics.Harness
 
             double radius = PlanetRadius + Altitude;
             double omega = Speed / radius;
-/// <summary>Terminator operation.</summary>
+
             double terminator = Terminator(radius);
             double halfSpan = ((length / radius) * 0.5d) + (omega * testSeconds * 6d);
 
@@ -337,14 +337,14 @@ namespace Thermodynamics.Harness
                 if (first)
                 {
                     first = false;
-/// <summary>OccludedShare operation.</summary>
+
                     reported = 1d - OccludedShare(angle, length, samples);
                     sinceTest = phase;
                 }
-/// <summary>if operation.</summary>
+
                 else if (sinceTest >= testSeconds)
                 {
-/// <summary>OccludedShare operation.</summary>
+
                     reported = 1d - OccludedShare(angle, length, samples);
                     sinceTest = 0d;
                 }
@@ -352,7 +352,7 @@ namespace Thermodynamics.Harness
                 for (int i = 0; i < Positions; i++)
                 {
                     double offset = ((i / (double)(Positions - 1)) - 0.5d) * (length / radius);
-/// <summary>IsOccluded operation.</summary>
+
                     double lit = IsOccluded(angle + offset, radius) ? 0d : 1d;
 
                     told[i] += reported * Tick;
@@ -375,17 +375,17 @@ namespace Thermodynamics.Harness
             worstDeficit = -worstDeficit;
         }
 
-/// <summary>ExtremityReport operation.</summary>
+
         public static string ExtremityReport(int occlusionInterval, float frequency)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.Derive();
 
-/// <summary>KelvinPerLitSecond operation.</summary>
+
             double perSecond = KelvinPerLitSecond(settings);
 
             sb.AppendLine("  WHAT THE WHOLE-GRID ANSWER COSTS ONE BLOCK, WHICH IS THE TOP RUNG");
@@ -397,7 +397,7 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
             sb.AppendLine("  grid        told and did not get   told and was denied      worst block");
 
-/// <summary>Extremities operation.</summary>
+
             List<Extremity> rows = Extremities(Lengths, SolarOcclusionSampler.MaxSamples,
                 occlusionInterval, frequency, perSecond);
 
@@ -417,7 +417,7 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
             sb.AppendLine("  grid        told and did not get   told and was denied      worst block");
 
-/// <summary>Extremities operation.</summary>
+
             List<Extremity> tight = Extremities(Lengths, SolarOcclusionSampler.MaxSamples,
                 1, frequency, perSecond);
 
@@ -445,10 +445,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(int occlusionInterval = 12, float frequency = 4f)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("SOLAR OCCLUSION LADDER");
@@ -465,7 +465,7 @@ namespace Thermodynamics.Harness
               .AppendLine(" degrees from the sub-solar point, not 90: OcclusionThreshold is a fitted curve");
             sb.AppendLine();
 
-/// <summary>Sweep operation.</summary>
+
             List<Rung> rungs = Sweep(Lengths, Samples, occlusionInterval, frequency);
 
             sb.AppendLine("  grid        samples   surplus sunlight   worst error   partial tests");

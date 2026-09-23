@@ -28,17 +28,17 @@ namespace Thermodynamics.Harness
             public float FarKelvin;
         }
 
-/// <summary>RadiatorStack operation.</summary>
+
         public static Row RadiatorStack(int count, bool preConversion)
         {
-/// <summary>RadiatorStack operation.</summary>
+
             return RadiatorStack(count, preConversion, SourceWatts);
         }
 
-/// <summary>RadiatorStack operation.</summary>
+
         public static Row RadiatorStack(int count, bool preConversion, float watts)
         {
-/// <summary>Cooler operation.</summary>
+
             BlockModel radiator = Cooler(Catalog.Radiator, preConversion);
 
             GridBuilder builder = GridBuilder.Large();
@@ -63,7 +63,7 @@ namespace Thermodynamics.Harness
                 simulation, source, top);
         }
 
-/// <summary>CoolantRing operation.</summary>
+
         public static Row CoolantRing(int width, int depth, bool preConversion)
         {
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, width, depth);
@@ -95,7 +95,7 @@ namespace Thermodynamics.Harness
                 if (nodes[i].Block.Position == cells[cells.Count / 2]) far = nodes[i].Block;
             }
 
-/// <summary>Read operation.</summary>
+
             Row row = Read("coolant-ring", cells.Count, preConversion, conductance,
                 simulation, source, far);
             return row;
@@ -105,10 +105,10 @@ namespace Thermodynamics.Harness
 
         private static readonly int[] Rings = { 4, 6, 8 };
 
-/// <summary>Measure operation.</summary>
+
         public static List<Row> Measure()
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             for (int i = 0; i < Stacks.Length; i++)
@@ -127,7 +127,7 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Table operation.</summary>
+
         public static string Table()
         {
             System.Text.StringBuilder text = new System.Text.StringBuilder();
@@ -155,7 +155,7 @@ namespace Thermodynamics.Harness
                 text.AppendLine("named here and not in the installed game: "
                     + string.Join(", ", missing.ToArray()));
             }
-/// <summary>if operation.</summary>
+
             else if (moves.Count == 0)
             {
                 text.AppendLine("  (no game installed, so nothing could be derived)");
@@ -165,10 +165,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report()
         {
-/// <summary>Measure operation.</summary>
+
             List<Row> rows = Measure();
             System.Text.StringBuilder text = new System.Text.StringBuilder();
 
@@ -206,13 +206,13 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Cooler operation.</summary>
+
         private static BlockModel Cooler(Func<BlockModel> make, bool preConversion)
         {
             using (Pre(preConversion)) return make();
         }
 
-/// <summary>Pre operation.</summary>
+
         private static IDisposable Pre(bool preConversion)
         {
             if (!preConversion) return new Restore(null);
@@ -233,20 +233,20 @@ namespace Thermodynamics.Harness
         {
             private readonly Func<BlockThermalProperties, BlockThermalProperties> previous;
 
-/// <summary>Restore operation.</summary>
+
             public Restore(Func<BlockThermalProperties, BlockThermalProperties> previous)
             {
                 this.previous = previous;
             }
 
-/// <summary>Dispose operation.</summary>
+
             public void Dispose()
             {
                 Catalog.MaterialOverride = previous;
             }
         }
 
-/// <summary>Read operation.</summary>
+
         private static Row Read(string rig, int count, bool preConversion, float conductance,
             ThermalSimulation simulation, BlockInstance source, BlockInstance far)
         {

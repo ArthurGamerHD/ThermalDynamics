@@ -9,13 +9,13 @@ namespace Thermodynamics.Tests
 {
     public class SunShadowMapTests
     {
-/// <summary>Vector3 operation.</summary>
+
         private static readonly Vector3 SunAlongX = new Vector3(1f, 0f, 0f);
 
-/// <summary>Builds the API method table.</summary>
+
         private static SunShadowMap Build(GridModel grid, Vector3 sun)
         {
-/// <summary>SunShadowMap operation.</summary>
+
             SunShadowMap map = new SunShadowMap();
             map.Restart(grid, sun);
             map.RunToCompletion();
@@ -23,13 +23,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ALoneCellIsLit operation.</summary>
+
         public void ALoneCellIsLit()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(builder.Grid, SunAlongX);
 
             Assert.True(map.IsFaceLit(Vector3I.Zero, Face.Right));
@@ -37,14 +37,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCellBehindAnotherIsShadowed operation.</summary>
+
         public void TheCellBehindAnotherIsShadowed()
         {
             GridBuilder builder = GridBuilder.Large();
-            builder.Place(Catalog.LightArmor(), new Vector3I(1, 0, 0));   // sunward
-            builder.Place(Catalog.LightArmor(), Vector3I.Zero);           // behind it
+            builder.Place(Catalog.LightArmor(), new Vector3I(1, 0, 0));
+            builder.Place(Catalog.LightArmor(), Vector3I.Zero);
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(builder.Grid, SunAlongX);
 
             Assert.True(map.IsFaceLit(new Vector3I(1, 0, 0), Face.Right));
@@ -52,14 +52,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ShadowFollowsTheSunAround operation.</summary>
+
         public void ShadowFollowsTheSunAround()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), new Vector3I(1, 0, 0));
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(builder.Grid, -SunAlongX);
 
             Assert.True(map.IsFaceLit(Vector3I.Zero, Face.Left));
@@ -67,14 +67,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CellsSideBySideAcrossTheSunAreBothLit operation.</summary>
+
         public void CellsSideBySideAcrossTheSunAreBothLit()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
             builder.Place(Catalog.LightArmor(), new Vector3I(0, 1, 0));
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(builder.Grid, SunAlongX);
 
             Assert.True(map.IsFaceLit(Vector3I.Zero, Face.Right));
@@ -82,23 +82,23 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACellTheMapNeverSawIsTreatedAsLit operation.</summary>
+
         public void ACellTheMapNeverSawIsTreatedAsLit()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(builder.Grid, SunAlongX);
 
             Assert.True(map.IsLit(new Vector3I(0, 40, 0)));
         }
 
         [Fact]
-/// <summary>AnUnbuiltMapLightsEverything operation.</summary>
+
         public void AnUnbuiltMapLightsEverything()
         {
-/// <summary>SunShadowMap operation.</summary>
+
             SunShadowMap map = new SunShadowMap();
 
             Assert.False(map.IsBuilt);
@@ -108,24 +108,24 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheInnerLayerOfAWallIsStillLitOnTheSidesThatFaceOut operation.</summary>
+
         public void TheInnerLayerOfAWallIsStillLitOnTheSidesThatFaceOut()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(2, 4, 1));
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(builder.Grid, SunAlongX);
 
             BlockInstance back = builder.Grid.GetAtCell(new Vector3I(0, 1, 0));
 
-            Assert.Equal(0f, map.FaceLitFraction(back, Face.Right), 5);    // toward the sun, buried
-            Assert.Equal(1f, map.FaceLitFraction(back, Face.Forward), 5);  // out of the wall's side
+            Assert.Equal(0f, map.FaceLitFraction(back, Face.Right), 5);
+            Assert.Equal(1f, map.FaceLitFraction(back, Face.Forward), 5);
             Assert.Equal(1f, map.FaceLitFraction(back, Face.Backward), 5);
         }
 
         [Fact]
-/// <summary>AFaceInsideARecessIsShadowedWhileTheWallAroundItIsLit operation.</summary>
+
         public void AFaceInsideARecessIsShadowedWhileTheWallAroundItIsLit()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -133,7 +133,7 @@ namespace Thermodynamics.Tests
             builder.Place(Catalog.LightArmor(), new Vector3I(3, 1, 0));
             builder.Place(Catalog.LightArmor(), new Vector3I(3, 2, 0));
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(builder.Grid, Vector3.Normalize(new Vector3(0.83f, 0.55f, 0f)));
 
             BlockInstance floor = builder.Grid.GetAtCell(new Vector3I(2, 0, 0));
@@ -144,7 +144,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ALongBlockCanHaveOneEndInShadowAndTheOtherInTheOpen operation.</summary>
+
         public void ALongBlockCanHaveOneEndInShadowAndTheOtherInTheOpen()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -152,20 +152,20 @@ namespace Thermodynamics.Tests
             BlockInstance bar = builder.Last;
             builder.Place(Catalog.LightArmor(), new Vector3I(2, 1, 0));
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(builder.Grid, Vector3.Normalize(new Vector3(0f, 1f, 0f)));
 
             Assert.Equal(2f / 3f, map.FaceLitFraction(bar, Face.Up), 3);
         }
 
         [Fact]
-/// <summary>ARestartIsOnlyNeededOnceTheSunHasMovedFarEnough operation.</summary>
+
         public void ARestartIsOnlyNeededOnceTheSunHasMovedFarEnough()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(builder.Grid, SunAlongX);
 
             Vector3 nudged = Vector3.Normalize(new Vector3(1f, 0.005f, 0f));
@@ -176,10 +176,10 @@ namespace Thermodynamics.Tests
         }
 
 
-/// <summary>AssertMatchesReference operation.</summary>
+
         private static void AssertMatchesReference(GridModel grid, Vector3 sun)
         {
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(grid, sun);
 
             IList<BlockInstance> blocks = grid.Blocks;
@@ -199,11 +199,11 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>ObliqueSuns operation.</summary>
+
         public static IEnumerable<object[]> ObliqueSuns()
         {
             yield return new object[] { new Vector3(1f, 0f, 0f) };
-            yield return new object[] { new Vector3(0.9004f, 0.1619f, -0.4038f) };  // the test world
+            yield return new object[] { new Vector3(0.9004f, 0.1619f, -0.4038f) };
             yield return new object[] { new Vector3(0.83f, 0.41f, 0.37f) };
             yield return new object[] { new Vector3(0.97f, 0.31f, 0.19f) };
             yield return new object[] { new Vector3(0.51f, 0.86f, 0.23f) };
@@ -214,7 +214,7 @@ namespace Thermodynamics.Tests
 
         [Theory]
         [MemberData(nameof(ObliqueSuns))]
-/// <summary>ASolidWallMatchesTheReferenceAtAnySunAngle operation.</summary>
+
         public void ASolidWallMatchesTheReferenceAtAnySunAngle(Vector3 sun)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -225,7 +225,7 @@ namespace Thermodynamics.Tests
 
         [Theory]
         [MemberData(nameof(ObliqueSuns))]
-/// <summary>AStaircaseMatchesTheReferenceAtAnySunAngle operation.</summary>
+
         public void AStaircaseMatchesTheReferenceAtAnySunAngle(Vector3 sun)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -239,7 +239,7 @@ namespace Thermodynamics.Tests
 
         [Theory]
         [MemberData(nameof(ObliqueSuns))]
-/// <summary>ASparseLatticeMatchesTheReferenceAtAnySunAngle operation.</summary>
+
         public void ASparseLatticeMatchesTheReferenceAtAnySunAngle(Vector3 sun)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -256,7 +256,7 @@ namespace Thermodynamics.Tests
 
         [Theory]
         [MemberData(nameof(ObliqueSuns))]
-/// <summary>AHollowBoxMatchesTheReferenceAtAnySunAngle operation.</summary>
+
         public void AHollowBoxMatchesTheReferenceAtAnySunAngle(Vector3 sun)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -266,7 +266,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnExactlyDiagonalSunGrazesPastTheCornerRatherThanBeingStoppedByIt operation.</summary>
+
         public void AnExactlyDiagonalSunGrazesPastTheCornerRatherThanBeingStoppedByIt()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -274,7 +274,7 @@ namespace Thermodynamics.Tests
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
 
             Vector3 sun = Vector3.Normalize(new Vector3(1f, 1f, 0f));
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(builder.Grid, sun);
 
             Assert.True(map.IsFaceLit(Vector3I.Zero, Face.Right));
@@ -284,7 +284,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARayCannotSlipBetweenTwoBlocksThatTouchOnlyAlongAnEdge operation.</summary>
+
         public void ARayCannotSlipBetweenTwoBlocksThatTouchOnlyAlongAnEdge()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -292,7 +292,7 @@ namespace Thermodynamics.Tests
             builder.Place(Catalog.LightArmor(), new Vector3I(2, 1, 0));
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(builder.Grid, Vector3.Normalize(new Vector3(1f, 1f, 0f)));
 
             Assert.False(map.IsFaceLit(Vector3I.Zero, Face.Right));
@@ -300,19 +300,19 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>SteppingInSmallBudgetsGivesTheSameAnswerAsRunningItAllAtOnce operation.</summary>
+
         public void SteppingInSmallBudgetsGivesTheSameAnswerAsRunningItAllAtOnce()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), new Vector3I(-3, 0, 0), new Vector3I(1, 7, 4));
 
-/// <summary>Vector3 operation.</summary>
+
             Vector3 sun = new Vector3(0.9004f, 0.1619f, -0.4038f);
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap whole = Build(builder.Grid, sun);
 
-/// <summary>SunShadowMap operation.</summary>
+
             SunShadowMap sliced = new SunShadowMap();
             sliced.Restart(builder.Grid, sun);
 
@@ -335,14 +335,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThePreviousAnswerStaysReadableWhileANewPassRuns operation.</summary>
+
         public void ThePreviousAnswerStaysReadableWhileANewPassRuns()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), new Vector3I(3, 0, 0));
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(builder.Grid, SunAlongX);
 
             Assert.True(map.IsFaceLit(new Vector3I(3, 0, 0), Face.Right));
@@ -360,13 +360,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>StepReportsCompletionExactlyOnce operation.</summary>
+
         public void StepReportsCompletionExactlyOnce()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(3, 3, 1));
 
-/// <summary>SunShadowMap operation.</summary>
+
             SunShadowMap map = new SunShadowMap();
             map.Restart(builder.Grid, SunAlongX);
 
@@ -380,13 +380,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSkinCellsOnTheBoxsOwnEdgeAreStillTracked operation.</summary>
+
         public void TheSkinCellsOnTheBoxsOwnEdgeAreStillTracked()
         {
             GridBuilder builder = GridBuilder.Large();
             for (int x = 0; x <= 3; x++) builder.Place(Catalog.LightArmor(), new Vector3I(x, 0, 0));
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(builder.Grid, SunAlongX);
 
             Assert.False(map.IsLit(new Vector3I(-1, 0, 0)));
@@ -395,7 +395,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARestartedMapMatchesAFreshOneExactly operation.</summary>
+
         public void ARestartedMapMatchesAFreshOneExactly()
         {
             GridBuilder a = GridBuilder.Large();
@@ -403,17 +403,17 @@ namespace Thermodynamics.Tests
             a.PlaceCensus(LoadShapes.Build("ship", 2000));
             b.PlaceCensus(LoadShapes.Build("ship", 2000));
 
-/// <summary>Vector3 operation.</summary>
+
             Vector3 first = new Vector3(1f, 0.7f, 0.3f);
-/// <summary>Vector3 operation.</summary>
+
             Vector3 second = new Vector3(-0.4f, 1f, -0.8f);
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap restarted = Build(a.Grid, first);
             restarted.Restart(a.Grid, second);
             restarted.RunToCompletion();
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap fresh = Build(b.Grid, second);
 
             Assert.True(fresh.ShadowedCount > 100,
@@ -435,18 +435,18 @@ namespace Thermodynamics.Tests
                 }
             }
             Assert.True(litSomewhere > 0 && shadedSomewhere > 0,
-/// <summary>answer operation.</summary>
+
                 "the fixture never exercised both classes of answer (`E8`)");
         }
 
         [Fact]
-/// <summary>AReusedMapCoversTheSkinAGrowingGridAdds operation.</summary>
+
         public void AReusedMapCoversTheSkinAGrowingGridAdds()
         {
             GridBuilder builder = GridBuilder.Large();
             for (int x = 0; x <= 2; x++) builder.Place(Catalog.LightArmor(), new Vector3I(x, 0, 0));
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(builder.Grid, SunAlongX);
 
             for (int x = 3; x <= 6; x++) builder.Place(Catalog.LightArmor(), new Vector3I(x, 0, 0));
@@ -460,13 +460,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWarmRebuildAllocatesNothing operation.</summary>
+
         public void AWarmRebuildAllocatesNothing()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", 2000));
 
-/// <summary>Builds the method table.</summary>
+
             SunShadowMap map = Build(builder.Grid, SunAlongX);
             map.Restart(builder.Grid, SunAlongX);
             map.RunToCompletion();
@@ -485,13 +485,13 @@ namespace Thermodynamics.Tests
 
     public class SolarSelfShadowingTests
     {
-/// <summary>Sun operation.</summary>
+
         private static EnvironmentSample Sun()
         {
             return Worlds.Space(new Vector3(1f, 0f, 0f));
         }
 
-/// <summary>Solar operation.</summary>
+
         private static ThermalSettings Solar(bool selfShadowing)
         {
             ThermalSettings settings = Fixture.EnvironmentOnly();
@@ -500,7 +500,7 @@ namespace Thermodynamics.Tests
             return settings;
         }
 
-/// <summary>Pair operation.</summary>
+
         private static ThermalSimulation Pair(ThermalSettings settings, out ThermalNode front, out ThermalNode back)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -518,11 +518,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCheapModelHeatsABlockStandingBehindAnother operation.</summary>
+
         public void TheCheapModelHeatsABlockStandingBehindAnother()
         {
             ThermalNode front, back;
-/// <summary>Pair operation.</summary>
+
             ThermalSimulation simulation = Pair(Solar(false), out front, out back);
 
             simulation.StepExact(1, Sun());
@@ -532,11 +532,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SelfShadowingStopsTheBlockBehindFromBeingHeated operation.</summary>
+
         public void SelfShadowingStopsTheBlockBehindFromBeingHeated()
         {
             ThermalNode front, back;
-/// <summary>Pair operation.</summary>
+
             ThermalSimulation simulation = Pair(Solar(true), out front, out back);
 
             simulation.StepExact(1, Sun());
@@ -546,7 +546,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SelfShadowingLeavesALoneBlockAlone operation.</summary>
+
         public void SelfShadowingLeavesALoneBlockAlone()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -567,11 +567,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ShadowFollowsTheSunWhenItMoves operation.</summary>
+
         public void ShadowFollowsTheSunWhenItMoves()
         {
             ThermalNode front, back;
-/// <summary>Pair operation.</summary>
+
             ThermalSimulation simulation = Pair(Solar(true), out front, out back);
 
             simulation.StepExact(1, Sun());
@@ -584,10 +584,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockBuiltIntoTheShadowIsPickedUpWithoutTheSunMoving operation.</summary>
+
         public void ABlockBuiltIntoTheShadowIsPickedUpWithoutTheSunMoving()
         {
-/// <summary>Solar operation.</summary>
+
             ThermalSettings settings = Solar(true);
 
             GridBuilder builder = GridBuilder.Large();
@@ -601,7 +601,7 @@ namespace Thermodynamics.Tests
             Assert.True(lone.LastSolarWatts > 0f);
 
             simulation.AddBlock(
-/// <summary>BlockInstance operation.</summary>
+
                 new BlockInstance(Catalog.LightArmor(), new Vector3I(3, 0, 0), BlockOrientation.Identity));
             simulation.RebuildAll();
 

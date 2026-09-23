@@ -18,7 +18,7 @@ namespace Thermodynamics.Harness
             public double NsPerNode;
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(string shape, int blocks, int repeats = 30)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -36,9 +36,9 @@ namespace Thermodynamics.Harness
             float[] wattsA = new float[count];
             float[] wattsB = new float[count];
 
-/// <summary>List operation.</summary>
+
             List<int> exposedList = new List<int>();
-/// <summary>List operation.</summary>
+
             List<int> buriedGeneratingList = new List<int>();
             for (int i = 0; i < count; i++)
             {
@@ -65,9 +65,9 @@ namespace Thermodynamics.Harness
             const float Ambient = 220f;
             const float AmbientPow4 = Ambient * Ambient * Ambient * Ambient;
 
-/// <summary>Branchy operation.</summary>
+
             float sumA = Branchy(exposedFaces, temperature, radiationRow, convectionRow, sourceRow, wattsA, Ambient, AmbientPow4);
-/// <summary>Compact operation.</summary>
+
             float sumB = Compact(exposedIndex, buriedGenerating, temperature, radiationRow, convectionRow, sourceRow, wattsB, Ambient, AmbientPow4);
             for (int i = 0; i < count; i++)
             {
@@ -83,7 +83,7 @@ namespace Thermodynamics.Harness
                 throw new InvalidOperationException("the accumulators diverged: " + sumA + " against " + sumB);
             }
 
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
             rows.Add(Time("branchy (shipped shape)", count, exposedIndex.Length, repeats,
                 () => Branchy(exposedFaces, temperature, radiationRow, convectionRow, sourceRow, wattsA, Ambient, AmbientPow4)));
@@ -92,7 +92,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Branchy operation.</summary>
+
         private static float Branchy(int[] exposedFaces, float[] temperature, float[] radiationRow,
             float[] convectionRow, float[] sourceRow, float[] watts, float ambient, float ambientPow4)
         {
@@ -118,7 +118,7 @@ namespace Thermodynamics.Harness
             return accumulator;
         }
 
-/// <summary>Compact operation.</summary>
+
         private static float Compact(int[] exposedIndex, int[] buriedGenerating, float[] temperature,
             float[] radiationRow, float[] convectionRow, float[] sourceRow, float[] watts,
             float ambient, float ambientPow4)
@@ -148,18 +148,18 @@ namespace Thermodynamics.Harness
             return accumulator;
         }
 
-/// <summary>Time operation.</summary>
+
         private static Row Time(string shape, int nodes, int exposed, int repeats, Func<float> pass)
         {
             pass();
 
             double best = double.MaxValue;
-/// <summary>Stopwatch operation.</summary>
+
             Stopwatch watch = new Stopwatch();
             for (int r = 0; r < repeats; r++)
             {
                 watch.Restart();
-/// <summary>pass operation.</summary>
+
                 float sink = pass();
                 watch.Stop();
                 if (float.IsNaN(sink)) throw new InvalidOperationException("the pass produced NaN");
@@ -167,7 +167,7 @@ namespace Thermodynamics.Harness
                 if (ns < best) best = ns;
             }
 
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Shape = shape;
             row.Nodes = nodes;
@@ -177,17 +177,17 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(string shape, int blocks, Action<string> log = null)
         {
             if (log != null) log(blocks.ToString("n0", CultureInfo.InvariantCulture) + " blocks");
             return Table(Run(shape, blocks));
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(List<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.Append("shape".PadRight(26))
                 .Append("nodes".PadLeft(10))

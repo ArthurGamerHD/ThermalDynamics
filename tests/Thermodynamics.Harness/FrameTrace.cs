@@ -8,7 +8,7 @@ namespace Thermodynamics.Harness
     {
         public const double FrameBudgetMs = 1000d / 60d;
 
-/// <summary>List operation.</summary>
+
         private readonly List<double> samples = new List<double>();
 
         public double WorstMs { get; private set; }
@@ -17,7 +17,7 @@ namespace Thermodynamics.Harness
 
         public string Label;
 
-/// <summary>FrameTrace operation.</summary>
+
         public FrameTrace(string label)
         {
             Label = label;
@@ -35,7 +35,7 @@ namespace Thermodynamics.Harness
             get { return samples; }
         }
 
-/// <summary>Adds a .</summary>
+
         public void Add(double milliseconds, string what = null)
         {
             samples.Add(milliseconds);
@@ -56,7 +56,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Percentile operation.</summary>
+
         public double Percentile(double fraction)
         {
             if (samples.Count == 0) return 0d;
@@ -72,11 +72,11 @@ namespace Thermodynamics.Harness
 
         public int OverBudget
         {
-/// <summary>CountOver operation.</summary>
+
             get { return CountOver(FrameBudgetMs); }
         }
 
-/// <summary>CountOver operation.</summary>
+
         public int CountOver(double milliseconds)
         {
             int over = 0;
@@ -91,18 +91,18 @@ namespace Thermodynamics.Harness
         {
             get
             {
-/// <summary>Percentile operation.</summary>
+
                 double median = Percentile(0.5);
                 return median <= 0d ? 0d : WorstMs / median;
             }
         }
 
-/// <summary>Describe operation.</summary>
+
         public string Describe()
         {
             if (samples.Count == 0) return Label + ": no ticks";
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append(Label).Append(": ").Append(samples.Count).Append(" ticks, ")
               .Append("median ").Append(Percentile(0.5).ToString("n3"))
@@ -120,13 +120,13 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Row operation.</summary>
+
         public string Row()
         {
             return Percentile(0.5).ToString("n3") + "\t"
-/// <summary>Percentile operation.</summary>
+
                 + Percentile(0.95).ToString("n3") + "\t"
-/// <summary>Percentile operation.</summary>
+
                 + Percentile(0.99).ToString("n3") + "\t"
                 + WorstMs.ToString("n3") + "\t"
                 + SpikeRatio.ToString("n1") + "\t"

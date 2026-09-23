@@ -7,59 +7,59 @@ using VRageMath;
 
 namespace SENetworkAPI
 {
-	/// <summary>Which side of the connection an instance runs on.</summary>
+
 	public enum NetworkTypes { Dedicated, Server, Client }
 
-	/// <summary>
-	/// Send and receive layer for one mod on one communication channel.
-	/// Call <see cref="Init"/> once, then use <see cref="Instance"/>.
-	/// </summary>
+
+
+
+
 	public abstract class NetworkAPI
 	{
-		/// <summary>
-		/// Version of the API these sources came from. Mods embed the source
-		/// rather than referencing a binary, so this is the only way to tell
-		/// which build a given mod is carrying.
-		/// </summary>
+
+
+
+
+
 		public const string Version = "2.0.0";
 
-		/// <summary>The instance for this mod. Null until <see cref="Init"/> is called.</summary>
+
 		public static NetworkAPI Instance = null;
-		/// <summary>True once <see cref="Init"/> has run.</summary>
+
 		public static bool IsInitialized => Instance != null;
-		/// <summary>Writes every packet and property update to the game log.</summary>
+
 		public static bool LogNetworkTraffic = false;
 
-		/// <summary>
-		/// Payload size in bytes above which a packet is compressed. Compression
-		/// is flagged per packet, so this may be changed at runtime and the two
-		/// ends need not agree.
-		/// </summary>
+
+
+
+
+
 		public static int CompressionThreshold = 1024;
 
-		/// <summary>
-		/// Enables compact, optionally compressed property batches on send.
-		/// Every receiver must support batch format 1. Legacy packets are always
-		/// accepted; leave disabled when communicating with older library copies.
-		/// </summary>
+
+
+
+
+
 		public static bool UseCompactBatches = false;
 
-		/// <summary>Minimum legacy batch bytes worth attempting to pack. No send is delayed.</summary>
+
 		public static int CompactBatchThreshold = 256;
 
-		/// <summary>
-		/// Size in bytes above which the game discards an unreliable message.
-		/// Packets over this are sent reliably instead.
-		/// </summary>
+
+
+
+
 		public const int UnreliableMessageLimit = 1024;
 
-/// <summary>ResolveReliability operation.</summary>
+
 		internal static bool ResolveReliability(byte[] packet, bool isReliable)
 		{
 			return isReliable || packet.Length > UnreliableMessageLimit;
 		}
 
-/// <summary>Compress operation.</summary>
+
 		internal static void Compress(Command cmd)
 		{
 			if (cmd.BatchFormat != 0) return;
@@ -68,8 +68,8 @@ namespace SENetworkAPI
 				CompactBatch.TryEncode(cmd);
 				return;
 			}
-			// The original property layout already supports compression. Keep
-			// small values inline; use that layout only when it actually saves bytes.
+
+
 			if (!cmd.IsCompressed && cmd.Property != null && cmd.Property.Data != null &&
 				cmd.Property.Data.Length > CompressionThreshold)
 			{
@@ -100,27 +100,27 @@ namespace SENetworkAPI
 			cmd.IsCompressed = true;
 		}
 
-		/// <summary>
-		/// Raised for every command packet received, registered or not.
-		/// Provides sender, command string, data and send time.
-		/// </summary>
+
+
+
+
 		public event Action<ulong, string, byte[], DateTime> OnCommandRecived;
 
-		/// <summary>The communication channel this mod sends and listens on.</summary>
+
 		public readonly ushort ComId;
-		/// <summary>Chat command prefix, lowercased. Null when chat commands are off.</summary>
+
 		public readonly string Keyword;
-		/// <summary>Sender name used for chat messages the API prints.</summary>
+
 		public readonly string ModName;
 
 		internal bool UsingTextCommands => Keyword != null;
 
-		/// <summary>
-		/// Whether this instance is a client, a listen server or a dedicated
-		/// server. Derived from the instance type, so
-		/// <c>NetworkType != NetworkTypes.Client</c> guarantees a
-		/// <see cref="Server"/> cast will succeed.
-		/// </summary>
+
+
+
+
+
+
 		public NetworkTypes NetworkType
 		{
 			get
@@ -137,11 +137,11 @@ namespace SENetworkAPI
 		internal Dictionary<string, Action<ulong, string, byte[], DateTime>> NetworkCommands = new Dictionary<string, Action<ulong, string, byte[], DateTime>>(StringComparer.OrdinalIgnoreCase);
 		internal Dictionary<string, Action<string>> ChatCommands = new Dictionary<string, Action<string>>(StringComparer.OrdinalIgnoreCase);
 
-		/// <summary>Use <see cref="Init"/> instead of constructing this directly.</summary>
-		/// <param name="comId">The communication channel this mod sends and listens on</param>
-		/// <param name="modName">Sender name used for chat messages the API prints</param>
-		/// <param name="keyword">Chat command prefix, or null to disable chat commands</param>
-/// <summary>NetworkAPI operation.</summary>
+
+
+
+
+
 		public NetworkAPI(ushort comId, string modName, string keyword = null)
 		{
 			ComId = comId;
@@ -160,7 +160,7 @@ namespace SENetworkAPI
 			MyLog.Default.Info($"[NetworkAPI] Initialized. Version: {Version} Type: {GetType().Name} ComId: {ComId} Name: {ModName} Keyword: {Keyword}");
 		}
 
-/// <summary>HandleChatInput operation.</summary>
+
 		private void HandleChatInput(string messageText, ref bool sendToOthers)
 		{
 			if (!StartsWithKeyword(messageText))
@@ -168,7 +168,7 @@ namespace SENetworkAPI
 
 			sendToOthers = false;
 
-/// <summary>SecondToken operation.</summary>
+
 			string command = SecondToken(messageText);
 
 			Action<string> callback;
@@ -192,7 +192,7 @@ namespace SENetworkAPI
 			}
 		}
 
-/// <summary>StartsWithKeyword operation.</summary>
+
 		private bool StartsWithKeyword(string messageText)
 		{
 			if (messageText == null || Keyword == null)
@@ -209,7 +209,7 @@ namespace SENetworkAPI
 			return string.Compare(messageText, 0, Keyword, 0, length, StringComparison.OrdinalIgnoreCase) == 0;
 		}
 
-/// <summary>SecondToken operation.</summary>
+
 		private string SecondToken(string messageText)
 		{
 			int start = Keyword.Length + 1;
@@ -222,7 +222,7 @@ namespace SENetworkAPI
 			return (end < 0) ? messageText.Substring(start) : messageText.Substring(start, end - start);
 		}
 
-/// <summary>Invoke operation.</summary>
+
 		private void Invoke(Action<string> callback, string command, string arguments)
 		{
 			if (callback == null)
@@ -240,10 +240,10 @@ namespace SENetworkAPI
 			}
 		}
 
-/// <summary>HandleIncomingPacket operation.</summary>
+
 		private void HandleIncomingPacket(ushort channelId, byte[] payload, ulong senderId, bool fromServer)
 		{
-			// Reject unauthenticated client-to-client traffic before decoding it.
+
 			if (channelId != ComId || (!MyAPIGateway.Multiplayer.IsServer && !fromServer))
 			{
 				return;
@@ -263,8 +263,8 @@ namespace SENetworkAPI
 					return;
 				}
 
-				// A server-provided envelope may describe a relayed sender. Clients
-				// trust that envelope only after verifying the transport's server flag.
+
+
 				if (MyAPIGateway.Multiplayer.IsServer)
 				{
 					cmd.SteamId = senderId;
@@ -327,7 +327,7 @@ namespace SENetworkAPI
 
 					if (cmd.CommandString != null)
 					{
-/// <summary>ToDateTime operation.</summary>
+
 						DateTime sent = ToDateTime(cmd.Timestamp);
 
 						Invoke(OnCommandRecived, cmd, sent, "OnCommandRecived");
@@ -355,7 +355,7 @@ namespace SENetworkAPI
 			}
 		}
 
-/// <summary>ToDateTime operation.</summary>
+
 		private static DateTime ToDateTime(long timestamp)
 		{
 			if (timestamp < 0)
@@ -371,7 +371,7 @@ namespace SENetworkAPI
 			return new DateTime(timestamp);
 		}
 
-/// <summary>Invoke operation.</summary>
+
 		private void Invoke(Action<ulong, string, byte[], DateTime> callback, Command cmd, DateTime sent, string label)
 		{
 			if (callback == null)
@@ -389,14 +389,14 @@ namespace SENetworkAPI
 			}
 		}
 
-		/// <summary>
-		/// Registers a callback for a command name. Names are case insensitive
-		/// and may only be registered once. Null is not a valid name.
-		/// </summary>
-		/// <param name="command">The command name to handle</param>
-		/// <param name="callback">Receives sender, full command string, data and send time</param>
-		/// <exception cref="Exception">The name is null or already registered</exception>
-/// <summary>Registers and opens communication.</summary>
+
+
+
+
+
+
+
+
 		public void RegisterNetworkCommand(string command, Action<ulong, string, byte[], DateTime> callback)
 		{
 			if (command == null)
@@ -412,8 +412,8 @@ namespace SENetworkAPI
 			NetworkCommands.Add(command, callback);
 		}
 
-		/// <summary>Removes a command callback. No-op if it was never registered.</summary>
-		/// <param name="command">The command name to remove</param>
+
+
 		public void UnregisterNetworkCommand(string command)
 		{
 			if (command != null)
@@ -422,15 +422,15 @@ namespace SENetworkAPI
 			}
 		}
 
-		/// <summary>
-		/// Registers a callback for <c>&lt;keyword&gt; &lt;command&gt;</c> typed in chat.
-		/// Names are case insensitive and may only be registered once. Null or
-		/// empty registers the handler for the bare keyword.
-		/// </summary>
-		/// <param name="command">The word typed after the keyword</param>
-		/// <param name="callback">Receives everything typed after the command word</param>
-		/// <exception cref="Exception">The name is already registered</exception>
-/// <summary>Registers and opens communication.</summary>
+
+
+
+
+
+
+
+
+
 		public void RegisterChatCommand(string command, Action<string> callback)
 		{
 			if (command == null)
@@ -446,59 +446,59 @@ namespace SENetworkAPI
 			ChatCommands.Add(command, callback);
 		}
 
-		/// <summary>Removes a chat command callback. No-op if it was never registered.</summary>
-		/// <param name="command">The chat command to remove</param>
+
+
 		public void UnregisterChatCommand(string command)
 		{
 			ChatCommands.Remove(command ?? string.Empty);
 		}
 
-		/// <summary>
-		/// Sends a command. A client always sends to the server; a server sends
-		/// to one client, or to all of them when no steam id is given.
-		/// </summary>
-		/// <param name="commandString">Command name, plus any arguments delimited with spaces</param>
-		/// <param name="message">Text to display in chat on arrival</param>
-		/// <param name="data">Serialized payload</param>
-		/// <param name="sent">Send timestamp. Defaults to now</param>
-		/// <param name="steamId">Recipient, or 0 for all. Ignored by clients</param>
-		/// <param name="isReliable">False permits the unreliable channel for small packets</param>
-/// <summary>SendCommand operation.</summary>
+
+
+
+
+
+
+
+
+
+
+
 		public abstract void SendCommand(string commandString, string message = null, byte[] data = null, DateTime? sent = null, ulong steamId = ulong.MinValue, bool isReliable = true);
 
-		/// <summary>
-		/// Sends a command to clients within a radius of a point. Clients ignore
-		/// the position and send to the server.
-		/// </summary>
-		/// <param name="commandString">Command name, plus any arguments delimited with spaces</param>
-		/// <param name="point">Center of the send sphere, in world space</param>
-		/// <param name="radius">Radius of the send sphere. 0 uses the world's sync distance</param>
-		/// <param name="message">Text to display in chat on arrival</param>
-		/// <param name="data">Serialized payload</param>
-		/// <param name="sent">Send timestamp. Defaults to now</param>
-		/// <param name="steamId">Recipient, ignoring the radius, or 0 for everyone in range</param>
-		/// <param name="isReliable">False permits the unreliable channel for small packets</param>
-/// <summary>SendCommand operation.</summary>
+
+
+
+
+
+
+
+
+
+
+
+
+
 		public abstract void SendCommand(string commandString, Vector3D point, double radius = 0, string message = null, byte[] data = null, DateTime? sent = null, ulong steamId = ulong.MinValue, bool isReliable = true);
 
-/// <summary>SendCommand operation.</summary>
+
 		internal abstract void SendCommand(Command cmd, ulong steamId = ulong.MinValue, bool isReliable = true);
 
-/// <summary>SendCommand operation.</summary>
+
 		internal abstract void SendCommand(Command cmd, Vector3D point, double range = 0, ulong steamId = ulong.MinValue, bool isReliable = true);
 
-		/// <summary>Posts a line of chat under <see cref="ModName"/>.</summary>
-		/// <param name="message">The text to post</param>
+
+
 		public abstract void Say(string message);
 
-		/// <summary>Unregisters the message and chat handlers.</summary>
+
 		[ObsoleteAttribute("Manual Close() is unnecessary when SessionTools is included; it automatically cleans up the API when the world unloads.", false)]
 		public void Close()
 		{
 			UnregisterHandlers();
 		}
 
-/// <summary>Unregisters and closes communication.</summary>
+
 		internal void UnregisterHandlers()
 		{
 			MyLog.Default.Info($"[NetworkAPI] Unregistering communication stream: {ComId}");
@@ -511,14 +511,14 @@ namespace SENetworkAPI
 
 		}
 
-		/// <summary>Closes the instance and clears the property registries.</summary>
+
 		[ObsoleteAttribute("Manual Dispose() is unnecessary when SessionTools is included; it automatically cleans up the API when the world unloads.", false)]
 		public static void Dispose()
 		{
 			Shutdown();
 		}
 
-/// <summary>Shutdown operation.</summary>
+
 		internal static void Shutdown()
 		{
 			if (IsInitialized)
@@ -531,15 +531,15 @@ namespace SENetworkAPI
 			NetSync.ClearRegistries();
 		}
 
-		/// <summary>
-		/// Creates the instance for this mod, a <see cref="Client"/> or a
-		/// <see cref="Server"/> depending on the game state. No-op if already
-		/// initialized. Must run on the game update thread.
-		/// </summary>
-		/// <param name="comId">The communication channel this mod sends and listens on. Shared game wide, so pick an uncommon value</param>
-		/// <param name="modName">Sender name used for chat messages the API prints</param>
-		/// <param name="keyword">Chat command prefix, or null to disable chat commands</param>
-/// <summary>Init operation.</summary>
+
+
+
+
+
+
+
+
+
 		public static void Init(ushort comId, string modName, string keyword = null)
 		{
 			if (IsInitialized)
@@ -547,25 +547,25 @@ namespace SENetworkAPI
 
 			if (!MyAPIGateway.Multiplayer.IsServer)
 			{
-/// <summary>Client operation.</summary>
+
 				Instance = new Client(comId, modName, keyword);
 			}
 			else
 			{
-/// <summary>Server operation.</summary>
+
 				Instance = new Server(comId, modName, keyword);
 			}
 		}
 
-		/// <summary>Milliseconds between a timestamp and now. Whole milliseconds only.</summary>
-		/// <param name="timestamp">A DateTime.Ticks value</param>
+
+
 		public static float GetDeltaMilliseconds(long timestamp)
 		{
 			return (DateTime.UtcNow.Ticks - timestamp) / TimeSpan.TicksPerMillisecond;
 		}
 
-		/// <summary>Frames at 60fps between a timestamp and now, rounded up.</summary>
-		/// <param name="timestamp">A DateTime.Ticks value</param>
+
+
 		public static int GetDeltaFrames(long timestamp)
 		{
 			return (int)Math.Ceiling(GetDeltaMilliseconds(timestamp) / MillisecondsPerFrame);

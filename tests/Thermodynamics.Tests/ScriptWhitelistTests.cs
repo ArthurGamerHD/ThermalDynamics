@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
     public class ScriptWhitelistTests
     {
         [Fact]
-/// <summary>NoModSourceNamesAFrameworkTypeTheGameRefuses operation.</summary>
+
         public void NoModSourceNamesAFrameworkTypeTheGameRefuses()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
             Assert.True(sources.Count > 50,
                 "found " + sources.Count + " mod source files, which is not the mod");
 
-/// <summary>List operation.</summary>
+
             List<ScriptWhitelist.Finding> findings = new List<ScriptWhitelist.Finding>();
             foreach (string path in sources)
             {
@@ -34,7 +34,7 @@ namespace Thermodynamics.Tests
 
             if (findings.Count == 0) return;
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder message = new StringBuilder();
             message.Append(findings.Count)
                 .Append(" name(s) the game's script whitelist refuses. The mod project builds them "
@@ -50,7 +50,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCheckFindsTheDeclarationThatBrokeASession operation.</summary>
+
         public void TheCheckFindsTheDeclarationThatBrokeASession()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -63,9 +63,9 @@ namespace Thermodynamics.Tests
 
             const string broken =
                 "namespace T { public static class U {\n"
-/// <summary>W operation.</summary>
+
                 + "  public static string W(float w, IFormatProvider culture) { return null; }\n"
-/// <summary>X operation.</summary>
+
                 + "  public static string X(float w, System.IFormatProvider culture) { return null; }\n"
                 + "} }";
 
@@ -76,7 +76,7 @@ namespace Thermodynamics.Tests
             const string fixedUp =
                 "using System.Globalization;\n"
                 + "namespace T { public static class U {\n"
-/// <summary>W operation.</summary>
+
                 + "  public static string W(float w, CultureInfo culture) { return null; }\n"
                 + "} }";
 
@@ -84,7 +84,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCheckDoesNotReportMembersThatShareAFrameworkTypesName operation.</summary>
+
         public void TheCheckDoesNotReportMembersThatShareAFrameworkTypesName()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -98,7 +98,7 @@ namespace Thermodynamics.Tests
                 "namespace T { public class B {\n"
                 + "  public int Uri;\n"
                 + "  public string Lazy { get { return null; } }\n"
-/// <summary>Use operation.</summary>
+
                 + "  public void Use(B other) { int s = other.Uri; string c = other.Lazy; }\n"
                 + "} }";
 
@@ -106,7 +106,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ANameTheGameAlsoDeclaresIsLeftAlone operation.</summary>
+
         public void ANameTheGameAlsoDeclaresIsLeftAlone()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -117,7 +117,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheTranscriptionSaysWhereItCameFrom operation.</summary>
+
         public void TheTranscriptionSaysWhereItCameFrom()
         {
             Assert.Contains("Bin64", ScriptWhitelist.TranscribedFrom);
@@ -127,7 +127,7 @@ namespace Thermodynamics.Tests
             Assert.DoesNotContain("System", ScriptWhitelist.AllowedNamespaces);
         }
 
-/// <summary>Short operation.</summary>
+
         private static string Short(string path)
         {
             int index = path.IndexOf("Data" + Path.DirectorySeparatorChar, StringComparison.Ordinal);

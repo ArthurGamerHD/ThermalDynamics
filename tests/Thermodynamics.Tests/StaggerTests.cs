@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>StaggerTests operation.</summary>
+
         public StaggerTests(ITestOutputHelper output)
         {
             this.output = output;
@@ -22,7 +22,7 @@ namespace Thermodynamics.Tests
         private const double UnreadableFloor = 0.30d;
 
         [Fact]
-/// <summary>SpreadingCostsMoreOnlyOnceTheFleetStopsFittingInCache operation.</summary>
+
         public void SpreadingCostsMoreOnlyOnceTheFleetStopsFittingInCache()
         {
             List<StaggerLab.Row> rows = StaggerLab.Run(new[] { 4, 64 }, NodesEach, 8);
@@ -70,7 +70,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheLumpIsOneGridsStepAndDoesNotGrowWithTheFleet operation.</summary>
+
         public void TheLumpIsOneGridsStepAndDoesNotGrowWithTheFleet()
         {
             List<StaggerLab.Row> rows = StaggerLab.Run(new[] { 4, 64 }, NodesEach, 8);

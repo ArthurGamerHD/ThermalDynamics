@@ -11,25 +11,25 @@ namespace Thermodynamics.Core
 
         private static readonly Vector3D[] Corners = new Vector3D[]
         {
-/// <summary>Vector3D operation.</summary>
+
             new Vector3D(-1, -1, -1),
-/// <summary>Vector3D operation.</summary>
+
             new Vector3D(1, 1, 1),
-/// <summary>Vector3D operation.</summary>
+
             new Vector3D(-1, 1, -1),
-/// <summary>Vector3D operation.</summary>
+
             new Vector3D(1, -1, 1),
-/// <summary>Vector3D operation.</summary>
+
             new Vector3D(-1, -1, 1),
-/// <summary>Vector3D operation.</summary>
+
             new Vector3D(1, 1, -1),
-/// <summary>Vector3D operation.</summary>
+
             new Vector3D(-1, 1, 1),
-/// <summary>Vector3D operation.</summary>
+
             new Vector3D(1, -1, -1),
         };
 
-/// <summary>Points operation.</summary>
+
         public static void Points(BoundingBoxD bounds, int samples, List<Vector3D> results)
         {
             if (results == null) return;

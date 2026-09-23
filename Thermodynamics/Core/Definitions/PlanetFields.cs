@@ -26,7 +26,7 @@ namespace Thermodynamics.Core
 
     public static class PlanetProperties
     {
-/// <summary>Merge operation.</summary>
+
         public static PlanetThermalProperties Merge(
             PlanetThermalProperties baseline, PlanetThermalProperties read, PlanetField supplied)
         {
@@ -77,7 +77,7 @@ namespace Thermodynamics.Core
             return merged.Clamp();
         }
 
-/// <summary>IsVacuum operation.</summary>
+
         public static bool IsVacuum(PlanetThermalProperties properties)
         {
             return properties == null

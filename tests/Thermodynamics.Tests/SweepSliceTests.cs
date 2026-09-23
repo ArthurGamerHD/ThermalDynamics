@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
         private const int Cap = 4096;
 
         [Fact]
-/// <summary>NothingToSweepIsNoWork operation.</summary>
+
         public void NothingToSweepIsNoWork()
         {
             Assert.Equal(0, SimulationScheduler.SweepSlice(0, 1, Interval, Cap));
@@ -16,7 +16,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGridUnderTheCapIsSweptWholeOverTheInterval operation.</summary>
+
         public void AGridUnderTheCapIsSweptWholeOverTheInterval()
         {
             const int count = 800;
@@ -31,14 +31,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AMultiStepTickOwesEveryStepsShare operation.</summary>
+
         public void AMultiStepTickOwesEveryStepsShare()
         {
             Assert.Equal(300, SimulationScheduler.SweepSlice(800, 3, Interval, Cap));
         }
 
         [Fact]
-/// <summary>TheCapBoundsTheSliceHoweverLargeTheGrid operation.</summary>
+
         public void TheCapBoundsTheSliceHoweverLargeTheGrid()
         {
             Assert.Equal(Cap, SimulationScheduler.SweepSlice(1000000, 1, Interval, Cap));
@@ -46,7 +46,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ALargeGridTimesSeveralStepsDoesNotOverflow operation.</summary>
+
         public void ALargeGridTimesSeveralStepsDoesNotOverflow()
         {
             int slice = SimulationScheduler.SweepSlice(int.MaxValue / 2, 60, Interval, Cap);
@@ -55,7 +55,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSliceNeverExceedsTheRota operation.</summary>
+
         public void TheSliceNeverExceedsTheRota()
         {
             Assert.Equal(3, SimulationScheduler.SweepSlice(3, 60, Interval, Cap));
@@ -63,7 +63,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASliceNeverRoundsDownToNothing operation.</summary>
+
         public void ASliceNeverRoundsDownToNothing()
         {
             Assert.Equal(1, SimulationScheduler.SweepSlice(4, 1, 64, Cap));
@@ -74,7 +74,7 @@ namespace Thermodynamics.Tests
         [InlineData(7)]
         [InlineData(800)]
         [InlineData(50000)]
-/// <summary>WalkingTheRotaCoversEveryItem operation.</summary>
+
         public void WalkingTheRotaCoversEveryItem(int count)
         {
             bool[] seen = new bool[count];

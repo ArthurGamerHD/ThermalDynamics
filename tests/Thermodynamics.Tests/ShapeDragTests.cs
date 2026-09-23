@@ -10,10 +10,10 @@ namespace Thermodynamics.Tests
         private const float ThickAir = 1f;
         private const float Speed = 120f;
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings(bool shape)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -23,16 +23,16 @@ namespace Thermodynamics.Tests
             return settings;
         }
 
-/// <summary>Brick operation.</summary>
+
         private static ThermalSimulation Brick(bool shape)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.HeavyArmor(), Vector3I.Zero, new Vector3I(4, 4, 4));
-/// <summary>Built operation.</summary>
+
             return Built(builder, shape);
         }
 
-/// <summary>Wedge operation.</summary>
+
         private static ThermalSimulation Wedge(bool shape)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -48,11 +48,11 @@ namespace Thermodynamics.Tests
                 }
             }
 
-/// <summary>Built operation.</summary>
+
             return Built(builder, shape);
         }
 
-/// <summary>Built operation.</summary>
+
         private static ThermalSimulation Built(GridBuilder builder, bool shape)
         {
             ThermalSimulation simulation = builder.BuildSimulation(Settings(shape), 293.15f);
@@ -60,7 +60,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>DragWatts operation.</summary>
+
         private static float DragWatts(ThermalSimulation simulation)
         {
             simulation.StepExact(1, Worlds.Flight(ThickAir, Speed));
@@ -68,18 +68,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShapeTermSeparatesTheWedgeFromTheBrick operation.</summary>
+
         public void TheShapeTermSeparatesTheWedgeFromTheBrick()
         {
-/// <summary>DragWatts operation.</summary>
+
             float flatBrick = DragWatts(Brick(false));
-/// <summary>DragWatts operation.</summary>
+
             float flatWedge = DragWatts(Wedge(false));
             Assert.Equal(flatBrick, flatWedge, 3);
 
-/// <summary>DragWatts operation.</summary>
+
             float brick = DragWatts(Brick(true));
-/// <summary>DragWatts operation.</summary>
+
             float wedge = DragWatts(Wedge(true));
 
             Assert.True(brick > 0f, "the brick took no drag, so this compares nothing");
@@ -91,10 +91,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStairSteppedSlopeReconstructsToItsMeanSurface operation.</summary>
+
         public void AStairSteppedSlopeReconstructsToItsMeanSurface()
         {
-/// <summary>Wedge operation.</summary>
+
             ThermalSimulation wedge = Wedge(true);
             CellBitset occupancy = wedge.Grid.Occupancy();
 
@@ -110,10 +110,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFlatFaceSquareToTheFlowIsUnchangedAndTheEdgesAreNot operation.</summary>
+
         public void AFlatFaceSquareToTheFlowIsUnchangedAndTheEdgesAreNot()
         {
-/// <summary>Brick operation.</summary>
+
             ThermalSimulation brick = Brick(true);
             CellBitset occupancy = brick.Grid.Occupancy();
 
@@ -124,20 +124,20 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShapeTermMovesTemperaturesAndNotOnlyDrag operation.</summary>
+
         public void TheShapeTermMovesTemperaturesAndNotOnlyDrag()
         {
-/// <summary>Heated operation.</summary>
+
             ThermalSimulation off = Heated(false);
-/// <summary>Heated operation.</summary>
+
             ThermalSimulation on = Heated(true);
 
             off.StepExact(600, Worlds.Flight(ReentryDensity, ReentrySpeed));
             on.StepExact(600, Worlds.Flight(ReentryDensity, ReentrySpeed));
 
-/// <summary>Peak operation.</summary>
+
             float hot = Peak(off);
-/// <summary>Peak operation.</summary>
+
             float shaped = Peak(on);
 
             Assert.True(hot > 0f && shaped > 0f);
@@ -148,10 +148,10 @@ namespace Thermodynamics.Tests
             Assert.Equal(9.96f, hot - shaped, 1);
         }
 
-/// <summary>Heated operation.</summary>
+
         private static ThermalSimulation Heated(bool shape)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableSolarHeat = false;
             settings.EnableDamage = false;
@@ -166,7 +166,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Peak operation.</summary>
+
         private static float Peak(ThermalSimulation simulation)
         {
             float peak = 0f;
@@ -186,10 +186,10 @@ namespace Thermodynamics.Tests
         [InlineData(1, 0.500f)]
         [InlineData(2, 0.500f)]
         [InlineData(3, 0.500f)]
-/// <summary>AFortyFiveDegreeSlopeReadsTheSameAtEveryRadius operation.</summary>
+
         public void AFortyFiveDegreeSlopeReadsTheSameAtEveryRadius(int radius, float expected)
         {
-/// <summary>Ramp operation.</summary>
+
             ThermalSimulation ramp = Ramp(1);
             CellBitset occupancy = ramp.Grid.Occupancy();
 
@@ -200,19 +200,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RadiusOneCannotSeparateTheShallowSlopes operation.</summary>
+
         public void RadiusOneCannotSeparateTheShallowSlopes()
         {
-/// <summary>FactorOf operation.</summary>
+
             float shallow = FactorOf(Ramp(2), 2, 1);
-/// <summary>FactorOf operation.</summary>
+
             float shallower = FactorOf(Ramp(3), 3, 1);
 
             Assert.Equal(0.134f, shallow, 3);
             Assert.Equal(0.134f, shallower, 3);
         }
 
-/// <summary>FactorOf operation.</summary>
+
         private static float FactorOf(ThermalSimulation ramp, int run, int radius)
         {
             return ShapeNormal.Factor(
@@ -223,7 +223,7 @@ namespace Thermodynamics.Tests
         private const int RampWidth = 16;
         private const int RampHeight = 8;
 
-/// <summary>Ramp operation.</summary>
+
         private static ThermalSimulation Ramp(int run)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -243,17 +243,17 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>SlopeCell operation.</summary>
+
         private static BlockInstance SlopeCell(ThermalSimulation ramp, int run)
         {
             int y = RampHeight / 2;
             return ramp.Grid.GetAtCell(
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(RampWidth / 2, y, (RampHeight - y) * run - 1));
         }
 
         [Fact]
-/// <summary>AnUnbuiltNormalReadsAsNoCorrection operation.</summary>
+
         public void AnUnbuiltNormalReadsAsNoCorrection()
         {
             Assert.Equal(1f, ShapeNormal.Factor(Vector3.Zero, Vector3.Backward), 4);
@@ -261,7 +261,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASurfaceInTheLeeTakesNothingAndNothingExceedsOne operation.</summary>
+
         public void ASurfaceInTheLeeTakesNothingAndNothingExceedsOne()
         {
             Assert.Equal(0f, ShapeNormal.Factor(Vector3.Forward, Vector3.Backward), 4);
@@ -269,7 +269,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShapeNormalBudgetIsSizedAgainstWhatANodeCosts operation.</summary>
+
         public void TheShapeNormalBudgetIsSizedAgainstWhatANodeCosts()
         {
             Assert.Equal(452, SimulationScheduler.ShapeNormalBudget(126731));
@@ -282,12 +282,12 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-/// <summary>TheShapeTermOnlyEverReduces operation.</summary>
+
         public void TheShapeTermOnlyEverReduces(bool wedge)
         {
-/// <summary>DragWatts operation.</summary>
+
             float without = DragWatts(wedge ? Wedge(false) : Brick(false));
-/// <summary>DragWatts operation.</summary>
+
             float with = DragWatts(wedge ? Wedge(true) : Brick(true));
 
             Assert.True(with <= without + 1e-3f,

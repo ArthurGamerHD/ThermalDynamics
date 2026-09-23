@@ -23,15 +23,15 @@ namespace RichHudFramework.UI
 
 		public readonly Label textElement;
 
-/// <summary>LabelBox operation.</summary>
+
 		public LabelBox(HudParentBase parent) : base(parent)
 		{
-/// <summary>Label operation.</summary>
+
 			textElement = new Label(this);
 			TextBoard = textElement.TextBoard;
 		}
 
-/// <summary>LabelBox operation.</summary>
+
 		public LabelBox() : this(null)
 		{ }
 	}

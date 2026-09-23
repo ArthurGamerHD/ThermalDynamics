@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class UndergroundContactTests
     {
-/// <summary>At operation.</summary>
+
         private static EnvironmentState At(float depth, float windSpeed = 0f)
         {
             EnvironmentSample sample = Worlds.PlanetSurface(1f, 0.5f, windSpeed);
@@ -15,17 +15,17 @@ namespace Thermodynamics.Tests
             sample.IsUnderground = depth > 0f;
 
             return EnvironmentSolver.Solve(
-/// <summary>ThermalSettings operation.</summary>
+
                 new ThermalSettings().Derive(), PlanetThermalProperties.Default(), sample);
         }
 
         [Fact]
-/// <summary>RockShedsFarLessThanAir operation.</summary>
+
         public void RockShedsFarLessThanAir()
         {
-/// <summary>At operation.</summary>
+
             float air = At(0f).ConvectionCoefficient;
-/// <summary>At operation.</summary>
+
             float rock = At(50f).ConvectionCoefficient;
 
             Assert.True(air > 0f, "the surface case has to be exchanging with something");
@@ -38,12 +38,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCrossoverIsAGradientRatherThanAStep operation.</summary>
+
         public void TheCrossoverIsAGradientRatherThanAStep()
         {
-/// <summary>At operation.</summary>
+
             float surface = At(0f).ConvectionCoefficient;
-/// <summary>At operation.</summary>
+
             float deep = At(ThermalConstants.UndergroundContactDepth * 4f).ConvectionCoefficient;
             float range = surface - deep;
 
@@ -55,7 +55,7 @@ namespace Thermodynamics.Tests
             for (float depth = 0.5f; depth <= ThermalConstants.UndergroundContactDepth * 2f;
                  depth += 0.5f)
             {
-/// <summary>At operation.</summary>
+
                 float current = At(depth).ConvectionCoefficient;
 
                 Assert.True(current <= previous + 1e-3f,
@@ -76,12 +76,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NeitherWindNorWeatherReachesABuriedGrid operation.</summary>
+
         public void NeitherWindNorWeatherReachesABuriedGrid()
         {
-/// <summary>At operation.</summary>
+
             float still = At(50f).ConvectionCoefficient;
-/// <summary>At operation.</summary>
+
             float gale = At(50f, 60f).ConvectionCoefficient;
 
             Assert.Equal(still, gale, 3);
@@ -91,19 +91,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSameHullRunsHotterBuriedThanInTheOpen operation.</summary>
+
         public void TheSameHullRunsHotterBuriedThanInTheOpen()
         {
             Assert.True(Settled(50f) > Settled(0f) + 5f,
                 "a buried hull should run hotter than one in the open: "
-/// <summary>Sets the tled.</summary>
+
                 + Settled(50f).ToString("n1") + " K against " + Settled(0f).ToString("n1") + " K");
         }
 
-/// <summary>Sets the tled.</summary>
+
         private static float Settled(float depth)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableDamage = false;
             settings.EnableSolarHeat = false;

@@ -50,10 +50,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Vanilla operation.</summary>
+
         public static List<World> Vanilla()
         {
-/// <summary>List operation.</summary>
+
             List<World> worlds = new List<World>();
 
             worlds.Add(new World
@@ -65,7 +65,7 @@ namespace Thermodynamics.Harness
                 Engine = new PlanetThermalDerivation.Engine
                 {
                     DeepestGroundMetres = 600f,
-                    SurfaceTemperatureLevel = 0.5f,     // Cozy, by default
+                    SurfaceTemperatureLevel = 0.5f,
                     SurfaceGravity = 1.0f,
                     HasAtmosphere = true,
                     AtmosphereDensity = 1.0f,
@@ -106,7 +106,7 @@ namespace Thermodynamics.Harness
                 Engine = new PlanetThermalDerivation.Engine
                 {
                     DeepestGroundMetres = 600f,
-                    SurfaceTemperatureLevel = 0.5f,     // Cozy, by default — see the report
+                    SurfaceTemperatureLevel = 0.5f,
                     SurfaceGravity = 0.9f,
                     HasAtmosphere = true,
                     AtmosphereDensity = 1.0f,
@@ -183,7 +183,7 @@ namespace Thermodynamics.Harness
                 Engine = new PlanetThermalDerivation.Engine
                 {
                     DeepestGroundMetres = 285f,
-                    SurfaceTemperatureLevel = 0.5f,     // Cozy, by default — see the report
+                    SurfaceTemperatureLevel = 0.5f,
                     SurfaceGravity = 0.25f,
                     HasAtmosphere = true,
                     AtmosphereDensity = 1.0f,
@@ -219,10 +219,10 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Xml operation.</summary>
+
         public static string Xml()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
@@ -241,7 +241,7 @@ namespace Thermodynamics.Harness
                 "The fallback for any planet without an entry of its own. Earthlike, and unchanged\n"
                 + "\t\t\tfrom what this mod shipped before the per-planet entries existed.");
 
-/// <summary>Vanilla operation.</summary>
+
             List<World> worlds = Vanilla();
             for (int i = 0; i < worlds.Count; i++)
             {
@@ -273,7 +273,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Entry operation.</summary>
+
         private static void Entry(
             StringBuilder sb, string subtype, PlanetThermalProperties p, string note)
         {
@@ -323,7 +323,7 @@ namespace Thermodynamics.Harness
             sb.Append("\t\t</Definition>\n");
         }
 
-/// <summary>Value operation.</summary>
+
         private static void Value(StringBuilder sb, string name, float value, string note)
         {
             sb.Append("\n\t\t\t\t\t<!--").Append(note).Append("-->\n");
@@ -332,12 +332,12 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Report operation.</summary>
+
         public static string Report()
         {
-/// <summary>Vanilla operation.</summary>
+
             List<World> worlds = Vanilla();
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("Planet thermals, derived from each world's own generator definition\n\n");

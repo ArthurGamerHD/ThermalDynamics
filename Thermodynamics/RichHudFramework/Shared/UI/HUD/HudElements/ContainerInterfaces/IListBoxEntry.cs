@@ -4,7 +4,7 @@
 		: ISelectionBoxEntryTuple<TElement, TValue>
 		where TElement : HudElementBase, IMinLabelElement
 	{
-/// <summary>Returns the orsetmember.</summary>
+
 		object GetOrSetMember(object data, int memberEnum);
 	}
 }

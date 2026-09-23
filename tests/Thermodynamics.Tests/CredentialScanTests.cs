@@ -8,13 +8,13 @@ namespace Thermodynamics.Tests
 {
     public class CredentialScanTests
     {
-/// <summary>RepoRoot operation.</summary>
+
         private static string RepoRoot()
         {
             return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
 
-/// <summary>Files operation.</summary>
+
         private static IEnumerable<string> Files()
         {
             string[] extensions = { ".cs", ".xml", ".sbc", ".md", ".py", ".sh", ".json", ".txt",
@@ -45,7 +45,7 @@ namespace Thermodynamics.Tests
             public Regex Pattern;
         }
 
-/// <summary>Shapes operation.</summary>
+
         private static List<Shape> Shapes()
         {
             return new List<Shape>
@@ -53,38 +53,38 @@ namespace Thermodynamics.Tests
                 new Shape
                 {
                     Name = "a private key block",
-/// <summary>Regex operation.</summary>
+
                     Pattern = new Regex(@"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
                 },
                 new Shape
                 {
                     Name = "a provider-prefixed token",
-/// <summary>Regex operation.</summary>
+
                     Pattern = new Regex(@"\b(?:gh[pousr]_[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9]{20,})\b"),
                 },
                 new Shape
                 {
                     Name = "a credential assigned a literal",
-/// <summary>Regex operation.</summary>
+
                     Pattern = new Regex(
                         @"(?i)\b(?:api[_-]?key|secret|password|passwd|token)\b\s*[:=]\s*[""']([A-Za-z0-9+/=_-]{16,})[""']"),
                 },
                 new Shape
                 {
                     Name = "a Steam Web API key",
-/// <summary>Regex operation.</summary>
+
                     Pattern = new Regex(@"(?i)steam[^\n]{0,40}\b[0-9A-F]{32}\b"),
                 },
             };
         }
 
         [Fact]
-/// <summary>NoCredentialShapedLiteralIsInTheTree operation.</summary>
+
         public void NoCredentialShapedLiteralIsInTheTree()
         {
-/// <summary>List operation.</summary>
+
             List<string> found = new List<string>();
-/// <summary>Shapes operation.</summary>
+
             List<Shape> shapes = Shapes();
             int scanned = 0;
 
@@ -122,10 +122,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheScanFiresOnKeysAndNotOnTheWordKey operation.</summary>
+
         public void TheScanFiresOnKeysAndNotOnTheWordKey()
         {
-/// <summary>Shapes operation.</summary>
+
             List<Shape> shapes = Shapes();
 
             string[] credentials =

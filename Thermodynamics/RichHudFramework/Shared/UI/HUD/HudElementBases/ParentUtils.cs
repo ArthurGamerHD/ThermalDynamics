@@ -13,7 +13,7 @@ namespace RichHudFramework
 		{
 			protected static partial class ParentUtils
 			{
-/// <summary>Registers the API and message handler.</summary>
+
 				public static void RegisterNodes(HudParentBase newParent, IReadOnlyList<HudNodeBase> nodes)
 				{
 					if (nodes.Count == 0)
@@ -44,7 +44,7 @@ namespace RichHudFramework
 				}
 
 				public static void RegisterNodes<TCon, TNode>(HudParentBase newParent, IReadOnlyList<TCon> nodes)
-/// <summary>new operation.</summary>
+
 					where TCon : IHudNodeContainer<TNode>, new()
 					where TNode : HudNodeBase
 				{
@@ -75,7 +75,7 @@ namespace RichHudFramework
 					}
 				}
 
-/// <summary>Unregisters the API and cleans resources.</summary>
+
 				public static void UnregisterNodes(HudParentBase parent, IReadOnlyList<HudNodeBase> nodes, int index, int count)
 				{
 					if (count > 0)
@@ -114,7 +114,7 @@ namespace RichHudFramework
 				}
 
 				public static void UnregisterNodes<TCon, TNode>(HudParentBase parent, IReadOnlyList<TCon> nodes, int index, int count)
-/// <summary>new operation.</summary>
+
 					where TCon : IHudNodeContainer<TNode>, new()
 					where TNode : HudNodeBase
 				{

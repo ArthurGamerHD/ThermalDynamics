@@ -10,10 +10,10 @@ namespace Thermodynamics.Tests
     {
         private const float ThickAir = 1f;
 
-/// <summary>Rig operation.</summary>
+
         private static ThermalSimulation Rig(bool diagnostics)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -30,10 +30,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheGridTotalIsTheSumOfItsNodes operation.</summary>
+
         public void TheGridTotalIsTheSumOfItsNodes()
         {
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(true);
             simulation.StepExact(1, Worlds.Flight(ThickAir, 120f));
 
@@ -48,12 +48,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheTotalDoesNotDependOnDiagnosticsBeingOn operation.</summary>
+
         public void TheTotalDoesNotDependOnDiagnosticsBeingOn()
         {
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation watched = Rig(true);
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation unwatched = Rig(false);
 
             watched.StepExact(1, Worlds.Flight(ThickAir, 120f));
@@ -66,10 +66,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheTotalIsARateRatherThanAnAccumulation operation.</summary>
+
         public void TheTotalIsARateRatherThanAnAccumulation()
         {
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(false);
 
             simulation.StepExact(1, Worlds.Flight(ThickAir, 120f));
@@ -83,15 +83,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheTotalSurvivesEverySubstepOfAStep operation.</summary>
+
         public void TheTotalSurvivesEverySubstepOfAStep()
         {
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(false);
             simulation.StepExact(1, Worlds.Flight(ThickAir, 120f));
             float once = simulation.Solver.LastFrictionWatts;
 
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation many = Rig(false);
             many.StepExact(8, Worlds.Flight(ThickAir, 120f));
 
@@ -100,10 +100,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGridThatIsNotMovingThroughAirHasNoDragPower operation.</summary>
+
         public void AGridThatIsNotMovingThroughAirHasNoDragPower()
         {
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(false);
             simulation.StepExact(1, Worlds.Flight(ThickAir, 0f));
 
@@ -111,12 +111,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DragPowerRisesSteeplyWithSpeed operation.</summary>
+
         public void DragPowerRisesSteeplyWithSpeed()
         {
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation slow = Rig(false);
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation fast = Rig(false);
 
             slow.StepExact(1, Worlds.Flight(ThickAir, 60f));
@@ -128,10 +128,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFrictionTotalIsInsideTheHeatGain operation.</summary>
+
         public void TheFrictionTotalIsInsideTheHeatGain()
         {
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(false);
             simulation.StepExact(1, Worlds.Flight(ThickAir, 120f));
 

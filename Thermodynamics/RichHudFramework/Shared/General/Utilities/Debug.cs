@@ -6,13 +6,13 @@ namespace RichHudFramework
 	{
 		public static class Debug
 		{
-/// <summary>AssertNotNull operation.</summary>
+
 			public static void AssertNotNull<T>(T obj, string message = "")
 			{
 				Assert(obj != null, $"Object of type {typeof(T)} is null. " + message);
 			}
 
-/// <summary>Assert operation.</summary>
+
 			public static void Assert(bool condition, string message = "")
 			{
 				if (!condition)

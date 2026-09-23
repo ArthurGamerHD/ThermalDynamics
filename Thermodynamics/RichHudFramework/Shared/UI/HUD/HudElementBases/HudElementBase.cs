@@ -35,7 +35,7 @@ namespace RichHudFramework
 					if (value > Padding.X)
 						value -= Padding.X;
 
-/// <summary>Vector2 operation.</summary>
+
 					UnpaddedSize = new Vector2(value, UnpaddedSize.Y);
 				}
 			}
@@ -48,7 +48,7 @@ namespace RichHudFramework
 					if (value > Padding.Y)
 						value -= Padding.Y;
 
-/// <summary>Vector2 operation.</summary>
+
 					UnpaddedSize = new Vector2(UnpaddedSize.X, value);
 				}
 			}
@@ -69,7 +69,7 @@ namespace RichHudFramework
 
 			public bool UseCursor
 			{
-/// <summary>return operation.</summary>
+
 				get { return (Config[StateID] & (uint)HudElementStates.CanUseCursor) > 0; }
 				set
 				{
@@ -85,7 +85,7 @@ namespace RichHudFramework
 
 			public bool ShareCursor
 			{
-/// <summary>return operation.</summary>
+
 				get { return (Config[StateID] & (uint)HudElementStates.CanShareCursor) > 0; }
 				set
 				{
@@ -98,7 +98,7 @@ namespace RichHudFramework
 
 			public bool IsMasking
 			{
-/// <summary>return operation.</summary>
+
 				get { return (Config[StateID] & (uint)HudElementStates.IsMasking) > 0; }
 				set
 				{
@@ -111,7 +111,7 @@ namespace RichHudFramework
 
 			public bool IsSelectivelyMasked
 			{
-/// <summary>return operation.</summary>
+
 				get { return (Config[StateID] & (uint)HudElementStates.IsSelectivelyMasked) > 0; }
 				set
 				{
@@ -124,7 +124,7 @@ namespace RichHudFramework
 
 			public bool CanIgnoreMasking
 			{
-/// <summary>return operation.</summary>
+
 				get { return (Config[StateID] & (uint)HudElementStates.CanIgnoreMasking) > 0; }
 				set
 				{
@@ -143,7 +143,7 @@ namespace RichHudFramework
 
 			protected BoundingBox2? MaskingBox { get; private set; }
 
-/// <summary>HudElementBase operation.</summary>
+
 			public HudElementBase(HudParentBase parent) : base(parent)
 			{
 				DimAlignment = DimAlignments.None;
@@ -154,14 +154,14 @@ namespace RichHudFramework
 				OriginAlignment = Vector2.Zero;
 			}
 
-/// <summary>InputDepth operation.</summary>
+
 			protected override void InputDepth()
 			{
 				if (HudSpace.IsFacingCamera)
 				{
 					Vector3 cursorPos = HudSpace.CursorPos;
 					Vector2 halfSize = Vector2.Max(CachedSize, new Vector2(MinMouseBounds)) * .5f;
-/// <summary>BoundingBox2 operation.</summary>
+
 					BoundingBox2 box = new BoundingBox2(Position - halfSize, Position + halfSize);
 					bool mouseInBounds;
 
@@ -178,7 +178,7 @@ namespace RichHudFramework
 				}
 			}
 
-/// <summary>BeginInput operation.</summary>
+
 			protected sealed override void BeginInput()
 			{
 				Vector3 cursorPos = HudSpace.CursorPos;
@@ -205,7 +205,7 @@ namespace RichHudFramework
 				}
 			}
 
-/// <summary>BeginLayout operation.</summary>
+
 			protected sealed override void BeginLayout(bool _)
 			{
 				var parentFull = Parent as HudElementBase;
@@ -252,7 +252,7 @@ namespace RichHudFramework
 				if ((Config[StateID] & (uint)HudElementStates.IsMasking) > 0 && MaskingBox != null)
 				{
 					Vector2 halfSize = CachedSize * .5f;
-/// <summary>BoundingBox2 operation.</summary>
+
 					var bounds = new BoundingBox2(Position - halfSize, Position + halfSize);
 					isDisjoint =
 						(bounds.Max.X < MaskingBox.Value.Min.X) ||
@@ -270,7 +270,7 @@ namespace RichHudFramework
 					UpdateChildAlignment();
 			}			
 
-/// <summary>UpdateChildAlignment operation.</summary>
+
 			private void UpdateChildAlignment()
 			{
 				for (int i = 0; i < children.Count; i++)
@@ -359,7 +359,7 @@ namespace RichHudFramework
 				}
 			}
 
-/// <summary>UpdateMasking operation.</summary>
+
 			private void UpdateMasking()
 			{
 				_config[StateID] |= (uint)HudElementStates.IsMasked;
@@ -374,7 +374,7 @@ namespace RichHudFramework
 				else if (parentFull != null && (Config[StateID] & (uint)HudElementStates.IsSelectivelyMasked) > 0)
 				{
 					Vector2 halfParent = .5f * parentFull.CachedSize;
-/// <summary>BoundingBox2 operation.</summary>
+
 					parentBox = new BoundingBox2(
 						-halfParent + parentFull.Position,
 						halfParent + parentFull.Position
@@ -389,7 +389,7 @@ namespace RichHudFramework
 				if ((Config[StateID] & (uint)HudElementStates.IsMasking) > 0)
 				{
 					Vector2 halfSize = .5f * CachedSize;
-/// <summary>BoundingBox2 operation.</summary>
+
 					box = new BoundingBox2(
 						-halfSize + Position,
 						halfSize + Position
@@ -398,14 +398,14 @@ namespace RichHudFramework
 
 				if (parentBox != null && box != null)
 					box = box.Value.Intersect(parentBox.Value);
-/// <summary>if operation.</summary>
+
 				else if (box == null)
 					box = parentBox;
 
 				MaskingBox = box;
 			}
 
-/// <summary>Returns the orsetapimember.</summary>
+
 			protected override object GetOrSetApiMember(object data, int memberEnum)
 			{
 				switch ((HudElementAccessors)memberEnum)

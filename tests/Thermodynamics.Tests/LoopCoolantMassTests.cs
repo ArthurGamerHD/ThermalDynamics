@@ -12,7 +12,7 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>LoopCoolantMassTests operation.</summary>
+
         public LoopCoolantMassTests(ITestOutputHelper output)
         {
             this.output = output;
@@ -22,10 +22,10 @@ namespace Thermodynamics.Tests
 
         private const float ReferenceWatts = 125000f;
 
-/// <summary>Radiating operation.</summary>
+
         private static ThermalSettings Radiating()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = true;
             settings.EnableSolarHeat = false;
@@ -48,7 +48,7 @@ namespace Thermodynamics.Tests
             public float MassPerPipe;
         }
 
-/// <summary>Flat operation.</summary>
+
         private static LoopThermalProperties Flat()
         {
             LoopThermalProperties properties = LoopThermalProperties.Default();
@@ -56,7 +56,7 @@ namespace Thermodynamics.Tests
             return properties.Clamp();
         }
 
-/// <summary>Ring operation.</summary>
+
         private Reading Ring(bool large, bool flat, float watts, int steps)
         {
             GridBuilder builder = large ? GridBuilder.Large() : GridBuilder.Small();
@@ -71,7 +71,7 @@ namespace Thermodynamics.Tests
 
             if (flat)
             {
-/// <summary>Flat operation.</summary>
+
                 simulation.LoopProperties = Flat();
                 simulation.RebuildAll();
             }
@@ -99,16 +99,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRigReachesASteadyStateAndSaysSo operation.</summary>
+
         public void TheRigReachesASteadyStateAndSaysSo()
         {
             foreach (bool large in new[] { true, false })
             {
                 foreach (bool flat in new[] { false, true })
                 {
-/// <summary>Ring operation.</summary>
+
                     float settled = Ring(large, flat, ReferenceWatts, SettledSteps).Hottest;
-/// <summary>Ring operation.</summary>
+
                     float doubled = Ring(large, flat, ReferenceWatts, SettledSteps * 2).Hottest;
 
                     Assert.True(Absolute(doubled - settled) < 1f,
@@ -122,17 +122,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDensityCorrectionLeavesTheMeanWhereItWas operation.</summary>
+
         public void TheDensityCorrectionLeavesTheMeanWhereItWas()
         {
             foreach (bool large in new[] { true, false })
             {
-/// <summary>Ring operation.</summary>
+
                 Reading flat = Ring(large, true, ReferenceWatts, SettledSteps);
-/// <summary>Ring operation.</summary>
+
                 Reading shipped = Ring(large, false, ReferenceWatts, SettledSteps);
 
-/// <summary>Absolute operation.</summary>
+
                 float moved = Absolute(shipped.Mean - flat.Mean);
 
                 Assert.True(moved < 20f,
@@ -145,14 +145,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDensityCorrectionMovesTheSwingRatherThanTheMean operation.</summary>
+
         public void TheDensityCorrectionMovesTheSwingRatherThanTheMean()
         {
             const float Watts = 1250000f;
 
-/// <summary>Ring operation.</summary>
+
             Reading largeFlat = Ring(true, true, Watts, SettledSteps);
-/// <summary>Ring operation.</summary>
+
             Reading largeShipped = Ring(true, false, Watts, SettledSteps);
 
             Assert.True(largeShipped.Spread < largeFlat.Spread * 0.5f,
@@ -161,9 +161,9 @@ namespace Thermodynamics.Tests
                 + " K on the flat charge; ten times the fluid was expected to buffer the ring, and"
                 + " if it does not then the correction is not doing what balance.md says it does");
 
-/// <summary>Ring operation.</summary>
+
             Reading smallFlat = Ring(false, true, Watts, SettledSteps);
-/// <summary>Ring operation.</summary>
+
             Reading smallShipped = Ring(false, false, Watts, SettledSteps);
 
             Assert.True(smallShipped.Spread > smallFlat.Spread * 2f,
@@ -174,14 +174,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDensityCorrectionCostsNoSubsteps operation.</summary>
+
         public void TheDensityCorrectionCostsNoSubsteps()
         {
             foreach (bool large in new[] { true, false })
             {
-/// <summary>Ring operation.</summary>
+
                 Reading flat = Ring(large, true, ReferenceWatts, SettledSteps);
-/// <summary>Ring operation.</summary>
+
                 Reading shipped = Ring(large, false, ReferenceWatts, SettledSteps);
 
                 Assert.True(shipped.Substeps <= flat.Substeps + 0.01f,
@@ -194,7 +194,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFlatChargeOutweighsTheSmallPipeCarryingIt operation.</summary>
+
         public void TheFlatChargeOutweighsTheSmallPipeCarryingIt()
         {
             float pipe = ShippedBlocks.Model("Gauge_SG_CoolantPipe_Straight").Mass;
@@ -215,7 +215,7 @@ namespace Thermodynamics.Tests
                 + " would not be a correction");
         }
 
-/// <summary>Absolute operation.</summary>
+
         private static float Absolute(float value)
         {
             return value < 0f ? -value : value;

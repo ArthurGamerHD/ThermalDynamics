@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class BufferGrowthTests
     {
-/// <summary>Ship operation.</summary>
+
         private static ThermalSimulation Ship(int side)
         {
             ThermalSettings settings = new ThermalSettings
@@ -27,7 +27,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>AssertFinite operation.</summary>
+
         private static void AssertFinite(ThermalSimulation simulation, string when)
         {
             for (int i = 0; i < simulation.Solver.Nodes.Count; i++)
@@ -39,10 +39,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WeldingPastTheBufferCapacityDoesNotProduceNaN operation.</summary>
+
         public void WeldingPastTheBufferCapacityDoesNotProduceNaN()
         {
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation simulation = Ship(3);
 
             simulation.Update(1f / 60f, Worlds.Shadow());
@@ -55,7 +55,7 @@ namespace Thermodynamics.Tests
                     for (int z = 0; z < 3; z++)
                     {
                         simulation.AddBlock(new BlockInstance(Catalog.HeavyArmor(),
-/// <summary>Vector3I operation.</summary>
+
                             new Vector3I(x, y, z), BlockOrientation.Identity), 293.15f);
                     }
                 }
@@ -69,10 +69,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheGridKeepsItsTemperaturesAcrossTheGrowth operation.</summary>
+
         public void TheGridKeepsItsTemperaturesAcrossTheGrowth()
         {
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation simulation = Ship(3);
             simulation.Update(1f / 60f, Worlds.Shadow());
 
@@ -81,7 +81,7 @@ namespace Thermodynamics.Tests
             for (int x = 3; x < 9; x++)
             {
                 simulation.AddBlock(new BlockInstance(Catalog.HeavyArmor(),
-/// <summary>Vector3I operation.</summary>
+
                     new Vector3I(x, 0, 0), BlockOrientation.Identity), 293.15f);
             }
 

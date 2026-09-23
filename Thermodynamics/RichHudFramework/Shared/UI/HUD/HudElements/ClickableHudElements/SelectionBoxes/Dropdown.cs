@@ -10,31 +10,31 @@ namespace RichHudFramework.UI
 
 	public class Dropdown<TValue> : Dropdown<ListBoxEntry<TValue>, Label, TValue>
 	{
-/// <summary>Dropdown operation.</summary>
+
 		public Dropdown(HudParentBase parent) : base(parent)
 		{ }
 
-/// <summary>Dropdown operation.</summary>
+
 		public Dropdown() : base(null)
 		{ }
 	}
 
 	public class Dropdown<TElement, TValue> : Dropdown<ListBoxEntry<TElement, TValue>, TElement, TValue>
-/// <summary>new operation.</summary>
+
 		where TElement : HudElementBase, IMinLabelElement, new()
 	{
-/// <summary>Dropdown operation.</summary>
+
 		public Dropdown(HudParentBase parent) : base(parent)
 		{ }
 
-/// <summary>Dropdown operation.</summary>
+
 		public Dropdown() : base(null)
 		{ }
 	}
 
 	public class Dropdown<TContainer, TElement, TValue>
 		: HudElementBase, IClickableElement, IEntryBox<TContainer, TElement>
-/// <summary>new operation.</summary>
+
 		where TContainer : class, IListBoxEntry<TElement, TValue>, new()
 		where TElement : HudElementBase, IMinLabelElement
 	{
@@ -96,10 +96,10 @@ namespace RichHudFramework.UI
 
 		protected bool getDispFocus;
 
-/// <summary>Dropdown operation.</summary>
+
 		public Dropdown(HudParentBase parent) : base(parent)
 		{
-/// <summary>DropdownDisplay operation.</summary>
+
 			display = new DropdownDisplay(this)
 			{
 				DimAlignment = DimAlignments.UnpaddedSize,
@@ -113,12 +113,12 @@ namespace RichHudFramework.UI
 				ZOffset = 3,
 				DimAlignment = DimAlignments.Width,
 				ParentAlignment = ParentAlignments.Bottom,
-/// <summary>Color operation.</summary>
+
 				TabColor = new Color(0, 0, 0, 0),
 			};
 			listBox.FocusHandler.InputOwner = this;
 
-/// <summary>Vector2 operation.</summary>
+
 			Size = new Vector2(300f, 43f);
 			DropdownHeight = 100f;
 
@@ -126,11 +126,11 @@ namespace RichHudFramework.UI
 			ValueChanged += UpdateDisplay;
 		}
 
-/// <summary>Dropdown operation.</summary>
+
 		public Dropdown() : this(null)
 		{ }
 
-/// <summary>HandleInput operation.</summary>
+
 		protected override void HandleInput(Vector2 cursorPos)
 		{
 			if (SharedBinds.LeftButton.IsNewPressed && !(display.IsMousedOver || listBox.IsMousedOver))
@@ -143,7 +143,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>UpdateDisplay operation.</summary>
+
 		protected virtual void UpdateDisplay(object sender, EventArgs args)
 		{
 			if (Value != null)
@@ -154,7 +154,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>ClickDisplay operation.</summary>
+
 		protected virtual void ClickDisplay(object sender, EventArgs args)
 		{
 			if (!listBox.Visible)
@@ -163,7 +163,7 @@ namespace RichHudFramework.UI
 				CloseList();
 		}
 
-/// <summary>OpenList operation.</summary>
+
 		public void OpenList()
 		{
 			if (!listBox.Visible)
@@ -173,7 +173,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>CloseList operation.</summary>
+
 		public void CloseList()
 		{
 			if (listBox.Visible)
@@ -183,51 +183,51 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>Adds a .</summary>
+
 		public TContainer Add(RichText name, TValue assocMember, bool enabled = true) =>
 			listBox.Add(name, assocMember, enabled);
 
-/// <summary>Adds a range.</summary>
+
 		public void AddRange(IReadOnlyList<MyTuple<RichText, TValue, bool>> entries) =>
 			listBox.AddRange(entries);
 
-/// <summary>Insert operation.</summary>
+
 		public void Insert(int index, RichText name, TValue assocMember, bool enabled = true) =>
 			listBox.Insert(index, name, assocMember, enabled);
 
-/// <summary>Removes the at.</summary>
+
 		public void RemoveAt(int index) =>
 			listBox.RemoveAt(index);
 
-/// <summary>Removes the .</summary>
+
 		public bool Remove(TContainer entry) =>
 			listBox.Remove(entry);
 
-/// <summary>Removes the range.</summary>
+
 		public void RemoveRange(int index, int count) =>
 			listBox.RemoveRange(index, count);
 
-/// <summary>ClearEntries operation.</summary>
+
 		public void ClearEntries() =>
 			listBox.ClearEntries();
 
-/// <summary>Sets the selectionat.</summary>
+
 		public void SetSelectionAt(int index) =>
 			listBox.SetSelectionAt(index);
 
-/// <summary>Sets the selection.</summary>
+
 		public void SetSelection(TValue assocMember) =>
 			listBox.SetSelection(assocMember);
 
-/// <summary>Sets the selection.</summary>
+
 		public void SetSelection(TContainer member) =>
 			listBox.SetSelection(member);
 
-/// <summary>Returns the orsetmember.</summary>
+
 		public object GetOrSetMember(object data, int memberEnum) =>
 		 listBox.GetOrSetMember(data, memberEnum);
 
-/// <summary>Returns the enumerator.</summary>
+
 		public IEnumerator<TContainer> GetEnumerator() =>
 			listBox.EntryList.GetEnumerator();
 
@@ -236,7 +236,7 @@ namespace RichHudFramework.UI
 
 		protected class DropdownDisplay : Button
 		{
-/// <summary>Material operation.</summary>
+
 			private static readonly Material arrowMat = new Material("RichHudDownArrow", new Vector2(64f, 64f));
 
 			public RichText Text { get { return name.Text; } set { name.Text = value; } }
@@ -263,35 +263,35 @@ namespace RichHudFramework.UI
 			private readonly BorderBox border;
 			private Color lastTextColor;
 
-/// <summary>DropdownDisplay operation.</summary>
+
 			public DropdownDisplay(HudParentBase parent = null) : base(parent)
 			{
-/// <summary>BorderBox operation.</summary>
+
 				border = new BorderBox(this)
 				{
 					Thickness = 1f,
 					DimAlignment = DimAlignments.UnpaddedSize,
 				};
 
-/// <summary>Label operation.</summary>
+
 				name = new Label()
 				{
 					AutoResize = false,
-/// <summary>Vector2 operation.</summary>
+
 					Padding = new Vector2(10f, 0f)
 				};
 
-/// <summary>TexturedBox operation.</summary>
+
 				divider = new TexturedBox()
 				{
-/// <summary>Vector2 operation.</summary>
+
 					Padding = new Vector2(4f, 17f),
 					Width = 2f,
-/// <summary>Color operation.</summary>
+
 					Color = new Color(104, 113, 120),
 				};
 
-/// <summary>TexturedBox operation.</summary>
+
 				arrow = new TexturedBox()
 				{
 					Width = 38f,
@@ -299,7 +299,7 @@ namespace RichHudFramework.UI
 					Material = arrowMat,
 				};
 
-/// <summary>HudChain operation.</summary>
+
 				var layout = new HudChain(false, this)
 				{
 					SizingMode = HudChainSizingModes.FitMembersOffAxis,
@@ -322,7 +322,7 @@ namespace RichHudFramework.UI
 				FocusHandler.LostInputFocus += LoseFocus;
 			}
 
-/// <summary>HandleInput operation.</summary>
+
 			protected override void HandleInput(Vector2 cursorPos)
 			{
 				if (FocusHandler.HasFocus)
@@ -332,7 +332,7 @@ namespace RichHudFramework.UI
 						_mouseInput.LeftClick();
 					}
 				}
-/// <summary>if operation.</summary>
+
 				else if (!MouseInput.IsMousedOver)
 				{
 					lastBackgroundColor = Color;
@@ -340,7 +340,7 @@ namespace RichHudFramework.UI
 				}
 			}
 
-/// <summary>CursorEnter operation.</summary>
+
 			protected override void CursorEnter(object sender, EventArgs args)
 			{
 				if (HighlightEnabled)
@@ -362,7 +362,7 @@ namespace RichHudFramework.UI
 				}
 			}
 
-/// <summary>CursorExit operation.</summary>
+
 			protected override void CursorExit(object sender, EventArgs args)
 			{
 				if (HighlightEnabled)
@@ -388,7 +388,7 @@ namespace RichHudFramework.UI
 				}
 			}
 
-/// <summary>GainFocus operation.</summary>
+
 			private void GainFocus(object sender, EventArgs args)
 			{
 				if (UseFocusFormatting)
@@ -407,7 +407,7 @@ namespace RichHudFramework.UI
 				}
 			}
 
-/// <summary>LoseFocus operation.</summary>
+
 			private void LoseFocus(object sender, EventArgs args)
 			{
 				if (UseFocusFormatting)

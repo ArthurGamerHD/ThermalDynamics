@@ -10,13 +10,13 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>HandCoolingTests operation.</summary>
+
         public HandCoolingTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>Priced operation.</summary>
+
         private static List<HandCoolingLab.Price> Priced()
         {
             return GameBlocks.IsInstalled
@@ -24,14 +24,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ReturningABlockToAmbientCostsTensOfBottlesAtTheMedian operation.</summary>
+
         public void ReturningABlockToAmbientCostsTensOfBottlesAtTheMedian()
         {
-/// <summary>Priced operation.</summary>
+
             List<HandCoolingLab.Price> prices = Priced();
             if (prices.Count == 0) return;
 
-/// <summary>List operation.</summary>
+
             List<float> bottles = new List<float>();
             foreach (HandCoolingLab.Price price in prices) bottles.Add(price.BottlesToReturn);
             bottles.Sort();
@@ -52,16 +52,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DoingItInsideTheWindowTakesTensOfBottlesAtOnce operation.</summary>
+
         public void DoingItInsideTheWindowTakesTensOfBottlesAtOnce()
         {
-/// <summary>Priced operation.</summary>
+
             List<HandCoolingLab.Price> prices = Priced();
             if (prices.Count == 0) return;
 
-/// <summary>List operation.</summary>
+
             List<float> atOnce = new List<float>();
-/// <summary>List operation.</summary>
+
             List<float> windows = new List<float>();
 
             foreach (HandCoolingLab.Price price in prices)
@@ -90,10 +90,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AlmostEveryBlockThatCooksShedsAllOfItsOwnHeatInTheBestCase operation.</summary>
+
         public void AlmostEveryBlockThatCooksShedsAllOfItsOwnHeatInTheBestCase()
         {
-/// <summary>Priced operation.</summary>
+
             List<HandCoolingLab.Price> prices = Priced();
             if (prices.Count == 0) return;
 
@@ -116,16 +116,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PullingABlockBackFromItsRatingIsCheapEnoughForAHandTool operation.</summary>
+
         public void PullingABlockBackFromItsRatingIsCheapEnoughForAHandTool()
         {
-/// <summary>Priced operation.</summary>
+
             List<HandCoolingLab.Price> prices = Priced();
             if (prices.Count == 0) return;
 
             foreach (double overshoot in new[] { 10d, 25d, 50d, 100d })
             {
-/// <summary>List operation.</summary>
+
                 List<float> bottles = new List<float>();
 
                 foreach (HandCoolingLab.Price price in prices)
@@ -156,7 +156,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheReferenceBottleIsFiveKilogramsOfCarbonDioxide operation.</summary>
+
         public void TheReferenceBottleIsFiveKilogramsOfCarbonDioxide()
         {
             Assert.Equal(3300000f, HandCoolingLab.BottleJoules);

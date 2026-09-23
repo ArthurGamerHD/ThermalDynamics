@@ -6,7 +6,7 @@ namespace Thermodynamics.Tests
 {
     public class WattsClearFusionTests
     {
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation Build(bool fused)
         {
             ThermalSimulation simulation = Hulls.Driven();
@@ -14,7 +14,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>AssertIdentical operation.</summary>
+
         private static void AssertIdentical(ThermalSimulation a, ThermalSimulation b, string what)
         {
             SolverAb.AssertIdentical(
@@ -23,12 +23,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WritingTheWattsRowIsBitIdenticalInFlight operation.</summary>
+
         public void WritingTheWattsRowIsBitIdenticalInFlight()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation cleared = Build(false);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation fused = Build(true);
 
             EnvironmentSample sample = Worlds.Ab.EveryTermLive();
@@ -40,12 +40,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WritingTheWattsRowIsBitIdenticalInAnAtmosphere operation.</summary>
+
         public void WritingTheWattsRowIsBitIdenticalInAnAtmosphere()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation cleared = Build(false);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation fused = Build(true);
 
             EnvironmentSample sample = Worlds.Ab.MildAtmosphere();
@@ -57,12 +57,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WritingTheWattsRowIsBitIdenticalInVacuum operation.</summary>
+
         public void WritingTheWattsRowIsBitIdenticalInVacuum()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation cleared = Build(false);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation fused = Build(true);
 
             EnvironmentSample sample = Worlds.Ab.SunlitVacuum();
@@ -74,7 +74,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WritingTheWattsRowIsBitIdenticalWithTheEnvironmentOff operation.</summary>
+
         public void WritingTheWattsRowIsBitIdenticalWithTheEnvironmentOff()
         {
             ThermalSettings settings = Hulls.Uncapped();
@@ -96,7 +96,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WritingTheWattsRowIsBitIdenticalWithNothingToWrite operation.</summary>
+
         public void WritingTheWattsRowIsBitIdenticalWithNothingToWrite()
         {
             ThermalSettings settings = Hulls.Uncapped();
@@ -122,12 +122,12 @@ namespace Thermodynamics.Tests
         [InlineData(1)]
         [InlineData(97)]
         [InlineData(5000)]
-/// <summary>WritingTheWattsRowSurvivesTheStepBeingSpread operation.</summary>
+
         public void WritingTheWattsRowSurvivesTheStepBeingSpread(int budget)
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation whole = Build(false);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation spread = Build(true);
 
             EnvironmentState state = EnvironmentSolver.Solve(
@@ -146,12 +146,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDiagnosticsAgreeAsWell operation.</summary>
+
         public void TheDiagnosticsAgreeAsWell()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation cleared = Build(false);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation fused = Build(true);
 
             cleared.Solver.CollectDiagnostics = true;
@@ -168,12 +168,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheGridHeatTotalsAgree operation.</summary>
+
         public void TheGridHeatTotalsAgree()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation cleared = Build(false);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation fused = Build(true);
 
             EnvironmentSample sample = Worlds.Ab.EveryTermLive();

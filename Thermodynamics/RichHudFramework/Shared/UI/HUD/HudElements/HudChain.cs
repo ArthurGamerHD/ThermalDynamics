@@ -47,7 +47,7 @@ namespace RichHudFramework
         }
 
         public class HudChain<TElementContainer, TElement> : HudCollection<TElementContainer, TElement>
-/// <summary>new operation.</summary>
+
             where TElementContainer : IChainElementContainer<TElement>, new()
             where TElement : HudElementBase
         {
@@ -76,13 +76,13 @@ namespace RichHudFramework
                 {
                     if (value)
                     {
-                        alignAxis = 1; // Y
-                        offAxis = 0;   // X
+                        alignAxis = 1;
+                        offAxis = 0;
                     }
                     else
                     {
-                        alignAxis = 0; // X
-                        offAxis = 1;   // Y
+                        alignAxis = 0;
+                        offAxis = 1;
                     }
 
                     _alignVertical = value;
@@ -99,7 +99,7 @@ namespace RichHudFramework
 
             protected int rangeLength;
 
-/// <summary>HudChain operation.</summary>
+
             public HudChain(bool alignVertical = false, HudParentBase parent = null) : base(parent)
             {
                 Spacing = 0f;
@@ -107,25 +107,25 @@ namespace RichHudFramework
                 AlignVertical = alignVertical;
             }
 
-/// <summary>HudChain operation.</summary>
+
             public HudChain(HudParentBase parent) : this(false, parent)
             { }
 
-/// <summary>HudChain operation.</summary>
+
             public HudChain() : this(false, null)
             { }
 
-/// <summary>Adds a .</summary>
+
             public virtual void Add(TElement element, float alignAxisScale)
             {
-/// <summary>TElementContainer operation.</summary>
+
                 var newContainer = new TElementContainer();
                 newContainer.SetElement(element);
                 newContainer.AlignAxisScale = alignAxisScale;
                 Add(newContainer);
             }
 
-/// <summary>Sets the rangesize.</summary>
+
             public virtual Vector2 SetRangeSize(Vector2 newSize, int start = 0, int end = -1)
             {
                 Vector2 listSize = Vector2.Zero;
@@ -163,7 +163,7 @@ namespace RichHudFramework
                 return listSize;
             }
 
-/// <summary>Returns the rangesize.</summary>
+
             public virtual Vector2 GetRangeSize(int start = 0, int end = -1)
             {
                 Vector2 listSize = Vector2.Zero;
@@ -193,7 +193,7 @@ namespace RichHudFramework
                 return listSize;
             }
 
-/// <summary>Returns the boundedrangesize.</summary>
+
             protected virtual Vector2 GetBoundedRangeSize()
             {
                 Vector2 minSize = MemberMinSize,
@@ -243,7 +243,7 @@ namespace RichHudFramework
                 return listSize;
             }
 
-/// <summary>Measure operation.</summary>
+
             protected override void Measure()
             {
                 bool isSelfSizing = (SizingMode & chainSelfSizingMask) > 0;
@@ -255,10 +255,10 @@ namespace RichHudFramework
                     Vector2 chainBounds = UnpaddedSize;
 
                     if (isMemberSizeVariable)
-/// <summary>Returns the boundedrangesize.</summary>
+
                         rangeSize = GetBoundedRangeSize();
                     else
-/// <summary>Returns the rangesize.</summary>
+
                         rangeSize = GetRangeSize();
 
                     if (rangeSize[alignAxis] > 0f)
@@ -281,7 +281,7 @@ namespace RichHudFramework
                 }
             }
 
-/// <summary>Layout operation.</summary>
+
             protected override void Layout()
             {
                 Vector2 chainBounds = UnpaddedSize;
@@ -299,7 +299,7 @@ namespace RichHudFramework
 
                         elementSpanLength = Math.Min(elementSpanLength, chainBounds[alignAxis]);
 
-                        if (alignAxis == 1) // Vertical
+                        if (alignAxis == 1)
                         {
                             if ((SizingMode & HudChainSizingModes.AlignMembersCenter) > 0)
                             {
@@ -342,7 +342,7 @@ namespace RichHudFramework
 
             }
 
-/// <summary>UpdateRangeSize operation.</summary>
+
             protected void UpdateRangeSize(Vector2 chainBounds)
             {
                 rangeSize = Vector2.Zero;
@@ -433,7 +433,7 @@ namespace RichHudFramework
                     {
                         if (fitAlign)
                             size[alignAxis] = maxLimit[alignAxis];
-/// <summary>if operation.</summary>
+
                         else if (clampAlign)
                         {
                             if (maxLimit[alignAxis] > 0f)
@@ -445,7 +445,7 @@ namespace RichHudFramework
 
                     if (fitOff)
                         size[offAxis] = maxLimit[offAxis];
-/// <summary>if operation.</summary>
+
                     else if (clampOff)
                     {
                         if (maxLimit[offAxis] > 0f)
@@ -463,7 +463,7 @@ namespace RichHudFramework
                 rangeSize[alignAxis] += totalSpacing;
             }
 
-/// <summary>UpdateMemberOffsets operation.</summary>
+
             protected void UpdateMemberOffsets(Vector2 startOffset, Vector2 endOffset, float rcpSpanLength, float offAxisOffset = 0f)
             {
                 ParentAlignments left = (ParentAlignments)((int)ParentAlignments.Left * (2 - alignAxis)),
@@ -499,25 +499,25 @@ namespace RichHudFramework
         }
 
         public class HudChain<TElementContainer> : HudChain<TElementContainer, HudElementBase>
-/// <summary>new operation.</summary>
+
             where TElementContainer : IChainElementContainer<HudElementBase>, new()
         {
-/// <summary>HudChain operation.</summary>
+
             public HudChain(bool alignVertical = false, HudParentBase parent = null) : base(alignVertical, parent)
             { }
 
-/// <summary>HudChain operation.</summary>
+
             public HudChain(HudParentBase parent) : base(true, parent)
             { }
         }
 
         public class HudChain : HudChain<HudElementContainer<HudElementBase>, HudElementBase>
         {
-/// <summary>HudChain operation.</summary>
+
             public HudChain(bool alignVertical = false, HudParentBase parent = null) : base(alignVertical, parent)
             { }
 
-/// <summary>HudChain operation.</summary>
+
             public HudChain(HudParentBase parent) : base(true, parent)
             { }
         }

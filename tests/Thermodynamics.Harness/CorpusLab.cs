@@ -20,16 +20,16 @@ namespace Thermodynamics.Harness
 
             public Dictionary<string, string> Unreadable = new Dictionary<string, string>(StringComparer.Ordinal);
 
-/// <summary>List operation.</summary>
+
             public List<Blueprints.Ship> Usable = new List<Blueprints.Ship>();
 
             public Dictionary<string, int> Missing = new Dictionary<string, int>(StringComparer.Ordinal);
         }
 
-/// <summary>Scan operation.</summary>
+
         public static Summary Scan(string root)
         {
-/// <summary>Summary operation.</summary>
+
             Summary summary = new Summary();
 
             foreach (string file in Blueprints.Files(root))
@@ -74,16 +74,16 @@ namespace Thermodynamics.Harness
             return summary;
         }
 
-/// <summary>List operation.</summary>
+
         public static string List(string path)
         {
             string root = path ?? Blueprints.DefaultPath();
             if (root == null) return "";
 
-/// <summary>Scan operation.</summary>
+
             Summary summary = Scan(root);
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < summary.Usable.Count; i++)
             {
@@ -92,10 +92,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(string path)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             string root = path ?? Blueprints.DefaultPath();
@@ -109,7 +109,7 @@ namespace Thermodynamics.Harness
                 return sb.ToString();
             }
 
-/// <summary>Scan operation.</summary>
+
             Summary summary = Scan(root);
 
             sb.AppendLine("BLUEPRINT CORPUS");
@@ -187,7 +187,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Percentiles operation.</summary>
+
         private static List<KeyValuePair<string, int>> Percentiles(List<Blueprints.Ship> ships)
         {
             List<KeyValuePair<string, int>> bands = new List<KeyValuePair<string, int>>();
@@ -202,7 +202,7 @@ namespace Thermodynamics.Harness
             return bands;
         }
 
-/// <summary>Trim operation.</summary>
+
         private static string Trim(string text, int width)
         {
             return LabText.Trim(text, width);

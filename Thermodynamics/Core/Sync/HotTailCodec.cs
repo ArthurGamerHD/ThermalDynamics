@@ -15,7 +15,7 @@ namespace Thermodynamics.Core
 
         public const float MaxTemperature = 65535f * TemperatureStep;
 
-/// <summary>Select operation.</summary>
+
         public static int Select(IList<ThermalNode> nodes, float bandKelvin, int budget,
             List<StoredTemperature> results)
         {
@@ -58,7 +58,7 @@ namespace Thermodynamics.Core
             return inBand;
         }
 
-/// <summary>Margin operation.</summary>
+
         private static float Margin(Dictionary<long, float> criticals, StoredTemperature entry)
         {
             float critical;
@@ -70,20 +70,20 @@ namespace Thermodynamics.Core
             return entry.Temperature - critical;
         }
 
-/// <summary>SizeOf operation.</summary>
+
         public static int SizeOf(int blocks)
         {
             return HeaderSize + blocks * RecordSize;
         }
 
-/// <summary>Encode operation.</summary>
+
         public static byte[] Encode(IList<StoredTemperature> tail)
         {
-/// <summary>Encode operation.</summary>
+
             return Encode(tail, 0, tail == null ? 0 : tail.Count);
         }
 
-/// <summary>Encode operation.</summary>
+
         public static byte[] Encode(IList<StoredTemperature> tail, int offset, int count)
         {
             Clip(tail, ref offset, ref count);
@@ -93,7 +93,7 @@ namespace Thermodynamics.Core
             return bytes;
         }
 
-/// <summary>Write operation.</summary>
+
         public static int Write(byte[] bytes, int at, IList<StoredTemperature> tail, int offset, int count)
         {
             Clip(tail, ref offset, ref count);
@@ -110,7 +110,7 @@ namespace Thermodynamics.Core
             return at;
         }
 
-/// <summary>Clip operation.</summary>
+
         private static void Clip(IList<StoredTemperature> tail, ref int offset, ref int count)
         {
             int length = tail == null ? 0 : tail.Count;
@@ -121,7 +121,7 @@ namespace Thermodynamics.Core
             if (count > length - offset) count = length - offset;
         }
 
-/// <summary>Packets operation.</summary>
+
         public static int Packets(int records, int recordsPerPacket)
         {
             if (recordsPerPacket < 1) return 1;
@@ -130,14 +130,14 @@ namespace Thermodynamics.Core
             return records / recordsPerPacket + (records % recordsPerPacket == 0 ? 0 : 1);
         }
 
-/// <summary>TryDecode operation.</summary>
+
         public static bool TryDecode(byte[] data, List<StoredTemperature> results)
         {
-/// <summary>TryDecode operation.</summary>
+
             return TryDecode(data, 0, results);
         }
 
-/// <summary>TryDecode operation.</summary>
+
         public static bool TryDecode(byte[] data, int start, List<StoredTemperature> results)
         {
             if (results == null) return false;
@@ -147,15 +147,15 @@ namespace Thermodynamics.Core
             if (data[start] != Version1Marker) return false;
 
             int at = start + 1;
-/// <summary>ReadInt32 operation.</summary>
+
             int count = ReadInt32(data, ref at);
             if (count < 0 || data.Length - start < SizeOf(count)) return false;
 
             for (int i = 0; i < count; i++)
             {
-/// <summary>ReadInt64 operation.</summary>
+
                 long key = ReadInt64(data, ref at);
-/// <summary>ReadUInt16 operation.</summary>
+
                 ushort packed = ReadUInt16(data, ref at);
                 results.Add(new StoredTemperature(GridMath.FromKey(key), packed * TemperatureStep));
             }
@@ -163,7 +163,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>Quantise operation.</summary>
+
         public static ushort Quantise(float kelvin)
         {
             if (kelvin <= 0f) return 0;
@@ -171,7 +171,7 @@ namespace Thermodynamics.Core
             return (ushort)(kelvin / TemperatureStep + 0.5f);
         }
 
-/// <summary>WriteInt32 operation.</summary>
+
         private static void WriteInt32(byte[] bytes, ref int at, int value)
         {
             bytes[at++] = (byte)value;
@@ -180,7 +180,7 @@ namespace Thermodynamics.Core
             bytes[at++] = (byte)(value >> 24);
         }
 
-/// <summary>ReadInt32 operation.</summary>
+
         private static int ReadInt32(byte[] bytes, ref int at)
         {
             int value = bytes[at] | (bytes[at + 1] << 8) | (bytes[at + 2] << 16) | (bytes[at + 3] << 24);
@@ -188,13 +188,13 @@ namespace Thermodynamics.Core
             return value;
         }
 
-/// <summary>WriteInt64 operation.</summary>
+
         private static void WriteInt64(byte[] bytes, ref int at, long value)
         {
             for (int i = 0; i < 8; i++) bytes[at++] = (byte)(value >> (i * 8));
         }
 
-/// <summary>ReadInt64 operation.</summary>
+
         private static long ReadInt64(byte[] bytes, ref int at)
         {
             long value = 0;
@@ -203,14 +203,14 @@ namespace Thermodynamics.Core
             return value;
         }
 
-/// <summary>WriteUInt16 operation.</summary>
+
         private static void WriteUInt16(byte[] bytes, ref int at, ushort value)
         {
             bytes[at++] = (byte)value;
             bytes[at++] = (byte)(value >> 8);
         }
 
-/// <summary>ReadUInt16 operation.</summary>
+
         private static ushort ReadUInt16(byte[] bytes, ref int at)
         {
             ushort value = (ushort)(bytes[at] | (bytes[at + 1] << 8));

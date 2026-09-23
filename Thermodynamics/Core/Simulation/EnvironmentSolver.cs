@@ -7,12 +7,12 @@ namespace Thermodynamics.Core
     {
         public const float WindConvectionScale = 0.1f;
 
-/// <summary>Solve operation.</summary>
+
         public static EnvironmentState Solve(ThermalSettings settings, PlanetThermalProperties planet, EnvironmentSample sample)
         {
             if (settings == null) throw new ArgumentNullException("settings");
 
-/// <summary>EnvironmentState operation.</summary>
+
             EnvironmentState state = new EnvironmentState();
             state.SunDirectionLocal = sample.SunDirectionLocal;
             state.WindDirectionLocal = sample.RelativeWindDirectionLocal;
@@ -43,7 +43,7 @@ namespace Thermodynamics.Core
 
             float density = ThermalMath.Clamp01(sample.AirDensity);
             state.AirDensity = density;
-/// <summary>AtmosphereFactor operation.</summary>
+
             state.AtmosphereFactor = AtmosphereFactor(density);
 
             WeatherResponse.Weather weather = WeatherResponse.Soften(sample.Weather, ThermalMath.Clamp01(sample.WeatherIntensity));
@@ -88,7 +88,7 @@ namespace Thermodynamics.Core
             float air = planet.ConvectionCoefficient * windBonus
                 * Math.Max(0f, weather.ConvectionMultiplier);
 
-/// <summary>InRock operation.</summary>
+
             float rock = InRock(sample.Depth);
             state.ConvectionCoefficient = rock <= 0f
                 ? air
@@ -107,7 +107,7 @@ namespace Thermodynamics.Core
             return state;
         }
 
-/// <summary>InRock operation.</summary>
+
         public static float InRock(float depth)
         {
             if (depth <= 0f) return 0f;
@@ -116,7 +116,7 @@ namespace Thermodynamics.Core
             return share > 1f ? 1f : share;
         }
 
-/// <summary>AtmosphereFactor operation.</summary>
+
         public static float AtmosphereFactor(float airDensity)
         {
             float inverse = 1f - ThermalMath.Clamp01(airDensity);
@@ -124,7 +124,7 @@ namespace Thermodynamics.Core
             return 1f - (squared * squared);
         }
 
-/// <summary>SafeNormalize operation.</summary>
+
         private static Vector3 SafeNormalize(Vector3 v)
         {
             float lengthSquared = v.LengthSquared();

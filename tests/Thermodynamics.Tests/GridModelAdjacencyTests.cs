@@ -7,12 +7,12 @@ namespace Thermodynamics.Tests
 {
     public class GridModelAdjacencyTests
     {
-/// <summary>AssertSame operation.</summary>
+
         private static void AssertSame(GridModel grid, string what)
         {
-/// <summary>List operation.</summary>
+
             List<BlockInstance> fast = new List<BlockInstance>();
-/// <summary>List operation.</summary>
+
             List<BlockInstance> walked = new List<BlockInstance>();
             int answers = 0;
             int oneCell = 0;
@@ -40,7 +40,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWalkReportsTheFaceContactFaceWouldFind operation.</summary>
+
         public void TheWalkReportsTheFaceContactFaceWouldFind()
         {
             int compared = 0;
@@ -48,9 +48,9 @@ namespace Thermodynamics.Tests
 
             foreach (GridModel grid in new[] { CensusGrid(), MixedGrid() })
             {
-/// <summary>List operation.</summary>
+
                 List<BlockInstance> neighbours = new List<BlockInstance>();
-/// <summary>List operation.</summary>
+
                 List<int> faces = new List<int>();
 
                 for (int b = 0; b < grid.Blocks.Count; b++)
@@ -76,7 +76,7 @@ namespace Thermodynamics.Tests
             Assert.True(multiCell > 0, "no multi-cell block across either fixture, so the boundary walk's face was never checked");
         }
 
-/// <summary>CensusGrid operation.</summary>
+
         private static GridModel CensusGrid()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -85,21 +85,21 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACensusHullAnswersTheSameNeighboursByBothPaths operation.</summary>
+
         public void ACensusHullAnswersTheSameNeighboursByBothPaths()
         {
             AssertSame(CensusGrid(), "census hull");
         }
 
-/// <summary>MixedGrid operation.</summary>
+
         private static GridModel MixedGrid()
         {
-/// <summary>MixedBuilder operation.</summary>
+
             GridBuilder builder = MixedBuilder();
             return builder.Grid;
         }
 
-/// <summary>MixedBuilder operation.</summary>
+
         private static GridBuilder MixedBuilder()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -122,10 +122,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AMixedGridAnswersTheSameNeighboursByBothPaths operation.</summary>
+
         public void AMixedGridAnswersTheSameNeighboursByBothPaths()
         {
-/// <summary>MixedBuilder operation.</summary>
+
             GridBuilder builder = MixedBuilder();
 
             int multi = 0;
@@ -136,20 +136,20 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheOccupancyFilteredWalkFindsExactlyWhatThePlainWalkFinds operation.</summary>
+
         public void TheOccupancyFilteredWalkFindsExactlyWhatThePlainWalkFinds()
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(), 4000);
             GridModel grid = simulation.Grid;
             CellBitset occupied = grid.Occupancy();
 
-/// <summary>List operation.</summary>
+
             List<BlockInstance> plain = new List<BlockInstance>();
-/// <summary>List operation.</summary>
+
             List<int> plainFaces = new List<int>();
-/// <summary>List operation.</summary>
+
             List<BlockInstance> filtered = new List<BlockInstance>();
-/// <summary>List operation.</summary>
+
             List<int> filteredFaces = new List<int>();
 
             IList<BlockInstance> blocks = grid.Blocks;
@@ -185,7 +185,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>Returns the atkeyanswersforeverycellofablockandgetbykeyonlyforitslowest.</summary>
+
         public void GetAtKeyAnswersForEveryCellOfABlockAndGetByKeyOnlyForItsLowest()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -201,7 +201,7 @@ namespace Thermodynamics.Tests
                 {
                     for (int x = 0; x < 3; x++)
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I cell = new Vector3I(x, y, z);
                         long key = GridMath.Key(cell);
 

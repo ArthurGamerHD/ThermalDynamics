@@ -6,7 +6,7 @@ namespace RichHudFramework.UI
     using static NodeConfigIndices;
 
     public class ScrollBox<TElementContainer, TElement> : HudChain<TElementContainer, TElement>
-/// <summary>new operation.</summary>
+
         where TElementContainer : IScrollBoxEntry<TElement>, new()
         where TElement : HudElementBase
     {
@@ -22,7 +22,7 @@ namespace RichHudFramework.UI
                 if (value != _intStart)
                 {
                     _intStart = MathHelper.Clamp(value, 0, hudCollectionList.Count - 1);
-/// <summary>Returns the minscrolloffset.</summary>
+
                     ScrollBar.Value = GetMinScrollOffset(_intStart, false);
                 }
             }
@@ -36,13 +36,13 @@ namespace RichHudFramework.UI
                 if (value != _intEnd)
                 {
                     _intEnd = MathHelper.Clamp(value, 0, hudCollectionList.Count - 1);
-/// <summary>Returns the minscrolloffset.</summary>
+
                     ScrollBar.Value = GetMinScrollOffset(_intEnd, true);
                 }
             }
         }
 
-/// <summary>Vector2I operation.</summary>
+
         public Vector2I ClipRange => new Vector2I(_start, _end);
 
         public int VisStart { get; private set; }
@@ -70,11 +70,11 @@ namespace RichHudFramework.UI
             set
             {
                 if (ScrollBar == null)
-/// <summary>ScrollBar operation.</summary>
+
                     ScrollBar = new ScrollBar(this);
 
                 if (Divider == null)
-/// <summary>TexturedBox operation.</summary>
+
                     Divider = new TexturedBox(ScrollBar) { Color = new Color(53, 66, 75) };
 
                 ScrollBar.Vertical = value;
@@ -88,11 +88,11 @@ namespace RichHudFramework.UI
                     ScrollBar.ParentAlignment = ParentAlignments.InnerRight;
                     Divider.ParentAlignment = ParentAlignments.InnerLeft;
 
-/// <summary>Vector2 operation.</summary>
+
                     Divider.Padding = new Vector2(2f, 0f);
                     Divider.Width = 1f;
 
-/// <summary>Vector2 operation.</summary>
+
                     ScrollBar.Padding = new Vector2(30f, 10f);
                     ScrollBar.Width = 43f;
                 }
@@ -104,11 +104,11 @@ namespace RichHudFramework.UI
                     ScrollBar.ParentAlignment = ParentAlignments.InnerBottom;
                     Divider.ParentAlignment = ParentAlignments.InnerBottom;
 
-/// <summary>Vector2 operation.</summary>
+
                     Divider.Padding = new Vector2(16f, 2f);
                     Divider.Height = 1f;
 
-/// <summary>Vector2 operation.</summary>
+
                     ScrollBar.Padding = new Vector2(16f);
                     ScrollBar.Height = 24f;
                 }
@@ -129,10 +129,10 @@ namespace RichHudFramework.UI
 
         private int firstEnabled;
 
-/// <summary>ScrollBox operation.</summary>
+
         public ScrollBox(bool alignVertical, HudParentBase parent = null) : base(alignVertical, parent)
         {
-/// <summary>TexturedBox operation.</summary>
+
             Background = new TexturedBox(this)
             {
                 Color = TerminalFormatting.DarkSlateGrey,
@@ -152,15 +152,15 @@ namespace RichHudFramework.UI
             SizingMode = HudChainSizingModes.FitChainOffAxis;
         }
 
-/// <summary>ScrollBox operation.</summary>
+
         public ScrollBox(HudParentBase parent) : this(true, parent)
         { }
 
-/// <summary>ScrollBox operation.</summary>
+
         public ScrollBox() : this(true, null)
         { }
 
-/// <summary>Returns the rangesize.</summary>
+
         public override Vector2 GetRangeSize(int start = 0, int end = -1)
         {
             Vector2 size = base.GetRangeSize(start, end);
@@ -168,7 +168,7 @@ namespace RichHudFramework.UI
             return size;
         }
 
-/// <summary>Returns the rangeend.</summary>
+
         public int GetRangeEnd(int count, int start = 0)
         {
             start = MathHelper.Clamp(start, 0, hudCollectionList.Count - 1);
@@ -197,7 +197,7 @@ namespace RichHudFramework.UI
             return -1;
         }
 
-/// <summary>HandleInput operation.</summary>
+
         protected override void HandleInput(Vector2 cursorPos)
         {
             ScrollBar.InputEnabled = EnableScrolling;
@@ -209,7 +209,7 @@ namespace RichHudFramework.UI
                 {
                     if (SharedBinds.MousewheelUp.IsPressed)
                         ScrollBar.Value -= hudCollectionList[_intEnd].Element.Size[alignAxis] + Spacing;
-/// <summary>if operation.</summary>
+
                     else if (SharedBinds.MousewheelDown.IsPressed)
                         ScrollBar.Value += hudCollectionList[_intStart].Element.Size[alignAxis] + Spacing;
                 }
@@ -217,14 +217,14 @@ namespace RichHudFramework.UI
                 {
                     if (SharedBinds.MousewheelUp.IsPressed)
                         Start--;
-/// <summary>if operation.</summary>
+
                     else if (SharedBinds.MousewheelDown.IsPressed)
                         End++;
                 }
             }
         }
 
-/// <summary>Returns the boundedrangesize.</summary>
+
         protected override Vector2 GetBoundedRangeSize()
         {
             Vector2 listSize = Vector2.Zero,
@@ -278,7 +278,7 @@ namespace RichHudFramework.UI
             return listSize;
         }
 
-/// <summary>Measure operation.</summary>
+
         protected override void Measure()
         {
             if (UseSmoothScrolling)
@@ -292,7 +292,7 @@ namespace RichHudFramework.UI
                 Vector2 listSize = Vector2.Zero;
 
                 if (hudCollectionList.Count > 0)
-/// <summary>Returns the boundedrangesize.</summary>
+
                     listSize = GetBoundedRangeSize();
 
                 listSize[offAxis] += scrollBarPadding;
@@ -318,7 +318,7 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>Layout operation.</summary>
+
         protected override void Layout()
         {
             Vector2 effectivePadding = Padding;
@@ -350,18 +350,18 @@ namespace RichHudFramework.UI
                     Vector2 startOffset, endOffset;
                     float rcpSpanLength = 1f / Math.Max(rangeSize[alignAxis], 1E-6f);
 
-                    if (alignAxis == 1) // Vertical
+                    if (alignAxis == 1)
                     {
-/// <summary>Vector2 operation.</summary>
+
                         startOffset = new Vector2(-.5f * scrollBarPadding, .5f * chainSize.Y + scrollOffset);
-/// <summary>Vector2 operation.</summary>
+
                         endOffset = new Vector2(startOffset.X, startOffset.Y - rangeSize[alignAxis]);
                     }
                     else
                     {
-/// <summary>Vector2 operation.</summary>
+
                         startOffset = new Vector2(-.5f * chainSize.X - scrollOffset, .5f * scrollBarPadding);
-/// <summary>Vector2 operation.</summary>
+
                         endOffset = new Vector2(startOffset.X + rangeSize[alignAxis], startOffset.Y);
                     }
 
@@ -374,7 +374,7 @@ namespace RichHudFramework.UI
             ScrollBar.VisiblePercent = sliderVisRatio;
         }
 
-/// <summary>UpdateSmoothRange operation.</summary>
+
         private void UpdateSmoothRange(float maxLength, out float totalEnabledLength, out float scrollOffset)
         {
             EnabledCount = 0;
@@ -434,7 +434,7 @@ namespace RichHudFramework.UI
                         _intEnd = i;
                         VisCount++;
                     }
-/// <summary>if operation.</summary>
+
                     else if (_intStart != -1)
                         break;
 
@@ -444,7 +444,7 @@ namespace RichHudFramework.UI
 
             int max = hudCollectionList.Count - 1;
 
-            if (firstEnabled == -1) // Empty list or scrolled past everything
+            if (firstEnabled == -1)
             {
                 _intStart = 0;
                 _intEnd = 0;
@@ -453,7 +453,7 @@ namespace RichHudFramework.UI
                 return;
             }
 
-            if (_intStart == -1) // No elements were in view
+            if (_intStart == -1)
             {
                 _intStart = firstEnabled;
                 _intEnd = firstEnabled;
@@ -480,7 +480,7 @@ namespace RichHudFramework.UI
             if (_start != _intStart)
                 scrollOffset += hudCollectionList[_start].Element.Size[alignAxis] + Spacing;
 
-/// <summary>Returns the visibleindex.</summary>
+
             VisStart = GetVisibleIndex(_intStart);
 
             for (int i = 0; i < hudCollectionList.Count; i++)
@@ -494,7 +494,7 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>UpdateNormalRange operation.</summary>
+
         private void UpdateNormalRange(float maxLength, out float totalEnabledLength)
         {
             EnabledCount = 0;
@@ -536,7 +536,7 @@ namespace RichHudFramework.UI
                 if (relativePos <= 0f)
                     _intEnd = i;
                 else
-                    break; // Exceeded the view window
+                    break;
 
                 relativePos += Spacing;
             }
@@ -564,12 +564,12 @@ namespace RichHudFramework.UI
                     availableSpace -= (size + Spacing);
                 }
                 else
-                    break; // No more space fits
+                    break;
             }
 
             _start = _intStart;
             _end = _intEnd;
-/// <summary>Returns the visibleindex.</summary>
+
             VisStart = GetVisibleIndex(_intStart);
 
             for (int i = 0; i < hudCollectionList.Count; i++)
@@ -584,7 +584,7 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>Returns the visibleindex.</summary>
+
         private int GetVisibleIndex(int index)
         {
             int count = 0;
@@ -598,7 +598,7 @@ namespace RichHudFramework.UI
             return count;
         }
 
-/// <summary>Returns the minscrolloffset.</summary>
+
         private float GetMinScrollOffset(int index, bool getEnd)
         {
             if (hudCollectionList.Count > 0)
@@ -606,9 +606,9 @@ namespace RichHudFramework.UI
                 firstEnabled = MathHelper.Clamp(firstEnabled, 0, hudCollectionList.Count - 1);
                 float elementSize, topStart = 0f;
 
-                if (getEnd) // Fixed offset to get bottom edge
+                if (getEnd)
                     topStart -= UnpaddedSize[alignAxis] + Spacing;
-                else // Stop before the start of the range when finding start
+                else
                     index--;
 
                 for (int i = 0; i <= index && i < hudCollectionList.Count; i++)
@@ -629,25 +629,25 @@ namespace RichHudFramework.UI
     }
 
     public class ScrollBox<TElementContainer> : ScrollBox<TElementContainer, HudElementBase>
-/// <summary>new operation.</summary>
+
         where TElementContainer : IScrollBoxEntry<HudElementBase>, new()
     {
-/// <summary>ScrollBox operation.</summary>
+
         public ScrollBox(bool alignVertical, HudParentBase parent = null) : base(alignVertical, parent)
         { }
 
-/// <summary>ScrollBox operation.</summary>
+
         public ScrollBox(HudParentBase parent = null) : base(parent)
         { }
     }
 
     public class ScrollBox : ScrollBox<ScrollBoxEntry>
     {
-/// <summary>ScrollBox operation.</summary>
+
         public ScrollBox(bool alignVertical, HudParentBase parent = null) : base(alignVertical, parent)
         { }
 
-/// <summary>ScrollBox operation.</summary>
+
         public ScrollBox(HudParentBase parent = null) : base(parent)
         { }
     }

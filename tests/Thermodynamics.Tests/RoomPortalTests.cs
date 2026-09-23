@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
     public class RoomPortalTests
     {
 
-/// <summary>ShellWithDoor operation.</summary>
+
         private static ThermalSimulation ShellWithDoor(BlockModel doorModel, out BlockInstance door)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -24,7 +24,7 @@ namespace Thermodynamics.Tests
             return builder.BuildSimulation(new ThermalSettings());
         }
 
-/// <summary>ExternalMap operation.</summary>
+
         private static Dictionary<Vector3I, bool> ExternalMap(ThermalSimulation simulation, int reach = 4)
         {
             Dictionary<Vector3I, bool> result = new Dictionary<Vector3I, bool>(Vector3I.Comparer);
@@ -36,7 +36,7 @@ namespace Thermodynamics.Tests
                 {
                     for (int z = -reach; z <= reach; z++)
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I cell = new Vector3I(x, y, z);
                         result[cell] = map.IsExternal(cell);
                     }
@@ -45,7 +45,7 @@ namespace Thermodynamics.Tests
             return result;
         }
 
-/// <summary>Exposure operation.</summary>
+
         private static Dictionary<Vector3I, int> Exposure(ThermalSimulation simulation)
         {
             Dictionary<Vector3I, int> result = new Dictionary<Vector3I, int>(Vector3I.Comparer);
@@ -65,18 +65,18 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-/// <summary>PortalsAgreeWithAFullRemapForEitherDoorState operation.</summary>
+
         public void PortalsAgreeWithAFullRemapForEitherDoorState(bool open)
         {
             BlockInstance viaPortal;
-/// <summary>ShellWithDoor operation.</summary>
+
             ThermalSimulation portalSim = ShellWithDoor(Catalog.SlideDoor(), out viaPortal);
 
             viaPortal.IsSealedByDoorState = !open;
             portalSim.RefreshBlockSealing(viaPortal);
 
             BlockInstance viaRemap;
-/// <summary>ShellWithDoor operation.</summary>
+
             ThermalSimulation remapSim = ShellWithDoor(Catalog.SlideDoor(), out viaRemap);
             viaRemap.IsSealedByDoorState = !open;
             viaRemap.RefreshSurfaces();
@@ -89,18 +89,18 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-/// <summary>TheSameHoldsForADoorThatSealsOnEveryFace operation.</summary>
+
         public void TheSameHoldsForADoorThatSealsOnEveryFace(bool open)
         {
             BlockInstance viaPortal;
-/// <summary>ShellWithDoor operation.</summary>
+
             ThermalSimulation portalSim = ShellWithDoor(Catalog.AirtightDoor(), out viaPortal);
 
             viaPortal.IsSealedByDoorState = !open;
             portalSim.RefreshBlockSealing(viaPortal);
 
             BlockInstance viaRemap;
-/// <summary>ShellWithDoor operation.</summary>
+
             ThermalSimulation remapSim = ShellWithDoor(Catalog.AirtightDoor(), out viaRemap);
             viaRemap.IsSealedByDoorState = !open;
             viaRemap.RefreshSurfaces();
@@ -112,11 +112,11 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>CyclingADoorCostsNoMappingPass operation.</summary>
+
         public void CyclingADoorCostsNoMappingPass()
         {
             BlockInstance door;
-/// <summary>ShellWithDoor operation.</summary>
+
             ThermalSimulation simulation = ShellWithDoor(Catalog.SlideDoor(), out door);
 
             int passes = simulation.Rooms.CompletedPasses;
@@ -132,16 +132,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CyclingADoorManyTimesDoesNotDrift operation.</summary>
+
         public void CyclingADoorManyTimesDoesNotDrift()
         {
             BlockInstance door;
-/// <summary>ShellWithDoor operation.</summary>
+
             ThermalSimulation simulation = ShellWithDoor(Catalog.SlideDoor(), out door);
 
-/// <summary>ExternalMap operation.</summary>
+
             Dictionary<Vector3I, bool> shut = ExternalMap(simulation);
-/// <summary>Exposure operation.</summary>
+
             Dictionary<Vector3I, int> shutExposure = Exposure(simulation);
 
             for (int i = 0; i < 50; i++)
@@ -158,11 +158,11 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>AWallDoorIsFoundAsOnePortalOntoOpenAir operation.</summary>
+
         public void AWallDoorIsFoundAsOnePortalOntoOpenAir()
         {
             BlockInstance door;
-/// <summary>ShellWithDoor operation.</summary>
+
             ThermalSimulation simulation = ShellWithDoor(Catalog.SlideDoor(), out door);
             RoomMap map = simulation.Rooms.Map;
 
@@ -177,15 +177,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ADoorSealedOnEveryFaceIsARegionRatherThanStructure operation.</summary>
+
         public void ADoorSealedOnEveryFaceIsARegionRatherThanStructure()
         {
             BlockInstance door;
-/// <summary>ShellWithDoor operation.</summary>
+
             ThermalSimulation simulation = ShellWithDoor(Catalog.AirtightDoor(), out door);
             RoomMap map = simulation.Rooms.Map;
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I cell = new Vector3I(0, 0, -1);
             Assert.False(map.IsSolid(cell));
             Assert.True(map.RoomIndexOf(cell) >= 0);
@@ -201,13 +201,13 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>VentingIsTransitiveThroughAChainOfDoors operation.</summary>
+
         public void VentingIsTransitiveThroughAChainOfDoors()
         {
             GridBuilder builder = GridBuilder.Large();
 
             builder.Shell(Catalog.LightArmor(), new Vector3I(-2, -1, -1), new Vector3I(3, 2, 2));
-            builder.Place(Catalog.LightArmor(), new Vector3I(0, 0, 0));   // the divider
+            builder.Place(Catalog.LightArmor(), new Vector3I(0, 0, 0));
 
             BlockInstance outerPlug = builder.Grid.GetAtCell(new Vector3I(-2, 0, 0));
             builder.Grid.Remove(outerPlug);
@@ -224,9 +224,9 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings());
             RoomMap map = simulation.Rooms.Map;
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I westChamber = new Vector3I(-1, 0, 0);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I eastChamber = new Vector3I(1, 0, 0);
 
             Assert.False(map.IsExternal(westChamber));
@@ -252,7 +252,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ADoorBetweenTwoSealedRoomsVentsNeither operation.</summary>
+
         public void ADoorBetweenTwoSealedRoomsVentsNeither()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -263,7 +263,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings());
             RoomMap map = simulation.Rooms.Map;
 
-            Assert.Equal(3, map.RoomCount);   // two chambers and the doorway itself
+            Assert.Equal(3, map.RoomCount);
 
             door.IsSealedByDoorState = false;
             simulation.RefreshBlockSealing(door);
@@ -275,7 +275,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>ADoorTheMapHasNotSeenForcesARemap operation.</summary>
+
         public void ADoorTheMapHasNotSeenForcesARemap()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -285,7 +285,7 @@ namespace Thermodynamics.Tests
             BlockInstance plug = builder.Grid.GetAtCell(new Vector3I(0, 0, -1));
             simulation.RemoveBlock(plug);
 
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance door = new BlockInstance(Catalog.SlideDoor(), new Vector3I(0, 0, -1), BlockOrientation.Identity);
             simulation.AddBlock(door);
 
@@ -302,11 +302,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RemovingADoorDropsItsPortalOnTheNextPass operation.</summary>
+
         public void RemovingADoorDropsItsPortalOnTheNextPass()
         {
             BlockInstance door;
-/// <summary>ShellWithDoor operation.</summary>
+
             ThermalSimulation simulation = ShellWithDoor(Catalog.SlideDoor(), out door);
 
             Assert.Single(simulation.Rooms.Map.Portals);
@@ -322,11 +322,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APassRunWhileADoorIsOpenPublishesItVented operation.</summary>
+
         public void APassRunWhileADoorIsOpenPublishesItVented()
         {
             BlockInstance door;
-/// <summary>ShellWithDoor operation.</summary>
+
             ThermalSimulation simulation = ShellWithDoor(Catalog.SlideDoor(), out door);
 
             door.IsSealedByDoorState = false;
@@ -343,11 +343,11 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>RoomIdentitySurvivesADoorCycle operation.</summary>
+
         public void RoomIdentitySurvivesADoorCycle()
         {
             BlockInstance door;
-/// <summary>ShellWithDoor operation.</summary>
+
             ThermalSimulation simulation = ShellWithDoor(Catalog.SlideDoor(), out door);
 
             RoomMap before = simulation.Rooms.Map;
@@ -361,11 +361,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ChangedRoomsNamesOnlyWhatActuallyChanged operation.</summary>
+
         public void ChangedRoomsNamesOnlyWhatActuallyChanged()
         {
             BlockInstance door;
-/// <summary>ShellWithDoor operation.</summary>
+
             ThermalSimulation simulation = ShellWithDoor(Catalog.SlideDoor(), out door);
 
             door.IsSealedByDoorState = false;

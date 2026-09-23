@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     [Trait("speed", "slow")]
     public class ShapeTests
     {
-/// <summary>AllShapes operation.</summary>
+
         public static IEnumerable<object[]> AllShapes()
         {
             foreach (KeyValuePair<string, HashSet<Vector3I>> shape in GridShapes.Catalogue())
@@ -19,7 +19,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>CellsFor operation.</summary>
+
         private static HashSet<Vector3I> CellsFor(string name)
         {
             foreach (KeyValuePair<string, HashSet<Vector3I>> shape in GridShapes.Catalogue())
@@ -29,14 +29,14 @@ namespace Thermodynamics.Tests
             throw new ArgumentException("Unknown shape: " + name);
         }
 
-/// <summary>Pace operation.</summary>
+
         private static ThermalSettings Pace()
         {
             ThermalSettings settings = new ThermalSettings { Frequency = 4 };
             return settings.Derive();
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation Build(string name, ThermalSettings settings = null)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -47,10 +47,10 @@ namespace Thermodynamics.Tests
 
         [Theory]
         [MemberData(nameof(AllShapes))]
-/// <summary>EveryShapeBuildsOneConnectedConductionGraph operation.</summary>
+
         public void EveryShapeBuildsOneConnectedConductionGraph(string name)
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(name);
             GridMetrics metrics = GridMetrics.Measure(simulation);
 
@@ -60,7 +60,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AShipIsMostlySkinAndMostlyEmptySpaceWhereACubeIsNeither operation.</summary>
+
         public void AShipIsMostlySkinAndMostlyEmptySpaceWhereACubeIsNeither()
         {
             GridMetrics cube = GridMetrics.Measure(Build("solid-cube"));
@@ -77,7 +77,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnElongatedGridHasAConductionPathOrdersLongerThanACube operation.</summary>
+
         public void AnElongatedGridHasAConductionPathOrdersLongerThanACube()
         {
             GridMetrics cube = GridMetrics.Measure(Build("solid-cube"));
@@ -90,7 +90,7 @@ namespace Thermodynamics.Tests
 
         [Theory]
         [MemberData(nameof(AllShapes))]
-/// <summary>EnergyIsConservedOnEveryShapeWhenIsolated operation.</summary>
+
         public void EnergyIsConservedOnEveryShapeWhenIsolated(string name)
         {
             ThermalSettings settings = new ThermalSettings
@@ -103,7 +103,7 @@ namespace Thermodynamics.Tests
                 EnableCoolantLoops = false,
             }.Derive();
 
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(name, settings);
 
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -118,10 +118,10 @@ namespace Thermodynamics.Tests
 
         [Theory]
         [MemberData(nameof(AllShapes))]
-/// <summary>NoShapeProducesInvalidTemperatures operation.</summary>
+
         public void NoShapeProducesInvalidTemperatures(string name)
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(name);
 
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -142,7 +142,7 @@ namespace Thermodynamics.Tests
 
         [Theory]
         [MemberData(nameof(AllShapes))]
-/// <summary>EveryShapeReachesAUniformTemperatureWhenIsolated operation.</summary>
+
         public void EveryShapeReachesAUniformTemperatureWhenIsolated(string name)
         {
             ThermalSettings settings = new ThermalSettings
@@ -155,7 +155,7 @@ namespace Thermodynamics.Tests
                 EnableCoolantLoops = false,
             }.Derive();
 
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(name, settings);
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
             nodes[0].Temperature = 800f;
@@ -176,7 +176,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>HeatCrossesAThinNeckSymmetricallyInBothDirections operation.</summary>
+
         public void HeatCrossesAThinNeckSymmetricallyInBothDirections()
         {
             ThermalSettings settings = new ThermalSettings
@@ -189,15 +189,15 @@ namespace Thermodynamics.Tests
                 EnableCoolantLoops = false,
             }.Derive();
 
-/// <summary>TransferAcrossDumbbell operation.</summary>
+
             float forward = TransferAcrossDumbbell(settings, hotEndFirst: true);
-/// <summary>TransferAcrossDumbbell operation.</summary>
+
             float backward = TransferAcrossDumbbell(settings, hotEndFirst: false);
 
             Assert.Equal(forward, backward, Math.Abs(forward) * 1e-3f);
         }
 
-/// <summary>TransferAcrossDumbbell operation.</summary>
+
         private static float TransferAcrossDumbbell(ThermalSettings settings, bool hotEndFirst)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -205,9 +205,9 @@ namespace Thermodynamics.Tests
             builder.PlaceAll(Catalog.LightArmor(), cells);
             ThermalSimulation simulation = builder.BuildSimulation(settings);
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I hot = hotEndFirst ? new Vector3I(2, 2, 0) : new Vector3I(2, 2, 17);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I cold = hotEndFirst ? new Vector3I(2, 2, 17) : new Vector3I(2, 2, 0);
 
             simulation.Solver.SetAllTemperatures(300f);
@@ -225,26 +225,26 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>AnIrregularShapeGivesTheSameResultWhateverOrderItWasBuiltIn operation.</summary>
+
         public void AnIrregularShapeGivesTheSameResultWhateverOrderItWasBuiltIn()
         {
             HashSet<Vector3I> cells = GridShapes.Ship(20, 7, 7);
 
-/// <summary>List operation.</summary>
+
             List<Vector3I> forward = new List<Vector3I>(cells);
-/// <summary>List operation.</summary>
+
             List<Vector3I> reversed = new List<Vector3I>(forward);
             reversed.Reverse();
 
-/// <summary>Sets the tledmeantemperature.</summary>
+
             float a = SettledMeanTemperature(forward);
-/// <summary>Sets the tledmeantemperature.</summary>
+
             float b = SettledMeanTemperature(reversed);
 
             Assert.Equal(a, b, 3);
         }
 
-/// <summary>Sets the tledmeantemperature.</summary>
+
         private static float SettledMeanTemperature(List<Vector3I> cells)
         {
             GridBuilder builder = GridBuilder.Large();

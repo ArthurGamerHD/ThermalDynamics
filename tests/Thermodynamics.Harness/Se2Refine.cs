@@ -7,12 +7,12 @@ namespace Thermodynamics.Harness
 {
     public static class Se2Refine
     {
-/// <summary>Refined operation.</summary>
+
         public static GridBuilder Refined(GridBuilder source, int factor)
         {
             if (factor <= 1) return source;
 
-/// <summary>GridBuilder operation.</summary>
+
             GridBuilder fine = new GridBuilder(source.Grid.GridSize / factor);
             fine.Grid.EnsureCellCapacity(source.Grid.BlockCount * factor * factor * factor);
 
@@ -35,24 +35,24 @@ namespace Thermodynamics.Harness
             return fine;
         }
 
-/// <summary>RefinedModel operation.</summary>
+
         public static BlockModel RefinedModel(BlockModel source, int factor,
             Dictionary<BlockModel, BlockModel> cache)
         {
             BlockModel known;
             if (cache.TryGetValue(source, out known)) return known;
 
-/// <summary>BlockModel operation.</summary>
+
             BlockModel fine = new BlockModel();
             fine.Name = source.Name + "@" + factor;
             fine.Size = source.Extents * factor;
             fine.Mass = source.Mass;
             fine.Thermal = source.Thermal;
-/// <summary>ExpandSurfaces operation.</summary>
+
             fine.LocalSurfaces = ExpandSurfaces(source, factor, true);
             if (source.HasOpenState)
             {
-/// <summary>ExpandSurfaces operation.</summary>
+
                 fine.LocalSurfacesWhenOpen = ExpandSurfaces(source, factor, false);
             }
 
@@ -60,7 +60,7 @@ namespace Thermodynamics.Harness
             return fine;
         }
 
-/// <summary>ExpandSurfaces operation.</summary>
+
         private static int[] ExpandSurfaces(BlockModel source, int factor, bool sealedByState)
         {
             Vector3I extents = source.Extents * factor;
@@ -73,7 +73,7 @@ namespace Thermodynamics.Harness
                 {
                     for (int x = 0; x < extents.X; x++)
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I coarse = new Vector3I(x / factor, y / factor, z / factor);
                         int state = CellSurface.SelfOnly(
                             source.LocalSurfaceState(coarse, sealedByState));

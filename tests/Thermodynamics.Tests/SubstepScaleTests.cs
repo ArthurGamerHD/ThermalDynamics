@@ -5,7 +5,7 @@ namespace Thermodynamics.Tests
 {
     public class SubstepScaleTests
     {
-/// <summary>Hull operation.</summary>
+
         private static ThermalSimulation Hull(int frequency, int cap = 0, int blocks = 4000)
         {
             ThermalSettings settings = new ThermalSettings { Frequency = frequency };
@@ -23,7 +23,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Demand operation.</summary>
+
         private static float Demand(ThermalSimulation simulation)
         {
             return simulation.Solver.RequiredSubsteps(simulation.Settings.StepSeconds);
@@ -34,12 +34,12 @@ namespace Thermodynamics.Tests
         [InlineData(2, 4)]
         [InlineData(4, 8)]
         [InlineData(8, 16)]
-/// <summary>DemandIsProportionalToTheStepLength operation.</summary>
+
         public void DemandIsProportionalToTheStepLength(int slow, int fast)
         {
-/// <summary>Demand operation.</summary>
+
             float slower = Demand(Hull(slow));
-/// <summary>Demand operation.</summary>
+
             float faster = Demand(Hull(fast));
 
             Assert.True(slower > 0f, "the census hull asked for no substeps at Frequency " + slow
@@ -57,12 +57,12 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData(2, 4)]
         [InlineData(1, 2)]
-/// <summary>ACapMeansTheSameFloorAtTwiceTheRateAndTwiceTheCap operation.</summary>
+
         public void ACapMeansTheSameFloorAtTwiceTheRateAndTwiceTheCap(int fastCap, int slowCap)
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation fast = Hull(8, fastCap);
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation slow = Hull(4, slowCap);
 
             Demand(fast);
@@ -76,17 +76,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACapAboveWhatTheHullAsksForDoesNothingAtTheShippedRate operation.</summary>
+
         public void ACapAboveWhatTheHullAsksForDoesNothingAtTheShippedRate()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation uncapped = Hull(8);
-/// <summary>Demand operation.</summary>
+
             float demand = Demand(uncapped);
 
             Assert.InRange(demand, 2f, 4f);
 
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation capped = Hull(8, 4);
 
             Assert.Equal(demand, Demand(capped), 3);

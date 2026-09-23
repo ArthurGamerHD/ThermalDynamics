@@ -36,13 +36,13 @@ namespace Thermodynamics.Core
 
         public const int MaxExposedPerFace = (int)FaceMask;
 
-/// <summary>Returns the exposedfaces.</summary>
+
         public int GetExposedFaces(int face)
         {
             return (int)((exposedFaces >> (face * FaceBits)) & FaceMask);
         }
 
-/// <summary>Sets the exposedfaces.</summary>
+
         public void SetExposedFaces(int face, int count)
         {
             if (count < 0) count = 0;
@@ -85,7 +85,7 @@ namespace Thermodynamics.Core
                 {
                     if (value == 0f) return;
 
-/// <summary>NodeDiagnostics operation.</summary>
+
                     diagnostics = new NodeDiagnostics();
                 }
 
@@ -102,7 +102,7 @@ namespace Thermodynamics.Core
                 {
                     if (value == 0f) return;
 
-/// <summary>NodeDiagnostics operation.</summary>
+
                     diagnostics = new NodeDiagnostics();
                 }
 
@@ -119,7 +119,7 @@ namespace Thermodynamics.Core
                 {
                     if (value == 0f) return;
 
-/// <summary>NodeDiagnostics operation.</summary>
+
                     diagnostics = new NodeDiagnostics();
                 }
 
@@ -136,7 +136,7 @@ namespace Thermodynamics.Core
                 {
                     if (value == 0f) return;
 
-/// <summary>NodeDiagnostics operation.</summary>
+
                     diagnostics = new NodeDiagnostics();
                 }
 
@@ -153,7 +153,7 @@ namespace Thermodynamics.Core
                 {
                     if (value == 0f) return;
 
-/// <summary>NodeDiagnostics operation.</summary>
+
                     diagnostics = new NodeDiagnostics();
                 }
 
@@ -172,7 +172,7 @@ namespace Thermodynamics.Core
                 {
                     if (value == 0f) return;
 
-/// <summary>NodeDiagnostics operation.</summary>
+
                     diagnostics = new NodeDiagnostics();
                 }
 
@@ -189,7 +189,7 @@ namespace Thermodynamics.Core
                 {
                     if (value == 0f) return;
 
-/// <summary>NodeDiagnostics operation.</summary>
+
                     diagnostics = new NodeDiagnostics();
                 }
 
@@ -213,13 +213,13 @@ namespace Thermodynamics.Core
 
         private float heatTimeScale = 1f;
 
-/// <summary>ThermalNode operation.</summary>
+
         public ThermalNode(BlockInstance block, float gridSize, float initialTemperature)
             : this(block, gridSize, initialTemperature, 1f)
         {
         }
 
-/// <summary>ThermalNode operation.</summary>
+
         public ThermalNode(BlockInstance block, float gridSize, float initialTemperature, float heatTimeScale)
         {
             if (block == null) throw new ArgumentNullException("block");
@@ -244,7 +244,7 @@ namespace Thermodynamics.Core
             get { return cellFaceArea; }
         }
 
-/// <summary>RefreshThermalMass operation.</summary>
+
         public void RefreshThermalMass()
         {
             float mass = Math.Max(0f, Block.Mass);
@@ -254,20 +254,20 @@ namespace Thermodynamics.Core
             StateDirty = true;
         }
 
-/// <summary>RefreshExposure operation.</summary>
+
         public void RefreshExposure()
         {
             int total = 0;
             for (int i = 0; i < Face.Count; i++)
             {
-/// <summary>Returns the exposedfaces.</summary>
+
                 total += GetExposedFaces(i);
             }
 
             SetTotalAndDerived(total);
         }
 
-/// <summary>Sets the exposedfaces.</summary>
+
         public bool SetExposedFaces(int[] countsByFace)
         {
             if (countsByFace == null || countsByFace.Length < Face.Count)
@@ -295,7 +295,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>Sets the totalandderived.</summary>
+
         private void SetTotalAndDerived(int total)
         {
             TotalExposedFaces = total;
@@ -304,7 +304,7 @@ namespace Thermodynamics.Core
             StateDirty = true;
         }
 
-/// <summary>RefreshHeatGeneration operation.</summary>
+
         public void RefreshHeatGeneration()
         {
             float produced = Math.Max(0f, Block.PowerProducedWatts) * Thermal.ProducerWasteEnergy;
@@ -319,7 +319,7 @@ namespace Thermodynamics.Core
             get { return Temperature * ThermalMass; }
         }
 
-/// <summary>ToString operation.</summary>
+
         public override string ToString()
         {
             return Block.Name + " T=" + Temperature.ToString("n2") + "K";

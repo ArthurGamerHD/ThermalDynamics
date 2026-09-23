@@ -4,7 +4,7 @@ namespace Thermodynamics.Core
 {
     public static class LiftForce
     {
-/// <summary>Vector operation.</summary>
+
         public static Vector3 Vector(Vector3 pressureWatts, Vector3 relativeWind,
             ThermalSettings settings)
         {

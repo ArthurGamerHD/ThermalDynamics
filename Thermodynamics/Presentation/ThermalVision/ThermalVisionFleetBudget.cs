@@ -4,21 +4,21 @@ namespace Thermodynamics.Presentation
 {
     public static class ThermalVisionFleetBudget
     {
-/// <summary>BackOff operation.</summary>
+
         public static int BackOff(int current, int grids)
         {
             if (current < 1 || grids < 1) throw new ArgumentException("Positive fleet capacity required");
             return Math.Max(grids, current / 2);
         }
 
-/// <summary>ForViewport operation.</summary>
+
         public static int ForViewport(int capacity, int previousCount, int currentCount)
         {
             return previousCount > 0 && currentCount > 0 && currentCount <= previousCount / 2
                 ? 1400 : capacity;
         }
 
-/// <summary>Allocate operation.</summary>
+
         public static int[] Allocate(double[] weights, int[] demands, int total)
         {
             if (weights == null || demands == null || weights.Length != demands.Length || total < weights.Length)
@@ -50,7 +50,7 @@ namespace Thermodynamics.Presentation
             return result;
         }
 
-/// <summary>Allocate operation.</summary>
+
         public static int[] Allocate(double[] weights, int total)
         {
             if (weights == null || total < weights.Length) throw new ArgumentException("Budget must cover every grid");
@@ -69,7 +69,7 @@ namespace Thermodynamics.Presentation
             for (int i = 0; used < total; i = (i + 1) % result.Length, used++) result[i]++;
             return result;
         }
-/// <summary>Weight operation.</summary>
+
         private static double Weight(double value)
         { return double.IsNaN(value) || double.IsInfinity(value) || value <= 0 ? .000001 : Math.Min(value, 1000000); }
     }

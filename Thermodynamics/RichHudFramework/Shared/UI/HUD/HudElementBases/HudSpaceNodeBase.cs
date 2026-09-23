@@ -36,7 +36,7 @@ namespace RichHudFramework
 
 			public bool IsFacingCamera { get; protected set; }
 
-/// <summary>HudSpaceNodeBase operation.</summary>
+
 			public HudSpaceNodeBase(HudParentBase parent = null) : base(parent)
 			{
 				PlaneToWorldRef = new MatrixD[1];
@@ -47,7 +47,7 @@ namespace RichHudFramework
 				_config[StateID] |= (uint)HudElementStates.IsSpaceNode;
 			}
 
-/// <summary>Layout operation.</summary>
+
 			protected override void Layout()
 			{
 				MatrixD camMatrix = MyAPIGateway.Session.Camera.WorldMatrix;
@@ -64,7 +64,7 @@ namespace RichHudFramework
 				MatrixD.Invert(ref PlaneToWorldRef[0], out worldToPlane);
 
 				LineD cursorLine = HudMain.Cursor.WorldLine;
-/// <summary>PlaneD operation.</summary>
+
 				PlaneD plane = new PlaneD(nodeOrigin, nodeForward);
 
 				Vector3D worldIntersection = plane.Intersection(ref cursorLine.From, ref cursorLine.Direction);
@@ -72,7 +72,7 @@ namespace RichHudFramework
 				Vector3D localPos;
 				Vector3D.TransformNoProjection(ref worldIntersection, ref worldToPlane, out localPos);
 
-/// <summary>Vector3 operation.</summary>
+
 				CursorPos = new Vector3(
 					(float)localPos.X,
 					(float)localPos.Y,

@@ -14,7 +14,7 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>ClientInputTests operation.</summary>
+
         public ClientInputTests(ITestOutputHelper output)
         {
             this.output = output;
@@ -24,7 +24,7 @@ namespace Thermodynamics.Tests
 
         private const float Seconds = 480f;
 
-/// <summary>Run operation.</summary>
+
         private static ClientInputLab.Result Run(ClientInputLab.Degradation how,
             ClientDriftLab.Correction fix = null)
         {
@@ -33,10 +33,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUndegradedClientAgreesExactly operation.</summary>
+
         public void AnUndegradedClientAgreesExactly()
         {
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result result = Run(new ClientInputLab.Degradation { Name = "none" });
 
             Assert.Equal(0f, result.PeakKelvin, 4);
@@ -49,17 +49,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APerturbationDecaysAndABiasDoesNot operation.</summary>
+
         public void APerturbationDecaysAndABiasDoesNot()
         {
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result perturbed = Run(new ClientInputLab.Degradation
             {
                 Name = "stale join",
                 StaleSeconds = 60f,
             });
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result biased = Run(new ClientInputLab.Degradation
             {
                 Name = "power error",
@@ -79,17 +79,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABiggerInputErrorIsABiggerStandingError operation.</summary>
+
         public void ABiggerInputErrorIsABiggerStandingError()
         {
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result small = Run(new ClientInputLab.Degradation
             {
                 Name = "power error 2%",
                 PowerErrorShare = 0.02f,
             });
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result large = Run(new ClientInputLab.Degradation
             {
                 Name = "power error 10%",
@@ -102,7 +102,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheScriptedLoadActuallyChanges operation.</summary>
+
         public void TheScriptedLoadActuallyChanges()
         {
             float first = ClientInputLab.Watts(0f);
@@ -116,7 +116,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCombinedCaseIsTheUnionOfEveryOtherCase operation.</summary>
+
         public void TheCombinedCaseIsTheUnionOfEveryOtherCase()
         {
             List<ClientInputLab.Degradation> cases = ClientInputLab.All();
@@ -144,7 +144,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryCaseSaysWhatItDegradesAndWhy operation.</summary>
+
         public void EveryCaseSaysWhatItDegradesAndWhy()
         {
             foreach (ClientInputLab.Degradation one in ClientInputLab.All())
@@ -156,14 +156,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARunWithNothingHotSaysSoRatherThanReportingAgreement operation.</summary>
+
         public void ARunWithNothingHotSaysSoRatherThanReportingAgreement()
         {
             ClientInputLab.Result cold = ClientInputLab.Measure(
                 new ClientInputLab.Degradation { Name = "none" },
                 ClientDriftLab.Correction.None, "planet", 120f, Blocks);
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result hot = Run(new ClientInputLab.Degradation
             {
                 Name = "stale join",
@@ -176,7 +176,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCorrectionNarrowsWhatABiasedClientIsWrongAbout operation.</summary>
+
         public void TheCorrectionNarrowsWhatABiasedClientIsWrongAbout()
         {
             ClientInputLab.Degradation biased = new ClientInputLab.Degradation
@@ -185,9 +185,9 @@ namespace Thermodynamics.Tests
                 PowerErrorShare = 0.10f,
             };
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result alone = Run(biased);
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result corrected = Run(biased, new ClientDriftLab.Correction
             {
                 IntervalSeconds = 5f,
@@ -207,19 +207,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThrustBiasesAClientMoreThanPowerDoesAtTheSameError operation.</summary>
+
         public void ThrustBiasesAClientMoreThanPowerDoesAtTheSameError()
         {
             const float Error = 0.10f;
 
-/// <summary>Flying operation.</summary>
+
             ClientInputLab.Result thrust = Flying(new ClientInputLab.Degradation
             {
                 Name = "thrust error",
                 ThrustErrorShare = Error,
             });
 
-/// <summary>Flying operation.</summary>
+
             ClientInputLab.Result power = Flying(new ClientInputLab.Degradation
             {
                 Name = "power error",
@@ -239,7 +239,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AThrustErrorSettlesRatherThanDecayingAndOnlyOnAShipUnderWay operation.</summary>
+
         public void AThrustErrorSettlesRatherThanDecayingAndOnlyOnAShipUnderWay()
         {
             ClientInputLab.Degradation how = new ClientInputLab.Degradation
@@ -248,9 +248,9 @@ namespace Thermodynamics.Tests
                 ThrustErrorShare = 0.2f,
             };
 
-/// <summary>Flying operation.</summary>
+
             ClientInputLab.Result flying = Flying(how);
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result resting = Run(how);
 
             output.WriteLine("flying: peak {0:n1} K, standing {1:n1} K. at rest: peak {2:n1} K",
@@ -267,17 +267,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>MissingTheWeatherIsABiasAndTheLargestOne operation.</summary>
+
         public void MissingTheWeatherIsABiasAndTheLargestOne()
         {
-/// <summary>OnAPlanet operation.</summary>
+
             ClientInputLab.Result weather = OnAPlanet(new ClientInputLab.Degradation
             {
                 Name = "wrong weather",
                 MissesWeather = true,
             });
 
-/// <summary>OnAPlanet operation.</summary>
+
             ClientInputLab.Result air = OnAPlanet(new ClientInputLab.Degradation
             {
                 Name = "thinner air",
@@ -291,7 +291,7 @@ namespace Thermodynamics.Tests
                 "missing the weather showed " + weather.StandingKelvin
                 + " K, so the knob reached nothing");
 
-/// <summary>OnAPlanet operation.</summary>
+
             ClientInputLab.Result perturbation = OnAPlanet(new ClientInputLab.Degradation
             {
                 Name = "stale join",
@@ -306,14 +306,14 @@ namespace Thermodynamics.Tests
                 + " join's " + perturbation.StandingKelvin + " K, so it is not clearly a bias");
 
             Assert.True(weather.StandingKelvin > air.StandingKelvin,
-/// <summary>weather operation.</summary>
+
                 "missing the weather (" + weather.StandingKelvin + " K) is no worse than a 20 %"
-/// <summary>error operation.</summary>
+
                 + " air density error (" + air.StandingKelvin + " K), so it says nothing new");
         }
 
         [Fact]
-/// <summary>APositionLagCostsNothingLevelAndALapseRateOnADescent operation.</summary>
+
         public void APositionLagCostsNothingLevelAndALapseRateOnADescent()
         {
             ClientInputLab.Degradation how = new ClientInputLab.Degradation
@@ -322,9 +322,9 @@ namespace Thermodynamics.Tests
                 PositionLagSeconds = 5f,
             };
 
-/// <summary>Descending operation.</summary>
+
             ClientInputLab.Result descending = Descending(how);
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result level = Run(how);
 
             output.WriteLine("descending: peak {0:n2} K, standing {1:n2} K. level: peak {2:n2} K",
@@ -341,14 +341,14 @@ namespace Thermodynamics.Tests
                 + " bias — the sweep and this test both read it as a perturbation");
         }
 
-/// <summary>Descending operation.</summary>
+
         private static ClientInputLab.Result Descending(ClientInputLab.Degradation how,
             float seconds = Seconds)
         {
             return ClientInputLab.Measure(how, ClientDriftLab.Correction.None, "descent", seconds, Blocks);
         }
 
-/// <summary>OnAPlanet operation.</summary>
+
         private static ClientInputLab.Result OnAPlanet(ClientInputLab.Degradation how,
             float seconds = Seconds)
         {
@@ -356,7 +356,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACaseThatCannotActOnThisScenarioIsSaidRatherThanScored operation.</summary>
+
         public void ACaseThatCannotActOnThisScenarioIsSaidRatherThanScored()
         {
             ClientInputLab.Degradation how = new ClientInputLab.Degradation
@@ -366,9 +366,9 @@ namespace Thermodynamics.Tests
                 PositionLagSeconds = 5f,
             };
 
-/// <summary>Run operation.</summary>
-            ClientInputLab.Result wrong = Run(how);          // on "sunlit"
-/// <summary>Descending operation.</summary>
+
+            ClientInputLab.Result wrong = Run(how);
+
             ClientInputLab.Result right = Descending(how);
 
             Assert.True(wrong.NotExercised,
@@ -382,7 +382,7 @@ namespace Thermodynamics.Tests
             Assert.Contains(right.StandingKelvin.ToString("n2"), report);
         }
 
-/// <summary>Flying operation.</summary>
+
         private static ClientInputLab.Result Flying(ClientInputLab.Degradation how,
             float seconds = Seconds)
         {
@@ -390,10 +390,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWrongShadowPeaksHardAndThenDecays operation.</summary>
+
         public void AWrongShadowPeaksHardAndThenDecays()
         {
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result result = Run(new ClientInputLab.Degradation
             {
                 Name = "wrong shadow",
@@ -414,10 +414,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AClientPermanentlyInTheWrongShadowSettlesThereInstead operation.</summary>
+
         public void AClientPermanentlyInTheWrongShadowSettlesThereInstead()
         {
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result always = Run(new ClientInputLab.Degradation
             {
                 Name = "always in shade",
@@ -448,7 +448,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASpeedErrorStandsAndOnlyOnAShipThatIsMoving operation.</summary>
+
         public void ASpeedErrorStandsAndOnlyOnAShipThatIsMoving()
         {
             ClientInputLab.Degradation how = new ClientInputLab.Degradation
@@ -457,11 +457,11 @@ namespace Thermodynamics.Tests
                 SpeedErrorShare = 0.2f,
             };
 
-/// <summary>Flying operation.</summary>
+
             ClientInputLab.Result shorter = Flying(how, 240f);
-/// <summary>Flying operation.</summary>
+
             ClientInputLab.Result longer = Flying(how, 480f);
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result resting = Run(how);
 
             output.WriteLine("standing {0:n1} K at 240 s, {1:n1} K at 480 s; still and sunlit {2:n1} K",
@@ -479,7 +479,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(0f, resting.PeakKelvin, 3);
         }
 
-/// <summary>InTheDark operation.</summary>
+
         private static ClientInputLab.Result InTheDark(ClientInputLab.Degradation how, float period)
         {
             return ClientInputLab.Measure(how, ClientDriftLab.Correction.None,
@@ -487,7 +487,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AMassErrorStandsUnderAMovingLoadAndDecaysUnderASteadyOne operation.</summary>
+
         public void AMassErrorStandsUnderAMovingLoadAndDecaysUnderASteadyOne()
         {
             ClientInputLab.Degradation how = new ClientInputLab.Degradation
@@ -496,9 +496,9 @@ namespace Thermodynamics.Tests
                 MassErrorShare = 0.2f,
             };
 
-/// <summary>InTheDark operation.</summary>
+
             ClientInputLab.Result moving = InTheDark(how, ClientInputLab.LoadPeriodSeconds);
-/// <summary>InTheDark operation.</summary>
+
             ClientInputLab.Result steady = InTheDark(how, 1e9f);
 
             output.WriteLine("moving load: peak {0:n1} K, standing {1:n1} K. steady: peak {2:n1} K,"
@@ -523,19 +523,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockBelievedOffIsWorseThanTheSameWattsSpreadOverTheHull operation.</summary>
+
         public void ABlockBelievedOffIsWorseThanTheSameWattsSpreadOverTheHull()
         {
             const float Share = 0.1f;
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result concentrated = Run(new ClientInputLab.Degradation
             {
                 Name = "blocks off",
                 BlocksOffShare = Share,
             });
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result spread = Run(new ClientInputLab.Degradation
             {
                 Name = "power short",
@@ -566,24 +566,24 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheLastOnePerCentOfARoomsAirIsWorthMoreThanTheFirstNinetyNine operation.</summary>
+
         public void TheLastOnePerCentOfARoomsAirIsWorthMoreThanTheFirstNinetyNine()
         {
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result fifth = Run(new ClientInputLab.Degradation
             {
                 Name = "room pressure",
                 RoomPressureError = 0.2f,
             });
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result nearlyAll = Run(new ClientInputLab.Degradation
             {
                 Name = "room pressure 99 %",
                 RoomPressureError = 0.99f,
             });
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result gone = Run(new ClientInputLab.Degradation
             {
                 Name = "air gone",
@@ -616,7 +616,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUnconvergedRoomMapPeaksHardAndThenLeavesNothing operation.</summary>
+
         public void AnUnconvergedRoomMapPeaksHardAndThenLeavesNothing()
         {
             ClientInputLab.Degradation how = new ClientInputLab.Degradation
@@ -625,12 +625,12 @@ namespace Thermodynamics.Tests
                 RoomMapLagSeconds = 60f,
             };
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result shorter = Run(how);
             ClientInputLab.Result longer = ClientInputLab.Measure(how,
                 ClientDriftLab.Correction.None, "sunlit", 480f, Blocks);
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result airGone = Run(new ClientInputLab.Degradation
             {
                 Name = "air gone",
@@ -660,18 +660,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHullWithNoRoomMapBelievesItsSkinIsAQuarterLarger operation.</summary>
+
         public void AHullWithNoRoomMapBelievesItsSkinIsAQuarterLarger()
         {
             ThermalSimulation hull = Hulls.Driven(Hulls.Uncapped(), 2000);
 
-/// <summary>ExposedArea operation.</summary>
+
             float mapped = ExposedArea(hull);
             Assert.True(hull.Rooms.Map.RoomCount > 0,
                 "the census hull has no compartment, so there is no interior to lose");
 
             hull.Solver.RefreshExposure(new RoomMap());
-/// <summary>ExposedArea operation.</summary>
+
             float unmapped = ExposedArea(hull);
 
             output.WriteLine("exposed area: {0:n1} m2 mapped, {1:n1} m2 unmapped, {2:n3}x",
@@ -685,7 +685,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(mapped, ExposedArea(hull), 3);
         }
 
-/// <summary>ExposedArea operation.</summary>
+
         private static float ExposedArea(ThermalSimulation hull)
         {
             IList<ThermalNode> nodes = hull.Solver.Nodes;
@@ -695,10 +695,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARoomMapThatNeverLandsOutSettlesEveryOtherInputInTheSweep operation.</summary>
+
         public void ARoomMapThatNeverLandsOutSettlesEveryOtherInputInTheSweep()
         {
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result never = Run(new ClientInputLab.Degradation
             {
                 Name = "no room map",
@@ -706,7 +706,7 @@ namespace Thermodynamics.Tests
                 RoomMapLagSeconds = 1e9f,
             });
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result switched = Run(new ClientInputLab.Degradation
             {
                 Name = "blocks off",
@@ -728,7 +728,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSameShipInADifferentOrderDiffersOnlyInTheLastBits operation.</summary>
+
         public void TheSameShipInADifferentOrderDiffersOnlyInTheLastBits()
         {
             ClientInputLab.Degradation how = new ClientInputLab.Degradation
@@ -737,9 +737,9 @@ namespace Thermodynamics.Tests
                 BuildOrderSeed = 20260824,
             };
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result alone = Run(how);
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result corrected = Run(how, new ClientDriftLab.Correction
             {
                 IntervalSeconds = 5f,
@@ -784,7 +784,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnIndexKeyedCorrectionWouldLandEveryTemperatureOnTheWrongBlock operation.</summary>
+
         public void AnIndexKeyedCorrectionWouldLandEveryTemperatureOnTheWrongBlock()
         {
             ThermalSimulation server = Hulls.Driven(Hulls.Uncapped(), Blocks);
@@ -798,7 +798,7 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(0f, WorstDisagreement(server, client), 4);
 
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> tail = new List<StoredTemperature>();
             server.ExportHotTail(float.MaxValue, 0, tail);
             Assert.True(tail.Count > 0, "the server sent nothing, so this judges nothing");
@@ -809,7 +809,7 @@ namespace Thermodynamics.Tests
                 theirs[i].Temperature = tail[i].Temperature;
             }
 
-/// <summary>WorstDisagreement operation.</summary>
+
             float byIndex = WorstDisagreement(server, client);
             output.WriteLine("{0:n0} blocks in the band; an index-keyed apply leaves {1:n1} K",
                 tail.Count, byIndex);
@@ -819,7 +819,7 @@ namespace Thermodynamics.Tests
                 + " hull, so the position key is not buying what the codec says it is");
         }
 
-/// <summary>WorstDisagreement operation.</summary>
+
         private static float WorstDisagreement(ThermalSimulation server, ThermalSimulation client)
         {
             IList<ThermalNode> mine = server.Solver.Nodes;
@@ -838,7 +838,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCorrectionNarrowsAPartialHullsReadoutAndCannotTouchWhatIsAbsent operation.</summary>
+
         public void TheCorrectionNarrowsAPartialHullsReadoutAndCannotTouchWhatIsAbsent()
         {
             ClientInputLab.Degradation how = new ClientInputLab.Degradation
@@ -847,9 +847,9 @@ namespace Thermodynamics.Tests
                 BlocksMissingShare = 0.1f,
             };
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result alone = Run(how);
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result corrected = Run(how, new ClientDriftLab.Correction
             {
                 IntervalSeconds = 5f,
@@ -875,10 +875,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BlocksArrivingLateAreAPerturbationAndBlocksNeverArrivingAreABias operation.</summary>
+
         public void BlocksArrivingLateAreAPerturbationAndBlocksNeverArrivingAreABias()
         {
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result late = Run(new ClientInputLab.Degradation
             {
                 Name = "blocks missing",
@@ -886,7 +886,7 @@ namespace Thermodynamics.Tests
                 BlocksMissingSeconds = 60f,
             });
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result never = Run(new ClientInputLab.Degradation
             {
                 Name = "blocks never arrive",
@@ -912,7 +912,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARateDifferenceIsWorthWhatTheLoadIsDoingAndNothingElse operation.</summary>
+
         public void ARateDifferenceIsWorthWhatTheLoadIsDoingAndNothingElse()
         {
             ClientInputLab.Degradation how = new ClientInputLab.Degradation
@@ -921,9 +921,9 @@ namespace Thermodynamics.Tests
                 SimSpeedError = -0.1f,
             };
 
-/// <summary>InTheDark operation.</summary>
+
             ClientInputLab.Result moving = InTheDark(how, ClientInputLab.LoadPeriodSeconds);
-/// <summary>InTheDark operation.</summary>
+
             ClientInputLab.Result steady = InTheDark(how, 1e9f);
 
             output.WriteLine("moving load: peak {0:n1} K, standing {1:n2} K. steady: peak {2:n1} K,"
@@ -940,7 +940,7 @@ namespace Thermodynamics.Tests
 
             ClientInputLab.Result longer = ClientInputLab.Measure(how,
                 ClientDriftLab.Correction.None, "sunlit", 480f, Blocks);
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result shorter = Run(how);
 
             output.WriteLine("sunlit: {0:n2} K at 240 s, {1:n2} K at 480 s",
@@ -953,12 +953,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSameLostTimeInLumpsPeaksFarHigherThanAsASlope operation.</summary>
+
         public void TheSameLostTimeInLumpsPeaksFarHigherThanAsASlope()
         {
             const float Deficit = 1f / 6f;
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result lumps = Run(new ClientInputLab.Degradation
             {
                 Name = "hitching",
@@ -966,7 +966,7 @@ namespace Thermodynamics.Tests
                 HitchLosesSeconds = 5f,
             });
 
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result slope = Run(new ClientInputLab.Degradation
             {
                 Name = "slow clock",
@@ -992,10 +992,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHeatSourceTheClientNeverHeardAboutIsABias operation.</summary>
+
         public void AHeatSourceTheClientNeverHeardAboutIsABias()
         {
-/// <summary>Run operation.</summary>
+
             ClientInputLab.Result result = Run(new ClientInputLab.Degradation
             {
                 Name = "missing source",
@@ -1016,7 +1016,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARoomKnobOnAHullWithNoCompartmentIsRefusedRatherThanReportedAsHarmless operation.</summary>
+
         public void ARoomKnobOnAHullWithNoCompartmentIsRefusedRatherThanReportedAsHarmless()
         {
             const int NoCompartment = 500;
@@ -1039,15 +1039,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>MassIsTheOnlyChannelBlockConditionHasIntoTheModel operation.</summary>
+
         public void MassIsTheOnlyChannelBlockConditionHasIntoTheModel()
         {
             BlockThermalProperties thermal = Catalog.DefaultThermal();
             BlockModel model = BlockModel.Solid("block", Vector3I.One, 1000f, thermal);
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance block = new BlockInstance(model, Vector3I.Zero, BlockOrientation.Identity);
 
-/// <summary>ThermalNode operation.</summary>
+
             ThermalNode node = new ThermalNode(block, 2.5f, 300f);
             float whole = node.ThermalMass;
 
@@ -1059,7 +1059,7 @@ namespace Thermodynamics.Tests
             string root = ShippedBlocks.RepoRoot();
             string scripts = Path.Combine(root, "Thermodynamics");
             string[] routes = { "BuildLevelRatio", "BuildIntegrity", "CurrentDamage", "MaxIntegrity" };
-/// <summary>List operation.</summary>
+
             List<string> offenders = new List<string>();
 
             foreach (string file in Directory.GetFiles(scripts, "*.cs", SearchOption.AllDirectories))

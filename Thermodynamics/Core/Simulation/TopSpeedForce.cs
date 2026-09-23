@@ -2,7 +2,7 @@ namespace Thermodynamics.Core
 {
     public static class TopSpeedForce
     {
-/// <summary>Newtons operation.</summary>
+
         public static float Newtons(float resistance, float mass, float cruise, float speed)
         {
             if (!(speed > cruise) || !(speed > 0f)) return 0f;
@@ -12,7 +12,7 @@ namespace Thermodynamics.Core
             return resistance * mass * over;
         }
 
-/// <summary>Ceiling operation.</summary>
+
         public static float Ceiling(bool boostEnabled, float cruise, float boostCeiling)
         {
             if (!(cruise > 0f)) cruise = 0f;

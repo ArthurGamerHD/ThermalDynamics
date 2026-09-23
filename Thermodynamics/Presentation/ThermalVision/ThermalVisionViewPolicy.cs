@@ -4,15 +4,15 @@ namespace Thermodynamics.Presentation
 {
     public static class ThermalVisionViewPolicy
     {
-/// <summary>DrawContext operation.</summary>
+
         public static bool DrawContext(bool fleetMode, bool hasField)
         { return fleetMode || hasField; }
 
-/// <summary>SuppressForUi operation.</summary>
+
         public static bool SuppressForUi(bool guiAvailable, bool gameChat, bool frameworkChat, bool cursor)
         { return !guiAvailable; }
 
-/// <summary>FarDistance operation.</summary>
+
         public static double FarDistance(double cameraFar, double sessionFar, double near)
         {
             if (Valid(cameraFar, near)) return cameraFar;
@@ -20,13 +20,13 @@ namespace Thermodynamics.Presentation
             return Math.Max(15000, near + 1);
         }
 
-/// <summary>BackdropDistance operation.</summary>
+
         public static double BackdropDistance(double far)
         {
             return far * .999999;
         }
 
-/// <summary>DetailBudget operation.</summary>
+
         public static int DetailBudget(double diameterPixels, int previous, bool interior)
         {
             if(interior || double.IsNaN(diameterPixels)) return 512;
@@ -39,7 +39,7 @@ namespace Thermodynamics.Presentation
             return budget;
         }
 
-/// <summary>Valid operation.</summary>
+
         private static bool Valid(double value, double near)
         { return !double.IsNaN(value) && !double.IsInfinity(value) && value > near + 1; }
     }

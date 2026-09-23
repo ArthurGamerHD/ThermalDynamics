@@ -27,7 +27,7 @@ namespace Thermodynamics.Harness
 
         private int[][] regionFine;
 
-/// <summary>HashSet operation.</summary>
+
         private readonly HashSet<long> doorCells = new HashSet<long>();
 
         private struct Entry
@@ -44,7 +44,7 @@ namespace Thermodynamics.Harness
 
         public int ExternalCells;
 
-/// <summary>List operation.</summary>
+
         public readonly List<int> RegionCells = new List<int>();
 
         public int RoomCount
@@ -61,7 +61,7 @@ namespace Thermodynamics.Harness
 
         public long SealingBytes;
 
-/// <summary>CoarseRoomFlood operation.</summary>
+
         public CoarseRoomFlood(int edge)
         {
             if (edge < 2)
@@ -72,7 +72,7 @@ namespace Thermodynamics.Harness
             Edge = edge;
         }
 
-/// <summary>Run operation.</summary>
+
         public void Run(GridModel grid, SurfaceMap surfaces)
         {
             if (grid == null || grid.BlockCount == 0)
@@ -81,7 +81,7 @@ namespace Thermodynamics.Harness
             }
 
             boxMin = grid.Min - Vector3I.One;
-/// <summary>Vector3I operation.</summary>
+
             Vector3I boxMaxEx = grid.Max + new Vector3I(2, 2, 2);
             sizeX = boxMaxEx.X - boxMin.X;
             sizeY = boxMaxEx.Y - boxMin.Y;
@@ -121,7 +121,7 @@ namespace Thermodynamics.Harness
             InteriorScan();
         }
 
-/// <summary>RegionOf operation.</summary>
+
         public int RegionOf(Vector3I cell)
         {
             int x = cell.X - boxMin.X;
@@ -130,7 +130,7 @@ namespace Thermodynamics.Harness
             if (x < 0 || x >= sizeX || y < 0 || y >= sizeY || z < 0 || z >= sizeZ) return -1;
 
             int sx = x / Edge, sy = y / Edge, sz = z / Edge;
-/// <summary>SuperIndex operation.</summary>
+
             int super = SuperIndex(sx, sy, sz);
             if (superState[super] == Open) return regionSuper[super];
 
@@ -144,7 +144,7 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>ClassifyByBlockBounds operation.</summary>
+
         private void ClassifyByBlockBounds(GridModel grid)
         {
             IList<BlockInstance> blocks = grid.Blocks;
@@ -170,7 +170,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>FillSealingTiles operation.</summary>
+
         private void FillSealingTiles(SurfaceMap surfaces)
         {
             foreach (Vector3I cell in surfaces.Cells)
@@ -181,7 +181,7 @@ namespace Thermodynamics.Harness
                 if (x < 0 || x >= sizeX || y < 0 || y >= sizeY || z < 0 || z >= sizeZ) continue;
 
                 int sx = x / Edge, sy = y / Edge, sz = z / Edge;
-/// <summary>SuperIndex operation.</summary>
+
                 int super = SuperIndex(sx, sy, sz);
 
                 superState[super] = Mixed;
@@ -203,7 +203,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>CollectDoorCells operation.</summary>
+
         private void CollectDoorCells(GridModel grid)
         {
             doorCells.Clear();
@@ -219,14 +219,14 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>SeedCell operation.</summary>
+
         private void SeedCell(Vector3I cell, int region)
         {
             int x = cell.X - boxMin.X;
             int y = cell.Y - boxMin.Y;
             int z = cell.Z - boxMin.Z;
             int sx = x / Edge, sy = y / Edge, sz = z / Edge;
-/// <summary>SuperIndex operation.</summary>
+
             int super = SuperIndex(sx, sy, sz);
 
             if (superState[super] == Open)
@@ -241,20 +241,20 @@ namespace Thermodynamics.Harness
             TakeFine(super, off, region);
         }
 
-/// <summary>Flood operation.</summary>
+
         private void Flood()
         {
             while (frontierCount > 0)
             {
-/// <summary>Dequeue operation.</summary>
+
                 Entry entry = Dequeue();
                 if (entry.Fine < 0) StepSuper(entry.Super);
-/// <summary>StepFine operation.</summary>
+
                 else StepFine(entry.Super, entry.Fine);
             }
         }
 
-/// <summary>StepSuper operation.</summary>
+
         private void StepSuper(int super)
         {
             SupercellsTaken++;
@@ -272,7 +272,7 @@ namespace Thermodynamics.Harness
                 int nx = sx + offset.X, ny = sy + offset.Y, nz = sz + offset.Z;
                 if (nx < 0 || nx >= superX || ny < 0 || ny >= superY || nz < 0 || nz >= superZ) continue;
 
-/// <summary>SuperIndex operation.</summary>
+
                 int neighbour = SuperIndex(nx, ny, nz);
                 if (superState[neighbour] == Open)
                 {
@@ -284,7 +284,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>EnterMixedFace operation.</summary>
+
         private void EnterMixedFace(int neighbour, int nx, int ny, int nz, int face, int region)
         {
             int dimX, dimY, dimZ;
@@ -322,7 +322,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>StepFine operation.</summary>
+
         private void StepFine(int super, int off)
         {
             FineCellsVisited++;
@@ -353,7 +353,7 @@ namespace Thermodynamics.Harness
                 if (gx < 0 || gx >= sizeX || gy < 0 || gy >= sizeY || gz < 0 || gz >= sizeZ) continue;
 
                 int nsx = gx / Edge, nsy = gy / Edge, nsz = gz / Edge;
-/// <summary>SuperIndex operation.</summary>
+
                 int neighbourSuper = SuperIndex(nsx, nsy, nsz);
 
                 if (superState[neighbourSuper] == Open)
@@ -375,7 +375,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>InteriorScan operation.</summary>
+
         private void InteriorScan()
         {
             int superCount = superX * superY * superZ;
@@ -417,7 +417,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>IsDoorCell operation.</summary>
+
         private bool IsDoorCell(int super, int off, int sx, int sy, int sz, int dimX, int dimY)
         {
             if (doorCells.Count == 0) return false;
@@ -425,7 +425,7 @@ namespace Thermodynamics.Harness
             int lx = off % dimX;
             int ly = (off / dimX) % dimY;
             int lz = off / (dimX * dimY);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I cell = new Vector3I(
                 boxMin.X + sx * Edge + lx,
                 boxMin.Y + sy * Edge + ly,
@@ -434,7 +434,7 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>TakeSuper operation.</summary>
+
         private void TakeSuper(int super, int region)
         {
             visitedSuper[super >> 6] |= 1ul << (super & 63);
@@ -442,7 +442,7 @@ namespace Thermodynamics.Harness
             Enqueue(new Entry { Super = super, Fine = -1 });
         }
 
-/// <summary>TakeFine operation.</summary>
+
         private void TakeFine(int super, int off, int region)
         {
             int sx, sy, sz;
@@ -457,7 +457,7 @@ namespace Thermodynamics.Harness
             Enqueue(new Entry { Super = super, Fine = off });
         }
 
-/// <summary>MarkFine operation.</summary>
+
         private void MarkFine(int super, int off, int volume)
         {
             ulong[] bits = visitedFine[super];
@@ -473,13 +473,13 @@ namespace Thermodynamics.Harness
             bits[off >> 6] |= 1ul << (off & 63);
         }
 
-/// <summary>SuperVisited operation.</summary>
+
         private bool SuperVisited(int super)
         {
             return (visitedSuper[super >> 6] & (1ul << (super & 63))) != 0;
         }
 
-/// <summary>FineVisited operation.</summary>
+
         private bool FineVisited(int super, int off, int volume)
         {
             ulong[] bits = visitedFine[super];
@@ -494,13 +494,13 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>SuperIndex operation.</summary>
+
         private int SuperIndex(int sx, int sy, int sz)
         {
             return (sz * superY + sy) * superX + sx;
         }
 
-/// <summary>SuperCoords operation.</summary>
+
         private void SuperCoords(int super, out int sx, out int sy, out int sz)
         {
             sx = super % superX;
@@ -508,7 +508,7 @@ namespace Thermodynamics.Harness
             sz = super / (superX * superY);
         }
 
-/// <summary>TileDims operation.</summary>
+
         private void TileDims(int sx, int sy, int sz, out int dimX, out int dimY, out int dimZ)
         {
             dimX = Math.Min(Edge, sizeX - sx * Edge);
@@ -517,7 +517,7 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Enqueue operation.</summary>
+
         private void Enqueue(Entry entry)
         {
             if (frontierCount == frontier.Length)
@@ -535,7 +535,7 @@ namespace Thermodynamics.Harness
             frontierCount++;
         }
 
-/// <summary>Dequeue operation.</summary>
+
         private Entry Dequeue()
         {
             Entry entry = frontier[frontierHead];

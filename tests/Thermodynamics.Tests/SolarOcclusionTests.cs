@@ -8,10 +8,10 @@ namespace Thermodynamics.Tests
 {
     public class SolarOcclusionTests
     {
-/// <summary>Solar operation.</summary>
+
         private static ThermalSettings Solar()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableSolarHeat = true;
             settings.SolarEnergy = 1000f;
@@ -19,7 +19,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>HalfOccludedIsHalfTheSunlight operation.</summary>
+
         public void HalfOccludedIsHalfTheSunlight()
         {
             EnvironmentSample sample = Worlds.Space(new Vector3(1f, 0f, 0f));
@@ -33,7 +33,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FullyOccludedSetsTheFlagAndTakesAllOfIt operation.</summary>
+
         public void FullyOccludedSetsTheFlagAndTakesAllOfIt()
         {
             EnvironmentSample sample = Worlds.Space(new Vector3(1f, 0f, 0f));
@@ -46,7 +46,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFlagAloneStillMeansNoSun operation.</summary>
+
         public void TheFlagAloneStillMeansNoSun()
         {
             EnvironmentSample sample = Worlds.Space(new Vector3(1f, 0f, 0f));
@@ -59,7 +59,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PartialOcclusionCompoundsWithTheAtmosphere operation.</summary>
+
         public void PartialOcclusionCompoundsWithTheAtmosphere()
         {
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
@@ -76,7 +76,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>GoingUndergroundIsAlwaysFullShadow operation.</summary>
+
         public void GoingUndergroundIsAlwaysFullShadow()
         {
             EnvironmentSample sample = Worlds.Underground();
@@ -89,10 +89,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SolarHeatOffReadsAsFullyOccludedWhateverTheSampleSays operation.</summary>
+
         public void SolarHeatOffReadsAsFullyOccludedWhateverTheSampleSays()
         {
-/// <summary>Solar operation.</summary>
+
             ThermalSettings settings = Solar();
             settings.EnableSolarHeat = false;
 
@@ -106,7 +106,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnOutOfRangeFractionIsClampedRatherThanTrusted operation.</summary>
+
         public void AnOutOfRangeFractionIsClampedRatherThanTrusted()
         {
             EnvironmentSample sample = Worlds.Space(new Vector3(1f, 0f, 0f));
@@ -122,23 +122,23 @@ namespace Thermodynamics.Tests
     public class SolarOcclusionSamplerTests
     {
         private static readonly BoundingBoxD Ship =
-/// <summary>BoundingBoxD operation.</summary>
+
             new BoundingBoxD(new Vector3D(-50, -10, -20), new Vector3D(50, 10, 20));
 
-/// <summary>Points operation.</summary>
+
         private static List<Vector3D> Points(int samples)
         {
-/// <summary>List operation.</summary>
+
             List<Vector3D> results = new List<Vector3D>();
             SolarOcclusionSampler.Points(Ship, samples, results);
             return results;
         }
 
         [Fact]
-/// <summary>OneSampleIsTheCentreAndNothingElse operation.</summary>
+
         public void OneSampleIsTheCentreAndNothingElse()
         {
-/// <summary>Points operation.</summary>
+
             List<Vector3D> points = Points(1);
 
             Assert.Single(points);
@@ -146,10 +146,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>MorePointsStraddleTheShipRatherThanCrowdingOneEnd operation.</summary>
+
         public void MorePointsStraddleTheShipRatherThanCrowdingOneEnd()
         {
-/// <summary>Points operation.</summary>
+
             List<Vector3D> points = Points(3);
 
             Assert.Equal(3, points.Count);
@@ -161,10 +161,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EverySamplePointIsInsideTheHullRatherThanBesideIt operation.</summary>
+
         public void EverySamplePointIsInsideTheHullRatherThanBesideIt()
         {
-/// <summary>Points operation.</summary>
+
             List<Vector3D> points = Points(SolarOcclusionSampler.MaxSamples);
 
             Assert.Equal(SolarOcclusionSampler.MaxSamples, points.Count);
@@ -179,7 +179,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AskingForMoreThanExistOrFewerThanOneIsClamped operation.</summary>
+
         public void AskingForMoreThanExistOrFewerThanOneIsClamped()
         {
             Assert.Equal(SolarOcclusionSampler.MaxSamples, Points(50).Count);
@@ -188,10 +188,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APointGridDegeneratesToItsCentre operation.</summary>
+
         public void APointGridDegeneratesToItsCentre()
         {
-/// <summary>List operation.</summary>
+
             List<Vector3D> results = new List<Vector3D>();
             SolarOcclusionSampler.Points(new BoundingBoxD(Vector3D.Zero, Vector3D.Zero), 9, results);
 

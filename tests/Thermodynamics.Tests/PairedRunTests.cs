@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
 {
     public class PairedRunTests
     {
-/// <summary>WriteBlueprint operation.</summary>
+
         private static string WriteBlueprint(string blocks)
         {
             string path = Path.Combine(Path.GetTempPath(),
@@ -36,7 +36,7 @@ namespace Thermodynamics.Tests
             return file;
         }
 
-/// <summary>Block operation.</summary>
+
         private static string Block(string subtype, int x, int y, int z)
         {
             return "<MyObjectBuilder_CubeBlock xsi:type=\"MyObjectBuilder_CubeBlock\">"
@@ -45,7 +45,7 @@ namespace Thermodynamics.Tests
                 + "</MyObjectBuilder_CubeBlock>";
         }
 
-/// <summary>Ship operation.</summary>
+
         private static Blueprints.Ship Ship()
         {
             System.Text.StringBuilder blocks = new System.Text.StringBuilder();
@@ -67,7 +67,7 @@ namespace Thermodynamics.Tests
             return Blueprints.Read(WriteBlueprint(blocks.ToString()))[0];
         }
 
-/// <summary>Scenario operation.</summary>
+
         private static Battery.Scenario Scenario(string name)
         {
             foreach (Battery.Scenario scenario in Battery.All())
@@ -79,12 +79,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASettleStoppedRunRecordsWhereItStoppedAndItIsNotTheClock operation.</summary>
+
         public void ASettleStoppedRunRecordsWhereItStoppedAndItIsNotTheClock()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>Scenario operation.</summary>
+
             Battery.Scenario scenario = Scenario("surface-hot-noon");
             ScenarioOutcome outcome = Battery.Run(Ship(), scenario);
 
@@ -97,12 +97,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFixedClockRunStopsWhereItWasTold operation.</summary>
+
         public void AFixedClockRunStopsWhereItWasTold()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>Scenario operation.</summary>
+
             Battery.Scenario scenario = Scenario("vacuum-shadow");
 
             ScenarioOutcome control = Battery.Run(Ship(), scenario);
@@ -120,12 +120,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TwoArmsThatDifferInNothingAgreeExactly operation.</summary>
+
         public void TwoArmsThatDifferInNothingAgreeExactly()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>Scenario operation.</summary>
+
             Battery.Scenario scenario = Scenario("vacuum-shadow");
 
             ScenarioOutcome control = Battery.Run(Ship(), scenario);
@@ -139,12 +139,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACapMakesTheDemandTheSmallerOfItselfAndTheCap operation.</summary>
+
         public void ACapMakesTheDemandTheSmallerOfItselfAndTheCap()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>Scenario operation.</summary>
+
             Battery.Scenario scenario = Scenario("vacuum-shadow");
 
             ScenarioOutcome uncapped = Battery.Run(Ship(), scenario, Settings(0));
@@ -170,20 +170,20 @@ namespace Thermodynamics.Tests
             Assert.Equal(uncapped.SubstepsDemanded, loose.SubstepsDemanded, 3);
         }
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings(int cap)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubstepsPerBlock = cap;
             return settings;
         }
 
         [Fact]
-/// <summary>TheRecordedRowSaysWhichArmItIs operation.</summary>
+
         public void TheRecordedRowSaysWhichArmItIs()
         {
-/// <summary>List operation.</summary>
+
             List<string> header = new List<string>(CorpusRecord.OutcomeHeader.Split(','));
             Assert.Contains("cap", header);
             Assert.Contains("run_seconds", header);

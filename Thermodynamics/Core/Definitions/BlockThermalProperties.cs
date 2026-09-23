@@ -32,13 +32,13 @@ namespace Thermodynamics.Core
 
         public float OverheatDamagePerKelvin = 1f;
 
-/// <summary>Default operation.</summary>
+
         public static BlockThermalProperties Default()
         {
             return new BlockThermalProperties();
         }
 
-/// <summary>Clamp operation.</summary>
+
         public BlockThermalProperties Clamp()
         {
             Conductivity = Math.Max(0f, Conductivity);
@@ -55,10 +55,10 @@ namespace Thermodynamics.Core
             return this;
         }
 
-/// <summary>Validate operation.</summary>
+
         public List<string> Validate()
         {
-/// <summary>List operation.</summary>
+
             List<string> problems = new List<string>();
             if (SpecificHeat <= 0f) problems.Add("SpecificHeat must be greater than zero.");
             if (Emissivity > 1f) problems.Add("Emissivity above 1 is not physical.");
@@ -68,7 +68,7 @@ namespace Thermodynamics.Core
             return problems;
         }
 
-/// <summary>Clone operation.</summary>
+
         public BlockThermalProperties Clone()
         {
             return (BlockThermalProperties)MemberwiseClone();

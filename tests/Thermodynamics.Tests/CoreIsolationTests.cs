@@ -10,10 +10,10 @@ namespace Thermodynamics.Tests
 {
     public class CoreIsolationTests
     {
-/// <summary>typeof operation.</summary>
+
         private static readonly Assembly Core = typeof(ThermalSolver).Assembly;
 
-/// <summary>IsAllowed operation.</summary>
+
         private static bool IsAllowed(string assemblyName)
         {
             if (assemblyName == "VRage.Math") return true;
@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SimulationAssemblyContainsNoThermalVisionPresentation operation.</summary>
+
         public void SimulationAssemblyContainsNoThermalVisionPresentation()
         {
             foreach(Type type in Core.GetTypes())
@@ -36,7 +36,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThermalPresentationIsSeparateAndHasNoEngineRuntimeDependency operation.</summary>
+
         public void ThermalPresentationIsSeparateAndHasNoEngineRuntimeDependency()
         {
             Assembly presentation=typeof(ThermalVisionSurfaceField).Assembly;
@@ -47,10 +47,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCoreReferencesNothingButMathsAndTheFramework operation.</summary>
+
         public void TheCoreReferencesNothingButMathsAndTheFramework()
         {
-/// <summary>List operation.</summary>
+
             List<string> offenders = new List<string>();
 
             AssemblyName[] referenced = Core.GetReferencedAssemblies();
@@ -66,10 +66,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoPublicApiInTheCoreSpeaksAGameType operation.</summary>
+
         public void NoPublicApiInTheCoreSpeaksAGameType()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder offenders = new StringBuilder();
 
             Type[] types = Core.GetTypes();
@@ -92,7 +92,7 @@ namespace Thermodynamics.Tests
                 "game types reach the simulation's public surface:\n" + offenders);
         }
 
-/// <summary>CheckMember operation.</summary>
+
         private static void CheckMember(Type owner, MemberInfo member, StringBuilder offenders)
         {
             MethodBase method = member as MethodBase;
@@ -120,7 +120,7 @@ namespace Thermodynamics.Tests
             if (field != null) Check(owner, member, field.FieldType, offenders);
         }
 
-/// <summary>Check operation.</summary>
+
         private static void Check(Type owner, MemberInfo member, Type type, StringBuilder offenders)
         {
             if (type == null) return;
@@ -150,10 +150,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHostCanDriveTheSimulationThroughTheCoreAlone operation.</summary>
+
         public void AHostCanDriveTheSimulationThroughTheCoreAlone()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(0.25f);
 
             BlockThermalProperties thermal = new BlockThermalProperties
@@ -168,7 +168,7 @@ namespace Thermodynamics.Tests
 
             BlockModel model = BlockModel.Solid("hull", new Vector3I(2, 2, 2), 120f, thermal);
 
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
             simulation.AddBlock(new BlockInstance(model, Vector3I.Zero, BlockOrientation.Identity), 400f);
             simulation.AddBlock(new BlockInstance(model, new Vector3I(2, 0, 0), BlockOrientation.Identity), 300f);

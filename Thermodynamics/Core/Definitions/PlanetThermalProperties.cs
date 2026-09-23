@@ -30,16 +30,16 @@ namespace Thermodynamics.Core
 
         public float UndergroundConvectionCoefficient = 2f;
 
-/// <summary>Default operation.</summary>
+
         public static PlanetThermalProperties Default()
         {
             return new PlanetThermalProperties();
         }
 
-/// <summary>None operation.</summary>
+
         public static PlanetThermalProperties None()
         {
-/// <summary>PlanetThermalProperties operation.</summary>
+
             PlanetThermalProperties p = new PlanetThermalProperties();
             p.NightTemperature = 0f;
             p.DayTemperature = 0f;
@@ -52,14 +52,14 @@ namespace Thermodynamics.Core
             return p;
         }
 
-/// <summary>LagSecondsFor operation.</summary>
+
         public float LagSecondsFor(float dayLengthSeconds)
         {
             if (AmbientLagShareOfDay <= 0f || dayLengthSeconds <= 0f) return AmbientLagSeconds;
             return AmbientLagShareOfDay * dayLengthSeconds;
         }
 
-/// <summary>Clamp operation.</summary>
+
         public PlanetThermalProperties Clamp()
         {
             NightTemperature = Math.Max(0f, NightTemperature);
@@ -78,7 +78,7 @@ namespace Thermodynamics.Core
             return this;
         }
 
-/// <summary>Clone operation.</summary>
+
         public PlanetThermalProperties Clone()
         {
             return (PlanetThermalProperties)MemberwiseClone();

@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
     {
         private static List<RemapLocalityLab.Row> rows;
 
-/// <summary>Rows operation.</summary>
+
         private static List<RemapLocalityLab.Row> Rows()
         {
             if (rows == null) rows = RemapLocalityLab.Run(8000);
@@ -15,7 +15,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryMutationChangesSomethingAndVisitsTheBox operation.</summary>
+
         public void EveryMutationChangesSomethingAndVisitsTheBox()
         {
             foreach (RemapLocalityLab.Row row in Rows())
@@ -28,10 +28,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASkinChangeMovesAlmostNothingOfAFullPass operation.</summary>
+
         public void ASkinChangeMovesAlmostNothingOfAFullPass()
         {
-/// <summary>Find operation.</summary>
+
             RemapLocalityLab.Row skin = Find("skin add");
             Assert.True(skin.CellsChanged * 100 < skin.CellsVisited,
                 "adding one skin block changed " + skin.CellsChanged + " cells of " + skin.CellsVisited
@@ -39,10 +39,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RemovingARoomBoundaryMovesAtLeastTheRoom operation.</summary>
+
         public void RemovingARoomBoundaryMovesAtLeastTheRoom()
         {
-/// <summary>Find operation.</summary>
+
             RemapLocalityLab.Row boundary = Find("room boundary remove");
 
             Assert.True(boundary.CellsChanged >= 2,
@@ -51,17 +51,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RoomRenumberingAloneReadsAsNoChange operation.</summary>
+
         public void RoomRenumberingAloneReadsAsNoChange()
         {
-/// <summary>Find operation.</summary>
+
             RemapLocalityLab.Row buried = Find("buried remove");
             Assert.True(buried.CellsChanged < 50,
                 "removing one buried block read as " + buried.CellsChanged
                 + " changed cells; the canonical room naming is letting renumbering read as change");
         }
 
-/// <summary>Find operation.</summary>
+
         private static RemapLocalityLab.Row Find(string mutation)
         {
             foreach (RemapLocalityLab.Row row in Rows())

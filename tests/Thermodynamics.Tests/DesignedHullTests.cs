@@ -10,13 +10,13 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>DesignedHullTests operation.</summary>
+
         public DesignedHullTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>Find operation.</summary>
+
         private static DesignedHullLab.Row Find(List<DesignedHullLab.Row> rows, string fit)
         {
             for (int i = 0; i < rows.Count; i++)
@@ -29,16 +29,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PlumbingToTheSkinBeatsBoltingIntoTheHull operation.</summary>
+
         public void PlumbingToTheSkinBeatsBoltingIntoTheHull()
         {
             List<DesignedHullLab.Row> rows = DesignedHullLab.Run(200000f, 4);
 
-/// <summary>Find operation.</summary>
+
             DesignedHullLab.Row bare = Find(rows, "buried, bare");
-/// <summary>Find operation.</summary>
+
             DesignedHullLab.Row bolted = Find(rows, "bolted, buried");
-/// <summary>Find operation.</summary>
+
             DesignedHullLab.Row plumbed = Find(rows, "plumbed, to the skin");
 
             foreach (DesignedHullLab.Row row in rows)
@@ -68,11 +68,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BoltingAPanelIntoASolidHullIsWorseThanFittingNothing operation.</summary>
+
         public void BoltingAPanelIntoASolidHullIsWorseThanFittingNothing()
         {
             List<DesignedHullLab.Row> rows = DesignedHullLab.Run(200000f, 4);
-/// <summary>Find operation.</summary>
+
             DesignedHullLab.Row bolted = Find(rows, "bolted, buried");
 
             Assert.True(bolted.Radiators > 0, "no panels were fitted, so nothing is being measured");
@@ -85,17 +85,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShippedPickupIsNotStarvedOnABlockThisLarge operation.</summary>
+
         public void TheShippedPickupIsNotStarvedOnABlockThisLarge()
         {
-/// <summary>List operation.</summary>
+
             List<DesignedHullLab.Row> rows = new List<DesignedHullLab.Row>();
             float bare = 0f;
 
             for (int panels = 1; panels <= 4; panels++)
             {
                 List<DesignedHullLab.Row> run = DesignedHullLab.Run(6400000f, panels);
-/// <summary>Find operation.</summary>
+
                 DesignedHullLab.Row plumbed = Find(run, "plumbed, to the skin");
 
                 if (bare == 0f) bare = Find(run, "buried, bare").SourceKelvin;
