@@ -27,7 +27,6 @@ namespace Thermodynamics
 
         private static bool registered;
 
-/// <summary>Registers the API and message handler.</summary>
         public static void Register()
         {
             if (registered) return;
@@ -43,7 +42,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Unregisters the API and cleans resources.</summary>
         public static void Unregister()
         {
             if (!registered) return;
@@ -92,7 +90,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Send operation.</summary>
         public static void Send(string name, float value)
         {
             if (string.IsNullOrEmpty(name)) return;
@@ -110,7 +107,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Handle operation.</summary>
         private static void Handle(ushort channel, byte[] payload, ulong sender, bool fromServer)
         {
             try
@@ -137,7 +133,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Applies the .</summary>
         private static void Apply(SettingsRequest request, ulong sender)
         {
             MyPromoteLevel level = MyAPIGateway.Session.GetUserPromoteLevel(sender);
@@ -164,7 +159,6 @@ namespace Thermodynamics
 
             Settings.Instance.Apply();
 
-/// <summary>StringBuilder operation.</summary>
             StringBuilder message = new StringBuilder();
             message.Append(request.Name).Append(" = ")
                 .Append(Settings.Instance.GetValue(request.Name).ToString("n4"))
@@ -174,7 +168,6 @@ namespace Thermodynamics
             MyLog.Default.Info("[" + Settings.Name + "] " + sender + " set " + message);
         }
 
-/// <summary>Reply operation.</summary>
         private static void Reply(ulong recipient, string text)
         {
             try

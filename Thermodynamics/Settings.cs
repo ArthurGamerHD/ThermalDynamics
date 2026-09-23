@@ -233,9 +233,9 @@ namespace Thermodynamics
 
         [ProtoMember(129)] public bool HeatTerminalPanel = true;
 
-        [ProtoMember(78)] public float RoomOverlayMinKelvin = 253.15f;   // -20 C
+        [ProtoMember(78)] public float RoomOverlayMinKelvin = 253.15f;
 
-        [ProtoMember(79)] public float RoomOverlayMaxKelvin = 323.15f;   //  50 C
+        [ProtoMember(79)] public float RoomOverlayMaxKelvin = 323.15f;
 
 
 
@@ -289,17 +289,14 @@ namespace Thermodynamics
 
         [ProtoMember(110)] public int TelemetryPlanetProbes = 0;
 
-/// <summary>Returns the defaults.</summary>
         public static Settings GetDefaults()
         {
-/// <summary>Sets the tings.</summary>
             Settings s = new Settings();
             s.Version = CurrentVersion;
             s.Clamp();
             return s;
         }
 
-/// <summary>MigrateLoopCoupling operation.</summary>
         private void MigrateLoopCoupling()
         {
             if (LegacyLoopConductivity < 0f) return;
@@ -310,7 +307,6 @@ namespace Thermodynamics
 
         private const float ShippedLoopCoefficient = 1000f;
 
-/// <summary>Clamp operation.</summary>
         private void Clamp()
         {
             MigrateLoopCoupling();
@@ -376,7 +372,6 @@ namespace Thermodynamics
         [XmlIgnore]
         private Core.ThermalSettings core;
 
-/// <summary>ToCore operation.</summary>
         public Core.ThermalSettings ToCore()
         {
             if (core == null) core = new Core.ThermalSettings();
@@ -384,12 +379,9 @@ namespace Thermodynamics
             return core;
         }
 
-/// <summary>RestoreDefaults operation.</summary>
         public void RestoreDefaults()
         {
-/// <summary>Returns the defaults.</summary>
             Settings shipped = GetDefaults();
-/// <summary>Names operation.</summary>
             List<string> names = Names();
 
             for (int i = 0; i < names.Count; i++)
@@ -405,12 +397,9 @@ namespace Thermodynamics
 
         private string definitionState;
 
-/// <summary>DefinitionState operation.</summary>
         private string DefinitionState()
         {
-/// <summary>StringBuilder operation.</summary>
             StringBuilder state = new StringBuilder();
-/// <summary>Names operation.</summary>
             List<string> names = Names();
 
             for (int i = 0; i < names.Count; i++)
@@ -426,7 +415,6 @@ namespace Thermodynamics
             return state.ToString();
         }
 
-/// <summary>RebuildGrids operation.</summary>
         private static void RebuildGrids()
         {
             try
@@ -445,7 +433,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Applies the .</summary>
         public void Apply()
         {
             Clamp();
@@ -459,7 +446,7 @@ namespace Thermodynamics
             core.EnableRadiation = EnableRadiation;
             core.EnableConvection = EnableConvection;
             core.EnableSolarHeat = EnableSolarHeat;
-            core.SolarSelfShadowing = SolarSelfShadowing;   // derived from ShadowDetail
+            core.SolarSelfShadowing = SolarSelfShadowing;
             core.EnableHeatSources = EnableHeatSources;
             core.EnableWasteHeat = EnableWasteHeat;
             core.EnablePlanets = EnablePlanets;
@@ -508,7 +495,6 @@ namespace Thermodynamics
 
             Telemetry.SampleStride = TelemetrySampleStride;
 
-/// <summary>DefinitionState operation.</summary>
             string state = DefinitionState();
             bool moved = definitionState != null && definitionState != state;
             definitionState = state;
@@ -531,7 +517,6 @@ namespace Thermodynamics
             "HeatGlow", "HeatWarningSound", "HeatTerminalPanel",
         };
 
-/// <summary>Names operation.</summary>
         public static List<string> Names()
         {
             return new List<string>
@@ -586,15 +571,12 @@ namespace Thermodynamics
             };
         }
 
-/// <summary>Returns the value.</summary>
         public float GetValue(string name)
         {
             switch (name)
             {
-/// <summary>Flag operation.</summary>
                 case "EnableTopSpeed": return Flag(EnableTopSpeed);
                 case "SpeedLimit": return SpeedLimit;
-/// <summary>Flag operation.</summary>
                 case "EnableSpeedBoost": return Flag(EnableSpeedBoost);
                 case "LargeGridMinCruise": return LargeGridMinCruise;
                 case "LargeGridMidCruise": return LargeGridMidCruise;
@@ -612,49 +594,31 @@ namespace Thermodynamics
                 case "SmallGridMaxMass": return SmallGridMaxMass;
                 case "SmallGridMaxBoostSpeed": return SmallGridMaxBoostSpeed;
                 case "SmallGridResistance": return SmallGridResistance;
-/// <summary>Flag operation.</summary>
                 case "EnableEnvironment": return Flag(EnableEnvironment);
-/// <summary>Flag operation.</summary>
                 case "EnableConduction": return Flag(EnableConduction);
-/// <summary>Flag operation.</summary>
                 case "EnableRadiation": return Flag(EnableRadiation);
-/// <summary>Flag operation.</summary>
                 case "EnableConvection": return Flag(EnableConvection);
-/// <summary>Flag operation.</summary>
                 case "EnableSolarHeat": return Flag(EnableSolarHeat);
                 case "ShadowDetail": return ShadowDetail;
                 case "SolarTerrainRange": return SolarTerrainRange;
                 case "SolarOcclusionSamples": return SolarOcclusionSamples;
-/// <summary>Flag operation.</summary>
                 case "EnableHeatSources": return Flag(EnableHeatSources);
-/// <summary>Flag operation.</summary>
                 case "EnableWasteHeat": return Flag(EnableWasteHeat);
-/// <summary>Flag operation.</summary>
                 case "EnablePlanets": return Flag(EnablePlanets);
-/// <summary>Flag operation.</summary>
                 case "EnableFriction": return Flag(EnableFriction);
-/// <summary>Flag operation.</summary>
                 case "EnableWind": return Flag(EnableWind);
-/// <summary>Flag operation.</summary>
                 case "EnableDamage": return Flag(EnableDamage);
-/// <summary>Flag operation.</summary>
                 case "EnableCoolantLoops": return Flag(EnableCoolantLoops);
-/// <summary>Flag operation.</summary>
                 case "WellMixedCoolant": return Flag(WellMixedCoolant);
-/// <summary>Flag operation.</summary>
                 case "EnableRoomAir": return Flag(EnableRoomAir);
-/// <summary>Flag operation.</summary>
                 case "EnableHeatPumps": return Flag(EnableHeatPumps);
-/// <summary>Flag operation.</summary>
                 case "ClampOvershoot": return Flag(ClampOvershoot);
-/// <summary>Flag operation.</summary>
                 case "DamageIsPerSecond": return Flag(DamageIsPerSecond);
                 case "Frequency": return Frequency;
                 case "HeatTimeScale": return HeatTimeScale;
                 case "MaxElementVisitsPerStep": return MaxElementVisitsPerStep;
                 case "MaxSubsteps": return MaxSubsteps;
                 case "MaxSubstepsPerBlock": return MaxSubstepsPerBlock;
-/// <summary>Flag operation.</summary>
                 case "FloorBlocksWhenOverBudget": return Flag(FloorBlocksWhenOverBudget);
                 case "VacuumTemperature": return VacuumTemperature;
                 case "SolarEnergy": return SolarEnergy;
@@ -686,35 +650,23 @@ namespace Thermodynamics
                 case "SolarOcclusionInterval": return SolarOcclusionInterval;
                 case "ClimateGroundInfluence": return ClimateGroundInfluence;
                 case "ClimateWeatherInfluence": return ClimateWeatherInfluence;
-/// <summary>Flag operation.</summary>
                 case "DebugTextOnScreen": return Flag(DebugTextOnScreen);
-/// <summary>Flag operation.</summary>
                 case "DebugSolarRaycast": return Flag(DebugSolarRaycast);
-/// <summary>Flag operation.</summary>
                 case "DebugWindRaycast": return Flag(DebugWindRaycast);
-/// <summary>Flag operation.</summary>
                 case "DebugAeroOverlay": return Flag(DebugAeroOverlay);
                 case "DebugBlockOverlay": return DebugBlockOverlay;
                 case "DebugOverlayMaxBoxes": return DebugOverlayMaxBoxes;
                 case "DebugWindOverlay": return DebugWindOverlay;
-/// <summary>Flag operation.</summary>
                 case "DebugWindIndicator": return Flag(DebugWindIndicator);
-/// <summary>Flag operation.</summary>
                 case "ShowEnvironmentReadout": return Flag(ShowEnvironmentReadout);
-/// <summary>Flag operation.</summary>
                 case "HeatGlow": return Flag(HeatGlow);
-/// <summary>Flag operation.</summary>
                 case "HeatTerminalPanel": return Flag(HeatTerminalPanel);
-/// <summary>Flag operation.</summary>
                 case "HeatWarningSound": return Flag(HeatWarningSound);
                 case "RoomOverlayMinKelvin": return RoomOverlayMinKelvin;
                 case "RoomOverlayMaxKelvin": return RoomOverlayMaxKelvin;
-/// <summary>Flag operation.</summary>
                 case "EnableTemperatureSync": return Flag(EnableTemperatureSync);
-/// <summary>Flag operation.</summary>
                 case "ParallelGrids": return Flag(ParallelGrids);
                 case "TemperatureSyncInterval": return TemperatureSyncInterval;
-/// <summary>Flag operation.</summary>
                 case "EnableTelemetry": return Flag(EnableTelemetry);
                 case "TelemetrySampleStride": return TelemetrySampleStride;
                 case "TelemetryPlanetProbes": return TelemetryPlanetProbes;
@@ -744,15 +696,12 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Sets the value.</summary>
         public bool SetValue(string name, float value)
         {
             switch (name)
             {
-/// <summary>Flag operation.</summary>
                 case "EnableTopSpeed": EnableTopSpeed = Flag(value); return true;
                 case "SpeedLimit": SpeedLimit = value; return true;
-/// <summary>Flag operation.</summary>
                 case "EnableSpeedBoost": EnableSpeedBoost = Flag(value); return true;
                 case "LargeGridMinCruise": LargeGridMinCruise = value; return true;
                 case "LargeGridMidCruise": LargeGridMidCruise = value; return true;
@@ -770,49 +719,31 @@ namespace Thermodynamics
                 case "SmallGridMaxMass": SmallGridMaxMass = value; return true;
                 case "SmallGridMaxBoostSpeed": SmallGridMaxBoostSpeed = value; return true;
                 case "SmallGridResistance": SmallGridResistance = value; return true;
-/// <summary>Flag operation.</summary>
                 case "EnableEnvironment": EnableEnvironment = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "EnableConduction": EnableConduction = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "EnableRadiation": EnableRadiation = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "EnableConvection": EnableConvection = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "EnableSolarHeat": EnableSolarHeat = Flag(value); return true;
                 case "ShadowDetail": ShadowDetail = (int)value; return true;
                 case "SolarTerrainRange": SolarTerrainRange = value; return true;
                 case "SolarOcclusionSamples": SolarOcclusionSamples = (int)value; return true;
-/// <summary>Flag operation.</summary>
                 case "EnableHeatSources": EnableHeatSources = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "EnableWasteHeat": EnableWasteHeat = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "EnablePlanets": EnablePlanets = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "EnableFriction": EnableFriction = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "EnableWind": EnableWind = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "EnableDamage": EnableDamage = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "EnableCoolantLoops": EnableCoolantLoops = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "WellMixedCoolant": WellMixedCoolant = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "EnableRoomAir": EnableRoomAir = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "EnableHeatPumps": EnableHeatPumps = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "ClampOvershoot": ClampOvershoot = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "DamageIsPerSecond": DamageIsPerSecond = Flag(value); return true;
                 case "Frequency": Frequency = (int)value; return true;
                 case "HeatTimeScale": HeatTimeScale = value; return true;
                 case "MaxElementVisitsPerStep": MaxElementVisitsPerStep = (int)value; return true;
                 case "MaxSubsteps": MaxSubsteps = (int)value; return true;
                 case "MaxSubstepsPerBlock": MaxSubstepsPerBlock = (int)value; return true;
-/// <summary>Flag operation.</summary>
                 case "FloorBlocksWhenOverBudget": FloorBlocksWhenOverBudget = Flag(value); return true;
                 case "VacuumTemperature": VacuumTemperature = value; return true;
                 case "SolarEnergy": SolarEnergy = value; return true;
@@ -844,13 +775,9 @@ namespace Thermodynamics
                 case "SolarOcclusionInterval": SolarOcclusionInterval = (int)value; return true;
                 case "ClimateGroundInfluence": ClimateGroundInfluence = value; return true;
                 case "ClimateWeatherInfluence": ClimateWeatherInfluence = value; return true;
-/// <summary>Flag operation.</summary>
                 case "DebugTextOnScreen": DebugTextOnScreen = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "DebugSolarRaycast": DebugSolarRaycast = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "DebugWindRaycast": DebugWindRaycast = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "DebugAeroOverlay": DebugAeroOverlay = Flag(value); return true;
                 case "RoomOverlayMinKelvin": RoomOverlayMinKelvin = value; return true;
                 case "RoomOverlayMaxKelvin": RoomOverlayMaxKelvin = value; return true;
@@ -863,22 +790,14 @@ namespace Thermodynamics
                     WindOverlay.Set((WindOverlay.Mode)DebugWindOverlay);
                     return true;
                 case "DebugOverlayMaxBoxes": DebugOverlayMaxBoxes = (int)value; return true;
-/// <summary>Flag operation.</summary>
                 case "DebugWindIndicator": DebugWindIndicator = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "ShowEnvironmentReadout": ShowEnvironmentReadout = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "HeatGlow": HeatGlow = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "HeatTerminalPanel": HeatTerminalPanel = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "HeatWarningSound": HeatWarningSound = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "EnableTemperatureSync": EnableTemperatureSync = Flag(value); return true;
-/// <summary>Flag operation.</summary>
                 case "ParallelGrids": ParallelGrids = Flag(value); return true;
                 case "TemperatureSyncInterval": TemperatureSyncInterval = value; return true;
-/// <summary>Flag operation.</summary>
                 case "EnableTelemetry": EnableTelemetry = Flag(value); Telemetry.SetEnabled(EnableTelemetry); return true;
                 case "TelemetrySampleStride": TelemetrySampleStride = (int)value; return true;
                 case "TelemetryPlanetProbes": TelemetryPlanetProbes = (int)value; return true;
@@ -909,7 +828,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>IsFlag operation.</summary>
         public static bool IsFlag(string name)
         {
             return name != null && name != "DebugBlockOverlay" && name != "DebugWindOverlay"
@@ -924,31 +842,26 @@ namespace Thermodynamics
                 || name == "WellMixedCoolant");
         }
 
-/// <summary>Flag operation.</summary>
         private static float Flag(bool value)
         {
             return value ? 1f : 0f;
         }
 
-/// <summary>Flag operation.</summary>
         private static bool Flag(float value)
         {
             return value != 0f;
         }
 
 
-/// <summary>EnsureLoaded operation.</summary>
         public static Settings EnsureLoaded()
         {
             if (Instance != null) return Instance;
 
-/// <summary>CanReadWorldStorage operation.</summary>
             Instance = CanReadWorldStorage() ? Load() : GetDefaults();
             Instance.Apply();
             return Instance;
         }
 
-/// <summary>CanReadWorldStorage operation.</summary>
         private static bool CanReadWorldStorage()
         {
             try
@@ -963,10 +876,8 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Load operation.</summary>
         public static Settings Load()
         {
-/// <summary>Returns the defaults.</summary>
             Settings settings = GetDefaults();
             try
             {
@@ -1013,7 +924,6 @@ namespace Thermodynamics
 
         public static bool SavePending;
 
-/// <summary>FlushPending operation.</summary>
         public static void FlushPending()
         {
             if (!SavePending || Instance == null) return;
@@ -1031,7 +941,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Save operation.</summary>
         public static void Save(Settings settings)
         {
             try

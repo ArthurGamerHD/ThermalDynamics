@@ -15,7 +15,6 @@ namespace Thermodynamics
     [MySessionComponentDescriptor(MyUpdateOrder.NoUpdate)]
     public class PlanetManager : MySessionComponentBase
     {
-/// <summary>PlanetDefinition operation.</summary>
         public static readonly PlanetDefinition NullDef = new PlanetDefinition();
 
         public class Planet
@@ -25,7 +24,6 @@ namespace Thermodynamics
             public MyGravityProviderComponent GravityComponent;
             private PlanetDefinition definition = NullDef;
 
-/// <summary>Definition operation.</summary>
             public PlanetDefinition Definition() 
             {
                 if (definition == NullDef && Entity.Generator != null)
@@ -43,20 +41,16 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>List operation.</summary>
         private static List<Planet> Planets = new List<Planet>();
 
-/// <summary>CopyPlanets operation.</summary>
         public static void CopyPlanets(List<Planet> target) { target.Clear(); target.AddRange(Planets); }
 
-/// <summary>Init operation.</summary>
         public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
             MyAPIGateway.Entities.OnEntityAdd += AddPlanet;
             MyAPIGateway.Entities.OnEntityRemove += RemovePlanet;
         }
 
-/// <summary>Adds a planet.</summary>
         private void AddPlanet(IMyEntity ent)
         {
             if (ent is MyPlanet)
@@ -72,14 +66,12 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Removes the planet.</summary>
         private void RemovePlanet(IMyEntity ent)
         {
             Planets.RemoveAll(p => p.Entity.EntityId == ent.EntityId);
         }
 
 
-/// <summary>Returns the closestplanet.</summary>
         public static Planet GetClosestPlanet(Vector3D position) 
         {
             Planet current = null;

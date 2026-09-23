@@ -19,43 +19,33 @@ namespace Thermodynamics
         private static ThermalDebugView.Mode lastMode;
         private static long lastGrid;
         private static bool warned;
-/// <summary>StringBuilder operation.</summary>
         private static readonly StringBuilder Text = new StringBuilder();
 
-/// <summary>List operation.</summary>
         private static readonly List<int> RoomOrder = new List<int>();
 
-/// <summary>Builds the API method table.</summary>
         public static void Build()
         {
             if (panel != null) return;
 
-/// <summary>LabelBox operation.</summary>
             panel = new LabelBox(HudMain.HighDpiRoot)
             {
                 ParentAlignment = ParentAlignments.Top | ParentAlignments.Left
                     | ParentAlignments.InnerV | ParentAlignments.InnerH,
-/// <summary>Vector2 operation.</summary>
                 Offset = new Vector2(20f, -120f),
                 BuilderMode = TextBuilderModes.Lined,
                 AutoResize = true,
-/// <summary>Vector2 operation.</summary>
                 TextPadding = new Vector2(20f, 16f),
-/// <summary>Color operation.</summary>
                 Color = new Color(20, 24, 28, 190),
-/// <summary>GlyphFormat operation.</summary>
                 Format = new GlyphFormat(new Color(220, 235, 242), TextAlignment.Left, 0.9f),
                 Visible = false,
             };
         }
 
-/// <summary>Reset operation.</summary>
         public static void Reset()
         {
             panel = null;
         }
 
-/// <summary>Update operation.</summary>
         public static void Update()
         {
             if (panel == null)
@@ -86,11 +76,9 @@ namespace Thermodynamics
             sinceRefresh = 0;
 
             Compose(thermals);
-/// <summary>RichText operation.</summary>
             panel.Text = new RichText(Text.ToString());
         }
 
-/// <summary>WarnOnce operation.</summary>
         private static void WarnOnce()
         {
             if (warned) return;
@@ -102,7 +90,6 @@ namespace Thermodynamics
                 "Thermodynamics: the overlay readout needs the Rich HUD Master mod", 5000, "Red");
         }
 
-/// <summary>Compose operation.</summary>
         private static void Compose(ThermalGrid thermals)
         {
             Text.Clear();
@@ -120,20 +107,14 @@ namespace Thermodynamics
 
             switch (mode)
             {
-/// <summary>Temperature operation.</summary>
                 case ThermalDebugView.Mode.Temperature: Temperature(thermals); break;
-/// <summary>Solar operation.</summary>
                 case ThermalDebugView.Mode.SolarWatts: Solar(thermals, ref state); break;
-/// <summary>Exposed operation.</summary>
                 case ThermalDebugView.Mode.ExposedFaces: Exposed(thermals); break;
-/// <summary>Friction operation.</summary>
                 case ThermalDebugView.Mode.FrictionWatts: Friction(thermals, ref state); break;
-/// <summary>Rooms operation.</summary>
                 case ThermalDebugView.Mode.Rooms: Rooms(thermals); break;
             }
         }
 
-/// <summary>Temperature operation.</summary>
         private static void Temperature(ThermalGrid thermals)
         {
             float min = float.MaxValue, max = float.MinValue, total = 0f;
@@ -173,7 +154,6 @@ namespace Thermodynamics
             Text.Append("loops    ").Append(thermals.Simulation.Solver.Loops.Count).Append('\n');
         }
 
-/// <summary>Solar operation.</summary>
         private static void Solar(ThermalGrid thermals, ref EnvironmentState state)
         {
             float total = 0f, peak = 0f;
@@ -225,7 +205,6 @@ namespace Thermodynamics
             Text.Append('\n');
         }
 
-/// <summary>Exposed operation.</summary>
         private static void Exposed(ThermalGrid thermals)
         {
             int faces = 0, buried = 0, blocks = 0;
@@ -254,7 +233,6 @@ namespace Thermodynamics
                 .Append(thermals.Simulation.Rooms.PendingCells).Append(" cells queued\n");
         }
 
-/// <summary>Friction operation.</summary>
         private static void Friction(ThermalGrid thermals, ref EnvironmentState state)
         {
             float total = 0f, peak = 0f;
@@ -289,7 +267,6 @@ namespace Thermodynamics
                 .Append(Settings.Instance.EnableFriction ? "on" : "OFF").Append('\n');
         }
 
-/// <summary>Rooms operation.</summary>
         private static void Rooms(ThermalGrid thermals)
         {
             RoomMap map = thermals.Simulation.Rooms.Map;
@@ -347,7 +324,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Watts operation.</summary>
         private static string Watts(float watts)
         {
             return Units.Watts(watts, 2);

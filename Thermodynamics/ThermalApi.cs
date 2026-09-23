@@ -10,38 +10,22 @@ using VRageMath;
 
 namespace Thermodynamics
 {
-     /// <summary>Provides public API for other mods to interact with Thermal Dynamics.</summary>
     public static class ThermalApi
     {
-        /// <summary>
-        /// The mod message channel ID used for communication with other mods.
-        /// </summary>
         public const long ChannelId = 2985582372;
 
-        /// <summary>
-        /// The API version, incremented when breaking changes are made.
-        /// </summary>
         public const int Version = 1;
 
         private static Dictionary<string, Delegate> methods;
         private static bool registered;
 
-        /// <summary>
-        /// Stores threshold callback handlers registered by other mods.
-        /// </summary>
         private static readonly Dictionary<int, Action<IMySlimBlock, int, float, float, bool>> ThresholdHandlers =
             new Dictionary<int, Action<IMySlimBlock, int, float, float, bool>>();
 
-        /// <summary>
-        /// Stores threshold definitions that are applied to all grids.
-        /// </summary>
         private static readonly List<ThermalThreshold> GlobalThresholds = new List<ThermalThreshold>();
 
         private static int nextThresholdId = 1;
 
-        /// <summary>
-        /// Initializes the API and registers it to receive messages from other mods.
-        /// </summary>
         public static void Register()
         {
             if (registered) return;
@@ -52,9 +36,6 @@ namespace Thermodynamics
             Publish();
         }
 
-        /// <summary>
-        /// Unregisters the API and cleans up resources.
-        /// </summary>
         public static void Unregister()
         {
             if (!registered) return;
@@ -66,26 +47,17 @@ namespace Thermodynamics
             methods = null;
         }
 
-        /// <summary>
-        /// Handles incoming API requests from other mods by publishing the current API table.
-        /// </summary>
         private static void OnRequest(object payload)
         {
-            if (payload is Dictionary<string, Delegate>) return;   // our own broadcast coming back.
+            if (payload is Dictionary<string, Delegate>) return;
             Publish();
         }
 
-        /// <summary>
-        /// Sends the current API method table to other mods via the mod message channel.
-        /// </summary>
         private static void Publish()
         {
             MyAPIGateway.Utilities.SendModMessage(ChannelId, methods);
         }
 
-        /// <summary>
-        /// Wraps a function call to catch exceptions and return default values instead.
-        /// </summary>
         private static Func<TResult> Guard<TResult>(Func<TResult> call, string name)
         {
             return () =>
@@ -95,9 +67,6 @@ namespace Thermodynamics
             };
         }
 
-        /// <summary>
-        /// Wraps a function call with one parameter to catch exceptions and return default values instead.
-        /// </summary>
         private static Func<T1, TResult> Guard<T1, TResult>(Func<T1, TResult> call, string name)
         {
             return a =>
@@ -107,9 +76,6 @@ namespace Thermodynamics
             };
         }
 
-        /// <summary>
-        /// Wraps a function call with two parameters to catch exceptions and return default values instead.
-        /// </summary>
         private static Func<T1, T2, TResult> Guard<T1, T2, TResult>(Func<T1, T2, TResult> call, string name)
         {
             return (a, b) =>
@@ -119,9 +85,6 @@ namespace Thermodynamics
             };
         }
 
-        /// <summary>
-        /// Wraps a function call with three parameters to catch exceptions and return default values instead.
-        /// </summary>
         private static Func<T1, T2, T3, TResult> Guard<T1, T2, T3, TResult>(
             Func<T1, T2, T3, TResult> call, string name)
         {
@@ -138,7 +101,6 @@ namespace Thermodynamics
 
             methods["ApiVersion"] = Guard(new Func<int>(() => Version), "ApiVersion");
 
-            // ---- reading ------------------------------------------------------------------.
             methods["GetBlockTemperature"] = Guard(new Func<IMySlimBlock, float>(GetBlockTemperature), "GetBlockTemperature");
             methods["GetBlockThermals"] = Guard(new Func<IMySlimBlock, MyTuple<float, float, float, int>>(GetBlockThermals), "GetBlockThermals");
             methods["GetGridSummary"] = Guard(new Func<IMyCubeGrid, MyTuple<float, float, int, int>>(GetGridSummary), "GetGridSummary");
@@ -150,28 +112,22 @@ namespace Thermodynamics
             methods["SetBlockDragProfile"] = Guard(new Func<IMySlimBlock, float[], bool>(SetBlockDragProfile), "SetBlockDragProfile");
             methods["ClearBlockDragProfile"] = Guard(new Func<IMySlimBlock, bool>(ClearBlockDragProfile), "ClearBlockDragProfile");
 
-            // ---- writing ------------------------------------------------------------------.
             methods["SetBlockTemperature"] = Guard(new Func<IMySlimBlock, float, bool>(SetBlockTemperature), "SetBlockTemperature");
             methods["AddBlockHeat"] = Guard(new Func<IMySlimBlock, float, bool>(AddBlockHeat), "AddBlockHeat");
             methods["SetRoomPressure"] = Guard(new Func<IMyCubeGrid, Vector3I, float, bool>(SetRoomPressure), "SetRoomPressure");
 
-            // ---- heat sources -------------------------------------------------------------.
             methods["AddHeatSource"] = Guard(new Func<IMyEntity, float, float, int>(ThermalHeatSources.Add), "AddHeatSource");
             methods["AddHeatSourceAt"] = Guard(new Func<Vector3D, float, float, int>(ThermalHeatSources.Add), "AddHeatSourceAt");
             methods["UpdateHeatSource"] = Guard(new Func<int, float, bool>(ThermalHeatSources.Update), "UpdateHeatSource");
             methods["RemoveHeatSource"] = Guard(new Func<int, bool>(ThermalHeatSources.Remove), "RemoveHeatSource");
 
-            // ---- thresholds ---------------------------------------------------------------.
             methods["AddThreshold"] = Guard(new Func<float, int, Action<IMySlimBlock, int, float, float, bool>, int>(AddThreshold), "AddThreshold");
             methods["RemoveThreshold"] = Guard(new Func<int, bool>(RemoveThreshold), "RemoveThreshold");
 
-            // ---- settings -----------------------------------------------------------------.
             methods["GetSetting"] = Guard(new Func<string, float>(GetSetting), "GetSetting");
             methods["SetSetting"] = Guard(new Func<string, float, bool>(SetSetting), "SetSetting");
             methods["ListSettings"] = Guard(new Func<List<string>>(Settings.Names), "ListSettings");
         }
-
-        // ---- implementations ---------------------------------------------------------------.
 
         private static ThermalGrid GridOf(IMySlimBlock block)
         {
@@ -179,25 +135,6 @@ namespace Thermodynamics
             return block.CubeGrid.GameLogic == null ? null : block.CubeGrid.GameLogic.GetAs<ThermalGrid>();
         }
 
-        // / <summary>.
-        // / The thermal grid attached to a grid, or null where there is not one.
-        // /.
-        // / <para>.
-        // / **Every grid accessor here begins the same way and every one of them must.** A caller.
-        // / hands in an `IMyCubeGrid` from anywhere — a grid with no game logic, one whose logic has.
-        // / not attached yet, one this mod excluded from simulation — and each is a null on a.
-        // / different member.
-        // / and the failure would be an exception crossing the API boundary into somebody else's.
-        // / mod, which is what `Guard` exists to stop and what an accessor should not be relying on.
-        // / it for.
-        // / </para>.
-        // /.
-        // / <para>.
-        // / The accessors return zero for a grid this cannot resolve rather than throwing, which is.
-        // / the contract api.md states: *a block that is not simulated reads as zero rather than.
-        // / throwing*.
-        // / </para>.
-        // / </summary>.
         private static ThermalGrid GridOf(IMyCubeGrid grid)
         {
             if (grid == null || grid.GameLogic == null) return null;
@@ -216,7 +153,6 @@ namespace Thermodynamics
             return bound == null || bound.Node == null ? 0f : bound.Node.Temperature;
         }
 
-        // / <summary>Temperature K, thermal mass J/K, critical temperature K, exposed faces.</summary>.
         private static MyTuple<float, float, float, int> GetBlockThermals(IMySlimBlock block)
         {
             ThermalBlock bound = Bound(block);
@@ -233,7 +169,6 @@ namespace Thermodynamics
                 node.TotalExposedFaces);
         }
 
-        // / <summary>Hottest block K, ambient K, blocks over critical, coolant loops.</summary>.
         private static MyTuple<float, float, int, int> GetGridSummary(IMyCubeGrid grid)
         {
             ThermalGrid thermals = GridOf(grid);
@@ -250,11 +185,6 @@ namespace Thermodynamics
                 thermals.Simulation.Solver.Loops.Count);
         }
 
-        // / <summary>.
-        // / Watts the grid is venting to its surroundings, and watts it is making.
-        // / either alone, since a ship in balance vents exactly what it makes.
-        // / a grid is net absorbing.
-        // / </summary>.
         private static MyTuple<float, float> GetGridHeatBalance(IMyCubeGrid grid)
         {
             ThermalGrid thermals = GridOf(grid);
@@ -267,23 +197,6 @@ namespace Thermodynamics
                 thermals.Simulation.VentedWatts, thermals.Simulation.HeatGainWatts);
         }
 
-        // / <summary>.
-        // / Watts the grid is taking from the air by aerodynamic friction.
-        // /.
-        // / <para>.
-        // / **This is drag power in all but name.** The solver computes `FrictionScale x rho x.
-        // / v_rel^3 x area x windward exposure` summed over the grid's nodes, and real drag power is.
-        // / `1/2 C_d rho A v^3` — the same expression.
-        // / from the ship's motion, so a caller that wants to apply the force this implies has the.
-        // / magnitude here and nowhere else (thermal-model.md's change log).
-        // / </para>.
-        // /.
-        // / <para>.
-        // / It is one term of the second figure `GetGridHeatBalance` returns rather than a separate.
-        // / gain, so a caller adding the two would count it twice.
-        // / simulation, which is what every accessor here returns for one (`E8`).
-        // / </para>.
-        // / </summary>.
         private static float GetGridFrictionWatts(IMyCubeGrid grid)
         {
             ThermalGrid thermals = GridOf(grid);
@@ -292,35 +205,6 @@ namespace Thermodynamics
             return thermals.Simulation.FrictionWatts;
         }
 
-        // / <summary>.
-        // / Tells the drag model that a block is more slippery on some faces than its area says.
-        // /.
-        // / <para>.
-        // / **Six multipliers in `Face` order, each 0..1, riding the exposure the solver already.
-        // / computes.** The model's only shape term is a projected area, so it cannot tell a jet.
-        // / engine from a box of the same size — a nacelle is slippery nose-on and blunt side-on,.
-        // / and an axis-aligned face count does not say so.
-        // / block can (thermal-model.md's change log).
-        // / </para>.
-        // /.
-        // / <para>.
-        // / **A profile may only reduce, and that is the bound on what a registration may claim.** A.
-        // / block's faces are what its geometry gives it; this says the air slips past one more.
-        // / easily.
-        // / than refused, because a registration must not throw into somebody else's update loop.
-        // / (`W4`), and *no change* is the direction that cannot break a ship.
-        // / </para>.
-        // /.
-        // / <para>.
-        // / **It touches drag and the wind's convection, and not the sun.** The multiplier is applied.
-        // / where the flow is weighted; a block slippery to the air is not slippery to sunlight.
-        // / </para>.
-        // /.
-        // / <para>.
-        // / False for a block with no node, a null or short array — six entries are required, since a.
-        // / caller who meant five has made a mistake this cannot guess the shape of.
-        // / </para>.
-        // / </summary>.
         private static bool SetBlockDragProfile(IMySlimBlock block, float[] faces)
         {
             if (faces == null || faces.Length != Face.Count) return false;
@@ -332,7 +216,6 @@ namespace Thermodynamics
             return true;
         }
 
-        // / <summary>Removes a block's drag profile, so its faces read as their own area again.</summary>.
         private static bool ClearBlockDragProfile(IMySlimBlock block)
         {
             ThermalBlock bound = Bound(block);
@@ -342,28 +225,6 @@ namespace Thermodynamics
             return true;
         }
 
-        // / <summary>.
-        // / The grid's aerodynamic forces in world newtons: drag first, then lift.
-        // /.
-        // / <para>.
-        // / **The vectors <see cref="GetGridFrictionWatts"/> only gave the magnitude of.** The.
-        // / solver turns the wind into a friction power and a pressure field; drag is that power.
-        // / aligned with the flow and lift is the transverse remainder, each divided into newtons.
-        // / by the same law (`DragForce.Newtons`).
-        // / model, an atmospheric-entry effect — needs the vectors, not the watts, and this is the.
-        // / same assembly `AeroGroupForces` uses so a caller and the mod cannot disagree about the.
-        // / force on one grid.
-        // / </para>.
-        // /.
-        // / <para>.
-        // / Lift is zero unless both the shape term and lift are switched on (`EnableShapeDrag`,.
-        // / `EnableLift`); drag is zero unless the friction term is.
-        // / no simulation and for a still grid, which is what every accessor here returns for.
-        // / nothing to report (`E8`).
-        // / aerodynamics are enabled; a consumer reading them where the mod does not apply them is.
-        // / what this exists for.
-        // / </para>.
-        // / </summary>.
         private static MyTuple<Vector3, Vector3> GetGridAeroForces(IMyCubeGrid grid)
         {
             ThermalGrid thermals = GridOf(grid);
@@ -388,26 +249,6 @@ namespace Thermodynamics
             return new MyTuple<Vector3, Vector3>(drag, lift);
         }
 
-        // / <summary>.
-        // / The coolant loop a pipe block belongs to: found, mean temperature K, hottest pipe K,.
-        // / coldest pipe K, pipe count.
-        // /.
-        // / <para>.
-        // / **`GetGridSummary` gave the loop *count* and nothing to read off a loop.** Cooling is.
-        // / the feature the mod is named for, and a mod building a coolant readout or an automation.
-        // / on it could see how many loops a grid had and not one of their temperatures.
-        // / pipe block rather than a loop index, because a loop index is a slot in a list that a.
-        // / rebuild reorders while the block a player put down is stable — the same reason the.
-        // / threshold callback hands back a block.
-        // / </para>.
-        // /.
-        // / <para>.
-        // / The hottest and coldest pipe are given beside the mean because a loop that is doing its.
-        // / job has a gradient — it picks heat up at one end and sheds it at the other — and the.
-        // / mean alone hides exactly the spread a troubleshooter is looking for.
-        // / and zeros) for a block that is not a pipe, is on no loop, or is not simulated (`E8`).
-        // / </para>.
-        // / </summary>.
         private static MyTuple<bool, float, float, float, int> GetCoolantLoop(IMySlimBlock block)
         {
             ThermalBlock bound = Bound(block);
@@ -432,7 +273,6 @@ namespace Thermodynamics
                 true, loop.Temperature, loop.HottestSegment, loop.ColdestSegment, loop.PipeCount);
         }
 
-        // / <summary>Is a sealed room, air temperature K, pressure 0..1, volume m^3.</summary>.
         private static MyTuple<bool, float, float, float> GetRoom(IMyCubeGrid grid, Vector3I cell)
         {
             ThermalGrid thermals = GridOf(grid);
@@ -457,11 +297,6 @@ namespace Thermodynamics
             return true;
         }
 
-        // / <summary>.
-        // / Adds energy in joules.
-        // / the block's heat capacity, and so the same joules applied to two blocks produce the.
-        // / temperature changes their capacities imply.
-        // / </summary>.
         private static bool AddBlockHeat(IMySlimBlock block, float joules)
         {
             ThermalBlock bound = Bound(block);
@@ -482,24 +317,6 @@ namespace Thermodynamics
             return thermals.Simulation.SetRoomPressure(cell, pressure);
         }
 
-        // / <summary>.
-        // / One setting's value, or zero where there is no such setting.
-        // /.
-        // / <para>.
-        // / **`Settings.EnsureLoaded` rather than `Settings.Instance`, because a consumer cannot be.
-        // / asked to call in the right order.** That method exists for exactly this — its own.
-        // / summary says a mod cannot control load order — and it falls back to the defaults where.
-        // / the world storage is not readable yet, which is a better answer than zero: zero is what.
-        // / an unknown *name* returns, so returning it for *not loaded* would make the two.
-        // / indistinguishable.
-        // / </para>.
-        // /.
-        // / <para>.
-        // / This was `name => Settings.Instance.GetValue(name)` until 2026-08-28, four lines above a.
-        // / `SetSetting` that guarded the same field and returned `false` — so the writer was safe.
-        // / to call early and the reader threw into its caller (`W4`).
-        // / </para>.
-        // / </summary>.
         private static float GetSetting(string name)
         {
             Settings settings = Settings.EnsureLoaded();
@@ -515,13 +332,6 @@ namespace Thermodynamics
             return true;
         }
 
-        // ---- thresholds --------------------------------------------------------------------.
-
-        // / <summary>.
-        // / Registers a temperature to watch on every grid.
-        // / rising, 1 falling, 2 both.
-        // / threshold, the temperature reached, and whether it was rising.
-        // / </summary>.
         private static int AddThreshold(
             float temperature, int direction, Action<IMySlimBlock, int, float, float, bool> callback)
         {
@@ -567,7 +377,6 @@ namespace Thermodynamics
             return true;
         }
 
-        // / <summary>Applies every registered threshold to a grid that has just been created.</summary>.
         public static void ApplyThresholds(ThermalSimulation simulation)
         {
             if (simulation == null) return;
@@ -578,7 +387,6 @@ namespace Thermodynamics
             }
         }
 
-        // / <summary>Hands one crossing to its subscriber.</summary>.
         public static void RaiseThreshold(ThresholdCrossing crossing, IMySlimBlock block)
         {
             Action<IMySlimBlock, int, float, float, bool> handler;
@@ -590,8 +398,6 @@ namespace Thermodynamics
             }
             catch (Exception e)
             {
-                // A subscriber that throws is dropped, so one misbehaving consumer cannot stop the.
-                // simulation for the rest.
                 Telemetry.Exception("ThermalApi.RaiseThreshold", e);
                 ThresholdHandlers.Remove(crossing.ThresholdId);
             }

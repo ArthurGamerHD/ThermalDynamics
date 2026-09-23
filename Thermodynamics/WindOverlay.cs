@@ -59,10 +59,8 @@ namespace Thermodynamics
             public float Share;
         }
 
-/// <summary>List operation.</summary>
         private static readonly List<Arrow> Arrows = new List<Arrow>();
 
-/// <summary>List operation.</summary>
         private static readonly List<Arrow> Building = new List<Arrow>();
 
         private const int LocalCellsPerFrame = 192;
@@ -98,28 +96,24 @@ namespace Thermodynamics
 
         private static int sincePlayerSample = int.MaxValue;
 
-/// <summary>Cycle operation.</summary>
         public static void Cycle()
         {
             Current = (Mode)(((int)Current + 1) % ModeCount);
             Announce();
         }
 
-/// <summary>Sets the .</summary>
         public static void Set(Mode mode)
         {
             Current = mode;
             Announce();
         }
 
-/// <summary>Announce operation.</summary>
         private static void Announce()
         {
             if (MyAPIGateway.Utilities == null || MyAPIGateway.Utilities.IsDedicated) return;
             MyAPIGateway.Utilities.ShowNotification("wind map: " + Describe(Current), 2000, "White");
         }
 
-/// <summary>Describe operation.</summary>
         public static string Describe(Mode mode)
         {
             switch (mode)
@@ -130,7 +124,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Reset operation.</summary>
         public static void Reset()
         {
             Arrows.Clear();
@@ -142,7 +135,6 @@ namespace Thermodynamics
             PlayerUp = Vector3.Zero;
         }
 
-/// <summary>Draw operation.</summary>
         public static void Draw()
         {
             if (MyAPIGateway.Utilities == null || MyAPIGateway.Utilities.IsDedicated) return;
@@ -186,7 +178,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>DueToSample operation.</summary>
         private static bool DueToSample(PlanetManager.Planet planet, ref Vector3D eye)
         {
             if (Current != lastMode || planet.Entity.EntityId != lastPlanetId) return true;
@@ -202,7 +193,6 @@ namespace Thermodynamics
             return Current == Mode.Local && Anchor(ref eye) != localAnchor;
         }
 
-/// <summary>Anchor operation.</summary>
         private static Vector3D Anchor(ref Vector3D eye)
         {
             return new Vector3D(
@@ -211,13 +201,11 @@ namespace Thermodynamics
                 Math.Round(eye.Z / LocalSpacing) * LocalSpacing);
         }
 
-/// <summary>Rebuild operation.</summary>
         private static void Rebuild(PlanetManager.Planet planet, ref Vector3D eye)
         {
             bool switched = Current != lastMode || planet.Entity.EntityId != lastPlanetId;
 
             sinceSample = 0;
-/// <summary>Anchor operation.</summary>
             localAnchor = Anchor(ref eye);
             lastMode = Current;
             lastPlanetId = planet.Entity.EntityId;
@@ -238,7 +226,6 @@ namespace Thermodynamics
             BuildPlanet(planet, weather, weatherWind);
         }
 
-/// <summary>SampleWeather operation.</summary>
         private static void SampleWeather(ref Vector3D position, out float weather, out float weatherWind)
         {
             weather = 0f;
@@ -261,7 +248,6 @@ namespace Thermodynamics
                 WeatherResponse.Soften(WeatherResponse.For(name), influence), weather).WindMultiplier;
         }
 
-/// <summary>StartLocalBuild operation.</summary>
         private static void StartLocalBuild(
             PlanetManager.Planet planet, float weather, float weatherWind)
         {
@@ -295,14 +281,12 @@ namespace Thermodynamics
             Building.Clear();
         }
 
-/// <summary>AbandonBuild operation.</summary>
         private static void AbandonBuild()
         {
             buildCell = -1;
             Building.Clear();
         }
 
-/// <summary>StepLocalBuild operation.</summary>
         private static void StepLocalBuild(PlanetManager.Planet planet)
         {
             if (Current != Mode.Local || planet.Entity == null)
@@ -350,7 +334,6 @@ namespace Thermodynamics
             arrowThickness = (float)(arrowLength * 0.012d);
         }
 
-/// <summary>Builds the API method table.</summary>
         private static void BuildPlanet(PlanetManager.Planet planet, float weather, float weatherWind)
         {
             Vector3D centre = planet.Entity.PositionComp.GetPosition();
@@ -393,7 +376,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Adds a .</summary>
         private static void Add(
             List<Arrow> into, PlanetManager.Planet planet, ref Vector3D position,
             ref Vector3D centre, Vector3 axis, float weather, float weatherWind)
@@ -410,7 +392,6 @@ namespace Thermodynamics
                 ceiling, weather, WindField.Variation(position), weatherWind);
             if (speed <= 0f) return;
 
-/// <summary>Arrow operation.</summary>
             Arrow arrow = new Arrow();
             arrow.Position = position;
             arrow.Direction = direction;
@@ -421,7 +402,6 @@ namespace Thermodynamics
             into.Add(arrow);
         }
 
-/// <summary>SamplePlayerWind operation.</summary>
         private static void SamplePlayerWind(ref Vector3D eye)
         {
             sincePlayerSample++;
@@ -455,7 +435,6 @@ namespace Thermodynamics
                 * WindField.Speed(ceiling, weather, WindField.Variation(eye), weatherWind);
         }
 
-/// <summary>DrawArrow operation.</summary>
         private static void DrawArrow(ref Arrow arrow, ref Vector3D eye)
         {
             Vector3D direction = (Vector3D)arrow.Direction;
@@ -465,7 +444,6 @@ namespace Thermodynamics
             Vector3D tail = arrow.Position - (direction * (length * 0.5d));
             Vector3D tip = arrow.Position + (direction * (length * 0.5d));
 
-/// <summary>Colour operation.</summary>
             Vector4 colour = Colour(arrow.Share).ToVector4();
 
             double thickness = Math.Max(
@@ -489,7 +467,6 @@ namespace Thermodynamics
                 tip, back - (sweep * head * 0.5d), LineMaterial, ref colour, (float)thickness);
         }
 
-/// <summary>Colour operation.</summary>
         public static Color Colour(float share)
         {
             share = ThermalMath.Clamp01(share);
@@ -498,7 +475,6 @@ namespace Thermodynamics
             return Lerp(new Color(90, 220, 120), new Color(235, 70, 55), (share - 0.5f) * 2f);
         }
 
-/// <summary>Lerp operation.</summary>
         private static Color Lerp(Color from, Color to, float amount)
         {
             return new Color(

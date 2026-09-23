@@ -29,10 +29,8 @@ namespace Thermodynamics
 
         private static readonly Dictionary<long, MyLight> Lights = new Dictionary<long, MyLight>();
 
-/// <summary>List operation.</summary>
         private static readonly List<long> Extinguished = new List<long>();
 
-/// <summary>Draw operation.</summary>
         public static void Draw()
         {
             LastQuads = LastHotBlocks = LastSurfaceBlocks = 0;
@@ -77,7 +75,6 @@ namespace Thermodynamics
                 UpdateLight(thermals, ref eye);
 
                 if (quads < HeatGlowStyle.MaxQuads)
-/// <summary>DrawGrid operation.</summary>
                     quads += DrawGrid(thermals, ref eye, HeatGlowStyle.MaxQuads - quads);
             }
 
@@ -88,7 +85,6 @@ namespace Thermodynamics
             if (LastHotBlocks > 0) LastState = quads > 0 ? "submitted" : "culled";
         }
 
-/// <summary>Clear operation.</summary>
         public static void Clear()
         {
             LastQuads = LastHotBlocks = LastSurfaceBlocks = 0;
@@ -99,7 +95,6 @@ namespace Thermodynamics
             Extinguished.Clear();
         }
 
-/// <summary>Extinguish operation.</summary>
         private static void Extinguish(long entityId)
         {
             MyLight light;
@@ -114,7 +109,6 @@ namespace Thermodynamics
             MyLights.RemoveLight(light);
         }
 
-/// <summary>UpdateLight operation.</summary>
         private static void UpdateLight(ThermalGrid thermals, ref Vector3D eye)
         {
             GlowRegion region;
@@ -152,7 +146,6 @@ namespace Thermodynamics
             Vector3 locus = Incandescence.Colour(region.Kelvin);
 
             light.Position = centre;
-/// <summary>Color operation.</summary>
             light.Color = new Color(locus);
             light.Intensity = region.Glow * LightIntensity * fade;
             light.Range = lightRange;
@@ -161,7 +154,6 @@ namespace Thermodynamics
             light.UpdateLight();
         }
 
-/// <summary>Region operation.</summary>
         private static bool Region(ThermalGrid thermals, out GlowRegion region, out Vector3D centre,
             out float radius)
         {
@@ -178,7 +170,6 @@ namespace Thermodynamics
             return true;
         }
 
-/// <summary>DrawGrid operation.</summary>
         private static int DrawGrid(ThermalGrid thermals, ref Vector3D eye, int budget)
         {
             MatrixD gridMatrix = thermals.Grid.WorldMatrix;
@@ -206,7 +197,6 @@ namespace Thermodynamics
 
                 Vector3 half = FaceQuad.HalfExtents(bound.Block.Min, bound.Block.Max, gridSize);
                 LastSurfaceBlocks++;
-/// <summary>Colour operation.</summary>
                 Vector4 colour = Colour(block) * fade;
 
                 for (int face = 0; face < Face.Count && quads < budget; face++)
@@ -222,7 +212,6 @@ namespace Thermodynamics
             return quads;
         }
 
-/// <summary>DrawFace operation.</summary>
         private static bool DrawFace(int face, ref Vector3D centre, ref Vector3 half,
             ref MatrixD gridMatrix, ref Vector3D eye, ref Vector4 colour, float gridSize)
         {
@@ -257,7 +246,6 @@ namespace Thermodynamics
             return true;
         }
 
-/// <summary>Colour operation.</summary>
         private static Vector4 Colour(LitBlock block)
         {
             Vector3 locus = Incandescence.Colour(block.Kelvin);

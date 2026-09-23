@@ -32,15 +32,12 @@ namespace Thermodynamics
         private static readonly MyStringId FaceMaterial = MyStringId.GetOrCompute("Square");
         private static readonly MyStringId LineMaterial = MyStringId.GetOrCompute("Square");
 
-/// <summary>List operation.</summary>
         private static readonly List<ThermalGrid> Targets = new List<ThermalGrid>();
 
-/// <summary>OverlayBudget operation.</summary>
         public static readonly OverlayBudget Budget = new OverlayBudget();
 
         private static long billboards;
 
-/// <summary>Stopwatch operation.</summary>
         private static readonly Stopwatch DrawClock = new Stopwatch();
 
         private static double coneSin, coneCos;
@@ -60,28 +57,24 @@ namespace Thermodynamics
             get { return Current == Mode.SolarWatts || Current == Mode.FrictionWatts; }
         }
 
-/// <summary>Cycle operation.</summary>
         public static void Cycle()
         {
             Current = (Mode)(((int)Current + 1) % ModeCount);
             Announce();
         }
 
-/// <summary>Sets the .</summary>
         public static void Set(Mode mode)
         {
             Current = mode;
             Announce();
         }
 
-/// <summary>Announce operation.</summary>
         private static void Announce()
         {
             if (MyAPIGateway.Utilities == null || MyAPIGateway.Utilities.IsDedicated) return;
             MyAPIGateway.Utilities.ShowNotification("thermal overlay: " + Describe(Current), 2000, "White");
         }
 
-/// <summary>Describe operation.</summary>
         public static string Describe(Mode mode)
         {
             switch (mode)
@@ -95,7 +88,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Draw operation.</summary>
         public static void Draw()
         {
             if (Current == Mode.Off)
@@ -124,7 +116,6 @@ namespace Thermodynamics
             Targets.Clear();
         }
 
-/// <summary>BeginFrame operation.</summary>
         private static void BeginFrame()
         {
             Budget.MaxBoxes = Settings.Instance == null ? 12000 : Settings.Instance.DebugOverlayMaxBoxes;
@@ -145,7 +136,6 @@ namespace Thermodynamics
             DrawClock.Start();
         }
 
-/// <summary>EndFrame operation.</summary>
         private static void EndFrame()
         {
             Budget.EndFrame();
@@ -159,7 +149,6 @@ namespace Thermodynamics
                 billboards, Budget.Radius, DrawClock.Elapsed.TotalMilliseconds);
         }
 
-/// <summary>Wanted operation.</summary>
         private static bool Wanted(ref Vector3D delta, double boxRadius, ref MatrixD camera)
         {
             Vector3D forward = camera.Forward;
@@ -173,7 +162,6 @@ namespace Thermodynamics
             return Budget.Accept(delta.Length());
         }
 
-/// <summary>Box operation.</summary>
         private static void Box(
             ref MatrixD box, ref BoundingBoxD local, ref Color colour,
             MySimpleObjectRasterizer rasterizer, double thickness)
@@ -194,7 +182,6 @@ namespace Thermodynamics
             billboards += rasterizer == MySimpleObjectRasterizer.Wireframe ? 12 : 18;
         }
 
-/// <summary>CollectTargets operation.</summary>
         private static void CollectTargets(ref MatrixD camera, ref Vector3D eye)
         {
             Targets.Clear();
@@ -211,7 +198,6 @@ namespace Thermodynamics
             if (hit != null) Add(hit.HitEntity as MyCubeGrid);
         }
 
-/// <summary>Adds a .</summary>
         private static void Add(MyCubeGrid grid)
         {
             if (grid == null || grid.GameLogic == null) return;
@@ -223,7 +209,6 @@ namespace Thermodynamics
             Targets.Add(thermals);
         }
 
-/// <summary>DrawGrid operation.</summary>
         private static void DrawGrid(ThermalGrid thermals, ref MatrixD camera, ref Vector3D eye)
         {
             if (Current == Mode.Rooms)
@@ -259,16 +244,13 @@ namespace Thermodynamics
                 MatrixD box = gridMatrix;
                 box.Translation = eye + (delta * BandScale);
 
-/// <summary>BoundingBoxD operation.</summary>
                 BoundingBoxD local = new BoundingBoxD(-half * BandScale, half * BandScale);
-/// <summary>Colour operation.</summary>
                 Color colour = Colour(node);
 
                 Box(ref box, ref local, ref colour, MySimpleObjectRasterizer.SolidAndWireframe, 0.02);
             }
         }
 
-/// <summary>DrawSolarSurfaces operation.</summary>
         private static void DrawSolarSurfaces(ThermalGrid thermals, ref MatrixD camera, ref Vector3D eye)
         {
             EnvironmentState state = thermals.LastState;
@@ -337,7 +319,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>DrawRooms operation.</summary>
         private static void DrawRooms(ThermalGrid thermals, ref MatrixD camera, ref Vector3D eye)
         {
             RoomMap map = thermals.Simulation.Rooms.Map;
@@ -346,7 +327,6 @@ namespace Thermodynamics
             MatrixD gridMatrix = thermals.Grid.WorldMatrix;
             float gridSize = thermals.Grid.GridSize;
 
-/// <summary>Vector3D operation.</summary>
             Vector3D half = new Vector3D(gridSize * 0.45);
 
             float min = Settings.Instance.RoomOverlayMinKelvin;
@@ -354,21 +334,16 @@ namespace Thermodynamics
 
             for (int room = 0; room < map.RoomCount; room++)
             {
-/// <summary>AirOf operation.</summary>
                 RoomAirNode air = AirOf(thermals, room);
 
                 bool hasAir = air != null && air.HasAir;
 
-/// <summary>Disagrees operation.</summary>
                 bool disagrees = Disagrees(thermals, room);
 
                 Color fill = hasAir
-/// <summary>Fill operation.</summary>
                     ? Fill(air.Temperature, min, max)
-/// <summary>DryFill operation.</summary>
                     : DryFill(disagrees);
 
-/// <summary>RoomColour operation.</summary>
                 Color edge = RoomColour(room, map.IsVented(room));
 
                 foreach (Vector3I cell in map.CellsOf(room))
@@ -381,7 +356,6 @@ namespace Thermodynamics
                     MatrixD box = gridMatrix;
                     box.Translation = eye + (delta * BandScale);
 
-/// <summary>BoundingBoxD operation.</summary>
                     BoundingBoxD local = new BoundingBoxD(-half * BandScale, half * BandScale);
 
                     Box(ref box, ref local, ref fill,
@@ -408,7 +382,6 @@ namespace Thermodynamics
             DrawLostRooms(thermals, ref camera, ref eye, gridMatrix, half);
         }
 
-/// <summary>DrawLostRooms operation.</summary>
         private static void DrawLostRooms(
             ThermalGrid thermals, ref MatrixD camera, ref Vector3D eye, MatrixD gridMatrix, Vector3D half)
         {
@@ -420,7 +393,6 @@ namespace Thermodynamics
                 ThermalGrid.LostRoom room = lost[i];
                 if (room.Cells == null) continue;
 
-/// <summary>LostRoomColour operation.</summary>
                 Color fill = LostRoomColour(room.Index, room.VentSaysPressurised);
 
                 foreach (Vector3I cell in room.Cells)
@@ -433,7 +405,6 @@ namespace Thermodynamics
                     MatrixD box = gridMatrix;
                     box.Translation = eye + (delta * BandScale);
 
-/// <summary>BoundingBoxD operation.</summary>
                     BoundingBoxD local = new BoundingBoxD(-half * BandScale, half * BandScale);
 
                     Box(ref box, ref local, ref fill, MySimpleObjectRasterizer.SolidAndWireframe, 0.04);
@@ -441,13 +412,11 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>LostRoomColour operation.</summary>
         private static Color LostRoomColour(int index, bool ventSaysPressurised)
         {
             float hue = ((index * 0.61803399f) % 1f) * 0.13f;
 
             Color colour = ColorExtensions.HSVtoColor(
-/// <summary>Vector3 operation.</summary>
                 new Vector3(hue, 1f, ventSaysPressurised ? 1f : 0.55f));
 
             colour.A = (byte)(LostRoomFillAlpha * 255f);
@@ -456,7 +425,6 @@ namespace Thermodynamics
 
         private const float LostRoomFillAlpha = 0.25f;
 
-/// <summary>Disagrees operation.</summary>
         private static bool Disagrees(ThermalGrid thermals, int room)
         {
             IList<ThermalGrid.RoomVerdict> verdicts = thermals.RoomVerdicts;
@@ -465,12 +433,10 @@ namespace Thermodynamics
             return verdicts[room].IsDisagreement;
         }
 
-/// <summary>DryFill operation.</summary>
         private static Color DryFill(bool disagrees)
         {
             if (!disagrees) return new Color(90, 90, 90, 25);
 
-/// <summary>Color operation.</summary>
             Color colour = new Color(255, 0, 200);
             colour.A = (byte)(DisagreementFillAlpha * 255f);
             return colour;
@@ -478,7 +444,6 @@ namespace Thermodynamics
 
         private const float DisagreementFillAlpha = 0.3f;
 
-/// <summary>AirOf operation.</summary>
         private static RoomAirNode AirOf(ThermalGrid thermals, int room)
         {
             IList<RoomAirNode> air = thermals.Simulation.RoomAir;
@@ -489,7 +454,6 @@ namespace Thermodynamics
             return null;
         }
 
-/// <summary>Fill operation.</summary>
         private static Color Fill(float kelvin, float min, float max)
         {
             if (max <= min) max = min + 1f;
@@ -504,7 +468,6 @@ namespace Thermodynamics
 
         private const float RoomFillAlpha = 0.35f;
 
-/// <summary>RoomColour operation.</summary>
         private static Color RoomColour(int room, bool vented)
         {
             float hue = (room * 0.61803399f) % 1f;
@@ -514,7 +477,6 @@ namespace Thermodynamics
             return colour;
         }
 
-/// <summary>Colour operation.</summary>
         private static Color Colour(ThermalNode node)
         {
             Vector3 hsv;
