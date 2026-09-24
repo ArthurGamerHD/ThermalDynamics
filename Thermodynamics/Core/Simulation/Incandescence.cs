@@ -55,15 +55,6 @@ namespace Thermodynamics.Core
         /// <param name="kelvin">Current temperature in Kelvin.</param>
         /// <param name="critical">Critical temperature in Kelvin at which block fails.</param>
         /// <returns>Glow intensity (0-1). 0 = no glow, 1 = full incandescence.</returns>
-        /// <remarks>
-        /// Glow calculation:
-        ///   start = GlowStartKelvin(critical)
-        ///   if kelvin <= start: glow = 0
-        ///   if kelvin >= critical: glow = 1
-        ///   otherwise: glow = (kelvin - start) / (critical - start)
-        ///
-        /// This provides a smooth visual transition from dark (cold) to bright (critical).
-        /// </remarks>
         public static float Glow(float kelvin, float critical)
         {
             if (float.IsNaN(kelvin) || float.IsNaN(critical) || critical <= 0f) return 0f;
@@ -138,22 +129,6 @@ namespace Thermodynamics.Core
         /// </summary>
         /// <param name="kelvin">Temperature in Kelvin.</param>
         /// <returns>RGB color vector representing the incandescence color.</returns>
-        /// <remarks>
-        /// Color calculation:
-        ///   position = (kelvin - ColourFirstKelvin) / ColourStepKelvin
-        ///   
-        /// If position <= 0: return first color sample (800K)
-        /// If position >= last: return last color sample
-        /// Otherwise: linearly interpolate between floor(position) and ceil(position)
-        ///
-        /// Example temperatures and colors:
-        ///   798K - Draper point (beginning of visible glow)
-        ///   800K - Bright red (1, 0, 0)
-        ///   1000K - Orange-red
-        ///   1500K - Yellow-orange
-        ///   2000K - White
-        ///   3000K+ - Blue-white (very hot)
-        /// </remarks>
         public static Vector3 Colour(float kelvin)
         {
             float position = (kelvin - ColourFirstKelvin) / ColourStepKelvin;

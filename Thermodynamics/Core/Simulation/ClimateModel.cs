@@ -217,19 +217,6 @@ namespace Thermodynamics.Core
         /// <param name="seconds">Time elapsed in seconds.</param>
         /// <param name="lagSeconds">Time constant for lag in seconds.</param>
         /// <returns>Temperature after applying lag, approaching target.</returns>
-        /// <remarks>
-        /// Exponential smoothing formula:
-        ///   closed = 1 - e^(-seconds / lagSeconds)
-        ///   result = current + (target - current) * closed
-        ///
-        /// The lagSeconds parameter determines the time to reach ~63% of the way to target:
-        /// - After 1*lagSeconds: ~63% of way to target
-        /// - After 2*lagSeconds: ~86% of way to target  
-        /// - After 3*lagSeconds: ~95% of way to target
-        /// - After 5*lagSeconds: ~99% of way to target
-        ///
-        /// If lagSeconds <= 0 or seconds <= 0, returns target immediately (no lag).
-        /// </remarks>
         public static float Follow(float current, float target, float seconds, float lagSeconds)
         {
             if (lagSeconds <= 0f || seconds <= 0f) return target;

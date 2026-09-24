@@ -64,20 +64,6 @@ namespace Thermodynamics.Core
         /// <param name="interval">Time interval between measurements in seconds.</param>
         /// <param name="threshold">Critical temperature threshold in Kelvin.</param>
         /// <returns>HeatForecast with crossing prediction and timing.</returns>
-        /// <remarks>
-        /// Forecast logic:
-        /// 1. If already at or above threshold -> immediate crossing (0 seconds)
-        /// 2. If rate <= 0 -> no crossing (cooling or stable)
-        /// 3. If rate is increasing or stable -> linear projection
-        ///    Time = (threshold - current) / rate
-        /// 4. If rate is decaying exponentially -> use tau (time constant) model
-        ///    Settles = current + tau * rate
-        ///    If settles > threshold -> solve for crossing time
-        ///    tau = -interval / ln(rate/previousRate)
-        /// 
-        /// The exponential model is appropriate for systems with thermal inertia
-        /// where heating rate decreases as temperature approaches equilibrium.
-        /// </remarks>
         public static HeatForecast Forecast(float kelvin, float rate, float previousRate,
             float interval, float threshold)
         {

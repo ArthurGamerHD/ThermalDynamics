@@ -119,7 +119,7 @@ namespace Thermodynamics.Core
         /// Uses the sum of all components - if negative, the direction is primarily negative.
         /// </summary>
         /// <param name="direction">The direction vector to check.</param>
-        /// <returns>True if direction.X + direction.Y + direction.Z < 0.</returns>
+        /// <returns>True if direction.X + direction.Y + direction.Z less than 0</returns>
         private static bool IsNegative(Vector3I direction)
         {
             return direction.X + direction.Y + direction.Z < 0;
@@ -319,12 +319,6 @@ namespace Thermodynamics.Core
         /// <param name="carnotFraction">Fraction of Carnot efficiency the pump achieves (0-1).</param>
         /// <param name="maxCoefficient">Maximum achievable COP (design limit).</param>
         /// <returns>The actual COP, or maxCoefficient if temperatures are equal.</returns>
-        /// <remarks>
-        /// The Carnot COP represents the theoretical maximum for any heat pump:
-        ///   COP_Carnot = TCold / (THot - TCold)
-        /// Real pumps achieve a fraction of this due to inefficiencies.
-        /// When hot - cold <= 0 (no temperature difference), the pump can operate at maximum COP.
-        /// </remarks>
         public static float Coefficient(float cold, float hot, float carnotFraction, float maxCoefficient)
         {
             if (carnotFraction <= 0f || maxCoefficient <= 0f) return 0f;

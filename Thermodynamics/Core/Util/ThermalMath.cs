@@ -9,7 +9,7 @@ namespace Thermodynamics.Core
     {
         /// <summary>
         /// Clamps a value to the range [0, 1].
-        /// Returns 0 if value < 0, 1 if value > 1, otherwise returns the value unchanged.
+        /// Returns 0 if value is less than 0, 1 if value > 1, otherwise returns the value unchanged.
         /// </summary>
         /// <param name="value">The value to clamp.</param>
         /// <returns>Clamped value between 0 and 1 inclusive.</returns>
