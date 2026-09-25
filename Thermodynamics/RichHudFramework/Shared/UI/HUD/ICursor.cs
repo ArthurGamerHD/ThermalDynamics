@@ -37,22 +37,22 @@ namespace RichHudFramework
 
 			LineD WorldLine { get; }
 
-/// <summary>IsCapturingSpace operation.</summary>
+
 			bool IsCapturingSpace(HudSpaceDelegate GetHudSpaceFunc);
 
-/// <summary>TryCaptureHudSpace operation.</summary>
+
 			bool TryCaptureHudSpace(float depthSquared, HudSpaceDelegate GetHudSpaceFunc);
 
-/// <summary>IsCapturing operation.</summary>
+
 			bool IsCapturing(ApiMemberAccessor capturedElement);
 
-/// <summary>TryCapture operation.</summary>
+
 			bool TryCapture(ApiMemberAccessor capturedElement);
 
-/// <summary>TryRelease operation.</summary>
+
 			bool TryRelease(ApiMemberAccessor capturedElement);
 
-/// <summary>Registers the API and message handler.</summary>
+
 			void RegisterToolTip(ToolTip toolTip);
 		}
 	}

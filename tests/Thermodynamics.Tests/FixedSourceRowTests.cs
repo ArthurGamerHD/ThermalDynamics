@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class FixedSourceRowTests
     {
-/// <summary>Hull operation.</summary>
+
         private static ThermalSimulation Hull()
         {
             ThermalSimulation simulation = Hulls.Driven();
@@ -15,7 +15,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>SumOfParts operation.</summary>
+
         private static float SumOfParts(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -34,16 +34,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheReportedHeatGainIsTheSumOfTheFiguresBesideIt operation.</summary>
+
         public void TheReportedHeatGainIsTheSumOfTheFiguresBesideIt()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull();
 
             simulation.StepExact(6,
                 Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 140f));
 
-/// <summary>SumOfParts operation.</summary>
+
             float parts = SumOfParts(simulation);
 
             Assert.True(parts > 0f, "the hull gained nothing, so this test asserts nothing");
@@ -51,7 +51,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABuriedProducerStillReportsItsWasteHeat operation.</summary>
+
         public void ABuriedProducerStillReportsItsWasteHeat()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -75,10 +75,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SwitchingSolarAndFrictionOffEmptiesTheirShareOfTheRow operation.</summary>
+
         public void SwitchingSolarAndFrictionOffEmptiesTheirShareOfTheRow()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull();
             EnvironmentSample sample = Worlds.PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 140f);
 

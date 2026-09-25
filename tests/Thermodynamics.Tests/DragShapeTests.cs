@@ -10,10 +10,10 @@ namespace Thermodynamics.Tests
         private const float ThickAir = 1f;
         private const float Speed = 120f;
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -23,7 +23,7 @@ namespace Thermodynamics.Tests
             return settings;
         }
 
-/// <summary>Brick operation.</summary>
+
         private static ThermalSimulation Brick()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -34,7 +34,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Wedge operation.</summary>
+
         private static ThermalSimulation Wedge()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -55,7 +55,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>DragWatts operation.</summary>
+
         private static float DragWatts(ThermalSimulation simulation)
         {
             simulation.StepExact(1, Worlds.Flight(ThickAir, Speed));
@@ -63,12 +63,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWedgeIsNotJustTheBrickAgain operation.</summary>
+
         public void TheWedgeIsNotJustTheBrickAgain()
         {
-/// <summary>Brick operation.</summary>
+
             ThermalSimulation brick = Brick();
-/// <summary>Wedge operation.</summary>
+
             ThermalSimulation wedge = Wedge();
 
             Assert.Equal(64, brick.Solver.Nodes.Count);
@@ -76,12 +76,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABrickAndAWedgeOfTheSameFrontalAreaDragIdentically operation.</summary>
+
         public void ABrickAndAWedgeOfTheSameFrontalAreaDragIdentically()
         {
-/// <summary>DragWatts operation.</summary>
+
             float brick = DragWatts(Brick());
-/// <summary>DragWatts operation.</summary>
+
             float wedge = DragWatts(Wedge());
 
             Assert.True(brick > 0f, "the brick took no drag, so this compares nothing");
@@ -90,7 +90,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>HalvingTheFrontalAreaHalvesTheDrag operation.</summary>
+
         public void HalvingTheFrontalAreaHalvesTheDrag()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -99,9 +99,9 @@ namespace Thermodynamics.Tests
             ThermalSimulation narrow = builder.BuildSimulation(Settings(), 293.15f);
             narrow.Planet = PlanetThermalProperties.Default();
 
-/// <summary>DragWatts operation.</summary>
+
             float full = DragWatts(Brick());
-/// <summary>DragWatts operation.</summary>
+
             float half = DragWatts(narrow);
 
             Assert.True(half > 0f);

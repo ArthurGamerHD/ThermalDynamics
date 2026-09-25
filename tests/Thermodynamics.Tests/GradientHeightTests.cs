@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
     public class GradientHeightTests
     {
         [Fact]
-/// <summary>AThickAtmosphereLeavesTheConfiguredHeightAlone operation.</summary>
+
         public void AThickAtmosphereLeavesTheConfiguredHeightAlone()
         {
             Assert.Equal(600f, WindProfile.GradientHeightIn(600f, 12000f), 3);
@@ -15,14 +15,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AThinAtmosphereCapsIt operation.</summary>
+
         public void AThinAtmosphereCapsIt()
         {
             Assert.Equal(285f, WindProfile.GradientHeightIn(600f, 285f), 3);
         }
 
         [Fact]
-/// <summary>ItNeverFallsBelowTheReferenceHeight operation.</summary>
+
         public void ItNeverFallsBelowTheReferenceHeight()
         {
             Assert.Equal(WindProfile.ReferenceHeight, WindProfile.GradientHeightIn(600f, 1f), 3);
@@ -30,7 +30,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnAirlessWorldLeavesItAlone operation.</summary>
+
         public void AnAirlessWorldLeavesItAlone()
         {
             Assert.Equal(600f, WindProfile.GradientHeightIn(600f, 0f), 3);
@@ -38,7 +38,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OnAShallowWorldTheProfileStopsWhereTheAirDoes operation.</summary>
+
         public void OnAShallowWorldTheProfileStopsWhereTheAirDoes()
         {
             const float Shallow = 285f;

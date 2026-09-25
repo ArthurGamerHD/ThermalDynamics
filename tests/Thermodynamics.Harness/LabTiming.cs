@@ -5,7 +5,7 @@ namespace Thermodynamics.Harness
 {
     public static class LabTiming
     {
-/// <summary>FastestOf operation.</summary>
+
         public static void FastestOf(int repeats, Action action, out double fastest, out double slowest)
         {
             fastest = double.MaxValue;

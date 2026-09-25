@@ -9,13 +9,13 @@ namespace Thermodynamics.Tests
 {
     public class IncandescenceTests
     {
-        private const double Planck = 6.62607015e-34;      // J s
-        private const double LightSpeed = 2.99792458e8;    // m/s
-        private const double Boltzmann = 1.380649e-23;     // J/K
+        private const double Planck = 6.62607015e-34;
+        private const double LightSpeed = 2.99792458e8;
+        private const double Boltzmann = 1.380649e-23;
 
         private const double SecondRadiation = 1.4387769e-2;
 
-/// <summary>Spectral operation.</summary>
+
         private static double Spectral(double metres, double kelvin)
         {
             double exponent = (Planck * LightSpeed) / (metres * Boltzmann * kelvin);
@@ -27,7 +27,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheRampIsTheLastHundredKelvinBeforeTheRating operation.</summary>
+
         public void TheRampIsTheLastHundredKelvinBeforeTheRating()
         {
             const float critical = 900f;
@@ -49,7 +49,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSameDistanceFromFailureReadsTheSameOnEveryBlock operation.</summary>
+
         public void TheSameDistanceFromFailureReadsTheSameOnEveryBlock()
         {
             float[] ratings = new float[] { 583f, 700f, 900f, 1200f, 1522f };
@@ -63,7 +63,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoBlockGlowsFromTheWeatherOnAnyPlanetTheGameShips operation.</summary>
+
         public void NoBlockGlowsFromTheWeatherOnAnyPlanetTheGameShips()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -94,7 +94,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDrawFloorIsWhereTheRampStarts operation.</summary>
+
         public void TheDrawFloorIsWhereTheRampStarts()
         {
             float[] ratings = new float[] { 583f, 900f, 1522f };
@@ -110,7 +110,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NonsenseRatingsDoNotProduceANonsenseRamp operation.</summary>
+
         public void NonsenseRatingsDoNotProduceANonsenseRamp()
         {
             Assert.Equal(0f, Incandescence.GlowStartKelvin(60f));
@@ -123,7 +123,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheColourTableIsThePlanckianLocus operation.</summary>
+
         public void TheColourTableIsThePlanckianLocus()
         {
             for (int i = 0; i < Incandescence.ColourSamples; i++)
@@ -142,7 +142,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>HotterIsYellower operation.</summary>
+
         public void HotterIsYellower()
         {
             Vector3 dull = Incandescence.Colour(900f);
@@ -162,7 +162,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AQuarterOfBlockTypesWouldNeverGlowIfTheBrightnessWerePhysical operation.</summary>
+
         public void AQuarterOfBlockTypesWouldNeverGlowIfTheBrightnessWerePhysical()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -195,10 +195,10 @@ namespace Thermodynamics.Tests
                 + "the band's per-block form unnecessary");
         }
 
-/// <summary>AssertColour operation.</summary>
+
         private static void AssertColour(float kelvin, Vector3 actual, float tolerance)
         {
-/// <summary>IntegratedColour operation.</summary>
+
             Vector3 expected = IntegratedColour(kelvin);
 
             Assert.True(Math.Abs(expected.X - actual.X) <= tolerance
@@ -207,7 +207,7 @@ namespace Thermodynamics.Tests
                 kelvin.ToString("n0") + " K: table " + actual + " against the integral " + expected);
         }
 
-/// <summary>IntegratedColour operation.</summary>
+
         private static Vector3 IntegratedColour(double kelvin)
         {
             const int steps = 800;
@@ -219,14 +219,14 @@ namespace Thermodynamics.Tests
             {
                 double nm = low + ((high - low) * i / steps);
                 double weight = (i == 0 || i == steps) ? 0.5d : 1d;
-/// <summary>Spectral operation.</summary>
+
                 double power = Spectral(nm * 1e-9d, kelvin) * weight;
 
-/// <summary>ObserverX operation.</summary>
+
                 x += power * ObserverX(nm);
-/// <summary>ObserverY operation.</summary>
+
                 y += power * ObserverY(nm);
-/// <summary>ObserverZ operation.</summary>
+
                 z += power * ObserverZ(nm);
             }
 
@@ -246,7 +246,7 @@ namespace Thermodynamics.Tests
                 (float)Transfer(Math.Max(0d, b / peak)));
         }
 
-/// <summary>Transfer operation.</summary>
+
         private static double Transfer(double linear)
         {
             return linear <= 0.0031308d
@@ -255,7 +255,7 @@ namespace Thermodynamics.Tests
         }
 
 
-/// <summary>Lobe operation.</summary>
+
         private static double Lobe(double nm, double centre, double lower, double upper)
         {
             double spread = nm < centre ? lower : upper;
@@ -263,7 +263,7 @@ namespace Thermodynamics.Tests
             return Math.Exp(-0.5d * t * t);
         }
 
-/// <summary>ObserverX operation.</summary>
+
         private static double ObserverX(double nm)
         {
             return (1.056d * Lobe(nm, 599.8d, 37.9d, 31.0d))
@@ -271,14 +271,14 @@ namespace Thermodynamics.Tests
                 - (0.065d * Lobe(nm, 501.1d, 20.4d, 26.2d));
         }
 
-/// <summary>ObserverY operation.</summary>
+
         private static double ObserverY(double nm)
         {
             return (0.821d * Lobe(nm, 568.8d, 46.9d, 40.5d))
                 + (0.286d * Lobe(nm, 530.9d, 16.3d, 31.1d));
         }
 
-/// <summary>ObserverZ operation.</summary>
+
         private static double ObserverZ(double nm)
         {
             return (1.217d * Lobe(nm, 437.0d, 11.8d, 36.0d))

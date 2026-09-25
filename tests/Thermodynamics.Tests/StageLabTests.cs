@@ -15,14 +15,14 @@ namespace Thermodynamics.Tests
     public class StageLabTests
     {
         [Fact]
-/// <summary>EveryStageReportsWorkAndATimeOnAHullThatExercisedIt operation.</summary>
+
         public void EveryStageReportsWorkAndATimeOnAHullThatExercisedIt()
         {
             int repeats = StageLab.Repeats;
             StageLab.Repeats = 3;
             try
             {
-/// <summary>List operation.</summary>
+
                 List<string> all = new List<string>(StageLab.Stages);
                 all.AddRange(StageLab.ExtraStages);
 
@@ -37,9 +37,9 @@ namespace Thermodynamics.Tests
                     Assert.True(row.Blocks > 1000, row.Stage + " ran on " + row.Blocks + " blocks");
                 }
 
-/// <summary>Find operation.</summary>
+
                 StageLab.Row dirty = Find(rows, "syncdirty");
-/// <summary>Find operation.</summary>
+
                 StageLab.Row clean = Find(rows, "syncclean");
                 Assert.Equal(dirty.Work, clean.Work);
                 Assert.True(dirty.BestMs > clean.BestMs,
@@ -54,7 +54,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARowSurvivesBeingWrittenAndReadBack operation.</summary>
+
         public void ARowSurvivesBeingWrittenAndReadBack()
         {
             int repeats = StageLab.Repeats;
@@ -100,7 +100,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnArtefactMissingAColumnIsRefusedRatherThanMisread operation.</summary>
+
         public void AnArtefactMissingAColumnIsRefusedRatherThanMisread()
         {
             string path = Path.Combine(Path.GetTempPath(),
@@ -126,7 +126,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Find operation.</summary>
+
         private static StageLab.Row Find(IList<StageLab.Row> rows, string stage)
         {
             for (int i = 0; i < rows.Count; i++)
@@ -138,7 +138,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryRowCarriesItsMedianAndItsShape operation.</summary>
+
         public void EveryRowCarriesItsMedianAndItsShape()
         {
             int repeats = StageLab.Repeats;
@@ -180,7 +180,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStepPhaseRowCarriesItsRepeatsAndItsMedian operation.</summary>
+
         public void AStepPhaseRowCarriesItsRepeatsAndItsMedian()
         {
             int repeats = StageLab.Repeats;
@@ -207,7 +207,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Contrived operation.</summary>
+
         private static StageLab.Row Contrived(string stage, string stop)
         {
             StageLab.Row row = new StageLab.Row();
@@ -221,7 +221,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheTableAndTheCsvSayWhyEachStageStopped operation.</summary>
+
         public void TheTableAndTheCsvSayWhyEachStageStopped()
         {
             int repeats = StageLab.Repeats;
@@ -259,9 +259,9 @@ namespace Thermodynamics.Tests
                     Assert.Contains(row.Stage + ",", csv);
                 }
 
-/// <summary>Contrived operation.</summary>
+
                 StageLab.Row capped = Contrived("contrived-capped", StageLab.Row.Capped);
-/// <summary>Contrived operation.</summary>
+
                 StageLab.Row confirmed = Contrived("contrived-confirmed", StageLab.Row.Confirmed);
 
                 List<StageLab.Row> mixed = new List<StageLab.Row> { confirmed, capped };
@@ -281,7 +281,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryStageStopsForAReasonItCanName operation.</summary>
+
         public void EveryStageStopsForAReasonItCanName()
         {
             int repeats = StageLab.Repeats;
@@ -326,7 +326,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryStageReportsWhatItAllocatedAndTheSteppingPathAllocatesNothing operation.</summary>
+
         public void EveryStageReportsWhatItAllocatedAndTheSteppingPathAllocatesNothing()
         {
             int repeats = StageLab.Repeats;
@@ -353,7 +353,7 @@ namespace Thermodynamics.Tests
                     "a warm room pass allocated " + rooms.AllocatedBytes + " bytes; the row samples the first recycled"
                     + " pass, so this figure is `D20` coming undone or the sample landing on a slot-building repeat");
                 Assert.True(solver.AllocatedBytes < 4 * 1024,
-/// <summary>path operation.</summary>
+
                     "a settled step allocated " + solver.AllocatedBytes + " bytes; nothing allocates on the stepping path (`C4`)");
             }
             finally
@@ -363,7 +363,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStagesWorkIsTheSameFigureEveryTimeItIsAsked operation.</summary>
+
         public void AStagesWorkIsTheSameFigureEveryTimeItIsAsked()
         {
             int repeats = StageLab.Repeats;

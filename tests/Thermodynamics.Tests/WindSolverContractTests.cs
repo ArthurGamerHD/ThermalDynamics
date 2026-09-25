@@ -9,13 +9,13 @@ namespace Thermodynamics.Tests
 {
     public class WindSolverContractTests
     {
-/// <summary>Reasonable operation.</summary>
+
         private static WindSolver.Inputs Reasonable()
         {
             WindSolver.Inputs inputs = new WindSolver.Inputs();
             inputs.Ceiling = 74f;
             inputs.Up = Vector3.Normalize(new Vector3(1f, 0.4f, 0.2f));
-/// <summary>Vector3 operation.</summary>
+
             inputs.Axis = new Vector3(0f, 1f, 0f);
             inputs.WeatherIntensity = 0.3f;
             inputs.WeatherWind = 1f;
@@ -29,16 +29,16 @@ namespace Thermodynamics.Tests
             inputs.TerrainInfluence = 1f;
             inputs.TerrainRadius = 300f;
             inputs.SlopeStrength = 1f;
-/// <summary>Hillside operation.</summary>
+
             inputs.Terrain = Hillside(120f);
             return inputs;
         }
 
         [Fact]
-/// <summary>ANoughtCeilingIsAStillDirectionlessWindWithEveryModulationNeutral operation.</summary>
+
         public void ANoughtCeilingIsAStillDirectionlessWindWithEveryModulationNeutral()
         {
-/// <summary>Reasonable operation.</summary>
+
             WindSolver.Inputs inputs = Reasonable();
             inputs.Ceiling = 0f;
 
@@ -56,12 +56,12 @@ namespace Thermodynamics.Tests
             Assert.Equal(1f, result.SpeedUp);
             Assert.Equal(1f, result.Shelter);
 
-/// <summary>Reasonable operation.</summary>
+
             WindSolver.Inputs blowing = Reasonable();
             Assert.True(WindSolver.Solve(ref blowing).Speed > 0f);
         }
 
-/// <summary>Hillside operation.</summary>
+
         private static float[] Hillside(float rise)
         {
             float[] heights = new float[WindTerrain.SampleCount];
@@ -77,10 +77,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheDirectionIsAlwaysAUnitVectorOrExactlyZero operation.</summary>
+
         public void TheDirectionIsAlwaysAUnitVectorOrExactlyZero()
         {
-/// <summary>Reasonable operation.</summary>
+
             WindSolver.Inputs inputs = Reasonable();
 
             for (float heating = 0f; heating <= 1f; heating += 0.1f)
@@ -100,10 +100,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheReportedFactorsMultiplyBackIntoTheReportedSpeed operation.</summary>
+
         public void TheReportedFactorsMultiplyBackIntoTheReportedSpeed()
         {
-/// <summary>Reasonable operation.</summary>
+
             WindSolver.Inputs inputs = Reasonable();
             inputs.SlopeStrength = 0f;
 
@@ -119,10 +119,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WhereSlopeWindBlowsTheDecompositionIsTheOnlyThingThatChanges operation.</summary>
+
         public void WhereSlopeWindBlowsTheDecompositionIsTheOnlyThingThatChanges()
         {
-/// <summary>Reasonable operation.</summary>
+
             WindSolver.Inputs inputs = Reasonable();
             inputs.Heating = 0f;
             inputs.HeightAboveGround = 2f;
@@ -137,10 +137,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSameInputsAlwaysGiveTheSameAnswer operation.</summary>
+
         public void TheSameInputsAlwaysGiveTheSameAnswer()
         {
-/// <summary>Reasonable operation.</summary>
+
             WindSolver.Inputs inputs = Reasonable();
 
             WindSolver.Result first = WindSolver.Solve(ref inputs);
@@ -157,10 +157,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SolvingAllocatesNothing operation.</summary>
+
         public void SolvingAllocatesNothing()
         {
-/// <summary>Reasonable operation.</summary>
+
             WindSolver.Inputs inputs = Reasonable();
 
             for (int i = 0; i < 1000; i++) WindSolver.Solve(ref inputs);
@@ -175,10 +175,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>ANullTerrainRingIsTreatedAsNoTerrainRatherThanCrashing operation.</summary>
+
         public void ANullTerrainRingIsTreatedAsNoTerrainRatherThanCrashing()
         {
-/// <summary>Reasonable operation.</summary>
+
             WindSolver.Inputs inputs = Reasonable();
             inputs.Terrain = null;
 
@@ -191,10 +191,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AShortTerrainRingIsRefusedRatherThanReadPastItsEnd operation.</summary>
+
         public void AShortTerrainRingIsRefusedRatherThanReadPastItsEnd()
         {
-/// <summary>Reasonable operation.</summary>
+
             WindSolver.Inputs inputs = Reasonable();
             inputs.Terrain = new float[WindTerrain.SampleCount - 1];
 
@@ -205,10 +205,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoCeilingMeansNoWindAndEveryFactorLeftAtRest operation.</summary>
+
         public void NoCeilingMeansNoWindAndEveryFactorLeftAtRest()
         {
-/// <summary>Reasonable operation.</summary>
+
             WindSolver.Inputs inputs = Reasonable();
             inputs.Ceiling = 0f;
 
@@ -222,10 +222,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ANegativeCeilingIsTreatedAsNone operation.</summary>
+
         public void ANegativeCeilingIsTreatedAsNone()
         {
-/// <summary>Reasonable operation.</summary>
+
             WindSolver.Inputs inputs = Reasonable();
             inputs.Ceiling = -50f;
 
@@ -233,29 +233,29 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AZeroLengthUpOrAxisProducesNoWindRatherThanANaN operation.</summary>
+
         public void AZeroLengthUpOrAxisProducesNoWindRatherThanANaN()
         {
-/// <summary>Reasonable operation.</summary>
+
             WindSolver.Inputs inputs = Reasonable();
             inputs.Up = Vector3.Zero;
             Assert.False(float.IsNaN(WindSolver.Solve(ref inputs).Speed));
 
-/// <summary>Reasonable operation.</summary>
+
             inputs = Reasonable();
             inputs.Axis = Vector3.Zero;
             Assert.False(float.IsNaN(WindSolver.Solve(ref inputs).Speed));
         }
 
         [Fact]
-/// <summary>UpParallelToTheAxisIsAPoleAndHasNoWindDirection operation.</summary>
+
         public void UpParallelToTheAxisIsAPoleAndHasNoWindDirection()
         {
-/// <summary>Reasonable operation.</summary>
+
             WindSolver.Inputs inputs = Reasonable();
-/// <summary>Vector3 operation.</summary>
+
             inputs.Up = new Vector3(0f, 1f, 0f);
-/// <summary>Vector3 operation.</summary>
+
             inputs.Axis = new Vector3(0f, 1f, 0f);
 
             WindSolver.Result r = WindSolver.Solve(ref inputs);
@@ -265,7 +265,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NonsenseNumbersDoNotEscapeAsNonsenseWind operation.</summary>
+
         public void NonsenseNumbersDoNotEscapeAsNonsenseWind()
         {
             float[] ceilings = { 0f, 0.001f, 74f, 1e6f };
@@ -286,7 +286,7 @@ namespace Thermodynamics.Tests
                                 foreach (float radius in radii)
                                     foreach (float influence in influences)
                                     {
-/// <summary>Reasonable operation.</summary>
+
                                         WindSolver.Inputs inputs = Reasonable();
                                         inputs.Ceiling = ceiling;
                                         inputs.HeightAboveGround = height;
@@ -314,13 +314,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SlopeWindNeverCarriesTheWindPastThePlanetsOwnFigure operation.</summary>
+
         public void SlopeWindNeverCarriesTheWindPastThePlanetsOwnFigure()
         {
-/// <summary>Reasonable operation.</summary>
+
             WindSolver.Inputs inputs = Reasonable();
             inputs.WeatherIntensity = 0f;
-/// <summary>Hillside operation.</summary>
+
             inputs.Terrain = Hillside(400f);
 
             for (float ceiling = 0.5f; ceiling < 80f; ceiling *= 1.7f)
@@ -342,7 +342,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheAnimationExportIsSelfConsistentAndFreeOfNonsense operation.</summary>
+
         public void TheAnimationExportIsSelfConsistentAndFreeOfNonsense()
         {
             string json = WindAnimation.Json();
@@ -357,7 +357,7 @@ namespace Thermodynamics.Tests
                 * WindAnimation.Latitudes.Length
                 * WindAnimation.Longitudes;
 
-/// <summary>ArrayLengths operation.</summary>
+
             List<int> lengths = ArrayLengths(json, "\"speed\":");
             Assert.Equal(WindLab.Planet.VanillaNames.Length, lengths.Count);
 
@@ -366,7 +366,7 @@ namespace Thermodynamics.Tests
                 Assert.Equal(expected, lengths[i]);
             }
 
-/// <summary>ArrayLengths operation.</summary>
+
             List<int> bearings = ArrayLengths(json, "\"bearing\":");
             for (int i = 0; i < bearings.Count; i++) Assert.Equal(expected, bearings[i]);
 
@@ -374,18 +374,18 @@ namespace Thermodynamics.Tests
                 * WindAnimation.Latitudes.Length
                 * WindAnimation.Longitudes;
 
-/// <summary>ArrayLengths operation.</summary>
+
             List<int> heating = ArrayLengths(json, "\"heating\":");
             for (int i = 0; i < heating.Count; i++) Assert.Equal(heatingExpected, heating[i]);
         }
 
         [Fact]
-/// <summary>TheAnimationExportCoversAWholeDayAndBothPolesOfHeating operation.</summary>
+
         public void TheAnimationExportCoversAWholeDayAndBothPolesOfHeating()
         {
             string json = WindAnimation.Json();
 
-/// <summary>Offsets operation.</summary>
+
             List<int> starts = Offsets(json, "\"heating\":");
             Assert.NotEmpty(starts);
 
@@ -400,10 +400,10 @@ namespace Thermodynamics.Tests
             Assert.True(high > 0.8f, "the exported day has no afternoon in it: " + high);
         }
 
-/// <summary>Offsets operation.</summary>
+
         private static List<int> Offsets(string json, string key)
         {
-/// <summary>List operation.</summary>
+
             List<int> found = new List<int>();
             int at = 0;
             while (true)
@@ -416,10 +416,10 @@ namespace Thermodynamics.Tests
             return found;
         }
 
-/// <summary>ArrayLengths operation.</summary>
+
         private static List<int> ArrayLengths(string json, string key)
         {
-/// <summary>List operation.</summary>
+
             List<int> lengths = new List<int>();
             foreach (int start in Offsets(json, key))
             {
@@ -432,7 +432,7 @@ namespace Thermodynamics.Tests
             return lengths;
         }
 
-/// <summary>Values operation.</summary>
+
         private static IEnumerable<float> Values(string json, int start)
         {
             int open = json.IndexOf('[', start);

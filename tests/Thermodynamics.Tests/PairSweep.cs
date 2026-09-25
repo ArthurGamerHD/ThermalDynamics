@@ -18,7 +18,7 @@ namespace Thermodynamics.Tests
             + "made_w,vented_w,substeps_demanded,hottest_block";
 
         [Fact]
-/// <summary>EveryPairOfConductionAndClockGetsAMeasuredCell operation.</summary>
+
         public void EveryPairOfConductionAndClockGetsAMeasuredCell()
         {
             List<Blueprints.Ship> ships;
@@ -29,7 +29,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryCandidateCellIsPricedInAir operation.</summary>
+
         public void EveryCandidateCellIsPricedInAir()
         {
             List<Blueprints.Ship> ships;
@@ -40,7 +40,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryLoadAndClockPairGetsAMeasuredCell operation.</summary>
+
         public void EveryLoadAndClockPairGetsAMeasuredCell()
         {
             List<Blueprints.Ship> ships;
@@ -50,7 +50,7 @@ namespace Thermodynamics.Tests
             Sweep(LoadDial, PairLab.Load(), PairLab.LoadScenarios, ships, scenarios);
         }
 
-/// <summary>Prologue operation.</summary>
+
         private static bool Prologue(
             out List<Blueprints.Ship> ships, out Dictionary<string, Battery.Scenario> scenarios)
         {
@@ -71,7 +71,7 @@ namespace Thermodynamics.Tests
             return true;
         }
 
-/// <summary>Sweep operation.</summary>
+
         private static void Sweep(Pass pass, List<PairLab.Cell> cells, string[] scenarioNames,
             List<Blueprints.Ship> ships, Dictionary<string, Battery.Scenario> scenarios)
         {
@@ -96,11 +96,11 @@ namespace Thermodynamics.Tests
                 "the grid produced no rows and had nothing recorded as already finished");
         }
 
-/// <summary>Run operation.</summary>
+
         private static void Run(Pass pass, PairLab.Cell cell, string[] scenarioNames,
             List<Blueprints.Ship> ships, Dictionary<string, Battery.Scenario> scenarios)
         {
-/// <summary>object operation.</summary>
+
             object gate = new object();
             int written = 0;
             int skipped = 0;
@@ -131,7 +131,7 @@ namespace Thermodynamics.Tests
                                 continue;
                             }
 
-/// <summary>List operation.</summary>
+
                             List<string> mine = new List<string>();
 
                             Blueprints.Ship ship = source.Reload();
@@ -178,11 +178,11 @@ namespace Thermodynamics.Tests
                 + ") wrote " + written + " rows, resumed past " + skipped + " ships");
         }
 
-/// <summary>Row operation.</summary>
+
         private static string Row(PairLab.Cell cell, Battery.Scenario scenario,
             Blueprints.Ship ship, ScenarioOutcome o)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder row = new StringBuilder();
             row.Append(CorpusRecord.Text(cell.Name)).Append(',');
             row.Append(CorpusRecord.Num(cell.Conductivity)).Append(',');
@@ -228,7 +228,7 @@ namespace Thermodynamics.Tests
         private static readonly Pass LoadDial =
             new Pass { Dataset = "load", Record = new ShipSet.Resume("load") };
 
-/// <summary>Progress operation.</summary>
+
         private static void Progress(string line)
         {
             ShipSet.Progress("pairs", line);

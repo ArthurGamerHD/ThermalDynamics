@@ -9,11 +9,11 @@ namespace Thermodynamics.Tests
     [Collection("alone")]
     public class SelfShadowScenarioTests
     {
-/// <summary>Vector3 operation.</summary>
+
         private static readonly Vector3 Sun = new Vector3(0.9004f, 0.1619f, -0.4038f);
 
         [Fact]
-/// <summary>EveryDirectionMatchesGeometryWorkedOutIndependently operation.</summary>
+
         public void EveryDirectionMatchesGeometryWorkedOutIndependently()
         {
             ScenarioResult result = Scenarios.Run("self-shadow");
@@ -48,7 +48,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFaceTurnedToTheSunIsLitWholeAndTheRecessIsDark operation.</summary>
+
         public void TheFaceTurnedToTheSunIsLitWholeAndTheRecessIsDark()
         {
             ScenarioResult result = Scenarios.Run("self-shadow");
@@ -77,7 +77,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheHeadlineSharesAreTheOnesTheGeometryImplies operation.</summary>
+
         public void TheHeadlineSharesAreTheOnesTheGeometryImplies()
         {
             string summary = Scenarios.Run("self-shadow").Summary;
@@ -89,7 +89,7 @@ namespace Thermodynamics.Tests
             Assert.True(Share(summary, "flank ") >= 70f, summary);
         }
 
-/// <summary>Share operation.</summary>
+
         private static float Share(string summary, string after)
         {
             int start = summary.IndexOf(after) + after.Length;
@@ -99,14 +99,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SelfShadowingTakesSolarGainAwayAndNeverAddsIt operation.</summary>
+
         public void SelfShadowingTakesSolarGainAwayAndNeverAddsIt()
         {
             ScenarioResult result = Scenarios.Run("self-shadow");
 
-/// <summary>Extract operation.</summary>
+
             float shadowed = Extract(result.Summary, "self-shadowing ");
-/// <summary>Extract operation.</summary>
+
             float cheap = Extract(result.Summary, "against ");
 
             Assert.True(shadowed < cheap,
@@ -114,21 +114,21 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SelfShadowingCostsNothingPerStepBetweenPasses operation.</summary>
+
         public void SelfShadowingCostsNothingPerStepBetweenPasses()
         {
             string summary = Scenarios.Run("shadow-cost").Summary;
 
-/// <summary>Milliseconds operation.</summary>
+
             float off = Milliseconds(summary, "self-shadowing off ");
-/// <summary>Milliseconds operation.</summary>
+
             float on = Milliseconds(summary, ", on ");
 
             Assert.True(on < (off * 1.5f) + 0.005f,
                 "per-step cost should be near identical between passes: " + summary);
         }
 
-/// <summary>Milliseconds operation.</summary>
+
         private static float Milliseconds(string summary, string after)
         {
             int start = summary.IndexOf(after) + after.Length;
@@ -137,7 +137,7 @@ namespace Thermodynamics.Tests
                 System.Globalization.CultureInfo.InvariantCulture);
         }
 
-/// <summary>Extract operation.</summary>
+
         private static float Extract(string summary, string after)
         {
             int start = summary.IndexOf(after) + after.Length;

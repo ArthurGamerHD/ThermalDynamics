@@ -23,7 +23,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(string shape, int blocks, int repeats = 15)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -36,24 +36,24 @@ namespace Thermodynamics.Harness
             int[] linkB;
             LinkIndices(simulation, out linkA, out linkB);
 
-/// <summary>Filled operation.</summary>
+
             float[] temperature = Filled(nodes, 293.15f);
-/// <summary>Filled operation.</summary>
+
             float[] watts = Filled(nodes, 1f);
-/// <summary>Filled operation.</summary>
+
             float[] mass = Filled(nodes, 2f);
-/// <summary>Filled operation.</summary>
+
             float[] critical = Filled(nodes, 1400f);
-/// <summary>Filled operation.</summary>
+
             float[] source = Filled(nodes, 3f);
-/// <summary>Filled operation.</summary>
+
             float[] radiation = Filled(nodes, 0.5f);
-/// <summary>Filled operation.</summary>
+
             float[] convection = Filled(nodes, 0.25f);
-/// <summary>Filled operation.</summary>
+
             float[] conductance = Filled(linkA.Length, 0.1f);
 
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
             rows.Add(Measure("environment", nodes, 24, repeats, delegate
             {
@@ -87,19 +87,19 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>BytesOf operation.</summary>
+
         private static double BytesOf(string pass)
         {
             switch (pass)
             {
-                case "environment": return 4 * 5;          // four in, one out
-/// <summary>return operation.</summary>
-                case "conduction": return (4 * 3) + (4 * 4); // two indices and a conductance in, two gathers and two scatters
-                default: return 4 * 5;                     // temperature in and out, watts, mass, critical
+                case "environment": return 4 * 5;
+
+                case "conduction": return (4 * 3) + (4 * 4);
+                default: return 4 * 5;
             }
         }
 
-/// <summary>Measure operation.</summary>
+
         private static Row Measure(string pass, long elements, int substeps, int repeats, Action body)
         {
             body();
@@ -115,17 +115,17 @@ namespace Thermodynamics.Harness
                 if (ns < best) best = ns;
             }
 
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Pass = pass;
             row.Elements = elements;
             row.FloorNs = best;
-/// <summary>BytesOf operation.</summary>
+
             row.BytesPerElement = BytesOf(pass);
             return row;
         }
 
-/// <summary>Filled operation.</summary>
+
         private static float[] Filled(int count, float value)
         {
             float[] row = new float[count];
@@ -133,14 +133,14 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>LinkIndices operation.</summary>
+
         private static void LinkIndices(ThermalSimulation simulation, out int[] a, out int[] b)
         {
-/// <summary>List operation.</summary>
+
             List<int> ends = new List<int>();
-/// <summary>List operation.</summary>
+
             List<int> others = new List<int>();
-/// <summary>List operation.</summary>
+
             List<BlockInstance> scratch = new List<BlockInstance>();
 
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -163,10 +163,10 @@ namespace Thermodynamics.Harness
             b = others.ToArray();
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(IList<Row> rows, IList<StageLab.Row> measured)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("  pass          elements     floor ns/el    step ns/el   over floor      floor GB/s");
 

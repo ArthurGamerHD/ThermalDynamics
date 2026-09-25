@@ -7,10 +7,10 @@ namespace Thermodynamics.Tests
 {
     public class DragForceTests
     {
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings(float frictionScale = 0.001f, float dragCoefficient = 1f)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.FrictionScale = frictionScale;
             settings.DragCoefficient = dragCoefficient;
@@ -19,24 +19,24 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheForceIsThePowerOverTheSpeed operation.</summary>
+
         public void TheForceIsThePowerOverTheSpeed()
         {
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
 
             Assert.Equal(5.0e6f, DragForce.Newtons(1.0e6f, 100f, settings), 0);
         }
 
         [Fact]
-/// <summary>TheMedianHullsMissingForceIsWhatTheBacklogSays operation.</summary>
+
         public void TheMedianHullsMissingForceIsWhatTheBacklogSays()
         {
             float heatingShare = 5.05e6f / 300f;
             Assert.True(System.Math.Abs(heatingShare - 16.8e3f) < 100f,
                 "the backlog's 16.8 kN is not 5.05 MW over 300 m/s, it is " + heatingShare);
 
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
             float whole = DragForce.Newtons(5.05e6f, 300f, settings);
 
@@ -46,7 +46,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheForceScalesWithTheDragCoefficient operation.</summary>
+
         public void TheForceScalesWithTheDragCoefficient()
         {
             float one = DragForce.Newtons(1.0e6f, 100f, Settings(dragCoefficient: 1f));
@@ -56,7 +56,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TuningTheHeatDialLeavesTheForceAlone operation.</summary>
+
         public void TuningTheHeatDialLeavesTheForceAlone()
         {
             float baseline = DragForce.Newtons(1.0e6f, 100f, Settings(frictionScale: 0.001f));
@@ -66,17 +66,17 @@ namespace Thermodynamics.Tests
         }
 
         [Theory]
-        [InlineData(0f, 100f)]      // no drag work
-        [InlineData(1.0e6f, 0f)]    // at rest
-        [InlineData(-1f, 100f)]     // nonsense in, nought out
-/// <summary>NoForceWhereThereIsNothingToDivide operation.</summary>
+        [InlineData(0f, 100f)]
+        [InlineData(1.0e6f, 0f)]
+        [InlineData(-1f, 100f)]
+
         public void NoForceWhereThereIsNothingToDivide(float watts, float speed)
         {
             Assert.Equal(0f, DragForce.Newtons(watts, speed, Settings()));
         }
 
         [Fact]
-/// <summary>AWorldWithNoFrictionTermHasNoDrag operation.</summary>
+
         public void AWorldWithNoFrictionTermHasNoDrag()
         {
             Assert.Equal(0f, DragForce.Newtons(1.0e6f, 100f, Settings(frictionScale: 0f)));
@@ -84,12 +84,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheForceIsAlongTheRelativeWind operation.</summary>
+
         public void TheForceIsAlongTheRelativeWind()
         {
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
-/// <summary>Vector3 operation.</summary>
+
             Vector3 wind = new Vector3(0f, 0f, 100f);
 
             Vector3 force = DragForce.Vector(1.0e6f, wind, settings);
@@ -100,10 +100,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHeadwindAndATailwindPushOppositeWays operation.</summary>
+
         public void AHeadwindAndATailwindPushOppositeWays()
         {
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
 
             Vector3 ahead = DragForce.Vector(1.0e6f, new Vector3(0f, 0f, 100f), settings);
@@ -114,17 +114,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>StillAirIsNoForce operation.</summary>
+
         public void StillAirIsNoForce()
         {
             Assert.Equal(Vector3.Zero, DragForce.Vector(1.0e6f, Vector3.Zero, Settings()));
         }
 
         [Fact]
-/// <summary>TheForceComesOutOfTheSolversOwnWatts operation.</summary>
+
         public void TheForceComesOutOfTheSolversOwnWatts()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;

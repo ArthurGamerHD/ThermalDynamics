@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>CapVersusAllowanceTests operation.</summary>
+
         public CapVersusAllowanceTests(ITestOutputHelper output)
         {
             this.output = output;
@@ -22,7 +22,7 @@ namespace Thermodynamics.Tests
         private const double CapKelvinP99 = 0.024d;
 
         [Fact]
-/// <summary>OffItDoesNotReachTheStepPathAtAll operation.</summary>
+
         public void OffItDoesNotReachTheStepPathAtAll()
         {
             int[] sizes = { 64000 };
@@ -46,7 +46,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OnAnOverBudgetGridKeepsItsClockByFlooringToWhatItCanAfford operation.</summary>
+
         public void OnAnOverBudgetGridKeepsItsClockByFlooringToWhatItCanAfford()
         {
             int[] sizes = { 64000 };
@@ -77,7 +77,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WhereTheBudgetBindsTheCapKeepsTheClockThatTheAllowanceGivesAway operation.</summary>
+
         public void WhereTheBudgetBindsTheCapKeepsTheClockThatTheAllowanceGivesAway()
         {
             int[] sizes = { 32000, 64000 };

@@ -16,11 +16,11 @@ namespace Thermodynamics.Tests
     {
 
         [Fact]
-/// <summary>TheVanillaReferenceStillMatchesTheInstalledGame operation.</summary>
+
         public void TheVanillaReferenceStillMatchesTheInstalledGame()
         {
             string content = GameBlocks.ContentPath();
-            if (content == null) return;      // no install here; nothing to check against
+            if (content == null) return;
 
             Dictionary<string, float> componentMass = new Dictionary<string, float>();
             foreach (XElement component in XDocument.Load(Path.Combine(content, "Components.sbc"))
@@ -62,7 +62,7 @@ namespace Thermodynamics.Tests
                     string type = (string)id.Element("TypeId");
                     if (subtype == null || type == null) continue;
 
-/// <summary>Key operation.</summary>
+
                     string key = Key(type, subtype);
                     if (!blocks.ContainsKey(key)) blocks[key] = definition;
                 }
@@ -91,7 +91,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Key operation.</summary>
+
         private static string Key(string typeId, string subtypeId)
         {
             string type = typeId ?? "";
@@ -99,7 +99,7 @@ namespace Thermodynamics.Tests
             return type + "/" + (subtypeId ?? "");
         }
 
-/// <summary>Name operation.</summary>
+
         private static string Name(Vanilla.Block block)
         {
             return block.Subtype.Length > 0 ? block.Subtype : block.TypeId + " (no subtype)";
@@ -107,12 +107,12 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheVanillaComponentListsStillMatchTheInstalledGame operation.</summary>
+
         public void TheVanillaComponentListsStillMatchTheInstalledGame()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
 
             foreach (Vanilla.Block reference in Vanilla.Reference)
@@ -147,7 +147,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryShippedBlockIsPricedAndWeighsSomething operation.</summary>
+
         public void EveryShippedBlockIsPricedAndWeighsSomething()
         {
             foreach (string subtype in ShippedBlocks.Subtypes())
@@ -167,7 +167,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryShippedBlockGetsItsOwnThermalProperties operation.</summary>
+
         public void EveryShippedBlockGetsItsOwnThermalProperties()
         {
             foreach (string subtype in ShippedBlocks.Subtypes())
@@ -178,7 +178,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryCoolantBlockHasPlumbingAndNothingElseDoes operation.</summary>
+
         public void EveryCoolantBlockHasPlumbingAndNothingElseDoes()
         {
             foreach (string subtype in ShippedBlocks.Subtypes())
@@ -196,7 +196,7 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData("SurfaceAreaScaler", "ExposedSurfaceMultiplier")]
         [InlineData("CriticalTemperatureScaler", "OverheatDamagePerKelvin")]
-/// <summary>TheRetiredPropertyNamesAreStillRead operation.</summary>
+
         public void TheRetiredPropertyNamesAreStillRead(string legacy, string current)
         {
             string cubes = File.ReadAllText(Path.Combine(ShippedBlocks.DataRoot(), "Cubes.xml"));
@@ -211,7 +211,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheRadiatorBeatsTheArmourItDisplaces operation.</summary>
+
         public void TheRadiatorBeatsTheArmourItDisplaces()
         {
             List<BalanceLab.DeliveredRow> rows = BalanceLab.Delivered();
@@ -231,7 +231,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PlumbingAPanelBeatsEveryDialButAMultipliedArea operation.</summary>
+
         public void PlumbingAPanelBeatsEveryDialButAMultipliedArea()
         {
             List<BalanceLab.SensitivityRow> rows = BalanceLab.Sensitivity();
@@ -264,7 +264,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASinkFaceConductsSeveralTimesHarderThanABoltJoint operation.</summary>
+
         public void ASinkFaceConductsSeveralTimesHarderThanABoltJoint()
         {
             List<BalanceLab.SensitivityRow> rows = BalanceLab.Sensitivity();
@@ -280,7 +280,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SurfaceDialsGiveDiminishingReturns operation.</summary>
+
         public void SurfaceDialsGiveDiminishingReturns()
         {
             List<BalanceLab.SensitivityRow> rows = BalanceLab.Sensitivity()
@@ -302,7 +302,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LongerRingsDeliverColderBlocks operation.</summary>
+
         public void LongerRingsDeliverColderBlocks()
         {
             List<BalanceLab.LoopRow> rows = BalanceLab.Loops();
@@ -320,14 +320,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheHeatPumpPassesThroughAllThreeOfItsLimits operation.</summary>
+
         public void TheHeatPumpPassesThroughAllThreeOfItsLimits()
         {
             List<BalanceLab.PumpRow> rows = BalanceLab.Pump();
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> seen = new HashSet<string>();
             foreach (BalanceLab.PumpRow row in rows)
             {
@@ -344,7 +344,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OnlyTheRadiatorClaimsExtraSurface operation.</summary>
+
         public void OnlyTheRadiatorClaimsExtraSurface()
         {
             foreach (BalanceLab.BlockRow row in BalanceLab.Blocks())

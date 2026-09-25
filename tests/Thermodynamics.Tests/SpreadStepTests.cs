@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
     [Trait("speed", "slow")]
     public class SpreadStepTests
     {
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation Build()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -34,7 +34,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Seed operation.</summary>
+
         private static void Seed(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -45,7 +45,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Sky operation.</summary>
+
         private static EnvironmentSample Sky()
         {
             return Worlds.PlanetSurface(0.6f, timeOfDay: 0.4f, windSpeed: 15f);
@@ -55,12 +55,12 @@ namespace Thermodynamics.Tests
         [InlineData(1)]
         [InlineData(97)]
         [InlineData(1000)]
-/// <summary>ProfilingAStepInFlightDoesNotChangeIt operation.</summary>
+
         public void ProfilingAStepInFlightDoesNotChangeIt(int budget)
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation clean = Build();
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation observed = Build();
             Seed(clean);
             Seed(observed);
@@ -97,12 +97,12 @@ namespace Thermodynamics.Tests
         [InlineData(7)]
         [InlineData(64)]
         [InlineData(1000)]
-/// <summary>ASpreadStepIsBitIdenticalToAWholeOne operation.</summary>
+
         public void ASpreadStepIsBitIdenticalToAWholeOne(int budget)
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation whole = Build();
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation spread = Build();
             Seed(whole);
             Seed(spread);
@@ -124,12 +124,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ManySpreadStepsStayIdenticalToManyWholeOnes operation.</summary>
+
         public void ManySpreadStepsStayIdenticalToManyWholeOnes()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation whole = Build();
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation spread = Build();
             Seed(whole);
             Seed(spread);
@@ -154,12 +154,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThePublishedDeltaDescribesTheWholeStep operation.</summary>
+
         public void ThePublishedDeltaDescribesTheWholeStep()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation whole = Build();
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation spread = Build();
             Seed(whole);
             Seed(spread);
@@ -179,12 +179,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EventsRaisedDuringASpreadStepAllSurvive operation.</summary>
+
         public void EventsRaisedDuringASpreadStepAllSurvive()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation whole = Build();
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation spread = Build();
 
             foreach (ThermalSimulation simulation in new[] { whole, spread })
@@ -204,15 +204,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnAbandonedStepLeavesTheGridWhereTheLastSubstepLeftIt operation.</summary>
+
         public void AnAbandonedStepLeavesTheGridWhereTheLastSubstepLeftIt()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build();
             Seed(simulation);
 
             EnvironmentState state = EnvironmentSolver.Solve(
-/// <summary>Sky operation.</summary>
+
                 simulation.Settings, simulation.Planet, Sky());
 
             simulation.Solver.BeginStep(simulation.Settings.StepSeconds, state);
@@ -230,17 +230,17 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>EveryFrameDoesItsShareAndNoFrameDoesTheLot operation.</summary>
+
         public void EveryFrameDoesItsShareAndNoFrameDoesTheLot()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build();
             Seed(simulation);
 
             const float frame = 1f / 60f;
             const int frames = 120;
 
-/// <summary>List operation.</summary>
+
             List<long> perFrame = new List<long>();
             for (int i = 0; i < frames; i++)
             {
@@ -272,10 +272,10 @@ namespace Thermodynamics.Tests
         [InlineData(4, 1f)]
         [InlineData(10, 1f)]
         [InlineData(4, 2f)]
-/// <summary>TheConfiguredRateSurvivesBeingSpread operation.</summary>
+
         public void TheConfiguredRateSurvivesBeingSpread(int frequency, float speed)
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build();
 
             simulation.Settings.Frequency = frequency;
@@ -298,12 +298,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGridTooSmallToOweAWholeElementPerFrameStillAdvances operation.</summary>
+
         public void AGridTooSmallToOweAWholeElementPerFrameStillAdvances()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
             simulation.AddBlock(new BlockInstance(Catalog.LightArmor(), Vector3I.Zero,
                 BlockOrientation.Identity), 900f);
@@ -318,15 +318,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWorkEstimateMatchesWhatTheStepActuallyCosts operation.</summary>
+
         public void TheWorkEstimateMatchesWhatTheStepActuallyCosts()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build();
             Seed(simulation);
 
             EnvironmentState state = EnvironmentSolver.Solve(
-/// <summary>Sky operation.</summary>
+
                 simulation.Settings, simulation.Planet, Sky());
 
             simulation.Solver.BeginStep(simulation.Settings.StepSeconds, state);

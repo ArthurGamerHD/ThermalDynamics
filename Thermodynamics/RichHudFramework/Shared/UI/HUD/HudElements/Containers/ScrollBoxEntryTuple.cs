@@ -6,7 +6,7 @@
 	{
 		public virtual TData AssocMember { get; set; }
 
-/// <summary>ScrollBoxEntryTuple operation.</summary>
+
 		public ScrollBoxEntryTuple()
 		{ }
 	}

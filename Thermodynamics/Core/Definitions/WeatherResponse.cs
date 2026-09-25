@@ -14,7 +14,7 @@ namespace Thermodynamics.Core
 
             public float ConvectionMultiplier;
 
-/// <summary>Weather operation.</summary>
+
             public Weather(float temperature, float solar, float wind, float convection)
             {
                 TemperatureOffset = temperature;
@@ -24,7 +24,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Weather operation.</summary>
+
         public static readonly Weather Calm = new Weather(0f, 1f, 1f, 1f);
 
         private static readonly KeyValuePair<string, Weather>[] Weathers =
@@ -50,7 +50,7 @@ namespace Thermodynamics.Core
         public const float LightFraction = 0.5f;
 
 
-/// <summary>For operation.</summary>
+
         public static Weather For(string weather)
         {
             if (string.IsNullOrEmpty(weather)) return Calm;
@@ -68,7 +68,7 @@ namespace Thermodynamics.Core
             return Calm;
         }
 
-/// <summary>Soften operation.</summary>
+
         public static Weather Soften(Weather weather, float fraction)
         {
             if (fraction <= 0f) return Calm;
@@ -81,7 +81,7 @@ namespace Thermodynamics.Core
                 1f + ((weather.ConvectionMultiplier - 1f) * fraction));
         }
 
-/// <summary>SwingMultiplier operation.</summary>
+
         public static float SwingMultiplier(Weather weather)
         {
             float swing = 0.5f + (0.5f * weather.SolarMultiplier);

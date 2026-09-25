@@ -10,10 +10,10 @@ namespace Thermodynamics.Harness
 
         public const int Unbounded = 4096;
 
-/// <summary>Uncapped operation.</summary>
+
         public static ThermalSettings Uncapped(int maxSubsteps = Unbounded)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubsteps = maxSubsteps;
             settings.MaxElementVisitsPerStep = 0;
@@ -23,7 +23,7 @@ namespace Thermodynamics.Harness
 
         public const float PastCriticalMultiple = 2f;
 
-/// <summary>DrivenPastCritical operation.</summary>
+
         public static ThermalSimulation DrivenPastCritical(ThermalSettings settings,
             int blocks = DefaultBlocks, int buildOrderSeed = 0)
         {
@@ -31,15 +31,15 @@ namespace Thermodynamics.Harness
                 Census.ProducerWatts * PastCriticalMultiple);
         }
 
-/// <summary>Driven operation.</summary>
+
         public static ThermalSimulation Driven(ThermalSettings settings, int blocks = DefaultBlocks,
             int buildOrderSeed = 0)
         {
-/// <summary>Driven operation.</summary>
+
             return Driven(settings, blocks, buildOrderSeed, Census.ProducerWatts);
         }
 
-/// <summary>Driven operation.</summary>
+
         public static ThermalSimulation Driven(ThermalSettings settings, int blocks,
             int buildOrderSeed, float producerWatts)
         {
@@ -68,7 +68,7 @@ namespace Thermodynamics.Harness
             return simulation;
         }
 
-/// <summary>RequireSpread operation.</summary>
+
         private static void RequireSpread(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -90,7 +90,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Driven operation.</summary>
+
         public static ThermalSimulation Driven()
         {
             return Driven(Uncapped());

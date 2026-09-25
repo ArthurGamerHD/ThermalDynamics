@@ -84,16 +84,16 @@ namespace Thermodynamics.Harness
                 }
             }
 
-/// <summary>Sets the tings.</summary>
+
             public ThermalSettings Settings()
             {
-/// <summary>ThermalSettings operation.</summary>
+
                 ThermalSettings settings = new ThermalSettings();
                 settings.HeatTimeScale = Clock;
                 return settings.Derive();
             }
 
-/// <summary>Material operation.</summary>
+
             public Func<string, string, BlockThermalProperties, BlockThermalProperties> Material()
             {
                 if (Conductivity == 1f && Waste == 1f) return null;
@@ -117,10 +117,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>All operation.</summary>
+
         public static List<Cell> All()
         {
-/// <summary>Cells operation.</summary>
+
             return Cells(Grid);
         }
 
@@ -144,24 +144,24 @@ namespace Thermodynamics.Harness
             new[] { 4f, 90f, 1f }, new[] { 4f, 80f, 1f },
         };
 
-/// <summary>Load operation.</summary>
+
         public static List<Cell> Load()
         {
-/// <summary>Cells operation.</summary>
+
             return Cells(LoadGrid);
         }
 
-/// <summary>Decision operation.</summary>
+
         public static List<Cell> Decision()
         {
-/// <summary>Cells operation.</summary>
+
             return Cells(AirGrid);
         }
 
-/// <summary>Cells operation.</summary>
+
         private static List<Cell> Cells(float[][] grid)
         {
-/// <summary>List operation.</summary>
+
             List<Cell> cells = new List<Cell>();
 
             for (int i = 0; i < grid.Length; i++)
@@ -176,7 +176,7 @@ namespace Thermodynamics.Harness
 
         public const float Ceiling = 7200f;
 
-/// <summary>Stretch operation.</summary>
+
         public static Battery.Scenario Stretch(Battery.Scenario scenario, Cell cell)
         {
             return new Battery.Scenario

@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
     public class SolarSymmetryTests
     {
         [Fact]
-/// <summary>ALoneCubeTakesTheSameSunFromAllSixDirections operation.</summary>
+
         public void ALoneCubeTakesTheSameSunFromAllSixDirections()
         {
             if (!GameBlocks.IsInstalled) return;

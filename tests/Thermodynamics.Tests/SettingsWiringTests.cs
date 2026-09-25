@@ -8,25 +8,25 @@ namespace Thermodynamics.Tests
 {
     public class SettingsWiringTests
     {
-/// <summary>RepoRoot operation.</summary>
+
         private static string RepoRoot()
         {
             return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
 
-/// <summary>Source operation.</summary>
+
         private static string Source()
         {
             return File.ReadAllText(Path.Combine(
                 RepoRoot(), "Thermodynamics", "Settings.cs"));
         }
 
-/// <summary>Regex operation.</summary>
+
         private static readonly Regex Declaration = new Regex(
             @"\[ProtoMember\((\d+)\)\]\s*public\s+[A-Za-z0-9_<>\[\]]+\s+([A-Za-z0-9_]+)");
 
         [Fact]
-/// <summary>NoTwoSettingsShareAProtoMemberNumber operation.</summary>
+
         public void NoTwoSettingsShareAProtoMemberNumber()
         {
             Dictionary<int, List<string>> byNumber = new Dictionary<int, List<string>>();
@@ -44,7 +44,7 @@ namespace Thermodynamics.Tests
                 "only " + byNumber.Count + " settings were found, so the pattern has changed and this"
                 + " test is no longer reading anything");
 
-/// <summary>List operation.</summary>
+
             List<string> clashes = new List<string>();
             foreach (KeyValuePair<int, List<string>> pair in byNumber)
             {
@@ -59,17 +59,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoSettingReusesANumberThatWasDeliberatelyRetired operation.</summary>
+
         public void NoSettingReusesANumberThatWasDeliberatelyRetired()
         {
-/// <summary>Source operation.</summary>
+
             string source = Source();
 
             int[] retired = { 53, 54, 55, 56, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 72, 76 };
-/// <summary>HashSet operation.</summary>
+
             HashSet<int> banned = new HashSet<int>(retired);
 
-/// <summary>List operation.</summary>
+
             List<string> reused = new List<string>();
             foreach (Match match in Declaration.Matches(source))
             {
@@ -82,7 +82,7 @@ namespace Thermodynamics.Tests
         }
 
 
-/// <summary>Names operation.</summary>
+
         private static List<string> Names(string source)
         {
             Match block = Regex.Match(source,
@@ -91,7 +91,7 @@ namespace Thermodynamics.Tests
 
             Assert.True(block.Success, "Names() no longer has the shape this test reads");
 
-/// <summary>List operation.</summary>
+
             List<string> names = new List<string>();
             foreach (Match match in Regex.Matches(block.Groups[1].Value, "\"([A-Za-z0-9_]+)\""))
             {
@@ -100,7 +100,7 @@ namespace Thermodynamics.Tests
             return names;
         }
 
-/// <summary>Cases operation.</summary>
+
         private static HashSet<string> Cases(string source, string signature, string endSignature)
         {
             int start = source.IndexOf(signature, StringComparison.Ordinal);
@@ -112,7 +112,7 @@ namespace Thermodynamics.Tests
 
             if (end < 0) end = source.Length;
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> cases = new HashSet<string>();
             foreach (Match match in Regex.Matches(source.Substring(start, end - start),
                 "case \"([A-Za-z0-9_]+)\""))
@@ -123,24 +123,24 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryNamedSettingCanBeReadAndWritten operation.</summary>
+
         public void EveryNamedSettingCanBeReadAndWritten()
         {
-/// <summary>Source operation.</summary>
+
             string source = Source();
-/// <summary>Names operation.</summary>
+
             List<string> names = Names(source);
 
             Assert.True(names.Count > 60, "only " + names.Count + " names found");
 
-/// <summary>Cases operation.</summary>
+
             HashSet<string> readable = Cases(source, "public float GetValue", "public bool SetValue");
-/// <summary>Cases operation.</summary>
+
             HashSet<string> writable = Cases(source, "public bool SetValue", null);
 
-/// <summary>List operation.</summary>
+
             List<string> unreadable = new List<string>();
-/// <summary>List operation.</summary>
+
             List<string> unwritable = new List<string>();
 
             for (int i = 0; i < names.Count; i++)
@@ -156,20 +156,20 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NothingIsReadableOrWritableWithoutBeingNamed operation.</summary>
+
         public void NothingIsReadableOrWritableWithoutBeingNamed()
         {
-/// <summary>Source operation.</summary>
+
             string source = Source();
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> names = new HashSet<string>(Names(source));
 
-/// <summary>Cases operation.</summary>
+
             HashSet<string> readable = Cases(source, "public float GetValue", "public bool SetValue");
-/// <summary>Cases operation.</summary>
+
             HashSet<string> writable = Cases(source, "public bool SetValue", null);
 
-/// <summary>List operation.</summary>
+
             List<string> orphans = new List<string>();
             foreach (string name in readable) if (!names.Contains(name)) orphans.Add("get " + name);
             foreach (string name in writable) if (!names.Contains(name)) orphans.Add("set " + name);
@@ -177,15 +177,15 @@ namespace Thermodynamics.Tests
             orphans.Sort();
 
             Assert.True(orphans.Count == 0,
-/// <summary>Names operation.</summary>
+
                 "cases that Names() does not list:\n  " + string.Join("\n  ", orphans.ToArray()));
         }
 
         [Fact]
-/// <summary>EverySettingThatIsAModeRatherThanASwitchIsExcludedFromIsFlag operation.</summary>
+
         public void EverySettingThatIsAModeRatherThanASwitchIsExcludedFromIsFlag()
         {
-/// <summary>Source operation.</summary>
+
             string source = Source();
 
             int start = source.IndexOf("public static bool IsFlag", StringComparison.Ordinal);
@@ -203,10 +203,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryBoolSettingIsAFlagAndNothingElseIs operation.</summary>
+
         public void EveryBoolSettingIsAFlagAndNothingElseIs()
         {
-/// <summary>Source operation.</summary>
+
             string source = Source();
 
             int start = source.IndexOf("public static bool IsFlag", StringComparison.Ordinal);
@@ -214,9 +214,9 @@ namespace Thermodynamics.Tests
 
             string body = source.Substring(start, Math.Min(1600, source.Length - start));
 
-/// <summary>Names operation.</summary>
+
             List<string> named = Names(source);
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
 
             foreach (Match match in Regex.Matches(source, @"public (bool|int|float) (\w+)\s*[;=]"))
@@ -249,10 +249,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EverySettingIsClampedOrDeliberatelyNot operation.</summary>
+
         public void EverySettingIsClampedOrDeliberatelyNot()
         {
-/// <summary>Source operation.</summary>
+
             string source = Source();
 
             string[] mustBeGuarded =
@@ -272,7 +272,7 @@ namespace Thermodynamics.Tests
             for (int i = open; i < source.Length; i++)
             {
                 if (source[i] == '{') depth++;
-/// <summary>if operation.</summary>
+
                 else if (source[i] == '}')
                 {
                     depth--;
@@ -290,19 +290,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheTwoClampListsAgreeOnEveryFieldTheyShare operation.</summary>
+
         public void TheTwoClampListsAgreeOnEveryFieldTheyShare()
         {
             Dictionary<string, string> world =
                 ClampLines(MethodBody(Source(), "private void Clamp()"));
-/// <summary>ClampLines operation.</summary>
+
             Dictionary<string, string> solver = ClampLines(MethodBody(
                 File.ReadAllText(Path.Combine(RepoRoot(),
                     "Thermodynamics", "Core", "Settings", "ThermalSettings.cs")),
-/// <summary>Derive operation.</summary>
+
                 "public ThermalSettings Derive()"));
 
-/// <summary>List operation.</summary>
+
             List<string> differ = new List<string>();
             int shared = 0;
             foreach (KeyValuePair<string, string> pair in world)
@@ -318,14 +318,14 @@ namespace Thermodynamics.Tests
 
             Assert.True(shared >= 10,
                 "the scan matched only " + shared + " shared clamped fields, so it is not seeing"
-/// <summary>compare operation.</summary>
+
                 + " the lists it claims to compare (E8)");
             Assert.True(differ.Count == 0,
                 differ.Count + " shared fields are clamped differently by the two copies:\n  "
                 + string.Join("\n  ", differ.ToArray()));
         }
 
-/// <summary>MethodBody operation.</summary>
+
         private static string MethodBody(string source, string anchor)
         {
             int start = source.IndexOf(anchor, StringComparison.Ordinal);
@@ -338,7 +338,7 @@ namespace Thermodynamics.Tests
             for (int i = open; i < source.Length; i++)
             {
                 if (source[i] == '{') depth++;
-/// <summary>if operation.</summary>
+
                 else if (source[i] == '}')
                 {
                     depth--;
@@ -350,11 +350,11 @@ namespace Thermodynamics.Tests
             return null;
         }
 
-/// <summary>Regex operation.</summary>
+
         private static readonly Regex ClampLine = new Regex(
             @"if \((\w+) (<=?|>=?) ([^)]+)\)\s*(\w+) = ([^;]+);");
 
-/// <summary>ClampLines operation.</summary>
+
         private static Dictionary<string, string> ClampLines(string body)
         {
             Dictionary<string, string> clamps = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -377,19 +377,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EverySolverSettingIsCopiedFromTheWorldsCopy operation.</summary>
+
         public void EverySolverSettingIsCopiedFromTheWorldsCopy()
         {
-/// <summary>Source operation.</summary>
+
             string source = Source();
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> exempt = new HashSet<string>(StringComparer.Ordinal)
             {
-                "Version",   // each side keeps its own; the world's gates a config migration
+                "Version",
             };
 
-/// <summary>List operation.</summary>
+
             List<string> missing = new List<string>();
             int checked_ = 0;
 
@@ -418,10 +418,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NothingIsCopiedIntoTheSolverThatTheSolverDoesNotHave operation.</summary>
+
         public void NothingIsCopiedIntoTheSolverThatTheSolverDoesNotHave()
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> core = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (System.Reflection.FieldInfo field in typeof(Thermodynamics.Core.ThermalSettings)
@@ -431,7 +431,7 @@ namespace Thermodynamics.Tests
                 core.Add(field.Name);
             }
 
-/// <summary>List operation.</summary>
+
             List<string> stray = new List<string>();
             foreach (Match match in Regex.Matches(Source(), @"\bcore\.([A-Za-z0-9_]+)\s*="))
             {

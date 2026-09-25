@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
     public class FaceTests
     {
         [Fact]
-/// <summary>OppositeIsAnInvolutionAndReversesTheOffset operation.</summary>
+
         public void OppositeIsAnInvolutionAndReversesTheOffset()
         {
             for (int face = 0; face < Face.Count; face++)
@@ -21,7 +21,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>IndexOfInvertsOffsets operation.</summary>
+
         public void IndexOfInvertsOffsets()
         {
             for (int face = 0; face < Face.Count; face++)
@@ -34,7 +34,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NormalsMatchOffsets operation.</summary>
+
         public void NormalsMatchOffsets()
         {
             for (int face = 0; face < Face.Count; face++)
@@ -45,7 +45,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OppositeFacesShareAnAxis operation.</summary>
+
         public void OppositeFacesShareAnAxis()
         {
             for (int face = 0; face < Face.Count; face++)
@@ -62,7 +62,7 @@ namespace Thermodynamics.Tests
     public class TemperatureScaleTests
     {
         [Fact]
-/// <summary>ConversionsRoundTrip operation.</summary>
+
         public void ConversionsRoundTrip()
         {
             Assert.Equal(0f, ThermalConstants.KelvinToCelsius(273.15f), 3);
@@ -72,7 +72,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RampIsBlackAtZeroAndBlueAtTheLowAnchor operation.</summary>
+
         public void RampIsBlackAtZeroAndBlueAtTheLowAnchor()
         {
             Vector3 cold = TemperatureScale.ToHsv(0f);
@@ -83,7 +83,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>HueSweepsDownFromBlueToRedBetweenTheAnchors operation.</summary>
+
         public void HueSweepsDownFromBlueToRedBetweenTheAnchors()
         {
             float previousHue = float.MaxValue;
@@ -98,7 +98,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AboveTheHighAnchorSaturationFallsTowardWhite operation.</summary>
+
         public void AboveTheHighAnchorSaturationFallsTowardWhite()
         {
             float atHigh = TemperatureScale.ToHsv(TemperatureScale.DefaultHigh).Y;
@@ -109,7 +109,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ValuesAreClampedRatherThanExtrapolated operation.</summary>
+
         public void ValuesAreClampedRatherThanExtrapolated()
         {
             Vector3 beyond = TemperatureScale.ToHsv(999999f);
@@ -121,7 +121,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DegenerateAnchorsDoNotProduceInfinities operation.</summary>
+
         public void DegenerateAnchorsDoNotProduceInfinities()
         {
             Vector3 colour = TemperatureScale.ToHsv(100f, 0f, 0f, 0f);
@@ -131,11 +131,11 @@ namespace Thermodynamics.Tests
         }
 
         [Theory]
-        [InlineData(1000f, 267f, 500f)]      // the default ramp: a block's temperature
-        [InlineData(1400f, 1f, 1000f)]       // solar irradiance on a face
-        [InlineData(20000f, 100f, 5000f)]    // solar and friction watts
-        [InlineData(100f, 5f, 90f)]          // room air, whose span is fitted per frame
-/// <summary>TheCoreRampReproducesTheOneTheOverlaysUsedToCarry operation.</summary>
+        [InlineData(1000f, 267f, 500f)]
+        [InlineData(1400f, 1f, 1000f)]
+        [InlineData(20000f, 100f, 5000f)]
+        [InlineData(100f, 5f, 90f)]
+
         public void TheCoreRampReproducesTheOneTheOverlaysUsedToCarry(float max, float low, float high)
         {
             for (float t = -50f; t <= max * 1.2f; t += max / 200f)
@@ -150,7 +150,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFullyExposedBlockUsedToColourToNaN operation.</summary>
+
         public void AFullyExposedBlockUsedToColourToNaN()
         {
             Vector3 legacy = LegacyFormulas.TemperatureColor(6f, 6f, 0f, 6f);
@@ -166,7 +166,7 @@ namespace Thermodynamics.Tests
     public class OcclusionMathTests
     {
         [Fact]
-/// <summary>VisualSizeShrinksWithDistance operation.</summary>
+
         public void VisualSizeShrinksWithDistance()
         {
             double near = OcclusionMath.VisualSize(1000d, 60000d);
@@ -175,40 +175,40 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SunBehindThePlanetIsOccluded operation.</summary>
+
         public void SunBehindThePlanetIsOccluded()
         {
             Vector3D planet = Vector3D.Zero;
             double radius = 60000d;
-/// <summary>Vector3D operation.</summary>
+
             Vector3D observer = new Vector3D(0d, 0d, radius + 1000d);
 
-/// <summary>Vector3 operation.</summary>
+
             Vector3 sunBehind = new Vector3(0f, 0f, -1f);
             Assert.True(OcclusionMath.IsOccludedBySphere(observer, planet, radius, sunBehind));
         }
 
         [Fact]
-/// <summary>SunOverheadIsNotOccluded operation.</summary>
+
         public void SunOverheadIsNotOccluded()
         {
             Vector3D planet = Vector3D.Zero;
             double radius = 60000d;
-/// <summary>Vector3D operation.</summary>
+
             Vector3D observer = new Vector3D(0d, 0d, radius + 1000d);
 
-/// <summary>Vector3 operation.</summary>
+
             Vector3 sunAbove = new Vector3(0f, 0f, 1f);
             Assert.False(OcclusionMath.IsOccludedBySphere(observer, planet, radius, sunAbove));
         }
 
         [Fact]
-/// <summary>FarFromThePlanetTheTerminatorIsSharp operation.</summary>
+
         public void FarFromThePlanetTheTerminatorIsSharp()
         {
             Vector3D planet = Vector3D.Zero;
             double radius = 60000d;
-/// <summary>Vector3D operation.</summary>
+
             Vector3D observer = new Vector3D(0d, 0d, 100000000d);
 
             Vector3 sideways = Vector3.Normalize(new Vector3(1f, 0f, -0.01f));

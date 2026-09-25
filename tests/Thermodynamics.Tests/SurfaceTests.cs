@@ -9,23 +9,23 @@ namespace Thermodynamics.Tests
 {
     public class SurfaceMapTests
     {
-/// <summary>MapOf operation.</summary>
+
         private static SurfaceMap MapOf(GridModel grid)
         {
-/// <summary>SurfaceMap operation.</summary>
+
             SurfaceMap map = new SurfaceMap();
             map.Rebuild(grid);
             return map;
         }
 
         [Fact]
-/// <summary>ALoneBlockHasSelfBitsAndNoNeighbourBits operation.</summary>
+
         public void ALoneBlockHasSelfBitsAndNoNeighbourBits()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(2.5f);
             grid.Add(Catalog.LightArmor(), Vector3I.Zero);
-/// <summary>MapOf operation.</summary>
+
             SurfaceMap map = MapOf(grid);
 
             int state = map.GetState(Vector3I.Zero);
@@ -39,14 +39,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NeighbourBitsMirrorTheOtherCellsSelfBits operation.</summary>
+
         public void NeighbourBitsMirrorTheOtherCellsSelfBits()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(2.5f);
             grid.Add(Catalog.LightArmor(), Vector3I.Zero);
             grid.Add(Catalog.LightArmor(), new Vector3I(1, 0, 0));
-/// <summary>MapOf operation.</summary>
+
             SurfaceMap map = MapOf(grid);
 
             int left = map.GetState(Vector3I.Zero);
@@ -62,13 +62,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryCellPairIsConsistentInBothDirections operation.</summary>
+
         public void EveryCellPairIsConsistentInBothDirections()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(3, 3, 3));
             builder.Place(Catalog.Grating(), new Vector3I(3, 1, 1));
-/// <summary>MapOf operation.</summary>
+
             SurfaceMap map = MapOf(builder.Grid);
 
             foreach (Vector3I cell in new List<Vector3I>(map.Cells))
@@ -89,15 +89,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RemovingABlockClearsTheNeighbourBitsItProduced operation.</summary>
+
         public void RemovingABlockClearsTheNeighbourBitsItProduced()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(2.5f);
             BlockInstance keep = grid.Add(Catalog.LightArmor(), Vector3I.Zero);
             BlockInstance drop = grid.Add(Catalog.LightArmor(), new Vector3I(1, 0, 0));
 
-/// <summary>SurfaceMap operation.</summary>
+
             SurfaceMap map = new SurfaceMap();
             map.AddBlock(keep);
             map.AddBlock(drop);
@@ -111,18 +111,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>IncrementalEditsMatchAFullRebuild operation.</summary>
+
         public void IncrementalEditsMatchAFullRebuild()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(3, 2, 3));
             builder.Place(Catalog.Grating(), new Vector3I(1, 2, 1));
 
-/// <summary>SurfaceMap operation.</summary>
+
             SurfaceMap incremental = new SurfaceMap();
             foreach (BlockInstance block in builder.Placed) incremental.AddBlock(block);
 
-/// <summary>MapOf operation.</summary>
+
             SurfaceMap rebuilt = MapOf(builder.Grid);
 
             foreach (Vector3I cell in new List<Vector3I>(rebuilt.Cells))
@@ -133,14 +133,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFaceIsSealedIfEitherSideSeals operation.</summary>
+
         public void AFaceIsSealedIfEitherSideSeals()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(2.5f);
-            grid.Add(Catalog.LightArmor(), Vector3I.Zero);          // seals
-            grid.Add(Catalog.Grating(), new Vector3I(1, 0, 0));     // does not
-/// <summary>MapOf operation.</summary>
+            grid.Add(Catalog.LightArmor(), Vector3I.Zero);
+            grid.Add(Catalog.Grating(), new Vector3I(1, 0, 0));
+
             SurfaceMap map = MapOf(grid);
 
             Assert.True(map.IsFaceSealed(Vector3I.Zero, Face.Right));
@@ -150,12 +150,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ALoneBlockExposesAllSixFaces operation.</summary>
+
         public void ALoneBlockExposesAllSixFaces()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
-/// <summary>MapOf operation.</summary>
+
             SurfaceMap map = MapOf(builder.Grid);
 
             int[] exposed = map.GetExposedFaces(builder.Placed[0], RoomMap.AllExternal);
@@ -166,13 +166,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BoltedFacesAreNotExposed operation.</summary>
+
         public void BoltedFacesAreNotExposed()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.LightArmor(), Vector3I.Zero);
             builder.Place(Catalog.LightArmor(), new Vector3I(1, 0, 0));
-/// <summary>MapOf operation.</summary>
+
             SurfaceMap map = MapOf(builder.Grid);
 
             int[] exposed = map.GetExposedFaces(builder.Placed[0], RoomMap.AllExternal);
@@ -182,13 +182,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>InteriorFacesOfAMultiCellBlockNeverCount operation.</summary>
+
         public void InteriorFacesOfAMultiCellBlockNeverCount()
         {
             GridBuilder builder = GridBuilder.Large();
             BlockModel slab = BlockModel.Solid("Slab", new Vector3I(1, 3, 1), 900f, Catalog.DefaultThermal());
             builder.Place(slab, Vector3I.Zero);
-/// <summary>MapOf operation.</summary>
+
             SurfaceMap map = MapOf(builder.Grid);
 
             int[] exposed = map.GetExposedFaces(builder.Placed[0], RoomMap.AllExternal);
@@ -200,7 +200,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(14, Total(exposed));
         }
 
-/// <summary>Total operation.</summary>
+
         private static int Total(int[] faces)
         {
             int sum = 0;
@@ -211,14 +211,14 @@ namespace Thermodynamics.Tests
 
     public class RoomMapperTests
     {
-/// <summary>MapperFor operation.</summary>
+
         private static RoomMapper MapperFor(GridModel grid, out SurfaceMap surfaces)
         {
-/// <summary>SurfaceMap operation.</summary>
+
             surfaces = new SurfaceMap();
             surfaces.Rebuild(grid);
 
-/// <summary>RoomMapper operation.</summary>
+
             RoomMapper mapper = new RoomMapper(surfaces);
             mapper.RequestRestart(grid);
             mapper.RunToCompletion();
@@ -226,15 +226,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASolidBlockIsStructureAndTheSpaceAroundItIsExternal operation.</summary>
+
         public void ASolidBlockIsStructureAndTheSpaceAroundItIsExternal()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(2.5f);
             grid.Add(Catalog.LightArmor(), Vector3I.Zero);
 
             SurfaceMap surfaces;
-/// <summary>MapperFor operation.</summary>
+
             RoomMapper mapper = MapperFor(grid, out surfaces);
             RoomMap map = mapper.Map;
 
@@ -245,14 +245,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASealedShellCreatesOneInteriorRoom operation.</summary>
+
         public void ASealedShellCreatesOneInteriorRoom()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Shell(Catalog.LightArmor(), new Vector3I(-1, -1, -1), new Vector3I(2, 2, 2));
 
             SurfaceMap surfaces;
-/// <summary>MapperFor operation.</summary>
+
             RoomMapper mapper = MapperFor(builder.Grid, out surfaces);
             RoomMap map = mapper.Map;
 
@@ -263,7 +263,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHoleInTheShellMakesTheInteriorExternal operation.</summary>
+
         public void AHoleInTheShellMakesTheInteriorExternal()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -273,7 +273,7 @@ namespace Thermodynamics.Tests
             builder.Grid.Remove(plug);
 
             SurfaceMap surfaces;
-/// <summary>MapperFor operation.</summary>
+
             RoomMapper mapper = MapperFor(builder.Grid, out surfaces);
 
             Assert.Equal(0, mapper.Map.RoomCount);
@@ -281,14 +281,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnOpenLatticeDoesNotSealARoom operation.</summary>
+
         public void AnOpenLatticeDoesNotSealARoom()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Shell(Catalog.Grating(), new Vector3I(-1, -1, -1), new Vector3I(2, 2, 2));
 
             SurfaceMap surfaces;
-/// <summary>MapperFor operation.</summary>
+
             RoomMapper mapper = MapperFor(builder.Grid, out surfaces);
 
             Assert.Equal(0, mapper.Map.RoomCount);
@@ -296,22 +296,22 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SteppingInSmallBudgetsGivesTheSameAnswerAsRunningItAllAtOnce operation.</summary>
+
         public void SteppingInSmallBudgetsGivesTheSameAnswerAsRunningItAllAtOnce()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Shell(Catalog.LightArmor(), new Vector3I(-2, -2, -2), new Vector3I(3, 3, 3));
 
-/// <summary>SurfaceMap operation.</summary>
+
             SurfaceMap surfaces = new SurfaceMap();
             surfaces.Rebuild(builder.Grid);
 
-/// <summary>RoomMapper operation.</summary>
+
             RoomMapper full = new RoomMapper(surfaces);
             full.RequestRestart(builder.Grid);
             full.RunToCompletion();
 
-/// <summary>RoomMapper operation.</summary>
+
             RoomMapper incremental = new RoomMapper(surfaces);
             incremental.RequestRestart(builder.Grid);
             int guard = 100000;
@@ -331,7 +331,7 @@ namespace Thermodynamics.Tests
                 {
                     for (int z = -3; z <= 3; z++)
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I cell = new Vector3I(x, y, z);
                         Assert.Equal(full.Map.IsExternal(cell), incremental.Map.IsExternal(cell));
                         Assert.Equal(full.Map.IsSolid(cell), incremental.Map.IsSolid(cell));
@@ -341,16 +341,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ManyRestartRequestsCollapseIntoOnePass operation.</summary>
+
         public void ManyRestartRequestsCollapseIntoOnePass()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 4, 4));
 
-/// <summary>SurfaceMap operation.</summary>
+
             SurfaceMap surfaces = new SurfaceMap();
             surfaces.Rebuild(builder.Grid);
-/// <summary>RoomMapper operation.</summary>
+
             RoomMapper mapper = new RoomMapper(surfaces);
 
             for (int i = 0; i < 500; i++)
@@ -363,17 +363,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheOldMapIsReadableWhileANewPassIsRunning operation.</summary>
+
         public void TheOldMapIsReadableWhileANewPassIsRunning()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Shell(Catalog.LightArmor(), new Vector3I(-1, -1, -1), new Vector3I(2, 2, 2));
 
-/// <summary>SurfaceMap operation.</summary>
+
             SurfaceMap surfaces = new SurfaceMap();
             surfaces.Rebuild(builder.Grid);
 
-/// <summary>RoomMapper operation.</summary>
+
             RoomMapper mapper = new RoomMapper(surfaces);
             mapper.RequestRestart(builder.Grid);
             mapper.RunToCompletion();
@@ -387,7 +387,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ExposureUsesTheRoomMapSoSealedInteriorsDoNotRadiate operation.</summary>
+
         public void ExposureUsesTheRoomMapSoSealedInteriorsDoNotRadiate()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -395,7 +395,7 @@ namespace Thermodynamics.Tests
             builder.Place(Catalog.Reactor(), Vector3I.Zero);
 
             SurfaceMap surfaces;
-/// <summary>MapperFor operation.</summary>
+
             RoomMapper mapper = MapperFor(builder.Grid, out surfaces);
 
             int[] exposed = surfaces.GetExposedFaces(builder.Last, mapper.Map);

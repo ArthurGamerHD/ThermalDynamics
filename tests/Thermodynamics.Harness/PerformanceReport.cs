@@ -36,39 +36,39 @@ namespace Thermodynamics.Harness
 
         private static readonly Feature[] Features =
         {
-/// <summary>delegate operation.</summary>
+
             new Feature { Name = "conduction",   Set = delegate (ThermalSettings s, bool on) { s.EnableConduction = on; } },
-/// <summary>delegate operation.</summary>
+
             new Feature { Name = "radiation",    Set = delegate (ThermalSettings s, bool on) { s.EnableRadiation = on; } },
-/// <summary>delegate operation.</summary>
+
             new Feature { Name = "convection",   Set = delegate (ThermalSettings s, bool on) { s.EnableConvection = on; } },
-/// <summary>delegate operation.</summary>
+
             new Feature { Name = "solar",        Set = delegate (ThermalSettings s, bool on) { s.EnableSolarHeat = on; } },
-/// <summary>delegate operation.</summary>
+
             new Feature { Name = "self shadow",  Set = delegate (ThermalSettings s, bool on) { s.SolarSelfShadowing = on; } },
-/// <summary>delegate operation.</summary>
+
             new Feature { Name = "waste heat",   Set = delegate (ThermalSettings s, bool on) { s.EnableWasteHeat = on; } },
-/// <summary>delegate operation.</summary>
+
             new Feature { Name = "heat sources", Set = delegate (ThermalSettings s, bool on) { s.EnableHeatSources = on; } },
-/// <summary>delegate operation.</summary>
+
             new Feature { Name = "friction",     Set = delegate (ThermalSettings s, bool on) { s.EnableFriction = on; } },
-/// <summary>delegate operation.</summary>
+
             new Feature { Name = "damage",       Set = delegate (ThermalSettings s, bool on) { s.EnableDamage = on; } },
-/// <summary>delegate operation.</summary>
+
             new Feature { Name = "coolant loops",Set = delegate (ThermalSettings s, bool on) { s.EnableCoolantLoops = on; } },
-/// <summary>delegate operation.</summary>
+
             new Feature { Name = "room air",     Set = delegate (ThermalSettings s, bool on) { s.EnableRoomAir = on; } },
-/// <summary>delegate operation.</summary>
+
             new Feature { Name = "heat pumps",   Set = delegate (ThermalSettings s, bool on) { s.EnableHeatPumps = on; } },
-/// <summary>delegate operation.</summary>
+
             new Feature { Name = "conduction clamp", Set = delegate (ThermalSettings s, bool on) { s.ClampConductionOvershoot = on; } },
-/// <summary>delegate operation.</summary>
+
             new Feature { Name = "environment clamp", Set = delegate (ThermalSettings s, bool on) { s.ClampEnvironmentOvershoot = on; } },
         };
 
         private static readonly int[] Caps = { 0, 16, 8, 4, 2, 1 };
 
-/// <summary>Worst operation.</summary>
+
         private static EnvironmentSample Worst()
         {
             return Worlds.Flight(1f, 300f);
@@ -76,7 +76,7 @@ namespace Thermodynamics.Harness
 
         private static readonly string[] WorldNames = { "vacuum", "atmosphere", "flight" };
 
-/// <summary>World operation.</summary>
+
         private static EnvironmentSample World(string name)
         {
             if (name == "vacuum") return Worlds.Space(new Vector3(0.3f, 0.9f, 0.2f));
@@ -89,11 +89,11 @@ namespace Thermodynamics.Harness
 
         public static int Repeats = 3;
 
-/// <summary>Run operation.</summary>
+
         public static List<ReportRow> Run(string shape, int size, int ticks, IList<int> ladder,
             Action<string> log = null)
         {
-/// <summary>List operation.</summary>
+
             List<ReportRow> rows = new List<ReportRow>();
 
             Measure(Configure(0, true), shape, 1000, 4);
@@ -129,13 +129,13 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Environment operation.</summary>
+
         private static void Environment(List<ReportRow> rows)
         {
             Add(rows, "machine", "host", "processors", System.Environment.ProcessorCount, "", false);
             Add(rows, "machine", "host", "64 bit", System.Environment.Is64BitProcess ? 1 : 0, "", false);
 
-/// <summary>Hull operation.</summary>
+
             GridBuilder hull = Hull("ship", 4000);
 
             double best = double.MaxValue;
@@ -143,12 +143,12 @@ namespace Thermodynamics.Harness
             for (int r = 0; r < (Repeats < 1 ? 1 : Repeats); r++)
             {
                 Stopwatch watch = Stopwatch.StartNew();
-/// <summary>Builds the method table.</summary>
+
                 ThermalSimulation calibration = Build(Configure(0, true), hull);
                 LoadBenchmarks.SeedSpread(calibration);
 
                 EnvironmentState state = EnvironmentSolver.Solve(
-/// <summary>Worst operation.</summary>
+
                     calibration.Settings, calibration.Planet, Worst());
 
                 for (int i = 0; i < 20; i++) calibration.Solver.Step(calibration.Settings.StepSeconds, state);
@@ -160,13 +160,13 @@ namespace Thermodynamics.Harness
             Add(rows, "machine", "calibration", "4k ship, 20 steps", best, "ms");
         }
 
-/// <summary>NoiseFloor operation.</summary>
+
         private static void NoiseFloor(List<ReportRow> rows, string shape, int size, int ticks,
             Action<string> log)
         {
             if (log != null) log("noise floor");
 
-/// <summary>Configure operation.</summary>
+
             ThermalSettings settings = Configure(0, true);
 
             double least = double.MaxValue;
@@ -174,7 +174,7 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < 5; i++)
             {
-/// <summary>Measure operation.</summary>
+
                 double ms = Measure(settings, shape, size, ticks).StepMs;
                 if (ms < least) least = ms;
                 if (ms > most) most = ms;
@@ -193,10 +193,10 @@ namespace Thermodynamics.Harness
             public ThermalSimulation Simulation;
         }
 
-/// <summary>RepeatBuild operation.</summary>
+
         public static BuiltHull RepeatBuild(ThermalSettings settings, GridBuilder hull)
         {
-/// <summary>BuiltHull operation.</summary>
+
             BuiltHull built = new BuiltHull();
             built.BuildMs = double.MaxValue;
 
@@ -206,7 +206,7 @@ namespace Thermodynamics.Harness
             for (int r = 0; r < (Repeats < 1 ? 1 : Repeats); r++)
             {
                 Stopwatch build = Stopwatch.StartNew();
-/// <summary>Builds the method table.</summary>
+
                 ThermalSimulation candidate = Build(settings, hull);
                 build.Stop();
 
@@ -237,7 +237,7 @@ namespace Thermodynamics.Harness
             return built;
         }
 
-/// <summary>Ladder operation.</summary>
+
         private static void Ladder(List<ReportRow> rows, string shape, IList<int> sizes, int ticks,
             Action<string> log)
         {
@@ -246,12 +246,12 @@ namespace Thermodynamics.Harness
                 int size = sizes[i];
                 if (log != null) log("  ladder " + size.ToString("n0"));
 
-/// <summary>Configure operation.</summary>
+
                 ThermalSettings settings = Configure(0, true);
-/// <summary>Hull operation.</summary>
+
                 GridBuilder hull = Hull(shape, size);
 
-/// <summary>RepeatBuild operation.</summary>
+
                 BuiltHull built = RepeatBuild(settings, hull);
                 ThermalSimulation simulation = built.Simulation;
 
@@ -261,7 +261,7 @@ namespace Thermodynamics.Harness
                 Add(rows, "ladder", name, "links", simulation.Solver.Links.Count, "");
                 Add(rows, "ladder", name, "build", built.BuildMs, "ms");
 
-/// <summary>Measure operation.</summary>
+
                 Sample sample = Measure(settings, shape, size, ticks, simulation);
 
                 Add(rows, "ladder", name, "step", sample.StepMs, "ms");
@@ -272,15 +272,15 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>FeatureBreakdown operation.</summary>
+
         private static void FeatureBreakdown(List<ReportRow> rows, string shape, int size, int ticks,
             Action<string> log)
         {
-/// <summary>Measure operation.</summary>
+
             Sample whole = Measure(Configure(0, true), shape, size, ticks);
             Add(rows, "features", "everything on", "step", whole.StepMs, "ms");
 
-/// <summary>Measure operation.</summary>
+
             Sample bare = Measure(Configure(0, false), shape, size, ticks);
             Add(rows, "features", "everything off", "step", bare.StepMs, "ms");
 
@@ -289,18 +289,18 @@ namespace Thermodynamics.Harness
                 Feature feature = Features[i];
                 if (log != null) log("  feature " + feature.Name);
 
-/// <summary>Configure operation.</summary>
+
                 ThermalSettings without = Configure(0, true);
                 feature.Set(without, false);
                 without.Derive();
-/// <summary>Measure operation.</summary>
+
                 Sample removed = Measure(without, shape, size, ticks);
 
-/// <summary>Configure operation.</summary>
+
                 ThermalSettings only = Configure(0, false);
                 feature.Set(only, true);
                 only.Derive();
-/// <summary>Measure operation.</summary>
+
                 Sample alone = Measure(only, shape, size, ticks);
 
                 Add(rows, "features", feature.Name, "marginal", whole.StepMs - removed.StepMs, "ms");
@@ -310,7 +310,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Configurations operation.</summary>
+
         private static void Configurations(List<ReportRow> rows, string shape, int size, int ticks,
             Action<string> log)
         {
@@ -322,7 +322,7 @@ namespace Thermodynamics.Harness
                 int cap = Caps[i];
                 if (log != null) log("  cap " + cap);
 
-/// <summary>Measure operation.</summary>
+
                 Sample sample = Measure(Configure(cap, true), shape, size, ticks);
                 string name = cap == 0 ? "cap off" : "cap " + cap;
 
@@ -339,13 +339,13 @@ namespace Thermodynamics.Harness
             StepShape(rows, shape, size, ticks, stepMs, substeps);
         }
 
-/// <summary>StepShape operation.</summary>
+
         private static void StepShape(List<ReportRow> rows, string shape, int size, int ticks,
             double[] stepMs, float[] substeps)
         {
-/// <summary>IndexOfCap operation.</summary>
+
             int low = IndexOfCap(4);
-/// <summary>IndexOfCap operation.</summary>
+
             int high = IndexOfCap(16);
             if (low < 0 || high < 0) return;
 
@@ -355,7 +355,7 @@ namespace Thermodynamics.Harness
             double perSubstep = (stepMs[high] - stepMs[low]) / span;
             double fixedMs = stepMs[low] - (perSubstep * substeps[low]);
 
-/// <summary>IndexOfCap operation.</summary>
+
             int uncapped = IndexOfCap(0);
             double atDefault = uncapped >= 0 && stepMs[uncapped] > 0d
                 ? 100d * fixedMs / stepMs[uncapped]
@@ -368,17 +368,17 @@ namespace Thermodynamics.Harness
             StepTerms(rows, shape, size, ticks, stepMs, perSubstep);
         }
 
-/// <summary>StepTerms operation.</summary>
+
         private static void StepTerms(List<ReportRow> rows, string shape, int size, int ticks,
             double[] stepMs, double perSubstep)
         {
-/// <summary>IndexOfCap operation.</summary>
+
             int one = IndexOfCap(1);
             if (one < 0) return;
 
-/// <summary>Configure operation.</summary>
+
             ThermalSettings settings = Configure(1, true);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(settings, shape, size);
             LoadBenchmarks.SeedSpread(simulation);
             Census.DriveCensus(simulation);
@@ -431,7 +431,7 @@ namespace Thermodynamics.Harness
                 firstSubstep - perSubstep, "ms");
         }
 
-/// <summary>IndexOfCap operation.</summary>
+
         private static int IndexOfCap(int cap)
         {
             for (int i = 0; i < Caps.Length; i++)
@@ -441,7 +441,7 @@ namespace Thermodynamics.Harness
             return -1;
         }
 
-/// <summary>OvershootClamp operation.</summary>
+
         private static void OvershootClamp(List<ReportRow> rows, string shape, int size, int ticks,
             Action<string> log)
         {
@@ -449,7 +449,7 @@ namespace Thermodynamics.Harness
             Regime(rows, "refused", 4, shape, size, ticks, log);
         }
 
-/// <summary>Diagnostics operation.</summary>
+
         private static void Diagnostics(List<ReportRow> rows, string shape, int size, int ticks,
             Action<string> log)
         {
@@ -459,11 +459,11 @@ namespace Thermodynamics.Harness
             try
             {
                 LoadBenchmarks.CollectDiagnostics = false;
-/// <summary>Measure operation.</summary>
+
                 Sample off = Measure(Configure(0, true), shape, size, ticks);
 
                 LoadBenchmarks.CollectDiagnostics = true;
-/// <summary>Measure operation.</summary>
+
                 Sample on = Measure(Configure(0, true), shape, size, ticks);
 
                 Add(rows, "diagnostics", "per-mechanism watts", "step, off", off.StepMs, "ms");
@@ -471,7 +471,7 @@ namespace Thermodynamics.Harness
                 Add(rows, "diagnostics", "per-mechanism watts", "cost of being measured",
                     on.StepMs - off.StepMs, "ms");
 
-/// <summary>Measure operation.</summary>
+
                 Sample all = Measure(Configure(0, true), shape, size, ticks,
                     null, null, true, everySubstep: true);
 
@@ -484,14 +484,14 @@ namespace Thermodynamics.Harness
                 Add(rows, "diagnostics", "per-mechanism watts", "written, every substep",
                     all.DiagnosticsPublished ? 1 : 0, "", false);
 
-/// <summary>Configure operation.</summary>
+
                 ThermalSettings single = Configure(0, true);
                 single.MaxSubsteps = 1;
                 single.Derive();
 
-/// <summary>Measure operation.</summary>
+
                 Sample onceLast = Measure(single, shape, size, ticks);
-/// <summary>Measure operation.</summary>
+
                 Sample onceEvery = Measure(single, shape, size, ticks, null, null, true, everySubstep: true);
 
                 Add(rows, "diagnostics", "one substep", "step, last substep only", onceLast.StepMs, "ms");
@@ -503,25 +503,25 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Regime operation.</summary>
+
         private static void Regime(List<ReportRow> rows, string name, int maxSubsteps, string shape,
             int size, int ticks, Action<string> log)
         {
             if (log != null) log("  clamp " + name);
 
-/// <summary>Configure operation.</summary>
+
             ThermalSettings gated = Configure(0, true);
             gated.MaxSubsteps = maxSubsteps;
             gated.Derive();
 
-/// <summary>Configure operation.</summary>
+
             ThermalSettings ungated = Configure(0, true);
             ungated.MaxSubsteps = maxSubsteps;
             ungated.Derive();
 
-/// <summary>Measure operation.</summary>
+
             Sample with = Measure(gated, shape, size, ticks, null, null, true);
-/// <summary>Measure operation.</summary>
+
             Sample without = Measure(ungated, shape, size, ticks, null, null, false);
 
             Add(rows, "overshoot clamp", name, "step, gated", with.StepMs, "ms");
@@ -535,7 +535,7 @@ namespace Thermodynamics.Harness
             Add(rows, "overshoot clamp", name, "gate change", change, "%");
         }
 
-/// <summary>Environments operation.</summary>
+
         private static void Environments(List<ReportRow> rows, int ticks, Action<string> log)
         {
             const int Size = 8000;
@@ -546,9 +546,9 @@ namespace Thermodynamics.Harness
                 {
                     if (log != null) log("  " + Shapes[s] + " in " + WorldNames[w]);
 
-/// <summary>Measure operation.</summary>
+
                     Sample sample = Measure(Configure(0, true), Shapes[s], Size, ticks,
-/// <summary>World operation.</summary>
+
                         null, World(WorldNames[w]));
 
                     string name = Shapes[s] + " " + WorldNames[w];
@@ -558,7 +558,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Scenarios operation.</summary>
+
         private static void Scenarios(List<ReportRow> rows, int ticks, Action<string> log)
         {
             const int Size = 8000;
@@ -571,7 +571,7 @@ namespace Thermodynamics.Harness
             Measured(rows, "scorched", WorstCases.Scorched("ship", Size, Configure(0, true)), ticks, log);
         }
 
-/// <summary>Measured operation.</summary>
+
         private static void Measured(List<ReportRow> rows, string name, WorstCases.Built built,
             int ticks, Action<string> log)
         {
@@ -579,7 +579,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = built.Simulation;
             EnvironmentState state = EnvironmentSolver.Solve(
-/// <summary>Worst operation.</summary>
+
                 simulation.Settings, simulation.Planet, Worst());
 
             float step = simulation.Settings.StepSeconds;
@@ -611,7 +611,7 @@ namespace Thermodynamics.Harness
             Add(rows, "scenarios", name, "overheat events", overheats / Math.Max(1, Repeats), "", false);
         }
 
-/// <summary>Fleets operation.</summary>
+
         private static void Fleets(List<ReportRow> rows, int ticks, Action<string> log)
         {
             const int Total = 8000;
@@ -624,7 +624,7 @@ namespace Thermodynamics.Harness
                 List<WorstCases.Built> fleet =
                     WorstCases.Fleet("ship", Total, counts[c], Configure(0, true));
 
-/// <summary>Worst operation.</summary>
+
                 EnvironmentSample sample = Worst();
                 WorstCases.StepFleet(fleet, sample, 2);
 
@@ -668,10 +668,10 @@ namespace Thermodynamics.Harness
             public bool DiagnosticsPublished;
         }
 
-/// <summary>Configure operation.</summary>
+
         private static ThermalSettings Configure(int cap, bool featuresOn)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
 
             if (!featuresOn)
@@ -687,7 +687,7 @@ namespace Thermodynamics.Harness
             return settings.Derive();
         }
 
-/// <summary>Hull operation.</summary>
+
         private static GridBuilder Hull(string shape, int size)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -695,13 +695,13 @@ namespace Thermodynamics.Harness
             return builder;
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation Build(ThermalSettings settings, string shape, int size)
         {
             return Build(settings, Hull(shape, size));
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation Build(ThermalSettings settings, GridBuilder builder)
         {
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
@@ -711,12 +711,12 @@ namespace Thermodynamics.Harness
             return simulation;
         }
 
-/// <summary>Measure operation.</summary>
+
         private static Sample Measure(ThermalSettings settings, string shape, int size, int ticks,
             ThermalSimulation prepared = null, EnvironmentSample? world = null, bool gateClamp = true,
             bool everySubstep = false)
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = prepared ?? Build(settings, shape, size);
             simulation.Solver.GateConductionClamp = gateClamp;
             simulation.Solver.DiagnosticsOnEverySubstep = everySubstep;
@@ -724,7 +724,7 @@ namespace Thermodynamics.Harness
             Census.DriveCensus(simulation);
 
             EnvironmentState state = EnvironmentSolver.Solve(
-/// <summary>Worst operation.</summary>
+
                 settings, simulation.Planet, world ?? Worst());
 
             float step = settings.StepSeconds;
@@ -744,7 +744,7 @@ namespace Thermodynamics.Harness
                 if (ms < best) best = ms;
             }
 
-/// <summary>Sample operation.</summary>
+
             Sample sample = new Sample();
             sample.StepMs = best;
             sample.MsPerSimulatedSecond = sample.StepMs * settings.StepsPerSecond;
@@ -776,7 +776,7 @@ namespace Thermodynamics.Harness
             return sample;
         }
 
-/// <summary>Adds a .</summary>
+
         private static void Add(List<ReportRow> rows, string section, string name, string metric,
             double value, string unit, bool lowerIsBetter = true)
         {
@@ -792,10 +792,10 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Table operation.</summary>
+
         public static string Table(IList<ReportRow> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             string section = null;
 
@@ -820,10 +820,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(IList<ReportRow> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append("section,case,metric,value,unit,lower_is_better\n");
 
@@ -841,10 +841,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>ParseCsv operation.</summary>
+
         public static List<ReportRow> ParseCsv(string text)
         {
-/// <summary>List operation.</summary>
+
             List<ReportRow> rows = new List<ReportRow>();
             string[] lines = text.Replace("\r\n", "\n").Split('\n');
 
@@ -852,7 +852,7 @@ namespace Thermodynamics.Harness
             {
                 if (lines[i].Length == 0) continue;
 
-/// <summary>SplitCsv operation.</summary>
+
                 List<string> fields = SplitCsv(lines[i]);
                 if (fields.Count < 6) continue;
 
@@ -873,21 +873,21 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Compare operation.</summary>
+
         public static string Compare(IList<ReportRow> baseline, IList<ReportRow> current,
             double threshold = 0.05)
         {
             Dictionary<string, ReportRow> before = new Dictionary<string, ReportRow>();
             for (int i = 0; i < baseline.Count; i++) before[baseline[i].Key] = baseline[i];
 
-/// <summary>NoiseOf operation.</summary>
+
             double noise = NoiseOf(current);
 
-/// <summary>List operation.</summary>
+
             List<string> regressions = new List<string>();
-/// <summary>List operation.</summary>
+
             List<string> improvements = new List<string>();
-/// <summary>List operation.</summary>
+
             List<string> appeared = new List<string>();
 
             for (int i = 0; i < current.Count; i++)
@@ -913,9 +913,9 @@ namespace Thermodynamics.Harness
                     && string.Equals(row.Unit, "ms", StringComparison.Ordinal);
 
                 string line = "  " + row.Key.PadRight(52)
-/// <summary>Format operation.</summary>
+
                     + Format(old.Value).PadLeft(12) + " ->"
-/// <summary>Format operation.</summary>
+
                     + Format(row.Value).PadLeft(12) + "  "
                     + (change > 0 ? "+" : "") + (100 * change).ToString("n1", Invariant) + "%"
                     + (underNoise ? "   (was inside the noise floor)" : "");
@@ -925,7 +925,7 @@ namespace Thermodynamics.Harness
                 else improvements.Add(line);
             }
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("\nregressions (").Append(regressions.Count).Append(")\n");
@@ -951,7 +951,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>NoiseOf operation.</summary>
+
         private static double NoiseOf(IList<ReportRow> rows)
         {
             for (int i = 0; i < rows.Count; i++)
@@ -966,7 +966,7 @@ namespace Thermodynamics.Harness
             return 0;
         }
 
-/// <summary>Format operation.</summary>
+
         private static string Format(double value)
         {
             if (value == Math.Floor(value) && Math.Abs(value) < 1e9)
@@ -979,13 +979,13 @@ namespace Thermodynamics.Harness
                 : value.ToString("n2", Invariant);
         }
 
-/// <summary>Quote operation.</summary>
+
         private static string Quote(string value)
         {
             return CsvLine.Text(value);
         }
 
-/// <summary>SplitCsv operation.</summary>
+
         private static List<string> SplitCsv(string line)
         {
             return CsvLine.Split(line);

@@ -5,7 +5,7 @@ namespace Thermodynamics.Tests
     public class StepWalksLabTests
     {
         [Fact]
-/// <summary>BothSchedulesAgreeGetTimedAndTheMirrorIsMeasuredAgainstAStep operation.</summary>
+
         public void BothSchedulesAgreeGetTimedAndTheMirrorIsMeasuredAgainstAStep()
         {
             StepWalksLab.Result result = StepWalksLab.Run("ship", 4000, 3);
@@ -19,7 +19,7 @@ namespace Thermodynamics.Tests
 
             Assert.True(result.MirrorMs > 0, "the mirror was never timed");
             Assert.True(result.SettledStepMs > result.MirrorMs,
-/// <summary>step operation.</summary>
+
                 "a settled step (" + result.SettledStepMs + " ms) reads cheaper than the mirror it contains ("
                 + result.MirrorMs + " ms), so one of the two clocks is wrong");
 

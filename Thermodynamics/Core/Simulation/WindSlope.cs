@@ -17,7 +17,7 @@ namespace Thermodynamics.Core
 
         public const float CalmSpeed = 5f;
 
-/// <summary>Velocity operation.</summary>
+
         public static Vector3 Velocity(
             Vector3 downhill, float slope, float heating, float height,
             float ambientSpeed, float strength)
@@ -45,7 +45,7 @@ namespace Thermodynamics.Core
                 * Math.Abs(swing)
                 * share
                 * (1f - (height / depth))
-/// <summary>Suppression operation.</summary>
+
                 * Suppression(ambientSpeed)
                 * (strength > 1f ? 1f : strength);
 
@@ -55,14 +55,14 @@ namespace Thermodynamics.Core
             return Vector3.Normalize(direction) * speed;
         }
 
-/// <summary>Suppression operation.</summary>
+
         public static float Suppression(float ambientSpeed)
         {
             if (ambientSpeed <= 0f) return 1f;
             return CalmSpeed / (CalmSpeed + ambientSpeed);
         }
 
-/// <summary>Sense operation.</summary>
+
         public static int Sense(float heating, float height)
         {
             float swing = (2f * heating) - 1f;

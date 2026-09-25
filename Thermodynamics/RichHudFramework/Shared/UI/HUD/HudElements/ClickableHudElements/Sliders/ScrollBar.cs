@@ -43,12 +43,12 @@ namespace RichHudFramework.UI
 
 		public readonly SliderBar SlideInput;
 
-/// <summary>ScrollBar operation.</summary>
+
 		public ScrollBar(HudParentBase parent) : base(parent)
 		{
-/// <summary>InputFocusHandler operation.</summary>
+
 			FocusHandler = new InputFocusHandler(this);
-/// <summary>SliderBar operation.</summary>
+
 			SlideInput = new SliderBar(this)
 			{
 				Reverse = true,
@@ -56,28 +56,28 @@ namespace RichHudFramework.UI
 				SliderWidth = 13f,
 				BarWidth = 13f,
 
-/// <summary>Color operation.</summary>
+
 				SliderColor = new Color(78, 87, 101),
-/// <summary>Color operation.</summary>
+
 				SliderHighlight = new Color(136, 140, 148),
 
-/// <summary>Color operation.</summary>
+
 				BarColor = new Color(41, 51, 61),
 			};
 
-/// <summary>Vector2 operation.</summary>
+
 			Size = new Vector2(13f, 300f);
-/// <summary>Vector2 operation.</summary>
+
 			Padding = new Vector2(30f, 10f);
 			SlideInput.SliderVisible = false;
 			VisiblePercent = 0.2f;
 		}
 
-/// <summary>ScrollBar operation.</summary>
+
 		public ScrollBar() : this(null)
 		{ }
 
-/// <summary>Layout operation.</summary>
+
 		protected override void Layout()
 		{
 			Vector2 size = UnpaddedSize;

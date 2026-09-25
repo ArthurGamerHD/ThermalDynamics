@@ -16,7 +16,6 @@ namespace Thermodynamics
         "Gauge_LG_HeatSource", "Gauge_SG_HeatSource")]
     public class ThermalHeatSourceBlock : MyGameLogicComponent
     {
-/// <summary>Guid operation.</summary>
         private static readonly Guid StorageGuid = new Guid("b1f2c07a-6d43-4d1e-9a5e-2f1c8d3b4a67");
 
         private IMyCubeBlock block;
@@ -53,25 +52,20 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Sets the watts.</summary>
         public void SetWatts(float value)
         {
             if (watts == null) return;
-/// <summary>HeatSourceBlockSetting operation.</summary>
             watts.Value = new HeatSourceBlockSetting(value, HeatSourceBlockSetting.DefaultRange)
                 .Clamped().Watts;
         }
 
-/// <summary>Sets the range.</summary>
         public void SetRange(float value)
         {
             if (range == null) return;
-/// <summary>HeatSourceBlockSetting operation.</summary>
             range.Value = new HeatSourceBlockSetting(HeatSourceBlockSetting.DefaultWatts, value)
                 .Clamped().Range;
         }
 
-/// <summary>Init operation.</summary>
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
             base.Init(objectBuilder);
@@ -89,9 +83,7 @@ namespace Thermodynamics
 
                 HeatSourceBlockSetting fresh = HeatSourceBlockSetting.Default();
 
-/// <summary>NetSync operation.</summary>
                 watts = new NetSync<float>(this, TransferType.Both, fresh.Watts).Coalesce();
-/// <summary>NetSync operation.</summary>
                 range = new NetSync<float>(this, TransferType.Both, fresh.Range).Coalesce();
 
                 watts.ValueChanged += OnDialChanged;
@@ -107,7 +99,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>UpdateOnceBeforeFrame operation.</summary>
         public override void UpdateOnceBeforeFrame()
         {
             try
@@ -116,7 +107,6 @@ namespace Thermodynamics
 
                 if (MyAPIGateway.Multiplayer == null || MyAPIGateway.Multiplayer.IsServer)
                 {
-/// <summary>Load operation.</summary>
                     HeatSourceBlockSetting saved = Load();
                     watts.Value = saved.Watts;
                     range.Value = saved.Range;
@@ -132,7 +122,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>UpdateAfterSimulation100 operation.</summary>
         public override void UpdateAfterSimulation100()
         {
             try
@@ -145,7 +134,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Close operation.</summary>
         public override void Close()
         {
             try
@@ -169,7 +157,6 @@ namespace Thermodynamics
             base.Close();
         }
 
-/// <summary>OnWorkingChanged operation.</summary>
         private void OnWorkingChanged(IMyCubeBlock changed)
         {
             try
@@ -182,7 +169,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>OnDialChanged operation.</summary>
         private void OnDialChanged(float previous, float current)
         {
             try
@@ -196,7 +182,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Sync operation.</summary>
         private void Sync()
         {
             if (!ready) return;
@@ -215,7 +200,6 @@ namespace Thermodynamics
             if (sourceId != 0)
             {
                 if (ThermalHeatSources.Update(sourceId, setting.Watts)
-/// <summary>RangeOf operation.</summary>
                     && RangeOf(sourceId) == setting.Range)
                 {
                     return;
@@ -228,7 +212,6 @@ namespace Thermodynamics
             sourceId = ThermalHeatSources.Add(Entity, setting.Watts, setting.Range);
         }
 
-/// <summary>RangeOf operation.</summary>
         private static float RangeOf(int id)
         {
             IList<ThermalHeatSources.HeatSource> all = ThermalHeatSources.All;
@@ -239,7 +222,6 @@ namespace Thermodynamics
             return -1f;
         }
 
-/// <summary>Save operation.</summary>
         private void Save()
         {
             try
@@ -262,7 +244,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Load operation.</summary>
         private HeatSourceBlockSetting Load()
         {
             try

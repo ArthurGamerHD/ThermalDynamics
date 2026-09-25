@@ -13,7 +13,7 @@ namespace Thermodynamics
         public float Max = float.MinValue;
         public float Last;
 
-/// <summary>Adds a .</summary>
+
         public void Add(float value)
         {
             if (float.IsNaN(value) || float.IsInfinity(value)) return;
@@ -52,7 +52,7 @@ namespace Thermodynamics
             get { return Count == 0 ? 0 : Max; }
         }
 
-/// <summary>Merge operation.</summary>
+
         public void Merge(RunningStat other)
         {
             if (other == null || other.Count == 0) return;
@@ -65,7 +65,7 @@ namespace Thermodynamics
             Last = other.Last;
         }
 
-/// <summary>Format operation.</summary>
+
         public string Format(string format)
         {
             if (Count == 0) return "-";
@@ -73,10 +73,10 @@ namespace Thermodynamics
                 + " (sd " + StdDev.ToString(format) + ", n " + Count + ")";
         }
 
-/// <summary>ToString operation.</summary>
+
         public override string ToString()
         {
-/// <summary>Format operation.</summary>
+
             return Format("n3");
         }
     }
@@ -86,14 +86,14 @@ namespace Thermodynamics
         public readonly float[] Edges;
         public readonly long[] Counts;
 
-/// <summary>Histogram operation.</summary>
+
         public Histogram(float[] edges)
         {
             Edges = edges;
             Counts = new long[edges.Length + 1];
         }
 
-/// <summary>Adds a .</summary>
+
         public void Add(float value)
         {
             if (float.IsNaN(value)) return;
@@ -120,20 +120,20 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Merge operation.</summary>
+
         public void Merge(Histogram other)
         {
             if (other == null || other.Counts.Length != Counts.Length) return;
             for (int i = 0; i < Counts.Length; i++) Counts[i] += other.Counts[i];
         }
 
-/// <summary>Clear operation.</summary>
+
         public void Clear()
         {
             for (int i = 0; i < Counts.Length; i++) Counts[i] = 0;
         }
 
-/// <summary>Write operation.</summary>
+
         public void Write(StringBuilder sb, string indent, string unit)
         {
             long total = Total;
@@ -159,13 +159,13 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>TemperatureEdges operation.</summary>
+
         public static float[] TemperatureEdges()
         {
             return new float[] { 2.8f, 50, 100, 200, 273.15f, 300, 350, 400, 500, 700, 1000, 1500, 2000, 5000 };
         }
 
-/// <summary>MillisecondEdges operation.</summary>
+
         public static float[] MillisecondEdges()
         {
             return new float[] { 0.01f, 0.05f, 0.1f, 0.25f, 0.5f, 1, 2, 5, 10, 25, 50, 100 };
@@ -181,32 +181,32 @@ namespace Thermodynamics
 
         public double LastMilliseconds;
 
-/// <summary>Stopwatch operation.</summary>
+
         private readonly Stopwatch _watch = new Stopwatch();
-/// <summary>Histogram operation.</summary>
+
         private readonly Histogram _distribution = new Histogram(Histogram.MillisecondEdges());
 
-/// <summary>TimingStat operation.</summary>
+
         public TimingStat(string name)
         {
             Name = name;
         }
 
-/// <summary>Begin operation.</summary>
+
         public void Begin()
         {
             _watch.Reset();
             _watch.Start();
         }
 
-/// <summary>End operation.</summary>
+
         public void End()
         {
             _watch.Stop();
             Record(_watch.Elapsed.TotalMilliseconds);
         }
 
-/// <summary>Record operation.</summary>
+
         public void Record(double milliseconds)
         {
             LastMilliseconds = milliseconds;
@@ -221,7 +221,7 @@ namespace Thermodynamics
             get { return Calls == 0 ? 0 : TotalMilliseconds / Calls; }
         }
 
-/// <summary>Merge operation.</summary>
+
         public void Merge(TimingStat other)
         {
             if (other == null || other.Calls == 0) return;
@@ -232,13 +232,13 @@ namespace Thermodynamics
             _distribution.Merge(other._distribution);
         }
 
-/// <summary>WriteDistribution operation.</summary>
+
         public void WriteDistribution(StringBuilder sb, string indent)
         {
             _distribution.Write(sb, indent, "ms");
         }
 
-/// <summary>WriteRow operation.</summary>
+
         public void WriteRow(StringBuilder sb)
         {
             sb.Append("  ")
@@ -250,7 +250,7 @@ namespace Thermodynamics
               .Append('\n');
         }
 
-/// <summary>WriteHeader operation.</summary>
+
         public static void WriteHeader(StringBuilder sb, string title)
         {
             sb.Append("  ")
@@ -265,27 +265,27 @@ namespace Thermodynamics
 
     public static class CostRollup
     {
-/// <summary>MeasuredMilliseconds operation.</summary>
+
         public static double MeasuredMilliseconds(
             double sessionFrame, double save, double load, double build)
         {
             return sessionFrame + save + load + build;
         }
 
-/// <summary>MeasuredMilliseconds operation.</summary>
+
         public static double MeasuredMilliseconds(
             double sessionFrame, double save, double load, double build, double blockEvents)
         {
             return MeasuredMilliseconds(sessionFrame, save, load, build) + blockEvents;
         }
 
-/// <summary>Unattributed operation.</summary>
+
         public static double Unattributed(double parent, double children)
         {
             return parent - children;
         }
 
-/// <summary>ShareOfRealTime operation.</summary>
+
         public static double ShareOfRealTime(double measuredMilliseconds, double sessionSeconds)
         {
             if (sessionSeconds <= 0.0) return -1.0;

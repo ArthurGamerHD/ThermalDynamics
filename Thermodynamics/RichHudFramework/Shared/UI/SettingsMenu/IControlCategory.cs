@@ -11,9 +11,9 @@ namespace RichHudFramework
         using Client;
 
         using ControlContainerMembers = MyTuple<
-            ApiMemberAccessor, // GetOrSetMember,
-            MyTuple<object, Func<int>>, // Member List
-            object // ID
+            ApiMemberAccessor,
+            MyTuple<object, Func<int>>,
+            object
         >;
 
 		public enum ControlCatAccessors : int
@@ -44,10 +44,10 @@ namespace RichHudFramework
 
             object ID { get; }
 
-/// <summary>Adds a .</summary>
+
             void Add(TElementContainer tile);
 
-/// <summary>Returns the apidata.</summary>
+
             ControlContainerMembers GetApiData();
         }
     }

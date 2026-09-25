@@ -52,7 +52,7 @@ namespace RichHudFramework.UI
 
 		private bool mouseCursorEntered;
 
-/// <summary>MouseInputElement operation.</summary>
+
 		public MouseInputElement(HudParentBase parent) : base(parent)
 		{
 			FocusHandler = (parent as IFocusableElement)?.FocusHandler;
@@ -61,11 +61,11 @@ namespace RichHudFramework.UI
 			DimAlignment = DimAlignments.UnpaddedSize;
 		}
 
-/// <summary>MouseInputElement operation.</summary>
+
 		public MouseInputElement() : this(null)
 		{ }
 
-/// <summary>ClearSubscribers operation.</summary>
+
 		public void ClearSubscribers()
 		{
 			CursorEntered = null;
@@ -76,14 +76,14 @@ namespace RichHudFramework.UI
 			RightReleased = null;
 		}
 
-/// <summary>InputDepth operation.</summary>
+
 		protected override void InputDepth()
 		{
 			if (HudSpace.IsFacingCamera)
 			{
 				Vector3 cursorPos = HudSpace.CursorPos;
 				Vector2 halfSize = Vector2.Max(CachedSize, new Vector2(MinMouseBounds)) * .5f;
-/// <summary>BoundingBox2 operation.</summary>
+
 				BoundingBox2 box = new BoundingBox2(Position - halfSize, Position + halfSize);
 				bool mouseInBounds;
 
@@ -106,7 +106,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>HandleInput operation.</summary>
+
 		protected override void HandleInput(Vector2 cursorPos)
 		{
 			FocusHandler = (Parent as IFocusableElement)?.FocusHandler;
@@ -178,7 +178,7 @@ namespace RichHudFramework.UI
 				IsRightReleased = false;
 		}
 
-/// <summary>LeftClick operation.</summary>
+
 		public virtual void LeftClick()
 		{
             var owner = (object)(FocusHandler?.InputOwner) ?? Parent;
@@ -188,7 +188,7 @@ namespace RichHudFramework.UI
 			IsLeftReleased = false;
 		}
 
-/// <summary>RightClick operation.</summary>
+
 		public virtual void RightClick()
 		{
             var owner = (object)(FocusHandler?.InputOwner) ?? Parent;

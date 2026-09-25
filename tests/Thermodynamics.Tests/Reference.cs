@@ -7,11 +7,11 @@ namespace Thermodynamics.Tests
 {
     public static class Reference
     {
-/// <summary>Lit operation.</summary>
+
         public static bool Lit(GridModel grid, Vector3I from, Vector3 sun)
         {
             sun = Vector3.Normalize(sun);
-/// <summary>Vector3 operation.</summary>
+
             Vector3 origin = new Vector3(from.X, from.Y, from.Z);
 
             IList<BlockInstance> blocks = grid.Blocks;
@@ -28,7 +28,7 @@ namespace Thermodynamics.Tests
             return true;
         }
 
-/// <summary>Penetrates operation.</summary>
+
         private static bool Penetrates(Vector3 origin, Vector3 direction, Vector3I cell)
         {
             const float Epsilon = 1e-3f;

@@ -7,9 +7,9 @@ using ApiMemberAccessor = System.Func<object, int, object>;
 namespace RichHudFramework
 {
 	using ControlContainerMembers = MyTuple<
-		ApiMemberAccessor, // GetOrSetMember,
-		MyTuple<object, Func<int>>, // Member List
-		object // ID
+		ApiMemberAccessor,
+		MyTuple<object, Func<int>>,
+		object
 	>;
 
 	namespace UI.Client
@@ -20,14 +20,14 @@ namespace RichHudFramework
 
 			public IControlPage<ControlCategory, ControlTile> CategoryContainer => this;
 
-/// <summary>ControlPage operation.</summary>
+
 			public ControlPage() : base(ModPages.ControlPage)
 			{
 				var catData = (MyTuple<object, Func<int>>)GetOrSetMemberFunc(null, (int)ControlPageAccessors.CategoryData);
 				var GetCatDataFunc = catData.Item1 as Func<int, ControlContainerMembers>;
 
 				Func<int, ControlCategory> GetCatFunc = (x => new ControlCategory(GetCatDataFunc(x)));
-/// <summary>ReadOnlyApiCollection operation.</summary>
+
 				Categories = new ReadOnlyApiCollection<ControlCategory>(GetCatFunc, catData.Item2);
 			}
 
@@ -37,7 +37,7 @@ namespace RichHudFramework
 			IEnumerator IEnumerable.GetEnumerator() =>
 				Categories.GetEnumerator();
 
-/// <summary>Adds a .</summary>
+
 			public void Add(ControlCategory category) =>
 				GetOrSetMemberFunc(category.ID, (int)ControlPageAccessors.AddCategory);
 		}

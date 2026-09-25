@@ -13,17 +13,17 @@ namespace Thermodynamics.Tests
         private readonly string scratch =
             Path.Combine(Path.GetTempPath(), "thermal-record-" + Guid.NewGuid().ToString("n"));
 
-/// <summary>Dispose operation.</summary>
+
         public void Dispose()
         {
             Environment.SetEnvironmentVariable("THERMAL_CORPUS_DATA", previous);
-/// <summary>if operation.</summary>
+
             try { if (Directory.Exists(scratch)) Directory.Delete(scratch, true); }
             catch (IOException) { }
         }
 
         [Fact]
-/// <summary>ARelativeDataDirectoryIsResolvedAgainstTheRepositoryRoot operation.</summary>
+
         public void ARelativeDataDirectoryIsResolvedAgainstTheRepositoryRoot()
         {
             Environment.SetEnvironmentVariable("THERMAL_CORPUS_DATA", "out/a-relative-name");
@@ -37,7 +37,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnAbsoluteDataDirectoryIsUsedAsGiven operation.</summary>
+
         public void AnAbsoluteDataDirectoryIsUsedAsGiven()
         {
             Environment.SetEnvironmentVariable("THERMAL_CORPUS_DATA", scratch);
@@ -46,7 +46,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ProvenanceIsWrittenIntoADirectoryThatDoesNotExistYet operation.</summary>
+
         public void ProvenanceIsWrittenIntoADirectoryThatDoesNotExistYet()
         {
             Environment.SetEnvironmentVariable("THERMAL_CORPUS_DATA", scratch);
@@ -64,7 +64,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NothingIsWrittenWhenRecordingIsOff operation.</summary>
+
         public void NothingIsWrittenWhenRecordingIsOff()
         {
             Environment.SetEnvironmentVariable("THERMAL_CORPUS_DATA", null);
@@ -77,7 +77,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ANameWithAQuoteAndACommaRoundTripsThroughTheOneSplit operation.</summary>
+
         public void ANameWithAQuoteAndACommaRoundTripsThroughTheOneSplit()
         {
             string name = "The \"Iron\" Maiden, Mk II";

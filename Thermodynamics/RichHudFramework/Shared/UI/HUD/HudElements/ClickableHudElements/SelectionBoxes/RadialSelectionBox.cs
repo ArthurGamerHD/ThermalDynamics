@@ -9,29 +9,29 @@ namespace RichHudFramework.UI
 {
 	using static NodeConfigIndices;
 
-	/// <summary>
-	/// Generic radial selection wheel (pie-menu style). Displays a collection of entries arranged
-	/// in a circular pattern around a central point. Supports both cursor-based and gesture-based
-	/// (drag-to-select) input methods.
-	/// </summary>
-	/// <typeparam name="TContainer">
-	/// Container type that wraps each entry's UI element and provides selection/association data.
-	/// </typeparam>
-	/// <typeparam name="TElement">
-	/// The actual UI element displayed for each entry (must support minimal labeling).
-	/// </typeparam>
+
+
+
+
+
+
+
+
+
+
+
 	public class RadialSelectionBox<TContainer, TElement> : HudCollection<TContainer, TElement>
 		where TContainer : IScrollBoxEntry<TElement>, new()
 		where TElement : HudElementBase
 	{
-		/// <summary>
-		/// Read-only access to the full list of entries currently in the wheel.
-		/// </summary>
+
+
+
 		public virtual IReadOnlyList<TContainer> EntryList => hudCollectionList;
 
-		/// <summary>
-		/// The currently selected entry. Returns null/default if nothing is selected.
-		/// </summary>
+
+
+
 		public virtual TContainer Selection
 		{
 			get
@@ -42,9 +42,9 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// The entry currently under the cursor or highlighted by gesture. Returns null/default if none.
-		/// </summary>
+
+
+
 		public virtual TContainer HighlightedEntry
 		{
 			get
@@ -55,109 +55,109 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Index of the currently selected entry in <see cref="EntryList"/>. -1 if no selection.
-		/// </summary>
+
+
+
 		public virtual int SelectionIndex { get; protected set; } = -1;
 
-		/// <summary>
-		/// Index of the currently highlighted entry in <see cref="EntryList"/>. -1 if nothing highlighted.
-		/// </summary>
+
+
+
 		public virtual int HighlightIndex { get; protected set; } = -1;
 
-		/// <summary>
-		/// Desired maximum number of visible slices. Determines polygon subdivision density.
-		/// If the number of enabled entries exceeds this value, the actual enabled count takes precedence.
-		/// </summary>
+
+
+
+
 		public virtual int MaxEntryCount { get; set; } = 8;
 
-		/// <summary>
-		/// Number of entries that are currently enabled and visible on the wheel.
-		/// </summary>
+
+
+
 		public virtual int EnabledCount { get; protected set; }
 
-		/// <summary>
-		/// When true, selection is driven by drag gestures instead of absolute cursor position.
-		/// </summary>
+
+
+
 		public virtual bool UseGestureInput { get; set; } = false;
 
-		/// <summary>
-		/// Background color of the entire radial wheel.
-		/// </summary>
+
+
+
 		public virtual Color BackgroundColor { get; set; }
 
-		/// <summary>
-		/// Color used for the slice under the cursor (or gesture highlight).
-		/// </summary>
+
+
+
 		public virtual Color HighlightColor { get; set; }
 
-		/// <summary>
-		/// Color used for the currently selected slice.
-		/// </summary>
+
+
+
 		public virtual Color SelectionColor { get; set; }
 
-		/// <summary>
-		/// Sensitivity of cursor/gesture movement when selecting slices. Range: 0.3–2.0.
-		/// Higher values make the wheel react faster to movement.
-		/// </summary>
+
+
+
+
 		public float CursorSensitivity { get; set; }
 
-        /// <summary>
-        /// The radius of the inner hole as a normalized fraction of the outer radius.
-        /// Range: 0.0 (solid circle) to 1.0 (infinitely thin ring).
-        /// </summary>
+
+
+
+
         public float InnerRadius
 		{
 			get { return polyBoard.InnerRadius; }
             set { polyBoard.InnerRadius = value; }
         }
 
-		/// <summary>
-		/// The <see cref="PuncturedPolyBoard"/> responsible for rendering the circular background
-		/// and colored selection/highlight slices.
-		/// </summary>
-		/// <exclude/>
+
+
+
+
+
 		protected readonly PuncturedPolyBoard polyBoard;
 
-		// Internal tracking
 
-		/// <summary>
-		/// Visible (enabled-only) position of the selection
-		/// </summary>
-		/// <exclude/>
+
+
+
+
+
 		protected int selectionVisPos;
 
-		/// <summary>
-		/// Visible (enabled-only) position of the highlight
-		/// </summary>
-		/// <exclude/>
+
+
+
+
 		protected int highlightVisPos;
 
-		/// <summary>
-		/// Max(MaxEntryCount, EnabledCount) - determines slice size
-		/// </summary>
-		/// <exclude/>
+
+
+
+
 		protected int effectiveMaxCount;
 
-		/// <summary>
-		/// Minimum number of polygon sides for smooth appearance
-		/// </summary>
-		/// <exclude/>
+
+
+
+
 		protected int minPolySize = 64;
 
-		/// <summary>
-		/// True when lastCursorPos needs reset
-		/// </summary>
-		/// <exclude/>
+
+
+
+
 		protected bool isStartPosStale = true;
 
-		/// <exclude/>
+
 		protected Vector2 lastCursorPos;
 
-		/// <summary>
-		/// Used for gesture accumulation and direction
-		/// </summary>
-		/// <exclude/>
+
+
+
+
 		protected Vector2 cursorNormal;
 
 		public RadialSelectionBox(HudParentBase parent = null) : base(parent)
@@ -167,7 +167,7 @@ namespace RichHudFramework.UI
 				Sides = 64
 			};
 
-			// Default color scheme
+
 			BackgroundColor = new Color(70, 78, 86);
 			HighlightColor = TerminalFormatting.DarkSlateGrey;
 			SelectionColor = TerminalFormatting.Mint;
@@ -180,18 +180,18 @@ namespace RichHudFramework.UI
 			isStartPosStale = true;
 		}
 
-		/// <summary>
-		/// Sets the selection to the entry at the specified index (clamped to valid range).
-		/// </summary>
+
+
+
 		public void SetSelectionAt(int index)
 		{
 			SelectionIndex = MathHelper.Clamp(index, 0, hudCollectionList.Count - 1);
 			lastCursorPos = new Vector2(HudSpace.CursorPos.X, HudSpace.CursorPos.Y);
 		}
 
-		/// <summary>
-		/// Sets the selection to the given entry if it exists in the collection.
-		/// </summary>
+
+
+
 		public void SetSelection(TContainer container)
 		{
 			int index = FindIndex(x => x.Equals(container));
@@ -201,18 +201,18 @@ namespace RichHudFramework.UI
 			lastCursorPos = new Vector2(HudSpace.CursorPos.X, HudSpace.CursorPos.Y);
 		}
 
-		/// <summary>
-		/// Highlights the entry at the specified index (clamped to valid range).
-		/// </summary>
+
+
+
 		public void SetHighlightAt(int index)
 		{
 			HighlightIndex = MathHelper.Clamp(index, 0, hudCollectionList.Count - 1);
 			lastCursorPos = new Vector2(HudSpace.CursorPos.X, HudSpace.CursorPos.Y);
 		}
 
-		/// <summary>
-		/// Highlights the given entry if it exists in the collection.
-		/// </summary>
+
+
+
 		public void SetHighlight(TContainer container)
 		{
 			int index = FindIndex(x => x.Equals(container));
@@ -222,9 +222,9 @@ namespace RichHudFramework.UI
 			lastCursorPos = new Vector2(HudSpace.CursorPos.X, HudSpace.CursorPos.Y);
 		}
 
-		/// <summary>
-		/// Removes all entries and clears both selection and highlight.
-		/// </summary>
+
+
+
 		public override void Clear()
 		{
 			HighlightIndex = -1;
@@ -232,23 +232,23 @@ namespace RichHudFramework.UI
 			base.Clear();
 		}
 
-		/// <summary>
-		/// Clears only the highlight (cursor/gesture hover).
-		/// </summary>
+
+
+
 		public void ClearHighlight() => HighlightIndex = -1;
 
-		/// <summary>
-		/// Clears only the current selection.
-		/// </summary>
+
+
+
 		public void ClearSelection() => SelectionIndex = -1;
 
-		/// <summary>
-		/// Updates selection highlighting, visibility and layout
-		/// </summary>
-		/// <exclude/>
+
+
+
+
 		protected override void Layout()
 		{
-			// Count enabled entries and sanitize indices
+
 			EnabledCount = 0;
 			SelectionIndex = MathHelper.Clamp(SelectionIndex, -1, hudCollectionList.Count - 1);
 			HighlightIndex = MathHelper.Clamp(HighlightIndex, -1, hudCollectionList.Count - 1);
@@ -269,7 +269,7 @@ namespace RichHudFramework.UI
 
 			effectiveMaxCount = Math.Max(MaxEntryCount, EnabledCount);
 
-			// Position each enabled entry in its slice
+
 			int sliceSize = polyBoard.Sides / effectiveMaxCount;
 			Vector2I slice = new Vector2I(0, sliceSize - 1);
 			Vector2 size = UnpaddedSize;
@@ -284,14 +284,14 @@ namespace RichHudFramework.UI
 				}
 			}
 
-			// Ensure polygon is detailed enough for the current slice count
+
 			polyBoard.Sides = Math.Max(effectiveMaxCount * 6, minPolySize);
 		}
 
-		/// <summary>
-		/// Performs cursor bounds checking for the selection box
-		/// </summary>
-		/// <exclude/>
+
+
+
+
 		protected override void InputDepth()
 		{
 			_config[StateID] &= ~(uint)HudElementStates.IsMouseInBounds;
@@ -308,7 +308,7 @@ namespace RichHudFramework.UI
 			float innerRadius = polyBoard.InnerRadius * outerRadius;
 			float distance = cursorPos.Length();
 
-			// Mouse is inside the active ring area
+
 			if (distance > innerRadius && distance < outerRadius)
 			{
 				_config[StateID] |= (uint)HudElementStates.IsMouseInBounds;
@@ -316,10 +316,10 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Updates selection input
-		/// </summary>
-		/// <exclude/>
+
+
+
+
 		protected override void HandleInput(Vector2 cursorPos)
 		{
 			if (UseGestureInput || IsMousedOver)
@@ -339,20 +339,20 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Updates <see cref="HighlightIndex"/> based on cursor position or drag gesture.
-		/// </summary>
-		/// <exclude/>
+
+
+
+
 		protected virtual void UpdateSelection(Vector2 cursorPos)
 		{
 			Vector2 offset = UseGestureInput ? (cursorPos - lastCursorPos) : (cursorPos - Position);
 
-			// Require a minimum movement to avoid jitter
+
 			if (offset.LengthSquared() > 64f)
 			{
 				if (UseGestureInput)
 				{
-					// Accumulate direction for smoother gesture control
+
 					Vector2 normalized = CursorSensitivity * 0.4f * Vector2.Normalize(offset);
 					cursorNormal = Vector2.Normalize(cursorNormal + normalized);
 				}
@@ -364,7 +364,7 @@ namespace RichHudFramework.UI
 				float bestDot = 0.5f;
 				int bestIndex = -1;
 
-				// Find the enabled entry whose offset most closely aligns with cursor direction
+
 				for (int i = 0; i < hudCollectionList.Count; i++)
 				{
 					var container = hudCollectionList[i];
@@ -384,11 +384,11 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Converts logical selection/highlight indices into visible slice positions
-		/// (skipping disabled entries).
-		/// </summary>
-		/// <exclude/>
+
+
+
+
+
 		protected void UpdateVisPos()
 		{
 			selectionVisPos = -1;
@@ -415,10 +415,10 @@ namespace RichHudFramework.UI
 			}
 		}
 
-		/// <summary>
-		/// Renders the selection box and highlighting using the polyboard
-		/// </summary>
-		/// <exclude/>
+
+
+
+
 		protected override void Draw()
 		{
 			Vector2 size = UnpaddedSize;
@@ -431,7 +431,7 @@ namespace RichHudFramework.UI
 			if (sliceSize <= 0)
 				return;
 
-			// Draw selection slice (skip if gesture mode and highlight overlaps)
+
 			if (selectionVisPos != -1 && (highlightVisPos != selectionVisPos || !UseGestureInput))
 			{
 				Vector2I slice = new Vector2I(0, sliceSize - 1) + (selectionVisPos * sliceSize);
@@ -439,7 +439,7 @@ namespace RichHudFramework.UI
 				polyBoard.Draw(size, Position, slice, HudSpace.PlaneToWorldRef);
 			}
 
-			// Draw highlight slice (skip if it would overlap selection in cursor mode)
+
 			if (highlightVisPos != -1 && (highlightVisPos != selectionVisPos || UseGestureInput))
 			{
 				Vector2I slice = new Vector2I(0, sliceSize - 1) + (highlightVisPos * sliceSize);
@@ -449,27 +449,27 @@ namespace RichHudFramework.UI
 		}
 	}
 
-	/// <summary>
-	/// Non-generic radial selection box using the default <see cref="ScrollBoxEntry"/> container
-	/// with plain <see cref="HudElementBase"/> elements.
-	/// <para>
-	/// Alias of <see cref="RadialSelectionBox{TContainer, TElement}"/> using 
-	/// <see cref="ScrollBoxEntry"/> and <see cref="HudElementBase"/> as the container and element, respectively.
-	/// </para>
-	/// </summary>
+
+
+
+
+
+
+
+
 	public class RadialSelectionBox : RadialSelectionBox<ScrollBoxEntry>
 	{
 		public RadialSelectionBox(HudParentBase parent = null) : base(parent) { }
 	}
 
-	/// <summary>
-	/// Generic radial selection box allowing custom containers while keeping
-	/// <see cref="HudElementBase"/> as the element type.
-	/// <para>
-	/// Alias of <see cref="RadialSelectionBox{TContainer, TElement}"/> using 
-	/// <see cref="HudElementBase"/> as the element.
-	/// </para>
-	/// </summary>
+
+
+
+
+
+
+
+
 	public class RadialSelectionBox<TContainer> : RadialSelectionBox<TContainer, HudElementBase>
 		where TContainer : IScrollBoxEntry<HudElementBase>, new()
 	{

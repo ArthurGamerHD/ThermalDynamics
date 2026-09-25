@@ -28,10 +28,10 @@ namespace RichHudFramework
 
             TerminalPageBase SelectedPage { get; }
 
-/// <summary>Adds a .</summary>
+
             void Add(TerminalPageBase page);
 
-/// <summary>Adds a range.</summary>
+
             void AddRange(IReadOnlyList<TerminalPageBase> pages);
         }
     }

@@ -6,19 +6,19 @@ namespace Thermodynamics.Harness
 {
     public static class Worlds
     {
-/// <summary>Space operation.</summary>
+
         public static EnvironmentSample Space(Vector3 sunDirectionLocal)
         {
             return EnvironmentSample.Vacuum(Vector3.Normalize(sunDirectionLocal));
         }
 
-/// <summary>Shadow operation.</summary>
+
         public static EnvironmentSample Shadow()
         {
             return EnvironmentSample.DarkVacuum();
         }
 
-/// <summary>DarkVacuumWithSources operation.</summary>
+
         public static EnvironmentSample DarkVacuumWithSources(int count)
         {
             EnvironmentSample sample = EnvironmentSample.DarkVacuum();
@@ -27,12 +27,12 @@ namespace Thermodynamics.Harness
             HeatSourceState[] sources = new HeatSourceState[count];
             for (int i = 0; i < count; i++)
             {
-                double a = i * 2.399963f;   // the golden angle, radians
+                double a = i * 2.399963f;
                 double z = 1.0 - (2.0 * (i + 0.5) / count);
                 double r = Math.Sqrt(Math.Max(0.0, 1.0 - (z * z)));
-/// <summary>Vector3 operation.</summary>
+
                 Vector3 direction = new Vector3((float)(Math.Cos(a) * r), (float)(Math.Sin(a) * r), (float)z);
-/// <summary>HeatSourceState operation.</summary>
+
                 sources[i] = new HeatSourceState(direction, 400f + (i % 5) * 120f);
             }
 
@@ -41,10 +41,10 @@ namespace Thermodynamics.Harness
             return sample;
         }
 
-/// <summary>PlanetSurface operation.</summary>
+
         public static EnvironmentSample PlanetSurface(float airDensity, float timeOfDay, float windSpeed = 0f)
         {
-/// <summary>EnvironmentSample operation.</summary>
+
             EnvironmentSample sample = new EnvironmentSample();
             sample.HasPlanet = true;
             sample.AirDensity = airDensity;
@@ -52,7 +52,7 @@ namespace Thermodynamics.Harness
             sample.UpDirection = Vector3.Up;
 
             double angle = (timeOfDay * 2d * Math.PI) - (Math.PI / 2d);
-/// <summary>Vector3 operation.</summary>
+
             Vector3 sun = new Vector3((float)Math.Cos(angle), (float)Math.Sin(angle), 0f);
             sample.SunDirection = sun;
             sample.SunDirectionLocal = sun;
@@ -75,10 +75,10 @@ namespace Thermodynamics.Harness
 
         public const float EarthlikeRadius = 60000f;
 
-/// <summary>Underground operation.</summary>
+
         public static EnvironmentSample Underground(float airDensity = 1f, float depth = 100f)
         {
-/// <summary>PlanetSurface operation.</summary>
+
             EnvironmentSample sample = PlanetSurface(airDensity, 0.5f);
             sample.IsUnderground = true;
             sample.IsSolarOccluded = true;
@@ -88,49 +88,49 @@ namespace Thermodynamics.Harness
             return sample;
         }
 
-/// <summary>Flight operation.</summary>
+
         public static EnvironmentSample Flight(float airDensity, float speed, float timeOfDay = 0.5f)
         {
-/// <summary>WindAndMotion operation.</summary>
+
             return WindAndMotion(airDensity, 0f, Vector3.Zero, Vector3.Backward * speed, timeOfDay);
         }
 
         public static class Ab
         {
-/// <summary>EveryTermLive operation.</summary>
+
             public static EnvironmentSample EveryTermLive()
             {
-/// <summary>PlanetSurface operation.</summary>
+
                 return PlanetSurface(1f, timeOfDay: 0.35f, windSpeed: 300f);
             }
 
-/// <summary>MildAtmosphere operation.</summary>
+
             public static EnvironmentSample MildAtmosphere()
             {
-/// <summary>PlanetSurface operation.</summary>
+
                 return PlanetSurface(0.8f, timeOfDay: 0.35f, windSpeed: 22f);
             }
 
-/// <summary>SunlitVacuum operation.</summary>
+
             public static EnvironmentSample SunlitVacuum()
             {
                 return Space(new Vector3(0.3f, 0.9f, 0.2f));
             }
         }
 
-/// <summary>Storm operation.</summary>
+
         public static EnvironmentSample Storm(float airDensity, float windSpeed, float timeOfDay = 0.5f)
         {
-/// <summary>WindAndMotion operation.</summary>
+
             return WindAndMotion(airDensity, windSpeed, Vector3.Forward, Vector3.Zero, timeOfDay);
         }
 
-/// <summary>WindAndMotion operation.</summary>
+
         public static EnvironmentSample WindAndMotion(
             float airDensity, float windSpeed, Vector3 windDirection, Vector3 velocity,
             float timeOfDay = 0.5f)
         {
-/// <summary>PlanetSurface operation.</summary>
+
             EnvironmentSample sample = PlanetSurface(airDensity, timeOfDay);
             sample.GridVelocity = velocity;
             sample.ComposeRelativeWind(windDirection, windSpeed, Matrix.Identity);

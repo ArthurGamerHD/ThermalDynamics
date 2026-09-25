@@ -2,7 +2,7 @@ namespace Thermodynamics.Harness
 {
     public static class LabText
     {
-/// <summary>Trim operation.</summary>
+
         public static string Trim(string text, int width)
         {
             if (text == null) return "";

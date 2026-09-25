@@ -6,7 +6,7 @@ namespace Thermodynamics.Tests
 {
     public static class SolverAb
     {
-/// <summary>Temperatures operation.</summary>
+
         public static float[] Temperatures(ThermalSimulation simulation)
         {
             return GridState.Temperatures(simulation);
@@ -17,7 +17,7 @@ namespace Thermodynamics.Tests
             "radiation", "convection", "solar", "friction", "heat source", "conduction",
         };
 
-/// <summary>Diagnostics operation.</summary>
+
         public static float[] Diagnostics(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -38,7 +38,7 @@ namespace Thermodynamics.Tests
             return values;
         }
 
-/// <summary>AssertVaried operation.</summary>
+
         public static void AssertVaried(float[] state, string what)
         {
             Assert.True(state.Length > 0, what + ": nothing was captured");
@@ -52,7 +52,7 @@ namespace Thermodynamics.Tests
                 + state[0].ToString("r") + ", so an identical result proves nothing");
         }
 
-/// <summary>AssertIdentical operation.</summary>
+
         public static void AssertIdentical(float[] expected, float[] actual,
             string what, string expectedIs, string actualIs, IList<string> perElement = null)
         {

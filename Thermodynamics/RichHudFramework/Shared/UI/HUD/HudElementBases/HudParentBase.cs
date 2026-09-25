@@ -3,24 +3,24 @@ using System.Collections.Generic;
 using VRage;
 using VRageMath;
 using HudNodeHookData = VRage.MyTuple<
-	System.Func<object, int, object>, // 1 -  GetOrSetApiMemberFunc
-	System.Action, // 2 - InputDepthAction
-	System.Action, // 3 - InputAction
-	System.Action, // 4 - SizingAction
-	System.Action<bool>, // 5 - LayoutAction
-	System.Action // 6 - DrawAction
+	System.Func<object, int, object>,
+	System.Action,
+	System.Action,
+	System.Action,
+	System.Action<bool>,
+	System.Action
 >;
 using HudSpaceOriginFunc = System.Func<VRageMath.Vector3D>;
 
 namespace RichHudFramework
 {
 	using HudNodeData = MyTuple<
-		uint[], // 1 - Config { 1.0 - State, 1.1 - NodeVisibleMask, 1.2 - NodeInputMask, 1.3 - zOffset, 1.4 - zOffsetInner, 1.5 - fullZOffset }
-		Func<Vector3D>[],  // 2 - GetNodeOriginFunc
-		HudNodeHookData, // 3 - Main hooks
-		object, // 4 - Parent as HudNodeDataHandle
-		List<object>, // 5 - Children as IReadOnlyList<HudNodeDataHandle>
-		object // 6 - Unused
+		uint[],
+		Func<Vector3D>[],
+		HudNodeHookData,
+		object,
+		List<object>,
+		object
 	>;
 
 	namespace UI
@@ -38,7 +38,7 @@ namespace RichHudFramework
 
 			public bool Visible
 			{
-/// <summary>return operation.</summary>
+
 				get { return (Config[StateID] & (uint)HudElementStates.IsVisible) > 0; }
 				set
 				{
@@ -51,7 +51,7 @@ namespace RichHudFramework
 
 			public bool InputEnabled
 			{
-/// <summary>return operation.</summary>
+
 				get { return (Config[StateID] & Config[InputMaskID]) == Config[InputMaskID]; }
 				set
 				{
@@ -64,7 +64,7 @@ namespace RichHudFramework
 
 			public sbyte ZOffset
 			{
-/// <summary>return operation.</summary>
+
 				get { return (sbyte)Config[ZOffsetID]; }
 				set
 				{
@@ -122,10 +122,10 @@ namespace RichHudFramework
 
 				public static readonly MemberInfo DrawBase;
 
-/// <summary>Adds a type.</summary>
+
 				public static void AddType(HudParentBase node, Type objType)
 				{
-/// <summary>default operation.</summary>
+
 					var usages = default(HookUsages);
 
 					{
@@ -164,10 +164,10 @@ namespace RichHudFramework
 
 				private static readonly Dictionary<Type, HookUsages> _typeHookMap;
 
-/// <summary>HookCanary operation.</summary>
+
 				static HookCanary()
 				{
-/// <summary>HookCanary operation.</summary>
+
 					var temp = new HookCanary();
 
 					InputDepthBase = ((Action)temp.InputDepth).Method;
@@ -182,20 +182,20 @@ namespace RichHudFramework
 					IsInitialized = true;
 				}
 
-/// <summary>HookCanary operation.</summary>
+
 				private HookCanary() { }
 			}
 
 			#endregion
 
-/// <summary>HudParentBase operation.</summary>
+
 			public HudParentBase()
 			{
 				if (HookCanary.IsInitialized)
 				{
-/// <summary>List operation.</summary>
+
 					children = new List<HudNodeBase>();
-/// <summary>List operation.</summary>
+
 					childHandles = new List<object>();
 					_config = new uint[ConfigLength];
 					Config = _config;
@@ -214,7 +214,7 @@ namespace RichHudFramework
 					_config[InputMaskID] = (uint)HudElementStates.IsInputEnabled;
 					_config[StateID] = (uint)(HudElementStates.IsRegistered | HudElementStates.IsInputEnabled | HudElementStates.IsVisible);
 			
-/// <summary>Returns the type.</summary>
+
 					Type nodeType = GetType();
 
 					if (!HookCanary.TypeHookMap.ContainsKey(nodeType))
@@ -242,7 +242,7 @@ namespace RichHudFramework
 				}
 			}
 
-/// <summary>BeginInput operation.</summary>
+
 			protected virtual void BeginInput()
 			{
 				if ((Config[StateID] & (uint)HudElementStates.IsInputHandlerCustom) > 0)
@@ -252,7 +252,7 @@ namespace RichHudFramework
 				}
 			}
 
-/// <summary>BeginLayout operation.</summary>
+
 			protected virtual void BeginLayout(bool _)
 			{
 				if (HudSpace != null)
@@ -264,27 +264,27 @@ namespace RichHudFramework
 					Layout();
 			}
 
-/// <summary>Measure operation.</summary>
+
 			protected virtual void Measure()
 			{ }
 
-/// <summary>Layout operation.</summary>
+
 			protected virtual void Layout()
 			{ }
 
-/// <summary>Draw operation.</summary>
+
 			protected virtual void Draw()
 			{ }
 
-/// <summary>InputDepth operation.</summary>
+
 			protected virtual void InputDepth()
 			{ }
 
-/// <summary>HandleInput operation.</summary>
+
 			protected virtual void HandleInput(Vector2 cursorPos)
 			{ }
 
-/// <summary>Registers and opens communication.</summary>
+
 			public virtual bool RegisterChild(HudNodeBase child)
 			{
 				if (child.Parent == this && !child.Registered)
@@ -308,19 +308,19 @@ namespace RichHudFramework
 
 					return true;
 				}
-/// <summary>if operation.</summary>
+
 				else if (child.Parent == null)
 					return child.Register(this);
 				else
 					return false;
 			}
 
-/// <summary>Removes the child.</summary>
+
 			public virtual bool RemoveChild(HudNodeBase child)
 			{
 				if (child.Parent == this)
 					return child.Unregister();
-/// <summary>if operation.</summary>
+
 				else if (child.Parent == null)
 				{
 					child._dataHandle[0].Item4 = null;
@@ -331,13 +331,13 @@ namespace RichHudFramework
 					return false;
 			}
 
-/// <summary>Returns the orsetapimember.</summary>
+
 			protected virtual object GetOrSetApiMember(object data, int memberEnum)
 			{
 				switch ((HudElementAccessors)memberEnum)
 				{
 					case HudElementAccessors.GetType:
-/// <summary>Returns the type.</summary>
+
 						return GetType();
 					case HudElementAccessors.ZOffset:
 						return (sbyte)ZOffset;

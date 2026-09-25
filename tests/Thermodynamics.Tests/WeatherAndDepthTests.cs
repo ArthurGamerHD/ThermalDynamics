@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
 {
     public class WeatherAndDepthTests
     {
-/// <summary>Earthlike operation.</summary>
+
         private static PlanetThermalProperties Earthlike()
         {
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
@@ -25,16 +25,16 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>ThinAirDoesNotCompoundAgainstTheLag operation.</summary>
+
         public void ThinAirDoesNotCompoundAgainstTheLag()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             EnvironmentSample sample = Worlds.PlanetSurface(0.612f, 0.5f);
-            sample.SecondsSincePrevious = 1f / 6f;      // the mod's own step
+            sample.SecondsSincePrevious = 1f / 6f;
             planet.AmbientLagSeconds = 45f;
 
             sample.PreviousAmbient = settings.VacuumTemperature;
@@ -58,12 +58,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGridWithNoHistoryStartsAtItsClimateRatherThanAtVacuum operation.</summary>
+
         public void AGridWithNoHistoryStartsAtItsClimateRatherThanAtVacuum()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             EnvironmentSample sample = Worlds.PlanetSurface(1f, 0.5f);
@@ -82,10 +82,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>AirCoolsWithHeightAboveSeaLevel operation.</summary>
+
         public void AirCoolsWithHeightAboveSeaLevel()
         {
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             Assert.Equal(280f, ClimateModel.Lapse(280f, 0f, 4f), 3);
@@ -97,7 +97,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AmbientHoldsUpThroughTheAtmosphereAndDiesAtTheEdgeOfIt operation.</summary>
+
         public void AmbientHoldsUpThroughTheAtmosphereAndDiesAtTheEdgeOfIt()
         {
             Assert.True(ClimateModel.AmbientDensityFactor(0.61f) > 0.999f);
@@ -120,10 +120,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>DepthBluntsTheDayAndThenRemovesIt operation.</summary>
+
         public void DepthBluntsTheDayAndThenRemovesIt()
         {
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
             float radius = Worlds.EarthlikeRadius;
 
@@ -143,10 +143,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BelowTheDeadzoneTheRockWarmsTowardTheCore operation.</summary>
+
         public void BelowTheDeadzoneTheRockWarmsTowardTheCore()
         {
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
             float radius = Worlds.EarthlikeRadius;
 
@@ -169,10 +169,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ATunnelIntoAMountainStaysCold operation.</summary>
+
         public void ATunnelIntoAMountainStaysCold()
         {
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
             float radius = Worlds.EarthlikeRadius;
 
@@ -184,12 +184,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSolverBuriesAGridAndTakesItsSunAway operation.</summary>
+
         public void TheSolverBuriesAGridAndTakesItsSunAway()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             EnvironmentState state = EnvironmentSolver.Solve(settings, planet, Worlds.Underground());
@@ -201,7 +201,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>EveryWeatherTheGameShipsIsRecognised operation.</summary>
+
         public void EveryWeatherTheGameShipsIsRecognised()
         {
             string[] weathers =
@@ -231,7 +231,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoWeatherAndAnUnknownWeatherAreBothCalm operation.</summary>
+
         public void NoWeatherAndAnUnknownWeatherAreBothCalm()
         {
             AssertCalm(WeatherResponse.For(""));
@@ -239,7 +239,7 @@ namespace Thermodynamics.Tests
             AssertCalm(WeatherResponse.For("SomeOtherModsWeather"));
         }
 
-/// <summary>AssertCalm operation.</summary>
+
         private static void AssertCalm(WeatherResponse.Weather weather)
         {
             Assert.Equal(0f, weather.TemperatureOffset, 5);
@@ -249,7 +249,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheKindsKeepTheOrderTheGameGaveThem operation.</summary>
+
         public void TheKindsKeepTheOrderTheGameGaveThem()
         {
             Assert.True(WeatherResponse.For("SnowHeavy").TemperatureOffset < -10f);
@@ -268,7 +268,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LightWeatherIsHalfOfHeavy operation.</summary>
+
         public void LightWeatherIsHalfOfHeavy()
         {
             WeatherResponse.Weather heavy = WeatherResponse.For("RainHeavy");
@@ -279,7 +279,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>IntensityFadesAWeatherInFromCalm operation.</summary>
+
         public void IntensityFadesAWeatherInFromCalm()
         {
             WeatherResponse.Weather storm = WeatherResponse.For("SnowHeavy");
@@ -296,7 +296,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OvercastFlattensTheDay operation.</summary>
+
         public void OvercastFlattensTheDay()
         {
             Assert.Equal(1f, WeatherResponse.SwingMultiplier(WeatherResponse.Calm), 3);
@@ -308,12 +308,12 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>AStormCoolsTheAirDarkensTheSunAndStripsHeatFaster operation.</summary>
+
         public void AStormCoolsTheAirDarkensTheSunAndStripsHeatFaster()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             EnvironmentSample clear = Worlds.PlanetSurface(1f, 0.5f);
@@ -333,12 +333,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ClearAirCostsTheModelNothing operation.</summary>
+
         public void ClearAirCostsTheModelNothing()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             EnvironmentSample clear = Worlds.PlanetSurface(1f, 0.5f);
@@ -356,12 +356,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHeatWaveWarmsTheAirAndBrightensTheSun operation.</summary>
+
         public void AHeatWaveWarmsTheAirAndBrightensTheSun()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             EnvironmentSample sample = Worlds.PlanetSurface(1f, 0.5f);
@@ -376,10 +376,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WeatherDoesNotReachAGridWithNoPlanet operation.</summary>
+
         public void WeatherDoesNotReachAGridWithNoPlanet()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
 
             EnvironmentSample sample = Worlds.Space(Vector3.Up);
@@ -394,7 +394,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheWindFieldTakesTheWeathersOwnWindModifier operation.</summary>
+
         public void TheWindFieldTakesTheWeathersOwnWindModifier()
         {
             float gale = WindField.Speed(80f, 1f, 0.5f, WeatherResponse.For("SandStormHeavy").WindMultiplier);

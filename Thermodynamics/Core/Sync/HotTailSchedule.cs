@@ -30,7 +30,7 @@ namespace Thermodynamics.Core
             get { return snapshotWanted; }
         }
 
-/// <summary>RequestSnapshot operation.</summary>
+
         public bool RequestSnapshot()
         {
             if (snapshotWanted) return false;
@@ -40,7 +40,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>Advance operation.</summary>
+
         public void Advance(float seconds)
         {
             if (seconds <= 0f) return;
@@ -50,7 +50,7 @@ namespace Thermodynamics.Core
             if (sinceSnapshot < SnapshotCooldownSeconds) sinceSnapshot += seconds;
         }
 
-/// <summary>Next operation.</summary>
+
         public HotTailSend Next()
         {
             if (snapshotWanted)
@@ -91,13 +91,13 @@ namespace Thermodynamics.Core
             get { return asked; }
         }
 
-/// <summary>Advance operation.</summary>
+
         public void Advance(float seconds)
         {
             if (seconds > 0f && !answered) waited += seconds;
         }
 
-/// <summary>ShouldAsk operation.</summary>
+
         public bool ShouldAsk()
         {
             if (answered) return false;
@@ -118,7 +118,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>Answer operation.</summary>
+
         public void Answer()
         {
             answered = true;

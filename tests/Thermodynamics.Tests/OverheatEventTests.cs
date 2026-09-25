@@ -6,10 +6,10 @@ namespace Thermodynamics.Tests
 {
     public class OverheatEventTests
     {
-/// <summary>Cooking operation.</summary>
+
         private static ThermalSimulation Cooking(int blocks = 800)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubsteps = 4096;
             settings.MaxSubstepsPerBlock = 0;
@@ -25,20 +25,20 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>DistinctBlocks operation.</summary>
+
         private static int DistinctBlocks(IList<OverheatEvent> events)
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<VRageMath.Vector3I> seen = new HashSet<VRageMath.Vector3I>();
             for (int i = 0; i < events.Count; i++) seen.Add(events[i].Block.Position);
             return seen.Count;
         }
 
         [Fact]
-/// <summary>AStepFilesOneEventPerOverheatingBlock operation.</summary>
+
         public void AStepFilesOneEventPerOverheatingBlock()
         {
-/// <summary>Cooking operation.</summary>
+
             ThermalSimulation simulation = Cooking();
             simulation.StepExact(1, Worlds.Shadow());
 
@@ -47,7 +47,7 @@ namespace Thermodynamics.Tests
             Assert.True(events.Count > 0,
                 "no block overheated, so this asserts nothing — the fixture is not cooking");
             Assert.True(simulation.Solver.LastSubsteps > 1,
-/// <summary>substep operation.</summary>
+
                 "the hull took " + simulation.Solver.LastSubsteps + " substep(s), so a per-substep"
                 + " list and a per-step list would be the same length and the test is blind");
 
@@ -55,10 +55,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CoalescingPreservesTheDamageABlockTakes operation.</summary>
+
         public void CoalescingPreservesTheDamageABlockTakes()
         {
-/// <summary>Cooking operation.</summary>
+
             ThermalSimulation simulation = Cooking();
             simulation.StepExact(30, Worlds.Shadow());
 
@@ -68,7 +68,7 @@ namespace Thermodynamics.Tests
 
             Assert.True(total > 0d, "nothing took damage over thirty steps");
 
-/// <summary>Cooking operation.</summary>
+
             ThermalSimulation reference = Cooking();
             float step = reference.Settings.StepSeconds;
             EnvironmentState state = EnvironmentSolver.Solve(
@@ -92,10 +92,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnEventCarriesTheHottestTemperatureTheBlockReached operation.</summary>
+
         public void AnEventCarriesTheHottestTemperatureTheBlockReached()
         {
-/// <summary>Cooking operation.</summary>
+
             ThermalSimulation simulation = Cooking();
             simulation.StepExact(1, Worlds.Shadow());
 
@@ -120,10 +120,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheListDoesNotGrowAcrossSteps operation.</summary>
+
         public void TheListDoesNotGrowAcrossSteps()
         {
-/// <summary>Cooking operation.</summary>
+
             ThermalSimulation simulation = Cooking();
             simulation.StepExact(1, Worlds.Shadow());
             int first = simulation.Solver.Overheats.Count;
@@ -139,7 +139,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheLowestCriticalTemperatureIsNeverAboveANodesOwn operation.</summary>
+
         public void TheLowestCriticalTemperatureIsNeverAboveANodesOwn()
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(), 3000);

@@ -16,21 +16,21 @@ namespace RichHudFramework
 
 			private readonly List<IBindGroup> bindGroups;
 
-/// <summary>RebindPage operation.</summary>
+
 			public RebindPage() : base(ModPages.RebindPage)
 			{
-/// <summary>List operation.</summary>
+
 				bindGroups = new List<IBindGroup>();
 			}
 
-/// <summary>Adds a .</summary>
+
 			public void Add(IBindGroup bindGroup, bool isAliased = false)
 			{
 				GetOrSetMemberFunc(new MyTuple<object, BindDefinitionData[], bool>(bindGroup.ID, null, isAliased), (int)RebindPageAccessors.Add);
 				bindGroups.Add(bindGroup);
 			}
 
-/// <summary>Adds a .</summary>
+
             public void Add(IBindGroup bindGroup, BindDefinition[] defaultBinds, bool isAliased = false)
 			{
 				BindDefinitionData[] data = new BindDefinitionData[defaultBinds.Length];
@@ -42,7 +42,7 @@ namespace RichHudFramework
 				bindGroups.Add(bindGroup);
 			}
 
-/// <summary>Returns the enumerator.</summary>
+
 			public IEnumerator<IBindGroup> GetEnumerator() =>
 				bindGroups.GetEnumerator();
 

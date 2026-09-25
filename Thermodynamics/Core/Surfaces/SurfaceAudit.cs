@@ -15,7 +15,7 @@ namespace Thermodynamics.Core
 
         public int Interior;
 
-/// <summary>ToString operation.</summary>
+
         public override string ToString()
         {
             return Exposed + "/" + Cells
@@ -25,7 +25,7 @@ namespace Thermodynamics.Core
 
     public static class SurfaceAudit
     {
-/// <summary>Explain operation.</summary>
+
         public static void Explain(
             SurfaceMap surfaces, BlockInstance block, RoomMap rooms, FaceExposure[] results)
         {
@@ -33,7 +33,7 @@ namespace Thermodynamics.Core
 
             for (int i = 0; i < Face.Count; i++)
             {
-/// <summary>default operation.</summary>
+
                 results[i] = default(FaceExposure);
             }
 
@@ -52,7 +52,7 @@ namespace Thermodynamics.Core
                 int u = span.U;
                 int v = span.V;
 
-/// <summary>default operation.</summary>
+
                 FaceExposure result = default(FaceExposure);
 
                 for (int a = BoxGeometry.Component(min, u); a < BoxGeometry.Component(maxExclusive, u); a++)
@@ -93,11 +93,11 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>ExplainAll operation.</summary>
+
         public static List<BlockExposure> ExplainAll(
             SurfaceMap surfaces, GridModel grid, RoomMap rooms, int limit = int.MaxValue)
         {
-/// <summary>List operation.</summary>
+
             List<BlockExposure> results = new List<BlockExposure>();
             if (surfaces == null || grid == null) return results;
 
@@ -108,7 +108,7 @@ namespace Thermodynamics.Core
             {
                 Explain(surfaces, blocks[i], rooms, faces);
 
-/// <summary>BlockExposure operation.</summary>
+
                 BlockExposure entry = new BlockExposure();
                 entry.Block = blocks[i];
                 entry.Faces = (FaceExposure[])faces.Clone();

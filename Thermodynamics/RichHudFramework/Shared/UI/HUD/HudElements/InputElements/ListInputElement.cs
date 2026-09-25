@@ -5,7 +5,7 @@ namespace RichHudFramework.UI
 {
 	public class ListInputElement<TElementContainer, TElement> : MouseInputElement
 		where TElement : HudElementBase, IMinLabelElement
-/// <summary>new operation.</summary>
+
 		where TElementContainer : class, IScrollBoxEntry<TElement>, new()
 	{
 		public event EventHandler SelectionChanged;
@@ -18,7 +18,7 @@ namespace RichHudFramework.UI
 			{
 				if (Entries.Count == 0 || SelectionIndex < 0 || SelectionIndex >= Entries.Count)
 				{
-/// <summary>default operation.</summary>
+
 					return default(TElementContainer);
 				}
 				else
@@ -43,27 +43,27 @@ namespace RichHudFramework.UI
 		public Vector2 ListPos { get; set; }
 
 		protected Vector2 lastCursorPos;
-		private int _selectionIndex; // -1 == no selection
+		private int _selectionIndex;
 		private int _highlightIndex;
 		private int _focusIndex;
 
-/// <summary>ListInputElement operation.</summary>
+
 		public ListInputElement(
 			HudElementBase parent,
 			IReadOnlyHudCollection<TElementContainer, TElement> entries
-/// <summary>base operation.</summary>
+
 		) : base(parent)
 		{
 			Entries = entries;
 			_selectionIndex = -1;
 		}
 
-/// <summary>ListInputElement operation.</summary>
+
 		public ListInputElement(HudChain<TElementContainer, TElement> parent)
 			: this(parent, parent)
 		{ }
 
-/// <summary>Sets the selectionat.</summary>
+
 		public void SetSelectionAt(int index)
 		{
 			if (index != _selectionIndex)
@@ -74,7 +74,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>Sets the selection.</summary>
+
 		public void SetSelection(TElementContainer member)
 		{
 			int index = Entries.FindIndex(x => member.Equals(x));
@@ -87,7 +87,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>OffsetSelectionIndex operation.</summary>
+
 		public void OffsetSelectionIndex(int offset, bool wrap = false)
 		{
 			int index = _selectionIndex,
@@ -103,7 +103,7 @@ namespace RichHudFramework.UI
 					else
 						index = Math.Min(index + dir, Entries.Count - 1);
 
-/// <summary>FindFirstEnabled operation.</summary>
+
 					index = FindFirstEnabled(index, wrap);
 				}
 			}
@@ -119,7 +119,7 @@ namespace RichHudFramework.UI
 					if (index < 0)
 						index += Entries.Count;
 
-/// <summary>FindLastEnabled operation.</summary>
+
 					index = FindLastEnabled(index, wrap);
 				}
 			}
@@ -127,7 +127,7 @@ namespace RichHudFramework.UI
 			SetSelectionAt(index);
 		}
 
-/// <summary>ClearSelection operation.</summary>
+
 		public void ClearSelection()
 		{
 			_selectionIndex = -1;
@@ -135,7 +135,7 @@ namespace RichHudFramework.UI
 			_focusIndex = 0;
 		}
 
-/// <summary>HandleInput operation.</summary>
+
 		protected override void HandleInput(Vector2 cursorPos)
 		{
 			if (Entries.Count > 0)
@@ -145,7 +145,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>UpdateSelectionInput operation.</summary>
+
 		protected virtual void UpdateSelectionInput(Vector2 cursorPos)
 		{
 			_selectionIndex = MathHelper.Clamp(_selectionIndex, -1, Entries.Count - 1);
@@ -153,7 +153,7 @@ namespace RichHudFramework.UI
 
 			if (KeyboardScroll)
 				_focusIndex = _highlightIndex;
-			else // Otherwise, focus index should follow the selection
+			else
 				_focusIndex = _selectionIndex;
 
 			if (FocusHandler?.HasFocus ?? false)
@@ -172,7 +172,7 @@ namespace RichHudFramework.UI
 					KeyboardScroll = true;
 					lastCursorPos = cursorPos;
 				}
-/// <summary>if operation.</summary>
+
 				else if (SharedBinds.DownArrow.IsNewPressed || SharedBinds.DownArrow.IsPressedAndHeld)
 				{
 					for (int i = _highlightIndex + 1; i < Entries.Count; i++)
@@ -191,7 +191,7 @@ namespace RichHudFramework.UI
 			else
 			{
 				KeyboardScroll = false;
-/// <summary>Vector2 operation.</summary>
+
 				lastCursorPos = new Vector2(float.MinValue);
 			}
 
@@ -205,7 +205,7 @@ namespace RichHudFramework.UI
 				if (!KeyboardScroll)
 				{
 					Vector2 cursorOffset = cursorPos - ListPos;
-/// <summary>BoundingBox2 operation.</summary>
+
 					BoundingBox2 listBounds = new BoundingBox2(-ListSize * .5f, ListSize * .5f);
 
 					if (listBounds.Contains(cursorOffset) == ContainmentType.Contains)
@@ -219,7 +219,7 @@ namespace RichHudFramework.UI
 								TElement element = Entries[i].Element;
 								Vector2 halfSize = element.Size * .5f,
 									offset = element.Offset;
-/// <summary>BoundingBox2 operation.</summary>
+
 								BoundingBox2 bb = new BoundingBox2(offset - halfSize, offset + halfSize);
 
 								if (bb.Contains(cursorOffset) == ContainmentType.Contains)
@@ -250,7 +250,7 @@ namespace RichHudFramework.UI
 			_highlightIndex = MathHelper.Clamp(_highlightIndex, 0, Entries.Count - 1);
 		}
 
-/// <summary>FindFirstEnabled operation.</summary>
+
 		private int FindFirstEnabled(int index, bool wrap)
 		{
 			if (wrap)
@@ -278,7 +278,7 @@ namespace RichHudFramework.UI
 			return -1;
 		}
 
-/// <summary>FindLastEnabled operation.</summary>
+
 		private int FindLastEnabled(int index, bool wrap)
 		{
 			if (wrap)

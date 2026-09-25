@@ -7,20 +7,20 @@ namespace Thermodynamics.Tests
 {
     public class ParallelTickTests
     {
-/// <summary>RepoRoot operation.</summary>
+
         private static string RepoRoot()
         {
             return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
 
-/// <summary>Source operation.</summary>
+
         private static string Source(string file)
         {
             return File.ReadAllText(Path.Combine(
                 RepoRoot(), "Thermodynamics", "Game", file));
         }
 
-/// <summary>Body operation.</summary>
+
         private static string Body(string source, string signature)
         {
             int at = source.IndexOf(signature);
@@ -33,7 +33,7 @@ namespace Thermodynamics.Tests
             for (int i = open; i < source.Length; i++)
             {
                 if (source[i] == '{') depth++;
-/// <summary>if operation.</summary>
+
                 else if (source[i] == '}')
                 {
                     depth--;
@@ -45,7 +45,7 @@ namespace Thermodynamics.Tests
             return null;
         }
 
-/// <summary>CodeOnly operation.</summary>
+
         private static string CodeOnly(string body)
         {
             body = Regex.Replace(body, @"/\*.*?\*/", " ", RegexOptions.Singleline);
@@ -58,13 +58,13 @@ namespace Thermodynamics.Tests
         };
 
         [Fact]
-/// <summary>TheSolveHalfNamesNothingThatBelongsToTheGame operation.</summary>
+
         public void TheSolveHalfNamesNothingThatBelongsToTheGame()
         {
-/// <summary>CodeOnly operation.</summary>
+
             string body = CodeOnly(Body(Source("ThermalGridSimulation.cs"), "public void SolveTick()"));
 
-/// <summary>List operation.</summary>
+
             List<string> found = new List<string>();
             foreach (string name in Forbidden)
             {
@@ -77,10 +77,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSchedulerPreparesAndPublishesAroundTheFanOut operation.</summary>
+
         public void TheSchedulerPreparesAndPublishesAroundTheFanOut()
         {
-/// <summary>CodeOnly operation.</summary>
+
             string scheduler = CodeOnly(Source("ThermalGridScheduler.cs"));
 
             int prepare = scheduler.IndexOf("PrepareTick");
@@ -97,7 +97,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheParallelPathShipsOff operation.</summary>
+
         public void TheParallelPathShipsOff()
         {
             string settings = File.ReadAllText(Path.Combine(

@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
     public class GridMathTests
     {
         [Fact]
-/// <summary>WideKeyRoundTripsAcrossTheWholeUsefulRange operation.</summary>
+
         public void WideKeyRoundTripsAcrossTheWholeUsefulRange()
         {
             int[] coordinates = { -100000, -4096, -513, -512, -1, 0, 1, 511, 512, 4096, 100000 };
@@ -20,7 +20,7 @@ namespace Thermodynamics.Tests
                 {
                     foreach (int z in coordinates)
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I position = new Vector3I(x, y, z);
                         Assert.Equal(position, GridMath.FromKey(GridMath.Key(position)));
                     }
@@ -29,10 +29,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WideKeyIsUniqueForNearbyPositions operation.</summary>
+
         public void WideKeyIsUniqueForNearbyPositions()
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<long> seen = new HashSet<long>();
             for (int x = -20; x <= 20; x++)
             {
@@ -47,7 +47,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LegacyKeyRoundTripsInsideItsSafeRange operation.</summary>
+
         public void LegacyKeyRoundTripsInsideItsSafeRange()
         {
             int[] coordinates = { -511, -256, -1, 0, 1, 256, 511 };
@@ -58,7 +58,7 @@ namespace Thermodynamics.Tests
                 {
                     foreach (int z in coordinates)
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I position = new Vector3I(x, y, z);
                         Assert.True(GridMath.IsLegacySafe(position));
                         Assert.Equal(position, GridMath.LegacyUnflatten(GridMath.LegacyFlatten(position)));
@@ -68,12 +68,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LegacyKeyAliasesOutsideItsSafeRange operation.</summary>
+
         public void LegacyKeyAliasesOutsideItsSafeRange()
         {
-/// <summary>Vector3I operation.</summary>
+
             Vector3I inRange = new Vector3I(0, 0, 0);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I outOfRange = new Vector3I(1024, -1, 0);
 
             Assert.False(GridMath.IsLegacySafe(outOfRange));
@@ -89,14 +89,14 @@ namespace Thermodynamics.Tests
         [InlineData(2, 3, 4, 12)]
         [InlineData(5, 1, 1, 5)]
         [InlineData(3, 3, 3, 9)]
-/// <summary>LargestFaceAreaIsTheProductOfTheTwoLargestSides operation.</summary>
+
         public void LargestFaceAreaIsTheProductOfTheTwoLargestSides(int x, int y, int z, int expected)
         {
             Assert.Equal(expected, GridMath.LargestFaceArea(new Vector3I(x, y, z)));
         }
 
         [Fact]
-/// <summary>LargestFaceAreaFixesTheOriginalOrderDependentResult operation.</summary>
+
         public void LargestFaceAreaFixesTheOriginalOrderDependentResult()
         {
             Assert.Equal(10, GridMath.LargestFaceArea(new Vector3I(1, 5, 2)));
@@ -108,12 +108,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ContainsUsesAnExclusiveUpperBound operation.</summary>
+
         public void ContainsUsesAnExclusiveUpperBound()
         {
-/// <summary>Vector3I operation.</summary>
+
             Vector3I min = new Vector3I(0, 0, 0);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I max = new Vector3I(2, 2, 2);
 
             Assert.True(GridMath.Contains(min, max, new Vector3I(0, 0, 0)));
@@ -123,7 +123,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CellCountMatchesTheBoxVolume operation.</summary>
+
         public void CellCountMatchesTheBoxVolume()
         {
             Assert.Equal(8, GridMath.CellCount(Vector3I.Zero, new Vector3I(2, 2, 2)));
@@ -132,7 +132,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AKeyIsLinearInTheCellSoANeighboursKeyIsAnAddition operation.</summary>
+
         public void AKeyIsLinearInTheCellSoANeighboursKeyIsAnAddition()
         {
             int checkedPairs = 0;
@@ -140,7 +140,7 @@ namespace Thermodynamics.Tests
             for (int y = -3; y <= 3; y++)
             for (int z = -3; z <= 3; z++)
             {
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I cell = new Vector3I(x * 7, y * 5, z * 11);
                 for (int face = 0; face < Face.Count; face++)
                 {

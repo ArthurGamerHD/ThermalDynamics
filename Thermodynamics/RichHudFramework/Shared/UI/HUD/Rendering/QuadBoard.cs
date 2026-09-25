@@ -10,7 +10,7 @@ namespace RichHudFramework
 			public struct CroppedBox
 			{
 				public static readonly BoundingBox2 defaultMask =
-/// <summary>Retrieves a thermal object; returns null if none.</summary>
+
 					new BoundingBox2(-Vector2.PositiveInfinity, Vector2.PositiveInfinity);
 
 				public BoundingBox2 bounds;
@@ -38,16 +38,16 @@ namespace RichHudFramework
 
 				public BoundedQuadMaterial materialData;
 
-/// <summary>QuadBoard operation.</summary>
+
 				static QuadBoard()
 				{
-/// <summary>BoundingBox2 operation.</summary>
+
 					var matFit = new BoundingBox2(new Vector2(0f, 0f), new Vector2(1f, 1f));
-/// <summary>QuadBoard operation.</summary>
+
 					Default = new QuadBoard(Material.Default.TextureID, matFit, Color.White);
 				}
 
-/// <summary>QuadBoard operation.</summary>
+
 				public QuadBoard(MyStringId textureID, BoundingBox2 matFit, Vector4 bbColor, float skewRatio = 0f)
 				{
 					materialData.textureID = textureID;
@@ -56,7 +56,7 @@ namespace RichHudFramework
 					this.skewRatio = skewRatio;
 				}
 
-/// <summary>QuadBoard operation.</summary>
+
 				public QuadBoard(MyStringId textureID, BoundingBox2 matFit, Color color, float skewRatio = 0f)
 				{
 					materialData.textureID = textureID;

@@ -12,7 +12,7 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>LocalisationSurfaceTests operation.</summary>
+
         public LocalisationSurfaceTests(ITestOutputHelper output)
         {
             this.output = output;
@@ -42,7 +42,7 @@ namespace Thermodynamics.Tests
         };
 
         [Fact]
-/// <summary>TheSurfaceInsideTheGamesHudIsASmallFractionOfWhatTheModWrites operation.</summary>
+
         public void TheSurfaceInsideTheGamesHudIsASmallFractionOfWhatTheModWrites()
         {
             string root = Path.Combine(
@@ -55,7 +55,7 @@ namespace Thermodynamics.Tests
 
             foreach (KeyValuePair<string, string[]> surface in Surfaces)
             {
-/// <summary>HashSet operation.</summary>
+
                 HashSet<string> distinct = new HashSet<string>(StringComparer.Ordinal);
 
                 foreach (string entry in surface.Value)
@@ -98,7 +98,7 @@ namespace Thermodynamics.Tests
             Assert.InRange(100.0 * inHud / total, 1.0, 10.0);
         }
 
-/// <summary>Visible operation.</summary>
+
         private static bool Visible(string value)
         {
             if (value.Length < 3) return false;

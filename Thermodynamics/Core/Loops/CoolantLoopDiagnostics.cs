@@ -25,7 +25,7 @@ namespace Thermodynamics.Core
         public string Subtype;
         public CoolantFault Fault;
 
-/// <summary>CoolantFaultExample operation.</summary>
+
         public CoolantFaultExample(Vector3I cell, string subtype, CoolantFault fault)
         {
             Cell = cell;
@@ -40,7 +40,7 @@ namespace Thermodynamics.Core
 
         public readonly int[] Counts = new int[6];
 
-/// <summary>List operation.</summary>
+
         public readonly List<CoolantFaultExample> Examples = new List<CoolantFaultExample>();
 
         public int PipesInLoops;
@@ -51,19 +51,19 @@ namespace Thermodynamics.Core
 
         private readonly int exampleLimit;
 
-/// <summary>CoolantLoopDiagnostics operation.</summary>
+
         public CoolantLoopDiagnostics()
             : this(DefaultExampleLimit)
         {
         }
 
-/// <summary>CoolantLoopDiagnostics operation.</summary>
+
         public CoolantLoopDiagnostics(int exampleLimit)
         {
             this.exampleLimit = exampleLimit > 0 ? exampleLimit : DefaultExampleLimit;
         }
 
-/// <summary>CountOf operation.</summary>
+
         public int CountOf(CoolantFault fault)
         {
             int index = (int)fault;
@@ -75,7 +75,7 @@ namespace Thermodynamics.Core
             get { return PipesAdrift > 0; }
         }
 
-/// <summary>Record operation.</summary>
+
         internal void Record(BlockInstance block, CoolantFault fault)
         {
             int index = (int)fault;
@@ -94,7 +94,7 @@ namespace Thermodynamics.Core
                 block.Min, block.Model == null ? "?" : block.Model.Name, fault));
         }
 
-/// <summary>Describe operation.</summary>
+
         public static string Describe(CoolantFault fault)
         {
             switch (fault)

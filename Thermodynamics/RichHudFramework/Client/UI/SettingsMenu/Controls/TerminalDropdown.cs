@@ -12,13 +12,13 @@ namespace RichHudFramework.UI.Client
 
 		public ListBoxData<T> List { get; }
 
-/// <summary>TerminalDropdown operation.</summary>
+
 		public TerminalDropdown() : base(MenuControls.DropdownControl)
 		{
-/// <summary>Returns the orsetmember.</summary>
+
 			var listData = GetOrSetMember(null, (int)ListControlAccessors.ListAccessors) as ApiMemberAccessor;
 
-/// <summary>ListBoxData operation.</summary>
+
 			List = new ListBoxData<T>(listData);
 		}
 	}

@@ -7,17 +7,17 @@ namespace Thermodynamics.Tests
 {
     public class DescentTests
     {
-/// <summary>Readings operation.</summary>
+
         private static List<Descent.Reading> Readings()
         {
             return Descent.Run();
         }
 
         [Fact]
-/// <summary>TheWindBlowsWhileTheHullIsAboveTheSurface operation.</summary>
+
         public void TheWindBlowsWhileTheHullIsAboveTheSurface()
         {
-/// <summary>Readings operation.</summary>
+
             List<Descent.Reading> readings = Readings();
 
             Assert.True(Descent.At(readings, 40).WindSpeed > 0f);
@@ -26,10 +26,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWindIsGoneOnceTheHullIsWhollyBuried operation.</summary>
+
         public void TheWindIsGoneOnceTheHullIsWhollyBuried()
         {
-/// <summary>Readings operation.</summary>
+
             List<Descent.Reading> readings = Readings();
 
             foreach (double height in new double[] { -6, -10, -20, -100, -1000, -20000 })
@@ -42,10 +42,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWindFadesOverTheHullRatherThanStopping operation.</summary>
+
         public void TheWindFadesOverTheHullRatherThanStopping()
         {
-/// <summary>Readings operation.</summary>
+
             List<Descent.Reading> readings = Readings();
 
             float surface = Descent.At(readings, 0).WindSpeed;
@@ -57,10 +57,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWindFallsMonotonicallyThroughTheDig operation.</summary>
+
         public void TheWindFallsMonotonicallyThroughTheDig()
         {
-/// <summary>Readings operation.</summary>
+
             List<Descent.Reading> readings = Readings();
 
             float previous = float.MaxValue;
@@ -75,10 +75,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSunIsGoneAsSoonAsTheHullIsUnderTheSurface operation.</summary>
+
         public void TheSunIsGoneAsSoonAsTheHullIsUnderTheSurface()
         {
-/// <summary>Readings operation.</summary>
+
             List<Descent.Reading> readings = Readings();
 
             Assert.True(Descent.At(readings, 10).SolarWatts > 0f);
@@ -93,12 +93,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AmbientDampsToTheRockAndThenWarmsTowardsTheCore operation.</summary>
+
         public void AmbientDampsToTheRockAndThenWarmsTowardsTheCore()
         {
-/// <summary>Readings operation.</summary>
+
             List<Descent.Reading> readings = Readings();
-/// <summary>PlanetThermalProperties operation.</summary>
+
             PlanetThermalProperties planet = new PlanetThermalProperties();
 
             float shallow = Descent.At(readings, -100).AmbientKelvin;
@@ -114,12 +114,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AmbientRisesMonotonicallyBelowTheDeadzone operation.</summary>
+
         public void AmbientRisesMonotonicallyBelowTheDeadzone()
         {
-/// <summary>Readings operation.</summary>
+
             List<Descent.Reading> readings = Readings();
-/// <summary>PlanetThermalProperties operation.</summary>
+
             PlanetThermalProperties planet = new PlanetThermalProperties();
 
             float previous = 0f;
@@ -134,10 +134,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheGamesFlagTurnsBeforeTheHullIsActuallyBuried operation.</summary>
+
         public void TheGamesFlagTurnsBeforeTheHullIsActuallyBuried()
         {
-/// <summary>Readings operation.</summary>
+
             List<Descent.Reading> readings = Readings();
             Descent.Reading dug = Descent.At(readings, -1);
 
@@ -147,10 +147,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCsvCarriesEveryReading operation.</summary>
+
         public void TheCsvCarriesEveryReading()
         {
-/// <summary>Readings operation.</summary>
+
             List<Descent.Reading> readings = Readings();
             string csv = Descent.Csv(readings);
 

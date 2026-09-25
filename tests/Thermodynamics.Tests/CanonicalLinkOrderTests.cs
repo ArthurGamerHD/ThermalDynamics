@@ -10,19 +10,19 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>CanonicalLinkOrderTests operation.</summary>
+
         public CanonicalLinkOrderTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>Census operation.</summary>
+
         private static ThermalSimulation Census(bool canonical, int blocks)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", blocks));
 
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             simulation.Solver.CanonicalLinkOrder = canonical;
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
@@ -30,7 +30,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>FirstDescent operation.</summary>
+
         private static int FirstDescent(IList<ThermalLink> links)
         {
             for (int i = 1; i < links.Count; i++)
@@ -43,16 +43,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheLinkListComesOutSortedByItsEnds operation.</summary>
+
         public void TheLinkListComesOutSortedByItsEnds()
         {
-/// <summary>Census operation.</summary>
+
             ThermalSimulation simulation = Census(true, 6000);
             IList<ThermalLink> links = simulation.Solver.Links;
 
             Assert.True(links.Count > 5000, "only " + links.Count + " links, so little is checked");
 
-/// <summary>FirstDescent operation.</summary>
+
             int descent = FirstDescent(links);
             Assert.True(descent < 0,
                 descent < 0 ? "" : "link " + descent + " joins " + links[descent].NodeA + "-"
@@ -61,14 +61,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWalksOwnOrderIsNotAlreadySorted operation.</summary>
+
         public void TheWalksOwnOrderIsNotAlreadySorted()
         {
-/// <summary>Census operation.</summary>
+
             ThermalSimulation simulation = Census(false, 6000);
             IList<ThermalLink> links = simulation.Solver.Links;
 
-/// <summary>FirstDescent operation.</summary>
+
             int descent = FirstDescent(links);
 
             output.WriteLine(links.Count.ToString("n0") + " links; the walk's own order first"
@@ -80,12 +80,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SortingIsAPermutationOfTheSameGraph operation.</summary>
+
         public void SortingIsAPermutationOfTheSameGraph()
         {
-/// <summary>Census operation.</summary>
+
             ThermalSimulation walked = Census(false, 6000);
-/// <summary>Census operation.</summary>
+
             ThermalSimulation sorted = Census(true, 6000);
 
             IList<ThermalLink> a = walked.Solver.Links;

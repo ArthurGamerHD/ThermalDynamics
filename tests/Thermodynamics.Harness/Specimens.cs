@@ -14,18 +14,18 @@ namespace Thermodynamics.Harness
             public string Reason;
         }
 
-/// <summary>Select operation.</summary>
+
         public static List<Scored> Select(IList<ShipProfile> corpus, int count)
         {
-/// <summary>List operation.</summary>
+
             List<Scored> panel = new List<Scored>();
             if (corpus == null || corpus.Count == 0 || count <= 0) return panel;
 
-/// <summary>List operation.</summary>
+
             List<double[]> features = new List<double[]>(corpus.Count);
             for (int i = 0; i < corpus.Count; i++) features.Add(corpus[i].Features);
 
-/// <summary>Spread operation.</summary>
+
             double[] scale = Spread(features);
             bool[] taken = new bool[corpus.Count];
 
@@ -51,7 +51,7 @@ namespace Thermodynamics.Harness
                 {
                     if (taken[i]) continue;
 
-/// <summary>Nearest operation.</summary>
+
                     double nearest = Nearest(features[i], panel, scale);
                     if (nearest > furthest)
                     {
@@ -67,7 +67,7 @@ namespace Thermodynamics.Harness
             return panel;
         }
 
-/// <summary>Take operation.</summary>
+
         private static void Take(IList<ShipProfile> corpus, List<double[]> features, bool[] taken,
             List<Scored> panel, int index, string reason, double[] scale)
         {
@@ -77,13 +77,13 @@ namespace Thermodynamics.Harness
             panel.Add(new Scored
             {
                 Ship = corpus[index],
-/// <summary>Nearest operation.</summary>
+
                 Isolation = panel.Count == 0 ? double.PositiveInfinity : Nearest(features[index], panel, scale),
                 Reason = reason,
             });
         }
 
-/// <summary>Extreme operation.</summary>
+
         private static int Extreme(List<double[]> features, int axis, bool highest)
         {
             int best = -1;
@@ -102,14 +102,14 @@ namespace Thermodynamics.Harness
             return best;
         }
 
-/// <summary>Nearest operation.</summary>
+
         private static double Nearest(double[] candidate, List<Scored> panel, double[] scale)
         {
             double nearest = double.PositiveInfinity;
 
             for (int i = 0; i < panel.Count; i++)
             {
-/// <summary>Distance operation.</summary>
+
                 double distance = Distance(candidate, panel[i].Ship.Features, scale);
                 if (distance < nearest) nearest = distance;
             }
@@ -117,7 +117,7 @@ namespace Thermodynamics.Harness
             return nearest;
         }
 
-/// <summary>Distance operation.</summary>
+
         public static double Distance(double[] a, double[] b, double[] scale)
         {
             double total = 0d;
@@ -131,7 +131,7 @@ namespace Thermodynamics.Harness
             return Math.Sqrt(total);
         }
 
-/// <summary>Spread operation.</summary>
+
         public static double[] Spread(List<double[]> features)
         {
             int axes = ShipProfile.FeatureNames.Length;
@@ -156,22 +156,22 @@ namespace Thermodynamics.Harness
             return scale;
         }
 
-/// <summary>Fidelity operation.</summary>
+
         public static double Fidelity(IList<ShipProfile> corpus, List<Scored> panel)
         {
             if (corpus == null || corpus.Count == 0 || panel == null || panel.Count == 0) return 0d;
 
-/// <summary>List operation.</summary>
+
             List<double[]> features = new List<double[]>(corpus.Count);
             for (int i = 0; i < corpus.Count; i++) features.Add(corpus[i].Features);
 
-/// <summary>Spread operation.</summary>
+
             double[] scale = Spread(features);
             double worst = 0d;
 
             for (int i = 0; i < corpus.Count; i++)
             {
-/// <summary>Nearest operation.</summary>
+
                 double nearest = Nearest(features[i], panel, scale);
                 if (nearest > worst) worst = nearest;
             }
@@ -179,7 +179,7 @@ namespace Thermodynamics.Harness
             return worst;
         }
 
-/// <summary>Redundant operation.</summary>
+
         public static List<KeyValuePair<ShipProfile, double>> Redundant(IList<ShipProfile> corpus,
             double within)
         {
@@ -188,11 +188,11 @@ namespace Thermodynamics.Harness
 
             if (corpus == null || corpus.Count < 2) return redundant;
 
-/// <summary>List operation.</summary>
+
             List<double[]> features = new List<double[]>(corpus.Count);
             for (int i = 0; i < corpus.Count; i++) features.Add(corpus[i].Features);
 
-/// <summary>Spread operation.</summary>
+
             double[] scale = Spread(features);
 
             for (int i = 0; i < corpus.Count; i++)
@@ -203,7 +203,7 @@ namespace Thermodynamics.Harness
                 {
                     if (i == j) continue;
 
-/// <summary>Distance operation.</summary>
+
                     double distance = Distance(features[i], features[j], scale);
                     if (distance < nearest) nearest = distance;
                 }

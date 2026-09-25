@@ -13,13 +13,13 @@ namespace Thermodynamics.Tests
 
         private static readonly string[] Material = { "Conductivity", "SpecificHeat" };
 
-/// <summary>Read operation.</summary>
+
         private static List<AuthoredValues.Entry> Read()
         {
             return AuthoredValues.Read(Material);
         }
 
-/// <summary>Claimed operation.</summary>
+
         private static string Claimed(string note)
         {
             Match match = Regex.Match(note ?? "", @"real units:\s*([^.,\n]+)",
@@ -27,27 +27,27 @@ namespace Thermodynamics.Tests
             return match.Success ? match.Groups[1].Value.Trim() : null;
         }
 
-/// <summary>Invented operation.</summary>
+
         private static bool Invented(string note)
         {
             return (note ?? "").TrimStart().StartsWith("invented", StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]
-/// <summary>EveryFigureThatNamesAMaterialMatchesIt operation.</summary>
+
         public void EveryFigureThatNamesAMaterialMatchesIt()
         {
-/// <summary>Read operation.</summary>
+
             List<AuthoredValues.Entry> authored = Read();
             Assert.NotEmpty(authored);
 
             int judged = 0;
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
 
             foreach (AuthoredValues.Entry entry in authored)
             {
-/// <summary>Claimed operation.</summary>
+
                 string material = Claimed(entry.Note);
                 if (material == null || !ReferenceMaterials.IsKnown(material)) continue;
 
@@ -70,19 +70,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryFigureSaysWhereItCameFrom operation.</summary>
+
         public void EveryFigureSaysWhereItCameFrom()
         {
-/// <summary>Read operation.</summary>
+
             List<AuthoredValues.Entry> authored = Read();
             Assert.NotEmpty(authored);
 
-/// <summary>List operation.</summary>
+
             List<string> unexplained = new List<string>();
 
             foreach (AuthoredValues.Entry entry in authored)
             {
-/// <summary>Claimed operation.</summary>
+
                 string material = Claimed(entry.Note);
 
                 if (material != null && ReferenceMaterials.IsKnown(material)) continue;
@@ -97,7 +97,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFigureThatDisagreesWithItsMaterialIsCaught operation.</summary>
+
         public void AFigureThatDisagreesWithItsMaterialIsCaught()
         {
             ReferenceMaterials.Reference aluminium = ReferenceMaterials.Get("aluminium");

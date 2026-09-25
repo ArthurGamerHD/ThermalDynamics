@@ -6,7 +6,7 @@ namespace Thermodynamics.Tests
 {
     public class ElementCostFitTests
     {
-/// <summary>Row operation.</summary>
+
         private static ElementCostLab.Row Row(int nodes, int links, int faces, double cost)
         {
             return new ElementCostLab.Row
@@ -19,7 +19,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheTwoPredictorFitRecoversKnownCoefficients operation.</summary>
+
         public void TheTwoPredictorFitRecoversKnownCoefficients()
         {
             List<ElementCostLab.Row> rows = new List<ElementCostLab.Row>
@@ -40,7 +40,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFitHasNoInterceptSoOverheadIsChargedToTheElements operation.</summary>
+
         public void TheFitHasNoInterceptSoOverheadIsChargedToTheElements()
         {
             List<ElementCostLab.Row> rows = new List<ElementCostLab.Row>
@@ -68,7 +68,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CollinearPredictorsAreRefusedRatherThanInvented operation.</summary>
+
         public void CollinearPredictorsAreRefusedRatherThanInvented()
         {
             List<ElementCostLab.Row> rows = new List<ElementCostLab.Row>
@@ -88,7 +88,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSinglePredictorFitRecoversItsCoefficient operation.</summary>
+
         public void TheSinglePredictorFitRecoversItsCoefficient()
         {
             List<ElementCostLab.Row> rows = new List<ElementCostLab.Row>
@@ -106,7 +106,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWeightIsLinksPerNodeAndSurvivesAChangeOfUnits operation.</summary>
+
         public void AWeightIsLinksPerNodeAndSurvivesAChangeOfUnits()
         {
             ElementCostLab.Fit fast = new ElementCostLab.Fit

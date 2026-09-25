@@ -21,28 +21,19 @@ namespace Thermodynamics
 
         private static readonly Dictionary<string, Plumbing> Shapes = new Dictionary<string, Plumbing>
         {
-/// <summary>Pipe operation.</summary>
             { "CoolantPipe_Straight", Pipe(StraightLink, None) },
-/// <summary>Pipe operation.</summary>
             { "CoolantPipe_Straight_DoubleSink", Pipe(StraightLink, new Vector3I[] { Vector3I.Left, Vector3I.Right }) },
-/// <summary>Pipe operation.</summary>
             { "CoolantPipe_Straight_SingleSink", Pipe(StraightLink, new Vector3I[] { Vector3I.Right }) },
-/// <summary>Pipe operation.</summary>
             { "CoolantPipe_Corner", Pipe(CornerLink, None) },
-/// <summary>Pipe operation.</summary>
             { "CoolantPipe_Corner_DoubleSink", Pipe(CornerLink, new Vector3I[] { Vector3I.Backward, Vector3I.Right }) },
-/// <summary>Pipe operation.</summary>
             { "CoolantPipe_Corner_SingleSink", Pipe(CornerLink, new Vector3I[] { Vector3I.Up }) },
-/// <summary>Pump operation.</summary>
             { "CoolantPump", Pump(StraightLink) },
         };
 
         private static readonly Dictionary<string, CoolantShape> Cache = new Dictionary<string, CoolantShape>();
 
-/// <summary>object operation.</summary>
         private static readonly object CacheLock = new object();
 
-/// <summary>Returns the .</summary>
         public static CoolantShape Get(string subtype, Vector3I size)
         {
             if (string.IsNullOrEmpty(subtype)) return null;
@@ -53,7 +44,6 @@ namespace Thermodynamics
                 if (Cache.TryGetValue(subtype, out cached)) return cached;
             }
 
-/// <summary>Builds the method table.</summary>
             CoolantShape shape = Build(subtype, size);
 
             lock (CacheLock)
@@ -66,7 +56,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Clear operation.</summary>
         public static void Clear()
         {
             lock (CacheLock)
@@ -79,7 +68,6 @@ namespace Thermodynamics
 
         public const float SmallGridPumpWatts = 10000f;
 
-/// <summary>Builds the API method table.</summary>
         private static CoolantShape Build(string subtype, Vector3I size)
         {
             Plumbing plumbing;
@@ -101,7 +89,6 @@ namespace Thermodynamics
             return CoolantShape.Pipe(plumbing.Link[0], plumbing.Link[1], plumbing.Sink);
         }
 
-/// <summary>StripGridPrefix operation.</summary>
         public static string StripGridPrefix(string subtype)
         {
             if (subtype == null) return "";
@@ -110,13 +97,11 @@ namespace Thermodynamics
             return subtype;
         }
 
-/// <summary>Pipe operation.</summary>
         private static Plumbing Pipe(Vector3I[] link, Vector3I[] sink)
         {
             return new Plumbing { Link = link, Sink = sink, IsPump = false };
         }
 
-/// <summary>Pump operation.</summary>
         private static Plumbing Pump(Vector3I[] link)
         {
             return new Plumbing { Link = link, Sink = None, IsPump = true };

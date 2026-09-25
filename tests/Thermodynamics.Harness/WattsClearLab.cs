@@ -20,7 +20,7 @@ namespace Thermodynamics.Harness
             public int Links;
             public int Substeps;
 
-/// <summary>return operation.</summary>
+
             public long RowBytes { get { return (long)Nodes * sizeof(float); } }
 
             public double ClearedMs;
@@ -48,10 +48,10 @@ namespace Thermodynamics.Harness
             public double WorstDelta;
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(IList<int> sizes, int ticks, Action<string> log = null)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             for (int s = 0; s < sizes.Count; s++)
@@ -64,16 +64,16 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Measure operation.</summary>
+
         private static Row Measure(int blocks, int ticks)
         {
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Blocks = blocks;
 
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation cleared = Build(blocks, fused: false);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation fused = Build(blocks, fused: true);
 
             row.Nodes = cleared.Solver.Nodes.Count;
@@ -89,7 +89,7 @@ namespace Thermodynamics.Harness
                 fused.Solver.Step(step, state);
             }
 
-/// <summary>WorstDelta operation.</summary>
+
             row.WorstDelta = WorstDelta(cleared, fused);
             row.Identical = row.WorstDelta == 0d;
 
@@ -124,7 +124,7 @@ namespace Thermodynamics.Harness
 
         private const int EquivalenceSteps = 20;
 
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation Build(int blocks, bool fused)
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(), blocks);
@@ -132,7 +132,7 @@ namespace Thermodynamics.Harness
             return simulation;
         }
 
-/// <summary>Time operation.</summary>
+
         private static double Time(ThermalSimulation simulation, EnvironmentState state, int ticks,
             bool fused)
         {
@@ -146,7 +146,7 @@ namespace Thermodynamics.Harness
             return watch.Elapsed.TotalMilliseconds / ticks;
         }
 
-/// <summary>WorstDelta operation.</summary>
+
         private static double WorstDelta(ThermalSimulation a, ThermalSimulation b)
         {
             IList<ThermalNode> left = a.Solver.Nodes;
@@ -164,10 +164,10 @@ namespace Thermodynamics.Harness
             return worst;
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine(
                 "  blocks     nodes     links  substeps    row KB     cleared       fused"
@@ -188,10 +188,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("blocks,nodes,links,substeps,row_bytes,cleared_ms,fused_ms,"
                 + "saved_ms,saved_percent,saved_ns_per_node_substep,identical,worst_delta_k");

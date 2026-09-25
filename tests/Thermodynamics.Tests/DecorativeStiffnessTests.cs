@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class DecorativeStiffnessTests
     {
-/// <summary>AsSteel operation.</summary>
+
         private static BlockThermalProperties AsSteel()
         {
             BlockThermalProperties t = Catalog.DefaultThermal();
@@ -17,17 +17,17 @@ namespace Thermodynamics.Tests
             return t;
         }
 
-/// <summary>AsLight operation.</summary>
+
         private static BlockThermalProperties AsLight()
         {
-/// <summary>AsSteel operation.</summary>
+
             BlockThermalProperties t = AsSteel();
             t.Conductivity = 2f;
             t.SpecificHeat = 900f;
             return t;
         }
 
-/// <summary>Profile operation.</summary>
+
         private static ThermalSolver.SubstepProfile Profile(
             BlockThermalProperties fitting, EnvironmentSample world)
         {
@@ -43,7 +43,7 @@ namespace Thermodynamics.Tests
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 1, 1));
             builder.Place(BlockModel.Solid("Fitting", Vector3I.One, 16f, fitting),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(4, 0, 0));
 
             ThermalSimulation simulation = builder.BuildSimulation(settings);
@@ -53,19 +53,19 @@ namespace Thermodynamics.Tests
             return simulation.Solver.ProfileSubsteps();
         }
 
-/// <summary>Vacuum operation.</summary>
+
         private static EnvironmentSample Vacuum() { return Worlds.Shadow(); }
 
-/// <summary>Air operation.</summary>
+
         private static EnvironmentSample Air() { return Worlds.PlanetSurface(1f, 0.5f); }
 
         [Fact]
-/// <summary>InVacuumTheMaterialPropertiesCarryTheFitting operation.</summary>
+
         public void InVacuumTheMaterialPropertiesCarryTheFitting()
         {
-/// <summary>Profile operation.</summary>
+
             ThermalSolver.SubstepProfile steel = Profile(AsSteel(), Vacuum());
-/// <summary>Profile operation.</summary>
+
             ThermalSolver.SubstepProfile light = Profile(AsLight(), Vacuum());
 
             Assert.True(steel.WorstNodeConductionShare > 0.6f,
@@ -75,12 +75,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>InAirTheEnvironmentIsMostOfWhatIsLeft operation.</summary>
+
         public void InAirTheEnvironmentIsMostOfWhatIsLeft()
         {
-/// <summary>Profile operation.</summary>
+
             ThermalSolver.SubstepProfile steel = Profile(AsSteel(), Air());
-/// <summary>Profile operation.</summary>
+
             ThermalSolver.SubstepProfile light = Profile(AsLight(), Air());
 
             Assert.True(steel.WorstNodeConductionShare < 0.5f,
@@ -105,16 +105,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ExposedAreaIsTheKnobThatReachesIt operation.</summary>
+
         public void ExposedAreaIsTheKnobThatReachesIt()
         {
-/// <summary>AsLight operation.</summary>
+
             BlockThermalProperties smaller = AsLight();
             smaller.ExposedSurfaceMultiplier = 0.1f;
 
-/// <summary>Profile operation.</summary>
+
             ThermalSolver.SubstepProfile full = Profile(AsLight(), Air());
-/// <summary>Profile operation.</summary>
+
             ThermalSolver.SubstepProfile reduced = Profile(smaller, Air());
 
             Assert.True(reduced.WorstNodeDemand < full.WorstNodeDemand * 0.2f,

@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     [Collection("alone")]
     public class LabInvariantTests
     {
-/// <summary>Corpus operation.</summary>
+
         private static List<string> Corpus()
         {
             return CorpusFixture.Files();
@@ -18,13 +18,13 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>NoDefinitionClaimsAPreposterousAmountOfPower operation.</summary>
+
         public void NoDefinitionClaimsAPreposterousAmountOfPower()
         {
             if (!GameBlocks.IsInstalled) return;
 
             const float Ceiling = 1e9f;
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
 
             foreach (GameBlocks.Definition definition in GameBlocks.All())
@@ -40,12 +40,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryDefinitionHasASizeAndAMass operation.</summary>
+
         public void EveryDefinitionHasASizeAndAMass()
         {
             if (!GameBlocks.IsInstalled) return;
 
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
 
             foreach (GameBlocks.Definition definition in GameBlocks.All())
@@ -59,7 +59,7 @@ namespace Thermodynamics.Tests
 
             Assert.Empty(wrong);
         }
-/// <summary>EveryBlockInABlueprintIsEitherPlacedOrCountedAsUnknown operation.</summary>
+
         internal static void EveryBlockInABlueprintIsEitherPlacedOrCountedAsUnknown()
         {
             if (!CorpusFixture.OptedIn()) return;
@@ -73,10 +73,10 @@ namespace Thermodynamics.Tests
             Assert.Empty(wrong);
         }
 
-/// <summary>Account operation.</summary>
+
         private static List<string> Account(string file)
         {
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
 
             List<Blueprints.Ship> ships = Blueprints.Read(file);
@@ -85,7 +85,7 @@ namespace Thermodynamics.Tests
             int accounted = 0;
             foreach (Blueprints.Ship ship in ships) accounted += ship.Blocks + ship.UnknownBlocks;
 
-/// <summary>CountBlocks operation.</summary>
+
             int inFile = CountBlocks(file);
             if (inFile != accounted)
             {
@@ -96,7 +96,7 @@ namespace Thermodynamics.Tests
             return wrong;
         }
 
-/// <summary>CountBlocks operation.</summary>
+
         private static int CountBlocks(string file)
         {
             System.Xml.Linq.XDocument document;
@@ -121,7 +121,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockWithNoNeighboursIsFullyExposed operation.</summary>
+
         public void ABlockWithNoNeighboursIsFullyExposed()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -145,14 +145,14 @@ namespace Thermodynamics.Tests
                     + " exposed faces of " + Face.Count);
             }
         }
-/// <summary>RunningTheSameThingTwiceGivesTheSameAnswer operation.</summary>
+
         internal static void RunningTheSameThingTwiceGivesTheSameAnswer()
         {
-/// <summary>Corpus operation.</summary>
+
             List<string> corpus = Corpus();
             if (corpus.Count == 0) return;
 
-/// <summary>List operation.</summary>
+
             List<string> drifted = new List<string>();
             int ships = 0;
 
@@ -167,7 +167,7 @@ namespace Thermodynamics.Tests
             Assert.Empty(drifted);
         }
 
-/// <summary>Compare operation.</summary>
+
         internal static List<string> Compare(Blueprints.Ship ship)
         {
             Dictionary<string, Battery.Scenario> byName = new Dictionary<string, Battery.Scenario>();
@@ -176,7 +176,7 @@ namespace Thermodynamics.Tests
             Battery.Scenario scenario = byName["full-electrical"];
             Battery.Scenario between = byName["burn-forward"];
 
-/// <summary>List operation.</summary>
+
             List<string> drifted = new List<string>();
 
             ScenarioOutcome first = Battery.Run(ship, scenario);
@@ -191,7 +191,7 @@ namespace Thermodynamics.Tests
             return drifted;
         }
 
-/// <summary>Differs operation.</summary>
+
         private static bool Differs(ScenarioOutcome a, ScenarioOutcome b)
         {
             if (a.HottestBlock != b.HottestBlock) return true;

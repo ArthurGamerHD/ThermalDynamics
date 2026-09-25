@@ -37,14 +37,14 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Environment operation.</summary>
+
         public static Func<float, EnvironmentSample> Environment(string category)
         {
             if (category == "PlanetaryEncounters") return t => Worlds.PlanetSurface(1f, 0.5f);
             return t => Worlds.Space(new VRageMath.Vector3(0.3f, 0.9f, 0.2f));
         }
 
-/// <summary>Measure operation.</summary>
+
         public static Outcome Measure(string path, ThermalSettings settings = null,
             ShipLoad.State load = null)
         {
@@ -79,9 +79,9 @@ namespace Thermodynamics.Harness
 
             ShipLoad.Apply(assembly, load ?? ShipLoad.State.Idle);
 
-/// <summary>AssemblyRunner operation.</summary>
+
             AssemblyRunner runner = new AssemblyRunner(assembly);
-/// <summary>Environment operation.</summary>
+
             runner.Environment = Environment(outcome.Category);
             runner.Integrity = GameBlocks.IntegrityOf;
             runner.Run(WatchSeconds);
@@ -97,7 +97,7 @@ namespace Thermodynamics.Harness
             return outcome;
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Outcome> Run(ThermalSettings settings = null, int limit = 0,
             ShipLoad.State load = null)
         {
@@ -108,10 +108,10 @@ namespace Thermodynamics.Harness
             return LabRun.Map(files, path => Measure(path, world, load), LabMode.Parallel);
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(IList<Outcome> outcomes)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
 
             int measured = 0, skipped = 0, lost = 0, crossed = 0;
@@ -169,7 +169,7 @@ namespace Thermodynamics.Harness
 
                 text.AppendLine();
                 text.AppendLine("  worst, by how soon it lost one");
-/// <summary>List operation.</summary>
+
                 List<Outcome> failures = new List<Outcome>();
                 for (int i = 0; i < outcomes.Count; i++)
                 {
@@ -192,10 +192,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(IList<Outcome> outcomes)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder csv = new StringBuilder();
             csv.AppendLine("prefab,category,blocks,grids,unknown_blocks,peak_k,mean_k,"
                 + "over_critical,seconds_to_critical,seconds_to_first_loss,skipped");

@@ -7,7 +7,7 @@ namespace Thermodynamics.Presentation
         public Mode Current { get; private set; }
 
 
-/// <summary>Enable operation.</summary>
+
         public bool Enable(Mode mode, long eligibleViewpoint)
         {
             Disable();
@@ -16,13 +16,13 @@ namespace Thermodynamics.Presentation
             return true;
         }
 
-/// <summary>Validate operation.</summary>
+
         public bool Validate(long eligibleViewpoint)
         {
             return eligibleViewpoint != 0 && Current != Mode.Off;
         }
 
-/// <summary>Disable operation.</summary>
+
         public void Disable()
         {
             Current = Mode.Off;

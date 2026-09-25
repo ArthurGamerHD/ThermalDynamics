@@ -14,7 +14,7 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>ShippedIdentityTests operation.</summary>
+
         public ShippedIdentityTests(ITestOutputHelper output)
         {
             this.output = output;
@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
         private const string SteamIdOwner = "76561198079985653";
 
         [Fact]
-/// <summary>TheWorkshopIdentityIsTheOneTheModIsPublishedUnder operation.</summary>
+
         public void TheWorkshopIdentityIsTheOneTheModIsPublishedUnder()
         {
             string path = Path.Combine(ShippedBlocks.RepoRoot(), "Workshop", "modinfo.sbmi");
@@ -33,7 +33,7 @@ namespace Thermodynamics.Tests
 
             XDocument info = XDocument.Load(path);
 
-/// <summary>List operation.</summary>
+
             List<string> ids = new List<string>();
             foreach (XElement element in info.Descendants())
             {
@@ -61,7 +61,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSecondIdentityFileIsStillThere operation.</summary>
+
         public void TheSecondIdentityFileIsStillThere()
         {
             string path = Path.Combine(ShippedBlocks.RepoRoot(), "Workshop", "metadata.mod");
@@ -70,13 +70,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheModelTreeKeepsItsShape operation.</summary>
+
         public void TheModelTreeKeepsItsShape()
         {
             string models = Path.Combine(ShippedBlocks.ContentRoot(), "Models");
             Assert.True(Directory.Exists(models), "Models/ is gone");
 
-/// <summary>List operation.</summary>
+
             List<string> paths = new List<string>();
             foreach (string file in Directory.GetFiles(models, "*.mwm", SearchOption.AllDirectories))
             {
@@ -100,7 +100,7 @@ namespace Thermodynamics.Tests
 
             output.WriteLine("{0} models, path-set digest {1}", paths.Count, digest);
 
-/// <summary>List operation.</summary>
+
             List<string> stray = new List<string>();
             for (int i = 0; i < paths.Count; i++)
             {

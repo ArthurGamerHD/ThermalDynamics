@@ -8,7 +8,7 @@ namespace Thermodynamics.Core
         public Base6Directions.Direction Forward;
         public Base6Directions.Direction Up;
 
-/// <summary>BlockOrientation operation.</summary>
+
         public BlockOrientation(Base6Directions.Direction forward, Base6Directions.Direction up)
         {
             Forward = forward;
@@ -17,11 +17,11 @@ namespace Thermodynamics.Core
 
         public static BlockOrientation Identity
         {
-/// <summary>BlockOrientation operation.</summary>
+
             get { return new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up); }
         }
 
-/// <summary>Returns the matrix.</summary>
+
         public Matrix GetMatrix()
         {
             return Matrix.CreateWorld(
@@ -37,14 +37,14 @@ namespace Thermodynamics.Core
 
         private static readonly bool[] legal = new bool[Slots];
 
-/// <summary>BlockOrientation operation.</summary>
+
         static BlockOrientation()
         {
             for (int f = 0; f < 6; f++)
             {
                 for (int u = 0; u < 6; u++)
                 {
-/// <summary>BlockOrientation operation.</summary>
+
                     BlockOrientation orientation = new BlockOrientation(
                         (Base6Directions.Direction)f, (Base6Directions.Direction)u);
 
@@ -70,7 +70,7 @@ namespace Thermodynamics.Core
 
         private int Slot
         {
-/// <summary>return operation.</summary>
+
             get { return ((int)Forward * 6) + (int)Up; }
         }
 
@@ -83,20 +83,20 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>RotateByMatrix operation.</summary>
+
         public Vector3I RotateByMatrix(Vector3I local)
         {
-/// <summary>Returns the matrix.</summary>
+
             Matrix m = GetMatrix();
             Vector3I result;
             Vector3I.Transform(ref local, ref m, out result);
             return result;
         }
 
-/// <summary>UnrotateByMatrix operation.</summary>
+
         public Vector3I UnrotateByMatrix(Vector3I grid)
         {
-/// <summary>Returns the matrix.</summary>
+
             Matrix m = GetMatrix();
             m.TransposeRotationInPlace();
             Vector3I result;
@@ -104,7 +104,7 @@ namespace Thermodynamics.Core
             return result;
         }
 
-/// <summary>Rotate operation.</summary>
+
         public Vector3I Rotate(Vector3I local)
         {
             if (!IsLegal) return RotateByMatrix(local);
@@ -120,7 +120,7 @@ namespace Thermodynamics.Core
                 (local.X * x.Z) + (local.Y * y.Z) + (local.Z * z.Z));
         }
 
-/// <summary>Unrotate operation.</summary>
+
         public Vector3I Unrotate(Vector3I grid)
         {
             if (!IsLegal) return UnrotateByMatrix(grid);
@@ -136,7 +136,7 @@ namespace Thermodynamics.Core
                 (grid.X * z.X) + (grid.Y * z.Y) + (grid.Z * z.Z));
         }
 
-/// <summary>RotateFace operation.</summary>
+
         public int RotateFace(int localFace)
         {
             if (localFace < 0 || localFace >= Face.Count) return -1;
@@ -145,25 +145,25 @@ namespace Thermodynamics.Core
             return rotatedFaces[(Slot * Face.Count) + localFace];
         }
 
-/// <summary>Equals operation.</summary>
+
         public bool Equals(BlockOrientation other)
         {
             return Forward == other.Forward && Up == other.Up;
         }
 
-/// <summary>Equals operation.</summary>
+
         public override bool Equals(object obj)
         {
             return obj is BlockOrientation && Equals((BlockOrientation)obj);
         }
 
-/// <summary>Returns the hashcode.</summary>
+
         public override int GetHashCode()
         {
             return ((int)Forward * 6) + (int)Up;
         }
 
-/// <summary>ToString operation.</summary>
+
         public override string ToString()
         {
             return "F:" + Forward + " U:" + Up;

@@ -38,7 +38,7 @@ namespace Thermodynamics.Core
 
             public const int EnvironmentFill = 6;
 
-/// <summary>Reset operation.</summary>
+
             public void Reset()
             {
                 for (int i = 0; i < PhaseCount; i++)
@@ -49,7 +49,7 @@ namespace Thermodynamics.Core
                 }
             }
 
-/// <summary>MillisecondsOf operation.</summary>
+
             public double MillisecondsOf(int phase)
             {
                 return Ticks[phase] * 1000d / Stopwatch.Frequency;
@@ -58,7 +58,7 @@ namespace Thermodynamics.Core
 
         public bool ProfileStepPhases;
 
-/// <summary>StepPhaseProfile operation.</summary>
+
         public readonly StepPhaseProfile StepPhases = new StepPhaseProfile();
 
         private EnvironmentState stepEnvironment;
@@ -94,7 +94,7 @@ namespace Thermodynamics.Core
 
         public long LastAdvanceWork { get; private set; }
 
-/// <summary>SubstepWork operation.</summary>
+
         private long SubstepWork(int nodeCount, int linkCount, int sources)
         {
             return (nodeCount / 8)
@@ -105,27 +105,27 @@ namespace Thermodynamics.Core
                 + nodeCount;
         }
 
-/// <summary>Step operation.</summary>
+
         public void Step(float deltaSeconds, EnvironmentState environment)
         {
             Step(deltaSeconds, environment, -1f);
         }
 
-/// <summary>Step operation.</summary>
+
         public void Step(float deltaSeconds, EnvironmentState environment, float knownRequired)
         {
             if (!BeginStep(deltaSeconds, environment, knownRequired)) return;
             while (!AdvanceStep(long.MaxValue)) { }
         }
 
-/// <summary>BeginStep operation.</summary>
+
         public bool BeginStep(float deltaSeconds, EnvironmentState environment)
         {
-/// <summary>BeginStep operation.</summary>
+
             return BeginStep(deltaSeconds, environment, -1f);
         }
 
-/// <summary>BeginStep operation.</summary>
+
         public bool BeginStep(float deltaSeconds, EnvironmentState environment, float knownRequired)
         {
             if (deltaSeconds <= 0f) return false;
@@ -142,7 +142,7 @@ namespace Thermodynamics.Core
             else
             {
                 PrepareStepState();
-/// <summary>RequiredSubstepsFromState operation.</summary>
+
                 required = RequiredSubstepsFromState(deltaSeconds);
             }
 
@@ -157,7 +157,7 @@ namespace Thermodynamics.Core
             ClearOverheatAccumulator();
             crossings.Clear();
 
-/// <summary>ClampSubsteps operation.</summary>
+
             int substeps = ClampSubsteps(required);
             LastSubsteps = substeps;
             LastStepWasClamped = required > MaxSubsteps;
@@ -199,7 +199,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>AdvanceStep operation.</summary>
+
         public bool AdvanceStep(long workBudget)
         {
             LastAdvanceWork = 0;
@@ -228,32 +228,32 @@ namespace Thermodynamics.Core
                 switch (stage)
                 {
                     case StepStage.Begin:
-/// <summary>BeginSubstep operation.</summary>
+
                         spent += BeginSubstep();
                         break;
 
                     case StepStage.Environment:
-/// <summary>AdvanceEnvironment operation.</summary>
+
                         spent += AdvanceEnvironment(remaining);
                         break;
 
                     case StepStage.Conduction:
-/// <summary>AdvanceConduction operation.</summary>
+
                         spent += AdvanceConduction(remaining);
                         break;
 
                     case StepStage.Coupled:
-/// <summary>AdvanceCoupled operation.</summary>
+
                         spent += AdvanceCoupled();
                         break;
 
                     case StepStage.Apply:
-/// <summary>AdvanceApply operation.</summary>
+
                         spent += AdvanceApply(remaining);
                         break;
 
                     default:
-/// <summary>AdvancePublish operation.</summary>
+
                         spent += AdvancePublish(remaining);
                         break;
                 }
@@ -274,7 +274,7 @@ namespace Thermodynamics.Core
             return stage == StepStage.Idle;
         }
 
-/// <summary>BeginSubstep operation.</summary>
+
         private long BeginSubstep()
         {
             int nodeCount = stepNodeCount;
@@ -288,7 +288,7 @@ namespace Thermodynamics.Core
             ClearConductionDiagnostics();
             ResetEnvironmentTotals();
 
-/// <summary>PlanEnvironment operation.</summary>
+
             stepPlan = PlanEnvironment(ref stepEnvironment);
 
             stage = StepStage.Environment;
@@ -297,11 +297,11 @@ namespace Thermodynamics.Core
             return nodeCount / 8;
         }
 
-/// <summary>AdvanceEnvironment operation.</summary>
+
         private long AdvanceEnvironment(long budget)
         {
             int count = stepNodeCount;
-/// <summary>Advance operation.</summary>
+
             int end = Advance(count, budget);
 
             AccumulateEnvironmentRange(ref stepEnvironment, ref stepPlan, substepSeconds,
@@ -327,11 +327,11 @@ namespace Thermodynamics.Core
             return spent;
         }
 
-/// <summary>AdvanceConduction operation.</summary>
+
         private long AdvanceConduction(long budget)
         {
             int count = stepLinkCount;
-/// <summary>Advance operation.</summary>
+
             int end = Advance(count, budget);
 
             AccumulateConductionRange(substepSeconds, stageCursor, end);
@@ -348,7 +348,7 @@ namespace Thermodynamics.Core
             return spent;
         }
 
-/// <summary>AdvanceCoupled operation.</summary>
+
         private long AdvanceCoupled()
         {
             AccumulateLoops(substepSeconds);
@@ -361,11 +361,11 @@ namespace Thermodynamics.Core
             return loops.Count + roomAir.Count + heatPumps.Count;
         }
 
-/// <summary>AdvanceApply operation.</summary>
+
         private long AdvanceApply(long budget)
         {
             int count = stepNodeCount;
-/// <summary>Advance operation.</summary>
+
             int end = Advance(count, budget);
 
             ApplyNodeWattsRange(substepSeconds, stageCursor, end);
@@ -404,11 +404,11 @@ namespace Thermodynamics.Core
             return spent;
         }
 
-/// <summary>AdvancePublish operation.</summary>
+
         private long AdvancePublish(long budget)
         {
             int count = stepNodeCount;
-/// <summary>Advance operation.</summary>
+
             int end = Advance(count, budget);
 
             bool watching = thresholds.Count > 0;
@@ -454,7 +454,7 @@ namespace Thermodynamics.Core
             return spent;
         }
 
-/// <summary>Advance operation.</summary>
+
         private int Advance(int count, long budget)
         {
             if (budget <= 0) return stageCursor;
@@ -465,7 +465,7 @@ namespace Thermodynamics.Core
             return stageCursor + (int)(budget < room ? budget : room);
         }
 
-/// <summary>AbandonStep operation.</summary>
+
         public void AbandonStep()
         {
             if (stage == StepStage.Idle) return;

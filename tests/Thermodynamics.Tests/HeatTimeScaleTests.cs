@@ -8,17 +8,17 @@ namespace Thermodynamics.Tests
 {
     public class HeatTimeScaleTests
     {
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings(float scale, int frequency = 4)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.HeatTimeScale = scale;
             settings.Frequency = frequency;
             return settings.Derive();
         }
 
-/// <summary>Cube operation.</summary>
+
         private static ThermalSimulation Cube(ThermalSettings settings, float temperature)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -29,12 +29,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CapacityIsDividedByTheScale operation.</summary>
+
         public void CapacityIsDividedByTheScale()
         {
-/// <summary>Cube operation.</summary>
+
             ThermalSimulation physical = Cube(Settings(1f), 300f);
-/// <summary>Cube operation.</summary>
+
             ThermalSimulation accelerated = Cube(Settings(225f), 300f);
 
             float a = physical.Solver.Nodes[0].ThermalMass;
@@ -44,14 +44,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ScalingCapacityIsTheSameAsRunningTimeFaster operation.</summary>
+
         public void ScalingCapacityIsTheSameAsRunningTimeFaster()
         {
             const int scale = 20;
 
-/// <summary>Cube operation.</summary>
+
             ThermalSimulation fast = Cube(Settings(scale), 800f);
-/// <summary>Cube operation.</summary>
+
             ThermalSimulation slow = Cube(Settings(1f), 800f);
 
             fast.StepExact(60 * 4, Worlds.Shadow());
@@ -69,7 +69,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EquilibriumDoesNotDependOnTheScale operation.</summary>
+
         public void EquilibriumDoesNotDependOnTheScale()
         {
             float[] scales = new float[] { 50f, 225f, 1000f };
@@ -99,12 +99,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHigherScaleCostsSubstepsNotAccuracy operation.</summary>
+
         public void AHigherScaleCostsSubstepsNotAccuracy()
         {
-/// <summary>Cube operation.</summary>
+
             ThermalSimulation gentle = Cube(Settings(1f), 800f);
-/// <summary>Cube operation.</summary>
+
             ThermalSimulation harsh = Cube(Settings(2000f), 800f);
 
             gentle.StepExact(40, Worlds.Shadow());
@@ -121,16 +121,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CoolantRunsOnTheSameClockAsTheBlocksItCools operation.</summary>
+
         public void CoolantRunsOnTheSameClockAsTheBlocksItCools()
         {
             LoopThermalProperties properties = LoopThermalProperties.Default();
             properties.SpecificHeat = 3400f;
             properties.CoolantMassPerPipe = 500f;
 
-/// <summary>CoolantLoop operation.</summary>
+
             CoolantLoop physical = new CoolantLoop(properties, 300f, 1f);
-/// <summary>CoolantLoop operation.</summary>
+
             CoolantLoop accelerated = new CoolantLoop(properties, 300f, new ThermalSettings().HeatTimeScale);
 
             Assert.Equal(new ThermalSettings().HeatTimeScale,
@@ -138,17 +138,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnInvalidScaleFallsBackToPhysical operation.</summary>
+
         public void AnInvalidScaleFallsBackToPhysical()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.HeatTimeScale = 0f;
             settings.Derive();
 
             Assert.Equal(1f, settings.HeatTimeScale);
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings negative = new ThermalSettings();
             negative.HeatTimeScale = -5f;
             negative.Derive();
@@ -157,14 +157,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShippedClockIsSlowerThanTheOneTheConversionReproduced operation.</summary>
+
         public void TheShippedClockIsSlowerThanTheOneTheConversionReproduced()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
 
-            const float steel = 450f;         // Data/Cubes.xml, DefaultThermodynamics
-            const float legacyValue = 2f;     // what that definition used to carry
+            const float steel = 450f;
+            const float legacyValue = 2f;
             const float conversionClock = 225f;
 
             Assert.Equal(legacyValue, steel / conversionClock, 3);

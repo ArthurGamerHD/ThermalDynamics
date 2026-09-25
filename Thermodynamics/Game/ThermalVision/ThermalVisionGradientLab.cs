@@ -15,18 +15,14 @@ namespace Thermodynamics
         private static bool gradientLab;
         private static readonly MyStringId GradientColour = MyStringId.GetOrCompute("GaugeThermalRampColour");
         private static readonly MyStringId GradientGrey = MyStringId.GetOrCompute("GaugeThermalRampGrey");
-/// <summary>List operation.</summary>
         private static readonly List<Vector3D> gradientPositions = new List<Vector3D>();
-/// <summary>List operation.</summary>
         private static readonly List<float> gradientTemperatures = new List<float>();
-/// <summary>HashSet operation.</summary>
         private static readonly HashSet<ThermalBlock> gradientSeen = new HashSet<ThermalBlock>();
         private static readonly Dictionary<Vector3D, Vector2> gradientUvs = new Dictionary<Vector3D, Vector2>();
         private static MatrixD gradientInverse;
         private static double gradientCell;
         private const int GradientLimit = 6000;
 
-/// <summary>PrepareGradient operation.</summary>
         private static void PrepareGradient(Crosshair.Target target)
         {
             gradientPositions.Clear(); gradientTemperatures.Clear(); gradientSeen.Clear(); gradientUvs.Clear();
@@ -39,7 +35,6 @@ namespace Thermodynamics
                         AddGradientSample(target.Thermals.GetAtCell(target.Cell + new Vector3I(x, y, z)));
         }
 
-/// <summary>Adds a gradientsample.</summary>
         private static void AddGradientSample(ThermalBlock block)
         {
             if (block == null || block.Node == null || !gradientSeen.Add(block)) return;
@@ -49,7 +44,6 @@ namespace Thermodynamics
             gradientTemperatures.Add(value);
         }
 
-/// <summary>GradientUv operation.</summary>
         private static Vector2 GradientUv(Vector3D world)
         {
             Vector2 uv;
@@ -61,24 +55,21 @@ namespace Thermodynamics
             {
                 double d = Vector3D.DistanceSquared(p, gradientPositions[i]);
                 if (d < nearestDistance) { nearestDistance = d; nearest = gradientTemperatures[i]; }
-                double w = Math.Exp(-d / 2); // One-grid-cell Gaussian width.
+                double w = Math.Exp(-d / 2);
                 sum += w * gradientTemperatures[i]; weight += w;
             }
             double temperature = weight > 1e-12 ? sum / weight : nearest;
             double t = Math.Max(0, Math.Min(1, (temperature - lowKelvin) / Math.Max(1, highKelvin - lowKelvin)));
-/// <summary>Vector2 operation.</summary>
             uv = new Vector2((float)((.5 + 255 * t) / 256), .5f);
             gradientUvs[world] = uv;
             return uv;
         }
 
-/// <summary>DrawGradient operation.</summary>
         private static void DrawGradient(ThermalVisionWorldTriangle triangle)
         {
             Vector3 normal = triangle.Normal;
 #pragma warning disable CS0618
             MyTransparentGeometry.AddTriangleBillboard(triangle.A, triangle.B, triangle.C,
-/// <summary>GradientUv operation.</summary>
                 normal, normal, normal, GradientUv(triangle.A), GradientUv(triangle.B), GradientUv(triangle.C),
                 State.Current == ThermalVisionState.Mode.Cividis ? GradientColour : GradientGrey,
                 0, (triangle.A + triangle.B + triangle.C) / 3, Vector4.One, MyBillboard.BlendTypeEnum.PostPP);

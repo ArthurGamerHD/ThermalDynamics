@@ -26,25 +26,25 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Lab operation.</summary>
+
         public static double[] Lab(Vector3 srgb)
         {
-/// <summary>Linear operation.</summary>
+
             double r = Linear(srgb.X);
-/// <summary>Linear operation.</summary>
+
             double g = Linear(srgb.Y);
-/// <summary>Linear operation.</summary>
+
             double b = Linear(srgb.Z);
 
             double x = (0.4124564d * r) + (0.3575761d * g) + (0.1804375d * b);
             double y = (0.2126729d * r) + (0.7151522d * g) + (0.0721750d * b);
             double z = (0.0193339d * r) + (0.1191920d * g) + (0.9503041d * b);
 
-/// <summary>F operation.</summary>
+
             double fx = F(x / 0.95047d);
-/// <summary>F operation.</summary>
+
             double fy = F(y / 1.00000d);
-/// <summary>F operation.</summary>
+
             double fz = F(z / 1.08883d);
 
             return new[]
@@ -55,26 +55,26 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>Linear operation.</summary>
+
         private static double Linear(double channel)
         {
             if (channel <= 0.04045d) return channel / 12.92d;
             return Math.Pow((channel + 0.055d) / 1.055d, 2.4d);
         }
 
-/// <summary>F operation.</summary>
+
         private static double F(double t)
         {
             if (t > 216d / 24389d) return Math.Pow(t, 1d / 3d);
             return ((24389d / 27d * t) + 16d) / 116d;
         }
 
-/// <summary>DeltaE operation.</summary>
+
         public static double DeltaE(Vector3 a, Vector3 b)
         {
-/// <summary>Lab operation.</summary>
+
             double[] first = Lab(a);
-/// <summary>Lab operation.</summary>
+
             double[] second = Lab(b);
 
             double dl = first[0] - second[0];
@@ -84,10 +84,10 @@ namespace Thermodynamics.Harness
             return Math.Sqrt((dl * dl) + (da * da) + (db * db));
         }
 
-/// <summary>Bands operation.</summary>
+
         public static List<Band> Bands()
         {
-/// <summary>List operation.</summary>
+
             List<Band> bands = new List<Band>();
 
             foreach (BlockCatalogLab.TypeRow row in BlockCatalogLab.Catalog())
@@ -103,7 +103,7 @@ namespace Thermodynamics.Harness
                     CriticalKelvin = critical,
                     StartKelvin = start,
                     BelowDraper = critical < Incandescence.DraperKelvin,
-/// <summary>DeltaE operation.</summary>
+
                     DeltaE = DeltaE(Incandescence.Colour(start), Incandescence.Colour(critical))
                 });
             }
@@ -112,7 +112,7 @@ namespace Thermodynamics.Harness
             return bands;
         }
 
-/// <summary>AcrossBlocks operation.</summary>
+
         public static double AcrossBlocks(out float coolest, out float hottest)
         {
             coolest = float.PositiveInfinity;
@@ -129,7 +129,7 @@ namespace Thermodynamics.Harness
             return DeltaE(Incandescence.Colour(coolest), Incandescence.Colour(hottest));
         }
 
-/// <summary>BestBand operation.</summary>
+
         public static double BestBand(out float atKelvin)
         {
             double best = 0d;
@@ -137,7 +137,7 @@ namespace Thermodynamics.Harness
 
             for (float start = Incandescence.ColourFirstKelvin - 200f; start <= 3000f; start += 5f)
             {
-/// <summary>DeltaE operation.</summary>
+
                 double delta = DeltaE(Incandescence.Colour(start),
                     Incandescence.Colour(start + Incandescence.GlowBandKelvin));
 

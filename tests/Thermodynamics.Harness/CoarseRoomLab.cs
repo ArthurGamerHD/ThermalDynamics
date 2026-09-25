@@ -22,13 +22,13 @@ namespace Thermodynamics.Harness
             public long SealingBytes;
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(GridBuilder builder, int[] edges, Action<string> log)
         {
             ThermalSimulation simulation = StageLab.Registered(builder);
             simulation.Surfaces.Rebuild(simulation.Grid);
 
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             if (log != null) log("shipped mapper, "
@@ -48,10 +48,10 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Baseline operation.</summary>
+
         private static Row Baseline(ThermalSimulation simulation)
         {
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Edge = 1;
 
@@ -82,17 +82,17 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Prototype operation.</summary>
+
         private static Row Prototype(ThermalSimulation simulation, RoomMap oracle, int edge)
         {
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Edge = edge;
 
-/// <summary>CoarseRoomFlood operation.</summary>
+
             CoarseRoomFlood flood = new CoarseRoomFlood(edge);
             flood.Run(simulation.Grid, simulation.Surfaces);
-/// <summary>Verify operation.</summary>
+
             row.Mismatch = Verify(oracle, flood);
             row.SupercellsTaken = flood.SupercellsTaken;
             row.FineCellsVisited = flood.FineCellsVisited;
@@ -120,7 +120,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Verify operation.</summary>
+
         public static string Verify(RoomMap oracle, CoarseRoomFlood flood)
         {
             if (oracle.ExternalCellCount != flood.ExternalCells)
@@ -173,10 +173,10 @@ namespace Thermodynamics.Harness
             return null;
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("  walk        blocks       best ms    median ms  repeats  stopped          work  unit             supers     fine cells    sealing KB  match");
             for (int i = 0; i < rows.Count; i++)
@@ -196,10 +196,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("walk,edge,blocks,best_ms,median_ms,repeats,stopped,work,supercells,fine_cells,sealing_bytes,match,taken_utc,host");
             for (int i = 0; i < rows.Count; i++)

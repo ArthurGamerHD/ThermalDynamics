@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>OcclusionLadderTests operation.</summary>
+
         public OcclusionLadderTests(ITestOutputHelper output)
         {
             this.output = output;
@@ -21,7 +21,7 @@ namespace Thermodynamics.Tests
         private const float ShippedFrequency = 4f;
 
         [Fact]
-/// <summary>MoreSamplesDoNotChangeTheEnergyAcrossATerminator operation.</summary>
+
         public void MoreSamplesDoNotChangeTheEnergyAcrossATerminator()
         {
             List<OcclusionLadderLab.Rung> rungs = OcclusionLadderLab.Sweep(
@@ -31,14 +31,14 @@ namespace Thermodynamics.Tests
             Assert.NotEmpty(rungs);
 
             int judged = 0;
-/// <summary>List operation.</summary>
+
             List<string> moved = new List<string>();
 
             foreach (double length in OcclusionLadderLab.Lengths)
             {
-/// <summary>Find operation.</summary>
+
                 OcclusionLadderLab.Rung one = Find(rungs, length, 1);
-/// <summary>Find operation.</summary>
+
                 OcclusionLadderLab.Rung nine = Find(rungs, length, SolarOcclusionSampler.MaxSamples);
 
                 judged++;
@@ -58,11 +58,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSurplusIsHalfTheIntervalWhateverTheSampleCount operation.</summary>
+
         public void TheSurplusIsHalfTheIntervalWhateverTheSampleCount()
         {
             int[] intervals = { 2, 4, 8, 12, 24 };
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
 
             foreach (int interval in intervals)
@@ -88,20 +88,20 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SamplesFixTheInstantaneousErrorAndOnlyOnLongHulls operation.</summary>
+
         public void SamplesFixTheInstantaneousErrorAndOnlyOnLongHulls()
         {
             List<OcclusionLadderLab.Rung> rungs = OcclusionLadderLab.Sweep(
                 new[] { 25d, 600d, 2500d }, new[] { 1, SolarOcclusionSampler.MaxSamples },
                 ShippedInterval, ShippedFrequency);
 
-/// <summary>Find operation.</summary>
+
             OcclusionLadderLab.Rung tinyOne = Find(rungs, 25d, 1);
-/// <summary>Find operation.</summary>
+
             OcclusionLadderLab.Rung tinyNine = Find(rungs, 25d, SolarOcclusionSampler.MaxSamples);
-/// <summary>Find operation.</summary>
+
             OcclusionLadderLab.Rung longOne = Find(rungs, 2500d, 1);
-/// <summary>Find operation.</summary>
+
             OcclusionLadderLab.Rung longNine = Find(rungs, 2500d, SolarOcclusionSampler.MaxSamples);
 
             Assert.True(tinyOne.WorstError - tinyNine.WorstError < 0.05d,
@@ -114,7 +114,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(0d, tinyOne.PartialTests);
             Assert.Equal(0d, longOne.PartialTests);
 
-/// <summary>Find operation.</summary>
+
             OcclusionLadderLab.Rung midNine = Find(rungs, 600d, SolarOcclusionSampler.MaxSamples);
             Assert.True(tinyNine.PartialTests < 0.25d,
                 "a 25 m grid saw " + tinyNine.PartialTests.ToString("n2") + " partial tests");
@@ -123,7 +123,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SunsetIsNotWhereGeometryPutsIt operation.</summary>
+
         public void SunsetIsNotWhereGeometryPutsIt()
         {
             double radius = OcclusionLadderLab.PlanetRadius + OcclusionLadderLab.Altitude;
@@ -135,7 +135,7 @@ namespace Thermodynamics.Tests
                 "sunset lands at " + terminator.ToString("n1") + " degrees");
         }
 
-/// <summary>Find operation.</summary>
+
         private static OcclusionLadderLab.Rung Find(List<OcclusionLadderLab.Rung> rungs,
             double length, int samples)
         {
@@ -148,10 +148,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThePerFaceRungIsWorthAboutAKelvinEveryTwoHundredMetresOfHull operation.</summary>
+
         public void ThePerFaceRungIsWorthAboutAKelvinEveryTwoHundredMetresOfHull()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.Derive();
 
@@ -173,12 +173,12 @@ namespace Thermodynamics.Tests
 
             for (int i = 0; i < rows.Count; i++)
             {
-/// <summary>Worst operation.</summary>
+
                 double worst = Worst(rows[i]);
                 double perMetre = worst / rows[i].LengthMetres;
 
                 output.WriteLine("{0:n0} m: {1:n2} K geometry, {2:n2} K at the shipped cadence, "
-/// <summary>Worst operation.</summary>
+
                     + "{3:n5} K/m", rows[i].LengthMetres, worst, Worst(shipped[i]), perMetre);
 
                 if (rows[i].LengthMetres < 150d) continue;
@@ -186,28 +186,28 @@ namespace Thermodynamics.Tests
                 Assert.InRange(perMetre, 0.0014d, 0.0022d);
             }
 
-/// <summary>Worst operation.</summary>
+
             double ordinary = Worst(rows[1]);
             Assert.True(ordinary < 1.0d,
                 "a 150 m hull's worst block is out by " + ordinary.ToString("n2") + " K");
         }
 
         [Fact]
-/// <summary>BelowThreeHundredMetresTheCadenceCostsMoreThanTheGeometry operation.</summary>
+
         public void BelowThreeHundredMetresTheCadenceCostsMoreThanTheGeometry()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.Derive();
 
             double perSecond = OcclusionLadderLab.KelvinPerLitSecond(settings);
             double[] lengths = { 150d };
 
-/// <summary>Worst operation.</summary>
+
             double shipped = Worst(OcclusionLadderLab.Extremities(
                 lengths, SolarOcclusionSampler.MaxSamples, 12, 4f, perSecond)[0]);
 
-/// <summary>Worst operation.</summary>
+
             double spatial = Worst(OcclusionLadderLab.Extremities(
                 lengths, SolarOcclusionSampler.MaxSamples, 1, 4f, perSecond)[0]);
 
@@ -220,7 +220,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheTableConfigurationPrintsIsTheOneTheLabProduces operation.</summary>
+
         public void TheTableConfigurationPrintsIsTheOneTheLabProduces()
         {
             string path = System.IO.Path.Combine(
@@ -228,7 +228,7 @@ namespace Thermodynamics.Tests
 
             Assert.True(System.IO.File.Exists(path), "no configuration.md at " + path);
 
-/// <summary>List operation.</summary>
+
             List<string> printed = new List<string>();
             bool inTable = false;
 
@@ -254,7 +254,7 @@ namespace Thermodynamics.Tests
                 "found " + printed.Count + " rows under configuration.md's per-face table, not 4, "
                 + "so this test is reading the wrong table or none");
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.Derive();
 
@@ -267,7 +267,7 @@ namespace Thermodynamics.Tests
             List<OcclusionLadderLab.Extremity> cadence = OcclusionLadderLab.Extremities(
                 lengths, SolarOcclusionSampler.MaxSamples, 12, 4f, perSecond);
 
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
 
             for (int i = 0; i < lengths.Length; i++)
@@ -275,11 +275,11 @@ namespace Thermodynamics.Tests
                 string[] cells = printed[i].Split('|');
                 Assert.True(cells.Length >= 4, "row " + i + " of the table has no three cells");
 
-/// <summary>Kelvin operation.</summary>
+
                 double hull = Kelvin(cells[1].Replace("m", ""));
-/// <summary>Kelvin operation.</summary>
+
                 double statedGeometry = Kelvin(cells[2]);
-/// <summary>Kelvin operation.</summary>
+
                 double statedCadence = Kelvin(cells[3]);
 
                 if (Math.Abs(hull - lengths[i]) > 0.5d)
@@ -301,10 +301,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoPageQuotesAPerMetreFigureTheLabDoesNotProduce operation.</summary>
+
         public void NoPageQuotesAPerMetreFigureTheLabDoesNotProduce()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.Derive();
 
@@ -317,7 +317,7 @@ namespace Thermodynamics.Tests
 
             foreach (OcclusionLadderLab.Extremity row in rows)
             {
-/// <summary>Worst operation.</summary>
+
                 double rate = Worst(row) / row.LengthMetres;
                 if (rate < low) low = rate;
                 if (rate > high) high = rate;
@@ -326,7 +326,7 @@ namespace Thermodynamics.Tests
             string docs = System.IO.Path.Combine(
                 Thermodynamics.Harness.ShippedBlocks.RepoRoot(), "docs");
 
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
             int quoted = 0;
 
@@ -367,7 +367,7 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", wrong.ToArray()));
         }
 
-/// <summary>Compare operation.</summary>
+
         private static void Compare(List<string> wrong, double length, string column,
             double printed, double measured)
         {
@@ -378,14 +378,14 @@ namespace Thermodynamics.Tests
                 + " K");
         }
 
-/// <summary>Kelvin operation.</summary>
+
         private static double Kelvin(string cell)
         {
             string text = cell.Replace("K", "").Replace("*", "").Replace(",", "").Trim();
             return double.Parse(text, System.Globalization.CultureInfo.InvariantCulture);
         }
 
-/// <summary>Worst operation.</summary>
+
         private static double Worst(OcclusionLadderLab.Extremity row)
         {
             return Math.Max(row.SurplusKelvin, row.DeficitKelvin);

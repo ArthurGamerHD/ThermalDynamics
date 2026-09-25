@@ -15,33 +15,33 @@ namespace Thermodynamics
         public const int RowLimit = 128;
         public const int EventLimit = 64;
         public long Frames, SuppressedFrames, Errors, RowsOverflowed, EventsDropped, ImportantEventsDropped;
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat CpuMilliseconds = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat ColdMilliseconds = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat WarmMilliseconds = new RunningStat();
         private readonly Dictionary<string, Row> rows = new Dictionary<string, Row>();
-/// <summary>Queue operation.</summary>
+
         private readonly Queue<string> events = new Queue<string>();
-/// <summary>Queue operation.</summary>
+
         private readonly Queue<string> importantEvents = new Queue<string>();
-/// <summary>object operation.</summary>
+
         private readonly object gate = new object();
-/// <summary>Row operation.</summary>
+
         private readonly Row overflow = new Row();
         private long sceneFrames, sceneLimited, sceneRefreshes;
-/// <summary>RunningStat operation.</summary>
+
         private readonly RunningStat sceneBatchTests = new RunningStat(), sceneBatchRejected = new RunningStat();
-/// <summary>SceneCulling operation.</summary>
+
         public void SceneCulling(int batches, int rejectedTriangles)
         {
             lock (gate) { sceneBatchTests.Add(batches); sceneBatchRejected.Add(rejectedTriangles); }
         }
         private long scenePendingFrames;
-/// <summary>RunningStat operation.</summary>
+
         private readonly RunningStat sceneBuildTriangles = new RunningStat(), sceneBuildMs = new RunningStat();
-/// <summary>SceneBuild operation.</summary>
+
         public void SceneBuild(int sourceTriangles, bool pending, float milliseconds)
         {
             lock (gate)
@@ -51,10 +51,10 @@ namespace Thermodynamics
             }
         }
         private readonly long[] sceneLimitFrames = new long[6];
-/// <summary>RunningStat operation.</summary>
+
         private readonly RunningStat sceneArmour = new RunningStat(), sceneDetail = new RunningStat();
 
-/// <summary>SceneBudget operation.</summary>
+
         public void SceneBudget(ThermalVisionSceneLimit limits, int armourSubmitted, int detailSubmitted)
         {
             lock (gate)
@@ -64,18 +64,18 @@ namespace Thermodynamics
                 sceneArmour.Add(armourSubmitted); sceneDetail.Add(detailSubmitted);
             }
         }
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat SceneDiscoveryMilliseconds = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat SceneDrawingMilliseconds = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         private readonly RunningStat sceneScanned = new RunningStat(), sceneCandidates = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         private readonly RunningStat sceneAttempted = new RunningStat(), sceneSubmitted = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         private readonly RunningStat sceneMissing = new RunningStat(), sceneLow = new RunningStat(), sceneHigh = new RunningStat();
 
-/// <summary>SceneFrame operation.</summary>
+
         public void SceneFrame(int scanned, int candidates, int attempted, int submitted, int missing, bool limited, float low, float high, bool refreshed = false, float discoveryMs = 0, float drawingMs = 0)
         {
             lock (gate)
@@ -93,16 +93,16 @@ namespace Thermodynamics
         private sealed class Row
         {
             public long Frames, Empty, Partial, Backfaces, Degenerate;
-/// <summary>RunningStat operation.</summary>
+
             public readonly RunningStat Temperature = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
             public readonly RunningStat Submitted = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
             public readonly RunningStat Examined = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
             public readonly RunningStat Cpu = new RunningStat();
 
-/// <summary>Adds a .</summary>
+
             public void Add(float kelvin, int submitted, int examined, bool partial, float ms, int backfaces, int degenerate)
             {
                 Frames++;
@@ -116,7 +116,7 @@ namespace Thermodynamics
                 Cpu.Add(ms);
             }
 
-/// <summary>Write operation.</summary>
+
             public void Write(StringBuilder sb, string key)
             {
                 sb.Append("  ").Append(key).Append(": frames=").Append(Frames)
@@ -129,12 +129,12 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Suppress operation.</summary>
+
         public void Suppress() { lock (gate) SuppressedFrames++; }
-/// <summary>Failure operation.</summary>
+
         public void Failure() { lock (gate) Errors++; }
 
-/// <summary>Frame operation.</summary>
+
         public void Frame(string key, float kelvin, int submitted, int examined, bool partial, bool cold, float ms, int backfaces = 0, int degenerate = 0)
         {
             lock (gate)
@@ -152,7 +152,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Event operation.</summary>
+
         public void Event(double seconds, string message, bool important = false)
         {
             lock (gate)
@@ -169,7 +169,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Write operation.</summary>
+
         public void Write(StringBuilder sb)
         {
             lock (gate)

@@ -12,16 +12,16 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>DefaultSettingsTests operation.</summary>
+
         public DefaultSettingsTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation BuildDefault()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
 
             settings.MaxElementVisitsPerStep = 0;
@@ -40,10 +40,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDefaultsAreTheMostFaithfulConfiguration operation.</summary>
+
         public void TheDefaultsAreTheMostFaithfulConfiguration()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings shipped = new ThermalSettings();
 
             Assert.True(shipped.EnableEnvironment);
@@ -60,11 +60,11 @@ namespace Thermodynamics.Tests
             Assert.True(shipped.EnableRoomAir);
             Assert.True(shipped.EnableHeatPumps);
 
-            Assert.True(shipped.SolarSelfShadowing);          // not the "any face pointing at the sun" model
-            Assert.False(shipped.WellMixedCoolant);           // a stopped pump stops cooling
-            Assert.True(shipped.DamageIsPerSecond);           // damage that does not scale with Frequency
+            Assert.True(shipped.SolarSelfShadowing);
+            Assert.False(shipped.WellMixedCoolant);
+            Assert.True(shipped.DamageIsPerSecond);
 
-            Assert.Equal(0, shipped.MaxSubstepsPerBlock);     // no block is integrated as heavier than it is
+            Assert.Equal(0, shipped.MaxSubstepsPerBlock);
 
             Assert.True(shipped.MaxSubsteps >= 64,
                 "MaxSubsteps of " + shipped.MaxSubsteps + " refuses the stability estimate in more"
@@ -84,10 +84,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDefaultIsFrameBounded operation.</summary>
+
         public void TheDefaultIsFrameBounded()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings shipped = new ThermalSettings();
 
             Assert.True(shipped.MaxElementVisitsPerStep > 0,
@@ -95,10 +95,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDefaultsStayPhysicalWithTheEnvironmentOn operation.</summary>
+
         public void TheDefaultsStayPhysicalWithTheEnvironmentOn()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = BuildDefault();
 
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -133,10 +133,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ANodeWithSixNeighboursStaysBoundedWhenItsSubstepsAreRefused operation.</summary>
+
         public void ANodeWithSixNeighboursStaysBoundedWhenItsSubstepsAreRefused()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.Frequency = 4;
             settings.HeatTimeScale = 100000f;

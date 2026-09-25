@@ -9,15 +9,15 @@ namespace RichHudFramework
 
 			public Func<float> UpdateScaleFunc { get; set; }
 
-/// <summary>ScaledSpaceNode operation.</summary>
+
 			public ScaledSpaceNode(HudParentBase parent = null) : base(parent)
 			{ }
 
-/// <summary>Layout operation.</summary>
+
 			protected override void Layout()
 			{
 				if (UpdateScaleFunc != null)
-/// <summary>UpdateScaleFunc operation.</summary>
+
 					PlaneScale = UpdateScaleFunc();
 
 				IReadOnlyHudSpaceNode parentSpace = Parent.HudSpace;

@@ -20,13 +20,13 @@ namespace RichHudFramework.UI.Rendering
 
 		private float _innerRadius;
 
-/// <summary>PuncturedPolyBoard operation.</summary>
+
 		public PuncturedPolyBoard()
 		{
 			_innerRadius = 0.6f;
 		}
 
-/// <summary>Draw operation.</summary>
+
 		public override void Draw(Vector2 size, Vector2 origin, Vector2I faceRange, MatrixD[] matrixRef)
 		{
 			if (_sides > 2)
@@ -59,7 +59,7 @@ namespace RichHudFramework.UI.Rendering
 			}
 		}
 
-/// <summary>Returns the sliceoffset.</summary>
+
 		public override Vector2 GetSliceOffset(Vector2 bbSize, Vector2I range)
 		{
 			if (updateVertices)
@@ -80,7 +80,7 @@ namespace RichHudFramework.UI.Rendering
 			return bbSize * sum * .25f;
 		}
 
-/// <summary>GenerateTriangles operation.</summary>
+
 		protected override void GenerateTriangles()
 		{
 			int max = vertices.Count;
@@ -104,7 +104,7 @@ namespace RichHudFramework.UI.Rendering
 			}
 		}
 
-/// <summary>GenerateVertices operation.</summary>
+
 		protected override void GenerateVertices()
 		{
 			float rotStep = (float)(Math.PI * 2f / _sides),

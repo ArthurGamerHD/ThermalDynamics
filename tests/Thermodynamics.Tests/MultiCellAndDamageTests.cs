@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class MultiCellAndDamageTests
     {
-/// <summary>Fragile operation.</summary>
+
         private static BlockThermalProperties Fragile()
         {
             BlockThermalProperties t = Catalog.DefaultThermal();
@@ -17,14 +17,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockIsIdentifiedByItsMinimumCell operation.</summary>
+
         public void ABlockIsIdentifiedByItsMinimumCell()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(2.5f);
             BlockModel model = BlockModel.Solid("BigBlock", new Vector3I(3, 3, 3), 5000f, Catalog.DefaultThermal());
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I min = new Vector3I(4, 0, 0);
             BlockInstance block = grid.Add(model, min);
 
@@ -37,10 +37,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnOverheatEventNamesTheBlockByItsMinimumCell operation.</summary>
+
         public void AnOverheatEventNamesTheBlockByItsMinimumCell()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
@@ -58,10 +58,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OverheatsFromEveryStepOfAnUpdateReachTheHost operation.</summary>
+
         public void OverheatsFromEveryStepOfAnUpdateReachTheHost()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
@@ -78,10 +78,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EachUpdateReportsOnlyItsOwnOverheats operation.</summary>
+
         public void EachUpdateReportsOnlyItsOwnOverheats()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.Derive();
@@ -100,7 +100,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACoolBlockProducesNoOverheats operation.</summary>
+
         public void ACoolBlockProducesNoOverheats()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -114,7 +114,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RefreshingSealingLeavesTheConductionGraphAlone operation.</summary>
+
         public void RefreshingSealingLeavesTheConductionGraphAlone()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -137,7 +137,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RefreshingSealingStillRemapsTheRooms operation.</summary>
+
         public void RefreshingSealingStillRemapsTheRooms()
         {
             GridBuilder builder = GridBuilder.Large();

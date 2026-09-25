@@ -62,33 +62,33 @@ namespace RichHudFramework.UI
 
 		protected Color lastBarColor, lastSliderColor, lastBackgroundColor;
 
-/// <summary>SliderBox operation.</summary>
+
 		public SliderBox(HudParentBase parent) : base(parent)
 		{
-/// <summary>TexturedBox operation.</summary>
+
 			background = new TexturedBox(this)
 			{
 				DimAlignment = DimAlignments.Size
 			};
 
-/// <summary>BorderBox operation.</summary>
+
 			border = new BorderBox(background)
 			{
 				Thickness = 1f,
 				DimAlignment = DimAlignments.Size,
 			};
 
-/// <summary>InputFocusHandler operation.</summary>
+
 			FocusHandler = new InputFocusHandler(this)
 			{
 				GainedInputFocusCallback = GainFocus,
 				LostInputFocusCallback = LoseFocus
 			};
-/// <summary>SliderBar operation.</summary>
+
 			slide = new SliderBar(this)
 			{
 				DimAlignment = DimAlignments.UnpaddedSize,
-/// <summary>Vector2 operation.</summary>
+
 				SliderSize = new Vector2(14f, 28f),
 				BarHeight = 5f,
 				MouseInput =
@@ -114,17 +114,17 @@ namespace RichHudFramework.UI
 			UseFocusFormatting = true;
 			HighlightEnabled = true;
 
-/// <summary>Vector2 operation.</summary>
+
 			Padding = new Vector2(18f, 18f);
-/// <summary>Vector2 operation.</summary>
+
 			Size = new Vector2(317f, 47f);
 		}
 
-/// <summary>SliderBox operation.</summary>
+
 		public SliderBox() : this(null)
 		{ }
 
-/// <summary>HandleInput operation.</summary>
+
 		protected override void HandleInput(Vector2 cursorPos)
 		{
 			if (FocusHandler.HasFocus)
@@ -133,7 +133,7 @@ namespace RichHudFramework.UI
 				{
 					Percent -= 0.01f;
 				}
-/// <summary>if operation.</summary>
+
 				else if (SharedBinds.RightArrow.IsNewPressed || SharedBinds.RightArrow.IsPressedAndHeld)
 				{
 					Percent += 0.01f;
@@ -141,7 +141,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>CursorEnter operation.</summary>
+
 		protected virtual void CursorEnter(object sender, EventArgs args)
 		{
 			if (HighlightEnabled)
@@ -159,7 +159,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>CursorExit operation.</summary>
+
 		protected virtual void CursorExit(object sender, EventArgs args)
 		{
 			if (HighlightEnabled)
@@ -179,7 +179,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>GainFocus operation.</summary>
+
 		protected virtual void GainFocus(object sender, EventArgs args)
 		{
 			if (UseFocusFormatting && !MouseInput.IsMousedOver)
@@ -194,7 +194,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>LoseFocus operation.</summary>
+
 		protected virtual void LoseFocus(object sender, EventArgs args)
 		{
 			if (UseFocusFormatting)

@@ -14,7 +14,7 @@ namespace Thermodynamics.Tests
 
         private static readonly int[] SizesInCells = { 1, 2, 4, 5, 6, 10, 14, 20 };
 
-/// <summary>Steel operation.</summary>
+
         private static BlockThermalProperties Steel()
         {
             return new BlockThermalProperties
@@ -30,7 +30,7 @@ namespace Thermodynamics.Tests
             };
         }
 
-/// <summary>Cube operation.</summary>
+
         private static BlockModel Cube(int cells)
         {
             float mass = 30f * cells * cells * cells;
@@ -39,15 +39,15 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>GeometryIsAnsweredFromBoundsAndNotFromCells operation.</summary>
+
         public void GeometryIsAnsweredFromBoundsAndNotFromCells()
         {
             Vector3I a = Vector3I.Zero;
-/// <summary>Vector3I operation.</summary>
+
             Vector3I aMax = new Vector3I(400, 400, 400);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I b = new Vector3I(400, 0, 0);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I bMax = new Vector3I(800, 400, 400);
 
             Stopwatch watch = Stopwatch.StartNew();
@@ -70,16 +70,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ContactBetweenDifferentSizesIsTheOverlapAndIsSymmetric operation.</summary>
+
         public void ContactBetweenDifferentSizesIsTheOverlapAndIsSymmetric()
         {
             Vector3I bigMin = Vector3I.Zero;
-/// <summary>Vector3I operation.</summary>
+
             Vector3I bigMax = new Vector3I(20, 20, 20);
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I smallMin = new Vector3I(20, 8, 8);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I smallMax = new Vector3I(22, 10, 10);
 
             int forward = BoxGeometry.ContactCells(bigMin, bigMax, smallMin, smallMax);
@@ -91,12 +91,12 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>EveryBlockSizeSe2ShipsCoexistsOnOneLattice operation.</summary>
+
         public void EveryBlockSizeSe2ShipsCoexistsOnOneLattice()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(LatticeMetres);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
 
             int x = 0;
@@ -126,12 +126,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AJointBetweenTheSmallestAndLargestBlockConservesEnergy operation.</summary>
+
         public void AJointBetweenTheSmallestAndLargestBlockConservesEnergy()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(LatticeMetres);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
 
             simulation.AddBlock(new BlockInstance(Cube(20), Vector3I.Zero,
@@ -159,12 +159,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSubstepEstimateRespondsToTheBlockSizeRatio operation.</summary>
+
         public void TheSubstepEstimateRespondsToTheBlockSizeRatio()
         {
-/// <summary>SubstepsFor operation.</summary>
+
             float gentle = SubstepsFor(20, 20, 0.25f);
-/// <summary>SubstepsFor operation.</summary>
+
             float stiff = SubstepsFor(1, 20, 0.25f);
 
             Assert.True(stiff > gentle * 4f,
@@ -174,7 +174,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OverALongStepTheSmallBlockForcesMoreSubstepsThanTheLargeOne operation.</summary>
+
         public void OverALongStepTheSmallBlockForcesMoreSubstepsThanTheLargeOne()
         {
             const float longStep = 8f;
@@ -188,12 +188,12 @@ namespace Thermodynamics.Tests
             Assert.True(stiff > 1, "the stiff pairing should need real substepping, got " + stiff);
         }
 
-/// <summary>SubstepsFor operation.</summary>
+
         private static float SubstepsFor(int firstCells, int secondCells, float stepSeconds)
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(LatticeMetres);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
 
             simulation.AddBlock(new BlockInstance(Cube(firstCells), Vector3I.Zero,
@@ -206,12 +206,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheStiffestPairingOnTheLatticeStaysBounded operation.</summary>
+
         public void TheStiffestPairingOnTheLatticeStaysBounded()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(LatticeMetres);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
 
             simulation.AddBlock(new BlockInstance(Cube(1), Vector3I.Zero,
@@ -233,12 +233,12 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>IncrementalTopologyHoldsOnAMixedSizeLattice operation.</summary>
+
         public void IncrementalTopologyHoldsOnAMixedSizeLattice()
         {
-/// <summary>List operation.</summary>
+
             List<Vector3I> placed = new List<Vector3I>();
-/// <summary>List operation.</summary>
+
             List<int> sizes = new List<int>();
 
             int x = 0;
@@ -252,9 +252,9 @@ namespace Thermodynamics.Tests
                 }
             }
 
-/// <summary>Assemble operation.</summary>
+
             ThermalSimulation whole = Assemble(placed, sizes, false);
-/// <summary>Assemble operation.</summary>
+
             ThermalSimulation incremental = Assemble(placed, sizes, true);
 
             Assert.Equal(whole.Solver.Nodes.Count, incremental.Solver.Nodes.Count);
@@ -262,12 +262,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>GrindingAMixedSizeLatticeLeavesTheSameGraphAsARebuild operation.</summary>
+
         public void GrindingAMixedSizeLatticeLeavesTheSameGraphAsARebuild()
         {
-/// <summary>List operation.</summary>
+
             List<Vector3I> placed = new List<Vector3I>();
-/// <summary>List operation.</summary>
+
             List<int> sizes = new List<int>();
 
             int x = 0;
@@ -278,14 +278,14 @@ namespace Thermodynamics.Tests
                 x += SizesInCells[i];
             }
 
-/// <summary>Assemble operation.</summary>
+
             ThermalSimulation simulation = Assemble(placed, sizes, false);
 
             simulation.RemoveBlock(simulation.Grid.GetAtCell(placed[7]));
             simulation.RemoveBlock(simulation.Grid.GetAtCell(placed[3]));
             simulation.Update(1f / 60f, Worlds.Shadow());
 
-/// <summary>Signature operation.</summary>
+
             List<string> afterGrinding = Signature(simulation);
             simulation.Solver.RebuildLinks();
 
@@ -293,12 +293,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASpreadStepIsIdenticalOnAMixedSizeLattice operation.</summary>
+
         public void ASpreadStepIsIdenticalOnAMixedSizeLattice()
         {
-/// <summary>List operation.</summary>
+
             List<Vector3I> placed = new List<Vector3I>();
-/// <summary>List operation.</summary>
+
             List<int> sizes = new List<int>();
 
             int x = 0;
@@ -309,9 +309,9 @@ namespace Thermodynamics.Tests
                 x += SizesInCells[i];
             }
 
-/// <summary>Assemble operation.</summary>
+
             ThermalSimulation whole = Assemble(placed, sizes, false);
-/// <summary>Assemble operation.</summary>
+
             ThermalSimulation spread = Assemble(placed, sizes, false);
 
             EnvironmentState state = EnvironmentSolver.Solve(
@@ -337,13 +337,13 @@ namespace Thermodynamics.Tests
         }
 
 
-/// <summary>Assemble operation.</summary>
+
         private static ThermalSimulation Assemble(
             List<Vector3I> placed, List<int> sizes, bool oneAtATime)
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(LatticeMetres);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
 
             for (int i = 0; i < placed.Count; i++)
@@ -366,10 +366,10 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Signature operation.</summary>
+
         private static List<string> Signature(ThermalSimulation simulation)
         {
-/// <summary>List operation.</summary>
+
             List<string> rows = new List<string>();
             IList<ThermalLink> links = simulation.Solver.Links;
 

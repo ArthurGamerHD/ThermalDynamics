@@ -6,7 +6,7 @@ namespace RichHudFramework
 {
 	public static class CollectionExtensions
 	{
-/// <summary>InsertSpan operation.</summary>
+
 		public static void InsertSpan<T>(this List<T> dst, int dstIndex, IReadOnlyList<T> src, int srcIndex = 0, int srcCount = -1)
 		{
 			if (srcCount == -1) srcCount = src.Count - srcIndex;
@@ -34,7 +34,7 @@ namespace RichHudFramework
 				dst[dstIndex + i] = src[srcIndex + i];
 		}
 
-/// <summary>Returns the subarray.</summary>
+
 		public static T[] GetSubarray<T>(this T[] arr, int start)
 		{
 			var result = new T[arr.Length - start];
@@ -42,7 +42,7 @@ namespace RichHudFramework
 			return result;
 		}
 
-/// <summary>Returns the subarray.</summary>
+
 		public static T[] GetSubarray<T>(this T[] arr, int start, int end)
 		{
 			end = MathHelper.Clamp(end, 0, arr.Length);

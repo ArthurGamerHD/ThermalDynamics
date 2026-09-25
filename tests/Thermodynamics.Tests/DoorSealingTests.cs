@@ -7,10 +7,10 @@ namespace Thermodynamics.Tests
 {
     public class DoorSealingTests
     {
-/// <summary>Door operation.</summary>
+
         private static BlockInstance Door(bool sealed_)
         {
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance door = new BlockInstance(Catalog.SlideDoor(), Vector3I.Zero, BlockOrientation.Identity);
             door.IsSealedByDoorState = sealed_;
             door.RefreshSurfaces();
@@ -18,7 +18,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AClosedDoorSealsTheWayThroughAndAnOpenOneDoesNot operation.</summary>
+
         public void AClosedDoorSealsTheWayThroughAndAnOpenOneDoesNot()
         {
             Assert.Equal(1f, Door(true).SealFraction(Face.Forward));
@@ -26,10 +26,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OpeningADoorLeavesTheSidesItIsBoltedInBySealed operation.</summary>
+
         public void OpeningADoorLeavesTheSidesItIsBoltedInBySealed()
         {
-/// <summary>Door operation.</summary>
+
             BlockInstance open = Door(false);
 
             Assert.Equal(1f, open.SealFraction(Face.Up));
@@ -39,10 +39,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSurfaceBitsAgreeWithTheFaceFractions operation.</summary>
+
         public void TheSurfaceBitsAgreeWithTheFaceFractions()
         {
-/// <summary>Door operation.</summary>
+
             BlockInstance open = Door(false);
             int state = open.SelfSurfaces[0];
 
@@ -52,10 +52,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockWithNoOpenStateIsNotADoorAndIgnoresTheFlag operation.</summary>
+
         public void ABlockWithNoOpenStateIsNotADoorAndIgnoresTheFlag()
         {
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance block = new BlockInstance(Catalog.LightArmor(), Vector3I.Zero, BlockOrientation.Identity);
 
             Assert.False(block.HasStateDependentSealing);
@@ -72,7 +72,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDoorCellJoinsTheRoomAndIsNotReportedAsALeak operation.</summary>
+
         public void TheDoorCellJoinsTheRoomAndIsNotReportedAsALeak()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -97,7 +97,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OpeningTheDoorPutsTheRoomOutdoorsAndClosingItRestoresTheRoom operation.</summary>
+
         public void OpeningTheDoorPutsTheRoomOutdoorsAndClosingItRestoresTheRoom()
         {
             GridBuilder builder = GridBuilder.Large();

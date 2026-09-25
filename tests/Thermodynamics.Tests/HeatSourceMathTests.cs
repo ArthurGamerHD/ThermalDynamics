@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class HeatSourceMathTests
     {
-/// <summary>At operation.</summary>
+
         private static Vector3D At(double metres)
         {
             return new Vector3D(metres, 0, 0);
@@ -17,7 +17,7 @@ namespace Thermodynamics.Tests
         [InlineData(10.0)]
         [InlineData(25.0)]
         [InlineData(100.0)]
-/// <summary>IrradianceIsPowerOverTheAreaOfTheSphere operation.</summary>
+
         public void IrradianceIsPowerOverTheAreaOfTheSphere(double distance)
         {
             const float Watts = 5e6f;
@@ -31,7 +31,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DoublingTheDistanceQuartersTheIrradiance operation.</summary>
+
         public void DoublingTheDistanceQuartersTheIrradiance()
         {
             float near = HeatSourceMath.Irradiance(Vector3D.Zero, 5e6f, 1000f, At(10.0));
@@ -41,7 +41,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheNearFieldIsClampedRatherThanInfinite operation.</summary>
+
         public void TheNearFieldIsClampedRatherThanInfinite()
         {
             float touching = HeatSourceMath.Irradiance(Vector3D.Zero, 5e6f, 1000f, Vector3D.Zero);
@@ -53,7 +53,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BeyondRangeNothingArrives operation.</summary>
+
         public void BeyondRangeNothingArrives()
         {
             Assert.True(HeatSourceMath.Irradiance(Vector3D.Zero, 5e6f, 100f, At(99.0)) > 0f);
@@ -61,10 +61,10 @@ namespace Thermodynamics.Tests
         }
 
         [Theory]
-        [InlineData(0f, 100f)]      // no output
-        [InlineData(5e6f, 0f)]      // no range
-        [InlineData(-5e6f, 100f)]   // negative output
-/// <summary>ASourceMakingNothingDeliversNothing operation.</summary>
+        [InlineData(0f, 100f)]
+        [InlineData(5e6f, 0f)]
+        [InlineData(-5e6f, 100f)]
+
         public void ASourceMakingNothingDeliversNothing(float watts, float range)
         {
             Assert.Equal(0f, HeatSourceMath.Irradiance(Vector3D.Zero, watts, range, At(10.0)));
@@ -72,7 +72,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheDirectionPointsAtTheSource operation.</summary>
+
         public void TheDirectionPointsAtTheSource()
         {
             MatrixD identity = MatrixD.Identity;
@@ -84,7 +84,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDirectionIsInTheGridsOwnFrame operation.</summary>
+
         public void TheDirectionIsInTheGridsOwnFrame()
         {
             MatrixD turned = MatrixD.Transpose(MatrixD.CreateRotationZ(Math.PI / 2.0));
@@ -95,7 +95,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACoincidentSourceHasNoDirectionRatherThanANaN operation.</summary>
+
         public void ACoincidentSourceHasNoDirectionRatherThanANaN()
         {
             MatrixD identity = MatrixD.Identity;

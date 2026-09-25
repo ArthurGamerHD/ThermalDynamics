@@ -7,10 +7,10 @@ namespace Thermodynamics.Tests
     public class SettingsDefaultsTests
     {
         [Fact]
-/// <summary>AFreshSettingsObjectIsAlreadyUsable operation.</summary>
+
         public void AFreshSettingsObjectIsAlreadyUsable()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
 
             Assert.True(settings.EnableConduction);
@@ -24,10 +24,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryNumericSettingStartsAtSomethingUsable operation.</summary>
+
         public void EveryNumericSettingStartsAtSomethingUsable()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
 
             foreach (FieldInfo field in typeof(ThermalSettings).GetFields(
@@ -42,7 +42,7 @@ namespace Thermodynamics.Tests
                     && field.Name != "RoomAirDensity"
                     && field.Name != "RoomConvectionCoefficient") continue;
 
-/// <summary>typeof operation.</summary>
+
                 double value = field.FieldType == typeof(float)
                     ? (float)field.GetValue(settings)
                     : (int)field.GetValue(settings);

@@ -14,13 +14,13 @@ namespace Thermodynamics
             public bool Persistence;
         }
 
-/// <summary>Parse operation.</summary>
+
         public static List<KeyValuePair<string, string>> Parse(string xml)
         {
             List<KeyValuePair<string, string>> rows = new List<KeyValuePair<string, string>>();
             if (string.IsNullOrEmpty(xml)) return rows;
 
-/// <summary>List operation.</summary>
+
             List<string> path = new List<string>();
             string open = null;
             int textStart = -1;
@@ -41,7 +41,7 @@ namespace Thermodynamics
 
                 bool closing = tag[0] == '/';
                 bool empty = tag[tag.Length - 1] == '/';
-/// <summary>TagName operation.</summary>
+
                 string name = TagName(tag, closing);
                 if (name.Length == 0) continue;
 
@@ -72,7 +72,7 @@ namespace Thermodynamics
             return rows;
         }
 
-/// <summary>Value operation.</summary>
+
         public static string Value(IList<KeyValuePair<string, string>> rows, string name)
         {
             if (rows == null) return null;
@@ -93,20 +93,20 @@ namespace Thermodynamics
             return null;
         }
 
-/// <summary>Flag operation.</summary>
+
         public static bool Flag(IList<KeyValuePair<string, string>> rows, string name, bool missing)
         {
-/// <summary>Value operation.</summary>
+
             string value = Value(rows, name);
             if (string.IsNullOrEmpty(value)) return missing;
 
             return value == "true" || value == "True" || value == "1";
         }
 
-/// <summary>Conflicts operation.</summary>
+
         public static List<string> Conflicts(IList<KeyValuePair<string, string>> rows, ModFeatures features)
         {
-/// <summary>List operation.</summary>
+
             List<string> conflicts = new List<string>();
             if (rows == null || rows.Count == 0) return conflicts;
 
@@ -136,14 +136,14 @@ namespace Thermodynamics
             return conflicts;
         }
 
-/// <summary>Adds a .</summary>
+
         private static void Add(
             List<KeyValuePair<string, string>> rows, List<string> path, int parents, string name, string value)
         {
             rows.Add(new KeyValuePair<string, string>(Join(path, parents, name), value.Trim()));
         }
 
-/// <summary>Join operation.</summary>
+
         private static string Join(List<string> path, int parents, string name)
         {
             if (parents <= 1) return name;
@@ -157,7 +157,7 @@ namespace Thermodynamics
             return joined + name;
         }
 
-/// <summary>TagName operation.</summary>
+
         private static string TagName(string tag, bool closing)
         {
             int start = closing ? 1 : 0;
@@ -171,7 +171,7 @@ namespace Thermodynamics
             return tag.Substring(start, i - start);
         }
 
-/// <summary>Decode operation.</summary>
+
         private static string Decode(string value)
         {
             if (value.IndexOf('&') < 0) return value;

@@ -31,7 +31,7 @@ namespace Thermodynamics.Harness
             public float SecondsTo90Percent;
         }
 
-/// <summary>Rig operation.</summary>
+
         private static ThermalSimulation Rig(ThermalSettings settings, out BlockInstance source)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -46,7 +46,7 @@ namespace Thermodynamics.Harness
             }
 
             builder.Place(BlockModel.Solid("Fitting", Vector3I.One, 24f, Catalog.DefaultThermal()),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(0, 2, 0));
 
             builder.Place(Catalog.Reactor(), new Vector3I(5, 2, 5));
@@ -56,20 +56,20 @@ namespace Thermodynamics.Harness
             return builder.BuildSimulation(settings, 293.15f);
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(float simulatedSeconds = 600f)
         {
             Measure(4, 60f);
             Measure(4, 60f);
 
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
             foreach (int frequency in new int[] { 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 60 })
             {
                 Row best = null;
                 for (int attempt = 0; attempt < 3; attempt++)
                 {
-/// <summary>Measure operation.</summary>
+
                     Row row = Measure(frequency, simulatedSeconds);
                     if (best == null || row.MillisecondsPerSimulatedSecond < best.MillisecondsPerSimulatedSecond)
                     {
@@ -81,7 +81,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Measure operation.</summary>
+
         private static Row Measure(int frequency, float simulatedSeconds)
         {
             ThermalSettings settings = new ThermalSettings
@@ -97,10 +97,10 @@ namespace Thermodynamics.Harness
             settings.Derive();
 
             BlockInstance source;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(settings, out source);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -139,18 +139,18 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>N operation.</summary>
+
         private static string N(double value, int decimals = 2)
         {
             return value.ToString("n" + decimals, CultureInfo.InvariantCulture);
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report()
         {
-/// <summary>Run operation.</summary>
+
             List<Row> rows = Run();
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("FREQUENCY SWEEP — where does substep cost bottom out?");
@@ -170,7 +170,7 @@ namespace Thermodynamics.Harness
                 }
 
                 sb.AppendLine(string.Format("{0,6} {1,12} {2,14} {3,11} {4,12} {5,14} {6,11} {7,10}",
-/// <summary>N operation.</summary>
+
                     row.Frequency, N(row.SubstepsPerStep), N(row.SubstepsPerSecond, 1),
                     N(row.Demanded, 1) + (row.Starved ? "!" : ""), N(row.MillisecondsPerStep, 4),
                     N(row.MillisecondsPerSimulatedSecond, 3), N(row.SettledKelvin, 1),
@@ -179,7 +179,7 @@ namespace Thermodynamics.Harness
 
             sb.AppendLine();
             sb.AppendLine("cheapest by wall clock: Frequency " + bestFrequency
-/// <summary>N operation.</summary>
+
                 + " at " + N(best, 3) + " ms per simulated second");
             sb.AppendLine();
             sb.AppendLine("substeps/s is the column the theory says should be flat: a shorter step");
@@ -189,10 +189,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("frequency,substeps_per_step,substeps_per_second,demanded,starved,"
                 + "ms_per_step,ms_per_simulated_second,settled_k");

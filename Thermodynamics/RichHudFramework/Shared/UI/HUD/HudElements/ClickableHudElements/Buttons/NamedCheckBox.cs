@@ -52,20 +52,20 @@ namespace RichHudFramework.UI
 
 		protected readonly HudChain layout;
 
-/// <summary>NamedCheckBox operation.</summary>
+
         public NamedCheckBox(HudParentBase parent) : base(parent)
         {
-/// <summary>Label operation.</summary>
+
             name = new Label()
             {
                 Format = TerminalFormatting.ControlFormat.WithAlignment(TextAlignment.Right),
                 Text = "NewCheckbox"
             };
 
-/// <summary>BorderedCheckBox operation.</summary>
+
             checkbox = new BorderedCheckBox();
 
-/// <summary>HudChain operation.</summary>
+
             layout = new HudChain(false, this)
             {
                 DimAlignment = DimAlignments.UnpaddedSize,
@@ -76,15 +76,15 @@ namespace RichHudFramework.UI
 
             FocusHandler.InputOwner = this;
             AutoResize = true;
-/// <summary>Vector2 operation.</summary>
+
             Size = new Vector2(250f, 37f);
         }
 
-/// <summary>NamedCheckBox operation.</summary>
+
 		public NamedCheckBox() : this(null)
 		{ }
 
-/// <summary>Measure operation.</summary>
+
 		protected override void Measure()
         {
             if (AutoResize)

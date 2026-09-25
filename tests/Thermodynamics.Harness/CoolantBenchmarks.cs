@@ -31,23 +31,23 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Measure operation.</summary>
+
         public static Row Measure(int hullSize, int rings, int steps)
         {
-/// <summary>Measure operation.</summary>
+
             return Measure(hullSize, rings, steps, 0f);
         }
 
-/// <summary>Measure operation.</summary>
+
         public static Row Measure(int hullSize, int rings, int steps, float flowOverride)
         {
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Rings = rings;
 
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation segmented = Build(hullSize, rings, false, flowOverride);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation mixed = Build(hullSize, rings, true, flowOverride);
 
             row.Blocks = segmented.Solver.Nodes.Count;
@@ -75,12 +75,12 @@ namespace Thermodynamics.Harness
             {
                 float substeps;
 
-/// <summary>TimeSteps operation.</summary>
+
                 double a = TimeSteps(segmented, steps, out substeps);
                 if (a < row.SegmentedMsPerStep) row.SegmentedMsPerStep = a;
                 row.SegmentedSubsteps = substeps;
 
-/// <summary>TimeSteps operation.</summary>
+
                 double b = TimeSteps(mixed, steps, out substeps);
                 if (b < row.MixedMsPerStep) row.MixedMsPerStep = b;
                 row.MixedSubsteps = substeps;
@@ -91,10 +91,10 @@ namespace Thermodynamics.Harness
 
         public const int Repeats = 5;
 
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation Build(int hullSize, int rings, bool wellMixed, float flowOverride)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.WellMixedCoolant = wellMixed;
 
@@ -116,7 +116,7 @@ namespace Thermodynamics.Harness
 
             for (int r = 0; r < rings; r++)
             {
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I origin = new Vector3I(max.X + 3, max.Y - (r * 3), max.Z + 3);
                 List<Vector3I> ring = PipeFitter.RectangleXZ(origin, 8, 6);
 
@@ -162,7 +162,7 @@ namespace Thermodynamics.Harness
             return simulation;
         }
 
-/// <summary>TimeSteps operation.</summary>
+
         private static double TimeSteps(ThermalSimulation simulation, int steps, out float substeps)
         {
             EnvironmentSample sample = Worlds.Shadow();
@@ -177,10 +177,10 @@ namespace Thermodynamics.Harness
             return clock.Elapsed.TotalMilliseconds / steps;
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append("  rings  pipes  loops   blocks    links   segmented   well-mixed   ratio  substeps   mixing\n");
             sb.Append("  -----  -----  -----   ------    -----   ---------   ----------   -----  --------   ------\n");
@@ -204,10 +204,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append("rings,pipes,loops,blocks,links,segmented_ms,mixed_ms,ratio,segmented_substeps,mixed_substeps\n");
 

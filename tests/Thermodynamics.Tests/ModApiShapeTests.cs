@@ -9,13 +9,13 @@ namespace Thermodynamics.Tests
 {
     public class ModApiShapeTests
     {
-/// <summary>RepoRoot operation.</summary>
+
         private static string RepoRoot()
         {
             return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
 
-/// <summary>Declared operation.</summary>
+
         private static Dictionary<string, string> Declared()
         {
             string source = File.ReadAllText(Path.Combine(RepoRoot(),
@@ -35,7 +35,7 @@ namespace Thermodynamics.Tests
                 while (i < source.Length)
                 {
                     if (source[i] == '<') depth++;
-/// <summary>if operation.</summary>
+
                     else if (source[i] == '>')
                     {
                         depth--;
@@ -45,7 +45,7 @@ namespace Thermodynamics.Tests
                 }
 
                 if (i >= source.Length) continue;
-/// <summary>Normalise operation.</summary>
+
                 shapes[match.Groups[1].Value] = Normalise("Func" + source.Substring(open, i - open + 1));
             }
 
@@ -53,13 +53,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryEntryInTheTableIsWrappedSoItCannotThrowIntoItsCaller operation.</summary>
+
         public void EveryEntryInTheTableIsWrappedSoItCannotThrowIntoItsCaller()
         {
             string source = File.ReadAllText(Path.Combine(RepoRoot(),
                 "Thermodynamics", "ThermalApi.cs"));
 
-/// <summary>List operation.</summary>
+
             List<string> bare = new List<string>();
 
             foreach (Match match in Regex.Matches(source,
@@ -73,16 +73,16 @@ namespace Thermodynamics.Tests
 
             Assert.True(bare.Count == 0,
                 "these API entries are not wrapped in Guard, so an exception inside one reaches the"
-/// <summary>it operation.</summary>
+
                 + " consumer that called it (`W4`): " + string.Join(", ", bare.ToArray()));
 
             Assert.True(Declared().Count >= 15,
-/// <summary>Declared operation.</summary>
+
                 "only " + Declared().Count + " entries were found in the table, so this judged"
                 + " almost nothing");
         }
 
-/// <summary>Documented operation.</summary>
+
         private static Dictionary<string, string> Documented()
         {
             string page = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "api.md"));
@@ -92,21 +92,21 @@ namespace Thermodynamics.Tests
             foreach (Match match in Regex.Matches(page,
                 @"\|\s*`(\w+)`\s*\|\s*`(Func<[^`]*)`\s*\|"))
             {
-/// <summary>Normalise operation.</summary>
+
                 shapes[match.Groups[1].Value] = Normalise(match.Groups[2].Value);
             }
 
             return shapes;
         }
 
-/// <summary>Normalise operation.</summary>
+
         private static string Normalise(string signature)
         {
             return Regex.Replace(signature, @"\s+", "");
         }
 
         [Fact]
-/// <summary>ApiVersionMovesWhenTheSurfaceBreaks operation.</summary>
+
         public void ApiVersionMovesWhenTheSurfaceBreaks()
         {
             string path = Path.Combine(RepoRoot(), "tests", "Thermodynamics.Tests",
@@ -142,11 +142,11 @@ namespace Thermodynamics.Tests
                 "the recorded surface holds " + recorded.Count + " entries, so this check would "
                 + "pass whatever the table said");
 
-/// <summary>Declared operation.</summary>
+
             Dictionary<string, string> declared = Declared();
-/// <summary>List operation.</summary>
+
             List<string> breaking = new List<string>();
-/// <summary>List operation.</summary>
+
             List<string> added = new List<string>();
 
             foreach (KeyValuePair<string, string> entry in recorded)
@@ -169,13 +169,13 @@ namespace Thermodynamics.Tests
                 if (!recorded.ContainsKey(entry.Key)) added.Add(entry.Key);
             }
 
-/// <summary>DeclaredVersion operation.</summary>
+
             int current = DeclaredVersion();
 
             if (breaking.Count == 0)
             {
                 Assert.True(current == recordedVersion,
-/// <summary>key operation.</summary>
+
                     "the API surface has not broken — " + added.Count + " key(s) added, nothing "
                     + "removed or reshaped — but ThermalApi.Version is " + current
                     + " against the recorded " + recordedVersion + ". A major that moves without a "
@@ -190,7 +190,7 @@ namespace Thermodynamics.Tests
                 + "same commit:\n  " + string.Join("\n  ", breaking.ToArray()));
         }
 
-/// <summary>DeclaredVersion operation.</summary>
+
         private static int DeclaredVersion()
         {
             string source = File.ReadAllText(Path.Combine(RepoRoot(),
@@ -203,12 +203,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryEntryHasTheSignatureTheApiPageGivesIt operation.</summary>
+
         public void EveryEntryHasTheSignatureTheApiPageGivesIt()
         {
-/// <summary>Declared operation.</summary>
+
             Dictionary<string, string> declared = Declared();
-/// <summary>Documented operation.</summary>
+
             Dictionary<string, string> documented = Documented();
 
             Assert.True(declared.Count > 10,
@@ -217,7 +217,7 @@ namespace Thermodynamics.Tests
             Assert.True(documented.Count > 10,
                 "only " + documented.Count + " signatures were read out of the API page");
 
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
 
             foreach (KeyValuePair<string, string> entry in declared)
@@ -249,14 +249,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWorkedExamplesCastWithTheSignaturesTheTableGives operation.</summary>
+
         public void TheWorkedExamplesCastWithTheSignaturesTheTableGives()
         {
             string page = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "api.md"));
-/// <summary>Documented operation.</summary>
+
             Dictionary<string, string> documented = Documented();
 
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
             int checked_ = 0;
 
@@ -264,7 +264,7 @@ namespace Thermodynamics.Tests
                 @"api\[""(\w+)""\]\s*as\s+(Func<[^;>]*(?:<[^>]*>)?[^;]*?)>\s*;"))
             {
                 string name = match.Groups[1].Value;
-/// <summary>Normalise operation.</summary>
+
                 string cast = Normalise(match.Groups[2].Value + ">");
 
                 string table;

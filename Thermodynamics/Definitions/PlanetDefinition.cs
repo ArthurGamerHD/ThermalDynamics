@@ -30,7 +30,6 @@ namespace Thermodynamics
 
         public PlanetField Supplied;
 
-/// <summary>Has operation.</summary>
         public bool Has(PlanetField field)
         {
             return (Supplied & field) != 0;
@@ -73,12 +72,10 @@ namespace Thermodynamics
 
         public float UndergroundConvectionCoefficient;
 
-/// <summary>Returns the definition.</summary>
         public static PlanetDefinition GetDefinition(MyDefinitionId defId) 
         {
             MyLog.Default.Info($"[{Settings.Name}] Planet Definition: {defId}");
 
-/// <summary>PlanetDefinition operation.</summary>
             PlanetDefinition def = new PlanetDefinition();
             DefinitionExtensionsAPI lookup = Session.Definitions;
 
@@ -86,7 +83,6 @@ namespace Thermodynamics
 
             if (!lookup.DefinitionIdExists(defId))
             {
-/// <summary>MyDefinitionId operation.</summary>
                 defId = new MyDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), Settings.DefaultSubtypeId);
             }
 

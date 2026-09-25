@@ -9,12 +9,12 @@ namespace Thermodynamics.Tests
     {
         private class RecordingProfiler : ISimulationProfiler
         {
-/// <summary>List operation.</summary>
+
             public readonly List<string> Events = new List<string>();
             public readonly Dictionary<SimulationPhase, int> Depth = new Dictionary<SimulationPhase, int>();
             public bool Unbalanced;
 
-/// <summary>Begin operation.</summary>
+
             public void Begin(SimulationPhase phase)
             {
                 int depth;
@@ -24,7 +24,7 @@ namespace Thermodynamics.Tests
                 Events.Add("begin " + phase);
             }
 
-/// <summary>End operation.</summary>
+
             public void End(SimulationPhase phase)
             {
                 int depth;
@@ -34,7 +34,7 @@ namespace Thermodynamics.Tests
                 Events.Add("end " + phase);
             }
 
-/// <summary>Count operation.</summary>
+
             public int Count(string what)
             {
                 int count = 0;
@@ -46,7 +46,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation BuildSimulation()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -55,12 +55,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryPhaseIsBracketed operation.</summary>
+
         public void EveryPhaseIsBracketed()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = BuildSimulation();
-/// <summary>RecordingProfiler operation.</summary>
+
             RecordingProfiler profiler = new RecordingProfiler();
             simulation.Profiler = profiler;
 
@@ -78,12 +78,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RebuildAllReportsTopologyRoomMappingAndExposure operation.</summary>
+
         public void RebuildAllReportsTopologyRoomMappingAndExposure()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = BuildSimulation();
-/// <summary>RecordingProfiler operation.</summary>
+
             RecordingProfiler profiler = new RecordingProfiler();
             simulation.Profiler = profiler;
 
@@ -96,14 +96,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryUpdateReportsTheSolver operation.</summary>
+
         public void EveryUpdateReportsTheSolver()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = BuildSimulation();
             simulation.RebuildAll();
 
-/// <summary>RecordingProfiler operation.</summary>
+
             RecordingProfiler profiler = new RecordingProfiler();
             simulation.Profiler = profiler;
 
@@ -117,7 +117,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PlacingABlockReportsATopologyRebuild operation.</summary>
+
         public void PlacingABlockReportsATopologyRebuild()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -125,7 +125,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
             simulation.RebuildAll();
 
-/// <summary>RecordingProfiler operation.</summary>
+
             RecordingProfiler profiler = new RecordingProfiler();
             simulation.Profiler = profiler;
 
@@ -136,15 +136,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ProfilingChangesNothingAboutTheResult operation.</summary>
+
         public void ProfilingChangesNothingAboutTheResult()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation instrumented = BuildSimulation();
-/// <summary>RecordingProfiler operation.</summary>
+
             instrumented.Profiler = new RecordingProfiler();
 
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation plain = BuildSimulation();
 
             instrumented.RebuildAll();
@@ -167,14 +167,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CollectingDiagnosticsChangesNothingAboutTheResult operation.</summary>
+
         public void CollectingDiagnosticsChangesNothingAboutTheResult()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation instrumented = BuildSimulation();
             instrumented.Solver.CollectDiagnostics = true;
 
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation plain = BuildSimulation();
             Assert.False(plain.Solver.CollectDiagnostics);
 
@@ -197,10 +197,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ATemperatureWrittenFromOutsideIsPickedUp operation.</summary>
+
         public void ATemperatureWrittenFromOutsideIsPickedUp()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = BuildSimulation();
             simulation.RebuildAll();
             simulation.Update(1f / 6f, Worlds.Shadow());
@@ -215,10 +215,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AMassChangeIsPickedUp operation.</summary>
+
         public void AMassChangeIsPickedUp()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = BuildSimulation();
             simulation.RebuildAll();
             simulation.Update(1f / 6f, Worlds.Shadow());
@@ -238,10 +238,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoProfilerMeansNoInstrumentation operation.</summary>
+
         public void NoProfilerMeansNoInstrumentation()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = BuildSimulation();
             Assert.Null(simulation.Profiler);
 

@@ -8,7 +8,7 @@ namespace Thermodynamics.Core
 
         public const float MinimumHeight = 0.5f;
 
-/// <summary>GradientHeightIn operation.</summary>
+
         public static float GradientHeightIn(float configured, float airAboveGround)
         {
             if (airAboveGround <= 0f) return configured;
@@ -17,7 +17,7 @@ namespace Thermodynamics.Core
             return airAboveGround < ReferenceHeight ? ReferenceHeight : airAboveGround;
         }
 
-/// <summary>Multiplier operation.</summary>
+
         public static float Multiplier(float height, float roughness, float gradientHeight)
         {
             if (roughness <= 0f) roughness = 0.0002f;
@@ -32,7 +32,7 @@ namespace Thermodynamics.Core
             return (float)(Math.Log((height + roughness) / roughness) / reference);
         }
 
-/// <summary>Heating operation.</summary>
+
         public static float Heating(
             float previous, float sunElevationSine, float seconds, float lagSeconds)
         {
@@ -44,7 +44,7 @@ namespace Thermodynamics.Core
             return ClimateModel.Follow(previous, target, seconds, lagSeconds);
         }
 
-/// <summary>Diurnal operation.</summary>
+
         public static float Diurnal(
             float heating, float height, float amplitude, float crossover, float boundary)
         {

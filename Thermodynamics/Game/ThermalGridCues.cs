@@ -14,21 +14,16 @@ namespace Thermodynamics
         private const int CueInterval = 4;
 
         private static readonly MySoundPair ApproachingSound =
-/// <summary>MySoundPair operation.</summary>
             new MySoundPair("ArcBlockDestroyedSmall");
 
         private static readonly MySoundPair CriticalSound =
-/// <summary>MySoundPair operation.</summary>
             new MySoundPair("ArcBlockDestroyed");
 
-/// <summary>HeatCueState operation.</summary>
         private readonly HeatCueState cueState = new HeatCueState();
-/// <summary>List operation.</summary>
         private readonly List<HeatCue> cues = new List<HeatCue>();
 
         private readonly Dictionary<Vector3I, float> glowing = new Dictionary<Vector3I, float>();
 
-/// <summary>List operation.</summary>
         private readonly List<LitBlock> litBlocks = new List<LitBlock>();
 
         public IList<LitBlock> LitBlocks
@@ -36,7 +31,6 @@ namespace Thermodynamics
             get { return litBlocks; }
         }
 
-/// <summary>List operation.</summary>
         private readonly List<Vector3I> faded = new List<Vector3I>();
 
         private int stepsSinceCues;
@@ -44,7 +38,6 @@ namespace Thermodynamics
 
         private static MyEntity3DSoundEmitter cueEmitter;
 
-/// <summary>UpdateCues operation.</summary>
         private void UpdateCues(int steps, float seconds)
         {
             secondsSinceCues += seconds;
@@ -91,7 +84,6 @@ namespace Thermodynamics
             if (glow) FadeBlocksNoLongerCued();
         }
 
-/// <summary>Applies the glow.</summary>
         private void ApplyGlow(HeatCue cue)
         {
             float glow = cue.Glow;
@@ -103,26 +95,22 @@ namespace Thermodynamics
                 return;
             }
 
-/// <summary>LitBlock operation.</summary>
             LitBlock lit = new LitBlock();
             lit.Position = cue.Block.Position;
             lit.Kelvin = cue.Kelvin;
             lit.Glow = glow;
             litBlocks.Add(lit);
 
-/// <summary>FatBlockAt operation.</summary>
             MyCubeBlock cube = FatBlockAt(cue.Block.Position);
             if (cube == null) return;
 
             Vector3 colour = Incandescence.Colour(cue.Kelvin);
-/// <summary>Color operation.</summary>
             Color emissive = new Color(colour * glow);
 
             if (!Emit(cube, glow, emissive)) return;
             glowing[cue.Block.Position] = glow;
         }
 
-/// <summary>Announce operation.</summary>
         private void Announce(HeatCue cue)
         {
             if (!IsPilotedLocally()) return;
@@ -136,7 +124,6 @@ namespace Thermodynamics
                 cue.Stage == HeatCueStage.Critical ? CriticalSound : ApproachingSound, true);
         }
 
-/// <summary>IsPilotedLocally operation.</summary>
         private bool IsPilotedLocally()
         {
             if (MyAPIGateway.Session == null) return false;
@@ -151,7 +138,6 @@ namespace Thermodynamics
             return seat != null && seat.CubeGrid == Grid;
         }
 
-/// <summary>FadeBlocksNoLongerCued operation.</summary>
         private void FadeBlocksNoLongerCued()
         {
             if (glowing.Count == 0) return;
@@ -174,7 +160,6 @@ namespace Thermodynamics
             faded.Clear();
         }
 
-/// <summary>ClearGlow operation.</summary>
         private void ClearGlow()
         {
             litBlocks.Clear();
@@ -187,12 +172,10 @@ namespace Thermodynamics
             faded.Clear();
         }
 
-/// <summary>Fade operation.</summary>
         private void Fade(Vector3I position)
         {
             glowing.Remove(position);
 
-/// <summary>FatBlockAt operation.</summary>
             MyCubeBlock cube = FatBlockAt(position);
             if (cube == null) return;
 
@@ -206,7 +189,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Emit operation.</summary>
         private static bool Emit(MyCubeBlock cube, float glow, Color emissive)
         {
             if (cube.Render == null || cube.Render.RenderObjectIDs == null
@@ -230,10 +212,8 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>FatBlockAt operation.</summary>
         private MyCubeBlock FatBlockAt(Vector3I position)
         {
-/// <summary>Returns the .</summary>
             ThermalBlock bound = Get(position);
             if (bound == null || bound.Block == null) return null;
 

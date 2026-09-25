@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>HeatLaunderingTests operation.</summary>
+
         public HeatLaunderingTests(ITestOutputHelper output)
         {
             this.output = output;
@@ -19,10 +19,10 @@ namespace Thermodynamics.Tests
 
         private const float Ambient = 293.15f;
 
-/// <summary>Isolated operation.</summary>
+
         private static ThermalSettings Isolated()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings s = new ThermalSettings();
             s.EnableEnvironment = false;
             s.EnableSolarHeat = false;
@@ -31,7 +31,7 @@ namespace Thermodynamics.Tests
             return s;
         }
 
-/// <summary>HeatAboveAmbient operation.</summary>
+
         private static float HeatAboveAmbient(ThermalSimulation simulation)
         {
             float total = 0f;
@@ -52,7 +52,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockChangeElsewhereDoesNotCoolTheCoolant operation.</summary>
+
         public void ABlockChangeElsewhereDoesNotCoolTheCoolant()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -74,7 +74,7 @@ namespace Thermodynamics.Tests
         [InlineData(3, 3, 8)]
         [InlineData(4, 3, 10)]
         [InlineData(5, 4, 14)]
-/// <summary>GrindingOnePipeLosesOnlyThatPipesShareOfTheCoolant operation.</summary>
+
         public void GrindingOnePipeLosesOnlyThatPipesShareOfTheCoolant(int width, int depth, int pipes)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -89,7 +89,7 @@ namespace Thermodynamics.Tests
 
             float segmentMass = loop.SegmentThermalMass;
             float nodeMass = simulation.Solver.GetNode(ring[0]).ThermalMass;
-/// <summary>HeatAboveAmbient operation.</summary>
+
             float start = HeatAboveAmbient(simulation);
 
             BlockInstance popped = ring[3];
@@ -98,12 +98,12 @@ namespace Thermodynamics.Tests
             simulation.RebuildAll();
 
             Assert.Empty(simulation.Solver.Loops);
-/// <summary>HeatAboveAmbient operation.</summary>
+
             float broken = HeatAboveAmbient(simulation);
 
             simulation.AddBlock(popped);
             simulation.RebuildAll();
-/// <summary>HeatAboveAmbient operation.</summary>
+
             float end = HeatAboveAmbient(simulation);
 
             float lost = start - end;
@@ -123,7 +123,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>GrindingARingOpenDrainsItAndRefillingCostsBackWhatDrained operation.</summary>
+
         public void GrindingARingOpenDrainsItAndRefillingCostsBackWhatDrained()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -138,13 +138,13 @@ namespace Thermodynamics.Tests
             const float Warm = Ambient + 100f;
             for (int i = 0; i < loop.Pipes.Count; i++) loop.SetSegmentTemperature(i, Warm);
 
-/// <summary>HeatAboveAmbient operation.</summary>
+
             float start = HeatAboveAmbient(simulation);
 
             BlockInstance popped = ring[3];
             simulation.RemoveBlock(popped);
             simulation.RebuildAll();
-/// <summary>HeatAboveAmbient operation.</summary>
+
             float drained = start - HeatAboveAmbient(simulation);
 
             simulation.AddBlock(popped);
@@ -165,7 +165,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGrindCostsTheHeatInTheBlockThatLeftAndNothingElse operation.</summary>
+
         public void AGrindCostsTheHeatInTheBlockThatLeftAndNothingElse()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -176,15 +176,15 @@ namespace Thermodynamics.Tests
             CoolantLoop loop = simulation.Solver.Loops[0];
             for (int i = 0; i < loop.Pipes.Count; i++) loop.SetSegmentTemperature(i, 900f);
 
-/// <summary>HeatAboveAmbient operation.</summary>
+
             float start = HeatAboveAmbient(simulation);
             float parcel = start / ring.Count;
 
-/// <summary>GrindAndReweld operation.</summary>
+
             float afterFirst = GrindAndReweld(simulation, ring[3]);
-/// <summary>GrindAndReweld operation.</summary>
+
             float afterSecond = GrindAndReweld(simulation, ring[3]);
-/// <summary>GrindAndReweld operation.</summary>
+
             float afterOther = GrindAndReweld(simulation, ring[5]);
 
             output.WriteLine("start {0:n0} J, one parcel {1:n0} J", start, parcel);
@@ -202,19 +202,19 @@ namespace Thermodynamics.Tests
             Assert.Equal(ring.Count, simulation.Solver.Loops[0].Pipes.Count);
         }
 
-/// <summary>GrindAndReweld operation.</summary>
+
         private static float GrindAndReweld(ThermalSimulation simulation, BlockInstance block)
         {
             simulation.RemoveBlock(block);
             simulation.RebuildAll();
             simulation.AddBlock(block);
             simulation.RebuildAll();
-/// <summary>HeatAboveAmbient operation.</summary>
+
             return HeatAboveAmbient(simulation);
         }
 
         [Fact]
-/// <summary>AGrindLeavesNoPipeHoldingCoolantBecauseTheRingDrained operation.</summary>
+
         public void AGrindLeavesNoPipeHoldingCoolantBecauseTheRingDrained()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -250,13 +250,13 @@ namespace Thermodynamics.Tests
                 "a pipe reached " + hottest.ToString("n2") + " K, above the 900 K the fluid was at");
         }
 
-/// <summary>SpilledByTurningTheMechanismOff operation.</summary>
+
         private ThermalSimulation SpilledByTurningTheMechanismOff(out List<BlockInstance> ring,
             out float fluidKelvin, out float pipeCapacity, out float parcelCapacity)
         {
             const float Fluid = 900f;
 
-/// <summary>Isolated operation.</summary>
+
             ThermalSettings settings = Isolated();
             GridBuilder builder = GridBuilder.Large();
             ring = PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
@@ -277,7 +277,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheBoundHoldsWhenTheMechanismIsTurnedOff operation.</summary>
+
         public void TheBoundHoldsWhenTheMechanismIsTurnedOff()
         {
             List<BlockInstance> ring;
@@ -330,12 +330,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TurningTheMechanismOffMovesTheHeatRatherThanLosingIt operation.</summary>
+
         public void TurningTheMechanismOffMovesTheHeatRatherThanLosingIt()
         {
             const float Fluid = 900f;
 
-/// <summary>Isolated operation.</summary>
+
             ThermalSettings settings = Isolated();
             GridBuilder builder = GridBuilder.Large();
             List<BlockInstance> ring =
@@ -345,14 +345,14 @@ namespace Thermodynamics.Tests
             CoolantLoop loop = simulation.Solver.Loops[0];
             for (int i = 0; i < loop.Pipes.Count; i++) loop.SetSegmentTemperature(i, Fluid);
 
-/// <summary>HeatAboveAmbient operation.</summary>
+
             float before = HeatAboveAmbient(simulation);
 
             settings.EnableCoolantLoops = false;
             settings.Derive();
             simulation.RebuildAll();
 
-/// <summary>HeatAboveAmbient operation.</summary>
+
             float after = HeatAboveAmbient(simulation);
 
             output.WriteLine("{0:n0} J in the ring, {1:n0} J in the pipes: {2:n3} % moved",
@@ -363,12 +363,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SwitchingItBackOnReclaimsWhatTheSpillLeft operation.</summary>
+
         public void SwitchingItBackOnReclaimsWhatTheSpillLeft()
         {
             const float Fluid = 900f;
 
-/// <summary>Isolated operation.</summary>
+
             ThermalSettings settings = Isolated();
             GridBuilder builder = GridBuilder.Large();
             PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3));
@@ -377,7 +377,7 @@ namespace Thermodynamics.Tests
             CoolantLoop loop = simulation.Solver.Loops[0];
             for (int i = 0; i < loop.Pipes.Count; i++) loop.SetSegmentTemperature(i, Fluid);
 
-/// <summary>HeatAboveAmbient operation.</summary>
+
             float before = HeatAboveAmbient(simulation);
 
             settings.EnableCoolantLoops = false;
@@ -388,7 +388,7 @@ namespace Thermodynamics.Tests
             settings.Derive();
             simulation.RebuildAll();
 
-/// <summary>HeatAboveAmbient operation.</summary>
+
             float after = HeatAboveAmbient(simulation);
 
             Assert.Single(simulation.Solver.Loops);
@@ -399,10 +399,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryCoolantBlockHasExactlyTwoLinkPorts operation.</summary>
+
         public void EveryCoolantBlockHasExactlyTwoLinkPorts()
         {
-/// <summary>List operation.</summary>
+
             List<string> wrong = new List<string>();
             int seen = 0;
 
@@ -428,7 +428,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>HeldCoolantSurvivesASaveAndLoad operation.</summary>
+
         public void HeldCoolantSurvivesASaveAndLoad()
         {
             List<BlockInstance> ring;
@@ -449,11 +449,11 @@ namespace Thermodynamics.Tests
                 "no pipe was holding coolant, so a save and a load of it is a save and a load of"
                 + " nothing — which is what this test spent a while doing");
 
-/// <summary>HeatAboveAmbient operation.</summary>
+
             float spilled = HeatAboveAmbient(simulation);
             string saved = simulation.Save();
 
-/// <summary>Isolated operation.</summary>
+
             ThermalSettings reloadSettings = Isolated();
             reloadSettings.EnableCoolantLoops = false;
             reloadSettings.Derive();
@@ -465,7 +465,7 @@ namespace Thermodynamics.Tests
 
             reloaded.Load(saved);
 
-/// <summary>HeatAboveAmbient operation.</summary>
+
             float restored = HeatAboveAmbient(reloaded);
 
             output.WriteLine("{0:n0} J/K held, {1:n0} J saved, {2:n0} J restored",
@@ -475,10 +475,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWellMixedModelLosesTheSameOneParcel operation.</summary>
+
         public void TheWellMixedModelLosesTheSameOneParcel()
         {
-/// <summary>Isolated operation.</summary>
+
             ThermalSettings settings = Isolated();
             settings.WellMixedCoolant = true;
             settings.Derive();
@@ -491,7 +491,7 @@ namespace Thermodynamics.Tests
             CoolantLoop loop = simulation.Solver.Loops[0];
             loop.Temperature = 900f;
 
-/// <summary>HeatAboveAmbient operation.</summary>
+
             float start = HeatAboveAmbient(simulation);
             float predicted = start / ring.Count;
 
@@ -500,7 +500,7 @@ namespace Thermodynamics.Tests
             simulation.AddBlock(ring[3]);
             simulation.RebuildAll();
 
-/// <summary>HeatAboveAmbient operation.</summary>
+
             float end = HeatAboveAmbient(simulation);
             float lost = start - end;
 

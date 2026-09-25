@@ -12,7 +12,7 @@ namespace Thermodynamics.Sim
 {
     public static class ThermalCorpusExport
     {
-/// <summary>Run operation.</summary>
+
         public static int Run(string output)
         {
             Directory.CreateDirectory(output);
@@ -26,7 +26,7 @@ namespace Thermodynamics.Sim
                 var scenario = Battery.All().Single(s => s.Name == scenarioName);
                 var assembly = ship.Build();
                 ShipLoad.Apply(assembly, scenario.Load);
-/// <summary>AssemblyRunner operation.</summary>
+
                 var runner = new AssemblyRunner(assembly) { Environment = scenario.Environment, Integrity = GameBlocks.IntegrityOf };
                 Console.WriteLine(ship.Name + " / " + scenarioName + " / " + ship.Blocks + " blocks");
                 runner.Run(60);
@@ -40,7 +40,7 @@ namespace Thermodynamics.Sim
             }
             return 0;
         }
-/// <summary>Save operation.</summary>
+
         private static void Save(string output, string id, Blueprints.Ship ship, ShipAssembly assembly,
             string scenario, int seconds, string phase, string path)
         {
@@ -77,7 +77,7 @@ namespace Thermodynamics.Sim
             Vector3D origin = blockRegions.Select(r => r.Min).Aggregate(Vector3D.Min);
             foreach (int budget in new[] {128, 512, 1400})
             {
-/// <summary>ThermalVisionBlockDetail operation.</summary>
+
                 var detail = new ThermalVisionBlockDetail(budget, max + new Vector3D(2));
                 foreach (var region in blockRegions) detail.Observe(region, true);
                 using (var scan = new ThermalVisionRegionScan(1, detail.CoarseCapacity, 1, 10485760, origin: origin))
@@ -95,7 +95,7 @@ namespace Thermodynamics.Sim
                         throw new InvalidOperationException("Mixed detail order exceeded budget");
                     var visible = new System.Collections.Generic.List<ThermalVisionRegionPartition.Region>();
                     order.WriteNearToFar(max + new Vector3D(2), visible);
-/// <summary>ThermalVisionFacePlan operation.</summary>
+
                     var facePlan = new ThermalVisionFacePlan(); facePlan.Build(visible, max + new Vector3D(2));
                     var predicted = blockRegions.Select(block => {
                         Vector3D p = (block.Min + block.Max) * .5;

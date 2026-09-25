@@ -5,7 +5,7 @@ namespace Thermodynamics.Core
 {
     public static class Units
     {
-/// <summary>Watts operation.</summary>
+
         public static string Watts(float watts, int decimals = 1, CultureInfo culture = null)
         {
             if (culture == null) culture = CultureInfo.CurrentCulture;

@@ -13,10 +13,10 @@ namespace RichHudFramework
 		{
 			IReadOnlyList<IBindGroup> BindGroups { get; }
 
-/// <summary>Adds a .</summary>
+
 			void Add(IBindGroup bindGroup, bool isAliased = false);
 
-/// <summary>Adds a .</summary>
+
 			void Add(IBindGroup bindGroup, BindDefinition[] defaultBinds, bool isAliased = false);
 		}
 	}

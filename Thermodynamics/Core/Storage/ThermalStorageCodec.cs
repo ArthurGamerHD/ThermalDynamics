@@ -9,7 +9,7 @@ namespace Thermodynamics.Core
         public Vector3I Position;
         public float Temperature;
 
-/// <summary>StoredTemperature operation.</summary>
+
         public StoredTemperature(Vector3I position, float temperature)
         {
             Position = position;
@@ -22,7 +22,7 @@ namespace Thermodynamics.Core
         public long Signature;
         public float Temperature;
 
-/// <summary>StoredLoop operation.</summary>
+
         public StoredLoop(long signature, float temperature)
         {
             Signature = signature;
@@ -35,7 +35,7 @@ namespace Thermodynamics.Core
         public long Signature;
         public float Fill;
 
-/// <summary>StoredLoopFill operation.</summary>
+
         public StoredLoopFill(long signature, float fill)
         {
             Signature = signature;
@@ -48,7 +48,7 @@ namespace Thermodynamics.Core
         public Vector3I Position;
         public float Capacity;
 
-/// <summary>StoredHeldCoolant operation.</summary>
+
         public StoredHeldCoolant(Vector3I position, float capacity)
         {
             Position = position;
@@ -61,7 +61,7 @@ namespace Thermodynamics.Core
         public Vector3I Anchor;
         public float Temperature;
 
-/// <summary>StoredRoom operation.</summary>
+
         public StoredRoom(Vector3I anchor, float temperature)
         {
             Anchor = anchor;
@@ -82,32 +82,32 @@ namespace Thermodynamics.Core
         private const int LegacyLoopRecordSize = 3;
 
         private const int Int32Size = 4;
-        private const int RecordSize = 12;   // 8 byte key + 4 byte temperature
+        private const int RecordSize = 12;
 
 
-/// <summary>Encode operation.</summary>
+
         public static string Encode(IList<StoredTemperature> blocks, IList<StoredLoop> loops)
         {
-/// <summary>Encode operation.</summary>
+
             return Encode(blocks, loops, null);
         }
 
-/// <summary>Encode operation.</summary>
+
         public static string Encode(IList<StoredTemperature> blocks, IList<StoredLoop> loops, IList<StoredRoom> rooms)
         {
-/// <summary>Encode operation.</summary>
+
             return Encode(blocks, loops, rooms, null);
         }
 
-/// <summary>Encode operation.</summary>
+
         public static string Encode(IList<StoredTemperature> blocks, IList<StoredLoop> loops,
             IList<StoredRoom> rooms, IList<StoredHeldCoolant> held)
         {
-/// <summary>Encode operation.</summary>
+
             return Encode(blocks, loops, rooms, held, null);
         }
 
-/// <summary>Encode operation.</summary>
+
         public static string Encode(IList<StoredTemperature> blocks, IList<StoredLoop> loops,
             IList<StoredRoom> rooms, IList<StoredHeldCoolant> held, IList<StoredLoopFill> fills)
         {
@@ -193,29 +193,29 @@ namespace Thermodynamics.Core
             return Convert.ToBase64String(bytes);
         }
 
-/// <summary>TryDecode operation.</summary>
+
         public static bool TryDecode(string data, List<StoredTemperature> blocks, List<StoredLoop> loops)
         {
-/// <summary>TryDecode operation.</summary>
+
             return TryDecode(data, blocks, loops, null);
         }
 
-/// <summary>TryDecode operation.</summary>
+
         public static bool TryDecode(string data, List<StoredTemperature> blocks, List<StoredLoop> loops, List<StoredRoom> rooms)
         {
-/// <summary>TryDecode operation.</summary>
+
             return TryDecode(data, blocks, loops, rooms, null);
         }
 
-/// <summary>TryDecode operation.</summary>
+
         public static bool TryDecode(string data, List<StoredTemperature> blocks, List<StoredLoop> loops,
             List<StoredRoom> rooms, List<StoredHeldCoolant> held)
         {
-/// <summary>TryDecode operation.</summary>
+
             return TryDecode(data, blocks, loops, rooms, held, null);
         }
 
-/// <summary>TryDecode operation.</summary>
+
         public static bool TryDecode(string data, List<StoredTemperature> blocks, List<StoredLoop> loops,
             List<StoredRoom> rooms, List<StoredHeldCoolant> held, List<StoredLoopFill> fills)
         {
@@ -241,15 +241,15 @@ namespace Thermodynamics.Core
 
             if (bytes[0] == Version2Marker)
             {
-/// <summary>TryDecodeVersion2 operation.</summary>
+
                 return TryDecodeVersion2(bytes, blocks, loops, rooms, held, fills);
             }
 
-/// <summary>TryDecodeLegacyBlocks operation.</summary>
+
             return TryDecodeLegacyBlocks(bytes, blocks);
         }
 
-/// <summary>TryDecodeVersion2 operation.</summary>
+
         private static bool TryDecodeVersion2(byte[] bytes, List<StoredTemperature> blocks,
             List<StoredLoop> loops, List<StoredRoom> rooms, List<StoredHeldCoolant> held,
             List<StoredLoopFill> fills)
@@ -260,7 +260,7 @@ namespace Thermodynamics.Core
                 byte section = bytes[at++];
 
                 if (at + Int32Size > bytes.Length) return false;
-/// <summary>ReadInt32 operation.</summary>
+
                 int count = ReadInt32(bytes, ref at);
                 if (count < 0) return false;
 
@@ -268,31 +268,31 @@ namespace Thermodynamics.Core
 
                 for (int i = 0; i < count; i++)
                 {
-/// <summary>ReadInt64 operation.</summary>
+
                     long key = ReadInt64(bytes, ref at);
-/// <summary>ReadSingle operation.</summary>
+
                     float temperature = ReadSingle(bytes, ref at);
 
                     if (section == SectionBlocks)
                     {
                         if (blocks != null) blocks.Add(new StoredTemperature(GridMath.FromKey(key), temperature));
                     }
-/// <summary>if operation.</summary>
+
                     else if (section == SectionLoops)
                     {
                         if (loops != null) loops.Add(new StoredLoop(key, temperature));
                     }
-/// <summary>if operation.</summary>
+
                     else if (section == SectionRooms)
                     {
                         if (rooms != null) rooms.Add(new StoredRoom(GridMath.FromKey(key), temperature));
                     }
-/// <summary>if operation.</summary>
+
                     else if (section == SectionHeldCoolant)
                     {
                         if (held != null) held.Add(new StoredHeldCoolant(GridMath.FromKey(key), temperature));
                     }
-/// <summary>if operation.</summary>
+
                     else if (section == SectionLoopFill)
                     {
                         if (fills != null) fills.Add(new StoredLoopFill(key, temperature));
@@ -303,7 +303,7 @@ namespace Thermodynamics.Core
         }
 
 
-/// <summary>EncodeLegacyBlocks operation.</summary>
+
         public static string EncodeLegacyBlocks(IList<StoredTemperature> blocks)
         {
             int count = blocks == null ? 0 : blocks.Count;
@@ -328,7 +328,7 @@ namespace Thermodynamics.Core
             return Convert.ToBase64String(bytes);
         }
 
-/// <summary>EncodeLegacyLoops operation.</summary>
+
         public static string EncodeLegacyLoops(IList<float> loopTemperatures)
         {
             int count = loopTemperatures == null ? 0 : loopTemperatures.Count;
@@ -347,7 +347,7 @@ namespace Thermodynamics.Core
             return Convert.ToBase64String(bytes);
         }
 
-/// <summary>TryDecodeLegacyBlocks operation.</summary>
+
         private static bool TryDecodeLegacyBlocks(byte[] bytes, List<StoredTemperature> blocks)
         {
             if (bytes.Length % LegacyRecordSize != 0) return false;
@@ -367,7 +367,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>TryDecodeLegacyLoops operation.</summary>
+
         public static bool TryDecodeLegacyLoops(string data, List<float> temperaturesByIndex)
         {
             if (temperaturesByIndex != null) temperaturesByIndex.Clear();
@@ -401,7 +401,7 @@ namespace Thermodynamics.Core
         }
 
 
-/// <summary>WriteInt32 operation.</summary>
+
         private static void WriteInt32(byte[] bytes, ref int at, int value)
         {
             bytes[at++] = (byte)value;
@@ -410,7 +410,7 @@ namespace Thermodynamics.Core
             bytes[at++] = (byte)(value >> 24);
         }
 
-/// <summary>ReadInt32 operation.</summary>
+
         private static int ReadInt32(byte[] bytes, ref int at)
         {
             int value = bytes[at]
@@ -421,7 +421,7 @@ namespace Thermodynamics.Core
             return value;
         }
 
-/// <summary>WriteInt64 operation.</summary>
+
         private static void WriteInt64(byte[] bytes, ref int at, long value)
         {
             for (int i = 0; i < 8; i++)
@@ -430,7 +430,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>ReadInt64 operation.</summary>
+
         private static long ReadInt64(byte[] bytes, ref int at)
         {
             long value = 0;
@@ -442,7 +442,7 @@ namespace Thermodynamics.Core
             return value;
         }
 
-/// <summary>WriteSingle operation.</summary>
+
         private static void WriteSingle(byte[] bytes, ref int at, float value)
         {
             byte[] raw = BitConverter.GetBytes(value);
@@ -452,7 +452,7 @@ namespace Thermodynamics.Core
             bytes[at++] = raw[3];
         }
 
-/// <summary>ReadSingle operation.</summary>
+
         private static float ReadSingle(byte[] bytes, ref int at)
         {
             float value = BitConverter.ToSingle(bytes, at);

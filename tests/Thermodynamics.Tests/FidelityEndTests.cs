@@ -10,13 +10,13 @@ namespace Thermodynamics.Tests
 {
     public class FidelityEndTests
     {
-/// <summary>Configuration operation.</summary>
+
         private static string Configuration()
         {
             return File.ReadAllText(Path.Combine(ShippedBlocks.RepoRoot(), "docs", "configuration.md"));
         }
 
-/// <summary>Defaults operation.</summary>
+
         private static Dictionary<string, float> Defaults()
         {
             string source = File.ReadAllText(Path.Combine(ShippedBlocks.RepoRoot(),
@@ -44,10 +44,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryDialNamesASettingThatExists operation.</summary>
+
         public void EveryDialNamesASettingThatExists()
         {
-/// <summary>Defaults operation.</summary>
+
             Dictionary<string, float> defaults = Defaults();
 
             Assert.NotEmpty(FidelityEnds.All);
@@ -60,10 +60,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThePageAndTheTableAgreeAboutWhichEndIsFaithful operation.</summary>
+
         public void ThePageAndTheTableAgreeAboutWhichEndIsFaithful()
         {
-/// <summary>Configuration operation.</summary>
+
             string page = Configuration();
 
             Assert.Equal(0f, Faithful("MaxSubstepsPerBlock"));
@@ -80,10 +80,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheTwoDialsThatDoNotShipFaithfulAreTheTwoTheSentenceIsFor operation.</summary>
+
         public void TheTwoDialsThatDoNotShipFaithfulAreTheTwoTheSentenceIsFor()
         {
-/// <summary>Defaults operation.</summary>
+
             Dictionary<string, float> shipped = Defaults();
 
             Assert.Equal(Faithful("MaxSubstepsPerBlock"), shipped["MaxSubstepsPerBlock"]);
@@ -94,7 +94,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSentenceIsUniformAndOnlyForDialsThatHaveOne operation.</summary>
+
         public void TheSentenceIsUniformAndOnlyForDialsThatHaveOne()
         {
             foreach (FidelityEnds.End end in FidelityEnds.All)
@@ -111,7 +111,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheMenuRendersTheSentenceIntoEveryDialsTip operation.</summary>
+
         public void TheMenuRendersTheSentenceIntoEveryDialsTip()
         {
             string menu = File.ReadAllText(Path.Combine(ShippedBlocks.RepoRoot(),
@@ -128,13 +128,13 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, Occurrences(window, "ThermalSettingsMenu.TipFor("));
             Assert.Equal(0, Occurrences(window, "new ToolTip"));
 
-/// <summary>Occurrences operation.</summary>
+
             int given = Occurrences(window, "ToolTip = tip");
             Assert.True(given >= 4, "only " + given + " controls were given a tip, so either a"
                 + " control kind has lost its tooltip or this is reading the wrong file");
         }
 
-/// <summary>Faithful operation.</summary>
+
         private static float Faithful(string setting)
         {
             FidelityEnds.End? end = FidelityEnds.For(setting);
@@ -142,7 +142,7 @@ namespace Thermodynamics.Tests
             return end.Value.Faithful;
         }
 
-/// <summary>Occurrences operation.</summary>
+
         private static int Occurrences(string text, string needle)
         {
             int count = 0;

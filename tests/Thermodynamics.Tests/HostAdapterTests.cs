@@ -8,10 +8,10 @@ namespace Thermodynamics.Tests
     public class HostAdapterTests
     {
 
-/// <summary>Paced operation.</summary>
+
         private static ThermalSimulation Paced(int frequency, float speed)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.Frequency = frequency;
             settings.SimulationSpeed = speed;
@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
             return builder.BuildSimulation(settings, 300f);
         }
 
-/// <summary>Frames operation.</summary>
+
         private static long Frames(ThermalSimulation simulation, int frames, float frameSeconds)
         {
             long before = simulation.StepsCompleted;
@@ -34,28 +34,28 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FrequencyIsStepsPerSimulatedSecond operation.</summary>
+
         public void FrequencyIsStepsPerSimulatedSecond()
         {
             Assert.Equal(4, Frames(Paced(4, 1f), 60, 1f / 60f));
         }
 
         [Fact]
-/// <summary>SimulationSpeedMultipliesTheStepRate operation.</summary>
+
         public void SimulationSpeedMultipliesTheStepRate()
         {
             Assert.Equal(12, Frames(Paced(4, 3f), 60, 1f / 60f));
         }
 
         [Fact]
-/// <summary>ALongFrameDoesNotProduceABurstOfSteps operation.</summary>
+
         public void ALongFrameDoesNotProduceABurstOfSteps()
         {
             Assert.Equal(1, Frames(Paced(4, 1f), 1, 60f));
         }
 
         [Fact]
-/// <summary>AZeroLengthFrameStepsNothing operation.</summary>
+
         public void AZeroLengthFrameStepsNothing()
         {
             Assert.Equal(0, Frames(Paced(4, 1f), 10, 0f));
@@ -63,7 +63,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>StraightPipeLinksForwardAndBackward operation.</summary>
+
         public void StraightPipeLinksForwardAndBackward()
         {
             CoolantShape shape = ThermalCoolantShapes.Get("Gauge_LG_CoolantPipe_Straight", Vector3I.One);
@@ -77,7 +77,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CornerPipeTurns operation.</summary>
+
         public void CornerPipeTurns()
         {
             CoolantShape shape = ThermalCoolantShapes.Get("Gauge_LG_CoolantPipe_Corner", Vector3I.One);
@@ -87,7 +87,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SinkVariantsCarryTheirPlates operation.</summary>
+
         public void SinkVariantsCarryTheirPlates()
         {
             Assert.Single(ThermalCoolantShapes.Get("Gauge_LG_CoolantPipe_Straight_SingleSink", Vector3I.One).SinkPorts);
@@ -97,7 +97,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BothGridSizesResolveToTheSamePlumbing operation.</summary>
+
         public void BothGridSizesResolveToTheSamePlumbing()
         {
             CoolantShape large = ThermalCoolantShapes.Get("Gauge_LG_CoolantPipe_Corner_DoubleSink", Vector3I.One);
@@ -109,7 +109,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PumpPortsSitAtTheEndsOfTheBlockWhateverItsLength operation.</summary>
+
         public void PumpPortsSitAtTheEndsOfTheBlockWhateverItsLength()
         {
             CoolantShape shortPump = ThermalCoolantShapes.Get("Gauge_LG_CoolantPump", Vector3I.One);
@@ -126,7 +126,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockWithNoPlumbingHasNoShape operation.</summary>
+
         public void ABlockWithNoPlumbingHasNoShape()
         {
             Assert.Null(ThermalCoolantShapes.Get("LargeBlockArmorBlock", Vector3I.One));
@@ -135,7 +135,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PrefixStrippingLeavesUnprefixedNamesAlone operation.</summary>
+
         public void PrefixStrippingLeavesUnprefixedNamesAlone()
         {
             Assert.Equal("CoolantPump", ThermalCoolantShapes.StripGridPrefix("Gauge_LG_CoolantPump"));
@@ -144,10 +144,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ShapesFromTheTableFormAWorkingRing operation.</summary>
+
         public void ShapesFromTheTableFormAWorkingRing()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(2.5f);
 
             BlockModel straight = BlockModel.Solid("CoolantPipe_Straight", Vector3I.One, 220f, new BlockThermalProperties());

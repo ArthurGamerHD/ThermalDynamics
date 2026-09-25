@@ -7,7 +7,6 @@ namespace Thermodynamics
 {
     public static class AeroGroupForces
     {
-/// <summary>Anchored operation.</summary>
         public static bool Anchored(List<IMyCubeGrid> grids)
         {
             for (int i = 0; i < grids.Count; i++)
@@ -17,7 +16,6 @@ namespace Thermodynamics
             return false;
         }
 
-/// <summary>Sum operation.</summary>
         public static void Sum(List<IMyCubeGrid> grids,
             out Vector3D weightedCentre, out float mass, out Vector3 drag, out Vector3 lift)
         {

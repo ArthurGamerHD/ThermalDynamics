@@ -11,16 +11,16 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>CoolantFillTests operation.</summary>
+
         public CoolantFillTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>Isolated operation.</summary>
+
         private static ThermalSettings Isolated()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings s = new ThermalSettings();
             s.EnableEnvironment = false;
             s.EnableSolarHeat = false;
@@ -29,7 +29,7 @@ namespace Thermodynamics.Tests
             return s;
         }
 
-/// <summary>Ring operation.</summary>
+
         private static ThermalSimulation Ring(out CoolantLoop loop)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -45,11 +45,11 @@ namespace Thermodynamics.Tests
         [InlineData(0.5f)]
         [InlineData(0.1f)]
         [InlineData(0.01f)]
-/// <summary>TheSubstepDemandIsInvariantInTheFill operation.</summary>
+
         public void TheSubstepDemandIsInvariantInTheFill(float fill)
         {
             CoolantLoop loop;
-/// <summary>Ring operation.</summary>
+
             ThermalSimulation simulation = Ring(out loop);
 
             float full = simulation.Solver.RequiredSubsteps(1f);
@@ -64,7 +64,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BothTheCapacityAndTheCouplingScaleWithTheFill operation.</summary>
+
         public void BothTheCapacityAndTheCouplingScaleWithTheFill()
         {
             CoolantLoop loop;
@@ -82,11 +82,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ADryRingStillExistsAndCouplesToNothing operation.</summary>
+
         public void ADryRingStillExistsAndCouplesToNothing()
         {
             CoolantLoop loop;
-/// <summary>Ring operation.</summary>
+
             ThermalSimulation simulation = Ring(out loop);
 
             loop.FillFraction = 0f;
@@ -101,7 +101,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFillIsClampedToItsRange operation.</summary>
+
         public void TheFillIsClampedToItsRange()
         {
             CoolantLoop loop;
@@ -115,7 +115,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>VentingAndRefillingAtTheBreakEvenExcessIsNeutralInHeat operation.</summary>
+
         public void VentingAndRefillingAtTheBreakEvenExcessIsNeutralInHeat()
         {
             CoolantLoop loop;
@@ -150,7 +150,7 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData(300f, true)]
         [InlineData(30f, false)]
-/// <summary>VentingPaysOnlyWhenTheCoolantIsHotterThanTheRefillIsPricedAt operation.</summary>
+
         public void VentingPaysOnlyWhenTheCoolantIsHotterThanTheRefillIsPricedAt(
             float excess, bool shouldPay)
         {
@@ -172,7 +172,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARingRefillsAtTheRateAndNoFaster operation.</summary>
+
         public void ARingRefillsAtTheRateAndNoFaster()
         {
             CoolantLoop loop;
@@ -195,7 +195,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>VentingATwiceEmptiedRingRemovesNothingTheSecondTime operation.</summary>
+
         public void VentingATwiceEmptiedRingRemovesNothingTheSecondTime()
         {
             CoolantLoop loop;
@@ -208,18 +208,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFillSurvivesASaveAndAPayloadWithoutOneLoadsFull operation.</summary>
+
         public void AFillSurvivesASaveAndAPayloadWithoutOneLoadsFull()
         {
             CoolantLoop loop;
-/// <summary>Ring operation.</summary>
+
             ThermalSimulation simulation = Ring(out loop);
 
             loop.FillFraction = 0.375f;
             string saved = simulation.Save();
 
             CoolantLoop reloaded;
-/// <summary>Ring operation.</summary>
+
             ThermalSimulation second = Ring(out reloaded);
             second.RebuildAll();
             second.Load(saved);
@@ -228,12 +228,12 @@ namespace Thermodynamics.Tests
             Assert.InRange(second.Solver.Loops[0].FillFraction, 0.374f, 0.376f);
 
             CoolantLoop fullLoop;
-/// <summary>Ring operation.</summary>
+
             ThermalSimulation full = Ring(out fullLoop);
             string withoutFills = full.Save();
 
             CoolantLoop third;
-/// <summary>Ring operation.</summary>
+
             ThermalSimulation loaded = Ring(out third);
             third.FillFraction = 0.1f;
             loaded.RebuildAll();
@@ -243,7 +243,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SteppingARingRefillsItAndChargesThePump operation.</summary>
+
         public void SteppingARingRefillsItAndChargesThePump()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -271,7 +271,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARingWithNoPumpAsksForNothingAndNeverRefills operation.</summary>
+
         public void ARingWithNoPumpAsksForNothingAndNeverRefills()
         {
             CoolantLoop loop;
@@ -289,7 +289,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARingWhosePumpsAreOffAsksForNothingAndRefillsNothing operation.</summary>
+
         public void ARingWhosePumpsAreOffAsksForNothingAndRefillsNothing()
         {
             CoolantLoop loop;
@@ -314,7 +314,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARingWhosePumpsAreTurnedDownToZeroRefillsNothing operation.</summary>
+
         public void ARingWhosePumpsAreTurnedDownToZeroRefillsNothing()
         {
             CoolantLoop loop;
@@ -329,11 +329,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRefillDemandAndTheSinksCeilingAreTheSameFigure operation.</summary>
+
         public void TheRefillDemandAndTheSinksCeilingAreTheSameFigure()
         {
             CoolantLoop loop;
-/// <summary>Ring operation.</summary>
+
             ThermalSimulation simulation = Ring(out loop);
 
             loop.FillFraction = 0f;
@@ -350,7 +350,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUnderSuppliedPumpRefillsByTheShareItWasGiven operation.</summary>
+
         public void AnUnderSuppliedPumpRefillsByTheShareItWasGiven()
         {
             CoolantLoop loop;
@@ -371,7 +371,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>GrindingAPipeVentsTheRingAndItComesBackEmpty operation.</summary>
+
         public void GrindingAPipeVentsTheRingAndItComesBackEmpty()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -406,7 +406,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARingReportsWhatItHoldsInKilograms operation.</summary>
+
         public void ARingReportsWhatItHoldsInKilograms()
         {
             CoolantLoop loop;
@@ -422,7 +422,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AVentedRingRefillsAcrossSteppedTimeAndThePumpPaysForIt operation.</summary>
+
         public void AVentedRingRefillsAcrossSteppedTimeAndThePumpPaysForIt()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -458,7 +458,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStoppedRingCarriesLessAcrossTheWallThanAFlowingOne operation.</summary>
+
         public void AStoppedRingCarriesLessAcrossTheWallThanAFlowingOne()
         {
             GridBuilder builder = GridBuilder.Large();

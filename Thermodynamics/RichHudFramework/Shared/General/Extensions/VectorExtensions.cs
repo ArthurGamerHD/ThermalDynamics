@@ -7,7 +7,7 @@ namespace RichHudFramework
         private static Color lastRgbColor;
         private static Vector4 lastBbColor;
 
-/// <summary>Returns the bbcolor.</summary>
+
         public static Vector4 GetBbColor(this Color color)
         {
             if (color == lastRgbColor)
@@ -24,22 +24,22 @@ namespace RichHudFramework
             return lastBbColor;
         }
 
-/// <summary>ToDouble operation.</summary>
+
         public static Vector2D ToDouble(this Vector2 vec) =>
-/// <summary>Vector2D operation.</summary>
+
             new Vector2D(vec.X, vec.Y);
 
-/// <summary>ToSingle operation.</summary>
+
         public static Vector2 ToSingle(this Vector2D vec) =>
-/// <summary>Vector2 operation.</summary>
+
             new Vector2((float)vec.X, (float)vec.Y);
 
-/// <summary>Sets the alphapct.</summary>
+
         public static Color SetAlphaPct(this Color color, float alphaPercent) =>
-/// <summary>Color operation.</summary>
+
             new Color(color.R, color.G, color.B, (byte)(alphaPercent * 255f));
 
-/// <summary>Returns the channel.</summary>
+
         public static byte GetChannel(this Color color, int channel)
         {
             switch (channel)
@@ -57,7 +57,7 @@ namespace RichHudFramework
             return 0;
         }
 
-/// <summary>Sets the channel.</summary>
+
         public static Color SetChannel(this Color color, int channel, byte value)
         {
             switch(channel)

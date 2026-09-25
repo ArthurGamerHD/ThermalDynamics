@@ -42,7 +42,7 @@ namespace Thermodynamics.Harness
                 get { return new State { Consumers = 1f, Thrust = 0f, Tools = 1f, Drives = 0f }; }
             }
 
-/// <summary>Burn operation.</summary>
+
             public static State Burn(int direction)
             {
                 return new State
@@ -72,14 +72,14 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Applies the .</summary>
+
         public static float Apply(ShipAssembly assembly, State state)
         {
             Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.ByModelName();
 
-/// <summary>List operation.</summary>
+
             List<BlockInstance> generators = new List<BlockInstance>();
-/// <summary>List operation.</summary>
+
             List<BlockInstance> stores = new List<BlockInstance>();
             float installed = 0f;
             float demand = 0f;
@@ -109,7 +109,7 @@ namespace Thermodynamics.Harness
                 if (definition.ThrustNewtons > 0f)
                 {
                     bool burning = state.ThrustDirection == null
-/// <summary>Direction operation.</summary>
+
                         || Direction(block) == state.ThrustDirection.Value;
 
                     if (burning && state.Thrust > 0f)
@@ -153,7 +153,7 @@ namespace Thermodynamics.Harness
             return watts;
         }
 
-/// <summary>ChargeSeconds operation.</summary>
+
         public static float ChargeSeconds(ShipAssembly assembly)
         {
             if (assembly == null) return 0f;
@@ -177,7 +177,7 @@ namespace Thermodynamics.Harness
             return longest;
         }
 
-/// <summary>Share operation.</summary>
+
         private static void Share(Dictionary<string, GameBlocks.Definition> definitions,
             List<BlockInstance> producers, float installed, float supplied)
         {
@@ -190,19 +190,19 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>IsStore operation.</summary>
+
         public static bool IsStore(string typeId)
         {
             return typeId == "BatteryBlock";
         }
 
-/// <summary>IsDrive operation.</summary>
+
         public static bool IsDrive(string typeId)
         {
             return typeId == "JumpDrive";
         }
 
-/// <summary>IsTool operation.</summary>
+
         public static bool IsTool(string typeId)
         {
             switch (typeId)
@@ -224,7 +224,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Direction operation.</summary>
+
         public static int Direction(BlockInstance block)
         {
             Vector3I facing = block.Orientation.Rotate(Vector3I.Forward);
@@ -236,7 +236,7 @@ namespace Thermodynamics.Harness
             return 0;
         }
 
-/// <summary>DirectionName operation.</summary>
+
         public static string DirectionName(int face)
         {
             switch (face)

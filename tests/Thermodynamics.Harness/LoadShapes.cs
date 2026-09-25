@@ -8,7 +8,7 @@ namespace Thermodynamics.Harness
     {
         public const int BulkheadSpacing = 6;
 
-/// <summary>Ship operation.</summary>
+
         public static HashSet<Vector3I> Ship(int targetCells)
         {
             int width;
@@ -26,7 +26,7 @@ namespace Thermodynamics.Harness
             return cells;
         }
 
-/// <summary>SolveShip operation.</summary>
+
         public static void SolveShip(int targetCells, out int width, out int length)
         {
             targetCells = Math.Max(64, targetCells);
@@ -53,14 +53,14 @@ namespace Thermodynamics.Harness
             length = bestLength;
         }
 
-/// <summary>Cube operation.</summary>
+
         public static HashSet<Vector3I> Cube(int targetCells)
         {
             int side = Math.Max(2, (int)Math.Round(Math.Pow(Math.Max(8, targetCells), 1d / 3d)));
             return GridShapes.SolidBox(Vector3I.Zero, new Vector3I(side, side, side));
         }
 
-/// <summary>Truss operation.</summary>
+
         public static HashSet<Vector3I> Truss(int targetCells)
         {
             const int width = 4;
@@ -70,16 +70,16 @@ namespace Thermodynamics.Harness
             return GridShapes.Truss(length, width, ringSpacing);
         }
 
-/// <summary>Builds the API method table.</summary>
+
         public static HashSet<Vector3I> Build(string shape, int targetCells)
         {
             switch (shape)
             {
-/// <summary>Ship operation.</summary>
+
                 case "ship": return Ship(targetCells);
-/// <summary>Cube operation.</summary>
+
                 case "cube": return Cube(targetCells);
-/// <summary>Truss operation.</summary>
+
                 case "truss": return Truss(targetCells);
                 default:
                     throw new ArgumentException("Unknown load shape: " + shape);

@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
     [Collection("alone")]
     public class CorpusAirWalk
     {
-/// <summary>Scenarios operation.</summary>
+
         private static List<Battery.Scenario> Scenarios()
         {
             List<Battery.Scenario> chosen = ScenarioIndex.Resolve(PairLab.AirScenarios, "the air walk");
@@ -17,7 +17,7 @@ namespace Thermodynamics.Tests
             return chosen;
         }
 
-/// <summary>Ceiling operation.</summary>
+
         private static Battery.Scenario Ceiling(Battery.Scenario scenario)
         {
             string set = Environment.GetEnvironmentVariable("THERMAL_SCENARIO_CEILING");
@@ -53,19 +53,19 @@ namespace Thermodynamics.Tests
         {
             public string Ship;
             public bool Convected;
-/// <summary>List operation.</summary>
+
             public readonly List<ScenarioOutcome> Outcomes = new List<ScenarioOutcome>();
-/// <summary>List operation.</summary>
+
             public readonly List<string> Violations = new List<string>();
         }
 
         [Fact]
-/// <summary>EveryShipInTheCorpusIsMeasuredInAir operation.</summary>
+
         public void EveryShipInTheCorpusIsMeasuredInAir()
         {
             if (CorpusFixture.Files().Count == 0) return;
 
-/// <summary>Scenarios operation.</summary>
+
             List<Battery.Scenario> scenarios = Scenarios();
 
             List<Walked> results = CorpusFixture.Sweep(Label,
@@ -73,7 +73,7 @@ namespace Thermodynamics.Tests
 
             Assert.True(results.Count > 0, "the corpus yielded no ships to walk in air");
 
-/// <summary>List operation.</summary>
+
             List<string> violations = new List<string>();
             int convected = 0;
 
@@ -92,7 +92,7 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", violations.ToArray()));
         }
 
-/// <summary>Walk operation.</summary>
+
         private static Walked Walk(Blueprints.Ship ship, List<Battery.Scenario> scenarios)
         {
             Walked walked = new Walked { Ship = ship.Name };

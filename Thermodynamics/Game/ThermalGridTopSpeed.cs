@@ -16,13 +16,10 @@ namespace Thermodynamics
 
         private static float appliedCap;
 
-/// <summary>List operation.</summary>
         private static readonly List<IMyCubeGrid> GroupGrids = new List<IMyCubeGrid>();
 
-/// <summary>HashSet operation.</summary>
         private static readonly HashSet<long> Handled = new HashSet<long>();
 
-/// <summary>Tick operation.</summary>
         public static void Tick()
         {
             if (MyAPIGateway.Session == null || !MyAPIGateway.Session.IsServer) return;
@@ -51,7 +48,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>CruiseSpeed operation.</summary>
         private static float CruiseSpeed(Settings settings, float mass, bool largeGrid)
         {
             return largeGrid
@@ -63,7 +59,6 @@ namespace Thermodynamics
                     settings.SmallGridMinCruise, settings.SmallGridMidCruise, settings.SmallGridMaxCruise);
         }
 
-/// <summary>Applies the cap.</summary>
         private static void ApplyCap(Settings settings)
         {
             MyDefinitionManager definitions = MyDefinitionManager.Static;
@@ -94,7 +89,6 @@ namespace Thermodynamics
             definitions.EnvironmentDefinition.SmallShipMaxSpeed = appliedCap;
         }
 
-/// <summary>Applies the togroupof.</summary>
         private static void ApplyToGroupOf(IMyCubeGrid leader, Settings settings)
         {
             if (!GridGroups.TryClaim(leader, GroupGrids, Handled)) return;
@@ -120,7 +114,6 @@ namespace Thermodynamics
             if (physical == null || mass <= 0f) return;
 
             float speed = physical.Physics.Speed;
-/// <summary>CruiseSpeed operation.</summary>
             float cruise = CruiseSpeed(settings, mass, largeGrid);
 
             float resistance = largeGrid ? settings.LargeGridResistance : settings.SmallGridResistance;

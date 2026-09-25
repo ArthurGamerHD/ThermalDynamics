@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class RoomMapSnapshotTests
     {
-/// <summary>Shell operation.</summary>
+
         private static ThermalSimulation Shell(bool snapshot)
         {
             GridBuilder builder = RoomFixtures.DooredShell();
@@ -21,7 +21,7 @@ namespace Thermodynamics.Tests
                 builder.Place(armour, new Vector3I(x, y, z));
             }
 
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             simulation.Rooms.SnapshotSealing = snapshot;
 
@@ -31,12 +31,12 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Census operation.</summary>
+
         private static ThermalSimulation Census(bool snapshot)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", 8000));
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             simulation.Rooms.SnapshotSealing = snapshot;
 
@@ -50,15 +50,15 @@ namespace Thermodynamics.Tests
         [InlineData(3, 4, 5)]
         [InlineData(1, 7, 2)]
         [InlineData(9, 1, 1)]
-/// <summary>WalkingABoxInScanOrderAdvancesTheIndexByOne operation.</summary>
+
         public void WalkingABoxInScanOrderAdvancesTheIndexByOne(int sizeX, int sizeY, int sizeZ)
         {
-/// <summary>Vector3I operation.</summary>
+
             Vector3I min = new Vector3I(-3, 11, -7);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I maxExclusive = min + new Vector3I(sizeX, sizeY, sizeZ);
 
-/// <summary>CellBitset operation.</summary>
+
             CellBitset box = new CellBitset();
             box.Reset(min, maxExclusive);
 
@@ -68,7 +68,7 @@ namespace Thermodynamics.Tests
             for (int y = min.Y; y < maxExclusive.Y; y++)
             for (int x = min.X; x < maxExclusive.X; x++)
             {
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I cell = new Vector3I(x, y, z);
                 Assert.True(expected == box.IndexOf(cell),
                     cell + " is index " + box.IndexOf(cell) + " and the scan is at " + expected);
@@ -81,12 +81,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSnapshotScanChargesFarFewerUnitsThanTheCellByCellScan operation.</summary>
+
         public void TheSnapshotScanChargesFarFewerUnitsThanTheCellByCellScan()
         {
-/// <summary>Census operation.</summary>
+
             ThermalSimulation byDictionary = Census(false);
-/// <summary>Census operation.</summary>
+
             ThermalSimulation bySnapshot = Census(true);
 
             long walked = byDictionary.Work.RoomCellsVisited;
@@ -102,10 +102,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NextClearIndexFindsTheFirstClearBitAtOrAfterAnyOffset operation.</summary>
+
         public void NextClearIndexFindsTheFirstClearBitAtOrAfterAnyOffset()
         {
-/// <summary>CellBitset operation.</summary>
+
             CellBitset bits = new CellBitset();
             Vector3I min = Vector3I.Zero;
             bits.Reset(min, new Vector3I(200, 1, 1));
@@ -121,10 +121,10 @@ namespace Thermodynamics.Tests
             Assert.Equal(1, examined);
             Assert.Equal(37L, bits.NextClearIndex(37, 200, out examined));
             Assert.Equal(129L, bits.NextClearIndex(38, 200, out examined));
-            Assert.Equal(3, examined); // the rest of word 0, all of word 1, and the word holding 129
+            Assert.Equal(3, examined);
             Assert.Equal(150L, bits.NextClearIndex(130, 200, out examined));
             Assert.Equal(151L, bits.NextClearIndex(151, 200, out examined));
-            Assert.Equal(150L, bits.NextClearIndex(150, 150, out examined)); // at the bound, the bound
+            Assert.Equal(150L, bits.NextClearIndex(150, 150, out examined));
 
             for (int i = 150; i < 200; i++) bits.AddIndex(i);
             Assert.Equal(200L, bits.NextClearIndex(130, 200, out examined));
@@ -132,7 +132,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APassIsUnaffectedByWhatTheLastOneLeftInTheFrontier operation.</summary>
+
         public void APassIsUnaffectedByWhatTheLastOneLeftInTheFrontier()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -143,7 +143,7 @@ namespace Thermodynamics.Tests
             Assert.True(first.RoomCount > 0, "the hull mapped no rooms");
             Assert.Equal(0, simulation.Rooms.PendingCells);
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I pad = new Vector3I(40, 40, 40);
             simulation.Rooms.RequestRestart(simulation.Grid.Min - pad, simulation.Grid.Max + pad);
             Assert.True(simulation.Rooms.RunToCompletion());
@@ -159,12 +159,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AShellWithADoorMapsToTheSameRoomsAndPortals operation.</summary>
+
         public void AShellWithADoorMapsToTheSameRoomsAndPortals()
         {
-/// <summary>Shell operation.</summary>
+
             ThermalSimulation byDictionary = Shell(false);
-/// <summary>Shell operation.</summary>
+
             ThermalSimulation bySnapshot = Shell(true);
 
             Assert.True(byDictionary.Rooms.Map.Portals.Count > 0, "the shell's door made no portal, so the portal half is untested");
@@ -172,24 +172,24 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACensusHullMapsToTheSameCompartments operation.</summary>
+
         public void ACensusHullMapsToTheSameCompartments()
         {
-/// <summary>Census operation.</summary>
+
             ThermalSimulation byDictionary = Census(false);
-/// <summary>Census operation.</summary>
+
             ThermalSimulation bySnapshot = Census(true);
 
             RoomMapAssert.SameMap(byDictionary.Rooms.Map, bySnapshot.Rooms.Map, "census hull");
         }
 
         [Fact]
-/// <summary>APressurisedHullStepsToTheSameTemperaturesEitherWay operation.</summary>
+
         public void APressurisedHullStepsToTheSameTemperaturesEitherWay()
         {
-/// <summary>Census operation.</summary>
+
             ThermalSimulation byDictionary = Census(false);
-/// <summary>Census operation.</summary>
+
             ThermalSimulation bySnapshot = Census(true);
 
             int pressurised = 0;

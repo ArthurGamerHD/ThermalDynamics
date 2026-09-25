@@ -13,57 +13,57 @@ namespace Thermodynamics.Core
         public const int SelfAirtightMask = 0x3F;
         public const int SelfMountMask = 0x3F << SelfMountShift;
 
-/// <summary>SelfAirtight operation.</summary>
+
         public static bool SelfAirtight(int state, int face)
         {
             return (state & (1 << (SelfAirtightShift + face))) != 0;
         }
 
-/// <summary>NeighbourAirtight operation.</summary>
+
         public static bool NeighbourAirtight(int state, int face)
         {
             return (state & (1 << (NeighbourAirtightShift + face))) != 0;
         }
 
-/// <summary>SelfMount operation.</summary>
+
         public static bool SelfMount(int state, int face)
         {
             return (state & (1 << (SelfMountShift + face))) != 0;
         }
 
-/// <summary>NeighbourMount operation.</summary>
+
         public static bool NeighbourMount(int state, int face)
         {
             return (state & (1 << (NeighbourMountShift + face))) != 0;
         }
 
-/// <summary>WithSelfAirtight operation.</summary>
+
         public static int WithSelfAirtight(int state, int face, bool value)
         {
-/// <summary>Sets the .</summary>
+
             return Set(state, SelfAirtightShift + face, value);
         }
 
-/// <summary>WithSelfMount operation.</summary>
+
         public static int WithSelfMount(int state, int face, bool value)
         {
-/// <summary>Sets the .</summary>
+
             return Set(state, SelfMountShift + face, value);
         }
 
-/// <summary>SelfOnly operation.</summary>
+
         public static int SelfOnly(int state)
         {
             return state & (SelfAirtightMask | SelfMountMask);
         }
 
-/// <summary>IsFullySealed operation.</summary>
+
         public static bool IsFullySealed(int state)
         {
             return (state & SelfAirtightMask) == SelfAirtightMask;
         }
 
-/// <summary>NeighbourContribution operation.</summary>
+
         public static int NeighbourContribution(int neighbourState, int face)
         {
             int opposite = Face.Opposite(face);
@@ -79,17 +79,17 @@ namespace Thermodynamics.Core
             return contribution;
         }
 
-/// <summary>Sets the .</summary>
+
         private static int Set(int state, int bit, bool value)
         {
             if (value) return state | (1 << bit);
             return state & ~(1 << bit);
         }
 
-/// <summary>Describe operation.</summary>
+
         public static string Describe(int state)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append("selfAir[");
             AppendGroup(sb, state, SelfAirtightShift);
@@ -103,7 +103,7 @@ namespace Thermodynamics.Core
             return sb.ToString();
         }
 
-/// <summary>AppendGroup operation.</summary>
+
         private static void AppendGroup(StringBuilder sb, int state, int shift)
         {
             for (int i = 0; i < Face.Count; i++)

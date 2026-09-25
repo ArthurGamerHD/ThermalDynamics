@@ -6,21 +6,21 @@ namespace Thermodynamics.Tests
     public class RoomPressureTests
     {
         [Fact]
-/// <summary>AWorldWithoutPressurisationHasNoAirAnywhere operation.</summary>
+
         public void AWorldWithoutPressurisationHasNoAirAnywhere()
         {
             Assert.Equal(0f, RoomPressure.Level(false, true, 1f), 5);
         }
 
         [Fact]
-/// <summary>ARoomTheGameDoesNotCallSealedHoldsNothing operation.</summary>
+
         public void ARoomTheGameDoesNotCallSealedHoldsNothing()
         {
             Assert.Equal(0f, RoomPressure.Level(true, false, 1f), 5);
         }
 
         [Fact]
-/// <summary>ASealedRoomHoldsWhatItsVentReports operation.</summary>
+
         public void ASealedRoomHoldsWhatItsVentReports()
         {
             Assert.Equal(1f, RoomPressure.Level(true, true, 1f), 5);
@@ -28,7 +28,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ReportingEmptyEmptiesTheRoomAndReportingNothingDoesNot operation.</summary>
+
         public void ReportingEmptyEmptiesTheRoomAndReportingNothingDoesNot()
         {
             Assert.Equal(0f, RoomPressure.Level(true, true, 0f), 5);
@@ -40,7 +40,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUnansweredRoomIsStillEmptyWhereSomethingElseSaidNo operation.</summary>
+
         public void AnUnansweredRoomIsStillEmptyWhereSomethingElseSaidNo()
         {
             Assert.Equal(0f, RoomPressure.Level(false, true, RoomPressure.NotReported), 5);
@@ -49,7 +49,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnImpossibleReadingIsClampedRatherThanTrusted operation.</summary>
+
         public void AnImpossibleReadingIsClampedRatherThanTrusted()
         {
             Assert.Equal(1f, RoomPressure.Level(true, true, 4f), 5);
@@ -61,10 +61,10 @@ namespace Thermodynamics.Tests
 
     public class RoomAirPressureTests
     {
-/// <summary>Room operation.</summary>
+
         private static RoomAirNode Room(float pressure)
         {
-/// <summary>RoomAirNode operation.</summary>
+
             RoomAirNode air = new RoomAirNode();
             air.RoomIndex = 0;
             air.CellCount = 8;
@@ -77,10 +77,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnEmptyRoomHasNoAirAndOnlyTheSolverFloorOfHeatCapacity operation.</summary>
+
         public void AnEmptyRoomHasNoAirAndOnlyTheSolverFloorOfHeatCapacity()
         {
-/// <summary>Room operation.</summary>
+
             RoomAirNode air = Room(0f);
 
             Assert.False(air.HasAir);
@@ -90,12 +90,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>HalfPressureIsHalfTheAirAndHalfTheHeatCapacity operation.</summary>
+
         public void HalfPressureIsHalfTheAirAndHalfTheHeatCapacity()
         {
-/// <summary>Room operation.</summary>
+
             RoomAirNode full = Room(1f);
-/// <summary>Room operation.</summary>
+
             RoomAirNode half = Room(0.5f);
 
             Assert.True(half.HasAir);
@@ -105,7 +105,7 @@ namespace Thermodynamics.Tests
     
 
         [Fact]
-/// <summary>ASealedEmptyRoomIsNotADisagreement operation.</summary>
+
         public void ASealedEmptyRoomIsNotADisagreement()
         {
             Assert.False(RoomPressure.Disagrees(false, false, 0f));
@@ -113,7 +113,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AirInTheGameAndNoneHereIsADisagreement operation.</summary>
+
         public void AirInTheGameAndNoneHereIsADisagreement()
         {
             Assert.True(RoomPressure.Disagrees(false, false, 1f));
@@ -121,21 +121,21 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARoomThisModelHasFilledIsNeverADisagreement operation.</summary>
+
         public void ARoomThisModelHasFilledIsNeverADisagreement()
         {
             Assert.False(RoomPressure.Disagrees(true, false, 1f));
         }
 
         [Fact]
-/// <summary>AVentedRoomIsEmptyOnPurpose operation.</summary>
+
         public void AVentedRoomIsEmptyOnPurpose()
         {
             Assert.False(RoomPressure.Disagrees(false, true, 1f));
         }
 
         [Fact]
-/// <summary>WhatCouldNotBeMeasuredIsNotAFault operation.</summary>
+
         public void WhatCouldNotBeMeasuredIsNotAFault()
         {
             Assert.False(RoomPressure.Disagrees(false, false, RoomPressure.NotReported));
@@ -144,14 +144,14 @@ namespace Thermodynamics.Tests
     
 
         [Fact]
-/// <summary>AnUnansweredSealedRoomNeedsTheVentsRead operation.</summary>
+
         public void AnUnansweredSealedRoomNeedsTheVentsRead()
         {
             Assert.True(RoomPressure.NeedsVentFallback(true, true, RoomPressure.NotReported));
         }
 
         [Fact]
-/// <summary>ARoomTheGameAnsweredForNeedsNoVents operation.</summary>
+
         public void ARoomTheGameAnsweredForNeedsNoVents()
         {
             Assert.False(RoomPressure.NeedsVentFallback(true, true, 1f));
@@ -159,7 +159,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARoomTheGameDoesNotSealNeedsNoVentsBecauseItsAnswerIsAlreadyZero operation.</summary>
+
         public void ARoomTheGameDoesNotSealNeedsNoVentsBecauseItsAnswerIsAlreadyZero()
         {
             Assert.False(RoomPressure.NeedsVentFallback(true, false, RoomPressure.NotReported));
@@ -168,7 +168,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWorldWithoutPressurisationNeedsNoVentsAtAll operation.</summary>
+
         public void AWorldWithoutPressurisationNeedsNoVentsAtAll()
         {
             Assert.False(RoomPressure.NeedsVentFallback(false, true, RoomPressure.NotReported));
@@ -176,7 +176,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFallbackIsNeededExactlyWhenTheAnswerIsStillOpen operation.</summary>
+
         public void TheFallbackIsNeededExactlyWhenTheAnswerIsStillOpen()
         {
             float[] levels = { RoomPressure.NotReported, 0f, 0.5f, 1f };

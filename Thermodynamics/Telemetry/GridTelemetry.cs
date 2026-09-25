@@ -141,7 +141,7 @@ namespace Thermodynamics
         public long FirstTickFrame = -1;
         public long LastTickFrame = -1;
 
-/// <summary>NoteTick operation.</summary>
+
         public void NoteTick(long frame)
         {
             if (FirstTickFrame < 0) FirstTickFrame = frame;
@@ -150,55 +150,55 @@ namespace Thermodynamics
 
         public ThermalGrid Grid;
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat CellCount = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat BlockCount = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat NeighborLinks = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat RoomCount = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat ExternalCells = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat SolidCells = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat RoomCells = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat LeakedCells = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat OpenBlockCells = new RunningStat();
 
         public RoomAudit LastAudit;
         public bool HasAudit;
 
         private int auditedPass = -1;
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat SurfaceEntries = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat CoolantLoops = new RunningStat();
 
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat LoopTemperature = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat LoopWattsAbsorbed = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat LoopWattsRejected = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat LoopPipes = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat LoopLinks = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat HeatPumps = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat HeatPumpsRunning = new RunningStat();
 
         public long HeatPumpUnconnectedSamples;
@@ -207,20 +207,20 @@ namespace Thermodynamics
 
         public long HeatPumpStarvedSamples;
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat HeatPumpLiftWatts = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat HeatPumpPowerWatts = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat HeatPumpRejectedWatts = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat HeatPumpCoefficient = new RunningStat();
 
         public long HeatPumpLimitedByRating;
         public long HeatPumpLimitedByCarnotOrHeat;
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat RecentlyRemovedSize = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat MapperQueueDepth = new RunningStat();
         public int PeakCellCount;
 
@@ -251,64 +251,64 @@ namespace Thermodynamics
         public long NodeUpdates;
         public long SampledNodes;
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat Substeps = new RunningStat();
 
         public long ClampedSteps;
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat SimulationRate = new RunningStat();
         public double SimulatedSecondsSkipped;
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat NodesPerStep = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat CriticalBlocks = new RunningStat();
         public long DamageEvents;
         public double TotalDamage;
         public float PeakTemperature = float.MinValue;
         public string PeakTemperatureBlock = "-";
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat HottestBlockTemperature = new RunningStat();
-/// <summary>Histogram operation.</summary>
+
         public readonly Histogram FinalTemperatures = new Histogram(Histogram.TemperatureEdges());
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat AmbientTemperature = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat AirDensity = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat AtmosphereFactor = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat WindSpeed = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat ConvectionCoefficient = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat VentedWatts = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat HeatGainWatts = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat FrictionWatts = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat EffectiveSolarEnergy = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat OccludedShare = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat Speed = new RunningStat();
         public long EnvironmentSamples;
         public long OccludedSamples;
         public long InAtmosphereSamples;
-/// <summary>HashSet operation.</summary>
+
         public readonly HashSet<string> Planets = new HashSet<string>();
 
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat RequiredSubsteps = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat FlooredNodes = new RunningStat();
 
         public ThermalSolver.SubstepProfile Profile;
@@ -319,22 +319,22 @@ namespace Thermodynamics
 
         private const int ProfileInterval = 64;
 
-/// <summary>TimingStat operation.</summary>
+
         public readonly TimingStat SimulationTime = new TimingStat("grid simulation");
 
-/// <summary>GridProfiler operation.</summary>
+
         public readonly GridProfiler Profiler = new GridProfiler();
-/// <summary>TimingStat operation.</summary>
+
         public readonly TimingStat SolarTime = new TimingStat("solar occlusion");
-/// <summary>TimingStat operation.</summary>
+
         public readonly TimingStat SaveTime = new TimingStat("save");
-/// <summary>TimingStat operation.</summary>
+
         public readonly TimingStat LoadTime = new TimingStat("load");
 
-/// <summary>TimingStat operation.</summary>
+
         public readonly TimingStat BuildTime = new TimingStat("build");
 
-/// <summary>TimingStat operation.</summary>
+
         public readonly TimingStat BlockEventTime = new TimingStat("block events");
 
         private const int StructureInterval = 8;
@@ -343,7 +343,7 @@ namespace Thermodynamics
 
         private int sampleOffset;
 
-/// <summary>GridTelemetry operation.</summary>
+
         public GridTelemetry(ThermalGrid grid)
         {
             Grid = grid;
@@ -352,7 +352,7 @@ namespace Thermodynamics
             RefreshIdentity();
         }
 
-/// <summary>RefreshIdentity operation.</summary>
+
         public void RefreshIdentity()
         {
             if (Grid == null || Grid.Grid == null) return;
@@ -365,7 +365,7 @@ namespace Thermodynamics
         }
 
 
-/// <summary>OnSteps operation.</summary>
+
         public void OnSteps(int steps)
         {
             if (Grid == null || Grid.Simulation == null) return;
@@ -410,7 +410,7 @@ namespace Thermodynamics
             SampleNodes(solver);
         }
 
-/// <summary>SampleLoopsAndPumps operation.</summary>
+
         private void SampleLoopsAndPumps(ThermalSolver solver)
         {
             IList<CoolantLoop> loops = solver.Loops;
@@ -461,7 +461,7 @@ namespace Thermodynamics
             HeatPumpsRunning.Add(running);
         }
 
-/// <summary>CaptureProfile operation.</summary>
+
         private void CaptureProfile(ThermalSolver solver)
         {
             ThermalSolver.SubstepProfile profile = solver.ProfileSubsteps();
@@ -481,7 +481,7 @@ namespace Thermodynamics
                 + " (" + node.ThermalMass.ToString("n0") + " J/K)";
         }
 
-/// <summary>SampleNodes operation.</summary>
+
         private void SampleNodes(ThermalSolver solver)
         {
             int stride = Telemetry.SampleStride;
@@ -510,7 +510,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>SampleStructure operation.</summary>
+
         public void SampleStructure()
         {
             if (Grid == null || Grid.Grid == null || Grid.Simulation == null) return;
@@ -547,7 +547,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>AuditRooms operation.</summary>
+
         private void AuditRooms(ThermalSimulation simulation)
         {
             if (simulation.Rooms.HasWorkPending) return;
@@ -567,7 +567,7 @@ namespace Thermodynamics
             if (LastAudit.HasLeak) Telemetry.NoteRoomLeak(this, LastAudit);
         }
 
-/// <summary>SampleEnvironment operation.</summary>
+
         public void SampleEnvironment(ThermalGrid grid)
         {
             if (grid == null || grid.Simulation == null) return;
@@ -592,14 +592,14 @@ namespace Thermodynamics
             FrictionWatts.Add(grid.Simulation.FrictionWatts);
         }
 
-/// <summary>NotePlanet operation.</summary>
+
         public void NotePlanet(string name)
         {
             if (string.IsNullOrEmpty(name)) return;
             if (Planets.Count < 32) Planets.Add(name);
         }
 
-/// <summary>NoteTemperature operation.</summary>
+
         public void NoteTemperature(ThermalNode node)
         {
             if (node == null || node.Temperature <= PeakTemperature) return;
@@ -608,7 +608,7 @@ namespace Thermodynamics
             PeakTemperatureBlock = node.Block.Name + " " + node.Block.Position;
         }
 
-/// <summary>SnapshotFinalState operation.</summary>
+
         public void SnapshotFinalState()
         {
             if (Grid == null || Grid.Simulation == null) return;
@@ -638,7 +638,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Close operation.</summary>
+
         public void Close()
         {
             if (IsClosed) return;
@@ -649,20 +649,20 @@ namespace Thermodynamics
             Grid = null;
         }
 
-/// <summary>List operation.</summary>
+
         public readonly List<SurfaceRow> Surfaces = new List<SurfaceRow>();
 
-/// <summary>List operation.</summary>
+
         public readonly List<RoomRow> Rooms = new List<RoomRow>();
 
         public bool RoomScanTruncated;
 
         public bool RoomScanRan;
 
-/// <summary>List operation.</summary>
+
         public readonly List<EnvironmentRow> Environment = new List<EnvironmentRow>();
 
-/// <summary>NoteEnvironmentProfile operation.</summary>
+
         public void NoteEnvironmentProfile(EnvironmentRow row)
         {
             if (Environment.Count >= MaxEnvironmentRows) return;
@@ -679,7 +679,7 @@ namespace Thermodynamics
 
         private const int MaxEnvironmentRows = 4000;
 
-/// <summary>SnapshotRooms operation.</summary>
+
         private void SnapshotRooms()
         {
             Rooms.Clear();
@@ -699,7 +699,7 @@ namespace Thermodynamics
             {
                 ThermalGrid.RoomVerdict verdict = verdicts[i];
 
-/// <summary>RoomRow operation.</summary>
+
                 RoomRow row = new RoomRow();
                 row.Kind = "mapped";
                 row.Index = i;
@@ -712,7 +712,7 @@ namespace Thermodynamics
                 row.Volume = verdict.CellCount * cellVolume;
                 row.Vented = verdict.Vented;
 
-/// <summary>AirOf operation.</summary>
+
                 RoomAirNode air = AirOf(i);
                 if (air != null)
                 {
@@ -737,7 +737,7 @@ namespace Thermodynamics
             {
                 ThermalGrid.LostRoom room = lost[i];
 
-/// <summary>RoomRow operation.</summary>
+
                 RoomRow row = new RoomRow();
                 row.Kind = "lost";
                 row.Index = room.Index;
@@ -761,7 +761,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>AirOf operation.</summary>
+
         private RoomAirNode AirOf(int roomIndex)
         {
             IList<RoomAirNode> air = Grid.Simulation.RoomAir;
@@ -772,7 +772,7 @@ namespace Thermodynamics
             return null;
         }
 
-/// <summary>SnapshotSurfaces operation.</summary>
+
         private void SnapshotSurfaces()
         {
             Telemetry.SurfaceRowsCaptured -= Surfaces.Count;
@@ -796,7 +796,7 @@ namespace Thermodynamics
                     || Telemetry.SurfaceRowsCaptured >= Telemetry.MaxSurfaceRows)
                 {
                     MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] surface capture for "
-/// <summary>rows operation.</summary>
+
                         + Name + " stopped at " + Surfaces.Count + " rows ("
                         + Telemetry.SurfaceRowsCaptured + " captured this session)");
                     return;
@@ -807,7 +807,7 @@ namespace Thermodynamics
 
                 for (int face = 0; face < Face.Count; face++)
                 {
-/// <summary>SurfaceRow operation.</summary>
+
                     SurfaceRow row = new SurfaceRow();
                     row.Block = node.Block.Name;
                     row.Subtype = bound.Block.BlockDefinition.Id.SubtypeName;
@@ -835,7 +835,7 @@ namespace Thermodynamics
 
         public double LifetimeSeconds
         {
-/// <summary>return operation.</summary>
+
             get { return (ClosedAtSeconds < 0 ? Telemetry.SessionSeconds : ClosedAtSeconds) - OpenedAtSeconds; }
         }
 

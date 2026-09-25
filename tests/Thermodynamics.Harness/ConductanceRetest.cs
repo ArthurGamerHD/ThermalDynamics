@@ -20,7 +20,7 @@ namespace Thermodynamics.Harness
             get { return PreDefault * (OldReference / (OldReference * OldDefaultQuality)); }
         }
 
-/// <summary>Authored operation.</summary>
+
         public static float Authored(float effective)
         {
             return effective / ThermalConstants.ConductionScale;
@@ -28,13 +28,13 @@ namespace Thermodynamics.Harness
 
         private static readonly string[] BestTypes = { "Thrust", "Reactor" };
 
-/// <summary>IsModBlock operation.</summary>
+
         public static bool IsModBlock(string subtype)
         {
             return subtype != null && subtype.StartsWith("Gauge_", StringComparison.Ordinal);
         }
 
-/// <summary>WasBest operation.</summary>
+
         public static bool WasBest(string typeId, string subtype)
         {
             if (IsModBlock(subtype)) return true;
@@ -47,7 +47,7 @@ namespace Thermodynamics.Harness
             return false;
         }
 
-/// <summary>PreConversion operation.</summary>
+
         public static float PreConversion(string typeId, string subtype)
         {
             return WasBest(typeId, subtype) ? PreBest : PreDefault;
@@ -66,7 +66,7 @@ namespace Thermodynamics.Harness
 
             public Func<string, string, bool> Reaches;
 
-/// <summary>Material operation.</summary>
+
             public Func<string, string, BlockThermalProperties, BlockThermalProperties> Material()
             {
                 if (Reaches == null) return null;
@@ -77,17 +77,17 @@ namespace Thermodynamics.Harness
                     if (!reaches(typeId, subtype)) return source;
 
                     BlockThermalProperties copy = source.Clone();
-/// <summary>Authored operation.</summary>
+
                     copy.Conductivity = Authored(PreConversion(typeId, subtype));
                     return copy;
                 };
             }
         }
 
-/// <summary>All operation.</summary>
+
         public static List<World> All()
         {
-/// <summary>List operation.</summary>
+
             List<World> worlds = new List<World>();
 
             worlds.Add(new World
@@ -166,10 +166,10 @@ namespace Thermodynamics.Harness
             "LargeBlockLargeContainer",
         };
 
-/// <summary>Moves operation.</summary>
+
         public static List<Move> Moves()
         {
-/// <summary>List operation.</summary>
+
             List<Move> moves = new List<Move>();
             if (!GameBlocks.IsInstalled) return moves;
 
@@ -186,7 +186,7 @@ namespace Thermodynamics.Harness
                 {
                     Subtype = Notable[i],
                     TypeId = definition.TypeId,
-/// <summary>PreConversion operation.</summary>
+
                     Before = PreConversion(definition.TypeId, Notable[i]),
                     After = thermal.Conductivity * ThermalConstants.ConductionScale,
                 });
@@ -195,10 +195,10 @@ namespace Thermodynamics.Harness
             return moves;
         }
 
-/// <summary>Missing operation.</summary>
+
         public static List<string> Missing()
         {
-/// <summary>List operation.</summary>
+
             List<string> missing = new List<string>();
             if (!GameBlocks.IsInstalled) return missing;
 

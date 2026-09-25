@@ -8,10 +8,10 @@ namespace Thermodynamics.Tests
 {
     public class IncrementalRoomTests
     {
-/// <summary>ShellCells operation.</summary>
+
         private static List<Vector3I> ShellCells(Vector3I min, Vector3I maxExclusive)
         {
-/// <summary>List operation.</summary>
+
             List<Vector3I> cells = new List<Vector3I>();
             for (int z = min.Z; z < maxExclusive.Z; z++)
             {
@@ -30,7 +30,7 @@ namespace Thermodynamics.Tests
             return cells;
         }
 
-/// <summary>Sets the tlemapper.</summary>
+
         private static void SettleMapper(ThermalSimulation simulation, int maxFrames = 600)
         {
             for (int i = 0; i < maxFrames && (simulation.Rooms.HasWorkPending || i == 0); i++)
@@ -40,16 +40,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WeldingAShellOneBlockAtATimeStillFindsTheRoom operation.</summary>
+
         public void WeldingAShellOneBlockAtATimeStillFindsTheRoom()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
 
             BlockModel armour = Catalog.LightArmor();
-/// <summary>ShellCells operation.</summary>
+
             List<Vector3I> cells = ShellCells(new Vector3I(-1, -1, -1), new Vector3I(2, 2, 2));
 
             for (int i = 0; i < cells.Count; i++)
@@ -68,16 +68,16 @@ namespace Thermodynamics.Tests
         private const float ThermalGridTick = 10f / 60f;
 
         [Fact]
-/// <summary>EveryBlockCellIsSolidNotExternalAfterAnIncrementalBuild operation.</summary>
+
         public void EveryBlockCellIsSolidNotExternalAfterAnIncrementalBuild()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
 
             BlockModel armour = Catalog.LightArmor();
-/// <summary>ShellCells operation.</summary>
+
             List<Vector3I> cells = ShellCells(new Vector3I(-1, -1, -1), new Vector3I(2, 2, 2));
             for (int i = 0; i < cells.Count; i++)
             {
@@ -94,7 +94,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AClosedDoorInTheWallKeepsTheRoomSealedAndAnOpenOneDoesNot operation.</summary>
+
         public void AClosedDoorInTheWallKeepsTheRoomSealedAndAnOpenOneDoesNot()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -122,7 +122,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheClassificationOfEveryCellInTheSearchBoxAddsUp operation.</summary>
+
         public void TheClassificationOfEveryCellInTheSearchBoxAddsUp()
         {
             GridBuilder builder = GridBuilder.Large();

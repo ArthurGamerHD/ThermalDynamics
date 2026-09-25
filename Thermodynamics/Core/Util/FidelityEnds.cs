@@ -12,7 +12,7 @@ namespace Thermodynamics.Core
 
             public readonly string Means;
 
-/// <summary>End operation.</summary>
+
             public End(string setting, float faithful, string means)
             {
                 Setting = setting;
@@ -23,17 +23,17 @@ namespace Thermodynamics.Core
 
         public static readonly End[] All =
         {
-/// <summary>End operation.</summary>
+
             new End("MaxSubstepsPerBlock", 0f, "0, which leaves every block's real capacity in place"),
-/// <summary>End operation.</summary>
+
             new End("MaxSubsteps", 64f, "the ceiling, which grants the stability estimate whatever it asks"),
-/// <summary>End operation.</summary>
+
             new End("MaxElementVisitsPerStep", 0f, "0, which removes the bound on a step's work"),
-/// <summary>End operation.</summary>
+
             new End("Frequency", 60f, "the highest rate, which is the finest step"),
         };
 
-/// <summary>For operation.</summary>
+
         public static End? For(string setting)
         {
             for (int i = 0; i < All.Length; i++)
@@ -44,10 +44,10 @@ namespace Thermodynamics.Core
             return null;
         }
 
-/// <summary>Sentence operation.</summary>
+
         public static string Sentence(string setting)
         {
-/// <summary>For operation.</summary>
+
             End? end = For(setting);
             return end == null ? string.Empty : " Most faithful at " + end.Value.Means + ".";
         }

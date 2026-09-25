@@ -72,27 +72,27 @@ namespace RichHudFramework.UI.Rendering
 
 		protected readonly List<Vector2> drawVertices;
 
-/// <summary>PolyBoard operation.</summary>
+
 		public PolyBoard()
 		{
-/// <summary>List operation.</summary>
+
 			triangles = new List<int>();
-/// <summary>List operation.</summary>
+
 			vertices = new List<Vector2>();
-/// <summary>List operation.</summary>
+
 			drawVertices = new List<Vector2>();
 
-/// <summary>MaterialFrame operation.</summary>
+
 			matFrame = new MaterialFrame();
 			polyMat = PolyMaterial.Default;
-/// <summary>List operation.</summary>
+
 			polyMat.texCoords = new List<Vector2>();
 
 			_sides = 16;
 			updateVertices = true;
 		}
 
-/// <summary>Draw operation.</summary>
+
 		public virtual void Draw(Vector2 size, Vector2 origin, MatrixD[] matrixRef)
 		{
 			if (_sides > 2)
@@ -119,7 +119,7 @@ namespace RichHudFramework.UI.Rendering
 			}
 		}
 
-/// <summary>Draw operation.</summary>
+
 		public virtual void Draw(Vector2 size, Vector2 origin, Vector2I faceRange, MatrixD[] matrixRef)
 		{
 			if (_sides > 2)
@@ -150,7 +150,7 @@ namespace RichHudFramework.UI.Rendering
 			}
 		}
 
-/// <summary>Returns the sliceoffset.</summary>
+
 		public virtual Vector2 GetSliceOffset(Vector2 bbSize, Vector2I range)
 		{
 			if (updateVertices)
@@ -164,7 +164,7 @@ namespace RichHudFramework.UI.Rendering
 			return bbSize * (start + end + center) / 3f;
 		}
 
-/// <summary>GeneratePolygon operation.</summary>
+
 		protected virtual void GeneratePolygon()
 		{
 			GenerateVertices();
@@ -177,7 +177,7 @@ namespace RichHudFramework.UI.Rendering
 			updateMatFit = true;
 		}
 
-/// <summary>GenerateTriangles operation.</summary>
+
 		protected virtual void GenerateTriangles()
 		{
 			int max = vertices.Count - 1;
@@ -192,7 +192,7 @@ namespace RichHudFramework.UI.Rendering
 			}
 		}
 
-/// <summary>GenerateTextureCoordinates operation.</summary>
+
 		protected virtual void GenerateTextureCoordinates()
 		{
 			Vector2 texScale = polyMat.texBounds.Size,
@@ -210,7 +210,7 @@ namespace RichHudFramework.UI.Rendering
 			}
 		}
 
-/// <summary>GenerateVertices operation.</summary>
+
 		protected virtual void GenerateVertices()
 		{
 			float rotStep = (float)(Math.PI * 2f / _sides),

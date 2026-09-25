@@ -33,7 +33,7 @@ namespace Thermodynamics.Harness
             public long RetainedBytes;
         }
 
-/// <summary>Run operation.</summary>
+
         public static void Run(string shape, int blocks, int[] factors,
             List<Summary> summaries, List<StageRow> stageRows, Action<string> log)
         {
@@ -54,7 +54,7 @@ namespace Thermodynamics.Harness
                     if (log != null) log("factor " + factor + ", " + Stages[s]);
                     StageLab.Settle();
 
-/// <summary>StageRow operation.</summary>
+
                     StageRow row = new StageRow();
                     row.Factor = factor;
                     row.Row = StageLab.Measure(Stages[s], fine);
@@ -64,7 +64,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Summarise operation.</summary>
+
         private static Summary Summarise(int factor, GridBuilder fine)
         {
             StageLab.Settle();
@@ -82,7 +82,7 @@ namespace Thermodynamics.Harness
 
             long after = GC.GetTotalMemory(true);
 
-/// <summary>Summary operation.</summary>
+
             Summary summary = new Summary();
             summary.Factor = factor;
             summary.Blocks = simulation.Grid.BlockCount;
@@ -107,10 +107,10 @@ namespace Thermodynamics.Harness
             return summary;
         }
 
-/// <summary>SummaryTable operation.</summary>
+
         public static string SummaryTable(IList<Summary> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("  factor    blocks         cells      box cells   surface cells       links   rooms     room cells    retained MB");
             for (int i = 0; i < rows.Count; i++)
@@ -124,10 +124,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-/// <summary>StageTable operation.</summary>
+
         public static string StageTable(IList<StageRow> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("  factor  stage        blocks       best ms    median ms      worst ms  repeats  stopped          work  unit              ns/unit      alloc KB");
             for (int i = 0; i < rows.Count; i++)
@@ -142,10 +142,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-/// <summary>SummaryCsv operation.</summary>
+
         public static string SummaryCsv(IList<Summary> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("factor,blocks,cells,box_cells,surface_cells,links,rooms,room_cells,external_cells,retained_bytes,taken_utc,host");
             for (int i = 0; i < rows.Count; i++)
@@ -168,10 +168,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-/// <summary>StageCsv operation.</summary>
+
         public static string StageCsv(IList<StageRow> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("factor,stage,blocks,best_ms,median_ms,worst_ms,repeats,stopped,work,work_unit,ns_per_unit,allocated_bytes,taken_utc,host");
             for (int i = 0; i < rows.Count; i++)

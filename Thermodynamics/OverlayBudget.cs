@@ -32,7 +32,6 @@ namespace Thermodynamics
             get { return Beyond + Capped; }
         }
 
-/// <summary>BeginFrame operation.</summary>
         public void BeginFrame()
         {
             Considered = 0;
@@ -49,7 +48,6 @@ namespace Thermodynamics
             get { return Radius < Unbounded; }
         }
 
-/// <summary>Accept operation.</summary>
         public bool Accept(double distance)
         {
             Considered++;
@@ -73,14 +71,12 @@ namespace Thermodynamics
             return true;
         }
 
-/// <summary>Cull operation.</summary>
         public void Cull()
         {
             Considered++;
             OffScreen++;
         }
 
-/// <summary>EndFrame operation.</summary>
         public void EndFrame()
         {
             if (MaxBoxes <= 0) return;
@@ -101,7 +97,6 @@ namespace Thermodynamics
             Radius = Math.Max(MinimumRadius, Furthest * Math.Pow(ratio, 1.0 / 3.0));
         }
 
-/// <summary>InView operation.</summary>
         public static bool InView(
             ref Vector3D delta, double boxRadius, ref Vector3D forward, double sinHalfAngle, double cosHalfAngle)
         {
@@ -116,7 +111,6 @@ namespace Thermodynamics
             return (across * cosHalfAngle) - (along * sinHalfAngle) <= boxRadius;
         }
 
-/// <summary>ConeHalfAngle operation.</summary>
         public static double ConeHalfAngle(double verticalFovRadians, double aspect)
         {
             if (verticalFovRadians <= 0) return Math.PI * 0.5;

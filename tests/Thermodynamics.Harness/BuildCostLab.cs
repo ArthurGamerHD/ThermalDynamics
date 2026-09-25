@@ -38,10 +38,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Vanilla operation.</summary>
+
         public static List<Row> Vanilla(out int dropped)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
             dropped = 0;
 
@@ -70,10 +70,10 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Shipped operation.</summary>
+
         public static List<Row> Shipped()
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             foreach (KeyValuePair<string, ShippedBlocks.Definition> entry in ShippedBlocks.All())
@@ -100,7 +100,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Percentile operation.</summary>
+
         public static double Percentile(List<float> sortedAscending, float value)
         {
             if (sortedAscending.Count == 0) return 0d;
@@ -111,14 +111,14 @@ namespace Thermodynamics.Harness
             return below / (double)sortedAscending.Count;
         }
 
-/// <summary>Column operation.</summary>
+
         public static List<float> Column(List<Row> rows, Func<Row, float> of)
         {
-/// <summary>List operation.</summary>
+
             List<float> values = new List<float>(rows.Count);
             foreach (Row row in rows)
             {
-/// <summary>of operation.</summary>
+
                 float value = of(row);
                 if (value > 0f) values.Add(value);
             }
@@ -140,11 +140,11 @@ namespace Thermodynamics.Harness
             public float SecondsToSettle;
         }
 
-/// <summary>MassLadder operation.</summary>
+
         public static List<MassRung> MassLadder(float[] factors, int radiators = 8,
             float seconds = 3600f)
         {
-/// <summary>List operation.</summary>
+
             List<MassRung> rungs = new List<MassRung>();
 
             GameBlocks.Definition reactor = null;
@@ -198,9 +198,9 @@ namespace Thermodynamics.Harness
                 int perSample = Math.Max(1, (int)(Interval / simulation.Settings.StepSeconds));
                 int samples = Math.Max(1, (int)(seconds / Interval));
 
-/// <summary>List operation.</summary>
+
                 List<float> trace = new List<float>(samples);
-/// <summary>List operation.</summary>
+
                 List<float> hot = new List<float>(samples);
 
                 for (int i = 0; i < samples; i++)
@@ -239,7 +239,7 @@ namespace Thermodynamics.Harness
             return rungs;
         }
 
-/// <summary>Quantile operation.</summary>
+
         public static float Quantile(List<float> sortedAscending, double quantile)
         {
             if (sortedAscending.Count == 0) return 0f;

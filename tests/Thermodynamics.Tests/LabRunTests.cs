@@ -11,10 +11,10 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData(LabMode.Linear)]
         [InlineData(LabMode.Parallel)]
-/// <summary>ResultsKeepTheOrderOfTheirInputs operation.</summary>
+
         public void ResultsKeepTheOrderOfTheirInputs(LabMode mode)
         {
-/// <summary>List operation.</summary>
+
             List<int> items = new List<int>();
             for (int i = 0; i < 200; i++) items.Add(i);
 
@@ -27,10 +27,10 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData(LabMode.Linear)]
         [InlineData(LabMode.Parallel)]
-/// <summary>OneItemThrowingDoesNotLoseTheRest operation.</summary>
+
         public void OneItemThrowingDoesNotLoseTheRest(LabMode mode)
         {
-/// <summary>List operation.</summary>
+
             List<int> items = new List<int>();
             for (int i = 0; i < 50; i++) items.Add(i);
 
@@ -46,7 +46,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ParallelUsesMoreThanOneWorkerButLeavesTheMachineACore operation.</summary>
+
         public void ParallelUsesMoreThanOneWorkerButLeavesTheMachineACore()
         {
             Assert.True(LabRun.Workers >= 1);
@@ -55,12 +55,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ParallelAndLinearProduceTheSameMatrix operation.</summary>
+
         public void ParallelAndLinearProduceTheSameMatrix()
         {
             if (CorpusFixture.Files().Count == 0) return;
 
-/// <summary>List operation.</summary>
+
             List<Battery.Scenario> scenarios = new List<Battery.Scenario>();
             foreach (Battery.Scenario scenario in Battery.All())
             {

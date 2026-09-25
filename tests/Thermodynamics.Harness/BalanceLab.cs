@@ -96,7 +96,7 @@ namespace Thermodynamics.Harness
             public float KelvinSaved;
         }
 
-/// <summary>Heater operation.</summary>
+
         public static BlockModel Heater()
         {
             BlockThermalProperties thermal = Catalog.ReactorThermal();
@@ -106,12 +106,12 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Blocks operation.</summary>
+
         public static List<BlockRow> Blocks()
         {
-/// <summary>List operation.</summary>
+
             List<BlockRow> rows = new List<BlockRow>();
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
 
             foreach (string subtype in ShippedBlocks.Subtypes())
@@ -124,7 +124,7 @@ namespace Thermodynamics.Harness
 
             foreach (Vanilla.Block block in Vanilla.Reference)
             {
-                if (block.TypeId != "CubeBlock") continue;      // armour only: the structural alternative
+                if (block.TypeId != "CubeBlock") continue;
 
                 BlockThermalProperties thermal = Catalog.DefaultThermal();
                 BlockModel model = BlockModel.Solid(block.Subtype, block.Size, block.Mass, thermal);
@@ -135,7 +135,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Measure operation.</summary>
+
         private static BlockRow Measure(string subtype, string kind, bool large, Vector3I size,
             float mass, int pcu, float buildSeconds, BlockThermalProperties thermal,
             BlockModel model, ThermalSettings settings)
@@ -158,22 +158,22 @@ namespace Thermodynamics.Harness
                 CapacityJoulesPerKelvin = mass * thermal.SpecificHeat / settings.HeatTimeScale,
             };
 
-/// <summary>GridBuilder operation.</summary>
+
             GridBuilder alone = new GridBuilder(gridSize);
             alone.Place(model, Vector3I.Zero);
             ThermalSimulation simulation = alone.BuildSimulation(settings, ReferenceTemperature);
             ThermalNode node = simulation.Solver.GetNodeAt(Vector3I.Zero);
 
             row.ExposedAreaAlone = node.ExposedArea;
-/// <summary>Radiated operation.</summary>
+
             row.ShedAloneWatts = Radiated(node, ReferenceTemperature);
 
-/// <summary>FirstMountFace operation.</summary>
+
             int joint = FirstMountFace(model);
             row.JointFace = joint < 0 ? "none" : Face.Name(joint);
-/// <summary>MountFaceCount operation.</summary>
+
             row.MountFaceCount = MountFaceCount(model);
-/// <summary>MountedShedding operation.</summary>
+
             row.ShedMountedWatts = MountedShedding(model, gridSize, settings, joint,
                 out row.ConductanceWattsPerKelvin);
 
@@ -182,7 +182,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Radiated operation.</summary>
+
         private static float Radiated(ThermalNode node, float temperature)
         {
             double hot = (double)temperature * temperature * temperature * temperature;
@@ -190,7 +190,7 @@ namespace Thermodynamics.Harness
             return (float)(node.RadiationCoefficient * (hot - cold));
         }
 
-/// <summary>MountFaceCount operation.</summary>
+
         private static int MountFaceCount(BlockModel model)
         {
             int count = 0;
@@ -201,7 +201,7 @@ namespace Thermodynamics.Harness
             return count;
         }
 
-/// <summary>FirstMountFace operation.</summary>
+
         private static int FirstMountFace(BlockModel model)
         {
             for (int face = 0; face < Face.Count; face++)
@@ -211,11 +211,11 @@ namespace Thermodynamics.Harness
             return -1;
         }
 
-/// <summary>MountedShedding operation.</summary>
+
         private static float MountedShedding(BlockModel model, float gridSize, ThermalSettings settings,
             int joint, out float conductance)
         {
-/// <summary>GridBuilder operation.</summary>
+
             GridBuilder builder = new GridBuilder(gridSize);
             BlockModel armour = BlockModel.Solid("hull", Vector3I.One, 500f, Catalog.DefaultThermal());
 
@@ -232,7 +232,7 @@ namespace Thermodynamics.Harness
                 {
                     int along = axis == 0 ? cell.X : axis == 1 ? cell.Y : cell.Z;
                     int span = axis == 0 ? extents.X : axis == 1 ? extents.Y : extents.Z;
-/// <summary>IsPositive operation.</summary>
+
                     bool onFace = IsPositive(step) ? along == span - 1 : along == 0;
                     if (onFace) builder.Place(armour, cell + step);
                 }
@@ -254,17 +254,17 @@ namespace Thermodynamics.Harness
                 if (link.NodeA == self || link.NodeB == self) conductance += link.Conductance;
             }
 
-/// <summary>Radiated operation.</summary>
+
             return Radiated(node, ReferenceTemperature);
         }
 
-/// <summary>IsPositive operation.</summary>
+
         private static bool IsPositive(Vector3I step)
         {
             return step.X > 0 || step.Y > 0 || step.Z > 0;
         }
 
-/// <summary>Kind operation.</summary>
+
         private static string Kind(string subtype)
         {
             if (subtype.Contains("Radiator")) return "radiator";
@@ -275,10 +275,10 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Loads operation.</summary>
+
         public static List<LoadRow> Loads()
         {
-/// <summary>List operation.</summary>
+
             List<LoadRow> rows = new List<LoadRow>();
 
             foreach (Vanilla.Block block in Vanilla.Reference)
@@ -307,10 +307,10 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Delivered operation.</summary>
+
         public static List<DeliveredRow> Delivered()
         {
-/// <summary>List operation.</summary>
+
             List<DeliveredRow> rows = new List<DeliveredRow>();
 
             foreach (float watts in new float[] { 200000f, 2000000f })
@@ -320,22 +320,22 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>DeliveredAt operation.</summary>
+
         private static List<DeliveredRow> DeliveredAt(float watts)
         {
-/// <summary>List operation.</summary>
+
             List<DeliveredRow> rows = new List<DeliveredRow>();
             ShippedBlocks.Definition radiator = ShippedBlocks.Get("Gauge_LG_Radiator");
-/// <summary>N operation.</summary>
+
             string load = N(watts / 1000f, 0) + " kW ";
 
-/// <summary>Column operation.</summary>
+
             float bare = Column(0, false, watts);
             rows.Add(new DeliveredRow { Label = load + "bare source", Count = 0, SettledKelvin = bare });
 
             foreach (int count in new int[] { 1, 2, 4, 8 })
             {
-/// <summary>Column operation.</summary>
+
                 float settled = Column(count, false, watts);
                 float mass = radiator.Mass * count;
                 rows.Add(new DeliveredRow
@@ -352,7 +352,7 @@ namespace Thermodynamics.Harness
 
             foreach (int count in new int[] { 1, 2, 4, 8 })
             {
-/// <summary>Column operation.</summary>
+
                 float settled = Column(count, true, watts);
                 float mass = ArmourSlabMass * count;
                 rows.Add(new DeliveredRow
@@ -372,7 +372,7 @@ namespace Thermodynamics.Harness
 
         private const float ArmourSlabMass = 5000f;
 
-/// <summary>Column operation.</summary>
+
         private static float Column(int panels, bool armourInstead, float watts)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -391,7 +391,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -421,14 +421,14 @@ namespace Thermodynamics.Harness
             public float SubstepDemand;
         }
 
-/// <summary>Sensitivity operation.</summary>
+
         public static List<SensitivityRow> Sensitivity()
         {
-/// <summary>List operation.</summary>
+
             List<SensitivityRow> rows = new List<SensitivityRow>();
             ShippedBlocks.Definition shipped = ShippedBlocks.Get("Gauge_LG_Radiator");
 
-/// <summary>PanelColumn operation.</summary>
+
             float baseline = PanelColumn(ShippedBlocks.Model("Gauge_LG_Radiator"));
             rows.Add(Row("(shipped)", "as built", ShippedBlocks.Model("Gauge_LG_Radiator"), baseline));
 
@@ -460,14 +460,14 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>CoolantFed operation.</summary>
+
         private static SensitivityRow CoolantFed(float baseline, float coefficient, float massPerPipe)
         {
             GridBuilder builder = GridBuilder.Large();
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I sourceCell = new Vector3I(1, 0, 0);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I panelTop = new Vector3I(4, 0, 0);
 
             builder.Place(Heater(), sourceCell);
@@ -494,7 +494,7 @@ namespace Thermodynamics.Harness
                 simulation.RebuildAll();
             }
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -516,7 +516,7 @@ namespace Thermodynamics.Harness
             return new SensitivityRow
             {
                 Dial = "coolant sink",
-/// <summary>Describe operation.</summary>
+
                 Change = Describe(coefficient, massPerPipe),
                 SettledKelvin = sourceKelvin,
                 KelvinVersusShipped = baseline - sourceKelvin,
@@ -528,21 +528,21 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>Describe operation.</summary>
+
         private static string Describe(float coefficient, float massPerPipe)
         {
             if (coefficient <= 0f && massPerPipe <= 0f) return "fed by a loop, not bolted";
 
-/// <summary>N operation.</summary>
+
             string text = coefficient > 0f ? "h " + N(coefficient, 0) : "h shipped";
             if (massPerPipe > 0f) text += ", " + N(massPerPipe, 0) + " kg/pipe";
             return text;
         }
 
-/// <summary>Row operation.</summary>
+
         private static SensitivityRow Row(string dial, string change, BlockModel model, float baseline)
         {
-/// <summary>PanelColumnDetail operation.</summary>
+
             ColumnResult result = PanelColumnDetail(model);
 
             return new SensitivityRow
@@ -558,30 +558,30 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>Variant operation.</summary>
+
         private static BlockModel Variant(ShippedBlocks.Definition shipped, Action<BlockThermalProperties> change)
         {
             BlockModel model = ShippedBlocks.Model("Gauge_LG_Radiator");
-/// <summary>Clone operation.</summary>
+
             BlockThermalProperties thermal = Clone(shipped.Thermal);
             change(thermal);
             model.Thermal = thermal;
             return model;
         }
 
-/// <summary>Clone operation.</summary>
+
         private static BlockThermalProperties Clone(BlockThermalProperties source)
         {
             return source.Clone();
         }
 
-/// <summary>MountEverywhere operation.</summary>
+
         private static BlockModel MountEverywhere(ShippedBlocks.Definition shipped)
         {
             return BlockModel.Solid("RadiatorAllMounts", shipped.Size, shipped.Mass, shipped.Thermal);
         }
 
-/// <summary>ShortPath operation.</summary>
+
         private static BlockModel ShortPath(ShippedBlocks.Definition shipped)
         {
             BlockModel model = BlockModel.Solid("RadiatorShallow", new Vector3I(1, 1, 2),
@@ -597,7 +597,7 @@ namespace Thermodynamics.Harness
             return model;
         }
 
-/// <summary>ShortPathEverywhere operation.</summary>
+
         private static BlockModel ShortPathEverywhere(ShippedBlocks.Definition shipped)
         {
             return BlockModel.Solid("RadiatorShallowAllMounts", new Vector3I(1, 1, 2),
@@ -611,13 +611,13 @@ namespace Thermodynamics.Harness
             public float JointWattsPerKelvin;
         }
 
-/// <summary>PanelColumn operation.</summary>
+
         private static float PanelColumn(BlockModel panel)
         {
             return PanelColumnDetail(panel).SourceKelvin;
         }
 
-/// <summary>PanelColumnDetail operation.</summary>
+
         private static ColumnResult PanelColumnDetail(BlockModel panel)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -629,14 +629,14 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
             runner.Track("panel", placed);
             runner.Run(14400f, 1200f);
 
-/// <summary>ColumnResult operation.</summary>
+
             ColumnResult result = new ColumnResult();
             runner.Final.Tracked.TryGetValue("source", out result.SourceKelvin);
             runner.Final.Tracked.TryGetValue("panel", out result.PanelKelvin);
@@ -658,12 +658,12 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Pump operation.</summary>
+
         public static List<PumpRow> Pump()
         {
-/// <summary>List operation.</summary>
+
             List<PumpRow> rows = new List<PumpRow>();
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             HeatPumpShape shape = ThermalHeatPumpShapes.Get("Gauge_LG_HeatPump", Vector3I.One);
 
@@ -695,10 +695,10 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Loops operation.</summary>
+
         public static List<LoopRow> Loops()
         {
-/// <summary>List operation.</summary>
+
             List<LoopRow> rows = new List<LoopRow>();
 
             foreach (int side in new int[] { 3, 4, 6, 8 })
@@ -708,13 +708,13 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Ring operation.</summary>
+
         private static LoopRow Ring(int side)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(3, 1, 3));
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I under = new Vector3I(1, 0, 0);
             BlockInstance occupant = builder.Grid.GetAtCell(under);
             builder.Grid.Remove(occupant);
@@ -735,7 +735,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -767,22 +767,22 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>N operation.</summary>
+
         private static string N(float value, int decimals = 1)
         {
             return value.ToString("n" + decimals, CultureInfo.InvariantCulture);
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
 
             sb.AppendLine("BLOCKS  (shed at " + N(ReferenceTemperature, 0) + " K into a "
-/// <summary>N operation.</summary>
+
                 + N(ReferenceAmbient, 1) + " K sky; reach = conduction across 100 K)");
             sb.AppendLine();
             sb.AppendLine(string.Format("{0,-42} {1,-13} {2,5} {3,8} {4,5} {5,9} {6,8} {7,10} {8,6} {9,9} {10,10}",
@@ -792,7 +792,7 @@ namespace Thermodynamics.Harness
             foreach (BlockRow row in Blocks())
             {
                 sb.AppendLine(string.Format("{0,-42} {1,-13} {2,5} {3,8} {4,5} {5,9} {6,8} {7,10} {8,6} {9,9} {10,10}",
-/// <summary>N operation.</summary>
+
                     row.Subtype, row.Kind, row.Cells, N(row.Mass, 0), row.Pcu,
                     N(row.CapacityJoulesPerKelvin, 0), N(row.ExposedAreaAlone, 1),
                     N(row.ShedMountedWatts, 0), row.MountFaceCount + "/6",
@@ -808,7 +808,7 @@ namespace Thermodynamics.Harness
             foreach (LoadRow row in Loads())
             {
                 sb.AppendLine(string.Format("{0,-30} {1,-13} {2,10} {3,9} {4,10} {5,12}",
-/// <summary>N operation.</summary>
+
                     row.Subtype, row.TypeId, N(row.RatedMegawatts, 2), row.Path,
                     N(row.WasteFraction, 3), N(row.WasteWatts, 0)));
             }
@@ -822,7 +822,7 @@ namespace Thermodynamics.Harness
             foreach (DeliveredRow row in Delivered())
             {
                 sb.AppendLine(string.Format("{0,-28} {1,6} {2,12} {3,12} {4,10} {5,12}",
-/// <summary>N operation.</summary>
+
                     row.Label, row.Count, N(row.SettledKelvin, 1), N(row.KelvinSaved, 1),
                     N(row.AddedMass, 0), N(row.KelvinPerTonne, 2)));
             }
@@ -837,11 +837,11 @@ namespace Thermodynamics.Harness
             foreach (SensitivityRow row in Sensitivity())
             {
                 sb.AppendLine(string.Format("{0,-20} {1,-30} {2,10} {3,8} {4,9} {5,8} {6,10} {7,11} {8,9}",
-/// <summary>N operation.</summary>
+
                     row.Dial, row.Change, N(row.SettledKelvin, 1), N(row.KelvinVersusShipped, 1),
                     N(row.PanelKelvin, 1), N(row.JointDropKelvin, 1),
                     N(row.JointWattsPerKelvin, 0), N(row.ThroughJointWatts, 0),
-/// <summary>N operation.</summary>
+
                     row.SubstepDemand > 0f ? N(row.SubstepDemand, 2) : "-"));
             }
 
@@ -867,7 +867,7 @@ namespace Thermodynamics.Harness
             foreach (LoopRow row in Loops())
             {
                 sb.AppendLine(string.Format("{0,7} {1,7} {2,12} {3,14} {4,12}",
-/// <summary>N operation.</summary>
+
                     row.Pipes, row.Sinks, N(row.FluidThermalMass, 0),
                     N(row.CouplingWattsPerKelvin, 0), N(row.SettledKelvin, 1)));
             }
@@ -877,10 +877,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>BlocksCsv operation.</summary>
+
         public static string BlocksCsv()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("subtype,kind,large,cells,mass_kg,pcu,build_s,specific_heat,emissivity,"
                 + "conductivity,exposed_surface_multiplier,capacity_j_per_k,area_m2,shed_alone_w,shed_mounted_w,"
@@ -896,14 +896,14 @@ namespace Thermodynamics.Harness
                     F(row.SpecificHeat), F(row.Emissivity), F(row.Conductivity), F(row.ExposedSurfaceMultiplier),
                     F(row.CapacityJoulesPerKelvin), F(row.ExposedAreaAlone), F(row.ShedAloneWatts),
                     F(row.ShedMountedWatts), row.MountFaceCount.ToString(CultureInfo.InvariantCulture),
-/// <summary>F operation.</summary>
+
                     row.JointFace, F(row.ConductanceWattsPerKelvin), F(row.ShedOverReach),
                 }));
             }
             return sb.ToString();
         }
 
-/// <summary>F operation.</summary>
+
         private static string F(float value)
         {
             return value.ToString("r", CultureInfo.InvariantCulture);

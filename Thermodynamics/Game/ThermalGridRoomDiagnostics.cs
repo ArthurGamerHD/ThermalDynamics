@@ -65,7 +65,6 @@ namespace Thermodynamics
             get { return roomVerdicts; }
         }
 
-/// <summary>List operation.</summary>
         private readonly List<RoomVerdict> roomVerdicts = new List<RoomVerdict>();
 
         public IList<LostRoom> LostRooms
@@ -73,23 +72,19 @@ namespace Thermodynamics
             get { return lostRooms; }
         }
 
-/// <summary>List operation.</summary>
         private readonly List<LostRoom> lostRooms = new List<LostRoom>();
 
         public bool LostRoomScanTruncated { get; private set; }
 
         public bool HasLostRoomScan { get; private set; }
 
-/// <summary>List operation.</summary>
         private readonly List<UnmappedRooms.Region> regionScratch = new List<UnmappedRooms.Region>();
         private Func<Vector3I, bool> airtightProbe;
 
-/// <summary>RescanGate operation.</summary>
         private readonly RescanGate lostRoomScan = new RescanGate(LostRoomScanInterval);
 
         private const int LostRoomScanInterval = 240;
 
-/// <summary>RefreshLostRooms operation.</summary>
         public void RefreshLostRooms()
         {
             if (!WantsLostRooms())
@@ -109,14 +104,12 @@ namespace Thermodynamics
             get { return Simulation == null ? 0 : Simulation.Rooms.CompletedPasses; }
         }
 
-/// <summary>WantsLostRooms operation.</summary>
         private static bool WantsLostRooms()
         {
             if (Telemetry.Enabled) return true;
             return ThermalDebugView.Current == ThermalDebugView.Mode.Rooms;
         }
 
-/// <summary>ScanLostRooms operation.</summary>
         public void ScanLostRooms()
         {
             lostRoomScan.Mark(RoomMapRevision);
@@ -151,7 +144,6 @@ namespace Thermodynamics
             {
                 UnmappedRooms.Region region = regionScratch[i];
 
-/// <summary>LostRoom operation.</summary>
                 LostRoom lost = new LostRoom();
                 lost.Index = i;
                 lost.Anchor = region.Anchor;
@@ -169,25 +161,19 @@ namespace Thermodynamics
             HasLostRoomScan = true;
         }
 
-/// <summary>ScanRoomVerdicts operation.</summary>
         private void ScanRoomVerdicts(RoomMap map)
         {
             IList<RoomAirNode> air = Simulation.RoomAir;
 
             for (int i = 0; i < map.RoomCount; i++)
             {
-/// <summary>AsSet operation.</summary>
                 HashSet<Vector3I> cells = AsSet(map.CellsOf(i));
 
-/// <summary>RoomVerdict operation.</summary>
                 RoomVerdict verdict = new RoomVerdict();
                 verdict.Vented = map.IsVented(i);
                 verdict.CellCount = cells.Count;
-/// <summary>LowestCell operation.</summary>
                 verdict.Anchor = LowestCell(cells);
-/// <summary>IsAirtightByGame operation.</summary>
                 verdict.GameAirtight = IsAirtightByGame(verdict.Anchor);
-/// <summary>GameOxygenIn operation.</summary>
                 verdict.GameOxygen = GameOxygenIn(cells);
 
                 for (int a = 0; a < air.Count; a++)
@@ -197,7 +183,6 @@ namespace Thermodynamics
                     break;
                 }
 
-/// <summary>ReadVentsOn operation.</summary>
                 VentReading reading = ReadVentsOn(cells);
                 verdict.Vents = reading.Names;
                 verdict.VentPressurised = reading.Pressurised;
@@ -207,10 +192,8 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>HashSet operation.</summary>
         private readonly HashSet<Vector3I> roomCellScratch = new HashSet<Vector3I>(Vector3I.Comparer);
 
-/// <summary>AsSet operation.</summary>
         private HashSet<Vector3I> AsSet(RoomMap.RoomCells cells)
         {
             roomCellScratch.Clear();
@@ -218,7 +201,6 @@ namespace Thermodynamics
             return roomCellScratch;
         }
 
-/// <summary>LowestCell operation.</summary>
         private static Vector3I LowestCell(HashSet<Vector3I> cells)
         {
             bool first = true;
@@ -235,7 +217,6 @@ namespace Thermodynamics
             return best;
         }
 
-/// <summary>Less operation.</summary>
         private static bool Less(Vector3I a, Vector3I b)
         {
             if (a.X != b.X) return a.X < b.X;
@@ -250,10 +231,8 @@ namespace Thermodynamics
             public float Oxygen;
         }
 
-/// <summary>ReadVentsOn operation.</summary>
         private VentReading ReadVentsOn(HashSet<Vector3I> cells)
         {
-/// <summary>VentReading operation.</summary>
             VentReading reading = new VentReading();
             reading.Oxygen = -1f;
 
@@ -261,7 +240,6 @@ namespace Thermodynamics
 
             for (int i = 0; i < vents.Count; i++)
             {
-/// <summary>LiveVentOn operation.</summary>
                 IMyAirVent vent = LiveVentOn(i, cells);
                 if (vent == null) continue;
 
@@ -286,14 +264,12 @@ namespace Thermodynamics
             return reading;
         }
 
-/// <summary>GameOxygenIn operation.</summary>
         private float GameOxygenIn(HashSet<Vector3I> cells)
         {
             float best = -1f;
 
             foreach (Vector3I cell in cells)
             {
-/// <summary>GameOxygenAt operation.</summary>
                 float level = GameOxygenAt(cell);
                 if (level > best) best = level;
             }
@@ -301,7 +277,6 @@ namespace Thermodynamics
             return best >= 0f ? best : VentOxygenAround(cells);
         }
 
-/// <summary>GameOxygenAt operation.</summary>
         public float GameOxygenAt(Vector3I cell)
         {
             if (gasSystemFailed) return -1f;
@@ -326,7 +301,6 @@ namespace Thermodynamics
 
         private bool gasSystemFailed;
 
-/// <summary>LiveVentOn operation.</summary>
         private IMyAirVent LiveVentOn(int index, HashSet<Vector3I> cells)
         {
             ThermalBlock bound = vents[index];
@@ -336,14 +310,12 @@ namespace Thermodynamics
             return vent;
         }
 
-/// <summary>VentOxygenAround operation.</summary>
         private float VentOxygenAround(HashSet<Vector3I> cells)
         {
             float best = -1f;
 
             for (int i = 0; i < vents.Count; i++)
             {
-/// <summary>LiveVentOn operation.</summary>
                 IMyAirVent vent = LiveVentOn(i, cells);
                 if (vent == null) continue;
 
@@ -361,12 +333,10 @@ namespace Thermodynamics
             return best;
         }
 
-/// <summary>VentSaysPressurised operation.</summary>
         private bool VentSaysPressurised(HashSet<Vector3I> cells)
         {
             for (int i = 0; i < vents.Count; i++)
             {
-/// <summary>LiveVentOn operation.</summary>
                 IMyAirVent vent = LiveVentOn(i, cells);
                 if (vent == null) continue;
 
@@ -383,13 +353,11 @@ namespace Thermodynamics
             return false;
         }
 
-/// <summary>IsAirtightByGame operation.</summary>
         private bool IsAirtightByGame(Vector3I cell)
         {
             return Grid.IsRoomAtPositionAirtight(cell);
         }
 
-/// <summary>DescribeLeaks operation.</summary>
         private void DescribeLeaks(UnmappedRooms.Region region, LostRoom lost)
         {
             Dictionary<string, int> counts = new Dictionary<string, int>();
@@ -415,7 +383,6 @@ namespace Thermodynamics
                 return string.Compare(a.Key, b.Key, StringComparison.Ordinal);
             });
 
-/// <summary>StringBuilder operation.</summary>
             StringBuilder blocks = new StringBuilder();
             for (int i = 0; i < ordered.Count && i < MaxLeakingBlocksReported; i++)
             {
@@ -428,10 +395,8 @@ namespace Thermodynamics
 
         private const int MaxLeakingBlocksReported = 6;
 
-/// <summary>DescribeVents operation.</summary>
         private void DescribeVents(LostRoom lost)
         {
-/// <summary>ReadVentsOn operation.</summary>
             VentReading reading = ReadVentsOn(lost.Cells);
 
             lost.Vents = reading.Names;
@@ -439,7 +404,6 @@ namespace Thermodynamics
             lost.OxygenLevel = reading.Oxygen;
         }
 
-/// <summary>TouchesRegion operation.</summary>
         private static bool TouchesRegion(ThermalBlock bound, HashSet<Vector3I> cells)
         {
             Vector3I[] ventCells = bound.Instance.Cells;

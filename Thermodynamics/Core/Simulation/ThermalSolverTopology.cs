@@ -10,10 +10,10 @@ namespace Thermodynamics.Core
         private int[] linkNextA = new int[0];
         private int[] linkNextB = new int[0];
 
-/// <summary>List operation.</summary>
+
         private readonly List<int> doomedLinks = new List<int>();
 
-/// <summary>EnsureNodeChainCapacity operation.</summary>
+
         private void EnsureNodeChainCapacity(int nodeCount)
         {
             if (nodeFirstLink.Length >= nodeCount) return;
@@ -24,7 +24,7 @@ namespace Thermodynamics.Core
             for (int i = previous; i < size; i++) nodeFirstLink[i] = -1;
         }
 
-/// <summary>EnsureLinkChainCapacity operation.</summary>
+
         private void EnsureLinkChainCapacity(int linkCount)
         {
             if (linkNextA.Length >= linkCount) return;
@@ -34,27 +34,27 @@ namespace Thermodynamics.Core
             Array.Resize(ref linkNextB, size);
         }
 
-/// <summary>ResetLinkChains operation.</summary>
+
         private void ResetLinkChains()
         {
             EnsureNodeChainCapacity(nodes.Count);
             for (int i = 0; i < nodeFirstLink.Length; i++) nodeFirstLink[i] = -1;
         }
 
-/// <summary>NextLink operation.</summary>
+
         private int NextLink(int link, int node)
         {
             return links[link].NodeA == node ? linkNextA[link] : linkNextB[link];
         }
 
-/// <summary>Sets the nextlink.</summary>
+
         private void SetNextLink(int link, int node, int next)
         {
             if (links[link].NodeA == node) linkNextA[link] = next;
             else linkNextB[link] = next;
         }
 
-/// <summary>ChainLink operation.</summary>
+
         private void ChainLink(int link)
         {
             ThermalLink entry = links[link];
@@ -69,7 +69,7 @@ namespace Thermodynamics.Core
             nodeFirstLink[entry.NodeB] = link;
         }
 
-/// <summary>UnchainFrom operation.</summary>
+
         private void UnchainFrom(int node, int link)
         {
             if (node < 0 || node >= nodeFirstLink.Length) return;
@@ -77,14 +77,14 @@ namespace Thermodynamics.Core
             int current = nodeFirstLink[node];
             if (current == link)
             {
-/// <summary>NextLink operation.</summary>
+
                 nodeFirstLink[node] = NextLink(link, node);
                 return;
             }
 
             while (current != -1)
             {
-/// <summary>NextLink operation.</summary>
+
                 int next = NextLink(current, node);
                 if (next == link)
                 {
@@ -95,7 +95,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>RetargetLink operation.</summary>
+
         private void RetargetLink(int node, int from, int to)
         {
             if (node < 0 || node >= nodeFirstLink.Length) return;
@@ -109,7 +109,7 @@ namespace Thermodynamics.Core
             int current = nodeFirstLink[node];
             while (current != -1)
             {
-/// <summary>NextLink operation.</summary>
+
                 int next = NextLink(current, node);
                 if (next == from)
                 {
@@ -120,7 +120,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Removes the linkat.</summary>
+
         private void RemoveLinkAt(int link)
         {
             ThermalLink entry = links[link];
@@ -156,7 +156,7 @@ namespace Thermodynamics.Core
             if (syncedLinks > links.Count) syncedLinks = links.Count;
         }
 
-/// <summary>DropLinksOf operation.</summary>
+
         private void DropLinksOf(ThermalNode node)
         {
             int index = node.Index;
@@ -178,7 +178,7 @@ namespace Thermodynamics.Core
             nodeFirstLink[index] = -1;
         }
 
-/// <summary>SpillEnergyOf operation.</summary>
+
         private float SpillEnergyOf(ThermalNode node)
         {
             int index = node.Index;
@@ -218,10 +218,10 @@ namespace Thermodynamics.Core
             return energy;
         }
 
-/// <summary>List operation.</summary>
+
         private readonly List<ThermalNode> spillTargets = new List<ThermalNode>();
 
-/// <summary>Removes the nodeincremental.</summary>
+
         private void RemoveNodeIncremental(ThermalNode node)
         {
             int index = node.Index;
@@ -254,7 +254,7 @@ namespace Thermodynamics.Core
             nodes.RemoveAt(last);
         }
 
-/// <summary>RepointNode operation.</summary>
+
         private void RepointNode(int from, int to)
         {
             for (int link = nodeFirstLink[to]; link != -1; )
@@ -285,7 +285,7 @@ namespace Thermodynamics.Core
                 for (int i = 0; i < loopLinks.Count; i++)
                 {
                     if (loopLinks[i].NodeIndex != from) continue;
-/// <summary>LoopLink operation.</summary>
+
                     loopLinks[i] = new LoopLink(to, loopLinks[i].Conductance, loopLinks[i].SegmentIndex);
                 }
             }
@@ -296,7 +296,7 @@ namespace Thermodynamics.Core
                 for (int i = 0; i < roomLinks.Count; i++)
                 {
                     if (roomLinks[i].NodeIndex != from) continue;
-/// <summary>RoomLink operation.</summary>
+
                     roomLinks[i] = new RoomLink(to, roomLinks[i].Conductance);
                 }
             }

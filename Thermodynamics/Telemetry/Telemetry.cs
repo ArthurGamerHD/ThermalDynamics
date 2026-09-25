@@ -43,7 +43,7 @@ namespace Thermodynamics
         public static string GameVersion = "(unknown)";
 
         public static readonly List<KeyValuePair<string, string>> WorldSettingsRows = new List<KeyValuePair<string, string>>();
-/// <summary>List operation.</summary>
+
         public static readonly List<string> Mods = new List<string>();
 
         public static readonly Dictionary<string, string> PlanetProperties = new Dictionary<string, string>();
@@ -54,15 +54,15 @@ namespace Thermodynamics
         public static long SimulationStepsObserved;
         public static long CellUpdatesObserved;
 
-/// <summary>Stopwatch operation.</summary>
+
         private static readonly Stopwatch SessionClock = new Stopwatch();
-/// <summary>SampleGate operation.</summary>
+
         private static readonly SampleGate Gate = new SampleGate();
         private static bool _started;
         private static bool _finished;
         private static bool _identityCaptured;
 
-/// <summary>List operation.</summary>
+
         public static readonly List<GridTelemetry> Grids = new List<GridTelemetry>();
         public static readonly Dictionary<long, GridTelemetry> GridsById = new Dictionary<long, GridTelemetry>();
         public static long GridsSeen;
@@ -71,7 +71,7 @@ namespace Thermodynamics
         public static readonly Dictionary<MyDefinitionId, BlockTypeTelemetry> BlockTypes = new Dictionary<MyDefinitionId, BlockTypeTelemetry>(MyDefinitionId.Comparer);
         public static long BlockTypeRecordsDropped;
 
-/// <summary>AnomalyRegistry operation.</summary>
+
         public static readonly AnomalyRegistry Faults = new AnomalyRegistry(MaxAnomalyKinds);
 
         public static Dictionary<string, AnomalyRecord> Anomalies
@@ -84,18 +84,18 @@ namespace Thermodynamics
             get { return Faults.KindsDropped; }
         }
 
-/// <summary>object operation.</summary>
+
         private static readonly object RegistryLock = new object();
 
-/// <summary>OverlayTelemetry operation.</summary>
+
         public static OverlayTelemetry Overlay = new OverlayTelemetry();
-/// <summary>ThermalVisionTelemetry operation.</summary>
+
         public static ThermalVisionTelemetry Vision = new ThermalVisionTelemetry();
 
-/// <summary>TimingStat operation.</summary>
+
         public static readonly TimingStat SessionFrameTime = new TimingStat("session frame");
 
-/// <summary>FrameCostTracker operation.</summary>
+
         public static readonly FrameCostTracker FrameCost = new FrameCostTracker();
 
         public static double SessionSeconds
@@ -104,7 +104,7 @@ namespace Thermodynamics
         }
 
 
-/// <summary>Start operation.</summary>
+
         public static void Start()
         {
             if (_started) return;
@@ -124,7 +124,7 @@ namespace Thermodynamics
             MyLog.Default.Info("[" + Settings.Name + "] [Telemetry] collection " + (Enabled ? "started" : "disabled"));
         }
 
-/// <summary>Sets the enabled.</summary>
+
         public static void SetEnabled(bool enabled)
         {
             if (!_started) Start();
@@ -143,7 +143,7 @@ namespace Thermodynamics
                 + (enabled ? "enabled" : "disabled") + " at runtime");
         }
 
-/// <summary>CaptureIdentity operation.</summary>
+
         private static void CaptureIdentity()
         {
             if (_identityCaptured) return;
@@ -175,7 +175,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>CaptureWorldSettings operation.</summary>
+
         private static void CaptureWorldSettings()
         {
             WorldSettingsRows.Clear();
@@ -186,7 +186,7 @@ namespace Thermodynamics
             WorldSettingsRows.AddRange(WorldSettings.Parse(MyAPIGateway.Utilities.SerializeToXML(settings)));
         }
 
-/// <summary>CaptureMods operation.</summary>
+
         private static void CaptureMods()
         {
             Mods.Clear();
@@ -205,7 +205,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>NotePlanetProperties operation.</summary>
+
         public static void NotePlanetProperties(string planet, PlanetThermalProperties properties, string supplied)
         {
             if (!Enabled || properties == null) return;
@@ -230,7 +230,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>FrameTick operation.</summary>
+
         public static void FrameTick()
         {
             if (!Enabled) return;
@@ -247,7 +247,7 @@ namespace Thermodynamics
             catch { }
         }
 
-/// <summary>Finish operation.</summary>
+
         public static void Finish(string reason, bool force = false)
         {
             if (!_started || !Enabled) return;
@@ -282,7 +282,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Reset operation.</summary>
+
         public static void Reset()
         {
             Enabled = false;
@@ -303,9 +303,9 @@ namespace Thermodynamics
             Mods.Clear();
             PlanetProperties.Clear();
             GameVersion = "(unknown)";
-/// <summary>OverlayTelemetry operation.</summary>
+
             Overlay = new OverlayTelemetry();
-/// <summary>ThermalVisionTelemetry operation.</summary>
+
             Vision = new ThermalVisionTelemetry();
 
             lock (RegistryLock)
@@ -327,7 +327,7 @@ namespace Thermodynamics
         }
 
 
-/// <summary>Registers the API and message handler.</summary>
+
         public static GridTelemetry RegisterGrid(ThermalGrid grid)
         {
             if (!_started) Start();
@@ -335,7 +335,7 @@ namespace Thermodynamics
 
             try
             {
-/// <summary>GridTelemetry operation.</summary>
+
                 GridTelemetry record = new GridTelemetry(grid);
 
                 lock (RegistryLock)
@@ -361,7 +361,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Returns the blocktype.</summary>
+
         public static BlockTypeTelemetry GetBlockType(MyDefinitionId id)
         {
             if (!Enabled) return null;
@@ -379,7 +379,7 @@ namespace Thermodynamics
                         return null;
                     }
 
-/// <summary>BlockTypeTelemetry operation.</summary>
+
                     type = new BlockTypeTelemetry(id);
                     BlockTypes.Add(id, type);
                     return type;
@@ -393,7 +393,7 @@ namespace Thermodynamics
         }
 
 
-/// <summary>OnGridStepped operation.</summary>
+
         public static void OnGridStepped(ThermalGrid grid, int steps)
         {
             if (!Enabled || grid == null || grid.Stats == null) return;
@@ -409,7 +409,7 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>CheckNode operation.</summary>
+
         public static void CheckNode(GridTelemetry grid, ThermalNode node)
         {
             CellUpdatesObserved++;
@@ -425,7 +425,7 @@ namespace Thermodynamics
                 + " from " + previous.ToString("n2"));
         }
 
-/// <summary>NoteRoomLeak operation.</summary>
+
         public static void NoteRoomLeak(GridTelemetry grid, RoomAudit audit)
         {
             string example = (grid == null ? "grid" : grid.Name) +
@@ -440,7 +440,7 @@ namespace Thermodynamics
             Anomaly("room map treats structure as open space", example);
         }
 
-/// <summary>OnCriticalDamage operation.</summary>
+
         public static void OnCriticalDamage(ThermalBlock block, float damage)
         {
             if (!Enabled || block == null) return;
@@ -456,19 +456,19 @@ namespace Thermodynamics
         }
 
 
-/// <summary>Anomaly operation.</summary>
+
         public static void Anomaly(string kind, string example)
         {
             Record(kind, example, false);
         }
 
-/// <summary>Exception operation.</summary>
+
         public static void Exception(string where, Exception e)
         {
             Record("exception in " + where, Describe(e), true);
         }
 
-/// <summary>GridFault operation.</summary>
+
         public static void GridFault(ThermalGrid grid, string kind)
         {
             string example;
@@ -490,7 +490,7 @@ namespace Thermodynamics
             Record(kind, example, true);
         }
 
-/// <summary>Record operation.</summary>
+
         private static void Record(string kind, string example, bool fault)
         {
             if (!Enabled && !fault) return;
@@ -508,7 +508,7 @@ namespace Thermodynamics
             catch { }
         }
 
-/// <summary>LogFaultSummary operation.</summary>
+
         public static void LogFaultSummary()
         {
             try
@@ -524,7 +524,7 @@ namespace Thermodynamics
             catch { }
         }
 
-/// <summary>LogLine operation.</summary>
+
         private static void LogLine(string text)
         {
             try
@@ -534,7 +534,7 @@ namespace Thermodynamics
             catch { }
         }
 
-/// <summary>Describe operation.</summary>
+
         private static string Describe(Exception e)
         {
             if (e == null) return "(null)";
@@ -559,7 +559,7 @@ namespace Thermodynamics
             return message;
         }
 
-/// <summary>Describe operation.</summary>
+
         private static string Describe(GridTelemetry grid, ThermalNode node)
         {
             try

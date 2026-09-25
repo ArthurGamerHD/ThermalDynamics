@@ -32,7 +32,6 @@ namespace Thermodynamics
         private readonly Dictionary<Vector3I, ThermalBlock> blocks =
             new Dictionary<Vector3I, ThermalBlock>(Vector3I.Comparer);
 
-/// <summary>List operation.</summary>
         private readonly List<ThermalBlock> sweepOrder = new List<ThermalBlock>();
 
         private int massSweepCursor;
@@ -42,7 +41,6 @@ namespace Thermodynamics
 
         public const int MaxRecentlyRemoved = 4096;
 
-/// <summary>List operation.</summary>
         private readonly List<ThermalBlock> vents = new List<ThermalBlock>();
 
         public IList<ThermalBlock> Vents
@@ -50,28 +48,23 @@ namespace Thermodynamics
             get { return vents; }
         }
 
-/// <summary>Registers the API and message handler.</summary>
         internal void RegisterVent(ThermalBlock bound)
         {
             if (bound != null && !vents.Contains(bound)) vents.Add(bound);
         }
 
-/// <summary>Unregisters the API and cleans resources.</summary>
         internal void UnregisterVent(ThermalBlock bound)
         {
             vents.Remove(bound);
         }
 
-/// <summary>List operation.</summary>
         private readonly List<ThermalBlock> heatPumps = new List<ThermalBlock>();
 
-/// <summary>Registers the API and message handler.</summary>
         internal void RegisterHeatPump(ThermalBlock bound)
         {
             if (bound != null && !heatPumps.Contains(bound)) heatPumps.Add(bound);
         }
 
-/// <summary>Unregisters the API and cleans resources.</summary>
         internal void UnregisterHeatPump(ThermalBlock bound)
         {
             heatPumps.Remove(bound);
@@ -89,7 +82,6 @@ namespace Thermodynamics
         }
         private bool disabled;
 
-/// <summary>List operation.</summary>
         private static readonly List<ThermalGrid> Live = new List<ThermalGrid>();
 
         public static IList<ThermalGrid> LiveGrids
@@ -109,7 +101,6 @@ namespace Thermodynamics
             get { return blocks.Count; }
         }
 
-/// <summary>Init operation.</summary>
         public override void Init(MyObjectBuilder_EntityBase objectBuilder)
         {
             base.Init(objectBuilder);
@@ -123,9 +114,7 @@ namespace Thermodynamics
                 return;
             }
 
-/// <summary>GridModel operation.</summary>
             Model = new GridModel(Grid.GridSize);
-/// <summary>ThermalSimulation operation.</summary>
             Simulation = new ThermalSimulation(Settings.Instance.ToCore(), Model);
 
             Stats = Telemetry.RegisterGrid(this);
@@ -137,7 +126,6 @@ namespace Thermodynamics
 
             if (Entity.Storage == null)
             {
-/// <summary>MyModStorageComponent operation.</summary>
                 Entity.Storage = new MyModStorageComponent();
             }
 
@@ -149,7 +137,6 @@ namespace Thermodynamics
             NeedsUpdate |= MyEntityUpdateEnum.BEFORE_NEXT_FRAME | MyEntityUpdateEnum.EACH_10TH_FRAME;
         }
 
-/// <summary>UpdateOnceBeforeFrame operation.</summary>
         public override void UpdateOnceBeforeFrame()
         {
             if (disabled) return;
@@ -174,7 +161,6 @@ namespace Thermodynamics
 
         }
 
-/// <summary>Adds a existingblocks.</summary>
         private void AddExistingBlocks()
         {
             var existing = Grid.GetBlocks();
@@ -187,14 +173,12 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>IsSerialized operation.</summary>
         public override bool IsSerialized()
         {
             Save();
             return base.IsSerialized();
         }
 
-/// <summary>Close operation.</summary>
         public override void Close()
         {
             if (Stats != null)
@@ -225,7 +209,6 @@ namespace Thermodynamics
         }
 
 
-/// <summary>BlockAdded operation.</summary>
         private void BlockAdded(IMySlimBlock block)
         {
             TopologyRevision++;
@@ -240,7 +223,6 @@ namespace Thermodynamics
             Stats.BlockEventTime.End();
         }
 
-/// <summary>Adds a block.</summary>
         private void AddBlock(IMySlimBlock block)
         {
             if (disabled || block == null) return;
@@ -262,10 +244,8 @@ namespace Thermodynamics
                     return;
                 }
 
-/// <summary>ThermalBlock operation.</summary>
                 ThermalBlock bound = new ThermalBlock(this, block, model);
 
-/// <summary>StartingTemperature operation.</summary>
                 float temperature = StartingTemperature(block.Min);
                 bound.Node = Simulation.AddBlock(bound.Instance, temperature);
 
@@ -283,7 +263,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>StartingTemperature operation.</summary>
         private float StartingTemperature(Vector3I position)
         {
             float carried;
@@ -295,7 +274,6 @@ namespace Thermodynamics
             return Simulation.DefaultTemperature;
         }
 
-/// <summary>BlockRemoved operation.</summary>
         private void BlockRemoved(IMySlimBlock block)
         {
             TopologyRevision++;
@@ -312,7 +290,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Removes the block.</summary>
         private void RemoveBlock(IMySlimBlock block)
         {
 
@@ -347,7 +324,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>RefreshDefinitions operation.</summary>
         public void RefreshDefinitions()
         {
             if (Simulation == null || !started) return;
@@ -371,7 +347,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>RefreshBlock operation.</summary>
         public void RefreshBlock(ThermalBlock bound)
         {
             if (bound == null || bound.Instance == null) return;
@@ -380,7 +355,6 @@ namespace Thermodynamics
             if (Stats != null) Stats.SurfaceRecalcs++;
         }
 
-/// <summary>RefreshBlockSealing operation.</summary>
         public void RefreshBlockSealing(ThermalBlock bound)
         {
             if (bound == null || bound.Instance == null) return;
@@ -389,7 +363,6 @@ namespace Thermodynamics
             if (Stats != null) Stats.SurfaceRecalcs++;
         }
 
-/// <summary>GridSplit operation.</summary>
         private void GridSplit(MyCubeGrid parent, MyCubeGrid child)
         {
             ThermalGrid a = parent.GameLogic.GetAs<ThermalGrid>();
@@ -402,7 +375,6 @@ namespace Thermodynamics
             a.HandOver(b);
         }
 
-/// <summary>GridMerge operation.</summary>
         private void GridMerge(MyCubeGrid survivor, MyCubeGrid absorbed)
         {
             ThermalGrid a = survivor.GameLogic.GetAs<ThermalGrid>();
@@ -421,18 +393,15 @@ namespace Thermodynamics
             b.HandOver(a);
         }
 
-/// <summary>HandOver operation.</summary>
         private void HandOver(ThermalGrid other)
         {
             if (other == null || RecentlyRemoved.Count == 0) return;
 
             bool sameFrame = Grid == other.Grid;
 
-/// <summary>List operation.</summary>
             List<Vector3I> handled = new List<Vector3I>();
             foreach (KeyValuePair<Vector3I, float> entry in RecentlyRemoved)
             {
-/// <summary>MapCell operation.</summary>
                 Vector3I target = sameFrame ? entry.Key : MapCell(Grid, other.Grid, entry.Key);
                 if (other.Receive(target, entry.Value)) handled.Add(target);
             }
@@ -443,10 +412,8 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Receive operation.</summary>
         private bool Receive(Vector3I min, float temperature)
         {
-/// <summary>Returns the .</summary>
             ThermalBlock bound = Get(min);
             if (bound != null && bound.Node != null)
             {
@@ -461,7 +428,6 @@ namespace Thermodynamics
             return false;
         }
 
-/// <summary>MapCell operation.</summary>
         private static Vector3I MapCell(MyCubeGrid from, MyCubeGrid to, Vector3I cell)
         {
             if (from == to) return cell;
@@ -469,7 +435,6 @@ namespace Thermodynamics
         }
 
 
-/// <summary>RefreshTelemetry operation.</summary>
         public void RefreshTelemetry()
         {
             if (!Telemetry.Enabled || Simulation == null)
@@ -488,7 +453,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Removes the fromsweeporder.</summary>
         private void RemoveFromSweepOrder(ThermalBlock bound)
         {
             int slot = bound.SweepSlot;
@@ -511,24 +475,20 @@ namespace Thermodynamics
             bound.SweepSlot = -1;
         }
 
-/// <summary>Returns the .</summary>
         public ThermalBlock Get(Vector3I min)
         {
             ThermalBlock bound;
             return blocks.TryGetValue(min, out bound) ? bound : null;
         }
 
-/// <summary>Returns the atcell.</summary>
         public ThermalBlock GetAtCell(Vector3I cell)
         {
-/// <summary>Returns the .</summary>
             ThermalBlock direct = Get(cell);
             if (direct != null) return direct;
 
             BlockInstance instance = Model.GetAtCell(cell);
             if (instance == null) return null;
 
-/// <summary>Returns the .</summary>
             return Get(instance.Position);
         }
     }

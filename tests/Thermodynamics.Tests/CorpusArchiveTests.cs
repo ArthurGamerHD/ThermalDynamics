@@ -7,10 +7,10 @@ namespace Thermodynamics.Tests
     {
         [Theory]
         [InlineData("bp.sbc")]
-        [InlineData("p.sbc")]          // the truncation actually found in the corpus
-        [InlineData(".sbc")]           // and its worst case: nothing left but the extension
+        [InlineData("p.sbc")]
+        [InlineData(".sbc")]
         [InlineData("BP.SBC")]
-/// <summary>EveryShapeOfBlueprintEntryIsFound operation.</summary>
+
         public void EveryShapeOfBlueprintEntryIsFound(string name)
         {
             Assert.True(Blueprints.IsLegacyBlueprintEntry(name));
@@ -22,7 +22,7 @@ namespace Thermodynamics.Tests
         [InlineData("umb.png")]
         [InlineData("")]
         [InlineData(null)]
-/// <summary>NothingElseIsMistakenForOne operation.</summary>
+
         public void NothingElseIsMistakenForOne(string name)
         {
             Assert.False(Blueprints.IsLegacyBlueprintEntry(name));

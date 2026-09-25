@@ -8,14 +8,14 @@ namespace Thermodynamics.Tests
         private const float MinMass = 200000f, MidMass = 5000000f, MaxMass = 8000000f;
         private const float Light = 60f, Mid = 80f, Heavy = 110f;
 
-/// <summary>Speed operation.</summary>
+
         private static float Speed(float mass)
         {
             return CruiseCurve.Speed(mass, MinMass, MidMass, MaxMass, Light, Mid, Heavy);
         }
 
         [Fact]
-/// <summary>TheEndsAreFlatAtTheAuthoredSpeeds operation.</summary>
+
         public void TheEndsAreFlatAtTheAuthoredSpeeds()
         {
             Assert.Equal(Light, Speed(0f));
@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCurveMeetsItsOwnMassPoints operation.</summary>
+
         public void TheCurveMeetsItsOwnMassPoints()
         {
             Assert.Equal(Light, Speed(MinMass), 3);
@@ -34,13 +34,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NothingLeavesTheAuthoredRange operation.</summary>
+
         public void NothingLeavesTheAuthoredRange()
         {
             for (int i = 0; i <= 200; i++)
             {
                 float mass = MinMass + (MaxMass - MinMass) * (i / 200f);
-/// <summary>Speed operation.</summary>
+
                 float speed = Speed(mass);
 
                 Assert.InRange(speed, Light, Heavy);
@@ -48,16 +48,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SpeedRisesWithMassAcrossTheWholeCurve operation.</summary>
+
         public void SpeedRisesWithMassAcrossTheWholeCurve()
         {
-/// <summary>Speed operation.</summary>
+
             float previous = Speed(MinMass);
 
             for (int i = 1; i <= 200; i++)
             {
                 float mass = MinMass + (MaxMass - MinMass) * (i / 200f);
-/// <summary>Speed operation.</summary>
+
                 float speed = Speed(mass);
 
                 Assert.True(speed >= previous - 1e-3f,
@@ -69,7 +69,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheInterpolatorHitsBothOfItsPoints operation.</summary>
+
         public void TheInterpolatorHitsBothOfItsPoints()
         {
             Assert.Equal(2d, CruiseCurve.Interpolate(0d, 2d, 5d, 9d, 1d), 9);

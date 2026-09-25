@@ -7,14 +7,14 @@ namespace Thermodynamics.Tests
 {
     internal static class ScenarioIndex
     {
-/// <summary>Resolve operation.</summary>
+
         public static List<Battery.Scenario> Resolve(string[] names, string walk)
         {
             Dictionary<string, Battery.Scenario> byName =
                 new Dictionary<string, Battery.Scenario>(StringComparer.Ordinal);
             foreach (Battery.Scenario scenario in Battery.All()) byName[scenario.Name] = scenario;
 
-/// <summary>List operation.</summary>
+
             List<Battery.Scenario> chosen = new List<Battery.Scenario>();
             foreach (string name in names)
             {

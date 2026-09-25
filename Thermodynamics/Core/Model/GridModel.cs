@@ -10,26 +10,26 @@ namespace Thermodynamics.Core
 
         private Dictionary<long, BlockInstance> blocksByCell = new Dictionary<long, BlockInstance>();
 
-/// <summary>List operation.</summary>
+
         private readonly List<BlockInstance> blocks = new List<BlockInstance>();
 
 
         private int coolantBlocks;
         private int heatPumpBlocks;
 
-/// <summary>List operation.</summary>
+
         private readonly List<BlockInstance> stateDependent = new List<BlockInstance>();
 
         private Vector3I min = Vector3I.MaxValue;
         private Vector3I max = Vector3I.MinValue;
         private bool boundsDirty;
 
-/// <summary>CellBitset operation.</summary>
+
         private readonly CellBitset occupied = new CellBitset();
         private int occupancyVersion = -1;
         private int version;
 
-/// <summary>GridModel operation.</summary>
+
         public GridModel(float gridSize)
         {
             if (gridSize <= 0f) throw new ArgumentException("gridSize must be positive", "gridSize");
@@ -58,17 +58,17 @@ namespace Thermodynamics.Core
 
         public Vector3I Min
         {
-/// <summary>RebuildBoundsIfNeeded operation.</summary>
+
             get { RebuildBoundsIfNeeded(); return min; }
         }
 
         public Vector3I Max
         {
-/// <summary>RebuildBoundsIfNeeded operation.</summary>
+
             get { RebuildBoundsIfNeeded(); return max; }
         }
 
-/// <summary>At operation.</summary>
+
         public BlockInstance At(Vector3I cell)
         {
             BlockInstance block;
@@ -80,7 +80,7 @@ namespace Thermodynamics.Core
             get { return version; }
         }
 
-/// <summary>Occupancy operation.</summary>
+
         public CellBitset Occupancy()
         {
             if (occupancyVersion == version) return occupied;
@@ -97,7 +97,7 @@ namespace Thermodynamics.Core
             return occupied;
         }
 
-/// <summary>EnsureCellCapacity operation.</summary>
+
         public void EnsureCellCapacity(int cells)
         {
             if (cells <= 0 || blocksByCell.Count > 0) return;
@@ -106,7 +106,7 @@ namespace Thermodynamics.Core
             if (blocks.Capacity < cells) blocks.Capacity = cells;
         }
 
-/// <summary>Adds a .</summary>
+
         public BlockInstance Add(BlockInstance block)
         {
             if (block == null) throw new ArgumentNullException("block");
@@ -137,19 +137,19 @@ namespace Thermodynamics.Core
             return block;
         }
 
-/// <summary>Adds a .</summary>
+
         public BlockInstance Add(BlockModel model, Vector3I min, BlockOrientation orientation)
         {
             return Add(new BlockInstance(model, min, orientation));
         }
 
-/// <summary>Adds a .</summary>
+
         public BlockInstance Add(BlockModel model, Vector3I min)
         {
             return Add(new BlockInstance(model, min, BlockOrientation.Identity));
         }
 
-/// <summary>Removes the .</summary>
+
         public bool Remove(BlockInstance block)
         {
             if (block == null || !Holds(block)) return false;
@@ -175,7 +175,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>Removes the slot.</summary>
+
         private void RemoveSlot(BlockInstance block)
         {
             if (!Holds(block))
@@ -209,20 +209,20 @@ namespace Thermodynamics.Core
             get { return heatPumpBlocks; }
         }
 
-/// <summary>Returns the atcell.</summary>
+
         public BlockInstance GetAtCell(Vector3I cell)
         {
             return GetAtKey(GridMath.Key(cell));
         }
 
-/// <summary>Returns the atkey.</summary>
+
         public BlockInstance GetAtKey(long key)
         {
             BlockInstance block;
             return blocksByCell.TryGetValue(key, out block) ? block : null;
         }
 
-/// <summary>Returns the bykey.</summary>
+
         public BlockInstance GetByKey(long key)
         {
             BlockInstance block;
@@ -230,41 +230,41 @@ namespace Thermodynamics.Core
             return block.Key == key ? block : null;
         }
 
-/// <summary>Holds operation.</summary>
+
         private bool Holds(BlockInstance block)
         {
             int slot = block.GridSlot;
             return slot >= 0 && slot < blocks.Count && ReferenceEquals(blocks[slot], block);
         }
 
-/// <summary>IsOccupied operation.</summary>
+
         public bool IsOccupied(Vector3I cell)
         {
             return blocksByCell.ContainsKey(GridMath.Key(cell));
         }
 
-/// <summary>Neighbours operation.</summary>
+
         public List<BlockInstance> Neighbours(BlockInstance block)
         {
-/// <summary>List operation.</summary>
+
             List<BlockInstance> result = new List<BlockInstance>();
             GetNeighbours(block, result);
             return result;
         }
 
-/// <summary>Returns the neighbours.</summary>
+
         public void GetNeighbours(BlockInstance block, List<BlockInstance> results)
         {
             GetNeighbours(block, results, null);
         }
 
-/// <summary>Returns the neighbours.</summary>
+
         public void GetNeighbours(BlockInstance block, List<BlockInstance> results, List<int> faces)
         {
             GetNeighbours(block, results, faces, null);
         }
 
-/// <summary>Returns the neighbours.</summary>
+
         public void GetNeighbours(BlockInstance block, List<BlockInstance> results, List<int> faces,
             CellBitset occupied)
         {
@@ -283,7 +283,7 @@ namespace Thermodynamics.Core
                         continue;
                     }
 
-/// <summary>Returns the atkey.</summary>
+
                     BlockInstance other = GetAtKey(key + GridMath.KeyByFace[face]);
                     if (other == null || other == block) continue;
                     results.Add(other);
@@ -296,13 +296,13 @@ namespace Thermodynamics.Core
         }
 
 
-/// <summary>Returns the neighbourswalkingtheboundary.</summary>
+
         public void GetNeighboursWalkingTheBoundary(BlockInstance block, List<BlockInstance> results)
         {
             GetNeighboursWalkingTheBoundary(block, results, null);
         }
 
-/// <summary>Returns the neighbourswalkingtheboundary.</summary>
+
         public void GetNeighboursWalkingTheBoundary(BlockInstance block, List<BlockInstance> results, List<int> faces)
         {
             if (block == null || results == null) return;
@@ -327,7 +327,7 @@ namespace Thermodynamics.Core
                         cell = BoxGeometry.WithComponent(cell, u, a);
                         cell = BoxGeometry.WithComponent(cell, v, b);
 
-/// <summary>Returns the atkey.</summary>
+
                         BlockInstance other = GetAtKey(GridMath.Key(cell) + GridMath.KeyByFace[face]);
                         if (other == null || other == block) continue;
                         if (results.Contains(other)) continue;
@@ -339,7 +339,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>SharedFaceCount operation.</summary>
+
         public int SharedFaceCount(BlockInstance a, BlockInstance b)
         {
             if (a == null || b == null || a == b) return 0;
@@ -356,7 +356,7 @@ namespace Thermodynamics.Core
             return count;
         }
 
-/// <summary>Grow operation.</summary>
+
         private void Grow(Vector3I cell)
         {
             if (boundsDirty) return;
@@ -364,7 +364,7 @@ namespace Thermodynamics.Core
             max = Vector3I.Max(max, cell);
         }
 
-/// <summary>RebuildBoundsIfNeeded operation.</summary>
+
         private void RebuildBoundsIfNeeded()
         {
             if (!boundsDirty) return;

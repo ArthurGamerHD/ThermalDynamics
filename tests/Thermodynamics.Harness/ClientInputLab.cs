@@ -110,22 +110,22 @@ namespace Thermodynamics.Harness
 
         public const float ThrustWatts = LoadedWatts;
 
-/// <summary>Measure operation.</summary>
+
         public static Result Measure(Degradation degradation, ClientDriftLab.Correction protocol,
             string scenario = "planet", float seconds = 600f, int blocks = 2000,
             float loadPeriodSeconds = LoadPeriodSeconds)
         {
-/// <summary>Degradation operation.</summary>
+
             Degradation how = degradation ?? new Degradation();
             ClientDriftLab.Correction fix = protocol ?? ClientDriftLab.Correction.None;
 
             seconds = LabClock.Seconds(seconds);
             if (loadPeriodSeconds < 1e8f) loadPeriodSeconds = LabClock.Seconds(loadPeriodSeconds);
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings world = new ThermalSettings().Derive();
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings served = new ThermalSettings();
             served.HeatTimeScale = world.HeatTimeScale * 0.5f;
             served = served.Derive();
@@ -150,7 +150,7 @@ namespace Thermodynamics.Harness
                 NotExercised = how.Scenarios != null && Array.IndexOf(how.Scenarios, scenario) < 0,
             };
 
-/// <summary>Pressurise operation.</summary>
+
             result.Rooms = Pressurise(server, 1f);
 
             bool asksAboutRooms = how.RoomPressureError > 0f || how.RoomMapLagSeconds > 0f;
@@ -188,7 +188,7 @@ namespace Thermodynamics.Harness
                 GridState.Restore(client, stale);
             }
 
-/// <summary>Withhold operation.</summary>
+
             List<BlockInstance> withheld = Withhold(client, how.BlocksMissingShare);
             bool blocksPending = withheld.Count > 0;
             if (blocksPending) Pressurise(client, clientPressure);
@@ -196,11 +196,11 @@ namespace Thermodynamics.Harness
             bool mapPending = how.RoomMapLagSeconds > 0f;
             if (mapPending) Unmap(client);
 
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> selection = new List<StoredTemperature>();
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> received = new List<StoredTemperature>();
-/// <summary>List operation.</summary>
+
             List<float> disagreements = new List<float>();
 
             float tick = fix.IntervalSeconds > 0f
@@ -221,10 +221,10 @@ namespace Thermodynamics.Harness
             {
                 float now = elapsed;
 
-/// <summary>Retune operation.</summary>
+
                 servedWatts = Retune(server, servedWatts, Watts(now, loadPeriodSeconds));
                 float wasClientWatts = clientWatts;
-/// <summary>Retune operation.</summary>
+
                 clientWatts = Retune(client, clientWatts,
                     Watts(now - how.PowerLagSeconds, loadPeriodSeconds) * (1f + how.PowerErrorShare));
 
@@ -239,7 +239,7 @@ namespace Thermodynamics.Harness
                 else
                 {
                     clientOwed += tick * (1f + how.SimSpeedError);
-/// <summary>Advance operation.</summary>
+
                     clientOwed -= Advance(client,
                         Sample(scenario, now - how.EnvironmentLagSeconds, how, true), clientOwed);
                 }
@@ -278,7 +278,7 @@ namespace Thermodynamics.Harness
                     float worst;
                     int over;
                     int absent;
-/// <summary>Compare operation.</summary>
+
                     int disagreeing = Compare(server, client, out worst, out over, out absent);
 
                     if (over > result.PeakServerCritical) result.PeakServerCritical = over;
@@ -305,17 +305,17 @@ namespace Thermodynamics.Harness
                         if (selection.Count > result.PeakBlocksSent) result.PeakBlocksSent = selection.Count;
                     }
 
-                    if (inBand < 0) return result;   // unreachable; keeps inBand read where it is set
+                    if (inBand < 0) return result;
                 }
             }
 
             result.BytesPerSecond = elapsed > 0f ? result.BytesPerSecond / elapsed : 0f;
-/// <summary>FinalThird operation.</summary>
+
             result.StandingKelvin = FinalThird(disagreements);
             return result;
         }
 
-/// <summary>FinalThird operation.</summary>
+
         private static float FinalThird(IList<float> series)
         {
             if (series == null || series.Count == 0) return 0f;
@@ -327,14 +327,14 @@ namespace Thermodynamics.Harness
             return (float)(total / (series.Count - from));
         }
 
-/// <summary>Watts operation.</summary>
+
         public static float Watts(float seconds)
         {
-/// <summary>Watts operation.</summary>
+
             return Watts(seconds, LoadPeriodSeconds);
         }
 
-/// <summary>Watts operation.</summary>
+
         public static float Watts(float seconds, float periodSeconds)
         {
             if (seconds < 0f) seconds = 0f;
@@ -344,7 +344,7 @@ namespace Thermodynamics.Harness
             return half % 2 == 0 ? LoadedWatts : IdleWatts;
         }
 
-/// <summary>Retune operation.</summary>
+
         private static float Retune(ThermalSimulation simulation, float current, float wanted)
         {
             if (current == wanted) return current;
@@ -352,18 +352,18 @@ namespace Thermodynamics.Harness
             return wanted;
         }
 
-/// <summary>Sample operation.</summary>
+
         private static EnvironmentSample Sample(string scenario, float seconds, Degradation how,
             bool onClient)
         {
-/// <summary>Built operation.</summary>
+
             EnvironmentSample sample = Built(scenario, seconds, how, onClient);
 
             if (!onClient && how.MissingHeatSourceIrradiance > 0f)
             {
                 sample.HeatSources = new[]
                 {
-/// <summary>HeatSourceState operation.</summary>
+
                     new HeatSourceState(new Vector3(0f, -1f, 0f), how.MissingHeatSourceIrradiance),
                 };
                 sample.HeatSourceCount = 1;
@@ -372,7 +372,7 @@ namespace Thermodynamics.Harness
             return sample;
         }
 
-/// <summary>Built operation.</summary>
+
         private static EnvironmentSample Built(string scenario, float seconds, Degradation how,
             bool onClient)
         {
@@ -432,7 +432,7 @@ namespace Thermodynamics.Harness
         public const float DescentFromMetres = 8000f;
         public const float DescentMetresPerSecond = 10f;
 
-/// <summary>Descend operation.</summary>
+
         private static void Descend(ref EnvironmentSample sample, float seconds)
         {
             if (seconds < 0f) seconds = 0f;
@@ -447,7 +447,7 @@ namespace Thermodynamics.Harness
             sample.AirDensity *= thinning;
         }
 
-/// <summary>Weather operation.</summary>
+
         private static void Weather(ref EnvironmentSample sample, Degradation how, bool onClient)
         {
             if (!how.MissesWeather || onClient) return;
@@ -460,7 +460,7 @@ namespace Thermodynamics.Harness
 
         public const float FlyingSpeed = 100f;
 
-/// <summary>Disagreeing operation.</summary>
+
         private static bool Disagreeing(Degradation how, float seconds)
         {
             if (how.OcclusionWrongEverySeconds <= 0f) return false;
@@ -471,13 +471,13 @@ namespace Thermodynamics.Harness
             return into < how.OcclusionWrongForSeconds;
         }
 
-/// <summary>Degrees operation.</summary>
+
         private static float Degrees(float degrees)
         {
             return (float)(degrees * Math.PI / 180d);
         }
 
-/// <summary>Reweigh operation.</summary>
+
         private static void Reweigh(ThermalSimulation simulation, float share)
         {
             if (share == 0f) return;
@@ -492,7 +492,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Silence operation.</summary>
+
         private static void Silence(ThermalSimulation simulation, float share)
         {
             if (share <= 0f) return;
@@ -516,7 +516,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Pressurise operation.</summary>
+
         private static int Pressurise(ThermalSimulation simulation, float level)
         {
             if (level < 0f) level = 0f;
@@ -533,27 +533,27 @@ namespace Thermodynamics.Harness
             return filled;
         }
 
-/// <summary>Unmap operation.</summary>
+
         private static void Unmap(ThermalSimulation simulation)
         {
             Pressurise(simulation, 0f);
             simulation.Solver.RefreshExposure(new RoomMap());
         }
 
-/// <summary>Remap operation.</summary>
+
         private static void Remap(ThermalSimulation simulation, float level)
         {
             simulation.Solver.RefreshExposure(simulation.Rooms.Map);
             Pressurise(simulation, level);
         }
 
-/// <summary>Drive operation.</summary>
+
         private static void Drive(ThermalSimulation simulation, float watts)
         {
             Census.DriveCensus(simulation, watts);
         }
 
-/// <summary>Advance operation.</summary>
+
         private static float Advance(ThermalSimulation simulation, EnvironmentSample environment,
             float seconds)
         {
@@ -567,7 +567,7 @@ namespace Thermodynamics.Harness
             return steps * step;
         }
 
-/// <summary>Compare operation.</summary>
+
         private static int Compare(ThermalSimulation server, ThermalSimulation client,
             out float worstKelvin, out int serverOverCritical, out int missing)
         {
@@ -602,7 +602,7 @@ namespace Thermodynamics.Harness
             return disagreeing;
         }
 
-/// <summary>Align operation.</summary>
+
         private static void Align(ThermalSimulation client, ThermalSimulation server)
         {
             IList<ThermalNode> mine = server.Solver.Nodes;
@@ -614,10 +614,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Withhold operation.</summary>
+
         private static List<BlockInstance> Withhold(ThermalSimulation simulation, float share)
         {
-/// <summary>List operation.</summary>
+
             List<BlockInstance> held = new List<BlockInstance>();
             if (share <= 0f) return held;
 
@@ -638,7 +638,7 @@ namespace Thermodynamics.Harness
             return held;
         }
 
-/// <summary>Deliver operation.</summary>
+
         private static void Deliver(ThermalSimulation simulation, List<BlockInstance> held)
         {
             if (held == null || held.Count == 0) return;
@@ -649,7 +649,7 @@ namespace Thermodynamics.Harness
             held.Clear();
         }
 
-/// <summary>All operation.</summary>
+
         public static List<Degradation> All()
         {
             List<Degradation> cases = new List<Degradation>
@@ -839,10 +839,10 @@ namespace Thermodynamics.Harness
             return cases;
         }
 
-/// <summary>NeedsScenario operation.</summary>
+
         private static string NeedsScenario(Result result)
         {
-/// <summary>All operation.</summary>
+
             List<Degradation> cases = All();
             for (int i = 0; i < cases.Count; i++)
             {
@@ -854,10 +854,10 @@ namespace Thermodynamics.Harness
             return "another scenario";
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(IList<Result> results)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("Each input a client drives its own simulation from, degraded, with the");
             text.AppendLine("correction off and on.");
@@ -886,7 +886,7 @@ namespace Thermodynamics.Harness
                         result.Name,
                         off ? "off" : result.Protocol.IntervalSeconds.ToString("n0") + " s"
                             + (result.Protocol.WholeHullOnJoin ? "+j" : ""),
-/// <summary>NeedsScenario operation.</summary>
+
                         "not exercised on " + result.Scenario + " — needs " + NeedsScenario(result)));
                     continue;
                 }

@@ -7,9 +7,9 @@ namespace Thermodynamics.Core
         private readonly Dictionary<ulong, Dictionary<long, HotTailSchedule>> owed =
             new Dictionary<ulong, Dictionary<long, HotTailSchedule>>();
 
-/// <summary>List operation.</summary>
+
         private readonly List<ulong> departed = new List<ulong>();
-/// <summary>List operation.</summary>
+
         private readonly List<long> stale = new List<long>();
 
         public float IntervalSeconds = HotTailSchedule.DefaultIntervalSeconds;
@@ -32,7 +32,7 @@ namespace Thermodynamics.Core
             get { return owed.Count; }
         }
 
-/// <summary>Advance operation.</summary>
+
         public void Advance(float seconds)
         {
             foreach (KeyValuePair<ulong, Dictionary<long, HotTailSchedule>> entry in owed)
@@ -44,19 +44,19 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Next operation.</summary>
+
         public HotTailSend Next(ulong client, long gridId)
         {
             return ScheduleFor(client, gridId).Next();
         }
 
-/// <summary>Request operation.</summary>
+
         public bool Request(ulong client, long gridId)
         {
             return ScheduleFor(client, gridId).RequestSnapshot();
         }
 
-/// <summary>Wants operation.</summary>
+
         public bool Wants(ulong client, long gridId)
         {
             Dictionary<long, HotTailSchedule> grids;
@@ -66,7 +66,7 @@ namespace Thermodynamics.Core
             return grids.TryGetValue(gridId, out schedule) && schedule.SnapshotWanted;
         }
 
-/// <summary>Forget operation.</summary>
+
         public void Forget(ICollection<ulong> clients, ICollection<long> grids)
         {
             departed.Clear();
@@ -96,13 +96,13 @@ namespace Thermodynamics.Core
             stale.Clear();
         }
 
-/// <summary>Clear operation.</summary>
+
         public void Clear()
         {
             owed.Clear();
         }
 
-/// <summary>ScheduleFor operation.</summary>
+
         private HotTailSchedule ScheduleFor(ulong client, long gridId)
         {
             Dictionary<long, HotTailSchedule> grids;
@@ -115,7 +115,7 @@ namespace Thermodynamics.Core
             HotTailSchedule schedule;
             if (!grids.TryGetValue(gridId, out schedule))
             {
-/// <summary>HotTailSchedule operation.</summary>
+
                 schedule = new HotTailSchedule();
                 grids[gridId] = schedule;
             }
@@ -128,7 +128,7 @@ namespace Thermodynamics.Core
     public class HotTailClientState
     {
         private readonly Dictionary<long, HotTailRequest> asked = new Dictionary<long, HotTailRequest>();
-/// <summary>List operation.</summary>
+
         private readonly List<long> stale = new List<long>();
 
         public int Tracked
@@ -149,7 +149,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Advance operation.</summary>
+
         public void Advance(float seconds)
         {
             foreach (KeyValuePair<long, HotTailRequest> entry in asked)
@@ -158,27 +158,27 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>ShouldAsk operation.</summary>
+
         public bool ShouldAsk(long gridId)
         {
             return RequestFor(gridId).ShouldAsk();
         }
 
-/// <summary>Answered operation.</summary>
+
         public void Answered(long gridId)
         {
             HotTailRequest request;
             if (asked.TryGetValue(gridId, out request)) request.Answer();
         }
 
-/// <summary>HasHull operation.</summary>
+
         public bool HasHull(long gridId)
         {
             HotTailRequest request;
             return asked.TryGetValue(gridId, out request) && request.Answered;
         }
 
-/// <summary>Forget operation.</summary>
+
         public void Forget(ICollection<long> grids)
         {
             stale.Clear();
@@ -192,19 +192,19 @@ namespace Thermodynamics.Core
             stale.Clear();
         }
 
-/// <summary>Clear operation.</summary>
+
         public void Clear()
         {
             asked.Clear();
         }
 
-/// <summary>RequestFor operation.</summary>
+
         private HotTailRequest RequestFor(long gridId)
         {
             HotTailRequest request;
             if (!asked.TryGetValue(gridId, out request))
             {
-/// <summary>HotTailRequest operation.</summary>
+
                 request = new HotTailRequest();
                 asked[gridId] = request;
             }

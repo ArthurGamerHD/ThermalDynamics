@@ -8,17 +8,17 @@ namespace Thermodynamics.Tests
 {
     public class ClimateModelTests
     {
-/// <summary>Earthlike operation.</summary>
+
         private static PlanetThermalProperties Earthlike()
         {
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
-            planet.NightTemperature = 283.15f;      // 10 C
-            planet.DayTemperature = 294.15f;        // 21 C
+            planet.NightTemperature = 283.15f;
+            planet.DayTemperature = 294.15f;
             planet.PoleTemperatureDrop = 40f;
             return planet;
         }
 
-/// <summary>Sine operation.</summary>
+
         private static float Sine(double degrees)
         {
             return (float)Math.Sin(degrees * Math.PI / 180d);
@@ -26,10 +26,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheEquatorGetsThePlanetsOwnFigures operation.</summary>
+
         public void TheEquatorGetsThePlanetsOwnFigures()
         {
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             Assert.Equal(planet.DayTemperature, ClimateModel.Target(planet, 0f, 1f, 0f), 2);
@@ -37,10 +37,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThePolesAreColderThanTheEquatorDayAndNight operation.</summary>
+
         public void ThePolesAreColderThanTheEquatorDayAndNight()
         {
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             float equatorNoon = ClimateModel.Target(planet, 0f, 1f, 0f);
@@ -52,10 +52,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDropGrowsWithLatitudeRatherThanSteppingAtABand operation.</summary>
+
         public void TheDropGrowsWithLatitudeRatherThanSteppingAtABand()
         {
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             float previous = ClimateModel.Target(planet, 0f, 0.5f, 0f);
@@ -72,10 +72,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APlanetWithNoPoleDropIsOneClimateAsItUsedToBe operation.</summary>
+
         public void APlanetWithNoPoleDropIsOneClimateAsItUsedToBe()
         {
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
             planet.PoleTemperatureDrop = 0f;
 
@@ -86,10 +86,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>BelowTheHorizonIsNightWhateverTheDepth operation.</summary>
+
         public void BelowTheHorizonIsNightWhateverTheDepth()
         {
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             float dusk = ClimateModel.Target(planet, 0f, -0.01f, 0f);
@@ -99,10 +99,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WarmthFollowsTheSunsHeight operation.</summary>
+
         public void WarmthFollowsTheSunsHeight()
         {
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             Assert.True(ClimateModel.Target(planet, 0f, Sine(60), 0f)
@@ -111,10 +111,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheGroundShiftsTheAirAboveItBothWays operation.</summary>
+
         public void TheGroundShiftsTheAirAboveItBothWays()
         {
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             float bare = ClimateModel.Target(planet, 0f, 0.5f, 0f);
@@ -124,7 +124,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SnowIsColdAndSandIsWarmAndAnythingUnknownIsNeither operation.</summary>
+
         public void SnowIsColdAndSandIsWarmAndAnythingUnknownIsNeither()
         {
             Assert.True(GroundTemperature.OffsetFor("Snow") < -10f);
@@ -139,10 +139,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>AWiderSwingCoolsTheNightAsMuchAsItWarmsTheNoon operation.</summary>
+
         public void AWiderSwingCoolsTheNightAsMuchAsItWarmsTheNoon()
         {
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             float flatDay = ClimateModel.Target(planet, 0f, 1f, 0f, 1f);
@@ -157,10 +157,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoSwingIsTheSameTemperatureAllDay operation.</summary>
+
         public void NoSwingIsTheSameTemperatureAllDay()
         {
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             Assert.Equal(
@@ -169,7 +169,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SandSwingsMoreThanSnowAndBothStillPointTheRightWay operation.</summary>
+
         public void SandSwingsMoreThanSnowAndBothStillPointTheRightWay()
         {
             GroundTemperature.Ground sand = GroundTemperature.For("Sand_02");
@@ -186,7 +186,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>AirChasesTheSunRatherThanTrackingIt operation.</summary>
+
         public void AirChasesTheSunRatherThanTrackingIt()
         {
             float ambient = ClimateModel.Follow(283.15f, 303.15f, 10f, 45f);
@@ -196,7 +196,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OneLagClosesAboutTwoThirdsOfTheGap operation.</summary>
+
         public void OneLagClosesAboutTwoThirdsOfTheGap()
         {
             float ambient = ClimateModel.Follow(0f + 100f, 200f, 45f, 45f);
@@ -205,14 +205,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EnoughTimeArrives operation.</summary>
+
         public void EnoughTimeArrives()
         {
             Assert.Equal(300f, ClimateModel.Follow(200f, 300f, 1000f, 45f), 1);
         }
 
         [Fact]
-/// <summary>NoLagMeansTheTargetAtOnce operation.</summary>
+
         public void NoLagMeansTheTargetAtOnce()
         {
             Assert.Equal(300f, ClimateModel.Follow(200f, 300f, 10f, 0f), 3);
@@ -220,10 +220,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheHottestPartOfTheDayLandsAfterNoon operation.</summary>
+
         public void TheHottestPartOfTheDayLandsAfterNoon()
         {
-/// <summary>Earthlike operation.</summary>
+
             PlanetThermalProperties planet = Earthlike();
 
             float ambient = planet.NightTemperature;
@@ -235,8 +235,8 @@ namespace Thermodynamics.Tests
             const int steps = 360;
             for (int i = 0; i < steps; i++)
             {
-/// <summary>Sine operation.</summary>
-                float elevation = Sine(i - 90);   // dawn, noon, dusk, midnight
+
+                float elevation = Sine(i - 90);
 
                 if (elevation > highestSun)
                 {

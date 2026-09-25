@@ -19,10 +19,10 @@ namespace Thermodynamics.Harness
 
         public static readonly int[] SourceCounts = { 0, 1, 8, 32 };
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(string shape, int blocks, int repeats = 12, Action<string> log = null)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
             foreach (int sources in SourceCounts)
             {
@@ -32,7 +32,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Measure operation.</summary>
+
         private static Row Measure(string shape, int blocks, int sources, int repeats)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -44,7 +44,7 @@ namespace Thermodynamics.Harness
 
             simulation.StepExact(1, sample);
 
-/// <summary>Stopwatch operation.</summary>
+
             Stopwatch watch = new Stopwatch();
             double best = double.MaxValue;
             for (int r = 0; r < repeats; r++)
@@ -55,7 +55,7 @@ namespace Thermodynamics.Harness
                 if (watch.Elapsed.TotalMilliseconds < best) best = watch.Elapsed.TotalMilliseconds;
             }
 
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Sources = sources;
             row.StepMs = best;
@@ -63,16 +63,16 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(string shape, int blocks, Action<string> log = null)
         {
             return Table(Run(shape, blocks, 12, log));
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(List<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.Append("sources".PadLeft(9))
                 .Append("step ms".PadLeft(11))

@@ -15,9 +15,9 @@ namespace Thermodynamics.Core
 
     public interface ISimulationProfiler
     {
-/// <summary>Begin operation.</summary>
+
         void Begin(SimulationPhase phase);
-/// <summary>End operation.</summary>
+
         void End(SimulationPhase phase);
     }
 }

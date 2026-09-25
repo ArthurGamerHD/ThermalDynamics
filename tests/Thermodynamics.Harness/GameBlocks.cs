@@ -34,7 +34,7 @@ namespace Thermodynamics.Harness
 
             public float ThrustNewtons;
 
-/// <summary>List operation.</summary>
+
             public List<BlockComponent> Components = new List<BlockComponent>();
 
             public float Integrity;
@@ -68,17 +68,17 @@ namespace Thermodynamics.Harness
                 }
             }
 
-/// <summary>ToString operation.</summary>
+
             public override string ToString()
             {
                 return TypeId + "/" + SubtypeId;
             }
         }
 
-/// <summary>ContentPath operation.</summary>
+
         public static string ContentPath()
         {
-/// <summary>List operation.</summary>
+
             List<string> candidates = new List<string>();
 
             string bin = Environment.GetEnvironmentVariable("SE_BIN");
@@ -102,7 +102,7 @@ namespace Thermodynamics.Harness
 
         public static bool IsInstalled
         {
-/// <summary>ContentPath operation.</summary>
+
             get { return ContentPath() != null; }
         }
 
@@ -110,17 +110,17 @@ namespace Thermodynamics.Harness
         private static Dictionary<string, float> _componentMasses;
         private static Dictionary<string, float> _componentIntegrities;
 
-/// <summary>object operation.</summary>
+
         private static readonly object CacheLock = new object();
 
-/// <summary>Warm operation.</summary>
+
         public static void Warm()
         {
             All();
             BySubtype();
         }
 
-/// <summary>ComponentMasses operation.</summary>
+
         public static Dictionary<string, float> ComponentMasses()
         {
             lock (CacheLock)
@@ -128,7 +128,7 @@ namespace Thermodynamics.Harness
             if (_componentMasses != null) return _componentMasses;
 
             Dictionary<string, float> masses = new Dictionary<string, float>();
-/// <summary>ContentPath operation.</summary>
+
             string content = ContentPath();
 
             if (content != null)
@@ -154,7 +154,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>ComponentIntegrities operation.</summary>
+
         public static Dictionary<string, float> ComponentIntegrities()
         {
             lock (CacheLock)
@@ -162,7 +162,7 @@ namespace Thermodynamics.Harness
             if (_componentIntegrities != null) return _componentIntegrities;
 
             Dictionary<string, float> integrities = new Dictionary<string, float>();
-/// <summary>ContentPath operation.</summary>
+
             string content = ContentPath();
 
             if (content != null)
@@ -188,7 +188,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>IntegrityOf operation.</summary>
+
         public static float IntegrityOf(string subtype)
         {
             if (string.IsNullOrEmpty(subtype)) return 0f;
@@ -197,16 +197,16 @@ namespace Thermodynamics.Harness
             return BySubtype().TryGetValue(subtype, out definition) ? definition.Integrity : 0f;
         }
 
-/// <summary>All operation.</summary>
+
         public static List<Definition> All()
         {
             lock (CacheLock)
             {
             if (_all != null) return _all;
 
-/// <summary>List operation.</summary>
+
             List<Definition> blocks = new List<Definition>();
-/// <summary>ContentPath operation.</summary>
+
             string content = ContentPath();
             if (content == null)
             {
@@ -214,9 +214,9 @@ namespace Thermodynamics.Harness
                 return blocks;
             }
 
-/// <summary>ComponentMasses operation.</summary>
+
             Dictionary<string, float> masses = ComponentMasses();
-/// <summary>ComponentIntegrities operation.</summary>
+
             Dictionary<string, float> integrities = ComponentIntegrities();
             string directory = Path.Combine(content, "CubeBlocks");
             if (!Directory.Exists(directory))
@@ -239,7 +239,7 @@ namespace Thermodynamics.Harness
 
                 foreach (XElement definition in document.Descendants("Definition"))
                 {
-/// <summary>Read operation.</summary>
+
                     Definition block = Read(definition, masses, integrities);
                     if (block != null) blocks.Add(block);
                 }
@@ -250,7 +250,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Read operation.</summary>
+
         private static Definition Read(XElement definition, Dictionary<string, float> masses,
             Dictionary<string, float> integrities)
         {
@@ -268,11 +268,11 @@ namespace Thermodynamics.Harness
                 TypeId = type,
                 SubtypeId = subtype ?? "",
                 Large = ((string)definition.Element("CubeSize") ?? "Large") == "Large",
-/// <summary>ParseSize operation.</summary>
+
                 Size = ParseSize(definition.Element("Size")),
             };
 
-/// <summary>Megawatts operation.</summary>
+
             block.PowerOutputWatts = Megawatts(definition, "MaxPowerOutput");
             block.PowerDrawWatts = Math.Max(
                 Megawatts(definition, "RequiredPowerInput"),
@@ -281,11 +281,11 @@ namespace Thermodynamics.Harness
                         Megawatts(definition, "OperationalPowerConsumption"))));
             if (block.TypeId == "Thrust") block.ThrustNewtons = Number(definition, "ForceMagnitude");
 
-/// <summary>Number operation.</summary>
+
             block.JumpEnergyJoules = Number(definition, "PowerNeededForJump") * 3600f
                 * ThermalConstants.MegawattsToWatts;
 
-/// <summary>Number operation.</summary>
+
             float efficiency = Number(definition, "PowerEfficiency");
             if (efficiency > 0f) block.PowerEfficiency = efficiency;
 
@@ -298,7 +298,7 @@ namespace Thermodynamics.Harness
             {
                 foreach (XElement mount in mounts.Elements("MountPoint"))
                 {
-/// <summary>FaceOf operation.</summary>
+
                     int face = FaceOf((string)mount.Attribute("Side"));
                     if (face < 0) continue;
 
@@ -314,7 +314,7 @@ namespace Thermodynamics.Harness
                 block.Pcu = pcu;
             }
 
-/// <summary>Number operation.</summary>
+
             block.BuildSeconds = Number(definition, "BuildTimeSeconds");
 
             XElement components = definition.Element("Components");
@@ -345,13 +345,13 @@ namespace Thermodynamics.Harness
             return block;
         }
 
-/// <summary>Megawatts operation.</summary>
+
         private static float Megawatts(XElement definition, string name)
         {
             return Number(definition, name) * ThermalConstants.MegawattsToWatts;
         }
 
-/// <summary>Number operation.</summary>
+
         private static float Number(XElement definition, string name)
         {
             float value;
@@ -360,7 +360,7 @@ namespace Thermodynamics.Harness
                 CultureInfo.InvariantCulture, out value) ? value : 0f;
         }
 
-/// <summary>ParseSize operation.</summary>
+
         private static Vector3I ParseSize(XElement size)
         {
             if (size == null) return Vector3I.One;
@@ -371,7 +371,7 @@ namespace Thermodynamics.Harness
                 Math.Max(1, ParseInt(size.Attribute("z"))));
         }
 
-/// <summary>ParseInt operation.</summary>
+
         private static int ParseInt(XAttribute attribute)
         {
             int value;
@@ -379,7 +379,7 @@ namespace Thermodynamics.Harness
                 NumberStyles.Integer, CultureInfo.InvariantCulture, out value) ? value : 1;
         }
 
-/// <summary>FaceOf operation.</summary>
+
         private static int FaceOf(string side)
         {
             switch (side)
@@ -394,7 +394,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>BySubtype operation.</summary>
+
         public static Dictionary<string, Definition> BySubtype()
         {
             lock (CacheLock)
@@ -414,7 +414,7 @@ namespace Thermodynamics.Harness
 
         private static Dictionary<string, Definition> _bySubtype;
 
-/// <summary>BaseVariants operation.</summary>
+
         public static Dictionary<string, Definition> BaseVariants()
         {
             lock (CacheLock)
@@ -428,7 +428,7 @@ namespace Thermodynamics.Harness
                 {
                     if (block.SubtypeId.Length > 0) continue;
 
-/// <summary>BaseVariantKey operation.</summary>
+
                     string key = BaseVariantKey(block.TypeId, block.Large);
                     if (!map.ContainsKey(key)) map[key] = block;
                 }
@@ -438,7 +438,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>BaseVariantKey operation.</summary>
+
         public static string BaseVariantKey(string typeId, bool large)
         {
             return (typeId ?? "") + (large ? "/large" : "/small");
@@ -446,14 +446,14 @@ namespace Thermodynamics.Harness
 
         private static Dictionary<string, Definition> _baseVariants;
 
-/// <summary>ModelName operation.</summary>
+
         public static string ModelName(Definition definition)
         {
             if (definition == null) return null;
             return definition.SubtypeId.Length > 0 ? definition.SubtypeId : definition.TypeId;
         }
 
-/// <summary>ByModelName operation.</summary>
+
         public static Dictionary<string, Definition> ByModelName()
         {
             lock (CacheLock)
@@ -476,7 +476,7 @@ namespace Thermodynamics.Harness
 
         private static Dictionary<string, Definition> _byModelName;
 
-/// <summary>ByTypeAndSubtype operation.</summary>
+
         public static Dictionary<string, Definition> ByTypeAndSubtype()
         {
             lock (CacheLock)
@@ -488,7 +488,7 @@ namespace Thermodynamics.Harness
 
                 foreach (Definition block in All())
                 {
-/// <summary>TypeAndSubtypeKey operation.</summary>
+
                     string key = TypeAndSubtypeKey(block.TypeId, block.SubtypeId);
                     if (!map.ContainsKey(key)) map[key] = block;
                 }
@@ -498,7 +498,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>TypeAndSubtypeKey operation.</summary>
+
         public static string TypeAndSubtypeKey(string typeId, string subtypeId)
         {
             string type = typeId ?? "";
@@ -508,7 +508,7 @@ namespace Thermodynamics.Harness
 
         private static Dictionary<string, Definition> _byTypeAndSubtype;
 
-/// <summary>ByType operation.</summary>
+
         public static Dictionary<string, List<Definition>> ByType()
         {
             Dictionary<string, List<Definition>> types = new Dictionary<string, List<Definition>>();
@@ -518,7 +518,7 @@ namespace Thermodynamics.Harness
                 List<Definition> list;
                 if (!types.TryGetValue(block.TypeId, out list))
                 {
-/// <summary>List operation.</summary>
+
                     list = new List<Definition>();
                     types[block.TypeId] = list;
                 }
@@ -528,7 +528,7 @@ namespace Thermodynamics.Harness
             return types;
         }
 
-/// <summary>TypeComponents operation.</summary>
+
         public static List<BlockComponent> TypeComponents(IList<Definition> blocks)
         {
             Dictionary<string, BlockComponent> total = new Dictionary<string, BlockComponent>();

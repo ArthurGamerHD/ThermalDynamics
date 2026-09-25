@@ -14,20 +14,20 @@ namespace RichHudFramework
     using Client;
     using Internal;
     using CursorMembers = MyTuple<
-        Func<HudSpaceDelegate, bool>, // IsCapturingSpace
-        Func<float, HudSpaceDelegate, bool>, // TryCaptureHudSpace
-        Func<ApiMemberAccessor, bool>, // IsCapturing
-        Func<ApiMemberAccessor, bool>, // TryCapture
-        Func<ApiMemberAccessor, bool>, // TryRelease
-        ApiMemberAccessor // GetOrSetMember
+        Func<HudSpaceDelegate, bool>,
+        Func<float, HudSpaceDelegate, bool>,
+        Func<ApiMemberAccessor, bool>,
+        Func<ApiMemberAccessor, bool>,
+        Func<ApiMemberAccessor, bool>,
+        ApiMemberAccessor
     >;
     using TextBuilderMembers = MyTuple<
-        MyTuple<Func<int, int, object>, Func<int>>, // GetLineMember, GetLineCount
-        Func<Vector2I, int, object>, // GetCharMember
-        ApiMemberAccessor, // GetOrSetMember
-        Action<IList<RichStringMembers>, Vector2I>, // Insert
-        Action<IList<RichStringMembers>>, // SetText
-        Action // Clear
+        MyTuple<Func<int, int, object>, Func<int>>,
+        Func<Vector2I, int, object>,
+        ApiMemberAccessor,
+        Action<IList<RichStringMembers>, Vector2I>,
+        Action<IList<RichStringMembers>>,
+        Action
     >;
 
     namespace UI
@@ -35,20 +35,20 @@ namespace RichHudFramework
         using static NodeConfigIndices;
         using TextBoardMembers = MyTuple<
             TextBuilderMembers,
-            FloatProp, // Scale
-            Func<Vector2>, // Size
-            Func<Vector2>, // TextSize
-            Vec2Prop, // FixedSize
-            Action<BoundingBox2, BoundingBox2, MatrixD[]> // Draw 
+            FloatProp,
+            Func<Vector2>,
+            Func<Vector2>,
+            Vec2Prop,
+            Action<BoundingBox2, BoundingBox2, MatrixD[]>
         >;
 
         namespace Client
         {
             using HudClientMembers = MyTuple<
-                CursorMembers, // Cursor
-                Func<TextBoardMembers>, // GetNewTextBoard
-                ApiMemberAccessor, // GetOrSetMembers
-                Action // Unregister
+                CursorMembers,
+                Func<TextBoardMembers>,
+                ApiMemberAccessor,
+                Action
             >;
 
             public sealed partial class HudMain : RichHudClient.ApiModule
@@ -98,7 +98,7 @@ namespace RichHudFramework
                         if (value != null)
                             return new RichText(value as List<RichStringMembers>);
                         else
-/// <summary>default operation.</summary>
+
                             return default(RichText);
                     }
                     set
@@ -148,7 +148,7 @@ namespace RichHudFramework
                 private readonly ApiMemberAccessor GetOrSetMemberFunc;
                 private readonly Action UnregisterAction;
 
-/// <summary>HudMain operation.</summary>
+
                 private HudMain() : base(ApiModuleTypes.HudMain, false, true)
                 {
                     if (Instance != null)
@@ -157,16 +157,16 @@ namespace RichHudFramework
                     Instance = this;
                     var members = (HudClientMembers)GetApiData();
 
-/// <summary>HudCursor operation.</summary>
+
                     _cursor = new HudCursor(members.Item1);
                     GetTextBoardDataFunc = members.Item2;
                     GetOrSetMemberFunc = members.Item3;
                     UnregisterAction = members.Item4;
 
                     PixelToWorldRef = new MatrixD[1];
-/// <summary>HudClientRoot operation.</summary>
+
                     _root = new HudClientRoot();
-/// <summary>HighDpiClientRoot operation.</summary>
+
                     _highDpiRoot = new HighDpiClientRoot();
 
                     GetOrSetMemberFunc(_root.DataHandle, (int)HudMainAccessors.ClientRootNode);
@@ -175,31 +175,31 @@ namespace RichHudFramework
                     UpdateCache();
                 }
 
-/// <summary>Init operation.</summary>
+
                 public static void Init()
                 {
                     BillBoardUtils.Init();
 
                     if (Instance == null)
-/// <summary>HudMain operation.</summary>
+
                         new HudMain();
                 }
 
-/// <summary>BeforeMasterDraw operation.</summary>
+
                 private void BeforeMasterDraw()
                 {
                     UpdateCache();
                     _cursor.Update();
                 }
 
-/// <summary>Close operation.</summary>
+
                 public override void Close()
                 {
                     UnregisterAction?.Invoke();
                     Instance = null;
                 }
 
-/// <summary>UpdateCache operation.</summary>
+
                 private void UpdateCache()
                 {
                     ScreenWidth = (float)GetOrSetMemberFunc(null, (int)HudMainAccessors.ScreenWidth);
@@ -212,7 +212,7 @@ namespace RichHudFramework
                     UiBkOpacity = (float)GetOrSetMemberFunc(null, (int)HudMainAccessors.UiBkOpacity);
                     InputMode = (HudInputMode)GetOrSetMemberFunc(null, (int)HudMainAccessors.InputMode);
 
-/// <summary>Vector2 operation.</summary>
+
                     ScreenDim = new Vector2(ScreenWidth, ScreenHeight);
                     ScreenDimHighDPI = ScreenDim / ResScale;
 
@@ -221,7 +221,7 @@ namespace RichHudFramework
                     enableCursorTemp = false;
                 }
 
-/// <summary>EnableCursorTemp operation.</summary>
+
                 public static void EnableCursorTemp()
                 {
                     if (Instance == null)
@@ -230,7 +230,7 @@ namespace RichHudFramework
                     Instance.enableCursorTemp = true;
                 }
 
-/// <summary>Returns the focusoffset.</summary>
+
                 public static byte GetFocusOffset(Action<byte> LoseFocusCallback)
                 {
                     if (Instance == null)
@@ -239,7 +239,7 @@ namespace RichHudFramework
                     return (byte)Instance.GetOrSetMemberFunc(LoseFocusCallback, (int)HudMainAccessors.GetFocusOffset);
                 }
 
-/// <summary>Returns the inputfocus.</summary>
+
                 public static void GetInputFocus(IFocusHandler handler)
                 {
                     if (Instance == null)
@@ -248,7 +248,7 @@ namespace RichHudFramework
                     Instance.GetOrSetMemberFunc(new Action(handler.ReleaseFocus), (int)HudMainAccessors.GetInputFocus);
                 }
 
-/// <summary>Returns the textboarddata.</summary>
+
                 public static TextBoardMembers GetTextBoardData()
                 {
                     if (Instance == null)
@@ -279,7 +279,7 @@ namespace RichHudFramework
 
                     public bool IsFacingCamera { get; }
 
-/// <summary>HudClientRoot operation.</summary>
+
                     public HudClientRoot()
                     {
                         DrawCursorInHudSpace = true;
@@ -293,10 +293,10 @@ namespace RichHudFramework
                         _config[StateID] |= (uint)(HudElementStates.CanUseCursor | HudElementStates.IsSpaceNode);
                     }
 
-/// <summary>Layout operation.</summary>
+
                     protected override void Layout()
                     {
-/// <summary>Vector3 operation.</summary>
+
                         CursorPos = new Vector3(Cursor.ScreenPos.X, Cursor.ScreenPos.Y, 0f);
                         HudElementBase.ElementUtils.UpdateRootAnchoring(ScreenDim, children);
                     }
@@ -304,13 +304,13 @@ namespace RichHudFramework
 
                 private class HighDpiClientRoot : ScaledSpaceNode
                 {
-/// <summary>HighDpiClientRoot operation.</summary>
+
                     public HighDpiClientRoot() : base(Root)
                     {
                         UpdateScaleFunc = () => ResScale;
                     }
 
-/// <summary>Layout operation.</summary>
+
                     protected override void Layout()
                     {
                         base.Layout();

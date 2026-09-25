@@ -31,39 +31,39 @@ namespace RichHudFramework
 
                 protected readonly Vector3D[] octant;
 
-/// <summary>BlockBoard operation.</summary>
+
                 public BlockBoard()
                 {
                     faces = new MatBoard[6];
                     octant = new Vector3D[8];
 
                     for (int n = 0; n < 6; n++)
-/// <summary>MatBoard operation.</summary>
+
                         faces[n] = new MatBoard();
                 }
 
-/// <summary>Sets the color.</summary>
+
                 public void SetColor(Color color)
                 {
                     for (int n = 0; n < 6; n++)
                         faces[n].Color = color;
                 }
 
-/// <summary>Sets the material.</summary>
+
                 public void SetMaterial(Material material)
                 {
                     for (int n = 0; n < 6; n++)
                         faces[n].Material = material;
                 }
 
-/// <summary>Sets the materialalignment.</summary>
+
                 public void SetMaterialAlignment(MaterialAlignment materialAlignment)
                 {
                     for (int n = 0; n < 6; n++)
                         faces[n].MatAlignment = materialAlignment;
                 }
 
-/// <summary>Draw operation.</summary>
+
                 public void Draw(ref MatrixD matrix)
                 {
                     MyQuadD faceQuad;
@@ -112,27 +112,27 @@ namespace RichHudFramework
                     faces[5].Draw(ref faceQuad);
                 }
 
-/// <summary>UpdateOctant operation.</summary>
+
                 private void UpdateOctant(ref MatrixD matrix)
                 {
                     Vector3D size = Size * 0.5d;
 
-/// <summary>Vector3D operation.</summary>
+
                     octant[0] = new Vector3D(-size.X, size.Y, -size.Z);
-/// <summary>Vector3D operation.</summary>
+
                     octant[1] = new Vector3D(size.X, size.Y, -size.Z);
-/// <summary>Vector3D operation.</summary>
+
                     octant[2] = new Vector3D(size.X, -size.Y, -size.Z);
-/// <summary>Vector3D operation.</summary>
+
                     octant[3] = new Vector3D(-size.X, -size.Y, -size.Z);
 
-/// <summary>Vector3D operation.</summary>
+
                     octant[4] = new Vector3D(-size.X, size.Y, size.Z);
-/// <summary>Vector3D operation.</summary>
+
                     octant[5] = new Vector3D(size.X, size.Y, size.Z);
-/// <summary>Vector3D operation.</summary>
+
                     octant[6] = new Vector3D(size.X, -size.Y, size.Z);
-/// <summary>Vector3D operation.</summary>
+
                     octant[7] = new Vector3D(-size.X, -size.Y, size.Z);
 
                     for (int n = 0; n < 8; n++)

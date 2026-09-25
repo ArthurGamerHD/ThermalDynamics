@@ -19,10 +19,10 @@ namespace RichHudFramework.UI
 	{
 		IBindEventProxy this[IBind bind] { get; }
 
-/// <summary>Adds a .</summary>
+
 		void Add(IBind bind, EventHandler NewPressed = null, EventHandler PressedAndHeld = null, EventHandler Released = null);
 
-/// <summary>Returns the hasbind.</summary>
+
 		bool GetHasBind(IBind bind);
 
         bool IsFocusRequired { get; set; }

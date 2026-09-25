@@ -19,14 +19,12 @@ namespace Thermodynamics
             get { return applying; }
         }
 
-/// <summary>Registers the API and message handler.</summary>
         public static void Register(MySessionComponentBase session)
         {
             if (synced != null || session == null) return;
 
             try
             {
-/// <summary>NetSync operation.</summary>
                 synced = new NetSync<Settings>(
                     session, TransferType.ServerToClient, Settings.EnsureLoaded(), true);
 
@@ -40,7 +38,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Publishes the API table to other mods.</summary>
         public static void Publish(Settings settings)
         {
             if (synced == null || settings == null || applying) return;
@@ -56,7 +53,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Refresh operation.</summary>
         private static void Refresh(ulong sender)
         {
             if (synced == null || !IsServer() || Settings.Instance == null) return;
@@ -71,7 +67,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Received operation.</summary>
         private static void Received(Settings previous, Settings value, ulong sender)
         {
             if (value == null) return;
@@ -114,7 +109,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Fingerprint operation.</summary>
         public static string Fingerprint()
         {
             Settings settings = Settings.Instance;
@@ -144,7 +138,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>ReplicatedCount operation.</summary>
         public static int ReplicatedCount()
         {
             List<string> names = Settings.Names();
@@ -161,7 +154,6 @@ namespace Thermodynamics
             get { return synced != null && synced.Value != null; }
         }
 
-/// <summary>Fetch operation.</summary>
         public static bool Fetch()
         {
             if (synced == null || IsServer()) return false;
@@ -178,7 +170,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>IsServer operation.</summary>
         private static bool IsServer()
         {
             try

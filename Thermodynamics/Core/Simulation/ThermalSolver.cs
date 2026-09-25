@@ -10,7 +10,7 @@ namespace Thermodynamics.Core
         public float Temperature;
         public float Damage;
 
-/// <summary>OverheatEvent operation.</summary>
+
         public OverheatEvent(BlockInstance block, float temperature, float damage)
         {
             Block = block;
@@ -32,15 +32,15 @@ namespace Thermodynamics.Core
         private readonly GridModel grid;
         private readonly SurfaceMap surfaces;
 
-/// <summary>List operation.</summary>
+
         private readonly List<ThermalNode> nodes = new List<ThermalNode>();
-/// <summary>List operation.</summary>
+
         private readonly List<ThermalLink> links = new List<ThermalLink>();
-/// <summary>List operation.</summary>
+
         private readonly List<CoolantLoop> loops = new List<CoolantLoop>();
-/// <summary>List operation.</summary>
+
         private readonly List<RoomAirNode> roomAir = new List<RoomAirNode>();
-/// <summary>List operation.</summary>
+
         private readonly List<HeatPumpDevice> heatPumps = new List<HeatPumpDevice>();
 
         private float[] nodeWatts = new float[0];
@@ -79,7 +79,7 @@ namespace Thermodynamics.Core
 
         private bool environmentRowsValid;
 
-/// <summary>InvalidateEnvironmentRows operation.</summary>
+
         private void InvalidateEnvironmentRows()
         {
             environmentRowsValid = false;
@@ -94,16 +94,16 @@ namespace Thermodynamics.Core
 
         private float[] nodeWindLit = new float[0];
 
-/// <summary>SunShadowMap operation.</summary>
+
         private readonly SunShadowMap sunShadow = new SunShadowMap();
 
-/// <summary>SunShadowMap operation.</summary>
+
         private readonly SunShadowMap windShadow = new SunShadowMap();
 
-/// <summary>List operation.</summary>
+
         public readonly List<SunShadowMap.Occluder> SunOccluders = new List<SunShadowMap.Occluder>();
 
-/// <summary>MarkSunOccludersChanged operation.</summary>
+
         public void MarkSunOccludersChanged()
         {
             sunLitDirty = true;
@@ -159,7 +159,7 @@ namespace Thermodynamics.Core
 
         public Vector3 LastPressureWatts { get; private set; }
 
-/// <summary>NodeShapeNormal operation.</summary>
+
         public Vector3 NodeShapeNormal(int index)
         {
             int b = index * 3;
@@ -180,7 +180,7 @@ namespace Thermodynamics.Core
 
         private bool heatGainRowTotalValid;
 
-/// <summary>ResetEnvironmentTotals operation.</summary>
+
         private void ResetEnvironmentTotals()
         {
             environmentWattsAccumulator = 0f;
@@ -189,7 +189,7 @@ namespace Thermodynamics.Core
             pressureAccumulator = Vector3.Zero;
         }
 
-/// <summary>Sets the tleheatgainrowtotal.</summary>
+
         private void SettleHeatGainRowTotal(bool summed)
         {
             if (summed)
@@ -207,7 +207,7 @@ namespace Thermodynamics.Core
             pressureAccumulator += pressureRowTotal;
         }
 
-/// <summary>Publishes the API table to other mods.</summary>
+
         private void PublishEnvironmentTotals()
         {
             LastEnvironmentWatts = environmentWattsAccumulator;
@@ -216,41 +216,41 @@ namespace Thermodynamics.Core
             LastPressureWatts = pressureAccumulator;
         }
 
-/// <summary>List operation.</summary>
+
         private readonly List<OverheatEvent> overheats = new List<OverheatEvent>();
 
         private float[] nodeOverheatDamage = new float[0];
         private float[] nodeOverheatPeak = new float[0];
 
-/// <summary>List operation.</summary>
+
         private readonly List<int> overheated = new List<int>();
 
-/// <summary>ThermalThresholds operation.</summary>
+
         private readonly ThermalThresholds thresholds = new ThermalThresholds();
-/// <summary>List operation.</summary>
+
         private readonly List<ThresholdCrossing> crossings = new List<ThresholdCrossing>();
         private readonly int[] exposureScratch = new int[Face.Count];
-/// <summary>List operation.</summary>
+
         private readonly List<BlockInstance> neighbourScratch = new List<BlockInstance>();
 
-/// <summary>List operation.</summary>
+
         private readonly List<int> neighbourFaces = new List<int>();
 
         private IBlockAdjacency adjacency;
 
-/// <summary>SimulationWork operation.</summary>
+
         public SimulationWork Work = new SimulationWork();
 
         private bool linksDirty = true;
 
-/// <summary>List operation.</summary>
+
         private readonly List<ThermalNode> pendingLinkNodes = new List<ThermalNode>();
 
         private int syncedLinks;
 
         private bool resyncAll = true;
 
-/// <summary>ThermalSolver operation.</summary>
+
         public ThermalSolver(ThermalSettings settings, GridModel grid, SurfaceMap surfaces)
         {
             if (settings == null) throw new ArgumentNullException("settings");
@@ -291,7 +291,7 @@ namespace Thermodynamics.Core
 
         public IList<ThermalLink> Links
         {
-/// <summary>RebuildLinksIfNeeded operation.</summary>
+
             get { RebuildLinksIfNeeded(); return links; }
         }
 
@@ -334,7 +334,7 @@ namespace Thermodynamics.Core
 
         public float LastRequiredSubsteps { get; private set; }
 
-/// <summary>NodeConductanceTotal operation.</summary>
+
         public float NodeConductanceTotal(int index)
         {
             if (index < 0 || index >= nodes.Count) return 0f;
@@ -343,15 +343,15 @@ namespace Thermodynamics.Core
             return nodeConductanceTotal[index];
         }
 
-/// <summary>NodeSubstepDemand operation.</summary>
+
         public float NodeSubstepDemand(int index)
         {
             EnvironmentState environment = Environment;
-/// <summary>NodeSubstepDemand operation.</summary>
+
             return NodeSubstepDemand(index, ref environment);
         }
 
-/// <summary>NodeSubstepDemand operation.</summary>
+
         public float NodeSubstepDemand(int index, ref EnvironmentState environment)
         {
             if (index < 0 || index >= nodes.Count) return 0f;
@@ -363,7 +363,7 @@ namespace Thermodynamics.Core
             float capacity = node.ThermalMass;
             if (capacity <= 0f) return 0f;
 
-/// <summary>StabilityEnvironment operation.</summary>
+
             StabilityTerms terms = StabilityEnvironment(ref environment);
 
             float rate = nodeConductanceTotal[index];
@@ -389,7 +389,7 @@ namespace Thermodynamics.Core
         public EnvironmentState Environment { get; private set; }
 
 
-/// <summary>EnsureNodeCapacity operation.</summary>
+
         public void EnsureNodeCapacity(int count)
         {
             if (count <= 0) return;
@@ -398,17 +398,17 @@ namespace Thermodynamics.Core
             if (pendingLinkNodes.Capacity < count) pendingLinkNodes.Capacity = count;
         }
 
-/// <summary>Adds a block.</summary>
+
         public ThermalNode AddBlock(BlockInstance block, float initialTemperature)
         {
             if (block == null) throw new ArgumentNullException("block");
             if (block.Thermal.ExcludeFromSimulation) return null;
 
-/// <summary>Returns the node.</summary>
+
             ThermalNode existing = GetNode(block);
             if (existing != null) return existing;
 
-/// <summary>ThermalNode operation.</summary>
+
             ThermalNode node = new ThermalNode(block, grid.GridSize, initialTemperature, settings.HeatTimeScale);
             node.Index = nodes.Count;
             nodes.Add(node);
@@ -426,12 +426,12 @@ namespace Thermodynamics.Core
 
         public float SpilledEnergy { get; private set; }
 
-/// <summary>Removes the block.</summary>
+
         public bool RemoveBlock(BlockInstance block)
         {
             if (block == null) return false;
 
-/// <summary>Returns the node.</summary>
+
             ThermalNode node = GetNode(block);
             if (node == null) return false;
 
@@ -445,7 +445,7 @@ namespace Thermodynamics.Core
 
                 EnsureBuffers();
                 EnsureNodeChainCapacity(nodes.Count);
-/// <summary>SpillEnergyOf operation.</summary>
+
                 SpilledEnergy = SpillEnergyOf(node);
             }
 
@@ -480,12 +480,12 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>RefreshBlockLinks operation.</summary>
+
         public bool RefreshBlockLinks(BlockInstance block)
         {
             if (block == null) return false;
 
-/// <summary>Returns the node.</summary>
+
             ThermalNode node = GetNode(block);
             if (node == null) return false;
 
@@ -502,12 +502,12 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>RefreshExposureOf operation.</summary>
+
         public void RefreshExposureOf(BlockInstance block, RoomMap rooms)
         {
             if (block == null) return;
 
-/// <summary>Returns the node.</summary>
+
             ThermalNode node = GetNode(block);
             if (node == null) return;
 
@@ -518,7 +518,7 @@ namespace Thermodynamics.Core
             if (node.SetExposedFaces(exposureScratch)) Work.ExposureNodeWrites++;
         }
 
-/// <summary>Returns the node.</summary>
+
         public ThermalNode GetNode(BlockInstance block)
         {
             if (block == null) return null;
@@ -530,7 +530,7 @@ namespace Thermodynamics.Core
             return node != null && ReferenceEquals(node.Block, block) ? node : null;
         }
 
-/// <summary>Returns the nodeat.</summary>
+
         public ThermalNode GetNodeAt(Vector3I cell)
         {
             return GetNode(grid.GetAtCell(cell));
@@ -538,7 +538,7 @@ namespace Thermodynamics.Core
 
         public bool CanonicalLinkOrder = true;
 
-/// <summary>CanonicaliseLinks operation.</summary>
+
         private void CanonicaliseLinks()
         {
             int count = links.Count;
@@ -571,13 +571,13 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Builds the API method table.</summary>
+
         public void BuildLinksIfNeeded()
         {
             RebuildLinksIfNeeded();
         }
 
-/// <summary>RebuildLinksIfNeeded operation.</summary>
+
         private void RebuildLinksIfNeeded()
         {
             if (linksDirty)
@@ -589,7 +589,7 @@ namespace Thermodynamics.Core
             if (pendingLinkNodes.Count > 0) LinkPendingNodes();
         }
 
-/// <summary>RebuildLinks operation.</summary>
+
         public void RebuildLinks()
         {
             AbandonStep();
@@ -630,7 +630,7 @@ namespace Thermodynamics.Core
 
                 for (int n = 0; n < neighbourScratch.Count; n++)
                 {
-/// <summary>Returns the node.</summary>
+
                     ThermalNode b = GetNode(neighbourScratch[n]);
                     if (b == null) continue;
 
@@ -670,7 +670,7 @@ namespace Thermodynamics.Core
             RecomputeConductanceTotals();
         }
 
-/// <summary>SyncLinkArrays operation.</summary>
+
         private void SyncLinkArrays()
         {
             if (linkA.Length < links.Count)
@@ -692,13 +692,13 @@ namespace Thermodynamics.Core
             syncedLinks = links.Count;
         }
 
-/// <summary>LinkPendingNodes operation.</summary>
+
         private void LinkPendingNodes()
         {
             Work.TopologyRebuilds++;
             Work.TopologyNodeVisits += pendingLinkNodes.Count;
 
-/// <summary>EnsureBuffers operation.</summary>
+
             bool buffersGrew = EnsureBuffers();
 
             IBlockAdjacency adjacency = Adjacency;
@@ -719,7 +719,7 @@ namespace Thermodynamics.Core
 
                 for (int n = 0; n < neighbourScratch.Count; n++)
                 {
-/// <summary>Returns the node.</summary>
+
                     ThermalNode b = GetNode(neighbourScratch[n]);
                     if (b == null) continue;
 
@@ -759,7 +759,7 @@ namespace Thermodynamics.Core
             if (firstNewLink < linkMassFactorFrom) linkMassFactorFrom = firstNewLink;
         }
 
-/// <summary>Adds a conductanceofnewlinks.</summary>
+
         private void AddConductanceOfNewLinks(int firstNewLink)
         {
             for (int i = firstNewLink; i < links.Count; i++)
@@ -772,7 +772,7 @@ namespace Thermodynamics.Core
 
         private readonly Dictionary<long, float> ventedRings = new Dictionary<long, float>();
 
-/// <summary>SpillDissolvedLoops operation.</summary>
+
         private void SpillDissolvedLoops(List<CoolantLoop> newLoops,
             Dictionary<long, float> previousFill)
         {
@@ -821,7 +821,7 @@ namespace Thermodynamics.Core
 
                 for (int p = 0; p < pipes; p++)
                 {
-/// <summary>Returns the node.</summary>
+
                     ThermalNode node = GetNode(dying.Pipes[p]);
                     if (node == null) continue;
 
@@ -841,7 +841,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>ReclaimHeldCoolant operation.</summary>
+
         private void ReclaimHeldCoolant(CoolantLoop loop)
         {
             int pipes = loop.Pipes.Count;
@@ -857,7 +857,7 @@ namespace Thermodynamics.Core
 
             for (int p = 0; p < pipes; p++)
             {
-/// <summary>Returns the node.</summary>
+
                 ThermalNode node = GetNode(loop.Pipes[p]);
                 if (node == null || node.HeldCoolantCapacity <= 0f) continue;
 
@@ -897,7 +897,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Sets the loops.</summary>
+
         public void SetLoops(List<CoolantLoop> newLoops)
         {
             Dictionary<long, float> previous = new Dictionary<long, float>();
@@ -975,7 +975,7 @@ namespace Thermodynamics.Core
             conductanceTotalsDirty = true;
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private void BuildLoopLinks(CoolantLoop loop)
         {
             loop.Links.Clear();
@@ -984,7 +984,7 @@ namespace Thermodynamics.Core
             {
                 BlockInstance pipe = loop.Pipes[i];
 
-/// <summary>Returns the node.</summary>
+
                 ThermalNode pipeNode = GetNode(pipe);
                 if (pipeNode != null)
                 {
@@ -1000,7 +1000,7 @@ namespace Thermodynamics.Core
                     BlockInstance target = grid.GetAtCell(sinks[s].Target);
                     if (target == null || target == pipe) continue;
 
-/// <summary>Returns the node.</summary>
+
                     ThermalNode targetNode = GetNode(target);
                     if (targetNode == null) continue;
 
@@ -1013,7 +1013,7 @@ namespace Thermodynamics.Core
         }
 
 
-/// <summary>RefreshExposure operation.</summary>
+
         public void RefreshExposure(RoomMap rooms)
         {
             BeginExposureRefresh(rooms);
@@ -1028,7 +1028,7 @@ namespace Thermodynamics.Core
             get { return exposureMap != null; }
         }
 
-/// <summary>BeginExposureRefresh operation.</summary>
+
         public void BeginExposureRefresh(RoomMap rooms)
         {
             Work.ExposureRefreshes++;
@@ -1036,7 +1036,7 @@ namespace Thermodynamics.Core
             exposureCursor = 0;
         }
 
-/// <summary>StepExposureRefresh operation.</summary>
+
         public bool StepExposureRefresh(int nodeBudget)
         {
             if (exposureMap == null) return false;
@@ -1063,7 +1063,7 @@ namespace Thermodynamics.Core
             return false;
         }
 
-/// <summary>RefreshExposureAround operation.</summary>
+
         public void RefreshExposureAround(RoomMap rooms, IList<int> roomIndices)
         {
             if (rooms == null || roomIndices == null) return;
@@ -1103,7 +1103,7 @@ namespace Thermodynamics.Core
 
             foreach (BlockInstance block in affected)
             {
-/// <summary>Returns the node.</summary>
+
                 ThermalNode node = GetNode(block);
                 if (node == null) continue;
 
@@ -1122,7 +1122,7 @@ namespace Thermodynamics.Core
             public bool Initialised;
         }
 
-/// <summary>List operation.</summary>
+
         private readonly List<RoomAirNode> roomAirPool = new List<RoomAirNode>();
 
         private readonly Dictionary<Vector3I, RememberedAir> rememberedAir =
@@ -1130,10 +1130,10 @@ namespace Thermodynamics.Core
 
         private int[] roomContactFaces = new int[0];
 
-/// <summary>List operation.</summary>
+
         private readonly List<int> roomContactOrder = new List<int>();
 
-/// <summary>RebuildRoomAir operation.</summary>
+
         public void RebuildRoomAir(RoomMap rooms)
         {
             Work.RoomAirRebuilds++;
@@ -1166,10 +1166,10 @@ namespace Thermodynamics.Core
                     RoomMap.RoomCells cells = rooms.CellsOf(r);
                     if (cells.Count == 0) continue;
 
-/// <summary>TakeRoomAirNode operation.</summary>
+
                     RoomAirNode air = TakeRoomAirNode();
                     air.RoomIndex = r;
-/// <summary>LowestCell operation.</summary>
+
                     air.Anchor = LowestCell(cells);
                     air.CellCount = cells.Count;
                     air.Volume = cells.Count * cellVolume;
@@ -1202,7 +1202,7 @@ namespace Thermodynamics.Core
             conductanceTotalsDirty = true;
         }
 
-/// <summary>TakeRoomAirNode operation.</summary>
+
         private RoomAirNode TakeRoomAirNode()
         {
             int last = roomAirPool.Count - 1;
@@ -1213,7 +1213,7 @@ namespace Thermodynamics.Core
             return air;
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private void BuildRoomLinks(RoomAirNode air, RoomMap rooms)
         {
             air.Links.Clear();
@@ -1241,7 +1241,7 @@ namespace Thermodynamics.Core
 
                     Work.RoomAirFaceHits++;
 
-/// <summary>Returns the node.</summary>
+
                     ThermalNode node = GetNode(block);
                     if (node == null) continue;
 
@@ -1279,7 +1279,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>RestoreRoomAir operation.</summary>
+
         public int RestoreRoomAir(IList<StoredRoom> stored)
         {
             if (stored == null || stored.Count == 0 || roomAir.Count == 0) return 0;
@@ -1304,7 +1304,7 @@ namespace Thermodynamics.Core
             return restored;
         }
 
-/// <summary>LowestCell operation.</summary>
+
         private static Vector3I LowestCell(RoomMap.RoomCells cells)
         {
             bool first = true;
@@ -1331,7 +1331,7 @@ namespace Thermodynamics.Core
         }
 
 
-/// <summary>RebuildHeatPumps operation.</summary>
+
         public void RebuildHeatPumps()
         {
             Work.HeatPumpRebuilds++;
@@ -1363,7 +1363,7 @@ namespace Thermodynamics.Core
                 Vector3I coldCell, hotCell;
                 if (!block.TryHeatPumpCells(out coldCell, out hotCell)) continue;
 
-/// <summary>HeatPumpDevice operation.</summary>
+
                 HeatPumpDevice device = new HeatPumpDevice();
                 device.Block = block;
                 device.RatedWatts = shape.RatedWatts;
@@ -1376,27 +1376,27 @@ namespace Thermodynamics.Core
                     device.PowerAvailable = carried.PowerAvailable;
                 }
 
-/// <summary>NodeIndexAt operation.</summary>
+
                 device.ColdNodeIndex = NodeIndexAt(coldCell);
-/// <summary>NodeIndexAt operation.</summary>
+
                 device.HotNodeIndex = NodeIndexAt(hotCell);
 
                 heatPumps.Add(device);
             }
         }
 
-/// <summary>NodeIndexAt operation.</summary>
+
         private int NodeIndexAt(Vector3I cell)
         {
             BlockInstance block = grid.GetAtCell(cell);
             if (block == null) return -1;
 
-/// <summary>Returns the node.</summary>
+
             ThermalNode node = GetNode(block);
             return node == null ? -1 : node.Index;
         }
 
-/// <summary>Returns the heatpump.</summary>
+
         public HeatPumpDevice GetHeatPump(BlockInstance block)
         {
             if (block == null) return null;
@@ -1408,7 +1408,7 @@ namespace Thermodynamics.Core
             return null;
         }
 
-/// <summary>AccumulateHeatPumps operation.</summary>
+
         private void AccumulateHeatPumps(float h)
         {
             if (!settings.EnableHeatPumps) return;
@@ -1445,14 +1445,14 @@ namespace Thermodynamics.Core
 
                 if (settable <= 0f) continue;
 
-/// <summary>Limit operation.</summary>
+
                 float wanted = Limit(coefficient * settable, pump.RatedWatts, headroom);
                 pump.DemandEnergy += (wanted / coefficient) * h;
 
                 float available = settable * ThermalMath.Clamp01(pump.PowerAvailable);
                 if (available <= 0f) continue;
 
-/// <summary>Limit operation.</summary>
+
                 float lift = Limit(coefficient * available, pump.RatedWatts, headroom);
                 float work = lift / coefficient;
 
@@ -1465,7 +1465,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Limit operation.</summary>
+
         private static float Limit(float watts, float rating, float headroom)
         {
             if (watts > rating) watts = rating;
@@ -1473,7 +1473,7 @@ namespace Thermodynamics.Core
             return watts;
         }
 
-/// <summary>Returns the roomair.</summary>
+
         public RoomAirNode GetRoomAir(RoomMap rooms, Vector3I cell)
         {
             if (rooms == null) return null;
@@ -1488,10 +1488,10 @@ namespace Thermodynamics.Core
             return null;
         }
 
-/// <summary>Sets the roompressure.</summary>
+
         public bool SetRoomPressure(RoomMap rooms, Vector3I cell, float pressure)
         {
-/// <summary>Returns the roomair.</summary>
+
             RoomAirNode air = GetRoomAir(rooms, cell);
             if (air == null) return false;
 
@@ -1512,7 +1512,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>RefreshHeatGeneration operation.</summary>
+
         public void RefreshHeatGeneration()
         {
             for (int i = 0; i < nodes.Count; i++)
@@ -1522,7 +1522,7 @@ namespace Thermodynamics.Core
         }
 
 
-/// <summary>SyncNodeState operation.</summary>
+
         internal void SyncNodeState()
         {
             Work.NodeStateSyncs++;
@@ -1577,7 +1577,7 @@ namespace Thermodynamics.Core
 
         private const float ClampBindingMargin = 0.9999f;
 
-/// <summary>ClampCanBind operation.</summary>
+
         private bool ClampCanBind(float h)
         {
             if (h <= 0f) return false;
@@ -1614,7 +1614,7 @@ namespace Thermodynamics.Core
             return false;
         }
 
-/// <summary>RefreshLinkMassFactors operation.</summary>
+
         private void RefreshLinkMassFactors()
         {
             int from = linkMassFactorFrom;
@@ -1635,7 +1635,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>ResolveDirection operation.</summary>
+
         private static void ResolveDirection(ref Vector3 direction, float[] weights)
         {
             for (int f = 0; f < Face.Count; f++)
@@ -1668,7 +1668,7 @@ namespace Thermodynamics.Core
             public float FrictionScale;
         }
 
-/// <summary>RelaxationFactor operation.</summary>
+
         private float RelaxationFactor(int node, float h)
         {
             if (!ConductionClampLive || h <= 0f) return 1f;
@@ -1683,10 +1683,10 @@ namespace Thermodynamics.Core
             return stable >= 1f ? 1f : stable;
         }
 
-/// <summary>PlanEnvironment operation.</summary>
+
         private EnvironmentPlan PlanEnvironment(ref EnvironmentState env)
         {
-/// <summary>EnvironmentPlan operation.</summary>
+
             EnvironmentPlan plan = new EnvironmentPlan();
 
             plan.Radiating = settings.EnableEnvironment && settings.EnableRadiation;
@@ -1750,14 +1750,14 @@ namespace Thermodynamics.Core
             get { return shapeNormalPass; }
         }
 
-/// <summary>RefreshShapeNormals operation.</summary>
+
         public void RefreshShapeNormals()
         {
             if (!BeginShapeNormalRefresh()) return;
             while (StepShapeNormalRefresh(int.MaxValue)) { }
         }
 
-/// <summary>BeginShapeNormalRefresh operation.</summary>
+
         public bool BeginShapeNormalRefresh()
         {
             if (shapeNormalPass) return true;
@@ -1775,7 +1775,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>StepShapeNormalRefresh operation.</summary>
+
         public bool StepShapeNormalRefresh(int nodeBudget)
         {
             if (!shapeNormalPass) return false;
@@ -1807,7 +1807,7 @@ namespace Thermodynamics.Core
             return false;
         }
 
-/// <summary>RebuildShapeNormals operation.</summary>
+
         public void RebuildShapeNormals()
         {
             if (nodeShapeNormal.Length < nodes.Count * 3)
@@ -1821,17 +1821,17 @@ namespace Thermodynamics.Core
             while (StepShapeNormalRefresh(int.MaxValue)) { }
         }
 
-/// <summary>ShapeFactorOf operation.</summary>
+
         private float ShapeFactorOf(int index, ref Vector3 wind)
         {
             int b = index * 3;
             return ShapeNormal.Factor(
-/// <summary>Vector3 operation.</summary>
+
                 new Vector3(nodeShapeNormal[b], nodeShapeNormal[b + 1], nodeShapeNormal[b + 2]),
                 wind);
         }
 
-/// <summary>AccumulateEnvironmentRange operation.</summary>
+
         private void AccumulateEnvironmentRange(ref EnvironmentState env, ref EnvironmentPlan plan,
             float h, int from, int to)
         {
@@ -1843,7 +1843,7 @@ namespace Thermodynamics.Core
                 {
                     for (int i = from; i < to; i++)
                     {
-/// <summary>RelaxationFactor operation.</summary>
+
                         nodeRelaxation[i] = RelaxationFactor(i, h);
                     }
                 }
@@ -2008,7 +2008,7 @@ namespace Thermodynamics.Core
 
                     if (clampRelaxation)
                     {
-/// <summary>ClampRelaxation operation.</summary>
+
                         float capped = ClampRelaxation(relaxation,
                             (env.AmbientTemperature - temperature) * nodeThermalMass[i] * inverseH);
 
@@ -2058,7 +2058,7 @@ namespace Thermodynamics.Core
             if (PrecomputeEnvironment && to >= nodes.Count) environmentRowsValid = true;
         }
 
-/// <summary>AccumulateHeatSources operation.</summary>
+
         private void AccumulateHeatSources(ref EnvironmentState env, bool diagnostics)
         {
             for (int s = 0; s < env.HeatSourceCount; s++)
@@ -2074,7 +2074,7 @@ namespace Thermodynamics.Core
                     if (nodeExposedFaces[i] <= 0) continue;
 
                     float watts = source.Irradiance * nodeAbsorptivity[i]
-/// <summary>Weighted operation.</summary>
+
                         * Weighted(i, sourceWeights) * nodeExposedArea[i];
                     if (watts == 0f) continue;
 
@@ -2085,7 +2085,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>RefreshSunShadow operation.</summary>
+
         private bool RefreshSunShadow(ref Vector3 sunLocal)
         {
             if (!settings.SolarSelfShadowing)
@@ -2097,7 +2097,7 @@ namespace Thermodynamics.Core
                     sunLitDirty = false;
                 }
 
-/// <summary>StepSunLit operation.</summary>
+
                 return StepSunLit(SunLitBudget);
             }
 
@@ -2109,11 +2109,11 @@ namespace Thermodynamics.Core
 
             if (sunShadow.Step(SunShadowBudget)) BeginSunLit(-1f);
 
-/// <summary>StepSunLit operation.</summary>
+
             return StepSunLit(SunLitBudget);
         }
 
-/// <summary>RefreshWindShadow operation.</summary>
+
         private bool RefreshWindShadow(ref Vector3 windLocal)
         {
             if (!settings.EnableWindwardShielding)
@@ -2124,7 +2124,7 @@ namespace Thermodynamics.Core
                     BeginWindLit(1f);
                 }
 
-/// <summary>StepWindLit operation.</summary>
+
                 return StepWindLit(SunLitBudget);
             }
 
@@ -2140,11 +2140,11 @@ namespace Thermodynamics.Core
 
             if (windShadow.Step(SunShadowBudget)) BeginWindLit(-1f);
 
-/// <summary>StepWindLit operation.</summary>
+
             return StepWindLit(SunLitBudget);
         }
 
-/// <summary>BeginWindLit operation.</summary>
+
         private void BeginWindLit(float fill)
         {
             windLitFill = fill;
@@ -2152,7 +2152,7 @@ namespace Thermodynamics.Core
             windLitPending = true;
         }
 
-/// <summary>StepWindLit operation.</summary>
+
         private bool StepWindLit(int nodeBudget)
         {
             if (!windLitPending) return false;
@@ -2192,7 +2192,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>BeginSunLit operation.</summary>
+
         private void BeginSunLit(float fill)
         {
             sunLitFill = fill;
@@ -2200,7 +2200,7 @@ namespace Thermodynamics.Core
             sunLitPending = true;
         }
 
-/// <summary>StepSunLit operation.</summary>
+
         private bool StepSunLit(int nodeBudget)
         {
             if (!sunLitPending) return false;
@@ -2239,7 +2239,7 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>FinishSunLit operation.</summary>
+
         public void FinishSunLit()
         {
             while (sunLitPending) StepSunLit(int.MaxValue);
@@ -2256,14 +2256,14 @@ namespace Thermodynamics.Core
 
         public int WindLitLength { get { return nodeWindLit.Length; } }
 
-/// <summary>SunLitFraction operation.</summary>
+
         public float SunLitFraction(int node, int face)
         {
             int index = (node * Face.Count) + face;
             return index >= 0 && index < nodeSunLit.Length ? nodeSunLit[index] : 1f;
         }
 
-/// <summary>Weighted operation.</summary>
+
         private float Weighted(int node, float[] weights)
         {
             int b = node * Face.Count;
@@ -2275,7 +2275,7 @@ namespace Thermodynamics.Core
                 + (nodeFaceWeights[b + 5] * weights[5]);
         }
 
-/// <summary>Publishes the API table to other mods.</summary>
+
         private void PublishOverheats()
         {
             for (int i = 0; i < overheated.Count; i++)
@@ -2286,7 +2286,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>ClearOverheatAccumulator operation.</summary>
+
         private void ClearOverheatAccumulator()
         {
             for (int i = 0; i < overheated.Count; i++)
@@ -2298,7 +2298,7 @@ namespace Thermodynamics.Core
             overheated.Clear();
         }
 
-/// <summary>ClearEnvironmentDiagnostics operation.</summary>
+
         private void ClearEnvironmentDiagnostics()
         {
             for (int i = 0; i < nodes.Count; i++)
@@ -2307,7 +2307,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>ClearEnvironmentDiagnostics operation.</summary>
+
         private void ClearEnvironmentDiagnostics(int i)
         {
             ThermalNode node = nodes[i];
@@ -2318,7 +2318,7 @@ namespace Thermodynamics.Core
             node.LastHeatSourceWatts = 0f;
         }
 
-/// <summary>ClearConductionDiagnostics operation.</summary>
+
         private void ClearConductionDiagnostics()
         {
             if (!diagnosticsSubstep) return;
@@ -2329,7 +2329,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>AccumulateConductionRange operation.</summary>
+
         private void AccumulateConductionRange(float h, int from, int to)
         {
             bool clamp = ConductionClampLive;
@@ -2368,7 +2368,7 @@ namespace Thermodynamics.Core
                     {
                         if (exchange > maxWatts) exchange = maxWatts;
                     }
-/// <summary>if operation.</summary>
+
                     else if (exchange < maxWatts)
                     {
                         exchange = maxWatts;
@@ -2385,7 +2385,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>AccumulateLoops operation.</summary>
+
         private void AccumulateLoops(float h)
         {
             if (!settings.EnableCoolantLoops) return;
@@ -2440,7 +2440,7 @@ namespace Thermodynamics.Core
 
                     if (clamp)
                     {
-/// <summary>ClampExchange operation.</summary>
+
                         exchange = ClampExchange(
                             exchange, h, difference,
                             loop.SegmentThermalMass,
@@ -2460,7 +2460,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>AccumulateRoomAir operation.</summary>
+
         private void AccumulateRoomAir(float h)
         {
             if (!settings.EnableRoomAir) return;
@@ -2486,9 +2486,9 @@ namespace Thermodynamics.Core
                 float roomRelaxation = 1f;
                 if (clamp && h > 0f)
                 {
-/// <summary>EffectiveRoomMass operation.</summary>
+
                     float mass = EffectiveRoomMass(r);
-/// <summary>RoomConductance operation.</summary>
+
                     float total = RoomConductance(r);
                     if (mass > 0f && total > 0f)
                     {
@@ -2507,7 +2507,7 @@ namespace Thermodynamics.Core
 
                     if (clamp)
                     {
-/// <summary>ClampExchange operation.</summary>
+
                         watts = ClampExchange(
                             watts, h, difference,
                             air.ThermalMass,
@@ -2526,7 +2526,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>ClampRelaxation operation.</summary>
+
         public static float ClampRelaxation(float watts, float wattsToEquilibrium)
         {
             if (watts > 0f)
@@ -2544,7 +2544,7 @@ namespace Thermodynamics.Core
             return 0f;
         }
 
-/// <summary>ClampExchange operation.</summary>
+
         public static float ClampExchange(float watts, float h, float difference, float massA, float massB)
         {
             if (h <= 0f) return watts;
@@ -2559,7 +2559,7 @@ namespace Thermodynamics.Core
             return maxEnergy / h;
         }
 
-/// <summary>Applies the nodewattsrange.</summary>
+
         private void ApplyNodeWattsRange(float h, int from, int to)
         {
             bool damageEnabled = settings.EnableDamage;
@@ -2594,13 +2594,13 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Applies the coupledwatts.</summary>
+
         private void ApplyCoupledWatts(float h)
         {
             for (int l = 0; l < loops.Count; l++)
             {
                 CoolantLoop loop = loops[l];
-/// <summary>EffectiveLoopMass operation.</summary>
+
                 float mass = EffectiveLoopMass(l);
                 float[] watts = loop.SegmentWatts;
 
@@ -2625,23 +2625,23 @@ namespace Thermodynamics.Core
         }
 
 
-/// <summary>RequiredSubsteps operation.</summary>
+
         public float RequiredSubsteps(float deltaSeconds)
         {
             PrepareStepState();
-/// <summary>RequiredSubstepsFromState operation.</summary>
+
             return RequiredSubstepsFromState(deltaSeconds);
         }
 
-/// <summary>RequiredSubsteps operation.</summary>
+
         public float RequiredSubsteps(float deltaSeconds, EnvironmentState environment)
         {
             Environment = environment;
-/// <summary>RequiredSubsteps operation.</summary>
+
             return RequiredSubsteps(deltaSeconds);
         }
 
-/// <summary>PrepareStepState operation.</summary>
+
         private void PrepareStepState()
         {
             RebuildLinksIfNeeded();
@@ -2658,18 +2658,18 @@ namespace Thermodynamics.Core
             public float Convection;
         }
 
-/// <summary>StabilityEnvironment operation.</summary>
+
         private StabilityTerms StabilityEnvironment()
         {
             EnvironmentState environment = Environment;
-/// <summary>StabilityEnvironment operation.</summary>
+
             return StabilityEnvironment(ref environment);
         }
 
-/// <summary>StabilityEnvironment operation.</summary>
+
         private StabilityTerms StabilityEnvironment(ref EnvironmentState environment)
         {
-/// <summary>StabilityTerms operation.</summary>
+
             StabilityTerms terms = new StabilityTerms();
 
             terms.Radiating = settings.EnableEnvironment && settings.EnableRadiation;
@@ -2681,7 +2681,7 @@ namespace Thermodynamics.Core
             return terms;
         }
 
-/// <summary>NodeStabilityRate operation.</summary>
+
         private float NodeStabilityRate(int i, ref StabilityTerms terms)
         {
             float rate = nodeConductanceTotal[i];
@@ -2697,26 +2697,26 @@ namespace Thermodynamics.Core
             return rate + (terms.Convection * nodeExposedArea[i]);
         }
 
-/// <summary>RequiredSubstepsFromState operation.</summary>
+
         private float RequiredSubstepsFromState(float deltaSeconds)
         {
             Work.StabilityEstimates++;
 
             float worst = 0f;
 
-/// <summary>StabilityEnvironment operation.</summary>
+
             StabilityTerms terms = StabilityEnvironment();
 
             for (int i = 0; i < nodes.Count; i++)
             {
-/// <summary>NodeStabilityRate operation.</summary>
+
                 float perNode = NodeStabilityRate(i, ref terms) / nodeThermalMass[i];
                 if (perNode > worst) worst = perNode;
             }
 
             for (int l = 0; l < loops.Count; l++)
             {
-/// <summary>SegmentConductance operation.</summary>
+
                 float perLoop = SegmentConductance(l) / EffectiveLoopMass(l);
                 if (perLoop > worst) worst = perLoop;
 
@@ -2726,7 +2726,7 @@ namespace Thermodynamics.Core
             {
                 if (!roomAir[r].HasAir) continue;
 
-/// <summary>RoomConductance operation.</summary>
+
                 float perRoom = RoomConductance(r) / EffectiveRoomMass(r);
                 if (perRoom > worst) worst = perRoom;
             }
@@ -2768,7 +2768,7 @@ namespace Thermodynamics.Core
             public long EnvironmentDominatedNodes;
         }
 
-/// <summary>PrepareForSteps operation.</summary>
+
         public void PrepareForSteps()
         {
             if (StepInFlight) return;
@@ -2777,7 +2777,7 @@ namespace Thermodynamics.Core
             RefreshLinkMassFactors();
         }
 
-/// <summary>ProfileSubsteps operation.</summary>
+
         public SubstepProfile ProfileSubsteps()
         {
             if (!StepInFlight)
@@ -2789,13 +2789,13 @@ namespace Thermodynamics.Core
                 ApplyThermalMassFloor();
             }
 
-/// <summary>SubstepProfile operation.</summary>
+
             SubstepProfile profile = new SubstepProfile();
             profile.StepSeconds = settings.StepSeconds;
             profile.Links = links.Count;
 
             float scale = settings.StepSeconds / StabilitySafetyFactor;
-/// <summary>StabilityEnvironment operation.</summary>
+
             StabilityTerms terms = StabilityEnvironment();
 
             float[] edges = SubstepProfile.DemandEdges;
@@ -2847,7 +2847,7 @@ namespace Thermodynamics.Core
 
             for (int i = 0; i < count; i++)
             {
-/// <summary>NodeStabilityRate operation.</summary>
+
                 float rate = NodeStabilityRate(i, ref terms);
                 float conduction = nodeConductanceTotal[i];
 
@@ -2884,13 +2884,13 @@ namespace Thermodynamics.Core
             float worst = profile.WorstNodeDemand > coupled ? profile.WorstNodeDemand : coupled;
             profile.RequiredSubsteps = worst <= 0f ? 1f : worst;
 
-/// <summary>RequiredSubstepsFromState operation.</summary>
+
             profile.RequiredSubstepsInForce = RequiredSubstepsFromState(settings.StepSeconds);
 
             return profile;
         }
 
-/// <summary>ClampSubsteps operation.</summary>
+
         private int ClampSubsteps(float required)
         {
             if (required <= 1f) return 1;
@@ -2902,7 +2902,7 @@ namespace Thermodynamics.Core
 
         private bool conductanceTotalsDirty = true;
 
-/// <summary>RecomputeConductanceTotalsIfNeeded operation.</summary>
+
         private void RecomputeConductanceTotalsIfNeeded()
         {
             if (!conductanceTotalsDirty) return;
@@ -2925,7 +2925,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Applies the thermalmassfloor.</summary>
+
         private void ApplyThermalMassFloor()
         {
             FlooredNodes = 0;
@@ -2939,14 +2939,14 @@ namespace Thermodynamics.Core
             float perRate = step / (StabilitySafetyFactor * cap);
             bool moved = false;
 
-/// <summary>StabilityEnvironment operation.</summary>
+
             StabilityTerms terms = StabilityEnvironment();
 
             int count = nodes.Count;
             for (int i = 0; i < count; i++)
             {
                 float real = nodes[i].ThermalMass;
-/// <summary>NodeStabilityRate operation.</summary>
+
                 float floor = NodeStabilityRate(i, ref terms) * perRate;
                 float wanted = real < floor ? floor : real;
 
@@ -2964,7 +2964,7 @@ namespace Thermodynamics.Core
             for (int l = 0; l < loops.Count; l++)
             {
                 CoolantLoop loop = loops[l];
-/// <summary>SegmentConductance operation.</summary>
+
                 float floor = SegmentConductance(l) * perRate;
                 loopEffectiveMass[l] = loop.SegmentThermalMass < floor ? floor : loop.SegmentThermalMass;
             }
@@ -2972,7 +2972,7 @@ namespace Thermodynamics.Core
             for (int r = 0; r < roomAir.Count; r++)
             {
                 RoomAirNode air = roomAir[r];
-/// <summary>RoomConductance operation.</summary>
+
                 float floor = RoomConductance(r) * perRate;
                 roomEffectiveMass[r] = air.ThermalMass < floor ? floor : air.ThermalMass;
             }
@@ -2981,13 +2981,13 @@ namespace Thermodynamics.Core
         private float[] loopConductanceTotal = new float[0];
         private float[] roomConductanceTotal = new float[0];
 
-/// <summary>LoopConductance operation.</summary>
+
         private float LoopConductance(int index)
         {
             return index >= 0 && index < loopConductanceTotal.Length ? loopConductanceTotal[index] : 0f;
         }
 
-/// <summary>SegmentConductance operation.</summary>
+
         private float SegmentConductance(int index)
         {
             if (index < 0 || index >= loops.Count) return 0f;
@@ -3023,13 +3023,13 @@ namespace Thermodynamics.Core
 
         private float[] segmentConductanceScratch = new float[0];
 
-/// <summary>RoomConductance operation.</summary>
+
         private float RoomConductance(int index)
         {
             return index >= 0 && index < roomConductanceTotal.Length ? roomConductanceTotal[index] : 0f;
         }
 
-/// <summary>RecomputeCoupledConductance operation.</summary>
+
         private void RecomputeCoupledConductance()
         {
             if (loopConductanceTotal.Length < loops.Count)
@@ -3065,7 +3065,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>EffectiveLoopMass operation.</summary>
+
         private float EffectiveLoopMass(int index)
         {
             if (EffectiveSubstepFloor <= 0 || index >= loopEffectiveMass.Length
@@ -3077,7 +3077,7 @@ namespace Thermodynamics.Core
             return loopEffectiveMass[index];
         }
 
-/// <summary>EffectiveRoomMass operation.</summary>
+
         private float EffectiveRoomMass(int index)
         {
             if (EffectiveSubstepFloor <= 0 || index >= roomEffectiveMass.Length
@@ -3091,7 +3091,7 @@ namespace Thermodynamics.Core
 
         public int FlooredNodes { get; private set; }
 
-/// <summary>RecomputeConductanceTotals operation.</summary>
+
         private void RecomputeConductanceTotals()
         {
             Work.ConductanceRecomputes++;
@@ -3139,7 +3139,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>EnsureBuffers operation.</summary>
+
         private bool EnsureBuffers()
         {
             bool grew = false;
@@ -3222,7 +3222,7 @@ namespace Thermodynamics.Core
 
         private int hottestNode = -1;
 
-/// <summary>HottestNode operation.</summary>
+
         public ThermalNode HottestNode()
         {
             if (hottestNode < 0 || hottestNode >= nodes.Count)
@@ -3238,7 +3238,7 @@ namespace Thermodynamics.Core
             return nodes[hottestNode];
         }
 
-/// <summary>Sets the alltemperatures.</summary>
+
         public void SetAllTemperatures(float kelvin)
         {
             for (int i = 0; i < nodes.Count; i++)

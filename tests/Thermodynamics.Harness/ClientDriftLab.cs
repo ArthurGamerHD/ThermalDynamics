@@ -62,7 +62,7 @@ namespace Thermodynamics.Harness
 
             public float JoinKelvin;
 
-/// <summary>List operation.</summary>
+
             public readonly List<Sample> Samples = new List<Sample>();
 
             public float SecondsToAgree = -1f;
@@ -100,15 +100,15 @@ namespace Thermodynamics.Harness
 
         public const float SampleSeconds = 5f;
 
-/// <summary>Measure operation.</summary>
+
         public static Run Measure(string scenario, float staleSeconds, float watchSeconds,
             int blocks = 2000, ThermalSettings settings = null)
         {
-/// <summary>Measure operation.</summary>
+
             return Measure(scenario, staleSeconds, watchSeconds, blocks, settings, Correction.None);
         }
 
-/// <summary>Measure operation.</summary>
+
         public static Run Measure(string scenario, float staleSeconds, float watchSeconds,
             int blocks, ThermalSettings settings, Correction protocol)
         {
@@ -116,13 +116,13 @@ namespace Thermodynamics.Harness
                 Machine.KeepsUp);
         }
 
-/// <summary>Measure operation.</summary>
+
         public static Run Measure(string scenario, float staleSeconds, float watchSeconds,
             int blocks, ThermalSettings settings, Correction protocol, Machine host)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings world = settings ?? new ThermalSettings().Derive();
-/// <summary>Environment operation.</summary>
+
             Func<float, EnvironmentSample> environment = Environment(scenario);
 
             ThermalSimulation server = Hulls.DrivenPastCritical(world, blocks);
@@ -142,15 +142,15 @@ namespace Thermodynamics.Harness
                 StaleSeconds = staleSeconds,
                 Scenario = scenario,
                 Blocks = server.Solver.Nodes.Count,
-/// <summary>MaxDifference operation.</summary>
+
                 JoinKelvin = MaxDifference(server, client),
                 Protocol = protocol ?? Correction.None,
                 Host = host ?? Machine.KeepsUp,
             };
 
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> selection = new List<StoredTemperature>();
-/// <summary>List operation.</summary>
+
             List<StoredTemperature> received = new List<StoredTemperature>();
 
             float tick = run.Protocol.IntervalSeconds > 0f
@@ -198,7 +198,7 @@ namespace Thermodynamics.Harness
 
                 if (sinceSample >= SampleSeconds)
                 {
-/// <summary>Compare operation.</summary>
+
                     Sample sample = Compare(server, client);
                     sample.Seconds = elapsed;
                     run.Samples.Add(sample);
@@ -235,7 +235,7 @@ namespace Thermodynamics.Harness
             return run;
         }
 
-/// <summary>Correct operation.</summary>
+
         private static void Correct(ThermalSimulation server, ThermalSimulation client, Run run,
             List<StoredTemperature> selection, List<StoredTemperature> received, float band)
         {
@@ -253,7 +253,7 @@ namespace Thermodynamics.Harness
             if (selection.Count > run.PeakBlocksSent) run.PeakBlocksSent = selection.Count;
         }
 
-/// <summary>Environment operation.</summary>
+
         private static Func<float, EnvironmentSample> Environment(string scenario)
         {
             if (scenario == "sunlit") return t => Worlds.Space(new Vector3(0.3f, 0.9f, 0.2f));
@@ -261,7 +261,7 @@ namespace Thermodynamics.Harness
             return t => Worlds.Shadow();
         }
 
-/// <summary>Step operation.</summary>
+
         private static void Step(ThermalSimulation simulation,
             Func<float, EnvironmentSample> environment, float seconds)
         {
@@ -269,19 +269,19 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < steps; i++) simulation.StepExact(1, environment(0f));
         }
 
-/// <summary>MaxDifference operation.</summary>
+
         private static float MaxDifference(ThermalSimulation a, ThermalSimulation b)
         {
             return Compare(a, b).MaxKelvin;
         }
 
-/// <summary>Compare operation.</summary>
+
         private static Sample Compare(ThermalSimulation server, ThermalSimulation client)
         {
             IList<ThermalNode> mine = server.Solver.Nodes;
             IList<ThermalNode> theirs = client.Solver.Nodes;
 
-/// <summary>Sample operation.</summary>
+
             Sample sample = new Sample();
             int count = Math.Min(mine.Count, theirs.Count);
             if (count == 0) return sample;
@@ -311,10 +311,10 @@ namespace Thermodynamics.Harness
             return sample;
         }
 
-/// <summary>CorrectionReport operation.</summary>
+
         public static string CorrectionReport(IList<Run> runs)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("What the server stating its near-critical band buys, and what it costs");
             text.AppendLine();
@@ -356,10 +356,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-/// <summary>HitchReport operation.</summary>
+
         public static string HitchReport(IList<Run> runs)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("A client that keeps losing simulated time, started in step with the server");
             text.AppendLine();
@@ -396,10 +396,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(IList<Run> runs)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("scenario   stale s   join K   to 10 K    to 1 K   misreading critical");
 

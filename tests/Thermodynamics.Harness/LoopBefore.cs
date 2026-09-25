@@ -10,7 +10,7 @@ namespace Thermodynamics.Harness
 
         public const float StagnantFraction = 1f;
 
-/// <summary>For operation.</summary>
+
         public static LoopThermalProperties For(float gridSize)
         {
             LoopThermalProperties properties = LoopThermalProperties.Default();
@@ -22,7 +22,7 @@ namespace Thermodynamics.Harness
             return properties.Clamp();
         }
 
-/// <summary>Applies the .</summary>
+
         public static void Apply(ShipAssembly assembly)
         {
             if (assembly == null) return;
@@ -30,7 +30,7 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < assembly.Simulations.Count; i++)
             {
                 ThermalSimulation simulation = assembly.Simulations[i];
-/// <summary>For operation.</summary>
+
                 simulation.LoopProperties = For(simulation.Grid.GridSize);
                 simulation.RebuildAll();
             }

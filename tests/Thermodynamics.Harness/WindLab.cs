@@ -27,7 +27,7 @@ namespace Thermodynamics.Harness
 
             public bool HasAtmosphere = true;
 
-/// <summary>Vector3 operation.</summary>
+
             public Vector3 Axis = new Vector3(0f, 1f, 0f);
 
             public double DayLength = 7200d;
@@ -49,7 +49,7 @@ namespace Thermodynamics.Harness
 
             public bool PeaksAboveAir { get { return HasAtmosphere && LimitAltitude < 1d; } }
 
-/// <summary>AirDensity operation.</summary>
+
             public float AirDensity(double radius)
             {
                 if (!HasAtmosphere || AtmosphereAltitude <= 0d) return 0f;
@@ -60,13 +60,13 @@ namespace Thermodynamics.Harness
                 return (float)share * Density;
             }
 
-/// <summary>WindCeiling operation.</summary>
+
             public float WindCeiling(double radius)
             {
                 return MaxWindSpeed * AirDensity(radius);
             }
 
-/// <summary>UpAt operation.</summary>
+
             public Vector3D UpAt(double latitude, double longitude)
             {
                 double lat = latitude * Math.PI / 180d;
@@ -78,13 +78,13 @@ namespace Thermodynamics.Harness
                     Math.Cos(lat) * Math.Sin(lon)));
             }
 
-/// <summary>GroundRadius operation.</summary>
+
             public double GroundRadius(Vector3D up)
             {
                 return AverageRadius + Ground.Height(up);
             }
 
-/// <summary>HorizonFrom operation.</summary>
+
             public double HorizonFrom(double height)
             {
                 if (height <= 0d) return 0d;
@@ -93,7 +93,7 @@ namespace Thermodynamics.Harness
 
             public double MetresPerDegree { get { return AverageRadius * Math.PI / 180d; } }
 
-/// <summary>SunElevationSine operation.</summary>
+
             public double SunElevationSine(double latitude, double longitude, double dayFraction)
             {
                 double lat = latitude * Math.PI / 180d;
@@ -108,7 +108,7 @@ namespace Thermodynamics.Harness
                 "EarthLike", "Alien", "Mars", "Pertam", "Triton", "Europa", "Titan", "Moon",
             };
 
-/// <summary>UsualDiameter operation.</summary>
+
             public static double UsualDiameter(string subtype)
             {
                 switch (subtype)
@@ -118,14 +118,14 @@ namespace Thermodynamics.Harness
                     case "Mars": return 120000d;
                     case "Triton": return 80000d;
                     case "Pertam": return 60000d;
-                    default: return 19000d;   // Moon, Europa, Titan
+                    default: return 19000d;
                 }
             }
 
-/// <summary>Vanilla operation.</summary>
+
             public static Planet Vanilla(string subtype, double diameterMetres)
             {
-/// <summary>Planet operation.</summary>
+
                 Planet planet = new Planet();
                 planet.Name = subtype;
                 planet.AverageRadius = diameterMetres * 0.5d;
@@ -180,7 +180,7 @@ namespace Thermodynamics.Harness
                 return planet;
             }
 
-/// <summary>Vanilla operation.</summary>
+
             public static Planet Vanilla(string subtype)
             {
                 return Vanilla(subtype, UsualDiameter(subtype));
@@ -197,10 +197,10 @@ namespace Thermodynamics.Harness
 
             public double Offset = 3300d;
 
-/// <summary>Terrain operation.</summary>
+
             public Terrain() { }
 
-/// <summary>Terrain operation.</summary>
+
             public Terrain(Planet planet)
             {
                 Relief = planet.MaxHillHeight - planet.MinHillHeight;
@@ -208,7 +208,7 @@ namespace Thermodynamics.Harness
                 Offset = (planet.MaxHillHeight + planet.MinHillHeight) * 0.5d;
             }
 
-/// <summary>Height operation.</summary>
+
             public virtual double Height(Vector3D up)
             {
                 double shape = 0d;
@@ -229,10 +229,10 @@ namespace Thermodynamics.Harness
 
         public class FlatTerrain : Terrain
         {
-/// <summary>FlatTerrain operation.</summary>
+
             public FlatTerrain() { }
             public FlatTerrain(Planet planet) : base(planet) { }
-/// <summary>Height operation.</summary>
+
             public override double Height(Vector3D up) { return 0d; }
         }
 
@@ -256,7 +256,7 @@ namespace Thermodynamics.Harness
 
             public float AmbientLagShareOfDay = 0.083f;
 
-/// <summary>LagSecondsFor operation.</summary>
+
             public float LagSecondsFor(double dayLengthSeconds)
             {
                 if (AmbientLagShareOfDay <= 0f || dayLengthSeconds <= 0d) return AmbientLagSeconds;
@@ -293,16 +293,16 @@ namespace Thermodynamics.Harness
             public float BearingDegrees;
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(Planet planet, Options options)
         {
             if (planet == null) planet = new Planet();
             if (options == null) options = new Options();
 
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
-/// <summary>List operation.</summary>
+
             List<Site> sites = new List<Site>();
 
             for (double latitude = -options.LatitudeLimit;
@@ -341,18 +341,18 @@ namespace Thermodynamics.Harness
 
             private float heating = -1f;
 
-/// <summary>Site operation.</summary>
+
             public Site(Planet planet, Options options, double latitude, double longitude)
             {
                 Latitude = latitude;
                 Longitude = longitude;
                 Up = planet.UpAt(latitude, longitude);
                 GroundRadius = planet.GroundRadius(Up);
-/// <summary>ReadRing operation.</summary>
+
                 Ring = ReadRing(planet, options, Up, GroundRadius);
             }
 
-/// <summary>Advance operation.</summary>
+
             public void Advance(
                 Planet planet, Options options, double dayFraction, float step, double seconds,
                 List<Row> rows)
@@ -401,7 +401,7 @@ namespace Thermodynamics.Harness
 
                     WindSolver.Result wind = WindSolver.Solve(ref inputs);
 
-/// <summary>Row operation.</summary>
+
                     Row row = new Row();
                     row.Seconds = seconds;
                     row.DayFraction = dayFraction;
@@ -431,7 +431,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>ReadRing operation.</summary>
+
         public static float[] ReadRing(Planet planet, Options options, Vector3D up, double groundRadius)
         {
             float[] ring = new float[WindTerrain.SampleCount];
@@ -462,7 +462,7 @@ namespace Thermodynamics.Harness
             return ring;
         }
 
-/// <summary>Clamp operation.</summary>
+
         private static double Clamp(double value, double low, double high)
         {
             if (value < low) return low;
@@ -471,10 +471,10 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(List<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append("time_s,day_fraction,latitude_deg,longitude_deg,ground_elev_m,")
               .Append("sun_elevation_deg,wind_agl_m,wind_ceiling,wind_band_share,wind_profile,")
@@ -497,22 +497,22 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>N operation.</summary>
+
         private static string N(double value)
         {
             return value.ToString("0.####", CultureInfo.InvariantCulture);
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(Planet planet, Options options)
         {
             if (planet == null) planet = new Planet();
             if (options == null) options = new Options();
 
-/// <summary>Run operation.</summary>
+
             List<Row> rows = Run(planet, options);
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append("Wind model, one simulated day on ").Append(planet.Name).Append('\n');
             sb.Append("  ").Append(rows.Count.ToString("n0")).Append(" samples: ")
@@ -526,7 +526,7 @@ namespace Thermodynamics.Harness
                 lat += options.LatitudeStep)
             {
                 double target = lat;
-/// <summary>Stat operation.</summary>
+
                 Stat speed = new Stat(), bear = new Stat(), terr = new Stat();
                 for (int i = 0; i < rows.Count; i++)
                 {
@@ -548,7 +548,7 @@ namespace Thermodynamics.Harness
             for (int h = 0; h < options.Heights.Length; h++)
             {
                 double height = options.Heights[h];
-/// <summary>Stat operation.</summary>
+
                 Stat day = new Stat(), night = new Stat();
                 for (int i = 0; i < rows.Count; i++)
                 {
@@ -564,7 +564,7 @@ namespace Thermodynamics.Harness
             }
 
             sb.Append("\nWhat the ground is doing\n");
-/// <summary>Stat operation.</summary>
+
             Stat up = new Stat(), shelter = new Stat(), channel = new Stat(), elev = new Stat();
             for (int i = 0; i < rows.Count; i++)
             {
@@ -583,12 +583,12 @@ namespace Thermodynamics.Harness
                 "  shelter           {0,7:n3} .. {1,6:n3}  (mean {2:n3})\n",
                 shelter.Min, shelter.Max, shelter.Mean));
             sb.Append(string.Format(CultureInfo.InvariantCulture,
-/// <summary>deg operation.</summary>
+
                 "  channelling       {0,7:n1} .. {1,6:n1} deg (mean {2:n1})\n",
                 channel.Min, channel.Max, channel.Mean));
 
             sb.Append("\nAgainst the engine's own figure\n");
-/// <summary>Stat operation.</summary>
+
             Stat ceiling = new Stat(), speeds = new Stat();
             int over = 0;
             for (int i = 0; i < rows.Count; i++)
@@ -613,7 +613,7 @@ namespace Thermodynamics.Harness
             private double min, max, total;
             private int count;
 
-/// <summary>Adds a .</summary>
+
             public void Add(double value)
             {
                 if (count == 0 || value < min) min = value;

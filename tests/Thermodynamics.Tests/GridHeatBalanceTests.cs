@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
 {
     public class GridHeatBalanceTests
     {
-/// <summary>Generation operation.</summary>
+
         private static float Generation(ThermalSimulation simulation)
         {
             float total = 0f;
@@ -17,7 +17,7 @@ namespace Thermodynamics.Tests
             return total;
         }
 
-/// <summary>Rig operation.</summary>
+
         private static ThermalSimulation Rig(
             float watts, out EnvironmentSample sample, bool solar = false, int blocks = 1)
         {
@@ -39,11 +39,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGridMakingNoHeatShedsWhatItHasAndSlowsAsItCools operation.</summary>
+
         public void AGridMakingNoHeatShedsWhatItHasAndSlowsAsItCools()
         {
             EnvironmentSample sample;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(0f, out sample);
 
             simulation.StepExact(1, sample);
@@ -66,16 +66,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AtEquilibriumVentingEqualsGeneration operation.</summary>
+
         public void AtEquilibriumVentingEqualsGeneration()
         {
             EnvironmentSample sample;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(50000f, out sample);
 
             for (int step = 0; step < LabClock.Steps(20000); step++) simulation.StepExact(1, sample);
 
-/// <summary>Generation operation.</summary>
+
             float made = Generation(simulation);
             Assert.True(made > 0f);
 
@@ -85,7 +85,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>HeatMadeInsideAHullIsStillCounted operation.</summary>
+
         public void HeatMadeInsideAHullIsStillCounted()
         {
             ThermalSettings settings = new ThermalSettings
@@ -111,7 +111,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>GenerationIsCountedWithTheEnvironmentSwitchedOff operation.</summary>
+
         public void GenerationIsCountedWithTheEnvironmentSwitchedOff()
         {
             ThermalSettings settings = new ThermalSettings
@@ -135,11 +135,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SunlightCountsAsHeatGained operation.</summary>
+
         public void SunlightCountsAsHeatGained()
         {
             EnvironmentSample sample;
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(0f, out sample, true, 4);
 
             simulation.StepExact(1, sample);
@@ -148,7 +148,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGridAbsorbingFromWarmAirVentsNothing operation.</summary>
+
         public void AGridAbsorbingFromWarmAirVentsNothing()
         {
             ThermalSettings settings = new ThermalSettings

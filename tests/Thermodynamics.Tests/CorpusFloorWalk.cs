@@ -13,16 +13,16 @@ namespace Thermodynamics.Tests
 
         private const float Slack = 0.01f;
 
-/// <summary>Scenarios operation.</summary>
+
         private static List<Battery.Scenario> Scenarios()
         {
             return ScenarioIndex.Resolve(PairLab.AirScenarios, "the floor walk");
         }
 
-/// <summary>Arm operation.</summary>
+
         private static ThermalSettings Arm(bool floorWhenOverBudget)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.FloorBlocksWhenOverBudget = floorWhenOverBudget;
             return settings;
@@ -32,19 +32,19 @@ namespace Thermodynamics.Tests
         {
             public string Ship;
             public bool Floored;
-/// <summary>List operation.</summary>
+
             public readonly List<ScenarioOutcome> Outcomes = new List<ScenarioOutcome>();
-/// <summary>List operation.</summary>
+
             public readonly List<string> Violations = new List<string>();
         }
 
         [Fact]
-/// <summary>EveryShipTheAllowanceBindsOnIsMeasuredWithTheFloorAndWithoutIt operation.</summary>
+
         public void EveryShipTheAllowanceBindsOnIsMeasuredWithTheFloorAndWithoutIt()
         {
             if (CorpusFixture.Files().Count == 0) return;
 
-/// <summary>Scenarios operation.</summary>
+
             List<Battery.Scenario> scenarios = Scenarios();
 
             List<Walked> results = CorpusFixture.Sweep(Label,
@@ -52,7 +52,7 @@ namespace Thermodynamics.Tests
 
             Assert.True(results.Count > 0, "the selection yielded no ships to walk");
 
-/// <summary>List operation.</summary>
+
             List<string> violations = new List<string>();
             int floored = 0;
 
@@ -71,7 +71,7 @@ namespace Thermodynamics.Tests
                 + string.Join("\n  ", violations.ToArray()));
         }
 
-/// <summary>Walk operation.</summary>
+
         private static Walked Walk(Blueprints.Ship ship, List<Battery.Scenario> scenarios)
         {
             Walked walked = new Walked { Ship = ship.Name };
@@ -96,7 +96,7 @@ namespace Thermodynamics.Tests
             return walked;
         }
 
-/// <summary>Judge operation.</summary>
+
         private static void Judge(Walked walked, string scenario,
             ScenarioOutcome shortened, ScenarioOutcome floored)
         {

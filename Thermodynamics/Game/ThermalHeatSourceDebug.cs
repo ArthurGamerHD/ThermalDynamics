@@ -13,15 +13,13 @@ namespace Thermodynamics
         private class Placed
         {
             public int Id;
-            public double ExpiresAt;     // seconds since session start; 0 means never
+            public double ExpiresAt;
         }
 
-/// <summary>List operation.</summary>
         private static readonly List<Placed> Ours = new List<Placed>();
 
         private static double elapsed;
 
-/// <summary>Update operation.</summary>
         public static void Update(float seconds)
         {
             elapsed += seconds;
@@ -36,7 +34,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Run operation.</summary>
         public static string Run(string argument)
         {
             HeatSourceCommand.Parsed command = HeatSourceCommand.Parse(argument);
@@ -44,11 +41,9 @@ namespace Thermodynamics
             switch (command.Verb)
             {
                 case HeatSourceCommand.Verb.List:
-/// <summary>List operation.</summary>
                     return List();
 
                 case HeatSourceCommand.Verb.Clear:
-/// <summary>Clear operation.</summary>
                     return Clear();
 
                 case HeatSourceCommand.Verb.Remove:
@@ -63,18 +58,15 @@ namespace Thermodynamics
                         : "no heat source with id " + command.Id;
 
                 case HeatSourceCommand.Verb.Place:
-/// <summary>Place operation.</summary>
                     return Place(command.Watts, command.Range, 0f);
 
                 case HeatSourceCommand.Verb.Pulse:
-/// <summary>Place operation.</summary>
                     return Place(command.Watts, command.Range, command.Seconds);
             }
 
             return command.Error ?? HeatSourceCommand.Help();
         }
 
-/// <summary>Place operation.</summary>
         private static string Place(float watts, float range, float lifetime)
         {
             MatrixD camera = MyAPIGateway.Session != null && MyAPIGateway.Session.Camera != null
@@ -100,12 +92,10 @@ namespace Thermodynamics
                 + range.ToString("n0", CultureInfo.InvariantCulture) + " m" + note;
         }
 
-/// <summary>List operation.</summary>
         private static string List()
         {
             if (ThermalHeatSources.Count == 0) return "no heat sources registered";
 
-/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append(ThermalHeatSources.Count).AppendLine(" heat sources:");
 
@@ -123,7 +113,6 @@ namespace Thermodynamics
             return sb.ToString().TrimEnd();
         }
 
-/// <summary>Clear operation.</summary>
         private static string Clear()
         {
             int count = ThermalHeatSources.Count;
@@ -132,7 +121,6 @@ namespace Thermodynamics
             return "removed " + count + " heat sources";
         }
 
-/// <summary>Reset operation.</summary>
         public static void Reset()
         {
             Ours.Clear();

@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class RoomMapSolidTests
     {
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation Build(string which)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -25,24 +25,24 @@ namespace Thermodynamics.Tests
         [Theory]
         [InlineData("shell")]
         [InlineData("census")]
-/// <summary>ACellIsSolidExactlyWhenTheSurfaceMapSealsItOnEveryFaceAndItIsNoDoor operation.</summary>
+
         public void ACellIsSolidExactlyWhenTheSurfaceMapSealsItOnEveryFaceAndItIsNoDoor(string which)
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build(which);
             RoomMap map = simulation.Rooms.Map;
             SurfaceMap surfaces = simulation.Surfaces;
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> doorCells = new HashSet<Vector3I>(Vector3I.Comparer);
             foreach (BlockInstance door in simulation.Grid.StateDependentBlocks)
             {
                 foreach (Vector3I cell in door.Cells) doorCells.Add(cell);
             }
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I min = simulation.Grid.Min - new Vector3I(2, 2, 2);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I max = simulation.Grid.Max + new Vector3I(2, 2, 2);
 
             int solid = 0;
@@ -51,7 +51,7 @@ namespace Thermodynamics.Tests
             for (int y = min.Y; y <= max.Y; y++)
             for (int z = min.Z; z <= max.Z; z++)
             {
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I cell = new Vector3I(x, y, z);
                 bool expected = surfaces.IsFullySealedStructurally(cell) && !doorCells.Contains(cell);
                 Assert.True(expected == map.IsSolid(cell),
@@ -67,10 +67,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASecondPassStartsFromAnEmptySet operation.</summary>
+
         public void ASecondPassStartsFromAnEmptySet()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build("shell");
             int before = simulation.Rooms.Map.SolidCellCount;
 

@@ -11,13 +11,13 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>ProfileClockTests operation.</summary>
+
         public ProfileClockTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>Profile operation.</summary>
+
         private static BalanceProfile Profile(string name)
         {
             foreach (BalanceProfile profile in BalanceProfile.All())
@@ -29,7 +29,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDurationScaleReachesTheRunAndIsTheRatioOfTheClocks operation.</summary>
+
         public void TheDurationScaleReachesTheRunAndIsTheRatioOfTheClocks()
         {
             Assert.Equal(1f, ScenarioRunner.EffectiveDurationScale, 3);
@@ -55,10 +55,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThePhysicalProfilesOverloadedRigSettlesOnceItIsGivenItsOwnClock operation.</summary>
+
         public void ThePhysicalProfilesOverloadedRigSettlesOnceItIsGivenItsOwnClock()
         {
-/// <summary>Profile operation.</summary>
+
             BalanceProfile physical = Profile("physical");
             Assert.True(physical.HeatTimeScale < 2f,
                 "the physical profile is supposed to run the real clock, and runs at "

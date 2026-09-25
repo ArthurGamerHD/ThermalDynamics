@@ -5,20 +5,20 @@ namespace Thermodynamics.Tests
 {
     public class CellBitsetTests
     {
-/// <summary>Over operation.</summary>
+
         private static CellBitset Over(Vector3I min, Vector3I maxExclusive)
         {
-/// <summary>CellBitset operation.</summary>
+
             CellBitset set = new CellBitset();
             set.Reset(min, maxExclusive);
             return set;
         }
 
         [Fact]
-/// <summary>AFreshSetHoldsNothing operation.</summary>
+
         public void AFreshSetHoldsNothing()
         {
-/// <summary>Over operation.</summary>
+
             CellBitset set = Over(Vector3I.Zero, new Vector3I(4, 4, 4));
 
             Assert.Equal(0, set.Count);
@@ -28,10 +28,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>Adds a ingreportswhetheritwasnew.</summary>
+
         public void AddingReportsWhetherItWasNew()
         {
-/// <summary>Over operation.</summary>
+
             CellBitset set = Over(Vector3I.Zero, new Vector3I(4, 4, 4));
 
             Assert.True(set.Add(new Vector3I(1, 2, 3)));
@@ -41,14 +41,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryCellOfTheBoxIsItsOwnBit operation.</summary>
+
         public void EveryCellOfTheBoxIsItsOwnBit()
         {
-/// <summary>Vector3I operation.</summary>
+
             Vector3I min = new Vector3I(-3, 5, -11);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I max = new Vector3I(4, 12, -2);
-/// <summary>Over operation.</summary>
+
             CellBitset set = Over(min, max);
 
             int expected = 0;
@@ -56,7 +56,7 @@ namespace Thermodynamics.Tests
                 for (int y = min.Y; y < max.Y; y++)
                     for (int x = min.X; x < max.X; x++)
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I cell = new Vector3I(x, y, z);
                         Assert.False(set.Contains(cell), cell + " was set before it was added");
                         Assert.True(set.Add(cell));
@@ -75,22 +75,22 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CellsOutsideTheBoxAreNotMembersAndCannotBeAdded operation.</summary>
+
         public void CellsOutsideTheBoxAreNotMembersAndCannotBeAdded()
         {
             Vector3I min = Vector3I.Zero;
-/// <summary>Vector3I operation.</summary>
+
             Vector3I max = new Vector3I(4, 4, 4);
-/// <summary>Over operation.</summary>
+
             CellBitset set = Over(min, max);
 
             Vector3I[] outside =
             {
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(-1, 0, 0), new Vector3I(0, -1, 0), new Vector3I(0, 0, -1),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(4, 0, 0), new Vector3I(0, 4, 0), new Vector3I(0, 0, 4),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(100, 100, 100),
             };
 
@@ -104,10 +104,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ResettingForgetsEverythingEvenWhenTheArrayIsReused operation.</summary>
+
         public void ResettingForgetsEverythingEvenWhenTheArrayIsReused()
         {
-/// <summary>Over operation.</summary>
+
             CellBitset set = Over(Vector3I.Zero, new Vector3I(8, 8, 8));
             for (int i = 0; i < 8; i++) set.Add(new Vector3I(i, i, i));
             Assert.Equal(8, set.Count);
@@ -122,10 +122,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>MovingTheBoxMovesWhatTheBitsMean operation.</summary>
+
         public void MovingTheBoxMovesWhatTheBitsMean()
         {
-/// <summary>Over operation.</summary>
+
             CellBitset set = Over(Vector3I.Zero, new Vector3I(4, 4, 4));
             set.Add(new Vector3I(1, 1, 1));
 
@@ -137,10 +137,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnEmptyBoxIsHarmless operation.</summary>
+
         public void AnEmptyBoxIsHarmless()
         {
-/// <summary>Over operation.</summary>
+
             CellBitset set = Over(new Vector3I(5, 5, 5), new Vector3I(5, 5, 5));
 
             Assert.Equal(0, set.Capacity);
@@ -150,10 +150,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARanksMemberIsItsPositionAmongTheMembers operation.</summary>
+
         public void ARanksMemberIsItsPositionAmongTheMembers()
         {
-/// <summary>Over operation.</summary>
+
             CellBitset set = Over(new Vector3I(-3, -3, -3), new Vector3I(14, 12, 9));
 
             uint state = 0x9E3779B9u;
@@ -182,7 +182,7 @@ namespace Thermodynamics.Tests
                 {
                     for (int x = -3; x < 14; x++)
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I cell = new Vector3I(x, y, z);
                         if (!set.Contains(cell)) continue;
 
@@ -198,10 +198,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AChangeToTheSetPutsTheRanksAway operation.</summary>
+
         public void AChangeToTheSetPutsTheRanksAway()
         {
-/// <summary>Over operation.</summary>
+
             CellBitset set = Over(new Vector3I(0, 0, 0), new Vector3I(8, 8, 8));
             set.Add(new Vector3I(1, 1, 1));
             set.Add(new Vector3I(2, 2, 2));
@@ -224,10 +224,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFullWordRanksAtBothEnds operation.</summary>
+
         public void AFullWordRanksAtBothEnds()
         {
-/// <summary>Over operation.</summary>
+
             CellBitset set = Over(new Vector3I(0, 0, 0), new Vector3I(128, 1, 1));
             for (int x = 0; x < 128; x++) set.Add(new Vector3I(x, 0, 0));
 

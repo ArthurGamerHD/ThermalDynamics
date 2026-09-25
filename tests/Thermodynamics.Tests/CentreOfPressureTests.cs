@@ -11,16 +11,16 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>CentreOfPressureTests operation.</summary>
+
         public CentreOfPressureTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -29,7 +29,7 @@ namespace Thermodynamics.Tests
             return settings;
         }
 
-/// <summary>CentreOfPressure operation.</summary>
+
         private static Vector3 CentreOfPressure(ThermalSimulation simulation)
         {
             Vector3 weighted = Vector3.Zero;
@@ -51,7 +51,7 @@ namespace Thermodynamics.Tests
             return total > 0f ? weighted / total : Vector3.Zero;
         }
 
-/// <summary>Centroid operation.</summary>
+
         private static Vector3 Centroid(ThermalSimulation simulation)
         {
             Vector3 sum = Vector3.Zero;
@@ -66,7 +66,7 @@ namespace Thermodynamics.Tests
             return count > 0 ? sum / count : Vector3.Zero;
         }
 
-/// <summary>Run operation.</summary>
+
         private static ThermalSimulation Run(GridBuilder builder)
         {
             ThermalSimulation simulation = builder.BuildSimulation(Settings(), 293.15f);
@@ -77,18 +77,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OnlyTheOffsetAcrossTheFlowCanMakeATorque operation.</summary>
+
         public void OnlyTheOffsetAcrossTheFlowCanMakeATorque()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.HeavyArmor(), Vector3I.Zero, new Vector3I(4, 4, 4));
 
-/// <summary>Run operation.</summary>
+
             ThermalSimulation simulation = Run(builder);
 
-/// <summary>CentreOfPressure operation.</summary>
+
             Vector3 pressure = CentreOfPressure(simulation);
-/// <summary>Centroid operation.</summary>
+
             Vector3 mass = Centroid(simulation);
             Vector3 separation = pressure - mass;
 
@@ -103,14 +103,14 @@ namespace Thermodynamics.Tests
                 + "should not");
         }
 
-/// <summary>Lateral operation.</summary>
+
         private static float Lateral(Vector3 separation)
         {
             return (float)Math.Sqrt(separation.X * separation.X + separation.Y * separation.Y);
         }
 
         [Fact]
-/// <summary>AFinnedHullHasALateralArmAndThisIsHowLong operation.</summary>
+
         public void AFinnedHullHasALateralArmAndThisIsHowLong()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -118,15 +118,15 @@ namespace Thermodynamics.Tests
             builder.Fill(Catalog.HeavyArmor(), Vector3I.Zero, new Vector3I(3, 3, 12));
             builder.Fill(Catalog.HeavyArmor(), new Vector3I(3, 0, 2), new Vector3I(9, 3, 5));
 
-/// <summary>Run operation.</summary>
+
             ThermalSimulation simulation = Run(builder);
 
-/// <summary>CentreOfPressure operation.</summary>
+
             Vector3 pressure = CentreOfPressure(simulation);
-/// <summary>Centroid operation.</summary>
+
             Vector3 mass = Centroid(simulation);
             Vector3 separation = pressure - mass;
-/// <summary>Lateral operation.</summary>
+
             float lateral = Lateral(separation);
 
             output.WriteLine("finned: pressure {0}, mass {1}, lateral arm {2:0.00} cells ({3:0.0} m)",

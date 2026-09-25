@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
 {
     public class BoxGeometryTests
     {
-/// <summary>V operation.</summary>
+
         private static Vector3I V(int x, int y, int z)
         {
             return new Vector3I(x, y, z);
@@ -17,17 +17,17 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>OverlapIsTheSharedLengthOfTwoHalfOpenIntervals operation.</summary>
+
         public void OverlapIsTheSharedLengthOfTwoHalfOpenIntervals()
         {
             Assert.Equal(2, BoxGeometry.Overlap(0, 4, 2, 6));
             Assert.Equal(4, BoxGeometry.Overlap(0, 4, 0, 4));
-            Assert.Equal(0, BoxGeometry.Overlap(0, 4, 4, 8));   // abutting, not overlapping
-            Assert.Equal(0, BoxGeometry.Overlap(0, 4, 9, 12));  // disjoint
+            Assert.Equal(0, BoxGeometry.Overlap(0, 4, 4, 8));
+            Assert.Equal(0, BoxGeometry.Overlap(0, 4, 9, 12));
         }
 
         [Fact]
-/// <summary>TwoUnitBlocksSideBySideTouchOnTheExpectedFace operation.</summary>
+
         public void TwoUnitBlocksSideBySideTouchOnTheExpectedFace()
         {
             int face = BoxGeometry.TouchingFace(V(0, 0, 0), V(1, 1, 1), V(1, 0, 0), V(2, 1, 1));
@@ -39,7 +39,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BlocksMeetingOnlyAtAnEdgeOrCornerDoNotTouch operation.</summary>
+
         public void BlocksMeetingOnlyAtAnEdgeOrCornerDoNotTouch()
         {
             Assert.Equal(-1, BoxGeometry.TouchingFace(V(0, 0, 0), V(1, 1, 1), V(1, 1, 0), V(2, 2, 1)));
@@ -51,7 +51,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>ContactAreaIsTheOverlapOfTheTwoFacesNotTheLargerOne operation.</summary>
+
         public void ContactAreaIsTheOverlapOfTheTwoFacesNotTheLargerOne()
         {
             int cells = BoxGeometry.ContactCells(
@@ -62,7 +62,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ContactAreaOfAFullyCoveredFaceIsThatWholeFace operation.</summary>
+
         public void ContactAreaOfAFullyCoveredFaceIsThatWholeFace()
         {
             int cells = BoxGeometry.ContactCells(
@@ -73,7 +73,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ContactAreaCountsOnlyThePartThatActuallyOverlaps operation.</summary>
+
         public void ContactAreaCountsOnlyThePartThatActuallyOverlaps()
         {
             int cells = BoxGeometry.ContactCells(
@@ -84,7 +84,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ContactAreaIsSymmetric operation.</summary>
+
         public void ContactAreaIsSymmetric()
         {
             int forward = BoxGeometry.ContactCells(V(0, 0, 0), V(4, 4, 4), V(1, 1, 4), V(3, 3, 6));
@@ -96,23 +96,23 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>FaceAreaIsTheProductOfThePerpendicularExtents operation.</summary>
+
         public void FaceAreaIsTheProductOfThePerpendicularExtents()
         {
-/// <summary>V operation.</summary>
+
             Vector3I extents = V(2, 3, 5);
 
-            Assert.Equal(15, BoxGeometry.FaceAreaCells(extents, Face.Right));     // Y * Z
+            Assert.Equal(15, BoxGeometry.FaceAreaCells(extents, Face.Right));
             Assert.Equal(15, BoxGeometry.FaceAreaCells(extents, Face.Left));
-            Assert.Equal(10, BoxGeometry.FaceAreaCells(extents, Face.Up));        // X * Z
-            Assert.Equal(6, BoxGeometry.FaceAreaCells(extents, Face.Forward));    // X * Y
+            Assert.Equal(10, BoxGeometry.FaceAreaCells(extents, Face.Up));
+            Assert.Equal(6, BoxGeometry.FaceAreaCells(extents, Face.Forward));
         }
 
         [Fact]
-/// <summary>SurfaceAreaMatchesTheSumOfTheSixFaces operation.</summary>
+
         public void SurfaceAreaMatchesTheSumOfTheSixFaces()
         {
-/// <summary>V operation.</summary>
+
             Vector3I extents = V(2, 3, 5);
 
             int summed = 0;
@@ -122,33 +122,33 @@ namespace Thermodynamics.Tests
             }
 
             Assert.Equal(summed, BoxGeometry.SurfaceAreaCells(extents));
-            Assert.Equal(62, BoxGeometry.SurfaceAreaCells(extents));   // 2*(6 + 15 + 10)
+            Assert.Equal(62, BoxGeometry.SurfaceAreaCells(extents));
         }
 
         [Fact]
-/// <summary>EnumeratingAFaceVisitsItsAreaAndStaysOnTheBoundary operation.</summary>
+
         public void EnumeratingAFaceVisitsItsAreaAndStaysOnTheBoundary()
         {
-/// <summary>List operation.</summary>
+
             List<Vector3I> visited = new List<Vector3I>();
             BoxGeometry.ForEachFaceCell(V(0, 0, 0), V(2, 3, 4), Face.Right, visited.Add);
 
             Assert.Equal(BoxGeometry.FaceAreaCells(V(2, 3, 4), Face.Right), visited.Count);
             for (int i = 0; i < visited.Count; i++)
             {
-                Assert.Equal(1, visited[i].X);   // the +X slab of a box spanning x in [0,2)
+                Assert.Equal(1, visited[i].X);
             }
         }
 
 
-/// <summary>Sized operation.</summary>
+
         private static BlockModel Sized(string name, Vector3I size, float mass)
         {
             return BlockModel.Solid(name, size, mass, Catalog.DefaultThermal());
         }
 
         [Fact]
-/// <summary>ASmallBlockOnALargeOneContactsOnlyItsOwnFaceArea operation.</summary>
+
         public void ASmallBlockOnALargeOneContactsOnlyItsOwnFaceArea()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -162,18 +162,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ConductanceIsIdenticalWhicheverWayRoundTheJointIsBuilt operation.</summary>
+
         public void ConductanceIsIdenticalWhicheverWayRoundTheJointIsBuilt()
         {
-/// <summary>JointConductance operation.</summary>
+
             float forward = JointConductance(V(4, 4, 4), 4000f, V(1, 1, 1), 100f);
-/// <summary>JointConductance operation.</summary>
+
             float backward = JointConductance(V(1, 1, 1), 100f, V(4, 4, 4), 4000f);
 
             Assert.Equal(forward, backward, 4);
         }
 
-/// <summary>JointConductance operation.</summary>
+
         private static float JointConductance(Vector3I sizeA, float massA, Vector3I sizeB, float massB)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -186,12 +186,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ADeeperBlockConductsMoreSlowlyThroughTheSameContactArea operation.</summary>
+
         public void ADeeperBlockConductsMoreSlowlyThroughTheSameContactArea()
         {
-/// <summary>JointConductance operation.</summary>
+
             float shallow = JointConductance(V(1, 1, 1), 100f, V(1, 1, 1), 100f);
-/// <summary>JointConductance operation.</summary>
+
             float deep = JointConductance(V(1, 1, 1), 100f, V(1, 1, 4), 400f);
 
             Assert.True(deep < shallow,
@@ -199,7 +199,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EnergyIsConservedAcrossAJointBetweenVeryDifferentBlockSizes operation.</summary>
+
         public void EnergyIsConservedAcrossAJointBetweenVeryDifferentBlockSizes()
         {
             ThermalSettings settings = new ThermalSettings
@@ -226,7 +226,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ALargeBlockFindsEveryNeighbourAlongItsFace operation.</summary>
+
         public void ALargeBlockFindsEveryNeighbourAlongItsFace()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -243,11 +243,11 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings());
 
             Assert.Equal(10, simulation.Solver.Nodes.Count);
-            Assert.Equal(9 + 12, simulation.Solver.Links.Count);   // slab-to-tile, plus tile-to-tile
+            Assert.Equal(9 + 12, simulation.Solver.Links.Count);
         }
 
         [Fact]
-/// <summary>AnInteriorBlockOfALargeSolidIsNeverItsOwnNeighbour operation.</summary>
+
         public void AnInteriorBlockOfALargeSolidIsNeverItsOwnNeighbour()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -261,7 +261,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>ALargeBlockAloneIsExposedOverItsWholeSurface operation.</summary>
+
         public void ALargeBlockAloneIsExposedOverItsWholeSurface()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -274,7 +274,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CoveringOneFaceOfALargeBlockRemovesExactlyThatMuchExposure operation.</summary>
+
         public void CoveringOneFaceOfALargeBlockRemovesExactlyThatMuchExposure()
         {
             GridBuilder bare = GridBuilder.Large();

@@ -11,9 +11,9 @@ namespace RichHudFramework
         using Client;
 
         using ControlContainerMembers = MyTuple<
-            ApiMemberAccessor, // GetOrSetMember,
-            MyTuple<object, Func<int>>, // Member List
-            object // ID
+            ApiMemberAccessor,
+            MyTuple<object, Func<int>>,
+            object
         >;
 
         public enum TerminalAccessors : int
@@ -79,13 +79,13 @@ namespace RichHudFramework
 
             IReadOnlyList<TerminalPageCategoryBase> Subcategories { get; }
 
-/// <summary>Adds a .</summary>
+
             void Add(TerminalPageCategoryBase subcategory);
 
-/// <summary>Adds a range.</summary>
+
             void AddRange(IReadOnlyList<IModRootMember> members);
 
-/// <summary>Returns the apidata.</summary>
+
             ControlContainerMembers GetApiData();
         }
     }

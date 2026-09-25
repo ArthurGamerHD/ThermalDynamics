@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
     public class OxygenGeneratorWasteHeatTests
     {
         [Fact]
-/// <summary>TheShippedFractionIsInsideTheBandElectrolysisSources operation.</summary>
+
         public void TheShippedFractionIsInsideTheBandElectrolysisSources()
         {
             float shipped = ShippedBlocks.FunctionOf("OxygenGenerator").ConsumerWasteEnergy;
@@ -18,7 +18,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoOxygenGeneratorDestroysItselfWithEveryFaceOnOpenSpace operation.</summary>
+
         public void NoOxygenGeneratorDestroysItselfWithEveryFaceOnOpenSpace()
         {
             foreach (OxygenGeneratorLab.Row row in Shipped())
@@ -32,7 +32,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFractionThisReplacedStillCooksTwoGeneratorsBare operation.</summary>
+
         public void TheFractionThisReplacedStillCooksTwoGeneratorsBare()
         {
             List<OxygenGeneratorLab.Row> cooked = OxygenGeneratorLab.Run(0.6f)
@@ -48,7 +48,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SkinningASmallHeatSourceCoolsItWhereSkinningAReactorDoesNot operation.</summary>
+
         public void SkinningASmallHeatSourceCoolsItWhereSkinningAReactorDoesNot()
         {
             foreach (OxygenGeneratorLab.Row row in Shipped()
@@ -63,7 +63,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGeneratorAtStandbyOrTheObservedDutyNeedsNoCooling operation.</summary>
+
         public void AGeneratorAtStandbyOrTheObservedDutyNeedsNoCooling()
         {
             foreach (OxygenGeneratorLab.Row row in Shipped()
@@ -77,7 +77,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Shipped operation.</summary>
+
         private static List<OxygenGeneratorLab.Row> Shipped()
         {
             List<OxygenGeneratorLab.Row> rows = OxygenGeneratorLab.Shipped();

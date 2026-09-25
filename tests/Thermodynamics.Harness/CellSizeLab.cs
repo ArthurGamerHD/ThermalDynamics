@@ -22,11 +22,11 @@ namespace Thermodynamics.Harness
             public float ConductionRatio;
             public float PickupRatio;
 
-/// <summary>Quotient operation.</summary>
+
             public float RadiationHandicap { get { return Quotient(WasteRatio, RadiationRatio); } }
-/// <summary>Quotient operation.</summary>
+
             public float ConductionHandicap { get { return Quotient(WasteRatio, ConductionRatio); } }
-/// <summary>Quotient operation.</summary>
+
             public float PickupHandicap { get { return Quotient(WasteRatio, PickupRatio); } }
 
             public float LargeGradient;
@@ -35,14 +35,14 @@ namespace Thermodynamics.Harness
             public bool LargeUncoolable;
             public bool SmallUncoolable;
 
-/// <summary>Quotient operation.</summary>
+
             private static float Quotient(float waste, float term)
             {
                 return term <= 0f ? float.PositiveInfinity : waste / term;
             }
         }
 
-/// <summary>ForcedGradient operation.</summary>
+
         public static float ForcedGradient(float watts, float cellSize, int faces,
             float coefficient)
         {
@@ -51,13 +51,13 @@ namespace Thermodynamics.Harness
             return conductance <= 0f ? float.PositiveInfinity : watts / conductance;
         }
 
-/// <summary>Pairs operation.</summary>
+
         public static List<Pair> Pairs()
         {
             return Pairs(LoopThermalProperties.Default().HeatTransferCoefficient);
         }
 
-/// <summary>Pairs operation.</summary>
+
         public static List<Pair> Pairs(float coefficient)
         {
             Dictionary<string, BlockHeatIndex.Reading> larges =
@@ -69,7 +69,7 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < readings.Count; i++)
             {
                 BlockHeatIndex.Reading r = readings[i];
-/// <summary>Family operation.</summary>
+
                 string family = Family(r.Subtype, r.Large);
                 if (family == null) continue;
 
@@ -77,7 +77,7 @@ namespace Thermodynamics.Harness
                 if (r.Large) larges[key] = r; else smalls[key] = r;
             }
 
-/// <summary>List operation.</summary>
+
             List<Pair> pairs = new List<Pair>();
 
             foreach (KeyValuePair<string, BlockHeatIndex.Reading> entry in larges)
@@ -98,33 +98,33 @@ namespace Thermodynamics.Harness
             return pairs;
         }
 
-/// <summary>Measure operation.</summary>
+
         private static Pair Measure(BlockHeatIndex.Reading large, BlockHeatIndex.Reading small,
             float coefficient)
         {
-/// <summary>Pair operation.</summary>
+
             Pair pair = new Pair();
             pair.TypeId = large.TypeId;
-/// <summary>Family operation.</summary>
+
             pair.Family = Family(large.Subtype, true);
             pair.Large = large;
             pair.Small = small;
 
             pair.WasteRatio = small.Watts / large.Watts;
 
-/// <summary>Ratio operation.</summary>
+
             pair.RadiationRatio = Ratio(small.RadiatedWatts, large.RadiatedWatts);
-/// <summary>Ratio operation.</summary>
+
             pair.ConductionRatio = Ratio(small.ConductedWatts, large.ConductedWatts);
 
             float largePickup = coefficient * Catalog.LargeGridSize * Catalog.LargeGridSize;
             float smallPickup = coefficient * Catalog.SmallGridSize * Catalog.SmallGridSize;
             pair.PickupRatio = smallPickup / largePickup;
 
-/// <summary>ForcedGradient operation.</summary>
+
             pair.LargeGradient = ForcedGradient(large.Watts, Catalog.LargeGridSize,
                 ReferenceSinkFaces, coefficient);
-/// <summary>ForcedGradient operation.</summary>
+
             pair.SmallGradient = ForcedGradient(small.Watts, Catalog.SmallGridSize,
                 ReferenceSinkFaces, coefficient);
 
@@ -136,13 +136,13 @@ namespace Thermodynamics.Harness
             return pair;
         }
 
-/// <summary>Ratio operation.</summary>
+
         private static float Ratio(float small, float large)
         {
             return large <= 0f ? float.NaN : small / large;
         }
 
-/// <summary>Family operation.</summary>
+
         public static string Family(string subtype, bool large)
         {
             if (string.IsNullOrEmpty(subtype)) return null;
@@ -154,16 +154,16 @@ namespace Thermodynamics.Harness
             return subtype.Substring(prefix.Length);
         }
 
-/// <summary>MedianHandicap operation.</summary>
+
         public static float MedianHandicap(IList<Pair> pairs, Func<Pair, float> term,
             float wattsFloor)
         {
-/// <summary>List operation.</summary>
+
             List<float> values = new List<float>();
             for (int i = 0; i < pairs.Count; i++)
             {
                 if (pairs[i].Large.Watts < wattsFloor) continue;
-/// <summary>term operation.</summary>
+
                 float value = term(pairs[i]);
                 if (float.IsNaN(value) || float.IsInfinity(value)) continue;
                 values.Add(value);
@@ -178,10 +178,10 @@ namespace Thermodynamics.Harness
                 : 0.5f * (values[middle - 1] + values[middle]);
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(IList<Pair> pairs, int limit)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine(string.Format("{0,-38}{1,10}{2,10}{3,8}{4,8}{5,8}{6,8}{7,11}{8,11}",
                 "family", "large kW", "small kW", "waste", "rad", "cond", "pickup",

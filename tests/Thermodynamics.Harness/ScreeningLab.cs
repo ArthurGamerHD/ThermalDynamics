@@ -11,7 +11,7 @@ namespace Thermodynamics.Harness
 
         public const double RedundantWithin = 0.08d;
 
-/// <summary>Measure operation.</summary>
+
         public static List<ShipProfile> Measure(IList<Blueprints.Ship> ships,
             ThermalSettings settings = null, LabMode mode = LabMode.Parallel)
         {
@@ -19,10 +19,10 @@ namespace Thermodynamics.Harness
             return LabRun.Map(ships, ship => ShipProfile.Measure(ship, settings), mode);
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(string path, int panelSize, LabMode mode = LabMode.Parallel)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             string root = path ?? Blueprints.DefaultPath();
@@ -41,7 +41,7 @@ namespace Thermodynamics.Harness
             }
 
             System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
-/// <summary>Measure operation.</summary>
+
             List<ShipProfile> profiles = Measure(corpus.Usable, null, mode);
             clock.Stop();
 
@@ -128,7 +128,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>StiffestBlocks operation.</summary>
+
         private static void StiffestBlocks(StringBuilder sb, List<ShipProfile> profiles)
         {
             Dictionary<string, List<float>> byBlock = new Dictionary<string, List<float>>();
@@ -141,7 +141,7 @@ namespace Thermodynamics.Harness
                 List<float> demands;
                 if (!byBlock.TryGetValue(name, out demands))
                 {
-/// <summary>List operation.</summary>
+
                     demands = new List<float>();
                     byBlock[name] = demands;
                 }
@@ -178,11 +178,11 @@ namespace Thermodynamics.Harness
 
         private const int TopStiffestBlocks = 12;
 
-/// <summary>Band operation.</summary>
+
         private static void Band(StringBuilder sb, string label, List<ShipProfile> profiles,
             Func<ShipProfile, float> property)
         {
-/// <summary>List operation.</summary>
+
             List<float> values = new List<float>(profiles.Count);
             for (int i = 0; i < profiles.Count; i++) values.Add(property(profiles[i]));
             values.Sort();
@@ -195,13 +195,13 @@ namespace Thermodynamics.Harness
             sb.AppendLine();
         }
 
-/// <summary>At operation.</summary>
+
         private static float At(List<float> sorted, float fraction)
         {
             return LabStats.PercentileOfSorted(sorted, fraction);
         }
 
-/// <summary>Trim operation.</summary>
+
         private static string Trim(string text, int width)
         {
             return LabText.Trim(text, width);

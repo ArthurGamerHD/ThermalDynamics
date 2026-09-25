@@ -20,7 +20,7 @@ namespace RichHudFramework
 
             protected byte OverlayOffset
             {
-/// <summary>return operation.</summary>
+
                 get { return (byte)Config[ZOffsetInnerID]; }
                 set
                 {
@@ -45,7 +45,7 @@ namespace RichHudFramework
                 }
             }
 
-/// <summary>HudNodeBase operation.</summary>
+
             public HudNodeBase(HudParentBase parent)
             {
                 _config[VisMaskID] = nodeVisible;
@@ -55,7 +55,7 @@ namespace RichHudFramework
                 Register(parent);
             }
 
-/// <summary>BeginLayout operation.</summary>
+
             protected override void BeginLayout(bool _)
             {
                 if ((Config[StateID] & (uint)HudElementStates.IsSpaceNode) == 0)
@@ -70,7 +70,7 @@ namespace RichHudFramework
                     Layout();
             }
 
-/// <summary>Registers and opens communication.</summary>
+
             public virtual bool Register(HudParentBase newParent)
             {
                 if (newParent == this)
@@ -95,7 +95,7 @@ namespace RichHudFramework
                     return false;
             }
 
-/// <summary>Unregisters and closes communication.</summary>
+
             public virtual bool Unregister()
             {
                 if (Parent != null)

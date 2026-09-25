@@ -8,13 +8,13 @@ namespace Thermodynamics.Tests
 {
     public class ThermalDynamicsClientTests
     {
-/// <summary>RepoRoot operation.</summary>
+
         private static string RepoRoot()
         {
             return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
         }
 
-/// <summary>ReadFunc operation.</summary>
+
         private static string ReadFunc(string source, int from)
         {
             int start = source.IndexOf("Func<", from, StringComparison.Ordinal);
@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
             for (int i = open; i < source.Length; i++)
             {
                 if (source[i] == '<') depth++;
-/// <summary>if operation.</summary>
+
                 else if (source[i] == '>')
                 {
                     depth--;
@@ -38,13 +38,13 @@ namespace Thermodynamics.Tests
             return null;
         }
 
-/// <summary>Normalise operation.</summary>
+
         private static string Normalise(string signature)
         {
             return Regex.Replace(signature, @"\s+", "");
         }
 
-/// <summary>ApiTable operation.</summary>
+
         private static Dictionary<string, string> ApiTable()
         {
             string source = File.ReadAllText(Path.Combine(RepoRoot(), "Thermodynamics", "ThermalApi.cs"));
@@ -52,14 +52,14 @@ namespace Thermodynamics.Tests
             Dictionary<string, string> shapes = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (Match match in Regex.Matches(source, @"methods\[""(\w+)""\]"))
             {
-/// <summary>ReadFunc operation.</summary>
+
                 string signature = ReadFunc(source, match.Index);
                 if (signature != null) shapes[match.Groups[1].Value] = signature;
             }
             return shapes;
         }
 
-/// <summary>ClientBindings operation.</summary>
+
         private static Dictionary<string, string> ClientBindings()
         {
             string source = File.ReadAllText(Path.Combine(RepoRoot(),
@@ -69,7 +69,7 @@ namespace Thermodynamics.Tests
 
             foreach (Match match in Regex.Matches(source, @"Get<"))
             {
-/// <summary>ReadFunc operation.</summary>
+
                 string signature = ReadFunc(source, match.Index);
                 if (signature == null) continue;
 
@@ -82,12 +82,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheClientBindsEveryApiKeyWithTheSameSignature operation.</summary>
+
         public void TheClientBindsEveryApiKeyWithTheSameSignature()
         {
-/// <summary>ApiTable operation.</summary>
+
             Dictionary<string, string> api = ApiTable();
-/// <summary>ClientBindings operation.</summary>
+
             Dictionary<string, string> client = ClientBindings();
 
             Assert.True(api.Count >= 15,
@@ -96,7 +96,7 @@ namespace Thermodynamics.Tests
                 "only " + client.Count + " client bindings were read, so the client's Get<> pattern"
                 + " changed and this test no longer sees it");
 
-/// <summary>List operation.</summary>
+
             List<string> problems = new List<string>();
 
             foreach (KeyValuePair<string, string> entry in api)
@@ -128,7 +128,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheClientChannelAndVersionMatchTheMod operation.</summary>
+
         public void TheClientChannelAndVersionMatchTheMod()
         {
             string apiSource = File.ReadAllText(Path.Combine(RepoRoot(),

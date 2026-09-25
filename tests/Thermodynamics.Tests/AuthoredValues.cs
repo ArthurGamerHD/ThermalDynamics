@@ -18,7 +18,7 @@ namespace Thermodynamics.Tests
 
             public string Note;
 
-/// <summary>ToString operation.</summary>
+
             public override string ToString()
             {
                 return TypeId + "/" + SubtypeId + " " + Property + " = "
@@ -26,10 +26,10 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Read operation.</summary>
+
         public static List<Entry> Read(params string[] properties)
         {
-/// <summary>List operation.</summary>
+
             List<Entry> found = new List<Entry>();
 
             string path = Path.Combine(ShippedBlocks.DataRoot(), "Cubes.xml");
@@ -40,9 +40,9 @@ namespace Thermodynamics.Tests
                 XElement id = definition.Element("Id");
                 if (id == null) continue;
 
-/// <summary>Text operation.</summary>
+
                 string type = Text(id.Element("TypeId"));
-/// <summary>Text operation.</summary>
+
                 string subtype = Text(id.Element("SubtypeId"));
 
                 foreach (XElement group in definition.Descendants("Group"))
@@ -61,13 +61,13 @@ namespace Thermodynamics.Tests
                             continue;
                         }
 
-/// <summary>Entry operation.</summary>
+
                         Entry entry = new Entry();
                         entry.TypeId = type;
                         entry.SubtypeId = subtype;
                         entry.Property = property;
                         entry.Value = value;
-/// <summary>NoteAbove operation.</summary>
+
                         entry.Note = NoteAbove(element);
                         found.Add(entry);
                     }
@@ -77,7 +77,7 @@ namespace Thermodynamics.Tests
             return found;
         }
 
-/// <summary>NoteAbove operation.</summary>
+
         public static string NoteAbove(XElement element)
         {
             XNode node = element.PreviousNode;
@@ -95,7 +95,7 @@ namespace Thermodynamics.Tests
             return "";
         }
 
-/// <summary>Flatten operation.</summary>
+
         private static string Flatten(string value)
         {
             if (value == null) return "";
@@ -112,13 +112,13 @@ namespace Thermodynamics.Tests
             return joined;
         }
 
-/// <summary>Text operation.</summary>
+
         private static string Text(XElement element)
         {
             return element == null ? "" : (element.Value ?? "").Trim();
         }
 
-/// <summary>RepoRoot operation.</summary>
+
         public static string RepoRoot()
         {
             return Thermodynamics.Harness.ShippedBlocks.RepoRoot();

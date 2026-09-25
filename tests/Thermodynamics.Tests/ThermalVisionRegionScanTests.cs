@@ -11,18 +11,18 @@ namespace Thermodynamics.Tests
     public class ThermalVisionRegionScanTests
     {
         [Fact]
-/// <summary>AdaptiveScanFinishesSceneThatCannotFitAtTwentyMetresWithoutLosingSamples operation.</summary>
+
         public void AdaptiveScanFinishesSceneThatCannotFitAtTwentyMetresWithoutLosingSamples()
         {
-/// <summary>List operation.</summary>
+
             var input = new List<Region>();
             for (int z = 0; z < 20; z++) for (int y = 0; y < 20; y++) for (int x = 0; x < 20; x++)
             {
-/// <summary>Vector3D operation.</summary>
+
                 var min = new Vector3D(x * 40 - 400 + .25, y * 40 - 400 + .25, z * 40 - 400 + .25);
                 input.Add(new Region(min, min + new Vector3D(.5), 250 + input.Count % 701));
             }
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
             var scan = new ThermalVisionRegionScan(5, 1536, 2, 5120);
             Assert.True(scan.Start(new List<IEnumerable<Region>> { input }));
             int updates = 0;
@@ -40,7 +40,7 @@ namespace Thermodynamics.Tests
             var expected = new Dictionary<Vector3I, float>();
             foreach (Region sample in input)
             {
-/// <summary>Vector3I operation.</summary>
+
                 var key = new Vector3I((int)Math.Floor(sample.Min.X / scan.CellSize),
                     (int)Math.Floor(sample.Min.Y / scan.CellSize), (int)Math.Floor(sample.Min.Z / scan.CellSize));
                 float old;
@@ -49,7 +49,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(expected.Count, scan.Count);
             for (int i = 0; i < scan.Count; i++)
             {
-/// <summary>Vector3I operation.</summary>
+
                 var key = new Vector3I((int)Math.Round(scan[i].Min.X / scan.CellSize),
                     (int)Math.Round(scan[i].Min.Y / scan.CellSize), (int)Math.Round(scan[i].Min.Z / scan.CellSize));
                 Assert.Equal(expected[key], scan[i].Kelvin);
@@ -57,13 +57,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DenseMultiGridScanCompletesWithoutPrefixStarvationOrPartialPublication operation.</summary>
+
         public void DenseMultiGridScanCompletesWithoutPrefixStarvationOrPartialPublication()
         {
             const int grids = 113, samplesPerGrid = 2348;
             var sources = new List<IEnumerable<Region>>();
             for (int grid = 0; grid < grids; grid++) sources.Add(DenseGrid(grid, samplesPerGrid));
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
             var scan = new ThermalVisionRegionScan(1, 2048, 128);
             Assert.True(scan.Start(sources));
             int work = 0, updates = 0;
@@ -82,23 +82,23 @@ namespace Thermodynamics.Tests
             Assert.True(lastGridPresent);
         }
 
-/// <summary>DenseGrid operation.</summary>
+
         private static IEnumerable<Region> DenseGrid(int grid, int count)
         {
             for (int i = 0; i < count; i++)
             {
-/// <summary>Vector3D operation.</summary>
+
                 var min = new Vector3D(grid, i % 16, 0);
                 yield return new Region(min, min + new Vector3D(.5), 300 + i % 250);
             }
         }
 
         [Fact]
-/// <summary>LaterSourcesAdvanceEvenWhileFirstSourceRasterizesLargeBounds operation.</summary>
+
         public void LaterSourcesAdvanceEvenWhileFirstSourceRasterizesLargeBounds()
         {
             int firstRead = 0, lastRead = 0;
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
             var scan = new ThermalVisionRegionScan(1, 256, 2);
             Assert.True(scan.Start(new List<IEnumerable<Region>> {
                 Counted(new Region(Vector3D.Zero, new Vector3D(100, 1, 1), 300), () => firstRead++),
@@ -113,15 +113,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CompletedSnapshotsPreserveHotspotsAndHalfOpenNegativeCellBounds operation.</summary>
+
         public void CompletedSnapshotsPreserveHotspotsAndHalfOpenNegativeCellBounds()
         {
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
             var scan = new ThermalVisionRegionScan(2, 32, 2);
             Assert.True(scan.Start(new List<IEnumerable<Region>> {
-/// <summary>Region operation.</summary>
+
                 new[] { new Region(new Vector3D(-2), Vector3D.Zero, 300),
-/// <summary>Region operation.</summary>
+
                     new Region(new Vector3D(-1.5), new Vector3D(-.5), 600) } }));
             while (scan.Running) scan.Advance(1);
             Assert.Equal(1, scan.Count);
@@ -130,7 +130,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(600f, scan[0].Kelvin);
             Assert.True(scan.Start(new List<IEnumerable<Region>> { new[] { new Region(Vector3D.Zero, new Vector3D(2), 400) } }));
             Assert.Equal(600f, scan[0].Kelvin);
-            scan.Advance(4); // source read, raster, exhausted source, staged output (not yet committed)
+            scan.Advance(4);
             Assert.Equal(600f, scan[0].Kelvin);
             scan.Advance(1);
             Assert.Equal(400f, scan[0].Kelvin);
@@ -138,10 +138,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CapacityOrSourceFailureDoesNotReplaceLastCompleteSnapshot operation.</summary>
+
         public void CapacityOrSourceFailureDoesNotReplaceLastCompleteSnapshot()
         {
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
             var scan = new ThermalVisionRegionScan(1, 1, 2);
             Assert.True(scan.Start(new List<IEnumerable<Region>> { new[] { new Region(Vector3D.Zero, Vector3D.One, 300) } }));
             while (scan.Running) scan.Advance(10);
@@ -160,10 +160,10 @@ namespace Thermodynamics.Tests
             Assert.Equal(0, scan.Count);
         }
 
-/// <summary>Counted operation.</summary>
+
         private static IEnumerable<Region> Counted(Region region, Action read)
         { read(); yield return region; }
-/// <summary>Failing operation.</summary>
+
         private static IEnumerable<Region> Failing(Action disposed)
         {
             try
@@ -171,7 +171,7 @@ namespace Thermodynamics.Tests
                 yield return new Region(Vector3D.Zero, Vector3D.One, 600);
                 throw new InvalidOperationException("Source mutated");
             }
-/// <summary>disposed operation.</summary>
+
             finally { disposed(); }
         }
     }

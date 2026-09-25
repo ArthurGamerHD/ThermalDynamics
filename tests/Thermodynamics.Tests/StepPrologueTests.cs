@@ -7,12 +7,12 @@ namespace Thermodynamics.Tests
 {
     public class StepPrologueTests
     {
-/// <summary>Census operation.</summary>
+
         private static ThermalSimulation Census(int blocks)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", blocks));
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
             simulation.RebuildAll();
@@ -20,10 +20,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStepAfterARebuildPerformsNoFullResync operation.</summary>
+
         public void AStepAfterARebuildPerformsNoFullResync()
         {
-/// <summary>Census operation.</summary>
+
             ThermalSimulation simulation = Census(2000);
 
             long full = simulation.Work.FullNodeResyncs;
@@ -38,18 +38,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFirstStepAllocatesLikeALaterOne operation.</summary>
+
         public void TheFirstStepAllocatesLikeALaterOne()
         {
-/// <summary>Census operation.</summary>
+
             ThermalSimulation simulation = Census(32000);
 
             Assert.True(simulation.Solver.LinkCount * 8L > 500_000,
                 "the fixture has too few links for the old allocation to have been visible");
 
-/// <summary>AllocatedBy operation.</summary>
+
             long first = AllocatedBy(simulation);
-/// <summary>AllocatedBy operation.</summary>
+
             long second = AllocatedBy(simulation);
 
             Assert.True(first < 100_000,
@@ -59,12 +59,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PreparingEarlyMovesNoTemperature operation.</summary>
+
         public void PreparingEarlyMovesNoTemperature()
         {
-/// <summary>Census operation.</summary>
+
             ThermalSimulation direct = Census(2000);
-/// <summary>Census operation.</summary>
+
             ThermalSimulation prepared = Census(2000);
             LoadBenchmarks.SeedSpread(direct);
             LoadBenchmarks.SeedSpread(prepared);
@@ -98,7 +98,7 @@ namespace Thermodynamics.Tests
             Assert.True(spread > 10f, "every temperature is still ambient, so agreement proves nothing (`E8`)");
         }
 
-/// <summary>AllocatedBy operation.</summary>
+
         private static long AllocatedBy(ThermalSimulation simulation)
         {
             long before = GC.GetAllocatedBytesForCurrentThread();

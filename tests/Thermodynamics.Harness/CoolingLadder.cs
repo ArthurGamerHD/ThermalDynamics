@@ -37,7 +37,7 @@ namespace Thermodynamics.Harness
             public float TopKelvin;
         }
 
-/// <summary>Candidates operation.</summary>
+
         private static List<KeyValuePair<string, BlockModel>> Candidates()
         {
             List<KeyValuePair<string, BlockModel>> candidates =
@@ -60,12 +60,12 @@ namespace Thermodynamics.Harness
 
             string[] vanilla =
             {
-                "LargeHeatVentBlock",     // 3x surface: the best the game gives away
-                "LargeExhaustPipe",       // 2x
-                "LargeBlockLargeThrust",  // 1.5x, and one a ship already carries
-                "LargeBlockWindTurbine",  // 1.5x
-                "LadderShaft",            // 1.5x, and nearly free
-                "LargeBlockArmorBlock",   // 1x: the control
+                "LargeHeatVentBlock",
+                "LargeExhaustPipe",
+                "LargeBlockLargeThrust",
+                "LargeBlockWindTurbine",
+                "LadderShaft",
+                "LargeBlockArmorBlock",
             };
 
             Dictionary<string, GameBlocks.Definition> definitions = GameBlocks.BySubtype();
@@ -86,10 +86,10 @@ namespace Thermodynamics.Harness
             return candidates;
         }
 
-/// <summary>List operation.</summary>
+
         private static readonly List<string> missing = new List<string>();
 
-/// <summary>BiggestReactor operation.</summary>
+
         private static GameBlocks.Definition BiggestReactor()
         {
             GameBlocks.Definition biggest = null;
@@ -108,7 +108,7 @@ namespace Thermodynamics.Harness
             return biggest;
         }
 
-/// <summary>Rung operation.</summary>
+
         private static Row Rung(string name, BlockModel cooler, GameBlocks.Definition reactor,
             int count, float bare)
         {
@@ -158,18 +158,18 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(out float bare)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
             bare = 0f;
 
-/// <summary>BiggestReactor operation.</summary>
+
             GameBlocks.Definition reactor = BiggestReactor();
             if (reactor == null) return rows;
 
-/// <summary>Rung operation.</summary>
+
             Row alone = Rung("(bare reactor)", null, reactor, 0, 0f);
             bare = alone.SourceKelvin;
             alone.Saved = 0f;
@@ -181,7 +181,7 @@ namespace Thermodynamics.Harness
 
                 foreach (int count in Counts)
                 {
-/// <summary>Rung operation.</summary>
+
                     Row row = Rung(candidate.Key, candidate.Value, reactor, count, bare);
                     row.Marginal = row.Saved - previous;
                     previous = row.Saved;
@@ -192,7 +192,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report()
         {
             if (!GameBlocks.IsInstalled)
@@ -201,10 +201,10 @@ namespace Thermodynamics.Harness
             }
 
             float bare;
-/// <summary>Run operation.</summary>
+
             List<Row> rows = Run(out bare);
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("COOLING LADDER");
             sb.AppendLine();

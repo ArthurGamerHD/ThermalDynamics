@@ -6,7 +6,7 @@ namespace Thermodynamics.Tests
 {
     public class HottestNodeTests
     {
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation Build()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -14,7 +14,7 @@ namespace Thermodynamics.Tests
             return builder.BuildSimulation(new ThermalSettings(), 293.15f);
         }
 
-/// <summary>HottestByWalking operation.</summary>
+
         private static ThermalNode HottestByWalking(ThermalSimulation simulation)
         {
             ThermalNode found = null;
@@ -27,10 +27,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ItIsTheHottestBlockAfterAStep operation.</summary>
+
         public void ItIsTheHottestBlockAfterAStep()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build();
 
             simulation.Solver.GetNodeAt(new Vector3I(2, 2, 2)).Temperature = 900f;
@@ -40,10 +40,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ItIsRightBeforeAnythingHasStepped operation.</summary>
+
         public void ItIsRightBeforeAnythingHasStepped()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build();
             simulation.Solver.GetNodeAt(new Vector3I(1, 0, 3)).Temperature = 750f;
 
@@ -51,10 +51,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ItSurvivesTheHottestBlockBeingDestroyed operation.</summary>
+
         public void ItSurvivesTheHottestBlockBeingDestroyed()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build();
 
             BlockInstance doomed = simulation.Grid.GetAtCell(new Vector3I(2, 2, 2));
@@ -73,10 +73,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ItFollowsTheHeatAsItMoves operation.</summary>
+
         public void ItFollowsTheHeatAsItMoves()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = Build();
 
             BlockInstance reactor = simulation.Grid.GetAtCell(new Vector3I(0, 0, 0));

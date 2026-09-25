@@ -19,7 +19,7 @@ namespace Thermodynamics.Harness
             public int Subtypes;
             public BlockThermalProperties Properties;
 
-/// <summary>List operation.</summary>
+
             public List<OverrideRow> Overrides = new List<OverrideRow>();
 
             public string Composition;
@@ -32,10 +32,10 @@ namespace Thermodynamics.Harness
             public string Reason;
         }
 
-/// <summary>Catalog operation.</summary>
+
         public static List<TypeRow> Catalog()
         {
-/// <summary>List operation.</summary>
+
             List<TypeRow> rows = new List<TypeRow>();
 
             foreach (KeyValuePair<string, List<GameBlocks.Definition>> type in GameBlocks.ByType())
@@ -47,7 +47,7 @@ namespace Thermodynamics.Harness
                     TypeId = type.Key,
                     Subtypes = type.Value.Count,
                     Properties = ShippedBlocks.DeriveWithFunction(components, type.Key),
-/// <summary>Composition operation.</summary>
+
                     Composition = Composition(components),
                 };
 
@@ -56,7 +56,7 @@ namespace Thermodynamics.Harness
                     if (block.Components.Count == 0) continue;
 
                     BlockThermalProperties own = ShippedBlocks.DeriveWithFunction(block.Components, type.Key);
-/// <summary>Deviation operation.</summary>
+
                     string reason = Deviation(row.Properties, own);
                     if (reason == null) continue;
 
@@ -75,10 +75,10 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Deviation operation.</summary>
+
         private static string Deviation(BlockThermalProperties type, BlockThermalProperties own)
         {
-/// <summary>List operation.</summary>
+
             List<string> reasons = new List<string>();
 
             if (Differs(type.Conductivity, own.Conductivity, ConductivityThreshold)) reasons.Add("conductivity");
@@ -91,25 +91,25 @@ namespace Thermodynamics.Harness
             return reasons.Count == 0 ? null : string.Join(", ", reasons.ToArray());
         }
 
-/// <summary>Differs operation.</summary>
+
         private static bool Differs(float type, float own, float threshold)
         {
             float reference = Math.Max(Math.Abs(type), 1e-6f);
             return Math.Abs(own - type) / reference >= threshold;
         }
 
-/// <summary>Composition operation.</summary>
+
         private static string Composition(IList<BlockComponent> components)
         {
             float total = 0f;
             for (int i = 0; i < components.Count; i++) total += components[i].Mass;
             if (total <= 0f) return "(no priced components)";
 
-/// <summary>List operation.</summary>
+
             List<BlockComponent> sorted = new List<BlockComponent>(components);
             sorted.Sort(delegate (BlockComponent a, BlockComponent b) { return b.Mass.CompareTo(a.Mass); });
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             int take = sorted.Count < 3 ? sorted.Count : 3;
             for (int i = 0; i < take; i++)
@@ -121,10 +121,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             if (!GameBlocks.IsInstalled)
@@ -134,7 +134,7 @@ namespace Thermodynamics.Harness
                 return sb.ToString();
             }
 
-/// <summary>Catalog operation.</summary>
+
             List<TypeRow> rows = Catalog();
             int overrides = 0;
             foreach (TypeRow row in rows) overrides += row.Overrides.Count;

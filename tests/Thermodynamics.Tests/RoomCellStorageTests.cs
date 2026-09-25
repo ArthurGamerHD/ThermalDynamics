@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
 {
     public class RoomCellStorageTests
     {
-/// <summary>CompartmentedHull operation.</summary>
+
         private static ThermalSimulation CompartmentedHull(int blocks)
         {
             ThermalSettings settings = Hulls.Uncapped();
@@ -21,13 +21,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoRoomCarriesACellTwice operation.</summary>
+
         public void NoRoomCarriesACellTwice()
         {
-/// <summary>CompartmentedHull operation.</summary>
+
             RoomMap map = CompartmentedHull(4000).Rooms.Map;
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> seen = new HashSet<Vector3I>(Vector3I.Comparer);
 
             for (int r = 0; r < map.RoomCount; r++)
@@ -45,10 +45,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheIndexAndTheRoomsDescribeTheSameCells operation.</summary>
+
         public void TheIndexAndTheRoomsDescribeTheSameCells()
         {
-/// <summary>CompartmentedHull operation.</summary>
+
             RoomMap map = CompartmentedHull(4000).Rooms.Map;
 
             int listed = 0;
@@ -71,10 +71,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACompletedPassLeavesNoSpareCapacityInTheCellStore operation.</summary>
+
         public void ACompletedPassLeavesNoSpareCapacityInTheCellStore()
         {
-/// <summary>CompartmentedHull operation.</summary>
+
             RoomMap map = CompartmentedHull(4000).Rooms.Map;
 
             Assert.True(map.RoomCellCount > 0, "the hull mapped no room cells, so nothing was checked");
@@ -82,10 +82,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRoomsTileTheCellStoreWithoutGapOrOverlap operation.</summary>
+
         public void TheRoomsTileTheCellStoreWithoutGapOrOverlap()
         {
-/// <summary>CompartmentedHull operation.</summary>
+
             RoomMap map = CompartmentedHull(4000).Rooms.Map;
 
             int expected = 0;
@@ -106,14 +106,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHintedFillNeitherGrowsNorTrimsItsCellStore operation.</summary>
+
         public void AHintedFillNeitherGrowsNorTrimsItsCellStore()
         {
             const int Cells = 3000;
 
-/// <summary>FillAndPublish operation.</summary>
+
             long untold = FillAndPublish(0, Cells);
-/// <summary>FillAndPublish operation.</summary>
+
             long told = FillAndPublish(Cells, Cells);
 
             long oneStore = Cells * 12L;
@@ -123,10 +123,10 @@ namespace Thermodynamics.Tests
                 + oneStore.ToString("n0") + "; the hint is reaching nothing");
         }
 
-/// <summary>FillAndPublish operation.</summary>
+
         private static long FillAndPublish(int hint, int cells)
         {
-/// <summary>RoomMap operation.</summary>
+
             RoomMap map = new RoomMap();
             map.SetSearchBounds(new Vector3I(0, 0, 0), new Vector3I(20, 20, 20));
             if (hint > 0) map.HintRoomCells(hint);
@@ -156,10 +156,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheMapperSizesARebuildFromThePassBeforeIt operation.</summary>
+
         public void TheMapperSizesARebuildFromThePassBeforeIt()
         {
-/// <summary>Unmapped operation.</summary>
+
             ThermalSimulation simulation = Unmapped(4000);
 
             long before = GC.GetAllocatedBytesForCurrentThread();
@@ -182,18 +182,18 @@ namespace Thermodynamics.Tests
                 "the rebuild allocated " + second.ToString("n0") + " bytes for "
                 + cells.ToString("n0") + " room cells — " + (second / (double)cells).ToString("n1")
                 + " a cell, against a bar of 34 — so it grew into its store and trimmed it back"
-/// <summary>it operation.</summary>
+
                 + " rather than being sized from the pass before it (the first pass, buffers and"
                 + " all, allocated " + first.ToString("n0") + ")");
         }
 
-/// <summary>Unmapped operation.</summary>
+
         private static ThermalSimulation Unmapped(int blocks)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", blocks));
 
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings().Derive(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -204,7 +204,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>RunPass operation.</summary>
+
         private static void RunPass(ThermalSimulation simulation)
         {
             simulation.Rooms.RequestRestart(simulation.Grid);
@@ -212,10 +212,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AClosedRoomCannotBeAddedTo operation.</summary>
+
         public void AClosedRoomCannotBeAddedTo()
         {
-/// <summary>RoomMap operation.</summary>
+
             RoomMap map = new RoomMap();
             map.SetSearchBounds(new Vector3I(0, 0, 0), new Vector3I(8, 8, 8));
 
@@ -231,10 +231,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SolidRoomAndExternalCellsAccountForTheWholeSearchVolume operation.</summary>
+
         public void SolidRoomAndExternalCellsAccountForTheWholeSearchVolume()
         {
-/// <summary>CompartmentedHull operation.</summary>
+
             ThermalSimulation simulation = CompartmentedHull(4000);
             RoomMap map = simulation.Rooms.Map;
 

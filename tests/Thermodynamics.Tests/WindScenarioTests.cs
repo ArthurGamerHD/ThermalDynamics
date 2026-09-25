@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class WindScenarioTests
     {
-/// <summary>Coarse operation.</summary>
+
         private static List<WindScenarios.Scenario> Coarse()
         {
             List<WindScenarios.Scenario> scenarios = WindScenarios.All();
@@ -15,10 +15,10 @@ namespace Thermodynamics.Tests
             return scenarios;
         }
 
-/// <summary>One operation.</summary>
+
         private static WindScenarios.Outcome One(string name)
         {
-/// <summary>Coarse operation.</summary>
+
             List<WindScenarios.Scenario> scenarios = Coarse();
             for (int i = 0; i < scenarios.Count; i++)
             {
@@ -29,7 +29,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>APlanetIsDerivedTheWayTheEngineDerivesOne operation.</summary>
+
         public void APlanetIsDerivedTheWayTheEngineDerivesOne()
         {
             WindLab.Planet earth = WindLab.Planet.Vanilla("EarthLike");
@@ -42,7 +42,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TritonsPeaksStandAboveItsOwnAtmosphere operation.</summary>
+
         public void TritonsPeaksStandAboveItsOwnAtmosphere()
         {
             WindLab.Planet triton = WindLab.Planet.Vanilla("Triton");
@@ -55,7 +55,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoOtherShippedWorldHasPeaksInVacuum operation.</summary>
+
         public void NoOtherShippedWorldHasPeaksInVacuum()
         {
             for (int i = 0; i < WindLab.Planet.VanillaNames.Length; i++)
@@ -69,7 +69,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACirculationBandIsAShortFlightRatherThanAContinent operation.</summary>
+
         public void ACirculationBandIsAShortFlightRatherThanAContinent()
         {
             WindLab.Planet earth = WindLab.Planet.Vanilla("EarthLike");
@@ -82,7 +82,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheHorizonIsCloseEnoughToMatterToWhatTheMapDraws operation.</summary>
+
         public void TheHorizonIsCloseEnoughToMatterToWhatTheMapDraws()
         {
             Assert.InRange(WindLab.Planet.Vanilla("EarthLike").HorizonFrom(2d), 450d, 520d);
@@ -90,7 +90,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheBoundaryLayerCanBeTallerThanAWholeAtmosphere operation.</summary>
+
         public void TheBoundaryLayerCanBeTallerThanAWholeAtmosphere()
         {
             WindLab.Planet titan = WindLab.Planet.Vanilla("Titan");
@@ -103,10 +103,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>NoScenarioAnywhereProducesNaNOrANegativeWind operation.</summary>
+
         public void NoScenarioAnywhereProducesNaNOrANegativeWind()
         {
-/// <summary>Coarse operation.</summary>
+
             List<WindScenarios.Scenario> scenarios = Coarse();
             Assert.True(scenarios.Count >= 25, "the matrix has shrunk: " + scenarios.Count);
 
@@ -125,10 +125,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryScenarioKeepsTheTerrainFactorsInsideTheirDeclaredCaps operation.</summary>
+
         public void EveryScenarioKeepsTheTerrainFactorsInsideTheirDeclaredCaps()
         {
-/// <summary>Coarse operation.</summary>
+
             List<WindScenarios.Scenario> scenarios = Coarse();
 
             for (int i = 0; i < scenarios.Count; i++)
@@ -144,10 +144,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>AnAirlessWorldHasNoWindAtAll operation.</summary>
+
         public void AnAirlessWorldHasNoWindAtAll()
         {
-/// <summary>One operation.</summary>
+
             WindScenarios.Outcome moon = One("vanilla:Moon");
 
             Assert.Equal(0f, moon.MinSpeed, 5);
@@ -156,12 +156,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TakingTheAirOrTheWindRatingAwayGivesTheSameStillWorld operation.</summary>
+
         public void TakingTheAirOrTheWindRatingAwayGivesTheSameStillWorld()
         {
             foreach (string name in new[] { "degenerate:no-atmosphere", "degenerate:no-wind-rating" })
             {
-/// <summary>One operation.</summary>
+
                 WindScenarios.Outcome o = One(name);
                 Assert.Equal(0f, o.MaxSpeed, 5);
                 Assert.Equal(0, o.Bad);
@@ -169,10 +169,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFlatWorldLeavesEveryTerrainFactorExactlyAlone operation.</summary>
+
         public void AFlatWorldLeavesEveryTerrainFactorExactlyAlone()
         {
-/// <summary>One operation.</summary>
+
             WindScenarios.Outcome flat = One("degenerate:flat-world");
 
             Assert.Equal(1f, flat.MinSpeedUp, 4);
@@ -183,10 +183,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TurningTerrainOffIsTheSameAsHavingNone operation.</summary>
+
         public void TurningTerrainOffIsTheSameAsHavingNone()
         {
-/// <summary>One operation.</summary>
+
             WindScenarios.Outcome off = One("settings:no-terrain");
 
             Assert.Equal(1f, off.MinSpeedUp, 4);
@@ -195,10 +195,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ADayShorterThanTheLagThatFollowsItStillBehaves operation.</summary>
+
         public void ADayShorterThanTheLagThatFollowsItStillBehaves()
         {
-/// <summary>One operation.</summary>
+
             WindScenarios.Outcome fast = One("degenerate:four-minute-day");
 
             Assert.Equal(0, fast.Bad);
@@ -207,12 +207,12 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TerrainReachesForItsBoundsWithoutSittingOnThem operation.</summary>
+
         public void TerrainReachesForItsBoundsWithoutSittingOnThem()
         {
             foreach (string name in new[] { "size:19km", "size:60km", "size:120km" })
             {
-/// <summary>One operation.</summary>
+
                 WindScenarios.Outcome o = One(name);
 
                 float ceiling = 1f + Thermodynamics.Core.WindTerrain.MaximumSpeedUp;
@@ -233,12 +233,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TerrainTellsOneWorldFromAnother operation.</summary>
+
         public void TerrainTellsOneWorldFromAnother()
         {
-/// <summary>One operation.</summary>
+
             WindScenarios.Outcome earth = One("vanilla:EarthLike");
-/// <summary>One operation.</summary>
+
             WindScenarios.Outcome pertam = One("vanilla:Pertam");
 
             Assert.True(pertam.MaxSpeedUp < earth.MaxSpeedUp - 0.05f,
@@ -250,12 +250,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWorldSmallEnoughThatTheTerrainRingSpansManyLandformsAveragesThemOut operation.</summary>
+
         public void AWorldSmallEnoughThatTheTerrainRingSpansManyLandformsAveragesThemOut()
         {
-/// <summary>One operation.</summary>
+
             WindScenarios.Outcome tiny = One("size:2km-moddedtiny");
-/// <summary>One operation.</summary>
+
             WindScenarios.Outcome usual = One("size:120km");
 
             Assert.True(tiny.MaxSpeedUp < usual.MaxSpeedUp,
@@ -266,10 +266,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>OnlyAStormReachesTheFrictionThresholdAndNothingPassesTheCeiling operation.</summary>
+
         public void OnlyAStormReachesTheFrictionThresholdAndNothingPassesTheCeiling()
         {
-/// <summary>One operation.</summary>
+
             WindScenarios.Outcome storm = One("settings:storm");
 
             Assert.Equal(0, storm.OverCeiling);
@@ -280,7 +280,7 @@ namespace Thermodynamics.Tests
                 "a parked grid in the worst weather the game reports is expected to be friction"
                 + " heated; if it no longer is, this test has outlived its subject");
 
-/// <summary>One operation.</summary>
+
             WindScenarios.Outcome calm = One("vanilla:EarthLike");
             Assert.Equal(0, calm.OverCeiling);
             Assert.Equal(0, calm.OverFriction);
@@ -290,12 +290,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OrdinaryWeatherOnEveryShippedWorldStaysUnderTheCeiling operation.</summary>
+
         public void OrdinaryWeatherOnEveryShippedWorldStaysUnderTheCeiling()
         {
             for (int i = 0; i < WindLab.Planet.VanillaNames.Length; i++)
             {
-/// <summary>One operation.</summary>
+
                 WindScenarios.Outcome o = One("vanilla:" + WindLab.Planet.VanillaNames[i]);
 
                 Assert.Equal(0, o.OverCeiling);

@@ -13,7 +13,7 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>BlockHeatIndexTests operation.</summary>
+
         public BlockHeatIndexTests(ITestOutputHelper output)
         {
             this.output = output;
@@ -28,7 +28,7 @@ namespace Thermodynamics.Tests
             };
 
         [Fact]
-/// <summary>NoShippedBlockIsImpossibleToCoolExceptTheOnesAlreadyKnown operation.</summary>
+
         public void NoShippedBlockIsImpossibleToCoolExceptTheOnesAlreadyKnown()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -36,12 +36,12 @@ namespace Thermodynamics.Tests
             List<BlockHeatIndex.Reading> readings = BlockHeatIndex.All();
             Assert.True(readings.Count > 0, "no block in the installed game reported any waste heat");
 
-/// <summary>List operation.</summary>
+
             List<string> unexpected = new List<string>();
-/// <summary>List operation.</summary>
+
             List<string> fixedNow = new List<string>();
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> seen = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (BlockHeatIndex.Reading reading in readings)
@@ -75,7 +75,7 @@ namespace Thermodynamics.Tests
 
             Report(readings);
 
-/// <summary>List operation.</summary>
+
             List<string> problems = new List<string>();
             problems.AddRange(unexpected);
             problems.AddRange(fixedNow);
@@ -86,7 +86,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheIndexReadsAsTheFactorTheHeatHasToComeDownBy operation.</summary>
+
         public void TheIndexReadsAsTheFactorTheHeatHasToComeDownBy()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -115,14 +115,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WithNothingRadiatingThePaceIsTheAdiabaticClosedForm operation.</summary>
+
         public void WithNothingRadiatingThePaceIsTheAdiabaticClosedForm()
         {
-            const float Capacity = 5000f;                        // J/K
+            const float Capacity = 5000f;
             const float Watts = 250f;
             float target = BlockHeatIndex.AmbientKelvin + 400f;
 
-            float expected = Capacity * 400f / Watts;            // 8,000 s
+            float expected = Capacity * 400f / Watts;
             float measured = BlockHeatIndex.SecondsToReach(Capacity, Watts, 0f, target);
 
             Assert.Equal(expected, measured, 1);
@@ -134,7 +134,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APaceIsInfiniteExactlyWhereTheEquilibriumIsBelowTheTarget operation.</summary>
+
         public void APaceIsInfiniteExactlyWhereTheEquilibriumIsBelowTheTarget()
         {
             const float Capacity = 5000f;
@@ -156,7 +156,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryBlocksPaceAgreesWithItsSelfIndex operation.</summary>
+
         public void EveryBlocksPaceAgreesWithItsSelfIndex()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -164,7 +164,7 @@ namespace Thermodynamics.Tests
             List<BlockHeatIndex.Reading> readings = BlockHeatIndex.All();
             Assert.True(readings.Count > 0, "no block in the installed game reported any waste heat");
 
-/// <summary>List operation.</summary>
+
             List<string> disagree = new List<string>();
 
             foreach (BlockHeatIndex.Reading r in readings)
@@ -184,7 +184,7 @@ namespace Thermodynamics.Tests
                 "pace and self index disagree on:\n  " + string.Join("\n  ", disagree));
         }
 
-/// <summary>Report operation.</summary>
+
         private void Report(List<BlockHeatIndex.Reading> readings)
         {
             output.WriteLine(string.Format("{0,-40}{1,8}{2,8}{3,12}{4,12}{5,10}{6,10}",
@@ -202,7 +202,7 @@ namespace Thermodynamics.Tests
             string directory = Environment.GetEnvironmentVariable("THERMAL_CORPUS_DATA");
             if (string.IsNullOrEmpty(directory)) return;
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder csv = new StringBuilder();
             csv.AppendLine("subtype,type_id,large,source,waste_w,area_m2,emissivity,critical_k,"
                 + "radiated_w,conducted_w,index,self_index,hull_area_needed_m2,equilibrium_k,"
@@ -234,13 +234,13 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Csv operation.</summary>
+
         private static string Csv(string value)
         {
             return Thermodynamics.Harness.CsvLine.Text(value);
         }
 
-/// <summary>Num operation.</summary>
+
         private static string Num(float value)
         {
             if (float.IsNaN(value) || float.IsInfinity(value)) return "";

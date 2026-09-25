@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
     {
         private static NodeActivityLab.Result result;
 
-/// <summary>Result operation.</summary>
+
         private static NodeActivityLab.Result Result()
         {
             if (result == null) result = NodeActivityLab.Run(4000, null, new[] { 10, 50, 200 });
@@ -15,10 +15,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryRowJudgesTheWholeGridAndThresholdsAreMonotone operation.</summary>
+
         public void EveryRowJudgesTheWholeGridAndThresholdsAreMonotone()
         {
-/// <summary>Result operation.</summary>
+
             List<NodeActivityLab.Row> rows = Result().Rows;
             Assert.True(rows.Count >= 6, "expected marks for two scenarios, got " + rows.Count + " rows");
 
@@ -44,28 +44,28 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheDrivenHullIsBusierThanTheParkedOne operation.</summary>
+
         public void TheDrivenHullIsBusierThanTheParkedOne()
         {
-/// <summary>Find operation.</summary>
+
             NodeActivityLab.Row parked = Find("parked in air", 200);
-/// <summary>Find operation.</summary>
+
             NodeActivityLab.Row driven = Find("driven in vacuum", 200);
 
             double parkedQuiet = (double)parked.QuietNodes[1] / parked.Nodes;
             double drivenQuiet = (double)driven.QuietNodes[1] / driven.Nodes;
 
             Assert.True(drivenQuiet <= parkedQuiet,
-/// <summary>quieter operation.</summary>
+
                 "the driven hull reads quieter (" + drivenQuiet + ") than the parked one (" + parkedQuiet
                 + ") at the millikelvin threshold; the scenarios are not measuring what their names say");
         }
 
         [Fact]
-/// <summary>TheDisturbanceWakesSomethingAndTheLabSaysHowMuch operation.</summary>
+
         public void TheDisturbanceWakesSomethingAndTheLabSaysHowMuch()
         {
-/// <summary>Result operation.</summary>
+
             List<NodeActivityLab.WavefrontRow> wavefront = Result().Wavefront;
             Assert.Equal(50, wavefront.Count);
 
@@ -81,7 +81,7 @@ namespace Thermodynamics.Tests
                 "the disturbance woke the whole grid, so the wavefront claim judged nothing");
         }
 
-/// <summary>Find operation.</summary>
+
         private static NodeActivityLab.Row Find(string scenario, int step)
         {
             foreach (NodeActivityLab.Row row in Result().Rows)

@@ -8,13 +8,13 @@ namespace Thermodynamics.Tests
 {
     public class RoomSpanFloodTests
     {
-/// <summary>Census operation.</summary>
+
         private static ThermalSimulation Census(bool spans, int blocks)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build("ship", blocks));
 
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             simulation.Rooms.SpanFlood = spans;
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
@@ -22,7 +22,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Compartments operation.</summary>
+
         private static ThermalSimulation Compartments(bool spans)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -33,7 +33,7 @@ namespace Thermodynamics.Tests
 
             builder.Remove(new Vector3I(9, 3, 2));
 
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             simulation.Rooms.SpanFlood = spans;
             for (int i = 0; i < builder.Placed.Count; i++) simulation.Solver.AddBlock(builder.Placed[i], 293.15f);
@@ -41,7 +41,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>AssertSameClassification operation.</summary>
+
         private static void AssertSameClassification(ThermalSimulation cells, ThermalSimulation spans, string what)
         {
             RoomMap a = cells.Rooms.Map;
@@ -77,31 +77,31 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRunWalkAndTheCellWalkAgreeOnCompartments operation.</summary>
+
         public void TheRunWalkAndTheCellWalkAgreeOnCompartments()
         {
             AssertSameClassification(Compartments(false), Compartments(true), "compartments");
         }
 
         [Fact]
-/// <summary>TheRunWalkAndTheCellWalkAgreeOnACensusHull operation.</summary>
+
         public void TheRunWalkAndTheCellWalkAgreeOnACensusHull()
         {
             AssertSameClassification(Census(false, 8000), Census(true, 8000), "census hull");
         }
 
         [Fact]
-/// <summary>EveryCellOfTheBoxIsClassifiedTheSameWay operation.</summary>
+
         public void EveryCellOfTheBoxIsClassifiedTheSameWay()
         {
-/// <summary>Compartments operation.</summary>
+
             ThermalSimulation cells = Compartments(false);
-/// <summary>Compartments operation.</summary>
+
             ThermalSimulation spans = Compartments(true);
 
             GridModel grid = cells.Grid;
             Vector3I min = grid.Min - Vector3I.One;
-/// <summary>Vector3I operation.</summary>
+
             Vector3I maxExclusive = grid.Max + new Vector3I(2, 2, 2);
 
             RoomMap a = cells.Rooms.Map;
@@ -117,7 +117,7 @@ namespace Thermodynamics.Tests
                 {
                     for (int x = min.X; x < maxExclusive.X; x++)
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I cell = new Vector3I(x, y, z);
 
                         Assert.True(a.IsSolid(cell) == b.IsSolid(cell), "solid disagreement at " + cell);

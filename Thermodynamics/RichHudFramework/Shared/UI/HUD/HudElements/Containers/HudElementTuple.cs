@@ -4,7 +4,7 @@
 	{
 		public virtual TData AssocData { get; set; }
 
-/// <summary>HudElementTuple operation.</summary>
+
 		public HudElementTuple()
 		{ }
 	}

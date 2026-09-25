@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
     public class BlockAccountingWalk
     {
         [Fact]
-/// <summary>EveryBlockInABlueprintIsEitherPlacedOrCountedAsUnknown operation.</summary>
+
         public void EveryBlockInABlueprintIsEitherPlacedOrCountedAsUnknown()
         {
             LabInvariantTests.EveryBlockInABlueprintIsEitherPlacedOrCountedAsUnknown();
@@ -20,13 +20,13 @@ namespace Thermodynamics.Tests
         private const int Sample = 200;
 
         [Fact]
-/// <summary>RunningTheSameThingTwiceGivesTheSameAnswer operation.</summary>
+
         public void RunningTheSameThingTwiceGivesTheSameAnswer()
         {
             List<Blueprints.Ship> ships = CorpusFixture.Spread(Sample);
             if (ships.Count == 0) return;
 
-/// <summary>List operation.</summary>
+
             List<string> drifted = new List<string>();
             foreach (List<string> report in LabRun.Map(ships, LabInvariantTests.Compare, LabMode.Parallel))
             {

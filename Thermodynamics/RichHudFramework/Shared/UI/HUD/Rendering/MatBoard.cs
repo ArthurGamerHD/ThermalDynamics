@@ -55,10 +55,10 @@ namespace RichHudFramework
 				private QuadBoard minBoard;
 				private readonly MaterialFrame matFrame;
 
-/// <summary>MatBoard operation.</summary>
+
 				public MatBoard()
 				{
-/// <summary>MaterialFrame operation.</summary>
+
 					matFrame = new MaterialFrame();
 					minBoard = QuadBoard.Default;
 
@@ -66,13 +66,13 @@ namespace RichHudFramework
 					bbAspect = -1f;
 				}
 
-/// <summary>Draw operation.</summary>
+
 				public void Draw(ref MyQuadD quad)
 				{
 					BillBoardUtils.AddQuad(ref minBoard.materialData, ref quad);
 				}
 
-/// <summary>Draw operation.</summary>
+
 				public void Draw(ref CroppedBox box, MatrixD[] matrixRef)
 				{
 					bool isDisjoint = false;
@@ -106,14 +106,14 @@ namespace RichHudFramework
 								box.bounds.Scale(matScale);
 						}
 
-/// <summary>FlatQuad operation.</summary>
+
 						FlatQuad quad = new FlatQuad()
 						{
 							Point0 = box.bounds.Max,
-/// <summary>Vector2 operation.</summary>
+
 							Point1 = new Vector2(box.bounds.Max.X, box.bounds.Min.Y),
 							Point2 = box.bounds.Min,
-/// <summary>Vector2 operation.</summary>
+
 							Point3 = new Vector2(box.bounds.Min.X, box.bounds.Max.Y),
 						};
 

@@ -89,7 +89,7 @@ namespace RichHudFramework.UI
 			{
 				_barSize.X = value;
 				value = Math.Max(_barSize.X, _sliderSize.X);
-/// <summary>Vector2 operation.</summary>
+
 				UnpaddedSize = new Vector2(value, UnpaddedSize.Y);
 			}
 		}
@@ -101,7 +101,7 @@ namespace RichHudFramework.UI
 			{
 				_barSize.Y = value;
 				value = Math.Max(_barSize.Y, _sliderSize.Y);
-/// <summary>Vector2 operation.</summary>
+
 				UnpaddedSize = new Vector2(UnpaddedSize.X, value);
 			}
 		}
@@ -123,7 +123,7 @@ namespace RichHudFramework.UI
 			{
 				_sliderSize.X = value;
 				value = Math.Max(_barSize.X, _sliderSize.X);
-/// <summary>Vector2 operation.</summary>
+
 				UnpaddedSize = new Vector2(value, UnpaddedSize.Y);
 			}
 		}
@@ -135,7 +135,7 @@ namespace RichHudFramework.UI
 			{
 				_sliderSize.Y = value;
 				value = Math.Max(_barSize.Y, _sliderSize.Y);
-/// <summary>Vector2 operation.</summary>
+
 				UnpaddedSize = new Vector2(UnpaddedSize.X, value);
 			}
 		}
@@ -160,18 +160,18 @@ namespace RichHudFramework.UI
 
 		protected bool canMoveSlider;
 
-/// <summary>SliderBar operation.</summary>
+
 		public SliderBar(HudParentBase parent) : base(parent)
 		{
-/// <summary>TexturedBox operation.</summary>
+
 			bar = new TexturedBox(this);
-/// <summary>TexturedBox operation.</summary>
+
 			slider = new TexturedBox(bar) { UseCursor = true, ShareCursor = true };
 			MouseInput = this;
 
-/// <summary>Vector2 operation.</summary>
+
 			_barSize = new Vector2(100f, 12f);
-/// <summary>Vector2 operation.</summary>
+
 			_sliderSize = new Vector2(6f, 12f);
 			UnpaddedSize = _barSize;
 			SliderVisible = true;
@@ -179,11 +179,11 @@ namespace RichHudFramework.UI
 			bar.Size = _barSize;
 			slider.Size = _sliderSize;
 
-/// <summary>Color operation.</summary>
+
 			SliderColor = new Color(180, 180, 180, 255);
-/// <summary>Color operation.</summary>
+
 			BarColor = new Color(140, 140, 140, 255);
-/// <summary>Color operation.</summary>
+
 			SliderHighlight = new Color(200, 200, 200, 255);
 			EnableHighlight = true;
 
@@ -199,11 +199,11 @@ namespace RichHudFramework.UI
 			DimAlignment = DimAlignments.None;
 		}
 
-/// <summary>SliderBar operation.</summary>
+
 		public SliderBar() : this(null)
 		{ }
 
-/// <summary>HandleInput operation.</summary>
+
 		protected override void HandleInput(Vector2 cursorPos)
 		{
 			base.HandleInput(cursorPos);
@@ -219,7 +219,7 @@ namespace RichHudFramework.UI
 				else
 					startCursorOffset = Vector2.Zero;
 			}
-/// <summary>if operation.</summary>
+
 			else if (canMoveSlider && !SharedBinds.LeftButton.IsPressed)
 				canMoveSlider = false;
 
@@ -257,7 +257,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>Layout operation.</summary>
+
 		protected override void Layout()
 		{
 			slider.Visible = SliderVisible;
@@ -305,25 +305,25 @@ namespace RichHudFramework.UI
 			UpdateButtonOffset();
 		}
 
-/// <summary>UpdateButtonOffset operation.</summary>
+
 		private void UpdateButtonOffset()
 		{
 			if (Vertical)
 			{
 				if (Reverse)
-/// <summary>Vector2 operation.</summary>
+
 					slider.Offset = new Vector2(0f, -(Percent - .5f) * (_barSize.Y - _sliderSize.Y));
 				else
-/// <summary>Vector2 operation.</summary>
+
 					slider.Offset = new Vector2(0f, (Percent - .5f) * (_barSize.Y - _sliderSize.Y));
 			}
 			else
 			{
 				if (Reverse)
-/// <summary>Vector2 operation.</summary>
+
 					slider.Offset = new Vector2(-(Percent - .5f) * (_barSize.X - _sliderSize.X), 0f);
 				else
-/// <summary>Vector2 operation.</summary>
+
 					slider.Offset = new Vector2((Percent - .5f) * (_barSize.X - _sliderSize.X), 0f);
 			}
 		}

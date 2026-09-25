@@ -20,16 +20,16 @@ namespace Thermodynamics.Presentation
         private readonly double maxCellSize;
         public double CellSize { get { return cellSize; } }
         public int Coarsenings { get; private set; }
-/// <summary>List operation.</summary>
+
         private readonly List<Source> sources = new List<Source>();
         private readonly Dictionary<Vector3I, float> working = new Dictionary<Vector3I, float>();
         private readonly bool average;
         private readonly Vector3D origin;
         public Vector3D Origin { get { return origin; } }
         private readonly Dictionary<Vector3I, Vector2D> moments = new Dictionary<Vector3I, Vector2D>();
-/// <summary>List operation.</summary>
+
         private List<Region> published = new List<Region>();
-/// <summary>List operation.</summary>
+
         private List<Region> staged = new List<Region>();
         private bool publishing;
         private Dictionary<Vector3I, float>.Enumerator publication;
@@ -41,7 +41,7 @@ namespace Thermodynamics.Presentation
         public int Count { get { return published.Count; } }
         public Region this[int index] { get { return published[index]; } }
 
-/// <summary>ThermalVisionRegionScan operation.</summary>
+
         public ThermalVisionRegionScan(double cellSize, int capacity, int sourceLimit, double maxCellSize = 0, bool average = false, Vector3D? origin = null)
         {
             if (double.IsNaN(cellSize) || double.IsInfinity(cellSize) || cellSize <= 0 || capacity < 1 || sourceLimit < 1)
@@ -58,7 +58,7 @@ namespace Thermodynamics.Presentation
             this.cellSize = cellSize; this.capacity = capacity; this.sourceLimit = sourceLimit;
         }
 
-/// <summary>Start operation.</summary>
+
         public bool Start(IList<IEnumerable<Region>> input)
         {
             Cancel(); Failure = null; SampleCount = 0; Coarsenings = 0;
@@ -73,7 +73,7 @@ namespace Thermodynamics.Presentation
             return true;
         }
 
-/// <summary>Advance operation.</summary>
+
         public int Advance(int workLimit)
         {
             if (workLimit < 1) throw new ArgumentException("Positive work budget required");
@@ -95,7 +95,7 @@ namespace Thermodynamics.Presentation
                         else
                         {
                             publication.Dispose(); publishing = false;
-/// <summary>List operation.</summary>
+
                             published = staged; staged = new List<Region>();
                             working.Clear(); moments.Clear(); Running = false; Generation++;
                         }
@@ -129,9 +129,9 @@ namespace Thermodynamics.Presentation
                             working[source.Cell] = moment.Y > 0 ? (float)(moment.X / moment.Y) : source.Kelvin;
                         }
                         if (source.Cell.X < source.Max.X) source.Cell.X++;
-/// <summary>if operation.</summary>
+
                         else if (source.Cell.Y < source.Max.Y) { source.Cell.X = source.Min.X; source.Cell.Y++; }
-/// <summary>if operation.</summary>
+
                         else if (source.Cell.Z < source.Max.Z) { source.Cell.X = source.Min.X; source.Cell.Y = source.Min.Y; source.Cell.Z++; }
                         else source.Rasterizing = false;
                     }
@@ -156,14 +156,14 @@ namespace Thermodynamics.Presentation
             return work;
         }
 
-/// <summary>Coarsen operation.</summary>
+
         private bool Coarsen()
         {
             if (cellSize > maxCellSize / 2) return false;
             var merged = new Dictionary<Vector3I, float>();
             foreach (KeyValuePair<Vector3I, float> entry in working)
             {
-/// <summary>Parent operation.</summary>
+
                 Vector3I parent = Parent(entry.Key);
                 float previous;
                 merged[parent] = merged.TryGetValue(parent, out previous) ? Math.Max(previous, entry.Value) : entry.Value;
@@ -173,7 +173,7 @@ namespace Thermodynamics.Presentation
             foreach (Source source in sources)
                 if (source.Rasterizing)
                 {
-/// <summary>Parent operation.</summary>
+
                     source.Min = Parent(source.Min); source.Max = Parent(source.Max);
                     source.Cell = source.Min;
                 }
@@ -181,11 +181,11 @@ namespace Thermodynamics.Presentation
             return true;
         }
 
-/// <summary>Parent operation.</summary>
+
         private static Vector3I Parent(Vector3I cell)
         { return new Vector3I((int)Math.Floor(cell.X / 2.0), (int)Math.Floor(cell.Y / 2.0), (int)Math.Floor(cell.Z / 2.0)); }
 
-/// <summary>Prepare operation.</summary>
+
         private bool Prepare(Source source, Region sample)
         {
             Vector3D a = (sample.Min - origin) / cellSize, b = (sample.Max - origin) / cellSize;
@@ -195,30 +195,30 @@ namespace Thermodynamics.Presentation
                 || a.X >= b.X || a.Y >= b.Y || a.Z >= b.Z) return false;
             const double bound = 1000000000;
             if (a.X < -bound || a.Y < -bound || a.Z < -bound || b.X > bound || b.Y > bound || b.Z > bound) return false;
-/// <summary>Vector3I operation.</summary>
+
             source.Min = new Vector3I((int)Math.Floor(a.X), (int)Math.Floor(a.Y), (int)Math.Floor(a.Z));
-/// <summary>Vector3I operation.</summary>
+
             source.Max = new Vector3I((int)Math.Ceiling(b.X) - 1, (int)Math.Ceiling(b.Y) - 1, (int)Math.Ceiling(b.Z) - 1);
             source.Cell = source.Min; source.Kelvin = sample.Kelvin; source.Rasterizing = true;
             source.BoundsMin = sample.Min; source.BoundsMax = sample.Max;
             return true;
         }
 
-/// <summary>Fail operation.</summary>
+
         private void Fail(string reason) { Cancel(); Failure = reason; }
-/// <summary>Cancel operation.</summary>
+
         public void Cancel()
         {
             Running = false;
             foreach (Source source in sources)
             {
-                try { source.Reader.Dispose(); } catch (Exception) { /* Continue releasing other sources. */ }
+                try { source.Reader.Dispose(); } catch (Exception) {  }
             }
             if (publishing) publication.Dispose();
             publishing = false; staged.Clear();
             sources.Clear(); working.Clear(); moments.Clear(); cursor = 0;
         }
-/// <summary>Dispose operation.</summary>
+
         public void Dispose() { Cancel(); published.Clear(); }
     }
 }

@@ -6,16 +6,16 @@ namespace Thermodynamics.Core
 {
     public class SunShadowMap
     {
-/// <summary>CellBitset operation.</summary>
+
         private CellBitset shadowed = new CellBitset();
 
-/// <summary>CellBitset operation.</summary>
+
         private CellBitset building = new CellBitset();
 
-/// <summary>List operation.</summary>
+
         private readonly List<Vector3I> pending = new List<Vector3I>();
 
-/// <summary>CellBitset operation.</summary>
+
         private readonly CellBitset queued = new CellBitset();
 
         public struct Occluder
@@ -27,10 +27,10 @@ namespace Thermodynamics.Core
             public long Id;
         }
 
-/// <summary>List operation.</summary>
+
         private readonly List<Occluder> occluders = new List<Occluder>();
 
-/// <summary>List operation.</summary>
+
         private readonly List<Vector3D> occluderSun = new List<Vector3D>();
 
         private GridModel grid;
@@ -54,7 +54,7 @@ namespace Thermodynamics.Core
 
         public int PendingCells { get { return Math.Max(0, pending.Count - cursor); } }
 
-/// <summary>NeedsRestart operation.</summary>
+
         public bool NeedsRestart(ref Vector3 sunLocal, float cosineTolerance)
         {
             if (!IsBuilt && !IsRunning) return true;
@@ -63,7 +63,7 @@ namespace Thermodynamics.Core
             return Vector3.Dot(reference, sunLocal) < cosineTolerance;
         }
 
-/// <summary>Clear operation.</summary>
+
         public void Clear()
         {
             shadowed.Clear();
@@ -76,13 +76,13 @@ namespace Thermodynamics.Core
             IsBuilt = false;
         }
 
-/// <summary>Restart operation.</summary>
+
         public void Restart(GridModel model, Vector3 sunLocal)
         {
             Restart(model, sunLocal, null);
         }
 
-/// <summary>Restart operation.</summary>
+
         public void Restart(GridModel model, Vector3 sunLocal, IList<Occluder> others)
         {
             pending.Clear();
@@ -94,7 +94,7 @@ namespace Thermodynamics.Core
             if (grid == null || sunLocal.LengthSquared() < 1e-6f) return;
 
             Vector3I setMin = grid.Min - Vector3I.One;
-/// <summary>Vector3I operation.</summary>
+
             Vector3I setMaxExclusive = grid.Max + new Vector3I(2, 2, 2);
             building.Reset(setMin, setMaxExclusive);
             queued.Reset(setMin, setMaxExclusive);
@@ -135,7 +135,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Step operation.</summary>
+
         public bool Step(int budget)
         {
             if (!IsRunning) return false;
@@ -163,29 +163,29 @@ namespace Thermodynamics.Core
             return true;
         }
 
-/// <summary>RunToCompletion operation.</summary>
+
         public void RunToCompletion()
         {
             while (IsRunning) Step(int.MaxValue);
         }
 
-/// <summary>IsLit operation.</summary>
+
         public bool IsLit(Vector3I cell)
         {
             return !IsBuilt || !shadowed.Contains(cell);
         }
 
-/// <summary>IsFaceLit operation.</summary>
+
         public bool IsFaceLit(Vector3I cell, int face)
         {
             Vector3I outside = cell + Face.Offsets[face];
 
             if (resultGrid != null && resultGrid.IsOccupied(outside)) return false;
-/// <summary>IsLit operation.</summary>
+
             return IsLit(outside);
         }
 
-/// <summary>FaceLitFraction operation.</summary>
+
         public float FaceLitFraction(BlockInstance block, int face)
         {
             if (!IsBuilt || block == null) return 1f;
@@ -213,12 +213,12 @@ namespace Thermodynamics.Core
 
         public int OccluderCount { get { return occluders.Count; } }
 
-/// <summary>Blocked operation.</summary>
+
         private bool Blocked(Vector3I start)
         {
             if (BlockedBySelf(start)) return true;
 
-/// <summary>Vector3D operation.</summary>
+
             Vector3D origin = new Vector3D(start.X, start.Y, start.Z);
 
             for (int i = 0; i < occluders.Count; i++)
@@ -232,33 +232,33 @@ namespace Thermodynamics.Core
             return false;
         }
 
-/// <summary>BlockedBySelf operation.</summary>
+
         private bool BlockedBySelf(Vector3I start)
         {
             Vector3I min = grid.Min;
             Vector3I max = grid.Max;
 
-/// <summary>BoxExit operation.</summary>
+
             float exit = BoxExit(start, min, max);
             if (exit <= 0f) return false;
 
             int x = start.X, y = start.Y, z = start.Z;
 
-/// <summary>Sign operation.</summary>
+
             int stepX = Sign(passSun.X), stepY = Sign(passSun.Y), stepZ = Sign(passSun.Z);
 
-/// <summary>Boundary operation.</summary>
+
             float tMaxX = Boundary(passSun.X);
-/// <summary>Boundary operation.</summary>
+
             float tMaxY = Boundary(passSun.Y);
-/// <summary>Boundary operation.</summary>
+
             float tMaxZ = Boundary(passSun.Z);
 
-/// <summary>Delta operation.</summary>
+
             float tDeltaX = Delta(passSun.X);
-/// <summary>Delta operation.</summary>
+
             float tDeltaY = Delta(passSun.Y);
-/// <summary>Delta operation.</summary>
+
             float tDeltaZ = Delta(passSun.Z);
 
             int limit = (2 * ((max.X - min.X) + (max.Y - min.Y) + (max.Z - min.Z))) + 8;
@@ -273,7 +273,7 @@ namespace Thermodynamics.Core
                     x += stepX;
                     tMaxX += tDeltaX;
                 }
-/// <summary>if operation.</summary>
+
                 else if (tMaxY <= tMaxZ)
                 {
                     t = tMaxY;
@@ -295,7 +295,7 @@ namespace Thermodynamics.Core
             return false;
         }
 
-/// <summary>BoxExit operation.</summary>
+
         private float BoxExit(Vector3I start, Vector3I min, Vector3I max)
         {
             float enter = 0f;
@@ -332,7 +332,7 @@ namespace Thermodynamics.Core
             return exit < enter ? 0f : exit;
         }
 
-/// <summary>Sign operation.</summary>
+
         private static int Sign(float value)
         {
             if (value > 0f) return 1;
@@ -340,14 +340,14 @@ namespace Thermodynamics.Core
             return 0;
         }
 
-/// <summary>Retrieves a thermal object; returns null if none.</summary>
+
         private static float Boundary(float component)
         {
             float magnitude = Math.Abs(component);
             return magnitude < 1e-6f ? float.MaxValue : 0.5f / magnitude;
         }
 
-/// <summary>Delta operation.</summary>
+
         private static float Delta(float component)
         {
             float magnitude = Math.Abs(component);

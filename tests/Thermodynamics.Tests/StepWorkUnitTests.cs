@@ -9,17 +9,17 @@ namespace Thermodynamics.Tests
     {
         private const int Blocks = 2000;
 
-/// <summary>Hull operation.</summary>
+
         private static WorstCases.Built Hull()
         {
             return WorstCases.Hull("ship", Blocks);
         }
 
         [Fact]
-/// <summary>TheRecordedSubstepCostIsTheOneTheAllowanceIsDividedBy operation.</summary>
+
         public void TheRecordedSubstepCostIsTheOneTheAllowanceIsDividedBy()
         {
-/// <summary>Hull operation.</summary>
+
             WorstCases.Built built = Hull();
             ThermalSimulation simulation = built.Simulation;
 
@@ -29,13 +29,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ScoringAStepWithTheJointCountUnderstatesItByTheLinkHalf operation.</summary>
+
         public void ScoringAStepWithTheJointCountUnderstatesItByTheLinkHalf()
         {
-/// <summary>Hull operation.</summary>
+
             WorstCases.Built built = Hull();
 
-/// <summary>ShipAssembly operation.</summary>
+
             ShipAssembly assembly = new ShipAssembly();
             assembly.Simulations.Add(built.Simulation);
 
@@ -57,15 +57,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCostIsTheWorstGridRatherThanTheSumOfThem operation.</summary>
+
         public void TheCostIsTheWorstGridRatherThanTheSumOfThem()
         {
-/// <summary>Hull operation.</summary>
+
             WorstCases.Built one = Hull();
-/// <summary>Hull operation.</summary>
+
             WorstCases.Built two = Hull();
 
-/// <summary>ShipAssembly operation.</summary>
+
             ShipAssembly assembly = new ShipAssembly();
             assembly.Simulations.Add(one.Simulation);
             assembly.Simulations.Add(two.Simulation);
@@ -75,13 +75,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnOutcomeCarriesTheLinkCountAndTheCostItImplies operation.</summary>
+
         public void AnOutcomeCarriesTheLinkCountAndTheCostItImplies()
         {
-/// <summary>Hull operation.</summary>
+
             WorstCases.Built built = Hull();
 
-/// <summary>ShipAssembly operation.</summary>
+
             ShipAssembly assembly = new ShipAssembly();
             assembly.Simulations.Add(built.Simulation);
 
@@ -90,7 +90,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(assembly.LinkCount, outcome.Links);
             Assert.Equal(assembly.WorstGridSubstepCost, outcome.SubstepCost);
 
-/// <summary>List operation.</summary>
+
             List<string> header = new List<string>(CorpusRecord.OutcomeHeader.Split(','));
             Assert.Contains("links", header);
             Assert.Contains("substep_cost", header);

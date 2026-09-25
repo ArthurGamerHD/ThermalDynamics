@@ -35,7 +35,6 @@ namespace Draygo.BlockExtensionsAPI
 			}
 		}
 
-/// <summary>DefinitionExtensionsAPI operation.</summary>
 		public DefinitionExtensionsAPI(Action callback)
 		{
 			if (MyAPIGateway.Utilities == null)
@@ -46,7 +45,6 @@ namespace Draygo.BlockExtensionsAPI
 			MyAPIGateway.Utilities.RegisterMessageHandler(MODID, recieveModHandlers);
 		}
 
-/// <summary>UnloadData operation.</summary>
 		public void UnloadData()
 		{
 			MyAPIGateway.Utilities.UnregisterMessageHandler(MODID, recieveModHandlers);
@@ -65,7 +63,6 @@ namespace Draygo.BlockExtensionsAPI
 			GetAllIndexedIds = 8
 		}
 
-/// <summary>recieveModHandlers operation.</summary>
 		private void recieveModHandlers(object obj)
 		{
 			if (Init)
@@ -110,16 +107,13 @@ namespace Draygo.BlockExtensionsAPI
 			}
 		}
 
-/// <summary>Assign operation.</summary>
 		private void Assign<T>(Type valuetype, ref T method) where T : class
 		{
 			method = _methods[valuetype] as T;
 		}
 
-/// <summary>Assign operation.</summary>
 		private void Assign<T>(AdditionalMethods mt, ref T method) where T : class
 		{
-/// <summary> getDelegate operation.</summary>
 			method = _getDelegate((int)mt) as T;
 		}
 
@@ -144,39 +138,33 @@ namespace Draygo.BlockExtensionsAPI
 		private Action<MyDefinitionId, List<MyStringId>> _GetGroups;
 		private Action<MyDefinitionId, MyStringId, List<MyTuple<MyStringId, Type>>> _GetProperties;
 		private Action<HashSet<MyDefinitionId>> _GetAllIndexedIds;
-/// <summary>DefinitionIdExists operation.</summary>
 		public bool DefinitionIdExists(MyDefinitionId definition)
 		{
 			return _DefIDExists?.Invoke(definition) ?? false;
 		}
 
 
-/// <summary>Returns the allindexedids.</summary>
 		public void GetAllIndexedIds(HashSet<MyDefinitionId> obj)
 		{
 			_GetAllIndexedIds?.Invoke(obj);
 		}
 
-/// <summary>Returns the groups.</summary>
 		public void GetGroups(MyDefinitionId definition, List<MyStringId> grouplist)
 		{
 			_GetGroups?.Invoke(definition, grouplist);
 		}
 
-/// <summary>Returns the properties.</summary>
 		public void GetProperties(MyDefinitionId definition, MyStringId groupid, List<MyTuple<MyStringId, Type>> properties)
 		{
 			_GetProperties?.Invoke(definition, groupid, properties);
 		}
 
 
-/// <summary>Registers the API and message handler.</summary>
 		public void RegisterTSS(MyTSSCommon script, IMyTextSurface surface, IMyTerminalBlock block, Action<MyTSSCommon, IMyTerminalBlock, List<IMyTerminalControl>> controlgetter)
 		{
 			_RegisterTSS?.Invoke(script, surface, block, controlgetter);
 		}
 
-/// <summary>UnRegisterTSS operation.</summary>
 		public void UnRegisterTSS(MyTSSCommon script, IMyTextSurface surface, IMyTerminalBlock block)
 		{
 			_UnregisterTSS?.Invoke(script, surface, block);
@@ -191,13 +179,11 @@ namespace Draygo.BlockExtensionsAPI
 			_RegisterTSSDataComponent?.Invoke(typeof(T), typeof(U), modContext, customFactory);
 		}
 
-/// <summary>Returns the tssdatacomponent.</summary>
 		public MyEntityComponentBase GetTSSDataComponent<T>(IMyTerminalBlock block) where T : MyTSSCommon
 		{
 			return _GetTSSDataComponent(typeof(T), block);
 		}
 
-/// <summary>Registers and opens communication.</summary>
 		public void RegisterGameLogic<T>(MyStringId componentName, IMyModContext mod, Func<T> customFactory = null) where T : MyGameLogicComponent, new()
 		{
 			if(customFactory == null)
@@ -206,7 +192,6 @@ namespace Draygo.BlockExtensionsAPI
 			_setGameLogic?.Invoke(componentName, mod, customFactory);
 		}
 
-/// <summary>TryGetText operation.</summary>
 		public bool TryGetText(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out string value)
 		{
 			var retval = _textMethod.Invoke(definition, group, propertyname);
@@ -214,14 +199,11 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-/// <summary>TryGetString operation.</summary>
 		public bool TryGetString(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out string value)
 		{
-/// <summary>TryGetText operation.</summary>
 			return TryGetText(definition, group, propertyname, out value);
 		}
 
-/// <summary>TryGetInt operation.</summary>
 		public bool TryGetInt(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out int value)
 		{
 			var retval = _intMethod.Invoke(definition, group, propertyname);
@@ -229,7 +211,6 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-/// <summary>TryGetLong operation.</summary>
 		public bool TryGetLong(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out long value)
 		{
 			var retval = _longMethod.Invoke(definition, group, propertyname);
@@ -237,7 +218,6 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-/// <summary>TryGetFloat operation.</summary>
 		public bool TryGetFloat(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out float value)
 		{
 			var retval = _floatMethod.Invoke(definition, group, propertyname);
@@ -245,7 +225,6 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-/// <summary>TryGetDouble operation.</summary>
 		public bool TryGetDouble(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out double value)
 		{
 			var retval = _doubleMethod.Invoke(definition, group, propertyname);
@@ -253,7 +232,6 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-/// <summary>TryGetBool operation.</summary>
 		public bool TryGetBool(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out bool value)
 		{
 			var retval = _booleanMethod.Invoke(definition, group, propertyname);
@@ -261,7 +239,6 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-/// <summary>TryGetColor operation.</summary>
 		public bool TryGetColor(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out Color value)
 		{
 			var retval = _colorMethod.Invoke(definition, group, propertyname);
@@ -269,7 +246,6 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-/// <summary>TryGetVector2I operation.</summary>
 		public bool TryGetVector2I(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out Vector2I value)
 		{
 			var retval = _vector2IMethod.Invoke(definition, group, propertyname);
@@ -277,7 +253,6 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-/// <summary>TryGetVector2D operation.</summary>
 		public bool TryGetVector2D(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out Vector2D value)
 		{
 			var retval = _vector2DMethod.Invoke(definition, group, propertyname);
@@ -285,7 +260,6 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-/// <summary>TryGetVector3I operation.</summary>
 		public bool TryGetVector3I(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out Vector3I value)
 		{
 			var retval = _vector3IMethod.Invoke(definition, group, propertyname);
@@ -293,7 +267,6 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-/// <summary>TryGetVector3D operation.</summary>
 		public bool TryGetVector3D(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out Vector3D value)
 		{
 			var retval = _vector3DMethod.Invoke(definition, group, propertyname);
@@ -301,12 +274,10 @@ namespace Draygo.BlockExtensionsAPI
 			return retval.Item1;
 		}
 
-/// <summary>TryGet operation.</summary>
 		public bool TryGet<T>(MyDefinitionId definition, MyStringId group, MyStringId propertyname, out T value)
 		{
 			if(!_methods?.ContainsKey(typeof(T)) ?? false)
 			{
-/// <summary>default operation.</summary>
 				value = default(T);
 				return false;
 			}

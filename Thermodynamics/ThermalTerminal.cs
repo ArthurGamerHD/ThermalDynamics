@@ -14,17 +14,14 @@ namespace Thermodynamics
     public static class ThermalTerminal
     {
         private static bool registered;
-/// <summary>StringBuilder operation.</summary>
         private static readonly StringBuilder Text = new StringBuilder();
 
-/// <summary>HashSet operation.</summary>
         private static readonly HashSet<long> Hooked = new HashSet<long>();
 
         private static IMyTerminalBlock shown;
 
         private static bool refreshing;
 
-/// <summary>Registers the API and message handler.</summary>
         public static void Register()
         {
             if (registered) return;
@@ -33,7 +30,6 @@ namespace Thermodynamics
             MyAPIGateway.TerminalControls.CustomControlGetter += OnCustomControlGetter;
         }
 
-/// <summary>Unregisters the API and cleans resources.</summary>
         public static void Unregister()
         {
             if (!registered) return;
@@ -45,7 +41,6 @@ namespace Thermodynamics
             shown = null;
         }
 
-/// <summary>OnCustomControlGetter operation.</summary>
         private static void OnCustomControlGetter(IMyTerminalBlock block, List<IMyTerminalControl> controls)
         {
             if (!HasThermals(block)) return;
@@ -59,7 +54,6 @@ namespace Thermodynamics
             block.RefreshCustomInfo();
         }
 
-/// <summary>AppendThrottle operation.</summary>
         private static void AppendThrottle(IMyTerminalBlock block, List<IMyTerminalControl> controls)
         {
             if (!(block is IMyUpgradeModule)) return;
@@ -86,19 +80,16 @@ namespace Thermodynamics
         private static IMyTerminalControlSlider sourceLevel;
         private static IMyTerminalControlSlider sourceRange;
 
-/// <summary>IsCoolantPump operation.</summary>
         private static bool IsCoolantPump(IMyTerminalBlock block)
         {
             return PumpControl(block) != null;
         }
 
-/// <summary>IsHeatPump operation.</summary>
         private static bool IsHeatPump(IMyTerminalBlock block)
         {
             return HeatPumpControl(block) != null;
         }
 
-/// <summary>PumpControl operation.</summary>
         private static ThermalCoolantPumpBlock PumpControl(IMyTerminalBlock block)
         {
             return block == null || block.GameLogic == null
@@ -106,7 +97,6 @@ namespace Thermodynamics
                 : block.GameLogic.GetAs<ThermalCoolantPumpBlock>();
         }
 
-/// <summary>HeatPumpControl operation.</summary>
         private static ThermalHeatPumpBlock HeatPumpControl(IMyTerminalBlock block)
         {
             return block == null || block.GameLogic == null
@@ -114,13 +104,11 @@ namespace Thermodynamics
                 : block.GameLogic.GetAs<ThermalHeatPumpBlock>();
         }
 
-/// <summary>IsHeatSource operation.</summary>
         private static bool IsHeatSource(IMyTerminalBlock block)
         {
             return HeatSourceControl(block) != null;
         }
 
-/// <summary>HeatSourceControl operation.</summary>
         private static ThermalHeatSourceBlock HeatSourceControl(IMyTerminalBlock block)
         {
             return block == null || block.GameLogic == null
@@ -128,7 +116,6 @@ namespace Thermodynamics
                 : block.GameLogic.GetAs<ThermalHeatSourceBlock>();
         }
 
-/// <summary>EnsureControls operation.</summary>
         private static void EnsureControls()
         {
             if (pumpSpeed != null) return;
@@ -145,19 +132,16 @@ namespace Thermodynamics
             pumpSpeed.Enabled = IsCoolantPump;
             pumpSpeed.Getter = b =>
             {
-/// <summary>PumpControl operation.</summary>
                 ThermalCoolantPumpBlock pump = PumpControl(b);
                 return pump == null ? 1f : pump.Speed;
             };
             pumpSpeed.Setter = (b, value) =>
             {
-/// <summary>PumpControl operation.</summary>
                 ThermalCoolantPumpBlock pump = PumpControl(b);
                 if (pump != null) pump.SetSpeed(value);
             };
             pumpSpeed.Writer = (b, sb) =>
             {
-/// <summary>PumpControl operation.</summary>
                 ThermalCoolantPumpBlock pump = PumpControl(b);
                 sb.Append(((pump == null ? 1f : pump.Speed) * 100f).ToString("n0")).Append('%');
             };
@@ -174,19 +158,16 @@ namespace Thermodynamics
             heatPumpPower.Enabled = IsHeatPump;
             heatPumpPower.Getter = b =>
             {
-/// <summary>HeatPumpControl operation.</summary>
                 ThermalHeatPumpBlock pump = HeatPumpControl(b);
                 return pump == null ? 1f : pump.PowerSetting;
             };
             heatPumpPower.Setter = (b, value) =>
             {
-/// <summary>HeatPumpControl operation.</summary>
                 ThermalHeatPumpBlock pump = HeatPumpControl(b);
                 if (pump != null) pump.SetPowerSetting(value);
             };
             heatPumpPower.Writer = (b, sb) =>
             {
-/// <summary>HeatPumpControl operation.</summary>
                 ThermalHeatPumpBlock pump = HeatPumpControl(b);
                 sb.Append(((pump == null ? 1f : pump.PowerSetting) * 100f).ToString("n0")).Append('%');
             };
@@ -207,7 +188,6 @@ namespace Thermodynamics
             sourceLevel.Enabled = IsHeatSource;
             sourceLevel.Getter = b =>
             {
-/// <summary>HeatSourceControl operation.</summary>
                 ThermalHeatSourceBlock source = HeatSourceControl(b);
                 return HeatSourceBlockSetting.PositionOfWatts(source == null
                     ? HeatSourceBlockSetting.DefaultWatts
@@ -215,13 +195,11 @@ namespace Thermodynamics
             };
             sourceLevel.Setter = (b, value) =>
             {
-/// <summary>HeatSourceControl operation.</summary>
                 ThermalHeatSourceBlock source = HeatSourceControl(b);
                 if (source != null) source.SetWatts(HeatSourceBlockSetting.WattsAtPosition(value));
             };
             sourceLevel.Writer = (b, sb) =>
             {
-/// <summary>HeatSourceControl operation.</summary>
                 ThermalHeatSourceBlock source = HeatSourceControl(b);
                 float watts = source == null ? HeatSourceBlockSetting.DefaultWatts : source.Setting.Watts;
 
@@ -242,26 +220,22 @@ namespace Thermodynamics
             sourceRange.Enabled = IsHeatSource;
             sourceRange.Getter = b =>
             {
-/// <summary>HeatSourceControl operation.</summary>
                 ThermalHeatSourceBlock source = HeatSourceControl(b);
                 return source == null ? HeatSourceBlockSetting.DefaultRange : source.Setting.Range;
             };
             sourceRange.Setter = (b, value) =>
             {
-/// <summary>HeatSourceControl operation.</summary>
                 ThermalHeatSourceBlock source = HeatSourceControl(b);
                 if (source != null) source.SetRange(value);
             };
             sourceRange.Writer = (b, sb) =>
             {
-/// <summary>HeatSourceControl operation.</summary>
                 ThermalHeatSourceBlock source = HeatSourceControl(b);
                 sb.Append((source == null ? HeatSourceBlockSetting.DefaultRange : source.Setting.Range)
                     .ToString("n0")).Append(" m");
             };
         }
 
-/// <summary>Update operation.</summary>
         public static void Update()
         {
             if (shown == null) return;
@@ -285,7 +259,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>AppendCustomInfo operation.</summary>
         private static void AppendCustomInfo(IMyTerminalBlock block, StringBuilder info)
         {
             if (!refreshing) shown = block;
@@ -295,13 +268,11 @@ namespace Thermodynamics
             info.Append(Describe(block));
         }
 
-/// <summary>HasThermals operation.</summary>
         private static bool HasThermals(IMyTerminalBlock block)
         {
             return Bound(block) != null;
         }
 
-/// <summary>Retrieves a thermal object; returns null if none.</summary>
         private static ThermalBlock Bound(IMyTerminalBlock block)
         {
             if (block == null || block.CubeGrid == null || block.CubeGrid.GameLogic == null) return null;
@@ -314,25 +285,21 @@ namespace Thermodynamics
 
         private const int LabelWidth = 9;
 
-/// <summary>T operation.</summary>
         private static string T(float kelvin)
         {
             return ThermalConstants.KelvinToCelsius(kelvin).ToString("n0") + "\u00b0C";
         }
 
-/// <summary>Row operation.</summary>
         private static void Row(string label)
         {
             Text.Append(label);
             for (int i = label.Length; i < LabelWidth; i++) Text.Append(' ');
         }
 
-/// <summary>Describe operation.</summary>
         private static StringBuilder Describe(IMyTerminalBlock block)
         {
             Text.Clear();
 
-/// <summary>Retrieves a thermal object; returns null if none.</summary>
             ThermalBlock bound = Bound(block);
             if (bound == null || bound.Node == null)
             {
@@ -362,7 +329,6 @@ namespace Thermodynamics
                 Text.Append((node.HeatGenerationWatts / 1000f).ToString("n1")).Append(" kW\n");
             }
 
-/// <summary>RoomOf operation.</summary>
             RoomAirNode air = RoomOf(bound);
             if (air != null && air.HasAir)
             {
@@ -378,10 +344,8 @@ namespace Thermodynamics
             return Text;
         }
 
-/// <summary>AppendHeatSource operation.</summary>
         private static void AppendHeatSource(IMyTerminalBlock block)
         {
-/// <summary>HeatSourceControl operation.</summary>
             ThermalHeatSourceBlock source = HeatSourceControl(block);
             if (source == null) return;
 
@@ -415,7 +379,6 @@ namespace Thermodynamics
             Text.Append(setting.IrradianceAt(50f).ToString("n1")).Append(" W/m\u00b2\n");
         }
 
-/// <summary>AppendHeatPump operation.</summary>
         private static void AppendHeatPump(ThermalBlock bound)
         {
             HeatPumpDevice pump = bound.Grid.Simulation.GetHeatPump(bound.Instance);
@@ -455,7 +418,6 @@ namespace Thermodynamics
             Text.Append('\n');
         }
 
-/// <summary>AppendCoolant operation.</summary>
         private static void AppendCoolant(ThermalBlock bound)
         {
             BlockInstance instance = bound.Instance;
@@ -510,7 +472,6 @@ namespace Thermodynamics
             Text.Append((refill / 1000f).ToString("n1")).Append(" kW\n");
         }
 
-/// <summary>RoomOf operation.</summary>
         private static RoomAirNode RoomOf(ThermalBlock bound)
         {
             ThermalSimulation simulation = bound.Grid.Simulation;

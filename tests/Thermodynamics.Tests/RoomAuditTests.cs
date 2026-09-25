@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class RoomAuditTests
     {
-/// <summary>SealedShell operation.</summary>
+
         private static ThermalSimulation SealedShell()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -16,10 +16,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHealthyShellAuditsClean operation.</summary>
+
         public void AHealthyShellAuditsClean()
         {
-/// <summary>SealedShell operation.</summary>
+
             ThermalSimulation simulation = SealedShell();
             RoomAudit audit = simulation.AuditRooms();
 
@@ -38,7 +38,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockThatSealsNothingIsCountedAndNamed operation.</summary>
+
         public void ABlockThatSealsNothingIsCountedAndNamed()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -62,7 +62,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnOpenDoorLeaksAndTheExampleSaysSo operation.</summary>
+
         public void AnOpenDoorLeaksAndTheExampleSaysSo()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -86,12 +86,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGridThatHasNeverBeenMappedIsNotAudited operation.</summary>
+
         public void AGridThatHasNeverBeenMappedIsNotAudited()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
 
             BlockModel armour = Catalog.LightArmor();
@@ -122,10 +122,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OnceAPassHasRunTheSameGridAuditsAsBuilt operation.</summary>
+
         public void OnceAPassHasRunTheSameGridAuditsAsBuilt()
         {
-/// <summary>SealedShell operation.</summary>
+
             ThermalSimulation simulation = SealedShell();
 
             Assert.True(simulation.Rooms.CompletedPasses > 0);
@@ -133,7 +133,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheExampleListIsBounded operation.</summary>
+
         public void TheExampleListIsBounded()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -147,7 +147,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryCellOfTheSearchBoxIsClassifiedExactlyOnce operation.</summary>
+
         public void EveryCellOfTheSearchBoxIsClassifiedExactlyOnce()
         {
             GridBuilder builder = GridBuilder.Large();

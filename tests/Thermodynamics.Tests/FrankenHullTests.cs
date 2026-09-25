@@ -11,13 +11,13 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>FrankenHullTests operation.</summary>
+
         public FrankenHullTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>Part operation.</summary>
+
         private static Blueprints.Grid Part(string name, Vector3I size)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -33,7 +33,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TiledHullsNeverLandOnTopOfEachOther operation.</summary>
+
         public void TiledHullsNeverLandOnTopOfEachOther()
         {
             List<Blueprints.Grid> parts = new List<Blueprints.Grid>
@@ -49,7 +49,7 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(manifest.Blocks, hull.Placed.Count);
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> occupied = new HashSet<Vector3I>();
             foreach (BlockInstance block in hull.Placed)
             {
@@ -61,10 +61,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheLatticeIsACubeSoTheHullHasNeighboursInEveryDirection operation.</summary>
+
         public void TheLatticeIsACubeSoTheHullHasNeighboursInEveryDirection()
         {
-/// <summary>Part operation.</summary>
+
             List<Blueprints.Grid> parts = new List<Blueprints.Grid> { Part("cube", new Vector3I(4, 4, 4)) };
 
             FrankenHull.Manifest manifest = new FrankenHull.Manifest();
@@ -79,10 +79,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ItStopsWithinOneHullOfWhatWasAskedFor operation.</summary>
+
         public void ItStopsWithinOneHullOfWhatWasAskedFor()
         {
-/// <summary>Part operation.</summary>
+
             List<Blueprints.Grid> parts = new List<Blueprints.Grid> { Part("cube", new Vector3I(4, 4, 4)) };
 
             FrankenHull.Manifest manifest = new FrankenHull.Manifest();
@@ -96,7 +96,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWeldedHullBuildsIntoOneSimulation operation.</summary>
+
         public void TheWeldedHullBuildsIntoOneSimulation()
         {
             List<Blueprints.Grid> parts = new List<Blueprints.Grid>
@@ -122,7 +122,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NothingToBuildFromIsAnEmptyHull operation.</summary>
+
         public void NothingToBuildFromIsAnEmptyHull()
         {
             FrankenHull.Manifest manifest = new FrankenHull.Manifest();

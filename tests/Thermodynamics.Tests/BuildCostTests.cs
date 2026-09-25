@@ -10,14 +10,14 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>Builds the API method table.</summary>
+
         public BuildCostTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
         [Fact]
-/// <summary>EveryShippedBlockIsPricedInsideTheGamesOwnRange operation.</summary>
+
         public void EveryShippedBlockIsPricedInsideTheGamesOwnRange()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -56,7 +56,7 @@ namespace Thermodynamics.Tests
                     BuildCostLab.Quantile(entry.Value, 0.99d));
             }
 
-/// <summary>List operation.</summary>
+
             List<BuildCostLab.Row> byVolume = new List<BuildCostLab.Row>(vanilla);
             byVolume.Sort(delegate (BuildCostLab.Row a, BuildCostLab.Row b)
             {
@@ -70,7 +70,7 @@ namespace Thermodynamics.Tests
                     byVolume[i].CubicMetres);
             }
 
-/// <summary>List operation.</summary>
+
             List<string> outside = new List<string>();
 
             foreach (BuildCostLab.Row row in shipped)
@@ -102,7 +102,7 @@ namespace Thermodynamics.Tests
 
         [Fact]
         [Trait("speed", "slow")]
-/// <summary>ChangingARecipeMovesTheTransientAndNotTheSteadyState operation.</summary>
+
         public void ChangingARecipeMovesTheTransientAndNotTheSteadyState()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -143,7 +143,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Check operation.</summary>
+
         private static void Check(List<string> outside, string subtype, string ratio,
             double percentile)
         {

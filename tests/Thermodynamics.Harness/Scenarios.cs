@@ -55,99 +55,99 @@ namespace Thermodynamics.Harness
             "station",
         };
 
-/// <summary>Run operation.</summary>
+
         public static ScenarioResult Run(string name)
         {
             switch (name)
             {
-/// <summary>VacuumSoak operation.</summary>
+
                 case "vacuum-soak": return VacuumSoak();
-/// <summary>Reactor operation.</summary>
+
                 case "reactor": return Reactor();
-/// <summary>Atmosphere operation.</summary>
+
                 case "atmosphere": return Atmosphere();
-/// <summary>DayNight operation.</summary>
+
                 case "daynight": return DayNight();
-/// <summary>Reentry operation.</summary>
+
                 case "reentry": return Reentry();
-/// <summary>Coolant operation.</summary>
+
                 case "coolant": return Coolant();
-/// <summary>SealedRoom operation.</summary>
+
                 case "sealed-room": return SealedRoom();
-/// <summary>Meltdown operation.</summary>
+
                 case "meltdown": return Meltdown();
-/// <summary>Radiator operation.</summary>
+
                 case "radiator": return Radiator();
-/// <summary>Airlock operation.</summary>
+
                 case "airlock": return Airlock();
-/// <summary>CoolantFailure operation.</summary>
+
                 case "coolant-failure": return CoolantFailure();
-/// <summary>Welding operation.</summary>
+
                 case "welding": return Welding();
-/// <summary>FirstRoom operation.</summary>
+
                 case "first-room": return FirstRoom();
-/// <summary>Stiff operation.</summary>
+
                 case "stiff": return Stiff();
-/// <summary>Units operation.</summary>
+
                 case "units": return Units();
-/// <summary>Performance operation.</summary>
+
                 case "perf": return Performance();
-/// <summary>Capital operation.</summary>
+
                 case "capital": return Capital();
-/// <summary>Fleet operation.</summary>
+
                 case "fleet": return Fleet();
-/// <summary>Interior operation.</summary>
+
                 case "interior": return Interior();
-/// <summary>Solver operation.</summary>
+
                 case "solver": return Solver();
-/// <summary>SelfShadow operation.</summary>
+
                 case "self-shadow": return SelfShadow();
-/// <summary>ShadowCost operation.</summary>
+
                 case "shadow-cost": return ShadowCost();
-/// <summary>Weather operation.</summary>
+
                 case "weather": return Weather();
-/// <summary>Underground operation.</summary>
+
                 case "underground": return Underground();
-/// <summary>CoolingPlant operation.</summary>
+
                 case "cooling-plant": return CoolingPlant();
-/// <summary>LoopFaults operation.</summary>
+
                 case "loop-faults": return LoopFaults();
-/// <summary>LoopDry operation.</summary>
+
                 case "loop-dry": return LoopDry();
-/// <summary>HeatPumpBackwards operation.</summary>
+
                 case "heatpump-backwards": return HeatPumpBackwards();
-/// <summary>HeatPumpLimits operation.</summary>
+
                 case "heatpump-limits": return HeatPumpLimits();
-/// <summary>CoolingRunaway operation.</summary>
+
                 case "cooling-runaway": return CoolingRunaway();
-/// <summary>LoopStiffness operation.</summary>
+
                 case "loop-stiffness": return LoopStiffness();
-/// <summary>LoopLayout operation.</summary>
+
                 case "loop-layout": return LoopLayout();
-/// <summary>AirConditioning operation.</summary>
+
                 case "air-conditioning": return AirConditioning();
-/// <summary>Station operation.</summary>
+
                 case "station": return Station();
                 default:
                     throw new ArgumentException("Unknown scenario: " + name);
             }
         }
 
-/// <summary>SelfShadow operation.</summary>
+
         public static ScenarioResult SelfShadow()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.SolarSelfShadowing = true;
 
-/// <summary>Slab operation.</summary>
+
             GridBuilder builder = Slab();
             ThermalSimulation simulation = builder.BuildSimulation(settings, 293.15f);
             simulation.Solver.CollectDiagnostics = true;
 
             EnvironmentSample sun = Worlds.Space(new Vector3(0.9004f, 0.1619f, -0.4038f));
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => sun;
             runner.Track("sunward-face", simulation.Solver.GetNodeAt(new Vector3I(3, 3, 1)).Block);
@@ -157,44 +157,44 @@ namespace Thermodynamics.Harness
 
             SunShadowMap shadow = simulation.Solver.SunShadow;
 
-/// <summary>LitShare operation.</summary>
+
             float sunward = LitShare(simulation, shadow, Face.Right);
-/// <summary>LitShare operation.</summary>
+
             float top = LitShare(simulation, shadow, Face.Up);
-/// <summary>LitShare operation.</summary>
+
             float flank = LitShare(simulation, shadow, Face.Forward);
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings cheap = new ThermalSettings();
             cheap.SolarSelfShadowing = false;
 
-/// <summary>Slab operation.</summary>
+
             ThermalSimulation plain = Slab().BuildSimulation(cheap, 293.15f);
             plain.Solver.CollectDiagnostics = true;
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner cheapRunner = new ScenarioRunner(plain);
             cheapRunner.Environment = t => sun;
             cheapRunner.Run(1800f, 300f);
 
             return Result("self-shadow", runner,
                 "Solid slab in sunlight, sun over the +X flank. Exposed faces lit: sunward "
-/// <summary>Pct operation.</summary>
+
                 + Pct(sunward) + ", top " + Pct(top) + ", flank " + Pct(flank)
-/// <summary>Pct operation.</summary>
+
                 + ", recess floor " + Pct(RecessShare(simulation, shadow))
                 + ". Shadowed air cells: " + shadow.ShadowedCount
-/// <summary>W operation.</summary>
+
                 + ". Grid solar with self-shadowing " + W(TotalSolar(simulation))
-/// <summary>W operation.</summary>
+
                 + " against " + W(TotalSolar(plain)) + " without. Hottest "
-/// <summary>C operation.</summary>
+
                 + C(runner.Final.HottestTemperature) + " against "
-/// <summary>C operation.</summary>
+
                 + C(cheapRunner.Final.HottestTemperature) + ".");
         }
 
-/// <summary>ShadowCost operation.</summary>
+
         public static ScenarioResult ShadowCost()
         {
             const int side = 20;
@@ -205,14 +205,14 @@ namespace Thermodynamics.Harness
             Vector3 sun = Vector3.Normalize(new Vector3(0.9004f, 0.1619f, -0.4038f));
             EnvironmentSample sample = Worlds.Space(sun);
 
-/// <summary>StepCost operation.</summary>
+
             double cheap = StepCost(builder, false, sample);
-/// <summary>StepCost operation.</summary>
+
             double shadowed = StepCost(builder, true, sample);
 
             ThermalSimulation solid = builder.BuildSimulation(Shadowing(true), 293.15f);
             solid.Update(1f / 60f, sample);
-/// <summary>MeasurePass operation.</summary>
+
             PassCost solidPass = MeasurePass(solid, sun);
 
             GridBuilder hull = GridBuilder.Large();
@@ -224,22 +224,22 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation ship = hull.BuildSimulation(Shadowing(true), 293.15f);
             ship.Update(1f / 60f, sample);
-/// <summary>MeasurePass operation.</summary>
+
             PassCost shipPass = MeasurePass(ship, sun);
 
             int budget = solid.Solver.SunShadowBudget;
 
             return Result("shadow-cost", new ScenarioRunner(solid),
                 side + "^3 solid grid, " + solid.Solver.Nodes.Count + " blocks: step with "
-/// <summary>Ms operation.</summary>
+
                 + "self-shadowing off " + Ms(cheap) + ", on " + Ms(shadowed)
                 + " (" + Overhead(cheap, shadowed) + "). One full pass " + solidPass.Cells
-/// <summary>Ms operation.</summary>
+
                 + " air cells in " + Ms(solidPass.Milliseconds) + ", "
-/// <summary>Slices operation.</summary>
+
                 + Slices(solidPass, budget) + ". A 30x20x20 hull with decks, "
                 + ship.Solver.Nodes.Count + " blocks: pass " + shipPass.Cells + " air cells in "
-/// <summary>Ms operation.</summary>
+
                 + Ms(shipPass.Milliseconds) + ", " + Slices(shipPass, budget)
                 + ". A pass runs when the sun moves 2 degrees, and never between.");
         }
@@ -250,12 +250,12 @@ namespace Thermodynamics.Harness
             public double Milliseconds;
         }
 
-/// <summary>MeasurePass operation.</summary>
+
         private static PassCost MeasurePass(ThermalSimulation simulation, Vector3 sun)
         {
             SunShadowMap map = simulation.Solver.SunShadow;
 
-/// <summary>PassCost operation.</summary>
+
             PassCost best = new PassCost();
             best.Milliseconds = double.MaxValue;
 
@@ -277,23 +277,23 @@ namespace Thermodynamics.Harness
             return best;
         }
 
-/// <summary>Slices operation.</summary>
+
         private static string Slices(PassCost pass, int budget)
         {
             int slices = Math.Max(1, (pass.Cells + budget - 1) / budget);
             return slices + " slices of " + budget + " at " + Ms(pass.Milliseconds / slices) + " each";
         }
 
-/// <summary>Shadowing operation.</summary>
+
         private static ThermalSettings Shadowing(bool on)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.SolarSelfShadowing = on;
             return settings;
         }
 
-/// <summary>StepCost operation.</summary>
+
         private static double StepCost(GridBuilder builder, bool shadowing, EnvironmentSample sample)
         {
             double best = double.MaxValue;
@@ -316,13 +316,13 @@ namespace Thermodynamics.Harness
             return best;
         }
 
-/// <summary>Ms operation.</summary>
+
         private static string Ms(double milliseconds)
         {
             return milliseconds.ToString("n3") + " ms";
         }
 
-/// <summary>Overhead operation.</summary>
+
         private static string Overhead(double baseline, double measured)
         {
             if (baseline <= 0) return "n/a";
@@ -331,7 +331,7 @@ namespace Thermodynamics.Harness
             return (percent >= 0 ? "+" : "") + percent.ToString("n1") + "%";
         }
 
-/// <summary>Slab operation.</summary>
+
         private static GridBuilder Slab()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -349,7 +349,7 @@ namespace Thermodynamics.Harness
             return builder;
         }
 
-/// <summary>LitShare operation.</summary>
+
         private static float LitShare(ThermalSimulation simulation, SunShadowMap shadow, int face)
         {
             int exposed = 0;
@@ -368,7 +368,7 @@ namespace Thermodynamics.Harness
             return exposed == 0 ? 0f : lit / exposed;
         }
 
-/// <summary>RecessShare operation.</summary>
+
         private static float RecessShare(ThermalSimulation simulation, SunShadowMap shadow)
         {
             int cells = 0;
@@ -389,7 +389,7 @@ namespace Thermodynamics.Harness
             return cells == 0 ? 0f : lit / cells;
         }
 
-/// <summary>TotalSolar operation.</summary>
+
         private static float TotalSolar(ThermalSimulation simulation)
         {
             float total = 0f;
@@ -398,13 +398,13 @@ namespace Thermodynamics.Harness
             return total;
         }
 
-/// <summary>Pct operation.</summary>
+
         private static string Pct(float fraction)
         {
             return (fraction * 100f).ToString("n0") + "%";
         }
 
-/// <summary>W operation.</summary>
+
         private static string W(float watts)
         {
             return watts >= 1000f
@@ -412,7 +412,7 @@ namespace Thermodynamics.Harness
                 : watts.ToString("n0") + " W";
         }
 
-/// <summary>VacuumSoak operation.</summary>
+
         public static ScenarioResult VacuumSoak()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -420,7 +420,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 800f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("block", builder.Placed[0]);
@@ -428,11 +428,11 @@ namespace Thermodynamics.Harness
 
             return Result("vacuum-soak", runner,
                 "One heavy armour block at 800 K radiating into shadow. Ends at "
-/// <summary>C operation.</summary>
+
                 + C(runner.Final.HottestTemperature) + " after one hour.");
         }
 
-/// <summary>Reactor operation.</summary>
+
         public static ScenarioResult Reactor()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -445,7 +445,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", builder.Last);
@@ -454,13 +454,13 @@ namespace Thermodynamics.Harness
 
             return Result("reactor", runner,
                 "15 MW reactor at the centre of a 5x5x5 light armour cube in shadow. Reactor reaches "
-/// <summary>C operation.</summary>
+
                 + C(runner.Final.Tracked["reactor"]) + ", hull "
-/// <summary>C operation.</summary>
+
                 + C(runner.Final.Tracked["hull"]) + ".");
         }
 
-/// <summary>Atmosphere operation.</summary>
+
         public static ScenarioResult Atmosphere()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -473,7 +473,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.PlanetSurface(1f, 0.25f);
             runner.Track("reactor", builder.Last);
@@ -482,13 +482,13 @@ namespace Thermodynamics.Harness
 
             return Result("atmosphere", runner,
                 "The same reactor cube at sea level. Reactor settles at "
-/// <summary>C operation.</summary>
+
                 + C(runner.Final.Tracked["reactor"]) + " against "
-/// <summary>C operation.</summary>
+
                 + C(runner.Final.AmbientTemperature) + " ambient.");
         }
 
-/// <summary>DayNight operation.</summary>
+
         public static ScenarioResult DayNight()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -496,7 +496,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 250f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             float dayLength = 7200f;
             runner.Environment = t => Worlds.PlanetSurface(0f, (t / dayLength) % 1f);
@@ -514,11 +514,11 @@ namespace Thermodynamics.Harness
 
             return Result("daynight", runner,
                 "Airless 3x1x3 plate over two rotations. Swings between "
-/// <summary>C operation.</summary>
+
                 + C(min) + " and " + C(max) + ".");
         }
 
-/// <summary>Reentry operation.</summary>
+
         public static ScenarioResult Reentry()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -526,7 +526,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Flight(0.8f, 300f);
             runner.Track("nose", builder.Placed[0]);
@@ -535,19 +535,19 @@ namespace Thermodynamics.Harness
             return Result("reentry",
                 runner,
                 "3x3 heavy armour face into 300 m/s of 0.8 density air. Nose reaches "
-/// <summary>C operation.</summary>
+
                 + C(runner.Final.Tracked["nose"]) + ".");
         }
 
-/// <summary>Coolant operation.</summary>
+
         public static ScenarioResult Coolant()
         {
             GridBuilder builder = GridBuilder.Large();
 
             List<Vector3I> ring = PipeFitter.RectangleXZ(Vector3I.Zero, 4, 2);
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
-            sinks[1] = Vector3I.Down;   // toward the reactor
-            sinks[2] = Vector3I.Up;     // toward the radiator
+            sinks[1] = Vector3I.Down;
+            sinks[2] = Vector3I.Up;
 
             List<BlockInstance> pipes = PipeFitter.BuildRing(builder, ring, 5, sinks);
 
@@ -560,7 +560,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", reactor);
@@ -574,19 +574,19 @@ namespace Thermodynamics.Harness
             string found = simulation.Solver.Loops.Count > 0
                 ? simulation.Solver.Loops.Count + " loop of " + simulation.Solver.Loops[0].PipeCount + " pipes, "
                   + simulation.Solver.Loops[0].Links.Count + " links"
-/// <summary>LOOP operation.</summary>
+
                 : "NO CLOSED LOOP (" + pipes.Count + " pipes placed)";
 
             return Result("coolant", runner,
                 "Pumped coolant ring between a 1.25 MW source and a plain armour block: " + found
-/// <summary>C operation.</summary>
+
                 + ". Reactor " + C(runner.Final.Tracked["reactor"])
                 + ", coolant " + (runner.Final.Tracked.ContainsKey("coolant") ? C(runner.Final.Tracked["coolant"]) : "n/a")
-/// <summary>C operation.</summary>
+
                 + ", sink block " + C(runner.Final.Tracked["sink-block"]) + ".");
         }
 
-/// <summary>SealedRoom operation.</summary>
+
         public static ScenarioResult SealedRoom()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -600,7 +600,7 @@ namespace Thermodynamics.Harness
             ThermalNode interior = simulation.Solver.GetNode(reactor);
             ThermalNode shell = simulation.Solver.GetNodeAt(new Vector3I(1, 0, 0));
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("interior-reactor", reactor);
@@ -612,13 +612,13 @@ namespace Thermodynamics.Harness
                 + interior.TotalExposedFaces + " (expected 0), conduction links: "
                 + interior.LinkCount + ", shell exposed faces: "
                 + shell.TotalExposedFaces + ". Reactor "
-/// <summary>C operation.</summary>
+
                 + C(runner.Final.Tracked["interior-reactor"]) + ", shell "
-/// <summary>C operation.</summary>
+
                 + C(runner.Final.Tracked["shell"]) + ".");
         }
 
-/// <summary>Meltdown operation.</summary>
+
         public static ScenarioResult Meltdown()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -629,7 +629,7 @@ namespace Thermodynamics.Harness
             float totalDamage = 0f;
             float timeToCritical = -1f;
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", builder.Placed[0]);
@@ -649,13 +649,13 @@ namespace Thermodynamics.Harness
 
             return Result("meltdown", runner,
                 "300 MW into a single unshielded reactor for 10 minutes: "
-/// <summary>C operation.</summary>
+
                 + C(simulation.Solver.HottestNode().Temperature) + ", critical after "
                 + (timeToCritical < 0f ? "never" : timeToCritical.ToString("n1") + " s")
                 + ", cumulative damage " + totalDamage.ToString("n0") + ".");
         }
 
-/// <summary>Performance operation.</summary>
+
         public static ScenarioResult Performance()
         {
             const int side = 20;
@@ -687,9 +687,9 @@ namespace Thermodynamics.Harness
             const int weldCount = 400;
 
             Stopwatch coalesced = Stopwatch.StartNew();
-/// <summary>GridModel operation.</summary>
+
             GridModel coalescedGrid = new GridModel(Catalog.LargeGridSize);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation coalescedSim = new ThermalSimulation(new ThermalSettings(), coalescedGrid);
             for (int i = 0; i < weldCount; i++)
             {
@@ -700,9 +700,9 @@ namespace Thermodynamics.Harness
             coalesced.Stop();
 
             Stopwatch perBlock = Stopwatch.StartNew();
-/// <summary>GridModel operation.</summary>
+
             GridModel eagerGrid = new GridModel(Catalog.LargeGridSize);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation eagerSim = new ThermalSimulation(new ThermalSettings(), eagerGrid);
             for (int i = 0; i < weldCount; i++)
             {
@@ -712,7 +712,7 @@ namespace Thermodynamics.Harness
             }
             perBlock.Stop();
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append(blocks.ToString("n0")).Append(" blocks, ")
               .Append(links.ToString("n0")).Append(" conduction links. Build+map ")
@@ -724,7 +724,7 @@ namespace Thermodynamics.Harness
               .Append(" ms coalesced vs ").Append(perBlock.ElapsedMilliseconds)
               .Append(" ms remapping per block.");
 
-/// <summary>ScenarioResult operation.</summary>
+
             ScenarioResult result = new ScenarioResult();
             result.Name = "perf";
             result.Summary = sb.ToString();
@@ -732,39 +732,39 @@ namespace Thermodynamics.Harness
             return result;
         }
 
-/// <summary>CellFor operation.</summary>
+
         private static Vector3I CellFor(int index)
         {
             return new Vector3I(index % 10, (index / 10) % 10, index / 100);
         }
 
 
-/// <summary>Radiator operation.</summary>
+
         public static ScenarioResult Radiator()
         {
-/// <summary>ReactorHull operation.</summary>
+
             float bare = ReactorHull(RadiatorPlacement.None);
-/// <summary>ReactorHull operation.</summary>
+
             float flush = ReactorHull(RadiatorPlacement.Flush);
-/// <summary>ReactorHull operation.</summary>
+
             float clear = ReactorHull(RadiatorPlacement.Clear);
 
-/// <summary>HullBuilder operation.</summary>
+
             GridBuilder builder = HullBuilder(RadiatorPlacement.Clear);
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", simulation.Grid.GetAtCell(new Vector3I(1, 1, 1)));
             runner.Run(3600f, 300f);
 
             return Result("radiator", runner,
-/// <summary>C operation.</summary>
+
                 "500 kW into a 3x3x3 hull in shadow. The source settles at " + C(bare)
-/// <summary>C operation.</summary>
+
                 + " bare, " + C(flush) + " with panels bolted flat against the hull, and "
-/// <summary>C operation.</summary>
+
                 + C(clear) + " with panels standing clear on booms.");
         }
 
@@ -775,7 +775,7 @@ namespace Thermodynamics.Harness
             Clear
         }
 
-/// <summary>HullBuilder operation.</summary>
+
         private static GridBuilder HullBuilder(RadiatorPlacement placement)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -792,7 +792,7 @@ namespace Thermodynamics.Harness
                 builder.Place(Catalog.Radiator(), new Vector3I(-1, 0, 0));
                 builder.Place(Catalog.Radiator(), new Vector3I(3, 0, 0));
             }
-/// <summary>if operation.</summary>
+
             else if (placement == RadiatorPlacement.Clear)
             {
                 builder.Place(Catalog.LightArmor(), new Vector3I(-1, 1, 1));
@@ -804,14 +804,14 @@ namespace Thermodynamics.Harness
             return builder;
         }
 
-/// <summary>ReactorHull operation.</summary>
+
         private static float ReactorHull(RadiatorPlacement placement)
         {
-/// <summary>HullBuilder operation.</summary>
+
             GridBuilder builder = HullBuilder(placement);
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Run(7200f, 3600f);
@@ -819,7 +819,7 @@ namespace Thermodynamics.Harness
             return simulation.Solver.GetNodeAt(new Vector3I(1, 1, 1)).Temperature;
         }
 
-/// <summary>Airlock operation.</summary>
+
         public static ScenarioResult Airlock()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -838,7 +838,7 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
             ThermalNode interior = simulation.Solver.GetNodeAt(new Vector3I(2, 1, 2));
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("interior", simulation.Grid.GetAtCell(new Vector3I(2, 1, 2)));
@@ -855,14 +855,14 @@ namespace Thermodynamics.Harness
             runner.Run(900f, 300f);
 
             return Result("airlock", runner,
-/// <summary>C operation.</summary>
+
                 "A 250 kW source inside a sealed 5x5x5 shell reaches " + C(sealedTemperature)
                 + " with " + sealedFaces + " exposed faces. Opening the door leaves it with "
-/// <summary>C operation.</summary>
+
                 + interior.TotalExposedFaces + " and it ends at " + C(interior.Temperature) + ".");
         }
 
-/// <summary>CoolantFailure operation.</summary>
+
         public static ScenarioResult CoolantFailure()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -879,7 +879,7 @@ namespace Thermodynamics.Harness
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", reactor);
@@ -899,21 +899,21 @@ namespace Thermodynamics.Harness
             runner.Run(1800f, 300f);
 
             return Result("coolant-failure", runner,
-/// <summary>C operation.</summary>
+
                 "A 1.25 MW source on a pumped ring holds at " + C(cooled) + " (" + loopsBefore
                 + " loop). With the pump destroyed the ring stops circulating — "
                 + simulation.Solver.Loops.Count + " loops — and the reactor ends at "
-/// <summary>C operation.</summary>
+
                 + C(simulation.Solver.GetNode(reactor).Temperature) + ".");
         }
 
-/// <summary>Welding operation.</summary>
+
         public static ScenarioResult Welding()
         {
             float window = LabClock.Seconds(5f);
-/// <summary>WeldedRise operation.</summary>
+
             float skeleton = WeldedRise(0.1f, window);
-/// <summary>WeldedRise operation.</summary>
+
             float finished = WeldedRise(1f, window);
 
             GridBuilder builder = GridBuilder.Large();
@@ -925,7 +925,7 @@ namespace Thermodynamics.Harness
             node.Block.Mass *= 0.1f;
             node.RefreshThermalMass();
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("skeleton", builder.Placed[0]);
@@ -937,20 +937,20 @@ namespace Thermodynamics.Harness
 
             return Result("welding", runner,
                 "Five seconds of a 250 kW source next to one heavy armour block. At a tenth of its "
-/// <summary>C operation.</summary>
+
                 + "mass the block reaches " + C(skeleton) + "; fully welded it is still at "
-/// <summary>C operation.</summary>
+
                 + C(finished) + ". The tracked run welds it up after those five seconds and "
-/// <summary>C operation.</summary>
+
                 + "settles at " + C(runner.Final.Tracked["skeleton"]) + ".");
         }
 
-/// <summary>FirstRoom operation.</summary>
+
         public static ScenarioResult FirstRoom()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
 
             BlockModel armour = Catalog.LightArmor();
@@ -965,12 +965,12 @@ namespace Thermodynamics.Harness
                     {
                         if (x == 0 && y == 0 && z == 0) continue;
 
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I cell = new Vector3I(x, y, z);
-/// <summary>Vector3I operation.</summary>
+
                         bool isDoor = cell == new Vector3I(0, 0, -1);
 
-/// <summary>BlockInstance operation.</summary>
+
                         BlockInstance block = new BlockInstance(
                             isDoor ? doorModel : armour, cell, BlockOrientation.Identity);
                         if (isDoor) door = block;
@@ -982,7 +982,7 @@ namespace Thermodynamics.Harness
                 }
             }
 
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance reactor = new BlockInstance(Catalog.Reactor(), new Vector3I(0, 0, 2), BlockOrientation.Identity);
             simulation.AddBlock(reactor);
             reactor.PowerProducedWatts = 0.3f * ThermalConstants.MegawattsToWatts;
@@ -1001,7 +1001,7 @@ namespace Thermodynamics.Harness
             simulation.Rooms.RunToCompletion();
             simulation.Solver.RefreshExposure(simulation.Rooms.Map);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", reactor);
@@ -1009,17 +1009,17 @@ namespace Thermodynamics.Harness
 
             return Result("first-room", runner,
                 "A 3x3x3 shell with a door, welded a block at a time, maps as "
-/// <summary>cells operation.</summary>
+
                 + closed.RoomCount + " sealed room over " + closed.SearchVolume + " search cells ("
                 + closed.ExternalCells + " external, " + closed.SolidCells + " structure, "
                 + closed.RoomCells + " room, " + closed.OpenBlockCells + " block cells outdoors). "
                 + "Opening the door leaves " + opened.RoomCount + " rooms and puts "
                 + opened.OpenBlockCells + " block cells outdoors. The reactor bolted to the outside ends at "
-/// <summary>C operation.</summary>
+
                 + C(reactor.PowerProducedWatts > 0 ? runner.Final.Tracked["reactor"] : 0f) + ".");
         }
 
-/// <summary>WeldedRise operation.</summary>
+
         private static float WeldedRise(float massFraction, float seconds)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -1032,7 +1032,7 @@ namespace Thermodynamics.Harness
             node.Block.Mass *= massFraction;
             node.RefreshThermalMass();
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Run(seconds, seconds);
@@ -1040,17 +1040,17 @@ namespace Thermodynamics.Harness
             return node.Temperature;
         }
 
-/// <summary>Stiff operation.</summary>
+
         public static ScenarioResult Stiff()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder report = new StringBuilder();
             ScenarioRunner last = null;
 
             int[] frequencies = new int[] { 1, 4, 16 };
             for (int f = 0; f < frequencies.Length; f++)
             {
-/// <summary>ThermalSettings operation.</summary>
+
                 ThermalSettings settings = new ThermalSettings();
                 settings.Frequency = frequencies[f];
                 settings.Derive();
@@ -1064,7 +1064,7 @@ namespace Thermodynamics.Harness
 
                 ThermalSimulation simulation = builder.BuildSimulation(settings, 900f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
                 ScenarioRunner runner = new ScenarioRunner(simulation);
                 runner.Environment = t => Worlds.Shadow();
                 runner.Track("feather", builder.Last);
@@ -1091,17 +1091,17 @@ namespace Thermodynamics.Harness
                 "A 20 kg block bolted to a 3x3x3 heavy armour cube at 900 K. " + report);
         }
 
-/// <summary>Units operation.</summary>
+
         public static ScenarioResult Units()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder report = new StringBuilder();
             ScenarioRunner last = null;
 
             float[] scales = new float[] { 1f, 25f, 225f };
             for (int i = 0; i < scales.Length; i++)
             {
-/// <summary>ThermalSettings operation.</summary>
+
                 ThermalSettings settings = new ThermalSettings();
                 settings.HeatTimeScale = scales[i];
                 settings.Derive();
@@ -1110,7 +1110,7 @@ namespace Thermodynamics.Harness
                 builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
 
                 ThermalSimulation simulation = builder.BuildSimulation(settings, 800f);
-/// <summary>ScenarioRunner operation.</summary>
+
                 ScenarioRunner runner = new ScenarioRunner(simulation);
                 runner.Environment = t => Worlds.Shadow();
                 runner.Track("block", builder.Placed[0]);
@@ -1128,7 +1128,7 @@ namespace Thermodynamics.Harness
                 + "clocks. Real steel is 450 J/(kg K); HeatTimeScale divides it. " + report);
         }
 
-/// <summary>Capital operation.</summary>
+
         public static ScenarioResult Capital()
         {
             Stopwatch build = Stopwatch.StartNew();
@@ -1137,9 +1137,9 @@ namespace Thermodynamics.Harness
             builder.PlaceAll(Catalog.HeavyArmor(),
                 GridShapes.Ship(fuselageLength: 180, fuselageWidth: 21, bulkheadSpacing: 6));
 
-/// <summary>StageTimings operation.</summary>
+
             StageTimings timings = new StageTimings();
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), builder.Grid);
             simulation.Profiler = timings;
 
@@ -1173,7 +1173,7 @@ namespace Thermodynamics.Harness
 
             double solverPerStep = solve.Elapsed.TotalMilliseconds / measured;
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Space(new Vector3(0f, 1f, 0f));
             runner.Track("skin", builder.Placed[0]);
@@ -1189,16 +1189,16 @@ namespace Thermodynamics.Harness
                 + timings.Describe(SimulationPhase.Exposure) + ".");
         }
 
-/// <summary>Fleet operation.</summary>
+
         public static ScenarioResult Fleet()
         {
             const int fleetSize = 20;
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.Derive();
 
-/// <summary>List operation.</summary>
+
             List<ThermalSimulation> fleet = new List<ThermalSimulation>();
             ScenarioRunner first = null;
             int cellsEach = 0;
@@ -1209,7 +1209,7 @@ namespace Thermodynamics.Harness
                 builder.PlaceAll(Catalog.HeavyArmor(),
                     GridShapes.Ship(fuselageLength: 40, fuselageWidth: 9, bulkheadSpacing: 6));
 
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I engineRoom = new Vector3I(4, 4, 6);
                 BlockInstance occupant = builder.Grid.GetAtCell(engineRoom);
                 if (occupant != null)
@@ -1228,7 +1228,7 @@ namespace Thermodynamics.Harness
 
                 if (i == 0)
                 {
-/// <summary>ScenarioRunner operation.</summary>
+
                     first = new ScenarioRunner(simulation);
                     first.Environment = t => Worlds.Shadow();
                     first.Track("reactor", builder.Last);
@@ -1269,7 +1269,7 @@ namespace Thermodynamics.Harness
                 + " ms of every simulated second.");
         }
 
-/// <summary>Interior operation.</summary>
+
         public static ScenarioResult Interior()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -1287,7 +1287,7 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
             while (simulation.HasPendingWork) simulation.Update(1f / 60f, Worlds.Shadow());
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("buried", buried);
@@ -1299,19 +1299,19 @@ namespace Thermodynamics.Harness
             int exposedFaces = simulation.Solver.GetNode(exposed).TotalExposedFaces;
 
             return Result("interior", runner,
-/// <summary>armour operation.</summary>
+
                 "A 200 kW consumer at 5% waste heat, buried in heavy armour ("
-/// <summary>skin operation.</summary>
+
                 + buriedFaces + " exposed faces) and bolted to the skin (" + exposedFaces
-/// <summary>C operation.</summary>
+
                 + "). Buried ends at " + C(runner.Final.Tracked["buried"]) + ", on the skin "
-/// <summary>C operation.</summary>
+
                 + C(runner.Final.Tracked["skin"]) + ", the hull above it "
-/// <summary>C operation.</summary>
+
                 + C(runner.Final.Tracked["hull"]) + ".");
         }
 
-/// <summary>Solver operation.</summary>
+
         public static ScenarioResult Solver()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -1340,12 +1340,12 @@ namespace Thermodynamics.Harness
 
             float step = simulation.Settings.StepSeconds;
 
-/// <summary>MeasureSolver operation.</summary>
+
             SolverCost single = MeasureSolver(simulation, step, links);
-/// <summary>MeasureSolver operation.</summary>
+
             SolverCost stiff = MeasureSolver(simulation, step * 6f, links);
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Space(new Vector3(0f, 1f, 0f));
             runner.Track("skin", builder.Placed[0]);
@@ -1359,7 +1359,7 @@ namespace Thermodynamics.Harness
                 + stiff.Describe(simulation.Settings.StepsPerSecond / 6f));
         }
 
-/// <summary>SeedSpread operation.</summary>
+
         private static void SeedSpread(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -1380,7 +1380,7 @@ namespace Thermodynamics.Harness
             public double PerVisitNs;
             public double MeanSubsteps;
 
-/// <summary>Describe operation.</summary>
+
             public string Describe(float stepsPerSecond)
             {
                 return PerStepMs.ToString("n4") + " ms per step at " + MeanSubsteps.ToString("n2")
@@ -1389,7 +1389,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>MeasureSolver operation.</summary>
+
         private static SolverCost MeasureSolver(ThermalSimulation simulation, float step, int links)
         {
             EnvironmentState environment = EnvironmentSolver.Solve(
@@ -1409,7 +1409,7 @@ namespace Thermodynamics.Harness
             }
             run.Stop();
 
-/// <summary>SolverCost operation.</summary>
+
             SolverCost cost = new SolverCost();
             cost.PerStepMs = run.Elapsed.TotalMilliseconds / measured;
             cost.PerVisitNs = visits <= 0 ? 0d : (run.Elapsed.TotalMilliseconds * 1e6) / visits;
@@ -1418,7 +1418,7 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Weather operation.</summary>
+
         public static ScenarioResult Weather()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -1428,20 +1428,20 @@ namespace Thermodynamics.Harness
 
             WeatherResponse.Weather storm = WeatherResponse.For("SnowHeavy");
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t =>
             {
                 EnvironmentSample sample = Worlds.PlanetSurface(1f, 0.5f);
                 sample.Weather = storm;
-/// <summary>Intensity operation.</summary>
+
                 sample.WeatherIntensity = Intensity(t, 300f, 600f, 900f);
                 return sample;
             };
             runner.Track("plate", builder.Placed[0]);
             runner.Run(1200f, 60f);
 
-            float clear = runner.Samples[5].AmbientTemperature;      // 300 s, storm just arriving
+            float clear = runner.Samples[5].AmbientTemperature;
             float worst = float.MaxValue;
             float coldest = float.MaxValue;
 
@@ -1455,15 +1455,15 @@ namespace Thermodynamics.Harness
             }
 
             EnvironmentState peak = EnvironmentSolver.Solve(
-/// <summary>StormAt operation.</summary>
+
                 simulation.Settings, simulation.Planet, StormAt(storm, 1f));
             EnvironmentState calm = EnvironmentSolver.Solve(
-/// <summary>StormAt operation.</summary>
+
                 simulation.Settings, simulation.Planet, StormAt(storm, 0f));
 
             return Result("weather", runner,
                 "3x1x3 plate at noon, heavy snowstorm arriving at 300 s and gone by 900 s. Ambient "
-/// <summary>C operation.</summary>
+
                 + C(clear) + " falling to " + C(worst) + ", plate down to " + C(coldest)
                 + ". At the peak the sun delivers " + peak.SolarEnergy.ToString("n0")
                 + " W/m2 against " + calm.SolarEnergy.ToString("n0")
@@ -1471,7 +1471,7 @@ namespace Thermodynamics.Harness
                 + " against " + calm.ConvectionCoefficient.ToString("n1") + " W/(m2 K).");
         }
 
-/// <summary>StormAt operation.</summary>
+
         private static EnvironmentSample StormAt(WeatherResponse.Weather storm, float intensity)
         {
             EnvironmentSample sample = Worlds.PlanetSurface(1f, 0.5f);
@@ -1480,7 +1480,7 @@ namespace Thermodynamics.Harness
             return sample;
         }
 
-/// <summary>Intensity operation.</summary>
+
         private static float Intensity(float t, float start, float peak, float end)
         {
             if (t <= start || t >= end) return 0f;
@@ -1488,10 +1488,10 @@ namespace Thermodynamics.Harness
             return 1f - ((t - peak) / (end - peak));
         }
 
-/// <summary>Underground operation.</summary>
+
         public static ScenarioResult Underground()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder summary = new StringBuilder();
             summary.Append("3x1x3 plate over one day at five depths. ");
 
@@ -1509,7 +1509,7 @@ namespace Thermodynamics.Harness
 
                 ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
-/// <summary>ScenarioRunner operation.</summary>
+
                 ScenarioRunner runner = new ScenarioRunner(simulation);
                 float dayLength = 7200f;
                 runner.Environment = t =>
@@ -1562,13 +1562,13 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>CoolingPlant operation.</summary>
+
         public static ScenarioResult CoolingPlant()
         {
             float withPlant, withoutPlant, loopDrawn, loopShed, pumpLift;
             float ignoredDrawn, ignoredShed, ignoredLift;
 
-/// <summary>Builds the method table.</summary>
+
             ScenarioRunner plant = BuildCoolingPlant(true, out withPlant,
                 out loopDrawn, out loopShed, out pumpLift);
             BuildCoolingPlant(false, out withoutPlant,
@@ -1576,15 +1576,15 @@ namespace Thermodynamics.Harness
 
             return Result("cooling-plant", plant,
                 "A reactor and eight hard-drawing batteries behind a pumped ring, heat pumps and "
-/// <summary>C operation.</summary>
+
                 + "eight radiators. Hottest block " + C(withPlant) + " with the plant, "
-/// <summary>C operation.</summary>
+
                 + C(withoutPlant) + " without it. The loop draws "
                 + loopDrawn.ToString("n0") + " W and sheds " + loopShed.ToString("n0")
                 + " W; the pumps lift " + pumpLift.ToString("n0") + " W.");
         }
 
-/// <summary>Builds the method table.</summary>
+
         private static ScenarioRunner BuildCoolingPlant(bool plumbing, out float hottest,
             out float loopDrawn, out float loopShed, out float pumpLift)
         {
@@ -1592,10 +1592,10 @@ namespace Thermodynamics.Harness
 
             builder.Fill(Catalog.LightArmor(), new Vector3I(0, 0, 0), new Vector3I(13, 2, 6));
 
-/// <summary>List operation.</summary>
+
             List<Vector3I> machinery = new List<Vector3I>();
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I reactorCell = new Vector3I(1, 2, 1);
             builder.Place(Catalog.Reactor(), reactorCell)
                    .Wasting(750000f);
@@ -1603,7 +1603,7 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < 8; i++)
             {
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I cell = new Vector3I(3 + i, 2, 1);
                 builder.Place(Catalog.Battery(), cell)
                        .Consuming(1f * ThermalConstants.MegawattsToWatts);
@@ -1625,12 +1625,12 @@ namespace Thermodynamics.Harness
                 for (int i = 0; i < cells.Count; i++)
                 {
                     if (sinks.ContainsKey(i)) continue;
-                    if (cells[i].Z != 4) continue;          // the run away from the machinery
-                    if ((cells[i].X % 3) != 1) continue;    // every third cell along it
+                    if (cells[i].Z != 4) continue;
+                    if ((cells[i].X % 3) != 1) continue;
 
                     Vector3I pump = cells[i] + Vector3I.Up;
                     builder.Place(Catalog.HeatPump(), pump,
-/// <summary>BlockOrientation operation.</summary>
+
                         new BlockOrientation(Base6Directions.Direction.Down, Base6Directions.Direction.Forward));
                     builder.Place(Catalog.Radiator(), pump + Vector3I.Up);
                 }
@@ -1645,7 +1645,7 @@ namespace Thermodynamics.Harness
                 pumps[i].PowerAvailable = 1f;
             }
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", simulation.Grid.GetAtCell(reactorCell));
@@ -1668,7 +1668,7 @@ namespace Thermodynamics.Harness
             return runner;
         }
 
-/// <summary>LoopFaults operation.</summary>
+
         public static ScenarioResult LoopFaults()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -1679,11 +1679,11 @@ namespace Thermodynamics.Harness
             PipeFitter.BuildPumplessRing(builder, pumpless);
 
             builder.Place(Catalog.CoolantPump(), new Vector3I(0, 20, 0),
-/// <summary>BlockOrientation operation.</summary>
+
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
 
             builder.Place(Catalog.CoolantPump(), new Vector3I(0, 25, 0),
-/// <summary>BlockOrientation operation.</summary>
+
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
             builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 25, 1));
             builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 25, -1));
@@ -1691,12 +1691,12 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
             CoolantLoopDiagnostics diagnosis = simulation.DiagnoseLoops();
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Run(60f, 30f);
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder faults = new StringBuilder();
             for (int i = 1; i < diagnosis.Counts.Length; i++)
             {
@@ -1711,12 +1711,12 @@ namespace Thermodynamics.Harness
                 + diagnosis.PipesAdrift + " pipes adrift: " + faults + ".");
         }
 
-/// <summary>LoopDry operation.</summary>
+
         public static ScenarioResult LoopDry()
         {
-/// <summary>RingAgainstReactor operation.</summary>
+
             float plumbedOnly = RingAgainstReactor(false);
-/// <summary>RingAgainstReactor operation.</summary>
+
             float withSink = RingAgainstReactor(true);
 
             GridBuilder builder = GridBuilder.Large();
@@ -1726,7 +1726,7 @@ namespace Thermodynamics.Harness
                    .Wasting(500000f);
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", simulation.Grid.GetAtCell(new Vector3I(1, -1, 0)));
@@ -1737,14 +1737,14 @@ namespace Thermodynamics.Harness
 
             return Result("loop-dry", runner,
                 "A closed pumped ring with no sink face against the reactor: 1 loop, coolant at "
-/// <summary>C operation.</summary>
+
                 + C(loop.Temperature) + ", drawing " + loop.LastWattsAbsorbed.ToString("n0")
-/// <summary>C operation.</summary>
+
                 + " W. Reactor " + C(plumbedOnly) + " with plumbing only against " + C(withSink)
                 + " with one sink face turned to meet it.");
         }
 
-/// <summary>RingAgainstReactor operation.</summary>
+
         private static float RingAgainstReactor(bool sink)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -1758,7 +1758,7 @@ namespace Thermodynamics.Harness
             BlockInstance reactor = builder.Last;
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Run(3600f, 1800f);
@@ -1766,37 +1766,37 @@ namespace Thermodynamics.Harness
             return simulation.Solver.GetNode(reactor).Temperature;
         }
 
-/// <summary>HeatPumpBackwards operation.</summary>
+
         public static ScenarioResult HeatPumpBackwards()
         {
-/// <summary>PumpBetweenReactorAndRadiator operation.</summary>
+
             float correct = PumpBetweenReactorAndRadiator(true);
-/// <summary>PumpBetweenReactorAndRadiator operation.</summary>
+
             float backwards = PumpBetweenReactorAndRadiator(false);
 
             GridBuilder builder = GridBuilder.Large();
-/// <summary>PumpRunner operation.</summary>
+
             ScenarioRunner runner = PumpRunner(false, builder);
 
             return Result("heatpump-backwards", runner,
-/// <summary>C operation.</summary>
+
                 "A pump between a 125 kW source and a radiator. The source " + C(correct)
-/// <summary>C operation.</summary>
+
                 + " with the cold face against it, " + C(backwards)
                 + " with the pump turned around — the wrong way costs "
                 + (backwards - correct).ToString("n1") + " K and the same electricity.");
         }
 
-/// <summary>PumpBetweenReactorAndRadiator operation.</summary>
+
         private static float PumpBetweenReactorAndRadiator(bool correctWayRound)
         {
             GridBuilder builder = GridBuilder.Large();
-/// <summary>PumpRunner operation.</summary>
+
             ScenarioRunner runner = PumpRunner(correctWayRound, builder);
             return runner.Final.Tracked["reactor"];
         }
 
-/// <summary>PumpRunner operation.</summary>
+
         private static ScenarioRunner PumpRunner(bool correctWayRound, GridBuilder builder)
         {
             builder.Place(Catalog.Reactor(), Vector3I.Zero).Wasting(125000f);
@@ -1807,7 +1807,7 @@ namespace Thermodynamics.Harness
                 : Base6Directions.Direction.Backward;
 
             builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
-/// <summary>BlockOrientation operation.</summary>
+
                 new BlockOrientation(forward, Base6Directions.Direction.Up));
             builder.Place(Catalog.Radiator(), new Vector3I(0, 0, 2));
 
@@ -1820,7 +1820,7 @@ namespace Thermodynamics.Harness
                 pumps[i].PowerAvailable = 1f;
             }
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", reactor);
@@ -1828,10 +1828,10 @@ namespace Thermodynamics.Harness
             return runner;
         }
 
-/// <summary>HeatPumpLimits operation.</summary>
+
         public static ScenarioResult HeatPumpLimits()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder report = new StringBuilder();
             ScenarioRunner last = null;
             float[] hotSides = new float[] { 300f, 350f, 500f, 1200f };
@@ -1842,12 +1842,12 @@ namespace Thermodynamics.Harness
                 builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
                 BlockInstance cold = builder.Last;
                 builder.Place(Catalog.HeatPump(), new Vector3I(0, 0, 1),
-/// <summary>BlockOrientation operation.</summary>
+
                     new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
                 builder.Place(Catalog.HeavyArmor(), new Vector3I(0, 0, 2));
                 BlockInstance hot = builder.Last;
 
-/// <summary>ThermalSettings operation.</summary>
+
                 ThermalSettings settings = new ThermalSettings();
                 settings.EnableEnvironment = false;
                 settings.EnableDamage = false;
@@ -1865,7 +1865,7 @@ namespace Thermodynamics.Harness
                 const float coldSide = 290f;
                 float hotSide = hotSides[i];
 
-/// <summary>ScenarioRunner operation.</summary>
+
                 ScenarioRunner runner = new ScenarioRunner(simulation);
                 runner.Environment = t => Worlds.Shadow();
                 runner.AfterStep = sim =>
@@ -1890,10 +1890,10 @@ namespace Thermodynamics.Harness
                 "One 60 kW pump against four gap widths. " + report + ".");
         }
 
-/// <summary>CoolingRunaway operation.</summary>
+
         public static ScenarioResult CoolingRunaway()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder report = new StringBuilder();
             ScenarioRunner last = null;
             float[] megawatts = new float[] { 0.5f, 2f, 32f };
@@ -1915,7 +1915,7 @@ namespace Thermodynamics.Harness
                 builder.Place(Catalog.Radiator(), cells[5] + Vector3I.Up);
 
                 ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
-/// <summary>ScenarioRunner operation.</summary>
+
                 ScenarioRunner runner = new ScenarioRunner(simulation);
                 runner.Environment = t => Worlds.Shadow();
                 runner.Track("reactor", reactor);
@@ -1935,10 +1935,10 @@ namespace Thermodynamics.Harness
                 "One radiator against three heat loads. " + report + ".");
         }
 
-/// <summary>LoopStiffness operation.</summary>
+
         public static ScenarioResult LoopStiffness()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder report = new StringBuilder();
             ScenarioRunner last = null;
             int[] sides = new int[] { 3, 9, 20 };
@@ -1955,7 +1955,7 @@ namespace Thermodynamics.Harness
                 builder.Place(Catalog.HeavyArmor(), cells[1] + Vector3I.Down);
                 BlockInstance hot = builder.Last;
 
-/// <summary>ThermalSettings operation.</summary>
+
                 ThermalSettings settings = new ThermalSettings();
                 settings.EnableEnvironment = false;
                 settings.EnableDamage = false;
@@ -1969,7 +1969,7 @@ namespace Thermodynamics.Harness
 
                 float before = simulation.Solver.TotalEnergy;
 
-/// <summary>ScenarioRunner operation.</summary>
+
                 ScenarioRunner runner = new ScenarioRunner(simulation);
                 runner.Environment = t => Worlds.Shadow();
                 runner.Track("sink", hot);
@@ -1995,41 +1995,41 @@ namespace Thermodynamics.Harness
                 + " s. " + report + ".");
         }
 
-/// <summary>LoopLayout operation.</summary>
+
         public static ScenarioResult LoopLayout()
         {
-/// <summary>LoopLayoutPlant operation.</summary>
+
             float bunched = LoopLayoutPlant(1, 4, false);
-/// <summary>LoopLayoutPlant operation.</summary>
+
             float spread = LoopLayoutPlant(1, 4, true);
             ScenarioRunner runner;
-/// <summary>LoopLayoutPlant operation.</summary>
+
             float small = LoopLayoutPlant(4, 1, false, out runner);
 
             return Result("loop-layout", runner,
                 "Four 62.5 kW sources and four radiators, 32 pipes and 4 pumps, arranged three ways. "
-/// <summary>C operation.</summary>
+
                 + "One ring with the sources bunched: " + C(bunched) + ". One ring with them spread "
-/// <summary>C operation.</summary>
+
                 + "evenly: " + C(spread) + ". Four separate rings: " + C(small)
                 + ". Splitting the ring buys nothing; spreading the sources buys "
                 + (bunched - spread).ToString("n0") + " K.");
         }
 
-/// <summary>LoopLayoutPlant operation.</summary>
+
         private static float LoopLayoutPlant(int rings, int pumpsPerRing, bool spreadSources)
         {
             ScenarioRunner ignored;
-/// <summary>LoopLayoutPlant operation.</summary>
+
             return LoopLayoutPlant(rings, pumpsPerRing, spreadSources, out ignored);
         }
 
-/// <summary>LoopLayoutPlant operation.</summary>
+
         private static float LoopLayoutPlant(int rings, int pumpsPerRing, bool spreadSources,
             out ScenarioRunner runner)
         {
             GridBuilder builder = GridBuilder.Large();
-/// <summary>List operation.</summary>
+
             List<BlockInstance> reactors = new List<BlockInstance>();
 
             int reactorsPerRing = rings == 1 ? 4 : 1;
@@ -2070,7 +2070,7 @@ namespace Thermodynamics.Harness
                 }
             }
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableSolarHeat = false;
             settings.EnableFriction = false;
@@ -2083,7 +2083,7 @@ namespace Thermodynamics.Harness
             {
                 while (loops[l].Pumps.Count < pumpsPerRing)
                 {
-/// <summary>CoolantPump operation.</summary>
+
                     CoolantPump extra = new CoolantPump();
                     extra.MaxPowerWatts = 20000f;
                     loops[l].Pumps.Add(extra);
@@ -2091,7 +2091,7 @@ namespace Thermodynamics.Harness
                 loops[l].RefreshFlow();
             }
 
-/// <summary>ScenarioRunner operation.</summary>
+
             runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("reactor", reactors[0]);
@@ -2106,24 +2106,24 @@ namespace Thermodynamics.Harness
             return hottest;
         }
 
-/// <summary>AirConditioning operation.</summary>
+
         public static ScenarioResult AirConditioning()
         {
             ScenarioRunner runner;
-/// <summary>ConditionedCabin operation.</summary>
+
             float without = ConditionedCabin(false, out runner);
-/// <summary>ConditionedCabin operation.</summary>
+
             float with = ConditionedCabin(true, out runner);
 
             return Result("air-conditioning", runner,
                 "A sealed cabin with a 15 kW source in it, and a heat pump on one wall rejecting into "
-/// <summary>C operation.</summary>
+
                 + "a radiator outside. Room air settles at " + C(without) + " with the pump off and "
-/// <summary>C operation.</summary>
+
                 + C(with) + " with it on, a difference of " + (without - with).ToString("n0") + " K.");
         }
 
-/// <summary>ConditionedCabin operation.</summary>
+
         private static float ConditionedCabin(bool pumpRunning, out ScenarioRunner runner)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -2132,11 +2132,11 @@ namespace Thermodynamics.Harness
             builder.Place(Catalog.Reactor(), new Vector3I(1, 1, 1)).Wasting(15000f);
 
             builder.Place(Catalog.HeatPump(), new Vector3I(1, 1, -2),
-/// <summary>BlockOrientation operation.</summary>
+
                 new BlockOrientation(Base6Directions.Direction.Backward, Base6Directions.Direction.Up));
             builder.Place(Catalog.Radiator(), new Vector3I(1, 1, -4));
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableSolarHeat = false;
             settings.EnableFriction = false;
@@ -2145,7 +2145,7 @@ namespace Thermodynamics.Harness
             ThermalSimulation simulation = builder.BuildSimulation(settings.Derive(), 320f);
             simulation.RebuildAll();
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I inside = new Vector3I(2, 1, 1);
             simulation.SetRoomPressure(inside, 1f);
             RoomAirNode air = simulation.Solver.GetRoomAir(simulation.Rooms.Map, inside);
@@ -2157,7 +2157,7 @@ namespace Thermodynamics.Harness
                 pumps[i].PowerAvailable = 1f;
             }
 
-/// <summary>ScenarioRunner operation.</summary>
+
             runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Run(5000f, 1000f);
@@ -2166,19 +2166,19 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Station operation.</summary>
+
         public static ScenarioResult Station()
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder summary = new StringBuilder();
 
-/// <summary>RunHull operation.</summary>
+
             StationCase shipVacuum = RunHull(false, false, 0);
-/// <summary>RunHull operation.</summary>
+
             StationCase stationVacuum = RunHull(true, false, 0);
-/// <summary>RunHull operation.</summary>
+
             StationCase shipAir = RunHull(false, true, 0);
-/// <summary>RunHull operation.</summary>
+
             StationCase stationAir = RunHull(true, true, 0);
 
             summary.Append(stationVacuum.Blocks.ToString("n0")).Append(" cells of station in ")
@@ -2214,7 +2214,7 @@ namespace Thermodynamics.Harness
                    .Append(" K, which is ").Append(Ratio(stationAirRise, shipAirRise))
                    .Append("x on the rise against the 2x a halved convecting area predicts. ");
 
-/// <summary>RunHull operation.</summary>
+
             StationCase stationNoAir = RunHull(true, false, 0, roomAir: false);
             float noAirRise = stationNoAir.Mean - stationNoAir.Ambient;
             summary.Append("With room air off the station's mean sits ").Append(noAirRise.ToString("n1"))
@@ -2224,9 +2224,9 @@ namespace Thermodynamics.Harness
                    .Append(" than with it on across ").Append(stationVacuum.PressurisedRooms)
                    .Append(" compartments. ");
 
-/// <summary>RunHull operation.</summary>
+
             StationCase shipHot = RunHull(false, true, 0, watts: StationWatts * 10f);
-/// <summary>RunHull operation.</summary>
+
             StationCase stationHot = RunHull(true, true, 0, watts: StationWatts * 10f);
             float shipHotRise = shipHot.Mean - shipHot.Ambient;
             float stationHotRise = stationHot.Mean - stationHot.Ambient;
@@ -2254,7 +2254,7 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < ladder.Length; i++)
             {
-/// <summary>RunHull operation.</summary>
+
                 StationCase priced = RunHull(true, false, ladder[i]);
                 if (priced.Radiators == lastCount) continue;
                 lastCount = priced.Radiators;
@@ -2304,7 +2304,7 @@ namespace Thermodynamics.Harness
             public float SettleDrift;
         }
 
-/// <summary>Gap operation.</summary>
+
         private static string Gap(StationCase c)
         {
             if (c.InsideCount == 0) return "no interior";
@@ -2312,19 +2312,19 @@ namespace Thermodynamics.Harness
                 + (c.InsideMean - c.SkinMean).ToString("n1") + " K over " + c.InsideCount + " blocks)";
         }
 
-/// <summary>Ratio operation.</summary>
+
         private static string Ratio(float a, float b)
         {
             return b == 0f ? "n/a" : (a / b).ToString("n3");
         }
 
-/// <summary>RunHull operation.</summary>
+
         private static StationCase RunHull(bool station, bool planet, int radiators,
             bool roomAir = true, float watts = StationWatts)
         {
             GridBuilder builder = GridBuilder.Large();
 
-/// <summary>List operation.</summary>
+
             List<Vector3I> cells = new List<Vector3I>(station
                 ? GridShapes.Station(new Vector3I(17, 15, 19), new Vector3I(3, 3, 3))
                 : GridShapes.Ship(40, 9, 12));
@@ -2339,7 +2339,7 @@ namespace Thermodynamics.Harness
                 max = Vector3I.Max(max, cells[i]);
             }
 
-/// <summary>Vector3 operation.</summary>
+
             Vector3 centre = new Vector3(
                 (min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f, (min.Z + max.Z) * 0.5f);
 
@@ -2350,7 +2350,7 @@ namespace Thermodynamics.Harness
             if (radiators > 0)
             {
                 BlockModel radiator = Catalog.Radiator();
-/// <summary>HashSet operation.</summary>
+
                 HashSet<Vector3I> occupied = new HashSet<Vector3I>(cells, Vector3I.Comparer);
 
                 for (int z = min.Z; z + 1 <= max.Z && placedRadiators < radiators; z += 2)
@@ -2369,7 +2369,7 @@ namespace Thermodynamics.Harness
                 }
             }
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableRoomAir = roomAir;
             settings.EnableFriction = false;
@@ -2390,7 +2390,7 @@ namespace Thermodynamics.Harness
                 }
             }
 
-/// <summary>List operation.</summary>
+
             List<ThermalNode> nodes = new List<ThermalNode>();
             for (int i = 0; i < simulation.Solver.Nodes.Count; i++) nodes.Add(simulation.Solver.Nodes[i]);
 
@@ -2417,7 +2417,7 @@ namespace Thermodynamics.Harness
                 externalFaces += simulation.Solver.Nodes[i].TotalExposedFaces;
             }
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = planet
                 ? (Func<float, EnvironmentSample>)(t => Worlds.PlanetSurface(1f, 0.25f))
@@ -2462,7 +2462,7 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>CellOrder operation.</summary>
+
         private static int CellOrder(Vector3I a, Vector3I b)
         {
             if (a.Z != b.Z) return a.Z.CompareTo(b.Z);
@@ -2471,10 +2471,10 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Result operation.</summary>
+
         private static ScenarioResult Result(string name, ScenarioRunner runner, string summary)
         {
-/// <summary>ScenarioResult operation.</summary>
+
             ScenarioResult result = new ScenarioResult();
             result.Name = name;
             result.Runner = runner;
@@ -2483,7 +2483,7 @@ namespace Thermodynamics.Harness
             return result;
         }
 
-/// <summary>C operation.</summary>
+
         private static string C(float kelvin)
         {
             return ThermalConstants.KelvinToCelsius(kelvin).ToString("n1") + " C";

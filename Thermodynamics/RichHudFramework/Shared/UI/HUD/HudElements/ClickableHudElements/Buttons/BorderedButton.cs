@@ -21,10 +21,10 @@ namespace RichHudFramework.UI
 
         protected Color lastColor, lastTextColor;
 
-/// <summary>BorderedButton operation.</summary>
+
         public BorderedButton(HudParentBase parent) : base(parent)
         {
-/// <summary>BorderBox operation.</summary>
+
             border = new BorderBox(this)
             {
                 Thickness = 1f,
@@ -36,11 +36,11 @@ namespace RichHudFramework.UI
             FocusTextColor = TerminalFormatting.Charcoal;
             Text = "NewBorderedButton";
 
-/// <summary>Vector2 operation.</summary>
+
             TextPadding = new Vector2(32f, 0f);
-/// <summary>Vector2 operation.</summary>
+
             Padding = new Vector2(37f, 0f);
-/// <summary>Vector2 operation.</summary>
+
             Size = new Vector2(253f, 50f);
             HighlightEnabled = true;
 
@@ -54,11 +54,11 @@ namespace RichHudFramework.UI
 			FocusHandler.LostInputFocus += LoseFocus;
         }
 
-/// <summary>BorderedButton operation.</summary>
+
         public BorderedButton() : this(null)
         { }
 
-/// <summary>HandleInput operation.</summary>
+
 		protected override void HandleInput(Vector2 cursorPos)
         {
             if (FocusHandler.HasFocus)
@@ -70,7 +70,7 @@ namespace RichHudFramework.UI
 			}
 		}
 
-/// <summary>CursorEnter operation.</summary>
+
 		protected override void CursorEnter(object sender, EventArgs args)
         {
             if (HighlightEnabled)
@@ -90,7 +90,7 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>CursorExit operation.</summary>
+
 		protected override void CursorExit(object sender, EventArgs args)
         {
             if (HighlightEnabled)
@@ -110,7 +110,7 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>GainFocus operation.</summary>
+
 		protected virtual void GainFocus(object sender, EventArgs args)
         {
             if (UseFocusFormatting)
@@ -126,7 +126,7 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>LoseFocus operation.</summary>
+
 		protected virtual void LoseFocus(object sender, EventArgs args)
         {
             if (UseFocusFormatting)

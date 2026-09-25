@@ -6,7 +6,6 @@ namespace Thermodynamics
 {
     public static class Debug
     {
-/// <summary>ShowDebugInfo operation.</summary>
         public static void ShowDebugInfo()
         {
             if (MyAPIGateway.Utilities.IsDedicated) return;
@@ -69,28 +68,23 @@ namespace Thermodynamics
 
             RoomMap map = simulation.Rooms.Map;
             MyAPIGateway.Utilities.ShowNotification(
-/// <summary>Classify operation.</summary>
                 "[Room] cell: " + Classify(map, cell) +
                 " sealed by state: " + (node.Block.IsSealedByDoorState ? "yes" : "no (door open)") +
-/// <summary>Neighbours operation.</summary>
                 " neighbours: " + Neighbours(map, simulation.Surfaces, cell), 1,
                 map.IsExternal(cell) ? "Red" : "White");
 
             MyAPIGateway.Utilities.ShowNotification(
-/// <summary>Exposure operation.</summary>
                 "[Faces] " + Exposure(simulation, node.Block), 1, "White");
 
             MyAPIGateway.Utilities.ShowNotification("[Aero] " + Aero(solver, node, state), 1, "White");
         }
 
-/// <summary>Aero operation.</summary>
         private static string Aero(ThermalSolver solver, ThermalNode node, EnvironmentState state)
         {
             Vector3 normal = solver.NodeShapeNormal(node.Index);
             float watts = node.LastFrictionWatts;
 
             string text = "friction: " + watts.ToString("n1") + "W"
-/// <summary>wind operation.</summary>
                 + "  wind(local): " + Compact(state.WindDirectionLocal * state.WindSpeed) + "m/s";
 
             if (normal == Vector3.Zero)
@@ -102,13 +96,11 @@ namespace Thermodynamics
             return text + "  normal: " + Compact(normal) + "  pressure push: " + Compact(push) + "W";
         }
 
-/// <summary>Compact operation.</summary>
         private static string Compact(Vector3 v)
         {
             return "(" + v.X.ToString("n1") + " " + v.Y.ToString("n1") + " " + v.Z.ToString("n1") + ")";
         }
 
-/// <summary>Exposure operation.</summary>
         private static string Exposure(ThermalSimulation simulation, BlockInstance block)
         {
             SurfaceAudit.Explain(simulation.Surfaces, block, simulation.Rooms.Map, ExposureScratch);
@@ -133,7 +125,6 @@ namespace Thermodynamics
 
         private static readonly FaceExposure[] ExposureScratch = new FaceExposure[Face.Count];
 
-/// <summary>Classify operation.</summary>
         private static string Classify(RoomMap map, Vector3I cell)
         {
             if (map.IsSolid(cell)) return "structure";
@@ -144,7 +135,6 @@ namespace Thermodynamics
             return "external";
         }
 
-/// <summary>Neighbours operation.</summary>
         private static string Neighbours(RoomMap map, SurfaceMap surfaces, Vector3I cell)
         {
             string text = "";

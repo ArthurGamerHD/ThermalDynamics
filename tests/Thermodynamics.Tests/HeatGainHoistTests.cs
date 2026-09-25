@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
 {
     public class HeatGainHoistTests
     {
-/// <summary>Hull operation.</summary>
+
         private static ThermalSimulation Hull(bool hoist)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -22,12 +22,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheHoistedFigureIsTheSummedFigureToTheBit operation.</summary>
+
         public void TheHoistedFigureIsTheSummedFigureToTheBit()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation summed = Hull(false);
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation hoisted = Hull(true);
 
             EnvironmentState state = EnvironmentSolver.Solve(
@@ -67,10 +67,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ANewStepDoesNotCarryTheLastStepsTotal operation.</summary>
+
         public void ANewStepDoesNotCarryTheLastStepsTotal()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(true);
             float step = simulation.Settings.StepSeconds;
 
@@ -92,7 +92,7 @@ namespace Thermodynamics.Tests
                 + " step's total rather than taking its own");
         }
 
-/// <summary>Bits operation.</summary>
+
         private static int Bits(float value)
         {
             return BitConverter.ToInt32(BitConverter.GetBytes(value), 0);

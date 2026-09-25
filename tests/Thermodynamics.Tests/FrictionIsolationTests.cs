@@ -9,10 +9,10 @@ namespace Thermodynamics.Tests
     {
         private const float ThickAir = 1f;
 
-/// <summary>Rig operation.</summary>
+
         private static ThermalSimulation Rig()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -28,10 +28,10 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>FrictionWatts operation.</summary>
+
         private static float FrictionWatts(EnvironmentSample sample)
         {
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig();
             simulation.StepExact(1, sample);
             return simulation.Solver.Nodes[0].LastFrictionWatts;
@@ -39,12 +39,12 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>MotionAloneHeatsAtEverySpeed operation.</summary>
+
         public void MotionAloneHeatsAtEverySpeed()
         {
-/// <summary>FrictionWatts operation.</summary>
+
             float fast = FrictionWatts(Worlds.Flight(ThickAir, 80f));
-/// <summary>FrictionWatts operation.</summary>
+
             float slow = FrictionWatts(Worlds.Flight(ThickAir, 40f));
 
             Assert.True(slow > 0f, "slow flight has to heat now that the floor ships at zero");
@@ -52,12 +52,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WindAloneHeatsAtEverySpeed operation.</summary>
+
         public void WindAloneHeatsAtEverySpeed()
         {
-/// <summary>FrictionWatts operation.</summary>
+
             float fast = FrictionWatts(Worlds.Storm(ThickAir, 80f));
-/// <summary>FrictionWatts operation.</summary>
+
             float slow = FrictionWatts(Worlds.Storm(ThickAir, 40f));
 
             Assert.True(slow > 0f, "a slow wind has to heat now that the floor ships at zero");
@@ -65,12 +65,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStormAndAFlightAtTheSameAirspeedAreTheSameHeat operation.</summary>
+
         public void AStormAndAFlightAtTheSameAirspeedAreTheSameHeat()
         {
-/// <summary>FrictionWatts operation.</summary>
+
             float storm = FrictionWatts(Worlds.Storm(ThickAir, 80f));
-/// <summary>FrictionWatts operation.</summary>
+
             float flight = FrictionWatts(Worlds.Flight(ThickAir, 80f));
 
             Assert.True(storm > 0f);
@@ -79,7 +79,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>FlyingWithTheWindAtItsOwnSpeedIsCalmAir operation.</summary>
+
         public void FlyingWithTheWindAtItsOwnSpeedIsCalmAir()
         {
             EnvironmentSample sample = Worlds.WindAndMotion(
@@ -90,7 +90,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHeadwindHeatsAsTheSumOfItsParts operation.</summary>
+
         public void AHeadwindHeatsAsTheSumOfItsParts()
         {
             EnvironmentSample headwind = Worlds.WindAndMotion(
@@ -98,14 +98,14 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(80f, headwind.RelativeWindSpeed, 3);
 
-/// <summary>FrictionWatts operation.</summary>
+
             float watts = FrictionWatts(headwind);
             Assert.True(watts > 0f);
             Assert.Equal(FrictionWatts(Worlds.Flight(ThickAir, 80f)), watts, 2);
         }
 
         [Fact]
-/// <summary>ATailwindHeatsAtTheAirflowNotTheGroundSpeed operation.</summary>
+
         public void ATailwindHeatsAtTheAirflowNotTheGroundSpeed()
         {
             EnvironmentSample downwind = Worlds.WindAndMotion(
@@ -113,7 +113,7 @@ namespace Thermodynamics.Tests
 
             Assert.Equal(20f, downwind.RelativeWindSpeed, 3);
 
-/// <summary>FrictionWatts operation.</summary>
+
             float watts = FrictionWatts(downwind);
             Assert.True(watts > 0f, "20 m/s of airflow has to heat now that the floor ships at zero");
             Assert.Equal(FrictionWatts(Worlds.Flight(ThickAir, 20f)), watts, 2);
@@ -122,7 +122,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACrosswindComposesByVectorNotByAddition operation.</summary>
+
         public void ACrosswindComposesByVectorNotByAddition()
         {
             EnvironmentSample crosswind = Worlds.WindAndMotion(
@@ -137,10 +137,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>ForcedConvectionCannotTellWindFromMotion operation.</summary>
+
         public void ForcedConvectionCannotTellWindFromMotion()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.Derive();
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
@@ -155,12 +155,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FrictionGrowsWithTheCubeOfTheAirspeed operation.</summary>
+
         public void FrictionGrowsWithTheCubeOfTheAirspeed()
         {
-/// <summary>FrictionWatts operation.</summary>
+
             float at60 = FrictionWatts(Worlds.Flight(ThickAir, 60f));
-/// <summary>FrictionWatts operation.</summary>
+
             float at120 = FrictionWatts(Worlds.Flight(ThickAir, 120f));
 
             Assert.True(at60 > 0f);
@@ -168,12 +168,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFrictionLawStillHoldsAtARaisedSpeedLimit operation.</summary>
+
         public void TheFrictionLawStillHoldsAtARaisedSpeedLimit()
         {
-/// <summary>FrictionWatts operation.</summary>
+
             float at100 = FrictionWatts(Worlds.Flight(ThickAir, 100f));
-/// <summary>FrictionWatts operation.</summary>
+
             float at300 = FrictionWatts(Worlds.Flight(ThickAir, 300f));
 
             Assert.True(at100 > 0f, "100 m/s is above the friction threshold");
@@ -186,10 +186,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ForcedConvectionSaturatesWhileFrictionCubes operation.</summary>
+
         public void ForcedConvectionSaturatesWhileFrictionCubes()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.Derive();
             PlanetThermalProperties planet = PlanetThermalProperties.Default();
@@ -209,10 +209,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ActivationFollowsTheRelativeWindThroughTheSolve operation.</summary>
+
         public void ActivationFollowsTheRelativeWindThroughTheSolve()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.Derive();
             PlanetThermalProperties planet = PlanetThermalProperties.Default();

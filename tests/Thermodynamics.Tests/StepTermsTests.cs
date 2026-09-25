@@ -5,13 +5,13 @@ namespace Thermodynamics.Tests
 {
     public class StepTermsTests
     {
-/// <summary>Hull operation.</summary>
+
         private static ThermalSimulation Hull(int maxSubsteps)
         {
             return Hulls.Driven(Hulls.Uncapped(maxSubsteps), 600);
         }
 
-/// <summary>Flight operation.</summary>
+
         private static EnvironmentSample Flight()
         {
             return Worlds.Ab.EveryTermLive();
@@ -21,10 +21,10 @@ namespace Thermodynamics.Tests
         [InlineData(1)]
         [InlineData(4)]
         [InlineData(32)]
-/// <summary>TheEnvironmentRowsAreFilledOnceAStep operation.</summary>
+
         public void TheEnvironmentRowsAreFilledOnceAStep(int maxSubsteps)
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(maxSubsteps);
             simulation.StepExact(1, Flight());
 
@@ -37,10 +37,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SwitchingTheCacheOffFillsOnEverySubstep operation.</summary>
+
         public void SwitchingTheCacheOffFillsOnEverySubstep()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(32);
             simulation.Solver.PrecomputeEnvironment = false;
             simulation.StepExact(1, Flight());
@@ -54,13 +54,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFillSpreadAcrossFramesIsStillOneFill operation.</summary>
+
         public void AFillSpreadAcrossFramesIsStillOneFill()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(32);
             EnvironmentState state = EnvironmentSolver.Solve(
-/// <summary>Flight operation.</summary>
+
                 simulation.Settings, simulation.Planet, Flight());
 
             simulation.Solver.Step(simulation.Settings.StepSeconds, state);

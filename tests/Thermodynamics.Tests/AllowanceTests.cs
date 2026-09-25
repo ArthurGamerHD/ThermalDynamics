@@ -13,21 +13,21 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>AllowanceTests operation.</summary>
+
         public AllowanceTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
         [Fact]
-/// <summary>AnAllowanceIsAPerFrameBudgetScaledByTheStepRate operation.</summary>
+
         public void AnAllowanceIsAPerFrameBudgetScaledByTheStepRate()
         {
             List<AllowanceLab.Row> rows = AllowanceLab.Run("ship", new[] { 16000 },
                 new[] { 1000000 }, new[] { "flight" }, AllowanceLab.DefaultFrames, null);
 
             AllowanceLab.Row row = rows[0];
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings().Derive();
             double ceiling = row.Allowance * settings.StepsPerSecond / 60d;
 
@@ -45,7 +45,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheAllowanceBindsInAirLongBeforeItBindsInVacuum operation.</summary>
+
         public void TheAllowanceBindsInAirLongBeforeItBindsInVacuum()
         {
             List<AllowanceLab.Row> rows = AllowanceLab.Run("ship", new[] { 16000 },
@@ -71,7 +71,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThePriceLadderLandsOnTheSweepsOwnSlowClockRow operation.</summary>
+
         public void ThePriceLadderLandsOnTheSweepsOwnSlowClockRow()
         {
             ClientInputLab.Result published = ClientInputLab.Measure(
@@ -89,7 +89,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheKelvinPriceOfALostRateIsNotLinearInIt operation.</summary>
+
         public void TheKelvinPriceOfALostRateIsNotLinearInIt()
         {
             List<AllowanceLab.PriceRow> ladder = AllowanceLab.PriceRates(
@@ -111,7 +111,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APriceIsInterpolatedAndNeverExtrapolated operation.</summary>
+
         public void APriceIsInterpolatedAndNeverExtrapolated()
         {
             List<AllowanceLab.PriceRow> ladder = new List<AllowanceLab.PriceRow>
@@ -131,7 +131,7 @@ namespace Thermodynamics.Tests
             Assert.True(AllowanceLab.PastTheLadder(At(0.50d), ladder));
         }
 
-/// <summary>At operation.</summary>
+
         private static AllowanceLab.Row At(double rate)
         {
             return new AllowanceLab.Row { Rate = rate };

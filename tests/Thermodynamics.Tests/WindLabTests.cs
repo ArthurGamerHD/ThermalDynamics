@@ -8,10 +8,10 @@ namespace Thermodynamics.Tests
 {
     public class WindLabTests
     {
-/// <summary>AtHeight operation.</summary>
+
         private static List<WindLab.Row> AtHeight(List<WindLab.Row> rows, double height)
         {
-/// <summary>List operation.</summary>
+
             List<WindLab.Row> found = new List<WindLab.Row>();
             for (int i = 0; i < rows.Count; i++)
             {
@@ -20,7 +20,7 @@ namespace Thermodynamics.Tests
             return found;
         }
 
-/// <summary>Mean operation.</summary>
+
         private static double Mean(List<WindLab.Row> rows, Func<WindLab.Row, double> of)
         {
             if (rows.Count == 0) return 0d;
@@ -29,7 +29,7 @@ namespace Thermodynamics.Tests
             return total / rows.Count;
         }
 
-/// <summary>DayNight operation.</summary>
+
         private static void DayNight(
             List<WindLab.Row> rows, double height, out double day, out double night)
         {
@@ -73,7 +73,7 @@ namespace Thermodynamics.Tests
             night = nightMeans / latitudes;
         }
 
-/// <summary>Adds a .</summary>
+
         private static void Add(Dictionary<double, double> totals, Dictionary<double, int> counts,
             double latitude, double speed)
         {
@@ -88,7 +88,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheEnginesOwnWindFigureIsReproducedExactly operation.</summary>
+
         public void TheEnginesOwnWindFigureIsReproducedExactly()
         {
             WindLab.Planet planet = new WindLab.Planet();
@@ -102,7 +102,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheEnginesFalloffIsLinearRatherThanExponential operation.</summary>
+
         public void TheEnginesFalloffIsLinearRatherThanExponential()
         {
             WindLab.Planet planet = new WindLab.Planet();
@@ -117,7 +117,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheEnginesWindIgnoresTheGroundEntirelyAndIsInvertedByIt operation.</summary>
+
         public void TheEnginesWindIgnoresTheGroundEntirelyAndIsInvertedByIt()
         {
             WindLab.Planet planet = new WindLab.Planet();
@@ -131,7 +131,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheSurfaceIsWindiestByDayAndTheAirAloftIsWindiestAtNight operation.</summary>
+
         public void TheSurfaceIsWindiestByDayAndTheAirAloftIsWindiestAtNight()
         {
             WindLab.Options options = new WindLab.Options();
@@ -151,7 +151,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SlopeWindCanOverturnTheSurfaceCycleOnSlopedGround operation.</summary>
+
         public void SlopeWindCanOverturnTheSurfaceCycleOnSlopedGround()
         {
             List<WindLab.Row> withSlope = WindLab.Run(new WindLab.Planet(), new WindLab.Options());
@@ -172,7 +172,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThereIsAHeightBetweenThemWhereTheDayBarelyMatters operation.</summary>
+
         public void ThereIsAHeightBetweenThemWhereTheDayBarelyMatters()
         {
             WindLab.Options options = new WindLab.Options();
@@ -187,7 +187,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AboveTheBoundaryLayerTheDayStopsMatteringAtAll operation.</summary>
+
         public void AboveTheBoundaryLayerTheDayStopsMatteringAtAll()
         {
             List<WindLab.Row> rows = WindLab.Run(new WindLab.Planet(), new WindLab.Options());
@@ -199,7 +199,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheHeatingCurveCoversTheWholeDay operation.</summary>
+
         public void TheHeatingCurveCoversTheWholeDay()
         {
             List<WindLab.Row> rows = WindLab.Run(new WindLab.Planet(), new WindLab.Options());
@@ -217,10 +217,10 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheSimulatedGroundIsRoughEnoughToExerciseTheTerrainModel operation.</summary>
+
         public void TheSimulatedGroundIsRoughEnoughToExerciseTheTerrainModel()
         {
-/// <summary>AtHeight operation.</summary>
+
             List<WindLab.Row> rows = AtHeight(
                 WindLab.Run(new WindLab.Planet(), new WindLab.Options()), 10d);
 
@@ -238,13 +238,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LevellingTheGroundSwitchesEveryTerrainEffectOff operation.</summary>
+
         public void LevellingTheGroundSwitchesEveryTerrainEffectOff()
         {
             WindLab.Planet flat = new WindLab.Planet();
             flat.Ground = new WindLab.FlatTerrain();
 
-/// <summary>AtHeight operation.</summary>
+
             List<WindLab.Row> rows = AtHeight(WindLab.Run(flat, new WindLab.Options()), 10d);
             Assert.NotEmpty(rows);
 
@@ -257,7 +257,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TurningTerrainOffMatchesFlatteningTheWorld operation.</summary>
+
         public void TurningTerrainOffMatchesFlatteningTheWorld()
         {
             WindLab.Options off = new WindLab.Options();
@@ -266,9 +266,9 @@ namespace Thermodynamics.Tests
             WindLab.Planet flat = new WindLab.Planet();
             flat.Ground = new WindLab.FlatTerrain();
 
-/// <summary>AtHeight operation.</summary>
+
             List<WindLab.Row> a = AtHeight(WindLab.Run(new WindLab.Planet(), off), 10d);
-/// <summary>AtHeight operation.</summary>
+
             List<WindLab.Row> b = AtHeight(WindLab.Run(flat, new WindLab.Options()), 10d);
 
             Assert.Equal(a.Count, b.Count);
@@ -278,7 +278,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>EveryLatitudeIsSampledIncludingTheOnesAFieldRunNeverReaches operation.</summary>
+
         public void EveryLatitudeIsSampledIncludingTheOnesAFieldRunNeverReaches()
         {
             List<WindLab.Row> rows = WindLab.Run(new WindLab.Planet(), new WindLab.Options());
@@ -296,7 +296,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWindIsNeverNegativeNorAbsurdAnywhereOnThePlanetAtAnyHour operation.</summary>
+
         public void TheWindIsNeverNegativeNorAbsurdAnywhereOnThePlanetAtAnyHour()
         {
             WindLab.Options options = new WindLab.Options();
@@ -317,7 +317,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCsvCarriesTheSameColumnNamesTheGameWrites operation.</summary>
+
         public void TheCsvCarriesTheSameColumnNamesTheGameWrites()
         {
             string csv = WindLab.Csv(WindLab.Run(new WindLab.Planet(), new WindLab.Options()));
@@ -334,7 +334,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARunIsRepeatable operation.</summary>
+
         public void ARunIsRepeatable()
         {
             List<WindLab.Row> a = WindLab.Run(new WindLab.Planet(), new WindLab.Options());

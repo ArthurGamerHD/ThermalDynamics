@@ -10,10 +10,10 @@ namespace Thermodynamics.Core
         {
             public Vector3I Anchor;
 
-/// <summary>HashSet operation.</summary>
+
             public readonly HashSet<Vector3I> Cells = new HashSet<Vector3I>(Vector3I.Comparer);
 
-/// <summary>List operation.</summary>
+
             public readonly List<Leak> Leaks = new List<Leak>();
 
             public int CellCount
@@ -30,7 +30,7 @@ namespace Thermodynamics.Core
 
             public Vector3I Neighbour;
 
-/// <summary>Leak operation.</summary>
+
             public Leak(Vector3I cell, int face, Vector3I neighbour)
             {
                 Cell = cell;
@@ -39,7 +39,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Find operation.</summary>
+
         public static bool Find(
             RoomMap map,
             SurfaceMap surfaces,
@@ -53,7 +53,7 @@ namespace Thermodynamics.Core
             if (map == null || surfaces == null || airtightHere == null) return true;
             if (map.IsEmpty) return true;
 
-/// <summary>List operation.</summary>
+
             List<Vector3I> candidates = new List<Vector3I>();
             IEnumerable<Vector3I> external = map.ExternalCells;
 
@@ -76,11 +76,11 @@ namespace Thermodynamics.Core
 
             candidates.Sort(CompareCells);
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> pool = new HashSet<Vector3I>(candidates, Vector3I.Comparer);
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> taken = new HashSet<Vector3I>(Vector3I.Comparer);
-/// <summary>Queue operation.</summary>
+
             Queue<Vector3I> frontier = new Queue<Vector3I>();
 
             for (int i = 0; i < candidates.Count; i++)
@@ -88,7 +88,7 @@ namespace Thermodynamics.Core
                 Vector3I start = candidates[i];
                 if (taken.Contains(start)) continue;
 
-/// <summary>Region operation.</summary>
+
                 Region region = new Region();
                 region.Anchor = start;
 
@@ -120,7 +120,7 @@ namespace Thermodynamics.Core
             return complete;
         }
 
-/// <summary>CollectLeaks operation.</summary>
+
         private static void CollectLeaks(Region region, SurfaceMap surfaces)
         {
             foreach (Vector3I cell in region.Cells)
@@ -138,14 +138,14 @@ namespace Thermodynamics.Core
 
         public const int DefaultCellLimit = 200000;
 
-/// <summary>CompareRegions operation.</summary>
+
         private static int CompareRegions(Region a, Region b)
         {
-/// <summary>CompareCells operation.</summary>
+
             return CompareCells(a.Anchor, b.Anchor);
         }
 
-/// <summary>CompareCells operation.</summary>
+
         private static int CompareCells(Vector3I a, Vector3I b)
         {
             if (a.X != b.X) return a.X < b.X ? -1 : 1;

@@ -8,7 +8,7 @@ namespace Thermodynamics.Core
     {
         private readonly Dictionary<long, long> cells = new Dictionary<long, long>();
 
-/// <summary>KeyOf operation.</summary>
+
         private static long KeyOf(Vector3I cell)
         {
             return GridMath.Key(cell);
@@ -20,19 +20,19 @@ namespace Thermodynamics.Core
         private const int StructuralShift = 32;
         private const long LiveMask = 0xFFFFFFFFL;
 
-/// <summary>Pack operation.</summary>
+
         private static long Pack(int live, int structural)
         {
             return (live & LiveMask) | ((long)structural << StructuralShift);
         }
 
-/// <summary>Live operation.</summary>
+
         private static int Live(long packed)
         {
             return (int)(packed & LiveMask);
         }
 
-/// <summary>Structural operation.</summary>
+
         private static int Structural(long packed)
         {
             return (int)(packed >> StructuralShift);
@@ -51,20 +51,20 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Returns the state.</summary>
+
         public int GetState(Vector3I cell)
         {
             long packed;
             return cells.TryGetValue(KeyOf(cell), out packed) ? Live(packed) : 0;
         }
 
-/// <summary>HasCell operation.</summary>
+
         public bool HasCell(Vector3I cell)
         {
             return cells.ContainsKey(KeyOf(cell));
         }
 
-/// <summary>Adds a block.</summary>
+
         public void AddBlock(BlockInstance block)
         {
             if (block == null) return;
@@ -88,7 +88,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Removes the block.</summary>
+
         public void RemoveBlock(BlockInstance block)
         {
             if (block == null) return;
@@ -105,7 +105,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Rebuild operation.</summary>
+
         public void Rebuild(GridModel grid)
         {
             cells.Clear();
@@ -159,16 +159,16 @@ namespace Thermodynamics.Core
                     structural |= CellSurface.NeighbourContribution(Structural(neighbour), face);
                 }
 
-/// <summary>Pack operation.</summary>
+
                 cells[key] = Pack(live, structural);
             }
         }
 
-/// <summary>RefreshCell operation.</summary>
+
         public void RefreshCell(Vector3I cell)
         {
             long packed;
-/// <summary>KeyOf operation.</summary>
+
             long key = KeyOf(cell);
             if (!cells.TryGetValue(key, out packed)) return;
 
@@ -186,11 +186,11 @@ namespace Thermodynamics.Core
                 }
             }
 
-/// <summary>Pack operation.</summary>
+
             cells[key] = Pack(live, structural);
         }
 
-/// <summary>RefreshNeighboursOf operation.</summary>
+
         private void RefreshNeighboursOf(Vector3I cell)
         {
             for (int face = 0; face < Face.Count; face++)
@@ -199,50 +199,50 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>IsFaceSealed operation.</summary>
+
         public bool IsFaceSealed(Vector3I cell, int face)
         {
-/// <summary>Returns the state.</summary>
+
             int state = GetState(cell);
             if (CellSurface.SelfAirtight(state, face)) return true;
 
-/// <summary>Returns the state.</summary>
+
             int neighbourState = GetState(cell + Face.Offsets[face]);
             return CellSurface.SelfAirtight(neighbourState, Face.Opposite(face));
         }
 
-/// <summary>IsFullySealed operation.</summary>
+
         public bool IsFullySealed(Vector3I cell)
         {
             return CellSurface.IsFullySealed(GetState(cell));
         }
 
-/// <summary>Returns the structuralstate.</summary>
+
         public int GetStructuralState(Vector3I cell)
         {
             long packed;
             return cells.TryGetValue(KeyOf(cell), out packed) ? Structural(packed) : 0;
         }
 
-/// <summary>IsFaceSealedStructurally operation.</summary>
+
         public bool IsFaceSealedStructurally(Vector3I cell, int face)
         {
-/// <summary>Returns the structuralstate.</summary>
+
             int state = GetStructuralState(cell);
             if (CellSurface.SelfAirtight(state, face)) return true;
 
-/// <summary>Returns the structuralstate.</summary>
+
             int neighbourState = GetStructuralState(cell + Face.Offsets[face]);
             return CellSurface.SelfAirtight(neighbourState, Face.Opposite(face));
         }
 
-/// <summary>IsFullySealedStructurally operation.</summary>
+
         public bool IsFullySealedStructurally(Vector3I cell)
         {
             return CellSurface.IsFullySealed(GetStructuralState(cell));
         }
 
-/// <summary>CopyStructuralSealing operation.</summary>
+
         public void CopyStructuralSealing(Vector3I min, Vector3I maxExclusive, byte[] sealing)
         {
             if (sealing == null) return;
@@ -267,7 +267,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Returns the exposedfaces.</summary>
+
         public void GetExposedFaces(BlockInstance block, RoomMap rooms, int[] resultsByFace)
         {
             if (resultsByFace == null || resultsByFace.Length < Face.Count)
@@ -281,7 +281,7 @@ namespace Thermodynamics.Core
             if (block.CellCount == 1)
             {
                 Vector3I cell = block.Min;
-/// <summary>Returns the state.</summary>
+
                 int state = GetState(cell);
                 for (int face = 0; face < Face.Count; face++)
                 {
@@ -295,7 +295,7 @@ namespace Thermodynamics.Core
             GetExposedFacesWalkingTheBoundary(block, rooms, resultsByFace);
         }
 
-/// <summary>Returns the exposedfaceswalkingtheboundary.</summary>
+
         public void GetExposedFacesWalkingTheBoundary(BlockInstance block, RoomMap rooms, int[] resultsByFace)
         {
             if (block == null || resultsByFace == null) return;
@@ -323,7 +323,7 @@ namespace Thermodynamics.Core
                         cell = BoxGeometry.WithComponent(cell, u, a);
                         cell = BoxGeometry.WithComponent(cell, v, b);
 
-/// <summary>Returns the state.</summary>
+
                         int state = GetState(cell);
                         Vector3I neighbour = cell + offset;
 
@@ -339,7 +339,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Returns the roomcontacts.</summary>
+
         public void GetRoomContacts(BlockInstance block, RoomMap rooms, List<RoomContact> results)
         {
             if (results == null || block == null || rooms == null) return;
@@ -378,20 +378,20 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Accumulate operation.</summary>
+
         private static void Accumulate(List<RoomContact> results, int room)
         {
             for (int i = 0; i < results.Count; i++)
             {
                 if (results[i].RoomIndex != room) continue;
-/// <summary>RoomContact operation.</summary>
+
                 results[i] = new RoomContact(room, results[i].Faces + 1);
                 return;
             }
             results.Add(new RoomContact(room, 1));
         }
 
-/// <summary>Returns the exposedfaces.</summary>
+
         public int[] GetExposedFaces(BlockInstance block, RoomMap rooms)
         {
             int[] result = new int[Face.Count];
@@ -399,7 +399,7 @@ namespace Thermodynamics.Core
             return result;
         }
 
-/// <summary>Clear operation.</summary>
+
         public void Clear()
         {
             cells.Clear();

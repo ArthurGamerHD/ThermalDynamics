@@ -17,14 +17,14 @@ namespace Thermodynamics.Tests
         [InlineData("1", true)]
         [InlineData("yes", true)]
         [InlineData("true", true)]
-/// <summary>OffMeansOffHoweverItIsSpelled operation.</summary>
+
         public void OffMeansOffHoweverItIsSpelled(string configured, bool expected)
         {
             Assert.Equal(expected, CorpusFixture.OptedIn(configured));
         }
 
         [Fact]
-/// <summary>AResumeDropsTheFinishedAndKeepsTheOrder operation.</summary>
+
         public void AResumeDropsTheFinishedAndKeepsTheOrder()
         {
             List<string> corpus = new List<string> { "a", "b", "c", "d", "e" };
@@ -43,14 +43,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ResumingIsIdempotent operation.</summary>
+
         public void ResumingIsIdempotent()
         {
             List<string> corpus = new List<string> { "a", "b", "c", "d", "e", "f" };
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> done = new HashSet<string>();
 
-/// <summary>List operation.</summary>
+
             List<string> visited = new List<string>();
             int rounds = 0;
 
@@ -70,7 +70,7 @@ namespace Thermodynamics.Tests
             Assert.Empty(CorpusFixture.Remaining(corpus, done));
         }
         [Fact]
-/// <summary>NarrowingThenResumingKeepsTheSameShips operation.</summary>
+
         public void NarrowingThenResumingKeepsTheSameShips()
         {
             List<string> corpus = new List<string> { "a", "b", "c", "d", "e" };
@@ -80,7 +80,7 @@ namespace Thermodynamics.Tests
             List<string> narrowedFirst = CorpusFixture.Remaining(
                 Keep(corpus, selection), done);
 
-/// <summary>Keep operation.</summary>
+
             List<string> resumedFirst = Keep(
                 CorpusFixture.Remaining(corpus, done), selection);
 
@@ -88,10 +88,10 @@ namespace Thermodynamics.Tests
             Assert.Equal(narrowedFirst, resumedFirst);
         }
 
-/// <summary>Keep operation.</summary>
+
         private static List<string> Keep(IList<string> corpus, ICollection<string> wanted)
         {
-/// <summary>List operation.</summary>
+
             List<string> kept = new List<string>();
             foreach (string path in corpus)
             {

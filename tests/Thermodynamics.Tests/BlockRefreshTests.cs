@@ -8,10 +8,10 @@ namespace Thermodynamics.Tests
 {
     public class BlockRefreshTests
     {
-/// <summary>Graph operation.</summary>
+
         private static List<string> Graph(ThermalSolver solver)
         {
-/// <summary>List operation.</summary>
+
             List<string> rows = new List<string>();
 
             foreach (ThermalLink link in solver.Links)
@@ -29,10 +29,10 @@ namespace Thermodynamics.Tests
             return rows;
         }
 
-/// <summary>Degrees operation.</summary>
+
         private static List<string> Degrees(ThermalSolver solver)
         {
-/// <summary>List operation.</summary>
+
             List<string> rows = new List<string>();
             for (int i = 0; i < solver.Nodes.Count; i++)
             {
@@ -43,7 +43,7 @@ namespace Thermodynamics.Tests
             return rows;
         }
 
-/// <summary>Ship operation.</summary>
+
         private static ThermalSimulation Ship()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -58,16 +58,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RefreshingABlockLeavesTheGraphAFullRebuildWouldHaveBuilt operation.</summary>
+
         public void RefreshingABlockLeavesTheGraphAFullRebuildWouldHaveBuilt()
         {
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation simulation = Ship();
             ThermalSolver solver = simulation.Solver;
 
-/// <summary>Graph operation.</summary>
+
             List<string> before = Graph(solver);
-/// <summary>Degrees operation.</summary>
+
             List<string> degreesBefore = Degrees(solver);
 
             BlockInstance block = simulation.Grid.GetAtCell(Vector3I.Zero);
@@ -81,7 +81,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(before, Graph(solver));
         }
 
-/// <summary>BoltedTopAndBottom operation.</summary>
+
         private static BlockModel BoltedTopAndBottom()
         {
             BlockModel model = BlockModel.Solid(
@@ -95,7 +95,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ReorientingABlockRebuildsTheJointsItsMountsDecide operation.</summary>
+
         public void ReorientingABlockRebuildsTheJointsItsMountsDecide()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -110,7 +110,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(0, solver.GetNode(bracket).LinkCount);
             Assert.Empty(Graph(solver));
 
-/// <summary>BlockOrientation operation.</summary>
+
             bracket.Orientation = new BlockOrientation(
                 Base6Directions.Direction.Forward, Base6Directions.Direction.Right);
 
@@ -118,7 +118,7 @@ namespace Thermodynamics.Tests
             solver.BuildLinksIfNeeded();
 
             Assert.Equal(1, solver.GetNode(bracket).LinkCount);
-/// <summary>Graph operation.</summary>
+
             List<string> repaired = Graph(solver);
             Assert.Single(repaired);
 
@@ -127,12 +127,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ReorientingABlockAwayFromItsNeighbourDropsTheJoint operation.</summary>
+
         public void ReorientingABlockAwayFromItsNeighbourDropsTheJoint()
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Place(BoltedTopAndBottom(), Vector3I.Zero,
-/// <summary>BlockOrientation operation.</summary>
+
                 new BlockOrientation(Base6Directions.Direction.Forward, Base6Directions.Direction.Right));
             BlockInstance bracket = builder.Last;
             builder.Place(Catalog.LightArmor(), new Vector3I(1, 0, 0));
@@ -155,14 +155,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RefreshingEveryBlockInTurnLeavesTheGraphIntact operation.</summary>
+
         public void RefreshingEveryBlockInTurnLeavesTheGraphIntact()
         {
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation simulation = Ship();
             ThermalSolver solver = simulation.Solver;
 
-/// <summary>Graph operation.</summary>
+
             List<string> before = Graph(solver);
 
             IList<BlockInstance> blocks = simulation.Grid.Blocks;
@@ -176,10 +176,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RefreshingABlockCostsItsOwnDegreeRatherThanTheGrid operation.</summary>
+
         public void RefreshingABlockCostsItsOwnDegreeRatherThanTheGrid()
         {
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation simulation = Ship();
             ThermalSolver solver = simulation.Solver;
 
@@ -199,10 +199,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AMountingChangeDoesNotAskForARemap operation.</summary>
+
         public void AMountingChangeDoesNotAskForARemap()
         {
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation simulation = Ship();
             long passesBefore = simulation.Rooms.Work.RoomPassesBegun;
 
@@ -214,7 +214,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ADoorOpeningIsResolvedThroughItsPortalRatherThanARemap operation.</summary>
+
         public void ADoorOpeningIsResolvedThroughItsPortalRatherThanARemap()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -242,7 +242,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ADoorTheMapperHasNeverSeenAsksForARemap operation.</summary>
+
         public void ADoorTheMapperHasNeverSeenAsksForARemap()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -255,7 +255,7 @@ namespace Thermodynamics.Tests
 
             BlockInstance wall = simulation.Grid.GetAtCell(new Vector3I(0, 0, -1));
             simulation.RemoveBlock(wall);
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance door = new BlockInstance(
                 Catalog.AirtightDoor(), new Vector3I(0, 0, -1), BlockOrientation.Identity);
             door.IsSealedByDoorState = true;
@@ -269,10 +269,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RefreshingABlockRecountsItsOwnExposedFaces operation.</summary>
+
         public void RefreshingABlockRecountsItsOwnExposedFaces()
         {
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation simulation = Ship();
 
             BlockInstance block = simulation.Grid.GetAtCell(new Vector3I(3, 0, 0));
@@ -297,10 +297,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RefreshingABlockKeepsItsTemperature operation.</summary>
+
         public void RefreshingABlockKeepsItsTemperature()
         {
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation simulation = Ship();
 
             BlockInstance block = simulation.Grid.GetAtCell(Vector3I.Zero);
@@ -315,15 +315,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RefreshingAnUnknownBlockDoesNothing operation.</summary>
+
         public void RefreshingAnUnknownBlockDoesNothing()
         {
-/// <summary>Ship operation.</summary>
+
             ThermalSimulation simulation = Ship();
-/// <summary>Graph operation.</summary>
+
             List<string> before = Graph(simulation.Solver);
 
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance stranger = new BlockInstance(
                 Catalog.LightArmor(), new Vector3I(40, 40, 40), BlockOrientation.Identity);
 

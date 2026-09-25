@@ -7,12 +7,12 @@ using HudSpaceDelegate = System.Func<VRage.MyTuple<bool, float, VRageMath.Matrix
 namespace RichHudFramework
 {
     using CursorMembers = MyTuple<
-        Func<HudSpaceDelegate, bool>, // IsCapturingSpace
-        Func<float, HudSpaceDelegate, bool>, // TryCaptureHudSpace
-        Func<ApiMemberAccessor, bool>, // IsCapturing
-        Func<ApiMemberAccessor, bool>, // TryCapture
-        Func<ApiMemberAccessor, bool>, // TryRelease
-        ApiMemberAccessor // GetOrSetMember
+        Func<HudSpaceDelegate, bool>,
+        Func<float, HudSpaceDelegate, bool>,
+        Func<ApiMemberAccessor, bool>,
+        Func<ApiMemberAccessor, bool>,
+        Func<ApiMemberAccessor, bool>,
+        ApiMemberAccessor
     >;
 
     namespace UI.Client
@@ -40,7 +40,7 @@ namespace RichHudFramework
                 private readonly Func<ApiMemberAccessor, bool> TryReleaseFunc;
                 private readonly ApiMemberAccessor GetOrSetMemberFunc;
 
-/// <summary>HudCursor operation.</summary>
+
                 public HudCursor(CursorMembers members)
                 {
                     IsCapturingSpaceFunc = members.Item1;
@@ -51,7 +51,7 @@ namespace RichHudFramework
                     GetOrSetMemberFunc = members.Item6;
                 }
 
-/// <summary>Update operation.</summary>
+
                 public void Update()
                 {
                     Visible = (bool)GetOrSetMemberFunc(null, (int)HudCursorAccessors.Visible);
@@ -61,27 +61,27 @@ namespace RichHudFramework
                     IsToolTipRegistered = (bool)GetOrSetMemberFunc(null, (int)HudCursorAccessors.IsToolTipRegistered);
                 }
 
-/// <summary>IsCapturingSpace operation.</summary>
+
                 public bool IsCapturingSpace(HudSpaceDelegate GetHudSpaceFunc) =>
                     IsCapturingSpaceFunc(GetHudSpaceFunc);
 
-/// <summary>TryCaptureHudSpace operation.</summary>
+
                 public bool TryCaptureHudSpace(float depthSquared, HudSpaceDelegate GetHudSpaceFunc) =>
                     TryCaptureHudSpaceFunc(depthSquared, GetHudSpaceFunc);
 
-/// <summary>IsCapturing operation.</summary>
+
                 public bool IsCapturing(ApiMemberAccessor capturedElement) =>
                     IsCapturingFunc(capturedElement);
 
-/// <summary>TryCapture operation.</summary>
+
                 public bool TryCapture(ApiMemberAccessor capturedElement) =>
                     TryCaptureFunc(capturedElement);
 
-/// <summary>TryRelease operation.</summary>
+
                 public bool TryRelease(ApiMemberAccessor capturedElement) =>
                     TryReleaseFunc(capturedElement);
 
-/// <summary>Registers and opens communication.</summary>
+
                 public void RegisterToolTip(ToolTip toolTip) =>
                     GetOrSetMemberFunc(toolTip.GetToolTipFunc, (int)HudCursorAccessors.RegisterToolTip);
             }

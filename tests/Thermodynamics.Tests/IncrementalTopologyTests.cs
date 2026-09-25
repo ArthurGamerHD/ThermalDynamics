@@ -8,10 +8,10 @@ namespace Thermodynamics.Tests
 {
     public class IncrementalTopologyTests
     {
-/// <summary>LinkSignature operation.</summary>
+
         private static List<string> LinkSignature(ThermalSolver solver)
         {
-/// <summary>List operation.</summary>
+
             List<string> rows = new List<string>();
             IList<ThermalLink> links = solver.Links;
 
@@ -22,9 +22,9 @@ namespace Thermodynamics.Tests
                 Vector3I a = solver.Nodes[link.NodeA].Block.Position;
                 Vector3I b = solver.Nodes[link.NodeB].Block.Position;
 
-/// <summary>Key operation.</summary>
+
                 string low = Key(a);
-/// <summary>Key operation.</summary>
+
                 string high = Key(b);
                 if (string.CompareOrdinal(low, high) > 0)
                 {
@@ -41,16 +41,16 @@ namespace Thermodynamics.Tests
             return rows;
         }
 
-/// <summary>Key operation.</summary>
+
         private static string Key(Vector3I cell)
         {
             return cell.X + "," + cell.Y + "," + cell.Z;
         }
 
-/// <summary>Shape operation.</summary>
+
         private static List<Vector3I> Shape()
         {
-/// <summary>List operation.</summary>
+
             List<Vector3I> cells = new List<Vector3I>();
 
             for (int z = 0; z < 4; z++)
@@ -66,14 +66,14 @@ namespace Thermodynamics.Tests
             return cells;
         }
 
-/// <summary>Pace operation.</summary>
+
         private static ThermalSettings Pace()
         {
             ThermalSettings settings = new ThermalSettings { Frequency = 4 };
             return settings.Derive();
         }
 
-/// <summary>BuiltAllAtOnce operation.</summary>
+
         private static ThermalSimulation BuiltAllAtOnce(List<Vector3I> cells)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -82,7 +82,7 @@ namespace Thermodynamics.Tests
                 builder.Place(Model(i), cells[i]);
             }
 
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Pace(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -93,18 +93,18 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>BuiltOneAtATime operation.</summary>
+
         private static ThermalSimulation BuiltOneAtATime(List<Vector3I> cells)
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Pace(), grid);
 
             for (int i = 0; i < cells.Count; i++)
             {
                 simulation.AddBlock(
-/// <summary>BlockInstance operation.</summary>
+
                     new BlockInstance(Model(i), cells[i], BlockOrientation.Identity), 293.15f);
 
                 simulation.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
@@ -118,22 +118,22 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Model operation.</summary>
+
         private static BlockModel Model(int index)
         {
             return (index % 3) == 0 ? Catalog.Grating() : Catalog.HeavyArmor();
         }
 
         [Fact]
-/// <summary>PlacingOneBlockAtATimeBuildsTheSameGraphAsBuildingItAllAtOnce operation.</summary>
+
         public void PlacingOneBlockAtATimeBuildsTheSameGraphAsBuildingItAllAtOnce()
         {
-/// <summary>Shape operation.</summary>
+
             List<Vector3I> cells = Shape();
 
-/// <summary>LinkSignature operation.</summary>
+
             List<string> incremental = LinkSignature(BuiltOneAtATime(cells).Solver);
-/// <summary>LinkSignature operation.</summary>
+
             List<string> global = LinkSignature(BuiltAllAtOnce(cells).Solver);
 
             Assert.Equal(global.Count, incremental.Count);
@@ -141,12 +141,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TwoBlocksPlacedTogetherAgainstEachOtherGetOneLinkNotTwo operation.</summary>
+
         public void TwoBlocksPlacedTogetherAgainstEachOtherGetOneLinkNotTwo()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Pace(), grid);
 
             simulation.AddBlock(new BlockInstance(Catalog.HeavyArmor(), Vector3I.Zero,
@@ -162,15 +162,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ConductanceTotalsMatchTheGlobalBuild operation.</summary>
+
         public void ConductanceTotalsMatchTheGlobalBuild()
         {
-/// <summary>Shape operation.</summary>
+
             List<Vector3I> cells = Shape();
 
-/// <summary>BuiltOneAtATime operation.</summary>
+
             ThermalSimulation incremental = BuiltOneAtATime(cells);
-/// <summary>BuiltAllAtOnce operation.</summary>
+
             ThermalSimulation global = BuiltAllAtOnce(cells);
 
             incremental.Solver.SetAllTemperatures(293.15f);
@@ -187,15 +187,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BothRoutesSimulateToTheSameTemperatures operation.</summary>
+
         public void BothRoutesSimulateToTheSameTemperatures()
         {
-/// <summary>Shape operation.</summary>
+
             List<Vector3I> cells = Shape();
 
-/// <summary>BuiltOneAtATime operation.</summary>
+
             ThermalSimulation incremental = BuiltOneAtATime(cells);
-/// <summary>BuiltAllAtOnce operation.</summary>
+
             ThermalSimulation global = BuiltAllAtOnce(cells);
 
             SeedByPosition(incremental);
@@ -218,27 +218,27 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>GrindingBlocksOffLeavesTheSameGraphAsNeverBuildingThem operation.</summary>
+
         public void GrindingBlocksOffLeavesTheSameGraphAsNeverBuildingThem()
         {
-/// <summary>Shape operation.</summary>
+
             List<Vector3I> cells = Shape();
 
             Vector3I[] removed =
             {
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(1, 1, 1),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(4, 1, 1),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(-3, 0, 0),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(0, 0, 0),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(2, 2, 3),
             };
 
-/// <summary>BuiltAllAtOnce operation.</summary>
+
             ThermalSimulation ground = BuiltAllAtOnce(cells);
             for (int i = 0; i < removed.Length; i++)
             {
@@ -249,7 +249,7 @@ namespace Thermodynamics.Tests
             }
             while (ground.HasPendingWork) ground.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
 
-/// <summary>List operation.</summary>
+
             List<Vector3I> remaining = new List<Vector3I>();
             for (int i = 0; i < cells.Count; i++)
             {
@@ -261,7 +261,7 @@ namespace Thermodynamics.Tests
                 if (!dropped) remaining.Add(cells[i]);
             }
 
-/// <summary>BuiltAllAtOnce operation.</summary>
+
             ThermalSimulation fresh = BuiltAllAtOnce(cells);
             for (int i = 0; i < removed.Length; i++)
             {
@@ -277,15 +277,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ArbitraryBuildingAndGrindingAlwaysMatchesARebuild operation.</summary>
+
         public void ArbitraryBuildingAndGrindingAlwaysMatchesARebuild()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Pace(), grid);
 
-/// <summary>List operation.</summary>
+
             List<Vector3I> plot = new List<Vector3I>();
             for (int z = 0; z < 5; z++)
                 for (int y = 0; y < 4; y++)
@@ -311,16 +311,16 @@ namespace Thermodynamics.Tests
                 else
                 {
                     simulation.AddBlock(
-/// <summary>BlockInstance operation.</summary>
+
                         new BlockInstance(Model(step), cell, BlockOrientation.Identity), 293.15f);
                 }
 
                 simulation.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
 
-/// <summary>LinkSignature operation.</summary>
+
                 List<string> incremental = LinkSignature(simulation.Solver);
                 simulation.Solver.RebuildLinks();
-/// <summary>LinkSignature operation.</summary>
+
                 List<string> rebuilt = LinkSignature(simulation.Solver);
 
                 Assert.True(rebuilt.Count == incremental.Count && Same(rebuilt, incremental),
@@ -330,7 +330,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Same operation.</summary>
+
         private static bool Same(List<string> a, List<string> b)
         {
             if (a.Count != b.Count) return false;
@@ -342,12 +342,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LinkCountsPerNodeSurviveChurn operation.</summary>
+
         public void LinkCountsPerNodeSurviveChurn()
         {
-/// <summary>Shape operation.</summary>
+
             List<Vector3I> cells = Shape();
-/// <summary>BuiltAllAtOnce operation.</summary>
+
             ThermalSimulation simulation = BuiltAllAtOnce(cells);
 
             simulation.RemoveBlock(simulation.Grid.GetAtCell(new Vector3I(1, 1, 1)));
@@ -371,21 +371,21 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>GrindingDoesNotDisturbWhatIsLeftStanding operation.</summary>
+
         public void GrindingDoesNotDisturbWhatIsLeftStanding()
         {
-/// <summary>Shape operation.</summary>
+
             List<Vector3I> cells = Shape();
-/// <summary>Vector3I operation.</summary>
+
             Vector3I doomed = new Vector3I(4, 1, 1);
 
-/// <summary>BuiltAllAtOnce operation.</summary>
+
             ThermalSimulation ground = BuiltAllAtOnce(cells);
             SeedByPosition(ground);
             ground.RemoveBlock(ground.Grid.GetAtCell(doomed));
             ground.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
 
-/// <summary>BuiltAllAtOnce operation.</summary>
+
             ThermalSimulation reference = BuiltAllAtOnce(cells);
             SeedByPosition(reference);
             BlockInstance block = reference.Grid.GetAtCell(doomed);
@@ -411,25 +411,25 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PlacingAndRemovingManyBlocksWithoutSteppingStaysInBounds operation.</summary>
+
         public void PlacingAndRemovingManyBlocksWithoutSteppingStaysInBounds()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Pace(), grid);
 
             simulation.AddBlock(new BlockInstance(Catalog.HeavyArmor(), Vector3I.Zero,
                 BlockOrientation.Identity), 293.15f);
             simulation.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
 
-/// <summary>List operation.</summary>
+
             List<BlockInstance> placed = new List<BlockInstance>();
             for (int i = 1; i < 600; i++)
             {
-/// <summary>BlockInstance operation.</summary>
+
                 BlockInstance block = new BlockInstance(Catalog.HeavyArmor(),
-/// <summary>Vector3I operation.</summary>
+
                     new Vector3I(0, 0, i), BlockOrientation.Identity);
                 simulation.AddBlock(block, 293.15f);
                 placed.Add(block);
@@ -447,17 +447,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ConductanceTotalsSurviveTheBuffersGrowing operation.</summary>
+
         public void ConductanceTotalsSurviveTheBuffersGrowing()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-/// <summary>ThermalSolver operation.</summary>
+
             ThermalSolver solver = new ThermalSolver(new ThermalSettings(), grid, new SurfaceMap());
 
             for (int i = 0; i < 40; i++)
             {
-/// <summary>BlockInstance operation.</summary>
+
                 BlockInstance block = new BlockInstance(Model(i), new Vector3I(0, 0, i),
                     BlockOrientation.Identity);
                 grid.Add(block);
@@ -467,7 +467,7 @@ namespace Thermodynamics.Tests
 
             for (int i = 40; i < 700; i++)
             {
-/// <summary>BlockInstance operation.</summary>
+
                 BlockInstance block = new BlockInstance(Model(i), new Vector3I(0, 0, i),
                     BlockOrientation.Identity);
                 grid.Add(block);
@@ -489,21 +489,21 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>GrindingDownALongRunThatWasFullyLinkedLeavesNothingBehind operation.</summary>
+
         public void GrindingDownALongRunThatWasFullyLinkedLeavesNothingBehind()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Pace(), grid);
 
-/// <summary>List operation.</summary>
+
             List<BlockInstance> placed = new List<BlockInstance>();
             for (int i = 0; i < 600; i++)
             {
-/// <summary>BlockInstance operation.</summary>
+
                 BlockInstance block = new BlockInstance(Catalog.HeavyArmor(),
-/// <summary>Vector3I operation.</summary>
+
                     new Vector3I(0, 0, i), BlockOrientation.Identity);
                 simulation.AddBlock(block, 293.15f);
                 placed.Add(block);
@@ -523,7 +523,7 @@ namespace Thermodynamics.Tests
             Assert.Empty(simulation.Solver.Links);
         }
 
-/// <summary>SeedByPosition operation.</summary>
+
         private static void SeedByPosition(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -535,19 +535,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APlacementUndoneBeforeTheNextTickLeavesNoLink operation.</summary>
+
         public void APlacementUndoneBeforeTheNextTickLeavesNoLink()
         {
-/// <summary>GridModel operation.</summary>
+
             GridModel grid = new GridModel(Catalog.LargeGridSize);
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Pace(), grid);
 
             simulation.AddBlock(new BlockInstance(Catalog.HeavyArmor(), Vector3I.Zero,
                 BlockOrientation.Identity), 293.15f);
             simulation.Update(LoadBenchmarks.TickSeconds, Worlds.Shadow());
 
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance transient = new BlockInstance(Catalog.HeavyArmor(), new Vector3I(1, 0, 0),
                 BlockOrientation.Identity);
             simulation.AddBlock(transient, 293.15f);

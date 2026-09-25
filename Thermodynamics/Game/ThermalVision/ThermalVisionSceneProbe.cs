@@ -27,13 +27,9 @@ namespace Thermodynamics
         private static int discoveryAge = 10;
         private static bool discoveryLimited;
         private static MatrixD discoveryView;
-/// <summary>Stopwatch operation.</summary>
         private static readonly Stopwatch ExposureClock = new Stopwatch();
-/// <summary>ThermalVisionAutoRange operation.</summary>
         private static readonly ThermalVisionAutoRange SceneRange = new ThermalVisionAutoRange();
-/// <summary>List operation.</summary>
         private static readonly List<SceneCandidate> SceneCandidates = new List<SceneCandidate>();
-/// <summary>CandidateComparer operation.</summary>
         private static readonly IComparer<SceneCandidate> NearestFirst = new CandidateComparer();
 
         private struct SceneCandidate
@@ -44,7 +40,6 @@ namespace Thermodynamics
 
         private sealed class CandidateComparer : IComparer<SceneCandidate>
         {
-/// <summary>Compare operation.</summary>
             public int Compare(SceneCandidate a, SceneCandidate b)
             {
                 int distance = a.Distance.CompareTo(b.Distance);
@@ -55,7 +50,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>DrawScene operation.</summary>
         private static void DrawScene()
         {
             sceneBuiltTriangles = 0;
@@ -83,7 +77,6 @@ namespace Thermodynamics
                     var grid = thermal.Grid;
                     if (grid == null || grid.MarkedForClose || thermal.Simulation == null) continue;
                     var box = grid.PositionComp.WorldAABB;
-/// <summary>BoundingSphereD operation.</summary>
                     var reach = new BoundingSphereD(view.Translation, SceneReach);
                     if (!box.Intersects(reach) || !camera.IsInFrustum(ref box)) continue;
                     foreach (var block in thermal.Blocks)
@@ -96,7 +89,6 @@ namespace Thermodynamics
                         Vector3 half;
                         block.Block.ComputeWorldCenter(out centre);
                         block.Block.ComputeScaledHalfExtents(out half);
-/// <summary>BoundingSphereD operation.</summary>
                         var sphere = new BoundingSphereD(centre, half.Length());
                         double distance = Vector3D.DistanceSquared(centre, view.Translation);
                         double reachWithRadius = SceneReach + sphere.Radius;
@@ -151,7 +143,6 @@ namespace Thermodynamics
                     Vector3 half;
                     block.Block.ComputeWorldCenter(out centre);
                     block.Block.ComputeScaledHalfExtents(out half);
-/// <summary>BoundingSphereD operation.</summary>
                     var sphere = new BoundingSphereD(centre, half.Length());
                     double reachWithRadius = SceneReach + sphere.Radius;
                     if (Vector3D.DistanceSquared(centre, view.Translation) > reachWithRadius * reachWithRadius
@@ -163,7 +154,6 @@ namespace Thermodynamics
                     { missing++; continue; }
                     int before = drawn;
                     parts = 0;
-/// <summary>Vector4 operation.</summary>
                     Vector4 colour = new Vector4(compositeMode ? srgb : ThermalVisionPalette.ToLinear(srgb), 1f);
                     var entity = block.Block.FatBlock as MyEntity;
                     if (entity != null) DrawEntity(entity, colour, view.Translation, 0);
@@ -188,7 +178,6 @@ namespace Thermodynamics
             if (frames++ % 6 == 0)
             {
                 string palette = State.Current == ThermalVisionState.Mode.Cividis ? "CIVIDIS" : "WHITE HOT";
-/// <summary>RichText operation.</summary>
                 panel.Text = new RichText((compositeMode ? "COMPOSITE EXPERIMENT / " : "SCENE PROBE 8 / ") + palette + " / "
                     + (lowKelvin - 273.15f).ToString("0") + "–" + (highKelvin - 273.15f).ToString("0")
                     + " C " + (automaticRange ? "AUTO" : "LOCK") + "\n"

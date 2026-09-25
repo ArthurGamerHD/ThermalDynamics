@@ -6,34 +6,34 @@ namespace Thermodynamics.Tests
 {
     public class BlockSurfaceBuilderTests
     {
-/// <summary>FullFace operation.</summary>
+
         private static MountRect FullFace(int face)
         {
             Vector3I normal = Face.Offsets[face];
             switch (face)
             {
-/// <summary>MountRect operation.</summary>
+
                 case Face.Forward: return new MountRect(normal, new Vector3(0, 0, 0), new Vector3(1, 1, 0));
-/// <summary>MountRect operation.</summary>
+
                 case Face.Backward: return new MountRect(normal, new Vector3(0, 0, 1), new Vector3(1, 1, 1));
-/// <summary>MountRect operation.</summary>
+
                 case Face.Left: return new MountRect(normal, new Vector3(0, 0, 0), new Vector3(0, 1, 1));
-/// <summary>MountRect operation.</summary>
+
                 case Face.Right: return new MountRect(normal, new Vector3(1, 0, 0), new Vector3(1, 1, 1));
-/// <summary>MountRect operation.</summary>
+
                 case Face.Down: return new MountRect(normal, new Vector3(0, 0, 0), new Vector3(1, 0, 1));
-/// <summary>MountRect operation.</summary>
+
                 default: return new MountRect(normal, new Vector3(0, 1, 0), new Vector3(1, 1, 1));
             }
         }
 
         [Fact]
-/// <summary>FullFaceMountCoversItsOwnFaceOnly operation.</summary>
+
         public void FullFaceMountCoversItsOwnFaceOnly()
         {
             for (int face = 0; face < Face.Count; face++)
             {
-/// <summary>FullFace operation.</summary>
+
                 MountRect mount = FullFace(face);
                 for (int probe = 0; probe < Face.Count; probe++)
                 {
@@ -44,10 +44,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DisabledMountCoversNothing operation.</summary>
+
         public void DisabledMountCoversNothing()
         {
-/// <summary>FullFace operation.</summary>
+
             MountRect mount = FullFace(Face.Up);
             mount.Enabled = false;
 
@@ -55,10 +55,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>MountOnAFarCellDoesNotCoverTheNearOne operation.</summary>
+
         public void MountOnAFarCellDoesNotCoverTheNearOne()
         {
-/// <summary>MountRect operation.</summary>
+
             MountRect mount = new MountRect(Vector3I.Right, new Vector3(3, 0, 0), new Vector3(3, 1, 1));
 
             Assert.True(BlockSurfaceBuilder.MountCovers(ref mount, new Vector3I(2, 0, 0), Face.Right));
@@ -67,7 +67,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AirtightBlockSealsEveryFaceOfEveryCell operation.</summary>
+
         public void AirtightBlockSealsEveryFaceOfEveryCell()
         {
             int[] states = BlockSurfaceBuilder.BuildSurfaces(new Vector3I(2, 1, 3), true, null, null);
@@ -80,10 +80,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SealTestDrivesSealingPerCellAndFace operation.</summary>
+
         public void SealTestDrivesSealingPerCellAndFace()
         {
-/// <summary>delegate operation.</summary>
+
             SealTest seals = delegate (Vector3I cell, int face)
             {
                 return cell.Y == 1 && face == Face.Up;
@@ -97,7 +97,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>MountsBecomeSelfMountBits operation.</summary>
+
         public void MountsBecomeSelfMountBits()
         {
             List<MountRect> mounts = new List<MountRect>
@@ -115,13 +115,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SurfacesAreIndexedTheWayBlockModelIndexesThem operation.</summary>
+
         public void SurfacesAreIndexedTheWayBlockModelIndexesThem()
         {
-/// <summary>Vector3I operation.</summary>
+
             Vector3I size = new Vector3I(2, 3, 4);
 
-/// <summary>delegate operation.</summary>
+
             SealTest seals = delegate (Vector3I cell, int face)
             {
                 return cell == new Vector3I(1, 2, 3) && face == Face.Right;
@@ -129,7 +129,7 @@ namespace Thermodynamics.Tests
 
             int[] states = BlockSurfaceBuilder.BuildSurfaces(size, false, seals, null);
 
-/// <summary>BlockModel operation.</summary>
+
             BlockModel model = new BlockModel();
             model.Size = size;
             model.LocalSurfaces = states;
@@ -140,7 +140,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FallbackSurfacesMountEverywhereAndSealOnlyWhenAsked operation.</summary>
+
         public void FallbackSurfacesMountEverywhereAndSealOnlyWhenAsked()
         {
             int[] open = BlockSurfaceBuilder.BuildFallbackSurfaces(new Vector3I(1, 1, 2), false);
@@ -156,13 +156,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>MountFractionsFollowFromTheBuiltSurfaces operation.</summary>
+
         public void MountFractionsFollowFromTheBuiltSurfaces()
         {
-/// <summary>FullFace operation.</summary>
+
             List<MountRect> mounts = new List<MountRect> { FullFace(Face.Up) };
 
-/// <summary>BlockModel operation.</summary>
+
             BlockModel model = new BlockModel();
             model.Size = Vector3I.One;
             model.LocalSurfaces = BlockSurfaceBuilder.BuildSurfaces(Vector3I.One, true, null, mounts);

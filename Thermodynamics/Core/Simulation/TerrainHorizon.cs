@@ -9,7 +9,7 @@ namespace Thermodynamics.Core
 
         public const double Tolerance = 2d;
 
-/// <summary>Occluded operation.</summary>
+
         public static bool Occluded(
             Vector3D origin,
             Vector3D sunDirection,

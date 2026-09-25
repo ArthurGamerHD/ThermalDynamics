@@ -33,26 +33,26 @@ namespace RichHudFramework.UI
 
         protected bool lastValue;
 
-/// <summary>BorderedCheckBox operation.</summary>
+
         public BorderedCheckBox(HudParentBase parent) : base(parent)
         {
-/// <summary>BorderBox operation.</summary>
+
             border = new BorderBox(this)
             {
                 Thickness = 1f,
                 DimAlignment = DimAlignments.Size,
             };
 
-/// <summary>TexturedBox operation.</summary>
+
             tickBox = new TexturedBox(this)
             {
                 DimAlignment = DimAlignments.UnpaddedSize,
-/// <summary>Vector2 operation.</summary>
+
                 Padding = new Vector2(17f),
             };
 
             Value = true;
-/// <summary>Vector2 operation.</summary>
+
 			Size = new Vector2(37f);
 
             Color = TerminalFormatting.OuterSpace;
@@ -72,11 +72,11 @@ namespace RichHudFramework.UI
 			FocusHandler.LostInputFocus += LoseFocus;
         }
 
-/// <summary>BorderedCheckBox operation.</summary>
+
         public BorderedCheckBox() : this(null)
         { }
 
-/// <summary>HandleInput operation.</summary>
+
 		protected override void HandleInput(Vector2 cursorPos)
         {
             tickBox.Visible = Value;
@@ -96,13 +96,13 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>ToggleValue operation.</summary>
+
 		protected virtual void ToggleValue(object sender, EventArgs args)
         {
             Value = !Value;
         }
 
-/// <summary>CursorEnter operation.</summary>
+
 		protected override void CursorEnter(object sender, EventArgs args)
         {
             if (HighlightEnabled)
@@ -118,7 +118,7 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>CursorExit operation.</summary>
+
 		protected override void CursorExit(object sender, EventArgs args)
         {
             if (HighlightEnabled)
@@ -136,7 +136,7 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>GainFocus operation.</summary>
+
 		protected virtual void GainFocus(object sender, EventArgs args)
         {
             if (HighlightEnabled)
@@ -149,7 +149,7 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>LoseFocus operation.</summary>
+
 		protected virtual void LoseFocus(object sender, EventArgs args)
         {
             if (HighlightEnabled)

@@ -15,9 +15,9 @@ namespace Thermodynamics
         {
             public ThermalGrid Grid;
             public ThermalVisionRegionOrder Order;
-/// <summary>Dictionary operation.</summary>
+
             public Dictionary<Region,ThermalVisionSurfaceField> Fields = new Dictionary<Region,ThermalVisionSurfaceField>();
-/// <summary>Dictionary operation.</summary>
+
             public Dictionary<Region,ThermalVisionSurfaceField> Previous = new Dictionary<Region,ThermalVisionSurfaceField>();
             public IEnumerator<bool> Work;
             public double Published, Next, Distance;
@@ -29,25 +29,25 @@ namespace Thermodynamics
             public float Mean;
             public bool Detailed;
         }
-/// <summary>Dictionary operation.</summary>
+
         private static readonly Dictionary<ThermalGrid,GridView> gridViews = new Dictionary<ThermalGrid,GridView>();
-/// <summary>List operation.</summary>
+
         private static readonly List<GridView> visibleViews = new List<GridView>();
-/// <summary>List operation.</summary>
+
         private static readonly List<ThermalGrid> deadViews = new List<ThermalGrid>();
         private static int viewWorkCursor;
-/// <summary>List operation.</summary>
+
         private static readonly List<BoundingBoxD> localVisionBlockers=new List<BoundingBoxD>(32);
         private static double preparationPriorityDebt;
-/// <summary>List operation.</summary>
+
         private static readonly List<Vector3D> nearCapPolygon=new List<Vector3D>(16);
-/// <summary>List operation.</summary>
+
         private static readonly List<Vector3D> nearCapScratch=new List<Vector3D>(16);
         private static readonly System.Diagnostics.Stopwatch FleetClock = System.Diagnostics.Stopwatch.StartNew();
         private static Dictionary<Region,ThermalVisionSurfaceField> previousSurface;
         private static float surfaceBlend = 1;
 
-/// <summary>PauseIndependentFleet operation.</summary>
+
         private static void PauseIndependentFleet()
         {
             preparationPriorityDebt=0;
@@ -58,21 +58,21 @@ namespace Thermodynamics
             }
             previousSurface=null;
         }
-/// <summary>ClearIndependentFleet operation.</summary>
+
         private static void ClearIndependentFleet()
         {
             preparationPriorityDebt=0;
             foreach(var view in gridViews.Values) if(view.Work!=null) view.Work.Dispose();
             gridViews.Clear(); visibleViews.Clear(); visionOccluders.Clear(); skyPlanets.Clear(); previousSurface=null;
         }
-/// <summary>OldTemperature operation.</summary>
+
         private static float OldTemperature(GridView view,Vector3D p)
         {
             Region cell; ThermalVisionSurfaceField field;
             if(view.Order!=null && view.Order.TryFind(p,out cell) && view.Fields.TryGetValue(cell,out field)) return field.Sample(p);
             return view.Mean;
         }
-/// <summary>FirstView operation.</summary>
+
         private static GridView FirstView(ThermalGrid grid,double now)
         {
             double sum=0; int count=0, visited=0;
@@ -86,16 +86,16 @@ namespace Thermodynamics
             }
             var view=new GridView { Grid=grid, Mean=count>0?(float)(sum/count):293.15f, Published=now, Blocks=grid.BlockCount };
             double size=grid.Grid.GridSize;
-/// <summary>Region operation.</summary>
+
             var box=new Region(((Vector3D)grid.Grid.Min-new Vector3D(.5))*size,((Vector3D)grid.Grid.Max+new Vector3D(.5))*size,view.Mean);
-/// <summary>ThermalVisionSurfaceField operation.</summary>
+
             var field=new ThermalVisionSurfaceField(box,double.MaxValue);
             for(int i=0;i<field.Values.Length;i++) field.Values[i]=view.Mean;
             field.BuildFaces(20); view.Fields.Add(box,field);
             ThermalVisionRegionOrder.TryBuild(new List<Region>{box},16,out view.Order);
             return view;
         }
-/// <summary>InteriorSamples operation.</summary>
+
         private static IEnumerable<Region> InteriorSamples(ThermalGrid thermal,Vector3D min,Vector3D max)
         {
             double size=thermal.Grid.GridSize;
@@ -109,7 +109,7 @@ namespace Thermodynamics
                 if(lo.X<hi.X && lo.Y<hi.Y && lo.Z<hi.Z) yield return new Region(lo,hi,t);
             }
         }
-/// <summary>RefreshGrid operation.</summary>
+
         private static IEnumerable<bool> RefreshGrid(GridView view)
         {
             double refreshStarted=FleetClock.Elapsed.TotalSeconds;
@@ -127,7 +127,7 @@ namespace Thermodynamics
             if(!view.Interior || Vector3D.Abs(localEye-centre).AbsMax()>grid.GridSize*4)
             {
                 Vector3D q=(localEye-origin)/(grid.GridSize*4);
-/// <summary>Vector3D operation.</summary>
+
                 centre=origin+new Vector3D(Math.Floor(q.X)+.5,Math.Floor(q.Y)+.5,Math.Floor(q.Z)+.5)*(grid.GridSize*4);
                 if(interior) reuse=false;
             }
@@ -141,11 +141,11 @@ namespace Thermodynamics
             job.SurfaceSpacing=grid.GridSize;
             while(job.SurfaceSpacing<desired) job.SurfaceSpacing*=2;
             if(view.Spacing>0 && desired>=view.Spacing*.75 && desired<=view.Spacing*2) job.SurfaceSpacing=view.Spacing;
-/// <summary>ThermalVisionBlockField operation.</summary>
+
             job.TemperatureField=new ThermalVisionBlockField(grid.GridSize,job.SurfaceSpacing*.6,
-/// <summary>Region operation.</summary>
+
                 new Region(((Vector3D)grid.Min-new Vector3D(.5))*grid.GridSize,((Vector3D)grid.Max+new Vector3D(.5))*grid.GridSize,0),job.BlockCount);
-/// <summary>List operation.</summary>
+
             var cells=new List<Region>();
             ThermalVisionRegionOrder order=view.Order;
             if(reuse)
@@ -168,7 +168,7 @@ namespace Thermodynamics
                         cells=job.Detail.Build(mean,true);
                         if(interior)
                         {
-/// <summary>Vector3D operation.</summary>
+
                             Vector3D min=centre-new Vector3D(grid.GridSize*6), max=centre+new Vector3D(grid.GridSize*6);
                             using(var fine=new ThermalVisionRegionScan(grid.GridSize,4096,1,origin:origin))
                             {
@@ -186,18 +186,18 @@ namespace Thermodynamics
             cells.Clear(); order.WriteNearToFar(Vector3D.Zero,cells);
             yield return true;
             var paired=reuse?null:ThermalVisionFacePlan.PairedFaces(cells); int cellIndex=0;
-/// <summary>Dictionary operation.</summary>
+
             var fields=new Dictionary<Region,ThermalVisionSurfaceField>(cells.Count);
-/// <summary>Dictionary operation.</summary>
+
             var prior=new Dictionary<Region,ThermalVisionSurfaceField>(cells.Count);
             int patchTrianglesSaved=0;
             foreach(var cell in cells)
             {
-/// <summary>ThermalVisionSurfaceField operation.</summary>
+
                 var field=new ThermalVisionSurfaceField(cell,job.SurfaceSpacing);
                 field.PairedFaceMask=reuse?view.Fields[cell].PairedFaceMask:paired[cellIndex];
                 cellIndex++;
-/// <summary>ThermalVisionSurfaceField operation.</summary>
+
                 var before=new ThermalVisionSurfaceField(cell,job.SurfaceSpacing);
                 for(int z=0;z<=field.Steps.Z;z++) for(int y=0;y<=field.Steps.Y;y++) for(int x=0;x<=field.Steps.X;x++)
                 {
@@ -218,7 +218,7 @@ namespace Thermodynamics
                 +" refresh-wall-ms="+((FleetClock.Elapsed.TotalSeconds-refreshStarted)*1000).ToString("F1")+" interior-occupancy="+interior+" geometry-reused="+reuse+" refresh-path="+(reuse?"temperature-only":"topology")+" spacing-m="+job.SurfaceSpacing+" nearest-samples="+job.TemperatureField.NearestSamples
                 +" cache-hits="+job.TemperatureField.CacheHits+" cache-entries="+job.TemperatureField.CacheEntries+" thermal-samples="+job.TemperatureField.Count+" field-fallbacks="+job.TemperatureField.Fallbacks+" field-queries="+job.TemperatureField.Queries,false);
         }
-/// <summary>FindFleetPreparationPriority operation.</summary>
+
         private static int FindFleetPreparationPriority(double now)
         {
             int refresh=-1;
@@ -231,7 +231,7 @@ namespace Thermodynamics
             }
             return refresh;
         }
-/// <summary>DrawIndependentFleet operation.</summary>
+
         private static void DrawIndependentFleet()
         {
             double now=FleetClock.Elapsed.TotalSeconds;
@@ -271,7 +271,7 @@ namespace Thermodynamics
                 if(view.Work!=null)
                 {
                     idle=0;
-/// <summary>if operation.</summary>
+
                     try { if(!view.Work.MoveNext()) { view.Work.Dispose(); view.Work=null; view.Next=now+.5; } }
                     catch(Exception error)
                     {
@@ -306,7 +306,7 @@ namespace Thermodynamics
                 surfaceBlend=(float)MathHelper.Clamp((now-view.Published)/.3,0,1);
                 if(surfaceBlend>=1 && view.Previous.Count>0) view.Previous.Clear();
                 MatrixD localCamera=camera.WorldMatrix*MatrixD.Invert(regionRenderMatrix); Vector3D eye=localCamera.Translation;
-/// <summary>BoundingFrustumD operation.</summary>
+
                 var localFrustum=new BoundingFrustumD(regionRenderMatrix*inverseCamera*camera.ProjectionMatrix);
                 localVisionBlockers.Clear();
                 for(int i=0;i<visionOccluders.Count;i++)
@@ -345,7 +345,7 @@ namespace Thermodynamics
             if(frames++%30==0)
             {
                 RecordEvent("independent occlusion: own-grid-hidden-subtrees="+hiddenSubtrees,false);
-/// <summary>RichText operation.</summary>
+
                 panel.Text=new RichText("THERMAL / "+(State.Current==ThermalVisionState.Mode.WhiteHot?"WHITE HOT":"CIVIDIS")
                     +" / "+(lowKelvin-273.15f).ToString("0")+" to "+(highKelvin-273.15f).ToString("0")+" C"
                     +(previews>0?" / refining "+previews+" grids":""));

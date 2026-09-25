@@ -35,7 +35,7 @@ namespace Thermodynamics.Harness
 
             public string Stop = Fixed;
 
-/// <summary>List operation.</summary>
+
             public readonly List<double> Samples = new List<double>();
 
             public double BestMs;
@@ -72,10 +72,10 @@ namespace Thermodynamics.Harness
 
         public static readonly string[] ExtraStages = { "syncdirty", "syncclean", "shapenormals" };
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(string shape, int blocks, IList<string> stages, Action<string> log = null)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             GridBuilder builder = GridBuilder.Large();
@@ -86,7 +86,7 @@ namespace Thermodynamics.Harness
                 if (log != null) log(stages[i] + ", " + blocks.ToString("n0") + " blocks");
 
                 Settle();
-/// <summary>Measure operation.</summary>
+
                 Row row = Measure(stages[i], builder);
                 Summarise(row);
                 rows.Add(row);
@@ -95,10 +95,10 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Registers the API and message handler.</summary>
+
         internal static ThermalSimulation Registered(GridBuilder builder)
         {
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings().Derive(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -107,42 +107,42 @@ namespace Thermodynamics.Harness
             return simulation;
         }
 
-/// <summary>Measure operation.</summary>
+
         internal static Row Measure(string stage, GridBuilder builder)
         {
             switch (stage)
             {
-/// <summary>Place operation.</summary>
+
                 case "place": return Place(builder);
-/// <summary>Registers and opens communication.</summary>
+
                 case "register": return Register(builder);
-/// <summary>Surfaces operation.</summary>
+
                 case "surfaces": return Surfaces(builder);
-/// <summary>Links operation.</summary>
+
                 case "links": return Links(builder);
-/// <summary>Rooms operation.</summary>
+
                 case "rooms": return Rooms(builder);
-/// <summary>Exposure operation.</summary>
+
                 case "exposure": return Exposure(builder);
-/// <summary>ShapeNormals operation.</summary>
+
                 case "shapenormals": return ShapeNormals(builder);
-/// <summary>NodeSync operation.</summary>
+
                 case "syncdirty": return NodeSync(builder, true);
-/// <summary>NodeSync operation.</summary>
+
                 case "syncclean": return NodeSync(builder, false);
-/// <summary>RoomAir operation.</summary>
+
                 case "roomair": return RoomAir(builder);
-/// <summary>Solver operation.</summary>
+
                 case "solver": return Solver(builder);
-/// <summary>ArgumentException operation.</summary>
+
                 default: throw new ArgumentException("Unknown stage: " + stage);
             }
         }
 
-/// <summary>NewRow operation.</summary>
+
         private static Row NewRow(string stage, ThermalSimulation simulation, string unit)
         {
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Stage = stage;
             row.Blocks = simulation.Solver.Nodes.Count;
@@ -151,7 +151,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Sets the tle.</summary>
+
         internal static void Settle()
         {
             GC.Collect();
@@ -159,13 +159,13 @@ namespace Thermodynamics.Harness
             GC.Collect();
         }
 
-/// <summary>Allocated operation.</summary>
+
         internal static long Allocated()
         {
             return GC.GetAllocatedBytesForCurrentThread();
         }
 
-/// <summary>Take operation.</summary>
+
         internal static void Take(Row row, double ms)
         {
             if (TraceRepeat != null) TraceRepeat(row.Stage + " " + ms.ToString("n3", CultureInfo.InvariantCulture));
@@ -187,7 +187,7 @@ namespace Thermodynamics.Harness
             if (ms > row.WorstMs) row.WorstMs = ms;
         }
 
-/// <summary>Sets the tled.</summary>
+
         internal static bool Settled(Row row)
         {
             if (row == null) return false;
@@ -208,7 +208,7 @@ namespace Thermodynamics.Harness
             return false;
         }
 
-/// <summary>Summarise operation.</summary>
+
         internal static void Summarise(Row row)
         {
             if (row == null || row.Samples.Count == 0) return;
@@ -218,7 +218,7 @@ namespace Thermodynamics.Harness
             row.MedianMs = sorted[sorted.Length / 2];
         }
 
-/// <summary>Work operation.</summary>
+
         internal static void Work(Row row, long work, int repeat)
         {
             if (repeat == 0) { row.Work = work; return; }
@@ -229,7 +229,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Place operation.</summary>
+
         private static Row Place(GridBuilder builder)
         {
             IList<BlockInstance> dealt = builder.Placed;
@@ -237,10 +237,10 @@ namespace Thermodynamics.Harness
 
             for (int r = 0; !Settled(row); r++)
             {
-/// <summary>GridModel operation.</summary>
+
                 GridModel grid = new GridModel(builder.Grid.GridSize);
 
-/// <summary>Allocated operation.</summary>
+
                 long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 for (int i = 0; i < dealt.Count; i++)
@@ -251,7 +251,7 @@ namespace Thermodynamics.Harness
 
                 if (row == null)
                 {
-/// <summary>Row operation.</summary>
+
                     row = new Row();
                     row.Stage = "place";
                     row.Blocks = grid.BlockCount;
@@ -266,17 +266,17 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Registers the API and message handler.</summary>
+
         private static Row Register(GridBuilder builder)
         {
             Row row = null;
 
             for (int r = 0; !Settled(row); r++)
             {
-/// <summary>ThermalSimulation operation.</summary>
+
                 ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings().Derive(), builder.Grid);
 
-/// <summary>Allocated operation.</summary>
+
                 long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 for (int i = 0; i < builder.Placed.Count; i++)
@@ -294,16 +294,16 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Surfaces operation.</summary>
+
         private static Row Surfaces(GridBuilder builder)
         {
-/// <summary>Registers and opens communication.</summary>
+
             ThermalSimulation simulation = Registered(builder);
-/// <summary>NewRow operation.</summary>
+
             Row row = NewRow("surfaces", simulation, "cells");
             for (int r = 0; !Settled(row); r++)
             {
-/// <summary>Allocated operation.</summary>
+
                 long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Surfaces.Rebuild(simulation.Grid);
@@ -316,17 +316,17 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Links operation.</summary>
+
         private static Row Links(GridBuilder builder)
         {
-/// <summary>Registers and opens communication.</summary>
+
             ThermalSimulation simulation = Registered(builder);
             simulation.Surfaces.Rebuild(simulation.Grid);
-/// <summary>NewRow operation.</summary>
+
             Row row = NewRow("links", simulation, "links");
             for (int r = 0; !Settled(row); r++)
             {
-/// <summary>Allocated operation.</summary>
+
                 long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Solver.RebuildLinks();
@@ -339,20 +339,20 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Rooms operation.</summary>
+
         private static Row Rooms(GridBuilder builder)
         {
-/// <summary>Registers and opens communication.</summary>
+
             ThermalSimulation simulation = Registered(builder);
             simulation.Surfaces.Rebuild(simulation.Grid);
-/// <summary>NewRow operation.</summary>
+
             Row row = NewRow("rooms", simulation, "cells visited");
 
             const int WarmRepeat = 3;
             for (int r = 0; r <= WarmRepeat || !Settled(row); r++)
             {
                 long before = simulation.Work.RoomCellsVisited;
-/// <summary>Allocated operation.</summary>
+
                 long allocated = r == WarmRepeat ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Rooms.RequestRestart(simulation.Grid);
@@ -369,10 +369,10 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>RoomAir operation.</summary>
+
         private static Row RoomAir(GridBuilder builder)
         {
-/// <summary>Registers and opens communication.</summary>
+
             ThermalSimulation simulation = Registered(builder);
             simulation.Surfaces.Rebuild(simulation.Grid);
             simulation.Rooms.RequestRestart(simulation.Grid);
@@ -395,13 +395,13 @@ namespace Thermodynamics.Harness
                     + " rooms, so this stage would time an outer loop and nothing else");
             }
 
-/// <summary>NewRow operation.</summary>
+
             Row row = NewRow("roomair", simulation, "face probes");
             for (int r = 0; !Settled(row); r++)
             {
                 long before = simulation.Work.RoomAirFaceProbes;
                 long hitsBefore = simulation.Work.RoomAirFaceHits;
-/// <summary>Allocated operation.</summary>
+
                 long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Solver.RebuildRoomAir(map);
@@ -416,20 +416,20 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Exposure operation.</summary>
+
         private static Row Exposure(GridBuilder builder)
         {
-/// <summary>Registers and opens communication.</summary>
+
             ThermalSimulation simulation = Registered(builder);
             simulation.Surfaces.Rebuild(simulation.Grid);
             simulation.Rooms.RequestRestart(simulation.Grid);
             simulation.Rooms.RunToCompletion();
-/// <summary>NewRow operation.</summary>
+
             Row row = NewRow("exposure", simulation, "nodes");
             for (int r = 0; !Settled(row); r++)
             {
                 long before = simulation.Work.ExposureNodeVisits;
-/// <summary>Allocated operation.</summary>
+
                 long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Solver.RefreshExposure(simulation.Rooms.Map);
@@ -442,20 +442,20 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>ShapeNormals operation.</summary>
+
         private static Row ShapeNormals(GridBuilder builder)
         {
-/// <summary>Registers and opens communication.</summary>
+
             ThermalSimulation simulation = Registered(builder);
             simulation.Surfaces.Rebuild(simulation.Grid);
 
-/// <summary>NewRow operation.</summary>
+
             Row row = NewRow("shapenormals", simulation, "nodes");
             int nodes = simulation.Solver.Nodes.Count;
 
             for (int r = 0; !Settled(row); r++)
             {
-/// <summary>Allocated operation.</summary>
+
                 long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Solver.RebuildShapeNormals();
@@ -468,7 +468,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>NodeSync operation.</summary>
+
         private static Row NodeSync(GridBuilder builder, bool dirty)
         {
             ThermalSimulation simulation = builder.BuildSimulation(Hulls.Uncapped(), 293.15f);
@@ -481,7 +481,7 @@ namespace Thermodynamics.Harness
 
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
 
-/// <summary>NewRow operation.</summary>
+
             Row row = NewRow(dirty ? "syncdirty" : "syncclean", simulation, "nodes");
             for (int r = 0; !Settled(row); r++)
             {
@@ -490,7 +490,7 @@ namespace Thermodynamics.Harness
                     for (int i = 0; i < nodes.Count; i++) nodes[i].StateDirty = true;
                 }
 
-/// <summary>Allocated operation.</summary>
+
                 long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 simulation.Solver.SyncNodeState();
@@ -503,7 +503,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>StepPhases operation.</summary>
+
         public static List<Row> StepPhases(string shape, int blocks, Action<string> log = null)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -562,11 +562,11 @@ namespace Thermodynamics.Harness
 
             simulation.Solver.ProfileStepPhases = false;
 
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
             for (int p = 0; p < best.Length; p++)
             {
-/// <summary>Row operation.</summary>
+
                 Row row = new Row();
                 row.Stage = ThermalSolver.StepPhaseProfile.Names[p];
                 row.Blocks = simulation.Solver.Nodes.Count;
@@ -586,7 +586,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Solver operation.</summary>
+
         private static Row Solver(GridBuilder builder)
         {
             ThermalSimulation simulation = builder.BuildSimulation(Hulls.Uncapped(), 293.15f);
@@ -599,12 +599,12 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < 3; i++) simulation.Solver.Step(step, state);
 
-/// <summary>NewRow operation.</summary>
+
             Row row = NewRow("solver", simulation, "substeps");
             for (int r = 0; !Settled(row); r++)
             {
                 long before = simulation.Work.SolverSubsteps;
-/// <summary>Allocated operation.</summary>
+
                 long allocated = r == 1 ? Allocated() : 0;
                 Stopwatch watch = Stopwatch.StartNew();
                 for (int i = 0; i < SolverStepsPerRepeat; i++) simulation.Solver.Step(step, state);
@@ -617,10 +617,10 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("  stage        blocks       best ms    median ms   best/med      worst ms   spread  repeats  stopped          work  unit              ns/unit      alloc KB  note");
             for (int i = 0; i < rows.Count; i++)
@@ -641,10 +641,10 @@ namespace Thermodynamics.Harness
 
         public static readonly string Host = Environment.MachineName;
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("stage,blocks,best_ms,median_ms,fast_mode_share,worst_ms,spread_percent,repeats,confirmed_best,stopped,work,work_unit,ns_per_unit,allocated_bytes,taken_utc,host");
             for (int i = 0; i < rows.Count; i++)
@@ -671,10 +671,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-/// <summary>ReadCsv operation.</summary>
+
         public static List<Row> ReadCsv(string path)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
             string[] lines = File.ReadAllLines(path);
 
@@ -691,9 +691,9 @@ namespace Thermodynamics.Harness
                 if (lines[i].Trim().Length == 0) continue;
 
                 string[] parts = lines[i].Split(',');
-/// <summary>Row operation.</summary>
+
                 Row row = new Row();
-/// <summary>Field operation.</summary>
+
                 row.Stage = Field(header, parts, "stage", path);
                 row.Blocks = int.Parse(Field(header, parts, "blocks", path), CultureInfo.InvariantCulture);
                 row.BestMs = double.Parse(Field(header, parts, "best_ms", path), CultureInfo.InvariantCulture);
@@ -701,10 +701,10 @@ namespace Thermodynamics.Harness
                 row.WorstMs = double.Parse(Field(header, parts, "worst_ms", path), CultureInfo.InvariantCulture);
                 row.Repeats = int.Parse(Field(header, parts, "repeats", path), CultureInfo.InvariantCulture);
                 row.ConfirmedBest = int.Parse(Field(header, parts, "confirmed_best", path), CultureInfo.InvariantCulture);
-/// <summary>Field operation.</summary>
+
                 row.Stop = Field(header, parts, "stopped", path);
                 row.Work = long.Parse(Field(header, parts, "work", path), CultureInfo.InvariantCulture);
-/// <summary>Field operation.</summary>
+
                 row.WorkUnit = Field(header, parts, "work_unit", path);
                 row.AllocatedBytes = long.Parse(Field(header, parts, "allocated_bytes", path), CultureInfo.InvariantCulture);
                 rows.Add(row);
@@ -713,7 +713,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Field operation.</summary>
+
         private static string Field(string[] header, string[] parts, string column, string path)
         {
             int index = Array.IndexOf(header, column);
@@ -725,10 +725,10 @@ namespace Thermodynamics.Harness
             return parts[index];
         }
 
-/// <summary>SamplesCsv operation.</summary>
+
         public static string SamplesCsv(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("stage,blocks,repeat,ms,taken_utc");
             for (int i = 0; i < rows.Count; i++)

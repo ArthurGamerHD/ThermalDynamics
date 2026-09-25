@@ -15,12 +15,12 @@ namespace Thermodynamics.Tests
         private class Censused
         {
             public string Row;
-/// <summary>List operation.</summary>
+
             public List<string> Composition = new List<string>();
         }
 
         [Fact]
-/// <summary>EveryShipInTheCorpusIsCounted operation.</summary>
+
         public void EveryShipInTheCorpusIsCounted()
         {
             if (CorpusFixture.Files().Count == 0) return;
@@ -55,7 +55,7 @@ namespace Thermodynamics.Tests
 
         private const int HeatSourcesColumn = 31;
 
-/// <summary>Positive operation.</summary>
+
         private static bool Positive(string[] fields, int column)
         {
             float value;
@@ -86,7 +86,7 @@ namespace Thermodynamics.Tests
             public float LiftOverDrag;
         }
 
-/// <summary>Aero operation.</summary>
+
         private static Aerodynamics Aero(ShipAssembly assembly)
         {
             double shapeSum = 0d;
@@ -140,7 +140,7 @@ namespace Thermodynamics.Tests
                 }
             }
 
-/// <summary>Aerodynamics operation.</summary>
+
             Aerodynamics aero = new Aerodynamics();
 
             aero.ShapeFactor = directions == 0 ? 1f : (float)(shapeSum / directions);
@@ -148,7 +148,7 @@ namespace Thermodynamics.Tests
             return aero;
         }
 
-/// <summary>Count operation.</summary>
+
         private static Censused Count(Blueprints.Ship ship)
         {
             ShipAssembly assembly = ship.Build();
@@ -215,18 +215,18 @@ namespace Thermodynamics.Tests
                         installed += definition.PowerOutputWatts;
                     }
                 }
-/// <summary>if operation.</summary>
+
                 else if (definition.ThrustNewtons > 0f)
                 {
                     thrusters++;
                     thrust += definition.ThrustNewtons;
                 }
-/// <summary>if operation.</summary>
+
                 else if (definition.TypeId == "CubeBlock")
                 {
                     armor++;
                 }
-/// <summary>if operation.</summary>
+
                 else if (definition.PowerDrawWatts > 0f)
                 {
                     consumers++;
@@ -269,10 +269,10 @@ namespace Thermodynamics.Tests
             double exposurePerKilowatt = full > 0f ? exposedArea / (full / 1000d) : 0d;
             double capacityPerWatt = full > 0f ? thermalMass / full : 0d;
 
-/// <summary>Censused operation.</summary>
+
             Censused censused = new Censused();
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder row = new StringBuilder();
             row.Append(CorpusRecord.Text(ship.Name)).Append(',');
             row.Append(ship.WorkshopId.ToString(CultureInfo.InvariantCulture)).Append(',');
@@ -322,7 +322,7 @@ namespace Thermodynamics.Tests
             row.Append(CorpusRecord.Num((float)geometry.LocalWattsPerAreaMax)).Append(',');
             row.Append(CorpusRecord.Num((float)geometry.SpreadMetres)).Append(',');
             row.Append(CorpusRecord.Num((float)geometry.HottestSourceConductance)).Append(',');
-/// <summary>Aero operation.</summary>
+
             Aerodynamics aero = Aero(assembly);
             row.Append(CorpusRecord.Num(aero.ShapeFactor)).Append(',');
             row.Append(CorpusRecord.Num(aero.LiftOverDrag));
@@ -334,7 +334,7 @@ namespace Thermodynamics.Tests
                 GameBlocks.Definition definition;
                 definitions.TryGetValue(entry.Key, out definition);
 
-/// <summary>StringBuilder operation.</summary>
+
                 StringBuilder line = new StringBuilder();
                 line.Append(CorpusRecord.Text(ship.Name)).Append(',');
                 line.Append(ship.WorkshopId.ToString(CultureInfo.InvariantCulture)).Append(',');

@@ -26,66 +26,48 @@ namespace Thermodynamics
         private static LabelBox gridPanel;
         private static int sinceText;
 
-/// <summary>StringBuilder operation.</summary>
         private static readonly StringBuilder ToolText = new StringBuilder();
-/// <summary>StringBuilder operation.</summary>
         private static readonly StringBuilder WindText = new StringBuilder();
-/// <summary>StringBuilder operation.</summary>
         private static readonly StringBuilder AirText = new StringBuilder();
 
-/// <summary>List operation.</summary>
         private static readonly List<BlockInstance> NeighbourScratch = new List<BlockInstance>();
 
-/// <summary>Builds the API method table.</summary>
         public static void Build()
         {
             if (toolLabel != null) return;
 
-/// <summary>Label operation.</summary>
             toolLabel = new Label(HudMain.HighDpiRoot)
             {
                 ParentAlignment = ParentAlignments.Center,
-/// <summary>Vector2 operation.</summary>
                 Offset = new Vector2(60f, 30f),
-/// <summary>GlyphFormat operation.</summary>
                 Format = new GlyphFormat(Color.White, TextAlignment.Left, 1.05f),
                 Visible = false,
             };
 
-/// <summary>Label operation.</summary>
             windLabel = new Label(HudMain.HighDpiRoot)
             {
                 ParentAlignment = ParentAlignments.Center,
-/// <summary>Vector2 operation.</summary>
                 Offset = new Vector2(0f, -132f),
-/// <summary>GlyphFormat operation.</summary>
                 Format = new GlyphFormat(new Color(200, 224, 236), TextAlignment.Center, 0.9f),
                 Visible = false,
             };
 
-/// <summary>Label operation.</summary>
             airLabel = new Label(HudMain.HighDpiRoot)
             {
                 ParentAlignment = ParentAlignments.Bottom | ParentAlignments.InnerV,
-/// <summary>Vector2 operation.</summary>
                 Offset = new Vector2(0f, 96f),
-/// <summary>GlyphFormat operation.</summary>
                 Format = new GlyphFormat(new Color(206, 214, 220), TextAlignment.Center, 0.85f),
                 Visible = false,
             };
 
-/// <summary>LabelBox operation.</summary>
             gridPanel = new LabelBox(HudMain.HighDpiRoot)
             {
                 ParentAlignment = ParentAlignments.Top | ParentAlignments.Right
                     | ParentAlignments.InnerV | ParentAlignments.InnerH,
-/// <summary>Vector2 operation.</summary>
                 Offset = new Vector2(-20f, -120f),
                 BuilderMode = TextBuilderModes.Lined,
                 AutoResize = true,
-/// <summary>Vector2 operation.</summary>
                 TextPadding = new Vector2(18f, 14f),
-/// <summary>Color operation.</summary>
                 Color = new Color(20, 24, 28, 190),
                 Format = Body,
                 Visible = false,
@@ -93,18 +75,14 @@ namespace Thermodynamics
         }
 
         private static readonly GlyphFormat Body =
-/// <summary>GlyphFormat operation.</summary>
             new GlyphFormat(new Color(220, 235, 242), TextAlignment.Left, 0.95f);
 
         private static readonly GlyphFormat Muted =
-/// <summary>GlyphFormat operation.</summary>
             new GlyphFormat(new Color(140, 158, 168), TextAlignment.Left, 0.95f);
 
         private static readonly GlyphFormat Warning =
-/// <summary>GlyphFormat operation.</summary>
             new GlyphFormat(new Color(226, 92, 80), TextAlignment.Left, 0.95f);
 
-/// <summary>Reset operation.</summary>
         public static void Reset()
         {
             toolLabel = null;
@@ -113,7 +91,6 @@ namespace Thermodynamics
             gridPanel = null;
         }
 
-/// <summary>Draw operation.</summary>
         public static void Draw()
         {
             if (MyAPIGateway.Utilities.IsDedicated) return;
@@ -141,7 +118,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Publishes the API table to other mods.</summary>
         private static void Publish(Label label, StringBuilder text)
         {
             if (label == null) return;
@@ -153,11 +129,9 @@ namespace Thermodynamics
             }
 
             label.Visible = true;
-/// <summary>RichText operation.</summary>
             label.Text = new RichText(text);
         }
 
-/// <summary>DrawToolHud operation.</summary>
         private static void DrawToolHud()
         {
             ToolText.Clear();
@@ -183,7 +157,6 @@ namespace Thermodynamics
             ToolText.Append(TemperatureScale.ToCelsiusString(bound.Node.Temperature));
         }
 
-/// <summary>DrawGridHud operation.</summary>
         private static void DrawGridHud()
         {
             GridPanelText = null;
@@ -237,7 +210,6 @@ namespace Thermodynamics
 
             if (simulated == 0) return;
 
-/// <summary>RichText operation.</summary>
             RichText text = new RichText();
 
             Pair(text, "grids", Thousands(simulated), "blocks", Thousands(blocks));
@@ -268,14 +240,12 @@ namespace Thermodynamics
             GridPanelText = text;
         }
 
-/// <summary>Row operation.</summary>
         private static void Row(RichText text, string label, string value, GlyphFormat? format = null)
         {
             text.Add(label.PadRight(9), Muted);
             text.Add(value + "\n", format ?? Body);
         }
 
-/// <summary>Pair operation.</summary>
         private static void Pair(RichText text, string leftLabel, string leftValue,
             string rightLabel, string rightValue, GlyphFormat? rightFormat = null)
         {
@@ -287,20 +257,17 @@ namespace Thermodynamics
 
         public static bool ShowPerformancePanel;
 
-/// <summary>TogglePerformancePanel operation.</summary>
         public static bool TogglePerformancePanel()
         {
             ShowPerformancePanel = !ShowPerformancePanel;
             return ShowPerformancePanel;
         }
 
-/// <summary>Thousands operation.</summary>
         private static string Thousands(long value)
         {
             return value.ToString("n0");
         }
 
-/// <summary>Watts operation.</summary>
         private static string Watts(float watts)
         {
             return Units.Watts(watts);
@@ -308,7 +275,6 @@ namespace Thermodynamics
 
         private static RichText GridPanelText;
 
-/// <summary>UsingExtinguisherTool operation.</summary>
         private static bool UsingExtinguisherTool()
         {
             IMyCharacter character = MyAPIGateway.Session == null || MyAPIGateway.Session.Player == null
@@ -332,14 +298,12 @@ namespace Thermodynamics
 
         private static readonly MyStringId NeedleMaterial = MyStringId.GetOrCompute("Square");
 
-/// <summary>DrawEnvironmentReadout operation.</summary>
         private static void DrawEnvironmentReadout()
         {
             AirText.Clear();
 
             if (Settings.Instance == null || !Settings.Instance.ShowEnvironmentReadout) return;
 
-/// <summary>PlayerGrid operation.</summary>
             ThermalGrid thermals = PlayerGrid();
             if (thermals == null || thermals.Simulation == null) return;
 
@@ -352,7 +316,6 @@ namespace Thermodynamics
                 thermals.LastState.AmbientTemperature, peak, critical));
         }
 
-/// <summary>PlayerGrid operation.</summary>
         private static ThermalGrid PlayerGrid()
         {
             if (MyAPIGateway.Session == null) return null;
@@ -375,7 +338,6 @@ namespace Thermodynamics
             return grid.GameLogic.GetAs<ThermalGrid>();
         }
 
-/// <summary>DrawWindNeedle operation.</summary>
         private static void DrawWindNeedle()
         {
             WindText.Clear();
@@ -430,7 +392,6 @@ namespace Thermodynamics
             MySimpleObjectDraw.DrawLine(
                 tip, back - (sweep * length * 0.2d), NeedleMaterial, ref colour, (float)thickness);
 
-/// <summary>Color operation.</summary>
             Vector4 tick = new Color(120, 140, 152).ToVector4();
             Vector3D tickBase = centre + (screenUp * (length * 1.25d));
 
@@ -443,12 +404,10 @@ namespace Thermodynamics
 
         private const float GaleSpeed = 35f;
 
-/// <summary>CurrentWind operation.</summary>
         private static bool CurrentWind(out Vector3 wind)
         {
             wind = Vector3.Zero;
 
-/// <summary>ControlledGrid operation.</summary>
             ThermalGrid thermals = ControlledGrid();
             if (thermals != null)
             {
@@ -467,7 +426,6 @@ namespace Thermodynamics
             return wind.LengthSquared() > 0f;
         }
 
-/// <summary>ControlledGrid operation.</summary>
         private static ThermalGrid ControlledGrid()
         {
             if (MyAPIGateway.Session.Player == null || MyAPIGateway.Session.Player.Controller == null)
@@ -485,7 +443,6 @@ namespace Thermodynamics
             return thermals == null || thermals.Simulation == null ? null : thermals;
         }
 
-/// <summary>DrawBillboard operation.</summary>
         private static void DrawBillboard(ThermalGrid thermals, ThermalBlock bound, MatrixD cameraMatrix)
         {
             Vector3D position;

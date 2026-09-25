@@ -8,10 +8,10 @@ namespace Thermodynamics.Tests
     public class FacePackingTests
     {
         [Fact]
-/// <summary>EachFaceHoldsItsOwnCount operation.</summary>
+
         public void EachFaceHoldsItsOwnCount()
         {
-/// <summary>Node operation.</summary>
+
             ThermalNode node = Node();
 
             for (int f = 0; f < Face.Count; f++)
@@ -31,10 +31,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACountPastTheLimitIsClampedRatherThanWrapped operation.</summary>
+
         public void ACountPastTheLimitIsClampedRatherThanWrapped()
         {
-/// <summary>Node operation.</summary>
+
             ThermalNode node = Node();
 
             node.SetExposedFaces(0, ThermalNode.MaxExposedPerFace + 1);
@@ -51,7 +51,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnExposedBlockStillCountsItsOwnFaces operation.</summary>
+
         public void AnExposedBlockStillCountsItsOwnFaces()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -71,7 +71,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>Sets the tingallsixatonceisthesixseparatewritesandtherefresh.</summary>
+
         public void SettingAllSixAtOnceIsTheSixSeparateWritesAndTheRefresh()
         {
             int[][] cases =
@@ -86,12 +86,12 @@ namespace Thermodynamics.Tests
 
             foreach (int[] counts in cases)
             {
-/// <summary>Node operation.</summary>
+
                 ThermalNode reference = Node();
                 for (int f = 0; f < Face.Count; f++) reference.SetExposedFaces(f, counts[f]);
                 reference.RefreshExposure();
 
-/// <summary>Node operation.</summary>
+
                 ThermalNode packed = Node();
                 bool expectDirty = false;
                 for (int f = 0; f < Face.Count; f++)
@@ -122,10 +122,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>Sets the tingallsixfromatooshortarrayisrejected.</summary>
+
         public void SettingAllSixFromATooShortArrayIsRejected()
         {
-/// <summary>Node operation.</summary>
+
             ThermalNode node = Node();
 
             Assert.Throws<System.ArgumentException>(() => node.SetExposedFaces(new int[Face.Count - 1]));
@@ -133,10 +133,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RepeatingTheSameCountsDoesNotMarkTheNodeDirty operation.</summary>
+
         public void RepeatingTheSameCountsDoesNotMarkTheNodeDirty()
         {
-/// <summary>Node operation.</summary>
+
             ThermalNode node = Node();
             int[] counts = { 3, 0, 5, 1, 0, 2 };
 
@@ -163,10 +163,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APackingWrittenWithoutItsDerivedValuesIsNotSkipped operation.</summary>
+
         public void APackingWrittenWithoutItsDerivedValuesIsNotSkipped()
         {
-/// <summary>Node operation.</summary>
+
             ThermalNode node = Node();
 
             node.SetExposedFaces(new[] { 4, 4, 4, 4, 4, 4 });
@@ -187,7 +187,7 @@ namespace Thermodynamics.Tests
             Assert.True(node.RadiationCoefficient > 0f);
         }
 
-/// <summary>Node operation.</summary>
+
         private static ThermalNode Node()
         {
             GridBuilder builder = GridBuilder.Large();

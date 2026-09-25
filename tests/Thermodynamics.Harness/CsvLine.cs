@@ -5,19 +5,19 @@ namespace Thermodynamics.Harness
 {
     public static class CsvLine
     {
-/// <summary>Text operation.</summary>
+
         public static string Text(string value)
         {
             if (value == null) return "\"\"";
             return "\"" + value.Replace("\"", "\"\"") + "\"";
         }
 
-/// <summary>Split operation.</summary>
+
         public static List<string> Split(string line)
         {
-/// <summary>List operation.</summary>
+
             List<string> fields = new List<string>();
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder current = new StringBuilder();
             bool quoted = false;
 

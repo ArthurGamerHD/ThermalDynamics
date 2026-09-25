@@ -9,10 +9,10 @@ namespace Thermodynamics.Tests
 {
     public class CoolantFlowTests
     {
-/// <summary>Isolated operation.</summary>
+
         private static ThermalSettings Isolated(float segmentsPerSecond = 4f)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableSolarHeat = false;
@@ -23,7 +23,7 @@ namespace Thermodynamics.Tests
             return settings.Derive();
         }
 
-/// <summary>Ring operation.</summary>
+
         private static ThermalSimulation Ring(int width, int depth, float segmentsPerSecond,
             out CoolantLoop loop)
         {
@@ -41,12 +41,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EachGridSizeHasItsOwnFlowRate operation.</summary>
+
         public void EachGridSizeHasItsOwnFlowRate()
         {
-/// <summary>RingOfSize operation.</summary>
+
             CoolantLoop large = RingOfSize(Catalog.LargeGridSize);
-/// <summary>RingOfSize operation.</summary>
+
             CoolantLoop small = RingOfSize(Catalog.SmallGridSize);
 
             Assert.Equal(10f, Math.Abs(large.FlowMetresPerSecond), 3);
@@ -64,10 +64,10 @@ namespace Thermodynamics.Tests
             Assert.Equal(10f, Math.Abs(large.FlowMetresPerSecond), 3);
         }
 
-/// <summary>RingOfSize operation.</summary>
+
         private static CoolantLoop RingOfSize(float gridSize)
         {
-/// <summary>GridBuilder operation.</summary>
+
             GridBuilder builder = new GridBuilder(gridSize);
             PipeFitter.BuildRing(builder, PipeFitter.RectangleXZ(Vector3I.Zero, 4, 4));
 
@@ -78,11 +78,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheParcelMappingIsABijectionAtEveryRotation operation.</summary>
+
         public void TheParcelMappingIsABijectionAtEveryRotation()
         {
             CoolantLoop loop;
-/// <summary>Ring operation.</summary>
+
             ThermalSimulation simulation = Ring(5, 5, 4f, out loop);
 
             int count = loop.PipeCount;
@@ -106,11 +106,11 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RotationAloneMovesHeatWithoutChangingIt operation.</summary>
+
         public void RotationAloneMovesHeatWithoutChangingIt()
         {
             CoolantLoop loop;
-/// <summary>Ring operation.</summary>
+
             ThermalSimulation simulation = Ring(5, 5, 4f, out loop);
 
             for (int i = 0; i < loop.PipeCount; i++)
@@ -130,7 +130,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHotParcelTravelsRoundTheRingIntact operation.</summary>
+
         public void AHotParcelTravelsRoundTheRingIntact()
         {
             CoolantLoop loop;
@@ -143,19 +143,19 @@ namespace Thermodynamics.Tests
             float peak = loop.HottestSegment;
             Assert.True(peak > 400f, "the pulse should start hot: " + peak);
 
-/// <summary>PipeHoldingThePulse operation.</summary>
+
             int startPipe = PipeHoldingThePulse(loop);
 
             for (int i = 0; i < count / 4; i++) loop.Advect(1f / 4f);
 
-/// <summary>PipeHoldingThePulse operation.</summary>
+
             int nowPipe = PipeHoldingThePulse(loop);
 
             Assert.NotEqual(startPipe, nowPipe);
             Assert.Equal(peak, loop.HottestSegment, 3);
         }
 
-/// <summary>PipeHoldingThePulse operation.</summary>
+
         private static int PipeHoldingThePulse(CoolantLoop loop)
         {
             int worst = 0;
@@ -174,13 +174,13 @@ namespace Thermodynamics.Tests
         [InlineData(4f)]
         [InlineData(50f)]
         [InlineData(5000f)]
-/// <summary>FlowSpeedDoesNotCostSubsteps operation.</summary>
+
         public void FlowSpeedDoesNotCostSubsteps(float segmentsPerSecond)
         {
             CoolantLoop slow, fast;
-/// <summary>Ring operation.</summary>
+
             ThermalSimulation a = Ring(5, 5, 1f, out slow);
-/// <summary>Ring operation.</summary>
+
             ThermalSimulation b = Ring(5, 5, segmentsPerSecond, out fast);
 
             a.StepExact(20, Worlds.Shadow());
@@ -193,7 +193,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStoppedPumpLeavesTheFarSideOfTheRingCold operation.</summary>
+
         public void AStoppedPumpLeavesTheFarSideOfTheRingCold()
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -227,7 +227,7 @@ namespace Thermodynamics.Tests
         }
     
         [Fact]
-/// <summary>HalfSpeedIsAboutSeventyPercentOfTheFlow operation.</summary>
+
         public void HalfSpeedIsAboutSeventyPercentOfTheFlow()
         {
             CoolantLoop loop;
@@ -249,7 +249,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AChangedPumpSettingReachesTheFluidOnlyAfterARefresh operation.</summary>
+
         public void AChangedPumpSettingReachesTheFluidOnlyAfterARefresh()
         {
             CoolantLoop loop;
@@ -266,10 +266,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWellMixedRingIsOneParcelHoldingEverything operation.</summary>
+
         public void TheWellMixedRingIsOneParcelHoldingEverything()
         {
-/// <summary>Isolated operation.</summary>
+
             ThermalSettings settings = Isolated();
             settings.WellMixedCoolant = true;
 
@@ -292,10 +292,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BothModelsHoldTheSameHeatAtTheSameTemperature operation.</summary>
+
         public void BothModelsHoldTheSameHeatAtTheSameTemperature()
         {
-/// <summary>Isolated operation.</summary>
+
             ThermalSettings mixedSettings = Isolated();
             mixedSettings.WellMixedCoolant = true;
 
@@ -317,12 +317,12 @@ namespace Thermodynamics.Tests
         [InlineData(4f)]
         [InlineData(8f)]
         [InlineData(64f)]
-/// <summary>FasterFlowNeverEvensTheRingOutLessThanSlowFlow operation.</summary>
+
         public void FasterFlowNeverEvensTheRingOutLessThanSlowFlow(float fastRate)
         {
-/// <summary>SpreadAcrossAHeatedRing operation.</summary>
+
             float slow = SpreadAcrossAHeatedRing(1f);
-/// <summary>SpreadAcrossAHeatedRing operation.</summary>
+
             float fast = SpreadAcrossAHeatedRing(fastRate);
 
             Assert.True(fast <= slow,
@@ -331,10 +331,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>VeryFastFlowConvergesOnAWellMixedRing operation.</summary>
+
         public void VeryFastFlowConvergesOnAWellMixedRing()
         {
-/// <summary>SpreadAcrossAHeatedRing operation.</summary>
+
             float spread = SpreadAcrossAHeatedRing(64f);
 
             Assert.True(spread < 5f,
@@ -342,7 +342,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>MixingReportsWhenFlowOutrunsTheStep operation.</summary>
+
         public void MixingReportsWhenFlowOutrunsTheStep()
         {
             CoolantLoop loop;
@@ -357,7 +357,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>MixingConservesHeat operation.</summary>
+
         public void MixingConservesHeat()
         {
             CoolantLoop loop;
@@ -375,9 +375,9 @@ namespace Thermodynamics.Tests
         }
 
         [Theory]
-        [InlineData(400f, 5f)]      // copper, what ships
-        [InlineData(1600f, 100f)]   // four times copper: degraded but bounded, not 291,360 K
-/// <summary>TheLoopPathSurvivesAVeryConductivePipe operation.</summary>
+        [InlineData(400f, 5f)]
+        [InlineData(1600f, 100f)]
+
         public void TheLoopPathSurvivesAVeryConductivePipe(float conductivity, float tolerance)
         {
             try
@@ -388,7 +388,7 @@ namespace Thermodynamics.Tests
                     return properties;
                 };
 
-/// <summary>SpreadAcrossAHeatedRing operation.</summary>
+
                 float spread = SpreadAcrossAHeatedRing(64f);
 
                 Assert.True(spread < tolerance,
@@ -402,12 +402,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RefusingTheRingsDemandApproximatesRatherThanDiverging operation.</summary>
+
         public void RefusingTheRingsDemandApproximatesRatherThanDiverging()
         {
-/// <summary>DemandOfTheHullWithoutItsRing operation.</summary>
+
             float bare = DemandOfTheHullWithoutItsRing();
-/// <summary>DemandOfTheHeatedRing operation.</summary>
+
             float withRing = DemandOfTheHeatedRing(4096);
 
             Assert.Equal(1f, bare, 0);
@@ -415,16 +415,16 @@ namespace Thermodynamics.Tests
                 "the ring demanded only " + withRing + " substeps, so it is not what sets the"
                 + " demand on this grid and the rest of this measures nothing");
 
-/// <summary>Ceiling operation.</summary>
+
             int halfWay = Ceiling(withRing, 4.5f);
-/// <summary>Ceiling operation.</summary>
+
             int hard = Ceiling(withRing, 9f);
 
-/// <summary>SpreadAcrossAHeatedRing operation.</summary>
+
             float granted = SpreadAcrossAHeatedRing(1f, 4096);
-/// <summary>SpreadAcrossAHeatedRing operation.</summary>
+
             float halved = SpreadAcrossAHeatedRing(1f, halfWay);
-/// <summary>SpreadAcrossAHeatedRing operation.</summary>
+
             float refused = SpreadAcrossAHeatedRing(1f, hard);
 
             Assert.True(halved < granted * 2f,
@@ -444,13 +444,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheClampIsInertWhileTheDemandIsGranted operation.</summary>
+
         public void TheClampIsInertWhileTheDemandIsGranted()
         {
-/// <summary>SpreadAcrossAHeatedRing operation.</summary>
+
             float clamped = SpreadAcrossAHeatedRing(1f, 4096);
 
-/// <summary>HeatedRing operation.</summary>
+
             ThermalSimulation unclamped = HeatedRing(1f, 4096);
             unclamped.Settings.ClampConductionOvershoot = false;
             unclamped.StepExact(300, Worlds.Shadow());
@@ -462,10 +462,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NoNodeIsDrivenPastTheHottestThingPullingOnIt operation.</summary>
+
         public void NoNodeIsDrivenPastTheHottestThingPullingOnIt()
         {
-/// <summary>HeatedRing operation.</summary>
+
             ThermalSimulation simulation = HeatedRing(64f, 1);
 
             float hottest = 0f;
@@ -493,26 +493,26 @@ namespace Thermodynamics.Tests
                 + " K, so something was driven past the only thing making heat");
         }
 
-/// <summary>Ceiling operation.</summary>
+
         private static int Ceiling(float demand, float oversubscription)
         {
             int ceiling = (int)Math.Round(demand / oversubscription);
             return ceiling < 1 ? 1 : ceiling;
         }
 
-/// <summary>DemandOfTheHeatedRing operation.</summary>
+
         private static float DemandOfTheHeatedRing(int maxSubsteps)
         {
-/// <summary>HeatedRing operation.</summary>
+
             ThermalSimulation simulation = HeatedRing(1f, maxSubsteps);
             simulation.StepExact(300, Worlds.Shadow());
             return simulation.Solver.LastSubsteps;
         }
 
-/// <summary>DemandOfTheHullWithoutItsRing operation.</summary>
+
         private static float DemandOfTheHullWithoutItsRing()
         {
-/// <summary>HeatedRingSettings operation.</summary>
+
             ThermalSettings settings = HeatedRingSettings(4096);
 
             GridBuilder builder = GridBuilder.Large();
@@ -525,10 +525,10 @@ namespace Thermodynamics.Tests
             return simulation.Solver.LastSubsteps;
         }
 
-/// <summary>HeatedRingSettings operation.</summary>
+
         private static ThermalSettings HeatedRingSettings(int maxSubsteps)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableDamage = false;
@@ -539,7 +539,7 @@ namespace Thermodynamics.Tests
             return settings;
         }
 
-/// <summary>HeatedRing operation.</summary>
+
         private static ThermalSimulation HeatedRing(float segmentsPerSecond, int maxSubsteps)
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -560,10 +560,10 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>SpreadAcrossAHeatedRing operation.</summary>
+
         private static float SpreadAcrossAHeatedRing(float segmentsPerSecond, int maxSubsteps)
         {
-/// <summary>HeatedRing operation.</summary>
+
             ThermalSimulation simulation = HeatedRing(segmentsPerSecond, maxSubsteps);
             simulation.StepExact(300, Worlds.Shadow());
 
@@ -571,15 +571,15 @@ namespace Thermodynamics.Tests
             return loop.HottestSegment - loop.ColdestSegment;
         }
 
-/// <summary>SpreadAcrossAHeatedRing operation.</summary>
+
         private static float SpreadAcrossAHeatedRing(float segmentsPerSecond)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
-            settings.Frequency = 1;                  // a one second step
+            settings.Frequency = 1;
             settings.EnableEnvironment = false;
             settings.EnableDamage = false;
-            settings.MaxSubsteps = 1;                // one substep, so the whole second is one h
+            settings.MaxSubsteps = 1;
             settings.MaxSubstepsPerBlock = 0;
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
@@ -604,10 +604,10 @@ namespace Thermodynamics.Tests
     
 
         [Fact]
-/// <summary>PumpPowerIsLinearInSpeed operation.</summary>
+
         public void PumpPowerIsLinearInSpeed()
         {
-/// <summary>CoolantPump operation.</summary>
+
             CoolantPump pump = new CoolantPump();
             pump.MaxPowerWatts = 20000f;
 
@@ -629,7 +629,7 @@ namespace Thermodynamics.Tests
         [InlineData(2)]
         [InlineData(4)]
         [InlineData(9)]
-/// <summary>TheBillForAGivenFlowDoesNotDependOnHowManyPumpsDeliverIt operation.</summary>
+
         public void TheBillForAGivenFlowDoesNotDependOnHowManyPumpsDeliverIt(int pumpCount)
         {
             CoolantLoop loop;
@@ -640,7 +640,7 @@ namespace Thermodynamics.Tests
             const float totalDemand = 1f;
             for (int i = 0; i < pumpCount; i++)
             {
-/// <summary>CoolantPump operation.</summary>
+
                 CoolantPump pump = new CoolantPump();
                 pump.MaxPowerWatts = 20000f;
                 pump.Speed = totalDemand / pumpCount;
@@ -659,7 +659,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FlowRisesWithTheSquareRootOfCombinedPumping operation.</summary>
+
         public void FlowRisesWithTheSquareRootOfCombinedPumping()
         {
             CoolantLoop loop;
@@ -668,7 +668,7 @@ namespace Thermodynamics.Tests
             loop.Pumps.Clear();
             for (int i = 0; i < 4; i++)
             {
-/// <summary>CoolantPump operation.</summary>
+
                 CoolantPump pump = new CoolantPump();
                 pump.MaxPowerWatts = 20000f;
                 loop.Pumps.Add(pump);
@@ -680,12 +680,12 @@ namespace Thermodynamics.Tests
     
 
         [Fact]
-/// <summary>APumpFittedBackwardsDrivesTheRingInReverse operation.</summary>
+
         public void APumpFittedBackwardsDrivesTheRingInReverse()
         {
-/// <summary>RingWithPump operation.</summary>
+
             CoolantLoop forward = RingWithPump(false);
-/// <summary>RingWithPump operation.</summary>
+
             CoolantLoop reverse = RingWithPump(true);
 
             Assert.Single(forward.Pumps);
@@ -697,12 +697,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AReversedRingCarriesHeatJustAsWell operation.</summary>
+
         public void AReversedRingCarriesHeatJustAsWell()
         {
-/// <summary>SpreadAfterHeatingOneSink operation.</summary>
+
             float forward = SpreadAfterHeatingOneSink(false);
-/// <summary>SpreadAfterHeatingOneSink operation.</summary>
+
             float reverse = SpreadAfterHeatingOneSink(true);
 
             Assert.True(forward > 0f && reverse > 0f, "both directions should be transporting");
@@ -710,7 +710,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OpposedPumpsCancelAndTheRingStops operation.</summary>
+
         public void OpposedPumpsCancelAndTheRingStops()
         {
             CoolantLoop loop;
@@ -718,7 +718,7 @@ namespace Thermodynamics.Tests
 
             loop.Pumps.Clear();
 
-/// <summary>CoolantPump operation.</summary>
+
             CoolantPump forward = new CoolantPump();
             forward.MaxPowerWatts = 20000f;
             forward.Direction = 1;
@@ -727,7 +727,7 @@ namespace Thermodynamics.Tests
             loop.RefreshFlow();
             Assert.True(loop.FlowSegmentsPerSecond > 0f);
 
-/// <summary>CoolantPump operation.</summary>
+
             CoolantPump against = new CoolantPump();
             against.MaxPowerWatts = 20000f;
             against.Direction = -1;
@@ -742,7 +742,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OpposedPumpsSubtractBeforeTheSquareRoot operation.</summary>
+
         public void OpposedPumpsSubtractBeforeTheSquareRoot()
         {
             CoolantLoop loop;
@@ -751,7 +751,7 @@ namespace Thermodynamics.Tests
             loop.Pumps.Clear();
             for (int i = 0; i < 4; i++)
             {
-/// <summary>CoolantPump operation.</summary>
+
                 CoolantPump pump = new CoolantPump();
                 pump.MaxPowerWatts = 20000f;
                 pump.Direction = i < 3 ? 1 : -1;
@@ -765,14 +765,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ReverseRotationIsExactToo operation.</summary>
+
         public void ReverseRotationIsExactToo()
         {
             CoolantLoop loop;
             Ring(5, 5, 4f, out loop);
 
             loop.Pumps.Clear();
-/// <summary>CoolantPump operation.</summary>
+
             CoolantPump against = new CoolantPump();
             against.MaxPowerWatts = 20000f;
             against.Direction = -1;
@@ -793,7 +793,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(hottest, loop.HottestSegment, 2);
         }
 
-/// <summary>RingWithPump operation.</summary>
+
         private static CoolantLoop RingWithPump(bool reversed)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -802,7 +802,7 @@ namespace Thermodynamics.Tests
             return builder.BuildSimulation(Isolated(), 300f).Solver.Loops[0];
         }
 
-/// <summary>SpreadAfterHeatingOneSink operation.</summary>
+
         private static float SpreadAfterHeatingOneSink(bool reversed)
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -822,7 +822,7 @@ namespace Thermodynamics.Tests
     
     
         [Fact]
-/// <summary>FlowIsReportedInMetresPerSecond operation.</summary>
+
         public void FlowIsReportedInMetresPerSecond()
         {
             CoolantLoop loop;
@@ -843,7 +843,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFlowRateDialIsMetresPerSecondWhicheverGridItIsOn operation.</summary>
+
         public void TheFlowRateDialIsMetresPerSecondWhicheverGridItIsOn()
         {
             CoolantLoop loop;

@@ -12,10 +12,10 @@ namespace Thermodynamics.Tests
     {
 
         [Fact]
-/// <summary>AFreshSolverReportsEmptySpaceAndNotAbsoluteZero operation.</summary>
+
         public void AFreshSolverReportsEmptySpaceAndNotAbsoluteZero()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings().Derive();
             GridBuilder builder = GridBuilder.Large();
             builder.Place(Catalog.HeavyArmor(), Vector3I.Zero);
@@ -28,7 +28,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SubstepEstimateBeforeTheFirstStepIsUsable operation.</summary>
+
         public void SubstepEstimateBeforeTheFirstStepIsUsable()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -54,7 +54,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFirstRecordedSampleHasAPhysicalAmbient operation.</summary>
+
         public void TheFirstRecordedSampleHasAPhysicalAmbient()
         {
             ScenarioResult result = Scenarios.Run("vacuum-soak");
@@ -65,12 +65,12 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>Builds the API method table.</summary>
+
         public void BuildingSurfacesConcurrentlyMatchesTheSingleThreadedAnswer()
         {
-/// <summary>Vector3I operation.</summary>
+
             Vector3I size = new Vector3I(1, 1, 2);
-/// <summary>delegate operation.</summary>
+
             SealTest seals = delegate (Vector3I cell, int face) { return face != Face.Up; };
 
             int[] expected = BlockSurfaceBuilder.BuildSurfaces(size, false, seals, Mounts());
@@ -96,14 +96,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>Builds the API method table.</summary>
+
         public void BuildingSurfacesDoesNotMutateOrRetainTheCallersMounts()
         {
-/// <summary>Mounts operation.</summary>
+
             List<MountRect> mounts = Mounts();
             int before = mounts.Count;
 
-/// <summary>delegate operation.</summary>
+
             SealTest seals = delegate (Vector3I cell, int face) { return true; };
             int[] first = BlockSurfaceBuilder.BuildSurfaces(Vector3I.One, true, seals, mounts);
 
@@ -115,15 +115,15 @@ namespace Thermodynamics.Tests
             Assert.Equal(copy, first);
         }
 
-/// <summary>Mounts operation.</summary>
+
         private static List<MountRect> Mounts()
         {
-/// <summary>List operation.</summary>
+
             List<MountRect> mounts = new List<MountRect>();
             for (int face = 0; face < Face.Count; face++)
             {
                 Vector3I normal = Face.Offsets[face];
-/// <summary>MountRect operation.</summary>
+
                 MountRect rect = new MountRect(normal, Vector3.Zero, Vector3.One);
                 rect.Enabled = true;
                 mounts.Add(rect);
@@ -133,7 +133,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>ACapitalShipCostsFarMoreToMapOnceThanToStep operation.</summary>
+
         public void ACapitalShipCostsFarMoreToMapOnceThanToStep()
         {
             ScenarioResult result = Scenarios.Run("capital");
@@ -151,7 +151,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>FleetCostScalesWithTheNumberOfGrids operation.</summary>
+
         public void FleetCostScalesWithTheNumberOfGrids()
         {
             ScenarioResult result = Scenarios.Run("fleet");
@@ -167,7 +167,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABuriedHeatSourceHasNoExposedFaceAndStillShedsItsHeat operation.</summary>
+
         public void ABuriedHeatSourceHasNoExposedFaceAndStillShedsItsHeat()
         {
             ScenarioResult result = Scenarios.Run("interior");

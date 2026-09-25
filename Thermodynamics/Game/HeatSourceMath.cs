@@ -7,7 +7,6 @@ namespace Thermodynamics
     {
         public const double NearFieldMetres = 1.0;
 
-/// <summary>Irradiance operation.</summary>
         public static float Irradiance(Vector3D source, float watts, float range, Vector3D at)
         {
             if (watts <= 0f || range <= 0f) return 0f;
@@ -20,7 +19,6 @@ namespace Thermodynamics
             return (float)(watts / (4.0 * Math.PI * distanceSquared));
         }
 
-/// <summary>Direction operation.</summary>
         public static Vector3 Direction(Vector3D source, Vector3D at, ref MatrixD worldToLocal)
         {
             Vector3D delta = source - at;

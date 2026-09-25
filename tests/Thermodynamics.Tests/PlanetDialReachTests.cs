@@ -13,22 +13,22 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>PlanetDialReachTests operation.</summary>
+
         public PlanetDialReachTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings()
         {
             return new ThermalSettings().Derive();
         }
 
-/// <summary>Places operation.</summary>
+
         private static List<EnvironmentSample> Places()
         {
-/// <summary>List operation.</summary>
+
             List<EnvironmentSample> places = new List<EnvironmentSample>();
 
             places.Add(Worlds.PlanetSurface(1f, 0.5f));
@@ -57,7 +57,7 @@ namespace Thermodynamics.Tests
             return places;
         }
 
-/// <summary>Warming operation.</summary>
+
         private static EnvironmentSample Warming(float dayLengthSeconds)
         {
             EnvironmentSample sample = Worlds.PlanetSurface(1f, 0.3f);
@@ -70,7 +70,7 @@ namespace Thermodynamics.Tests
             return sample;
         }
 
-/// <summary>Read operation.</summary>
+
         private static void Read(EnvironmentState state, List<float> into)
         {
             into.Add(state.AmbientTemperature);
@@ -88,15 +88,15 @@ namespace Thermodynamics.Tests
             into.Add(state.WeatherTemperatureOffset);
         }
 
-/// <summary>Fingerprint operation.</summary>
+
         private static List<float> Fingerprint(PlanetThermalProperties planet)
         {
-/// <summary>List operation.</summary>
+
             List<float> readings = new List<float>();
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
 
-/// <summary>Places operation.</summary>
+
             List<EnvironmentSample> places = Places();
             for (int i = 0; i < places.Count; i++)
             {
@@ -106,7 +106,7 @@ namespace Thermodynamics.Tests
             return readings;
         }
 
-/// <summary>Levels operation.</summary>
+
         private static float[] Levels(string name, float shipped)
         {
             if (name.EndsWith("Temperature", StringComparison.Ordinal))
@@ -118,7 +118,7 @@ namespace Thermodynamics.Tests
             return new float[] { shipped * 0.25f, shipped * 4f };
         }
 
-/// <summary>Same operation.</summary>
+
         private static bool Same(List<float> a, List<float> b)
         {
             if (a.Count != b.Count) return false;
@@ -134,10 +134,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryPlanetDialReachesTheEnvironment operation.</summary>
+
         public void EveryPlanetDialReachesTheEnvironment()
         {
-/// <summary>List operation.</summary>
+
             List<FieldInfo> fields = new List<FieldInfo>();
 
             foreach (FieldInfo field in typeof(PlanetThermalProperties)
@@ -150,10 +150,10 @@ namespace Thermodynamics.Tests
                 "only " + fields.Count + " planet dials were found, so this test would pass on a"
                 + " definition that had lost most of them");
 
-/// <summary>Fingerprint operation.</summary>
+
             List<float> shipped = Fingerprint(PlanetThermalProperties.Default());
 
-/// <summary>List operation.</summary>
+
             List<string> inert = new List<string>();
 
             foreach (FieldInfo field in fields)
@@ -186,7 +186,7 @@ namespace Thermodynamics.Tests
                 "planet dials that changed nothing the environment solve produces:\n  "
                 + string.Join("\n  ", inert)
                 + "\nEither the dial is wired to nothing — which is the defect this exists for —"
-/// <summary>Places operation.</summary>
+
                 + " or no place in Places() can see it, and a place is cheap to add.");
         }
     }

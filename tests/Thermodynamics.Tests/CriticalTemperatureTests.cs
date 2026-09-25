@@ -9,10 +9,10 @@ namespace Thermodynamics.Tests
     [Trait("speed", "slow")]
     public class CriticalTemperatureTests
     {
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings(int cap = 0)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubstepsPerBlock = cap;
             settings.MaxSubsteps = 4096;
@@ -21,7 +21,7 @@ namespace Thermodynamics.Tests
             return settings.Derive();
         }
 
-/// <summary>Driven operation.</summary>
+
         private static ThermalSimulation Driven(ThermalSettings settings, int blocks, float watts)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -45,10 +45,10 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>RunCollecting operation.</summary>
+
         private static List<OverheatEvent> RunCollecting(ThermalSimulation simulation, int steps)
         {
-/// <summary>List operation.</summary>
+
             List<OverheatEvent> events = new List<OverheatEvent>();
             EnvironmentSample sample = Worlds.Shadow();
 
@@ -63,7 +63,7 @@ namespace Thermodynamics.Tests
             return events;
         }
 
-/// <summary>Hottest operation.</summary>
+
         private static float Hottest(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -76,15 +76,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACensusShipAtMeasuredPowerSettlesBelowItsRating operation.</summary>
+
         public void ACensusShipAtMeasuredPowerSettlesBelowItsRating()
         {
-/// <summary>Driven operation.</summary>
+
             ThermalSimulation simulation = Driven(Settings(), 2000, Census.ProducerWatts);
-/// <summary>RunCollecting operation.</summary>
+
             List<OverheatEvent> events = RunCollecting(simulation, 400);
 
-/// <summary>Hottest operation.</summary>
+
             float peak = Hottest(simulation);
 
             Assert.True(peak > 400f, "the hull never warmed at all, peak " + peak + " K");
@@ -97,12 +97,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APastCriticalBlockRaisesDamageProportionalToHowFarPast operation.</summary>
+
         public void APastCriticalBlockRaisesDamageProportionalToHowFarPast()
         {
-/// <summary>Driven operation.</summary>
+
             ThermalSimulation simulation = Driven(Settings(), 2000, Census.ProducerWatts * 12f);
-/// <summary>RunCollecting operation.</summary>
+
             List<OverheatEvent> events = RunCollecting(simulation, 400);
 
             Assert.NotEmpty(events);
@@ -119,7 +119,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DamagePerSecondDoesNotDependOnTheStepLength operation.</summary>
+
         public void DamagePerSecondDoesNotDependOnTheStepLength()
         {
             float[] totals = new float[2];
@@ -127,18 +127,18 @@ namespace Thermodynamics.Tests
 
             for (int f = 0; f < frequencies.Length; f++)
             {
-/// <summary>Sets the tings.</summary>
+
                 ThermalSettings settings = Settings();
                 settings.Frequency = frequencies[f];
                 settings.DamageIsPerSecond = true;
                 settings.Derive();
 
-/// <summary>Driven operation.</summary>
+
                 ThermalSimulation simulation = Driven(settings, 2000, Census.ProducerWatts * 12f);
 
                 simulation.StepExact(frequencies[f] * LabClock.Steps(60), Worlds.Shadow());
 
-/// <summary>RunCollecting operation.</summary>
+
                 List<OverheatEvent> events = RunCollecting(simulation, frequencies[f] * 4);
 
                 float total = 0f;
@@ -156,23 +156,23 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSubstepCapDoesNotChangeWhetherAHullBurns operation.</summary>
+
         public void TheSubstepCapDoesNotChangeWhetherAHullBurns()
         {
             int Steps = LabClock.Steps(600);
 
-/// <summary>Driven operation.</summary>
+
             ThermalSimulation uncapped = Driven(Settings(0), 2000, Census.ProducerWatts * 12f);
-/// <summary>RunCollecting operation.</summary>
+
             List<OverheatEvent> uncappedEvents = RunCollecting(uncapped, Steps);
 
             Assert.NotEmpty(uncappedEvents);
 
             foreach (int cap in new int[] { 8, 4, 1 })
             {
-/// <summary>Driven operation.</summary>
+
                 ThermalSimulation capped = Driven(Settings(cap), 2000, Census.ProducerWatts * 12f);
-/// <summary>RunCollecting operation.</summary>
+
                 List<OverheatEvent> cappedEvents = RunCollecting(capped, Steps);
 
                 Assert.True(cappedEvents.Count > 0,
@@ -181,22 +181,22 @@ namespace Thermodynamics.Tests
 
                 float difference = Math.Abs(Hottest(capped) - Hottest(uncapped));
                 Assert.True(difference < 5f,
-/// <summary>Hottest operation.</summary>
+
                     "cap " + cap + " left the hottest block at " + Hottest(capped)
-/// <summary>Hottest operation.</summary>
+
                     + " K against " + Hottest(uncapped) + " K uncapped");
             }
         }
 
         [Fact]
-/// <summary>NothingBelowItsRatingIsEverDamaged operation.</summary>
+
         public void NothingBelowItsRatingIsEverDamaged()
         {
             foreach (int cap in new int[] { 0, 4, 1 })
             {
-/// <summary>Driven operation.</summary>
+
                 ThermalSimulation simulation = Driven(Settings(cap), 2000, Census.ProducerWatts * 12f);
-/// <summary>RunCollecting operation.</summary>
+
                 List<OverheatEvent> events = RunCollecting(simulation, 400);
 
                 for (int i = 0; i < events.Count; i++)
@@ -210,17 +210,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DamageDisabledRaisesNothing operation.</summary>
+
         public void DamageDisabledRaisesNothing()
         {
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
             settings.EnableDamage = false;
             settings.Derive();
 
-/// <summary>Driven operation.</summary>
+
             ThermalSimulation simulation = Driven(settings, 2000, Census.ProducerWatts * 12f);
-/// <summary>RunCollecting operation.</summary>
+
             List<OverheatEvent> events = RunCollecting(simulation, 400);
 
             Assert.Empty(events);

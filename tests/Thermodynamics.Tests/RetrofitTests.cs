@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
     public class RetrofitTests
     {
         [Fact]
-/// <summary>BoltingFitsEverywhereAndPlumbingHardlyFitsAtAll operation.</summary>
+
         public void BoltingFitsEverywhereAndPlumbingHardlyFitsAtAll()
         {
             Assert.True(RetrofitLab.Corpus.BoltedFitted > RetrofitLab.Corpus.Warm * 0.7f,
@@ -22,7 +22,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BoltingRadiatorsToARealShipHurtsMoreOftenThanItHelps operation.</summary>
+
         public void BoltingRadiatorsToARealShipHurtsMoreOftenThanItHelps()
         {
             Assert.True(RetrofitLab.Corpus.BoltedHurt > RetrofitLab.Corpus.BoltedHelped,
@@ -37,7 +37,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PlumbingWorksOnTheShipsItCanBeFittedTo operation.</summary>
+
         public void PlumbingWorksOnTheShipsItCanBeFittedTo()
         {
             Assert.True(RetrofitLab.Corpus.PlumbedHelped > RetrofitLab.Corpus.PlumbedHurt * 3,

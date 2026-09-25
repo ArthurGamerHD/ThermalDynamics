@@ -12,16 +12,16 @@ namespace Thermodynamics.Tests
     public class ScenarioClaimTests
     {
         [Fact]
-/// <summary>RadiatorsHelpWhenTheyStandClearAndHurtWhenTheyDoNot operation.</summary>
+
         public void RadiatorsHelpWhenTheyStandClearAndHurtWhenTheyDoNot()
         {
             string summary = Scenarios.Run("radiator").Summary;
 
-/// <summary>ExtractCelsius operation.</summary>
+
             float bare = ExtractCelsius(summary, 0);
-/// <summary>ExtractCelsius operation.</summary>
+
             float flush = ExtractCelsius(summary, 1);
-/// <summary>ExtractCelsius operation.</summary>
+
             float clear = ExtractCelsius(summary, 2);
 
             Assert.True(clear < bare, "panels with clearance should beat a bare hull");
@@ -29,7 +29,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OpeningTheDoorLetsASealedRoomRadiate operation.</summary>
+
         public void OpeningTheDoorLetsASealedRoomRadiate()
         {
             ScenarioResult result = Scenarios.Run("airlock");
@@ -50,7 +50,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LosingThePumpBreaksTheLoopAndHeatsTheReactor operation.</summary>
+
         public void LosingThePumpBreaksTheLoopAndHeatsTheReactor()
         {
             ScenarioResult result = Scenarios.Run("coolant-failure");
@@ -67,7 +67,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUnfinishedBlockSwingsFurtherThanAFinishedOne operation.</summary>
+
         public void AnUnfinishedBlockSwingsFurtherThanAFinishedOne()
         {
             ScenarioResult result = Scenarios.Run("welding");
@@ -83,7 +83,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStifferStepNeedsMoreSubstepsAndStillLandsInTheSamePlace operation.</summary>
+
         public void AStifferStepNeedsMoreSubstepsAndStillLandsInTheSamePlace()
         {
             ScenarioResult result = Scenarios.Run("stiff");
@@ -101,14 +101,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheUnitsScenarioShowsTheClockAndNotTheDestination operation.</summary>
+
         public void TheUnitsScenarioShowsTheClockAndNotTheDestination()
         {
             ScenarioResult result = Scenarios.Run("units");
 
-/// <summary>ExtractCelsius operation.</summary>
+
             float physical = ExtractCelsius(result.Summary, 0);
-/// <summary>ExtractCelsius operation.</summary>
+
             float shipped = ExtractCelsius(result.Summary, 2);
 
             Assert.True(shipped < physical,
@@ -116,7 +116,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSolverBenchmarkMeasuresConductionAndNotTheSkipPath operation.</summary>
+
         public void TheSolverBenchmarkMeasuresConductionAndNotTheSkipPath()
         {
             ScenarioResult result = Scenarios.Run("solver");
@@ -147,14 +147,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStormReachesMoreThanTheWind operation.</summary>
+
         public void AStormReachesMoreThanTheWind()
         {
             string summary = Scenarios.Run("weather").Summary;
 
-/// <summary>ExtractCelsius operation.</summary>
+
             float clear = ExtractCelsius(summary, 0);
-/// <summary>ExtractCelsius operation.</summary>
+
             float stormy = ExtractCelsius(summary, 1);
 
             Assert.True(stormy < clear - 10f,
@@ -163,24 +163,24 @@ namespace Thermodynamics.Tests
             MatchCollection numbers = Regex.Matches(summary, @"(\d+(?:\.\d+)?) W/m2 against (\d+)");
             Assert.True(numbers.Count > 0, "no solar comparison in: " + summary);
 
-/// <summary>Parse operation.</summary>
+
             float stormSolar = Parse(numbers[0].Groups[1].Value);
-/// <summary>Parse operation.</summary>
+
             float clearSolar = Parse(numbers[0].Groups[2].Value);
             Assert.True(stormSolar < clearSolar * 0.25f, "overcast should darken the sun: " + summary);
 
             MatchCollection convection = Regex.Matches(summary, @"at ([\d.]+) against ([\d.]+) W/\(m2 K\)");
             Assert.True(convection.Count > 0, "no convection comparison in: " + summary);
 
-/// <summary>Parse operation.</summary>
+
             float stormH = Parse(convection[0].Groups[1].Value);
-/// <summary>Parse operation.</summary>
+
             float clearH = Parse(convection[0].Groups[2].Value);
             Assert.True(stormH > clearH * 1.5f, "wet air should strip heat faster: " + summary);
         }
 
         [Fact]
-/// <summary>DepthDampsTheDayAndThenWarmsTheRock operation.</summary>
+
         public void DepthDampsTheDayAndThenWarmsTheRock()
         {
             string summary = Scenarios.Run("underground").Summary;
@@ -188,24 +188,24 @@ namespace Thermodynamics.Tests
             MatchCollection swings = Regex.Matches(summary, @"swing ([\d.]+) K");
             Assert.True(swings.Count >= 3, "expected a swing per depth in: " + summary);
 
-/// <summary>Parse operation.</summary>
+
             float surface = Parse(swings[0].Groups[1].Value);
-/// <summary>Parse operation.</summary>
+
             float shallow = Parse(swings[1].Groups[1].Value);
-/// <summary>Parse operation.</summary>
+
             float deep = Parse(swings[2].Groups[1].Value);
 
             Assert.True(surface > 5f, "the surface should have a day at all: " + summary);
             Assert.True(shallow < surface, "ten metres of rock should blunt it: " + summary);
             Assert.True(deep < 0.1f, "a hundred metres down there should be no day: " + summary);
 
-/// <summary>ExtractCelsius operation.</summary>
+
             float hundredMetres = ExtractCelsius(summary, 4);
-/// <summary>ExtractCelsius operation.</summary>
+
             float fiveKm = ExtractCelsius(summary, 6);
-/// <summary>ExtractCelsius operation.</summary>
+
             float twentyKm = ExtractCelsius(summary, 8);
-/// <summary>ExtractCelsius operation.</summary>
+
             float mountain = ExtractCelsius(summary, 10);
 
             Assert.True(fiveKm > hundredMetres + 50f, "below the deadzone the rock should warm: " + summary);
@@ -215,19 +215,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStationIsHarderToCoolThanAShipAndForADifferentReasonInAir operation.</summary>
+
         public void AStationIsHarderToCoolThanAShipAndForADifferentReasonInAir()
         {
             string summary = Scenarios.Run("station").Summary;
 
             Match vacuum = Regex.Match(summary,
-/// <summary>settles operation.</summary>
+
                 @"In vacuum the station's mean block settles ([\d,.]+) K above ambient against the ship's ([\d,.]+) K");
             Assert.True(vacuum.Success, "the vacuum comparison is not in the summary: " + summary);
 
-/// <summary>Parse operation.</summary>
+
             float stationVacuum = Parse(vacuum.Groups[1].Value);
-/// <summary>Parse operation.</summary>
+
             float shipVacuum = Parse(vacuum.Groups[2].Value);
 
             Assert.True(stationVacuum > shipVacuum,
@@ -238,9 +238,9 @@ namespace Thermodynamics.Tests
                 @"At ten times the load, where the air rises are large enough to divide, ([\d,.]+) K against ([\d,.]+) K");
             Assert.True(air.Success, "the loaded air comparison is not in the summary: " + summary);
 
-/// <summary>Parse operation.</summary>
+
             float stationAir = Parse(air.Groups[1].Value);
-/// <summary>Parse operation.</summary>
+
             float shipAir = Parse(air.Groups[2].Value);
 
             Assert.True(stationAir > shipAir,
@@ -255,7 +255,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheStationAndTheShipAreMatchedOnBlocksAndHalvedOnArea operation.</summary>
+
         public void TheStationAndTheShipAreMatchedOnBlocksAndHalvedOnArea()
         {
             HashSet<Vector3I> ship = GridShapes.Ship(40, 9, 12);
@@ -263,9 +263,9 @@ namespace Thermodynamics.Tests
 
             Assert.InRange(station.Count, ship.Count - 5, ship.Count + 5);
 
-/// <summary>ExternalFaces operation.</summary>
+
             int shipFaces = ExternalFaces(ship);
-/// <summary>ExternalFaces operation.</summary>
+
             int stationFaces = ExternalFaces(station);
 
             Assert.True(stationFaces > 0 && shipFaces > 0, "a shape with no outside is not a hull");
@@ -274,12 +274,12 @@ namespace Thermodynamics.Tests
             Assert.InRange(ratio, 1.9f, 2.1f);
         }
 
-/// <summary>ExternalFaces operation.</summary>
+
         private static int ExternalFaces(HashSet<Vector3I> cells)
         {
-/// <summary>Vector3I operation.</summary>
+
             Vector3I min = new Vector3I(int.MaxValue, int.MaxValue, int.MaxValue);
-/// <summary>Vector3I operation.</summary>
+
             Vector3I max = new Vector3I(int.MinValue, int.MinValue, int.MinValue);
             foreach (Vector3I cell in cells)
             {
@@ -289,9 +289,9 @@ namespace Thermodynamics.Tests
             min -= Vector3I.One;
             max += Vector3I.One;
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> outside = new HashSet<Vector3I>(Vector3I.Comparer);
-/// <summary>Queue operation.</summary>
+
             Queue<Vector3I> queue = new Queue<Vector3I>();
             outside.Add(min);
             queue.Enqueue(min);
@@ -321,13 +321,13 @@ namespace Thermodynamics.Tests
             return faces;
         }
 
-/// <summary>Parse operation.</summary>
+
         private static float Parse(string value)
         {
             return float.Parse(value.Replace(",", ""), CultureInfo.InvariantCulture);
         }
 
-/// <summary>ExtractCelsius operation.</summary>
+
         internal static float ExtractCelsius(string summary, int index)
         {
             MatchCollection matches = Regex.Matches(summary, @"(-?[\d,]+(?:\.\d+)?) C");

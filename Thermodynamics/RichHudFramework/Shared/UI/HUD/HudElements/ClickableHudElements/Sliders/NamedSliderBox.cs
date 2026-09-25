@@ -44,10 +44,10 @@ namespace RichHudFramework.UI
 
 		protected readonly Label name, current;
 
-/// <summary>NamedSliderBox operation.</summary>
+
 		public NamedSliderBox(HudParentBase parent) : base(parent)
 		{
-/// <summary>SliderBox operation.</summary>
+
 			SliderBox = new SliderBox(this)
 			{
 				DimAlignment = DimAlignments.UnpaddedWidth,
@@ -55,40 +55,40 @@ namespace RichHudFramework.UI
 				UseCursor = true,
 			};
 
-/// <summary>Label operation.</summary>
+
 			name = new Label(this)
 			{
 				AutoResize = false,
 				Format = TerminalFormatting.ControlFormat,
 				Text = "NewSlideBox",
-/// <summary>Vector2 operation.</summary>
+
 				Offset = new Vector2(0f, -18f),
 				ParentAlignment = ParentAlignments.PaddedInnerLeft | ParentAlignments.Top
 			};
 
-/// <summary>Label operation.</summary>
+
 			current = new Label(this)
 			{
 				AutoResize = false,
 				Format = TerminalFormatting.ControlFormat.WithAlignment(TextAlignment.Right),
 				Text = "Value",
-/// <summary>Vector2 operation.</summary>
+
 				Offset = new Vector2(0f, -18f),
 				ParentAlignment = ParentAlignments.PaddedInnerRight | ParentAlignments.Top
 			};
 
 			FocusHandler.InputOwner = this;
-/// <summary>Vector2 operation.</summary>
+
 			Padding = new Vector2(40f, 0f);
-/// <summary>Vector2 operation.</summary>
+
 			Size = new Vector2(317f, 70f);
 		}
 
-/// <summary>NamedSliderBox operation.</summary>
+
 		public NamedSliderBox() : this(null)
 		{ }
 
-/// <summary>Layout operation.</summary>
+
 		protected override void Layout()
 		{
 			Vector2 size = UnpaddedSize;

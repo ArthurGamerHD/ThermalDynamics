@@ -13,25 +13,25 @@ namespace Thermodynamics.Harness
         [ThreadStatic]
         public static Func<BlockThermalProperties, BlockThermalProperties> MaterialOverride;
 
-/// <summary>Applies the .</summary>
+
         private static BlockThermalProperties Apply(BlockThermalProperties properties)
         {
             return MaterialOverride == null ? properties : MaterialOverride(properties);
         }
 
-/// <summary>DefaultThermal operation.</summary>
+
         public static BlockThermalProperties DefaultThermal()
         {
             return Apply(RawDefault());
         }
 
-/// <summary>RawDefault operation.</summary>
+
         private static BlockThermalProperties RawDefault()
         {
             return new BlockThermalProperties
             {
-                Conductivity = 50f,          // mild steel, W/(m K)
-                SpecificHeat = 450f,       // mild steel
+                Conductivity = 50f,
+                SpecificHeat = 450f,
                 Emissivity = 0.125f,
                 ExposedSurfaceMultiplier = 1f,
                 ProducerWasteEnergy = 0.05f,
@@ -41,54 +41,54 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>ReactorThermal operation.</summary>
+
         public static BlockThermalProperties ReactorThermal()
         {
-/// <summary>RawDefault operation.</summary>
+
             BlockThermalProperties t = RawDefault();
-            t.Conductivity = 50f;      // steel
-            t.SpecificHeat = 600f;     // steel with graphite shielding
+            t.Conductivity = 50f;
+            t.SpecificHeat = 600f;
             t.Emissivity = 0.25f;
             t.ProducerWasteEnergy = 0.25f;
             t.ConsumerWasteEnergy = 0.25f;
             t.CriticalTemperature = 1200f;
             t.OverheatDamagePerKelvin = 0.25f;
-/// <summary>Applies the .</summary>
+
             return Apply(t);
         }
 
-/// <summary>RadiatorThermal operation.</summary>
+
         public static BlockThermalProperties RadiatorThermal()
         {
-/// <summary>RawDefault operation.</summary>
+
             BlockThermalProperties t = RawDefault();
-            t.Conductivity = 237f;     // aluminium
-            t.SpecificHeat = 900f;     // aluminium
+            t.Conductivity = 237f;
+            t.SpecificHeat = 900f;
             t.Emissivity = 0.35f;
             t.ExposedSurfaceMultiplier = 1.25f;
             t.ProducerWasteEnergy = 0f;
             t.ConsumerWasteEnergy = 0f;
             t.CriticalTemperature = 1000f;
-/// <summary>Applies the .</summary>
+
             return Apply(t);
         }
 
-/// <summary>CoolantThermal operation.</summary>
+
         public static BlockThermalProperties CoolantThermal()
         {
-/// <summary>RawDefault operation.</summary>
+
             BlockThermalProperties t = RawDefault();
-            t.Conductivity = 400f;     // copper
-            t.SpecificHeat = 385f;     // copper
+            t.Conductivity = 400f;
+            t.SpecificHeat = 385f;
             t.ProducerWasteEnergy = 0f;
             t.ConsumerWasteEnergy = 0f;
             t.CriticalTemperature = 1000f;
-/// <summary>Applies the .</summary>
+
             return Apply(t);
         }
 
 
-/// <summary>From operation.</summary>
+
         private static BlockModel From(string name, string subtype)
         {
             Vanilla.Block real = Vanilla.Find(subtype);
@@ -102,63 +102,63 @@ namespace Thermodynamics.Harness
             return BlockModel.Solid(name, real.Size, real.Mass, Apply(real.Thermal));
         }
 
-/// <summary>LightArmor operation.</summary>
+
         public static BlockModel LightArmor()
         {
-/// <summary>From operation.</summary>
+
             return From("LightArmorBlock", "LargeBlockArmorBlock");
         }
 
-/// <summary>LightArmorBar operation.</summary>
+
         public static BlockModel LightArmorBar(int length)
         {
             return BlockModel.Solid("LightArmorBar", new Vector3I(length, 1, 1), 500f * length, DefaultThermal());
         }
 
-/// <summary>LightArmorCube operation.</summary>
+
         public static BlockModel LightArmorCube(int size)
         {
             return BlockModel.Solid(
-/// <summary>Vector3I operation.</summary>
+
                 "LightArmorCube", new Vector3I(size, size, size), 500f * size * size * size, DefaultThermal());
         }
 
-/// <summary>HeavyArmor operation.</summary>
+
         public static BlockModel HeavyArmor()
         {
-/// <summary>From operation.</summary>
+
             return From("HeavyArmorBlock", "LargeHeavyBlockArmorBlock");
         }
 
-/// <summary>Reactor operation.</summary>
+
         public static BlockModel Reactor()
         {
-/// <summary>From operation.</summary>
+
             return From("SmallReactor", "LargeBlockSmallGenerator");
         }
 
-/// <summary>LargeReactor operation.</summary>
+
         public static BlockModel LargeReactor()
         {
-/// <summary>From operation.</summary>
+
             return From("LargeReactor", "LargeBlockLargeGenerator");
         }
 
-/// <summary>Battery operation.</summary>
+
         public static BlockModel Battery()
         {
-/// <summary>From operation.</summary>
+
             return From("Battery", "LargeBlockBatteryBlock");
         }
 
-/// <summary>Thruster operation.</summary>
+
         public static BlockModel Thruster()
         {
-/// <summary>From operation.</summary>
+
             return From("LargeThruster", "LargeBlockLargeThrust");
         }
 
-/// <summary>Radiator operation.</summary>
+
         public static BlockModel Radiator()
         {
             BlockModel model = BlockModel.Solid("Radiator", new Vector3I(1, 5, 2), 900f, RadiatorThermal());
@@ -173,7 +173,7 @@ namespace Thermodynamics.Harness
             return model;
         }
 
-/// <summary>SlideDoor operation.</summary>
+
         public static BlockModel SlideDoor()
         {
             BlockModel model = BlockModel.Solid("AirtightSlideDoor", Vector3I.One, 1065f, DefaultThermal());
@@ -197,7 +197,7 @@ namespace Thermodynamics.Harness
             return model;
         }
 
-/// <summary>AirtightDoor operation.</summary>
+
         public static BlockModel AirtightDoor()
         {
             BlockModel model = BlockModel.Solid("AirtightDoor", Vector3I.One, 400f, DefaultThermal());
@@ -205,14 +205,14 @@ namespace Thermodynamics.Harness
             return model;
         }
 
-/// <summary>Grating operation.</summary>
+
         public static BlockModel Grating()
         {
             return BlockModel.Open("Grating", Vector3I.One, 200f, DefaultThermal());
         }
 
 
-/// <summary>CoolantPipeStraight operation.</summary>
+
         public static BlockModel CoolantPipeStraight(params Vector3I[] sinkDirections)
         {
             BlockModel model = BlockModel.Solid("CoolantPipe_Straight", Vector3I.One, 220f, CoolantThermal());
@@ -220,7 +220,7 @@ namespace Thermodynamics.Harness
             return model;
         }
 
-/// <summary>CoolantPipeCorner operation.</summary>
+
         public static BlockModel CoolantPipeCorner(params Vector3I[] sinkDirections)
         {
             BlockModel model = BlockModel.Solid("CoolantPipe_Corner", Vector3I.One, 220f, CoolantThermal());
@@ -228,7 +228,7 @@ namespace Thermodynamics.Harness
             return model;
         }
 
-/// <summary>CoolantPump operation.</summary>
+
         public static BlockModel CoolantPump()
         {
             BlockModel model = BlockModel.Solid("CoolantPump", Vector3I.One, 600f, CoolantThermal());
@@ -236,7 +236,7 @@ namespace Thermodynamics.Harness
             return model;
         }
 
-/// <summary>CoolantPumpLong operation.</summary>
+
         public static BlockModel CoolantPumpLong()
         {
             BlockModel model = BlockModel.Solid("CoolantPump_Long", new Vector3I(1, 1, 3), 600f, CoolantThermal());
@@ -245,14 +245,14 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>HeatPump operation.</summary>
+
         public static BlockModel HeatPump()
         {
-/// <summary>HeatPump operation.</summary>
+
             return HeatPump(60000f, 20000f);
         }
 
-/// <summary>HeatPump operation.</summary>
+
         public static BlockModel HeatPump(float ratedWatts, float maxPowerWatts)
         {
             BlockModel model = BlockModel.Solid("HeatPump", Vector3I.One, 800f, DefaultThermal());

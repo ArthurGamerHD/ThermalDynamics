@@ -31,10 +31,10 @@ namespace Thermodynamics.Harness
             0d, 0.5d, 2d, 10d, 40d, 80d, 160d, 400d, 600d, 1200d, 5000d, 20000d,
         };
 
-/// <summary>All operation.</summary>
+
         public static List<Scenario> All()
         {
-/// <summary>List operation.</summary>
+
             List<Scenario> list = new List<Scenario>();
 
             for (int i = 0; i < WindLab.Planet.VanillaNames.Length; i++)
@@ -169,7 +169,7 @@ namespace Thermodynamics.Harness
             return list;
         }
 
-/// <summary>Tuned operation.</summary>
+
         private static Scenario Tuned(string name, string asks, Action<WindLab.Options> tune)
         {
             WindLab.Options options = new WindLab.Options();
@@ -217,18 +217,18 @@ namespace Thermodynamics.Harness
 
         public const float FrictionThreshold = 50f;
 
-/// <summary>Run operation.</summary>
+
         public static Outcome Run(Scenario scenario)
         {
             WindLab.Options options = scenario.Options;
             if (scenario.Heights != null) options.Heights = scenario.Heights;
 
             List<WindLab.Row> rows = scenario.Latitudes != null
-/// <summary>RunAt operation.</summary>
+
                 ? RunAt(scenario.Planet, options, scenario.Latitudes)
                 : WindLab.Run(scenario.Planet, options);
 
-/// <summary>Outcome operation.</summary>
+
             Outcome outcome = new Outcome();
             outcome.Name = scenario.Name;
             outcome.Asks = scenario.Asks;
@@ -289,16 +289,16 @@ namespace Thermodynamics.Harness
             return outcome;
         }
 
-/// <summary>RunAt operation.</summary>
+
         public static List<WindLab.Row> RunAt(
             WindLab.Planet planet, WindLab.Options options, double[] latitudes)
         {
-/// <summary>List operation.</summary>
+
             List<WindLab.Row> all = new List<WindLab.Row>();
 
             for (int i = 0; i < latitudes.Length; i++)
             {
-/// <summary>Copy operation.</summary>
+
                 WindLab.Options one = Copy(options);
                 one.LatitudeLimit = Math.Abs(latitudes[i]);
 
@@ -315,7 +315,7 @@ namespace Thermodynamics.Harness
             return all;
         }
 
-/// <summary>Copy operation.</summary>
+
         private static WindLab.Options Copy(WindLab.Options options)
         {
             return new WindLab.Options
@@ -338,12 +338,12 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report()
         {
-/// <summary>All operation.</summary>
+
             List<Scenario> scenarios = All();
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("Wind model across every shipped world, every size and every corner\n\n");
@@ -373,7 +373,7 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < scenarios.Count; i++)
             {
-/// <summary>Run operation.</summary>
+
                 Outcome o = Run(scenarios[i]);
 
                 sb.Append(string.Format(CultureInfo.InvariantCulture,

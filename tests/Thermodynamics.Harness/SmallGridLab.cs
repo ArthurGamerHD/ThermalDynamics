@@ -57,10 +57,10 @@ namespace Thermodynamics.Harness
             public int RequestedSteps;
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(int grids, IList<int> sizes, int steps, Action<string> log)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             for (int i = 0; i < sizes.Count; i++)
@@ -72,19 +72,19 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Measure operation.</summary>
+
         private static Row Measure(int grids, int blocksPerGrid, int steps)
         {
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Grids = grids;
             row.BlocksPerGrid = blocksPerGrid;
 
-/// <summary>List operation.</summary>
+
             List<ThermalSimulation> fleet = new List<ThermalSimulation>(grids);
             for (int i = 0; i < grids; i++)
             {
-/// <summary>Builds the method table.</summary>
+
                 ThermalSimulation simulation = Build(blocksPerGrid);
                 fleet.Add(simulation);
                 row.Blocks += simulation.Solver.Nodes.Count;
@@ -102,7 +102,7 @@ namespace Thermodynamics.Harness
             double best = double.MaxValue;
             double pacedBest = double.MaxValue;
             double visitBest = double.MaxValue;
-/// <summary>Stopwatch operation.</summary>
+
             Stopwatch watch = new Stopwatch();
 
             for (int repeat = 0; repeat < 4; repeat++)
@@ -123,7 +123,7 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>TimeWhole operation.</summary>
+
         private static void TimeWhole(List<ThermalSimulation> fleet, EnvironmentSample sample,
             int steps, Stopwatch watch, Row row, ref double best)
         {
@@ -143,7 +143,7 @@ namespace Thermodynamics.Harness
             row.Substeps = fleet[0].Solver.LastSubsteps;
         }
 
-/// <summary>TimePaced operation.</summary>
+
         private static void TimePaced(List<ThermalSimulation> fleet, EnvironmentSample sample,
             float frame, int frames, int steps, Stopwatch watch, Row row, ref double best)
         {
@@ -176,7 +176,7 @@ namespace Thermodynamics.Harness
             row.AdvancesPerStep = completed <= 0 ? 0d : advances / (double)completed;
         }
 
-/// <summary>TimeVisits operation.</summary>
+
         private static void TimeVisits(List<ThermalSimulation> fleet, EnvironmentSample sample,
             int frames, int steps, Stopwatch watch, ref double best)
         {
@@ -191,13 +191,13 @@ namespace Thermodynamics.Harness
             if (visits < best) best = visits;
         }
 
-/// <summary>Seed operation.</summary>
+
         private static void Seed(List<ThermalSimulation> fleet)
         {
             for (int i = 0; i < fleet.Count; i++) LoadBenchmarks.SeedSpread(fleet[i]);
         }
 
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation Build(int blocks)
         {
             if (blocks < 1) blocks = 1;
@@ -205,7 +205,7 @@ namespace Thermodynamics.Harness
             int side = 1;
             while (side * side * side < blocks) side++;
 
-/// <summary>List operation.</summary>
+
             List<Vector3I> cells = new List<Vector3I>(blocks);
             for (int x = 0; x < side && cells.Count < blocks; x++)
             {
@@ -232,10 +232,10 @@ namespace Thermodynamics.Harness
             return simulation;
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("  grids  blocks/grid    blocks  subs w/p    whole ms"
                 + "    paced ms   pacing   advances   steps p/w   us/grid/step"
@@ -262,10 +262,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("grids,blocks_per_grid,blocks,substeps,fleet_step_ms,paced_step_ms,"
                 + "pacing_overhead,advances_per_step,us_per_grid_step,ns_per_block_step,"

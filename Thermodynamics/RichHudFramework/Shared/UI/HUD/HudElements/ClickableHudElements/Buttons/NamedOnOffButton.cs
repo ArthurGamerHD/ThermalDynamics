@@ -38,10 +38,10 @@ namespace RichHudFramework.UI
 
 		protected readonly HudChain layout;
 
-/// <summary>NamedOnOffButton operation.</summary>
+
 		public NamedOnOffButton(HudParentBase parent) : base(parent)
 		{
-/// <summary>Label operation.</summary>
+
 			name = new Label()
 			{
 				Format = TerminalFormatting.ControlFormat.WithAlignment(TextAlignment.Center),
@@ -49,10 +49,10 @@ namespace RichHudFramework.UI
 				Height = 22f,
 			};
 
-/// <summary>OnOffButton operation.</summary>
+
 			onOffButton = new OnOffButton();
 
-/// <summary>HudChain operation.</summary>
+
 			layout = new HudChain(true, this)
 			{
 				DimAlignment = DimAlignments.UnpaddedSize,
@@ -61,13 +61,13 @@ namespace RichHudFramework.UI
 			};
 
 			FocusHandler.InputOwner = this;
-/// <summary>Vector2 operation.</summary>
+
 			Padding = new Vector2(40f, 0f);
-/// <summary>Vector2 operation.</summary>
+
 			Size = new Vector2(300f, 84f);
 		}
 
-/// <summary>NamedOnOffButton operation.</summary>
+
 		public NamedOnOffButton() : this(null)
 		{ }
 	}

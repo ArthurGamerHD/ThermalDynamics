@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>CatalogDriftTests operation.</summary>
+
         public CatalogDriftTests(ITestOutputHelper output)
         {
             this.output = output;
@@ -24,37 +24,37 @@ namespace Thermodynamics.Tests
             public string Vanilla;
         }
 
-/// <summary>Stands operation.</summary>
+
         private static List<Stand> Stands()
         {
             return new List<Stand>
             {
-/// <summary>Mass operation.</summary>
+
                 new Stand { Catalogue = "LightArmorBlock", CatalogueMass = Mass(Catalog.LightArmor()), Vanilla = "LargeBlockArmorBlock" },
-/// <summary>Mass operation.</summary>
+
                 new Stand { Catalogue = "HeavyArmorBlock", CatalogueMass = Mass(Catalog.HeavyArmor()), Vanilla = "LargeHeavyBlockArmorBlock" },
-/// <summary>Mass operation.</summary>
+
                 new Stand { Catalogue = "SmallReactor", CatalogueMass = Mass(Catalog.Reactor()), Vanilla = "LargeBlockSmallGenerator" },
-/// <summary>Mass operation.</summary>
+
                 new Stand { Catalogue = "LargeReactor", CatalogueMass = Mass(Catalog.LargeReactor()), Vanilla = "LargeBlockLargeGenerator" },
-/// <summary>Mass operation.</summary>
+
                 new Stand { Catalogue = "Battery", CatalogueMass = Mass(Catalog.Battery()), Vanilla = "LargeBlockBatteryBlock" },
-/// <summary>Mass operation.</summary>
+
                 new Stand { Catalogue = "LargeThruster", CatalogueMass = Mass(Catalog.Thruster()), Vanilla = "LargeBlockLargeThrust" },
             };
         }
 
-/// <summary>Mass operation.</summary>
+
         private static float Mass(BlockModel model)
         {
             return model.Mass;
         }
 
         [Fact]
-/// <summary>EveryStandInWeighsWhatItStandsInFor operation.</summary>
+
         public void EveryStandInWeighsWhatItStandsInFor()
         {
-/// <summary>List operation.</summary>
+
             List<string> drifted = new List<string>();
             float worst = 1f;
 
@@ -85,7 +85,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AScenarioReactorWastesWhatAShippedOneWastes operation.</summary>
+
         public void AScenarioReactorWastesWhatAShippedOneWastes()
         {
             BlockThermalProperties catalogue = Catalog.Reactor().Thermal;
@@ -102,7 +102,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ArmourMatchesExactly operation.</summary>
+
         public void ArmourMatchesExactly()
         {
             Assert.Equal(Vanilla.Find("LargeBlockArmorBlock").Mass, Mass(Catalog.LightArmor()), 1);

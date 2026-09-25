@@ -46,7 +46,7 @@ namespace Thermodynamics.Harness
 
         private static BlockModel producer;
 
-/// <summary>Producer operation.</summary>
+
         public static BlockModel Producer()
         {
             if (producer != null) return producer;
@@ -61,8 +61,8 @@ namespace Thermodynamics.Harness
 
         public static class Field
         {
-            public const float LeastDemand = 21.35f;   // STR Hound, 1,293 blocks, 19 Aug, Frequency 4
-            public const float MostDemand = 31.25f;    // UNSC Infinity, 42,051 blocks, 18 Aug, Frequency 4
+            public const float LeastDemand = 21.35f;
+            public const float MostDemand = 31.25f;
 
             public const float RaisedAtCap8 = 0.0116f;
             public const float RaisedAtCap4 = 0.0601f;
@@ -118,7 +118,7 @@ namespace Thermodynamics.Harness
 
         private static BlockModel[] models;
 
-/// <summary>Models operation.</summary>
+
         public static BlockModel[] Models()
         {
             if (models != null) return models;
@@ -132,7 +132,7 @@ namespace Thermodynamics.Harness
                 thermal.Conductivity = tier.Conductivity;
                 thermal.CriticalTemperature = tier.CriticalTemperature;
 
-/// <summary>Mounted operation.</summary>
+
                 built[i] = Mounted(tier.Name, tier.Mass, thermal, tier.MountFaces);
             }
 
@@ -140,7 +140,7 @@ namespace Thermodynamics.Harness
             return models;
         }
 
-/// <summary>Mounted operation.</summary>
+
         private static BlockModel Mounted(
             string name, float mass, BlockThermalProperties thermal, int mountFaces)
         {
@@ -157,7 +157,7 @@ namespace Thermodynamics.Harness
             return model;
         }
 
-/// <summary>TierAt operation.</summary>
+
         public static int TierAt(int index)
         {
             float position = ((index * 2654435761u) % 1000000u) / 1000000f;
@@ -172,14 +172,14 @@ namespace Thermodynamics.Harness
             return Tiers.Length - 1;
         }
 
-/// <summary>ProducesHeatAt operation.</summary>
+
         public static bool ProducesHeatAt(int index)
         {
             int period = (int)Math.Round(1f / ProducerShare);
             return period > 0 && (index % period) == 0;
         }
 
-/// <summary>IsProducer operation.</summary>
+
         public static bool IsProducer(ThermalNode node)
         {
             if (node == null || node.Block == null || node.Block.Model == null) return false;
@@ -189,20 +189,20 @@ namespace Thermodynamics.Harness
 
         public const string ProducerName = "producer";
 
-/// <summary>PlaceCensus operation.</summary>
+
         public static GridBuilder PlaceCensus(this GridBuilder builder, IEnumerable<Vector3I> cells)
         {
-/// <summary>Models operation.</summary>
+
             BlockModel[] tiers = Models();
-/// <summary>Producer operation.</summary>
+
             BlockModel source = Producer();
 
-/// <summary>List operation.</summary>
+
             List<Vector3I> layout = new List<Vector3I>(cells);
-/// <summary>TiersFor operation.</summary>
+
             int[] tierOf = TiersFor(layout);
 
-/// <summary>Bolt operation.</summary>
+
             BlockOrientation[] orientations = Bolt(layout, tierOf, tiers);
 
             for (int i = 0; i < layout.Count; i++)
@@ -220,11 +220,11 @@ namespace Thermodynamics.Harness
             return builder;
         }
 
-/// <summary>TiersFor operation.</summary>
+
         public static int[] TiersFor(List<Vector3I> layout)
         {
             int[] tierOf = new int[layout.Count];
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> filled = new HashSet<Vector3I>(layout);
 
             for (int i = 0; i < layout.Count; i++) tierOf[i] = TierAt(i);
@@ -233,21 +233,21 @@ namespace Thermodynamics.Harness
             return tierOf;
         }
 
-/// <summary>SurfaceTheLightestTier operation.</summary>
+
         private static void SurfaceTheLightestTier(
             List<Vector3I> layout, int[] tierOf, HashSet<Vector3I> filled)
         {
             const int Lightest = 0;
 
-/// <summary>List operation.</summary>
+
             List<int> buried = new List<int>();
-/// <summary>List operation.</summary>
+
             List<int> exposedElsewhere = new List<int>();
             int[] faces = new int[layout.Count];
 
             for (int i = 0; i < layout.Count; i++)
             {
-/// <summary>ExposedFaces operation.</summary>
+
                 faces[i] = ExposedFaces(layout[i], filled);
                 if (ProducesHeatAt(i)) continue;
 
@@ -278,12 +278,12 @@ namespace Thermodynamics.Harness
 
         private static int boltIdentity;
 
-/// <summary>EnsureBoltTable operation.</summary>
+
         private static void EnsureBoltTable()
         {
             if (boltOrientations != null) return;
 
-/// <summary>List operation.</summary>
+
             List<BlockOrientation> all = new List<BlockOrientation>(PipeFitter.AllOrientations());
             int[] rotated = new int[all.Count * Face.Count];
 
@@ -301,7 +301,7 @@ namespace Thermodynamics.Harness
             boltOrientations = all.ToArray();
         }
 
-/// <summary>Bolt operation.</summary>
+
         public static BlockOrientation[] Bolt(IList<Vector3I> layout, int[] tierOf, BlockModel[] tiers)
         {
             EnsureBoltTable();
@@ -362,7 +362,7 @@ namespace Thermodynamics.Harness
                         if (neighbour < 0) continue;
 
                         if (!placed[neighbour]
-/// <summary>MountsToward operation.</summary>
+
                             || MountsToward(mounts[tierOf[neighbour]], chosenIndex[neighbour], Face.Opposite(toward)))
                         {
                             joined++;
@@ -382,7 +382,7 @@ namespace Thermodynamics.Harness
             return chosen;
         }
 
-/// <summary>MountsToward operation.</summary>
+
         private static bool MountsToward(int mount, int orientation, int towardFace)
         {
             int b = orientation * Face.Count;
@@ -395,7 +395,7 @@ namespace Thermodynamics.Harness
             return false;
         }
 
-/// <summary>ExposedFaces operation.</summary>
+
         private static int ExposedFaces(Vector3I cell, HashSet<Vector3I> filled)
         {
             int open = 0;
@@ -410,14 +410,14 @@ namespace Thermodynamics.Harness
             return open;
         }
 
-/// <summary>DriveCensus operation.</summary>
+
         public static int DriveCensus(ThermalSimulation simulation)
         {
-/// <summary>DriveCensus operation.</summary>
+
             return DriveCensus(simulation, ProducerWatts);
         }
 
-/// <summary>DriveCensus operation.</summary>
+
         public static int DriveCensus(ThermalSimulation simulation, float watts)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -438,7 +438,7 @@ namespace Thermodynamics.Harness
             return producers;
         }
 
-/// <summary>DriveThrust operation.</summary>
+
         public static int DriveThrust(ThermalSimulation simulation, float watts)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;

@@ -64,27 +64,27 @@ namespace RichHudFramework.UI
 
 		protected int focusedChannel;
 
-/// <summary>ColorPickerRGB operation.</summary>
+
 		public ColorPickerRGB(HudParentBase parent) : base(parent)
 		{
-/// <summary>Label operation.</summary>
+
 			name = new Label()
 			{
 				Format = GlyphFormat.Blueish.WithSize(1.08f),
 				Text = "NewColorPicker",
 				AutoResize = false,
-/// <summary>Vector2 operation.</summary>
+
 				Size = new Vector2(88f, 22f)
 			};
 
-/// <summary>TexturedBox operation.</summary>
+
 			display = new TexturedBox()
 			{
 				Width = 231f,
 				Color = Color.Black
 			};
 
-/// <summary>BorderBox operation.</summary>
+
 			var dispBorder = new BorderBox(display)
 			{
 				Color = Color.White,
@@ -92,7 +92,7 @@ namespace RichHudFramework.UI
 				DimAlignment = DimAlignments.Size,
 			};
 
-/// <summary>HudChain operation.</summary>
+
 			headerChain = new HudChain(false)
 			{
 				Height = 22f,
@@ -102,11 +102,11 @@ namespace RichHudFramework.UI
 
 			sliderText = new Label[]
 			{
-/// <summary>Label operation.</summary>
+
 				new Label() { AutoResize = false, Format = TerminalFormatting.ControlFormat, Height = 47f },
-/// <summary>Label operation.</summary>
+
 				new Label() { AutoResize = false, Format = TerminalFormatting.ControlFormat, Height = 47f },
-/// <summary>Label operation.</summary>
+
 				new Label() { AutoResize = false, Format = TerminalFormatting.ControlFormat, Height = 47f }
 			};
 
@@ -125,19 +125,19 @@ namespace RichHudFramework.UI
 			
 			sliders = new SliderBox[]
 			{
-/// <summary>SliderBox operation.</summary>
+
 				new SliderBox()
 				{
 					Min = 0f, Max = 255f, Height = 47f,
 					UpdateValueCallback = UpdateChannelR
 				},
-/// <summary>SliderBox operation.</summary>
+
 				new SliderBox()
 				{
 					Min = 0f, Max = 255f, Height = 47f,
 					UpdateValueCallback = UpdateChannelG
 				},
-/// <summary>SliderBox operation.</summary>
+
 				new SliderBox()
 				{
 					Min = 0f, Max = 255f, Height = 47f,
@@ -158,14 +158,14 @@ namespace RichHudFramework.UI
 				}
 			};
 
-/// <summary>HudChain operation.</summary>
+
 			colorChain = new HudChain(false)
 			{
 				SizingMode = HudChainSizingModes.FitMembersOffAxis,
 				CollectionContainer = { { colorNameColumn, 0f }, { colorSliderColumn, 1f } }
 			};
 
-/// <summary>HudChain operation.</summary>
+
 			var mainChain = new HudChain(true, this)
 			{
 				DimAlignment = DimAlignments.UnpaddedSize,
@@ -178,7 +178,7 @@ namespace RichHudFramework.UI
 				}
 			};
 
-/// <summary>Vector2 operation.</summary>
+
 			Size = new Vector2(318f, 163f);
 			UseCursor = true;
 			ShareCursor = true;
@@ -187,11 +187,11 @@ namespace RichHudFramework.UI
 			lastColor = _color;
 		}
 
-/// <summary>ColorPickerRGB operation.</summary>
+
 		public ColorPickerRGB() : this(null)
 		{ }
 
-/// <summary>Sets the channelfocused.</summary>
+
 		public void SetChannelFocused(int channel)
 		{
 			channel = MathHelper.Clamp(channel, 0, 2);
@@ -200,7 +200,7 @@ namespace RichHudFramework.UI
 				focusedChannel = channel;
 		}
 
-/// <summary>UpdateChannelR operation.</summary>
+
 		protected virtual void UpdateChannelR(object sender, EventArgs args)
 		{
 			var slider = sender as SliderBox;
@@ -209,7 +209,7 @@ namespace RichHudFramework.UI
 			display.Color = _color;
 		}
 
-/// <summary>UpdateChannelG operation.</summary>
+
 		protected virtual void UpdateChannelG(object sender, EventArgs args)
 		{
 			var slider = sender as SliderBox;
@@ -218,7 +218,7 @@ namespace RichHudFramework.UI
 			display.Color = _color;
 		}
 
-/// <summary>UpdateChannelB operation.</summary>
+
 		protected virtual void UpdateChannelB(object sender, EventArgs args)
 		{
 			var slider = sender as SliderBox;
@@ -227,7 +227,7 @@ namespace RichHudFramework.UI
 			display.Color = _color;
 		}
 
-/// <summary>HandleInput operation.</summary>
+
 		protected override void HandleInput(Vector2 cursorPos)
 		{
 			if (_color != lastColor)
@@ -251,7 +251,7 @@ namespace RichHudFramework.UI
 						i = MathHelper.Clamp(i - 1, 0, sliders.Length - 1);
 						sliders[i].FocusHandler.GetInputFocus();
 					}
-/// <summary>if operation.</summary>
+
 					else if (SharedBinds.DownArrow.IsNewPressed)
 					{
 						i = MathHelper.Clamp(i + 1, 0, sliders.Length - 1);

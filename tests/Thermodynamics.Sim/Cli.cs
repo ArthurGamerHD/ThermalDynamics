@@ -2,7 +2,7 @@ namespace Thermodynamics.Sim
 {
     public static class Cli
     {
-/// <summary>Value operation.</summary>
+
         public static string Value(string[] args, string flag)
         {
             for (int i = 0; i < args.Length - 1; i++)
@@ -12,7 +12,7 @@ namespace Thermodynamics.Sim
             return null;
         }
 
-/// <summary>Has operation.</summary>
+
         public static bool Has(string[] args, string flag)
         {
             for (int i = 0; i < args.Length; i++)

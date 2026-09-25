@@ -85,13 +85,13 @@ namespace Thermodynamics.Harness
 
         public long SubstepCost;
 
-/// <summary>ToString operation.</summary>
+
         public override string ToString()
         {
             return Ship + " / " + Scenario + ": " + PeakKelvin.ToString("n0") + " K peak";
         }
 
-/// <summary>Read operation.</summary>
+
         public static ScenarioOutcome Read(ShipAssembly assembly, string ship, string scenario)
         {
             ScenarioOutcome outcome = new ScenarioOutcome
@@ -113,7 +113,7 @@ namespace Thermodynamics.Harness
 
             if (outcome.Blocks == 0) return outcome;
 
-/// <summary>List operation.</summary>
+
             List<float> temperatures = new List<float>(outcome.Blocks);
             float total = 0f;
             float margin = float.MaxValue;

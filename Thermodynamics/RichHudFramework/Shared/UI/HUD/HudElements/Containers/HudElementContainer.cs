@@ -4,11 +4,11 @@
 	{
 		public virtual TElement Element { get; protected set; }
 
-/// <summary>HudNodeContainer operation.</summary>
+
 		public HudNodeContainer()
 		{ }
 
-/// <summary>Sets the element.</summary>
+
 		public virtual void SetElement(TElement element)
 		{
 			if (Element == null)
@@ -27,13 +27,13 @@
 
 		public float AlignAxisScale { get; set; }
 
-/// <summary>HudElementContainer operation.</summary>
+
 		public HudElementContainer()
 		{
 			AlignAxisScale = 0f;
 		}
 
-/// <summary>Sets the element.</summary>
+
 		public virtual void SetElement(TElement element)
 		{
 			if (Element == null)

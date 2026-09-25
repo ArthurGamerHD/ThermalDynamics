@@ -28,7 +28,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>List operation.</summary>
         private static readonly List<HeatSource> Sources = new List<HeatSource>();
         private static int nextId = 1;
 
@@ -42,27 +41,21 @@ namespace Thermodynamics
             get { return Sources; }
         }
 
-/// <summary>Adds a .</summary>
         public static int Add(IMyEntity entity, float watts, float range)
         {
             if (entity == null || entity.MarkedForClose) return 0;
-/// <summary>Registers the API and message handler.</summary>
             return Register(entity, Vector3D.Zero, watts, range);
         }
 
-/// <summary>Adds a .</summary>
         public static int Add(Vector3D position, float watts, float range)
         {
-/// <summary>Registers the API and message handler.</summary>
             return Register(null, position, watts, range);
         }
 
-/// <summary>Registers the API and message handler.</summary>
         private static int Register(IMyEntity entity, Vector3D position, float watts, float range)
         {
             if (watts <= 0f || range <= 0f) return 0;
 
-/// <summary>HeatSource operation.</summary>
             HeatSource source = new HeatSource();
             source.Id = nextId++;
             source.Entity = entity;
@@ -74,7 +67,6 @@ namespace Thermodynamics
             return source.Id;
         }
 
-/// <summary>Update operation.</summary>
         public static bool Update(int id, float watts)
         {
             for (int i = 0; i < Sources.Count; i++)
@@ -86,7 +78,6 @@ namespace Thermodynamics
             return false;
         }
 
-/// <summary>Removes the .</summary>
         public static bool Remove(int id)
         {
             for (int i = 0; i < Sources.Count; i++)
@@ -99,13 +90,11 @@ namespace Thermodynamics
             return false;
         }
 
-/// <summary>Clear operation.</summary>
         public static void Clear()
         {
             Sources.Clear();
         }
 
-/// <summary>Sample operation.</summary>
         public static int Sample(Vector3D gridCentre, ref MatrixD worldToLocal, ref HeatSourceState[] buffer)
         {
             if (Sources.Count == 0) return 0;
@@ -140,7 +129,6 @@ namespace Thermodynamics
                     buffer = grown;
                 }
 
-/// <summary>HeatSourceState operation.</summary>
                 buffer[written] = new HeatSourceState(local, irradiance);
                 written++;
             }

@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class FaceWeightPairingTests
     {
-/// <summary>OpenOn operation.</summary>
+
         private static ThermalSimulation OpenOn(int face, ThermalSettings settings)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -24,7 +24,7 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Centre operation.</summary>
+
         private static ThermalNode Centre(ThermalSimulation simulation, int face)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -44,7 +44,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EachFaceTakesSunFromItsOwnNormalAndNoOther operation.</summary>
+
         public void EachFaceTakesSunFromItsOwnNormalAndNoOther()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -53,11 +53,11 @@ namespace Thermodynamics.Tests
             {
                 for (int from = 0; from < Face.Count; from++)
                 {
-/// <summary>OpenOn operation.</summary>
+
                     ThermalSimulation simulation = OpenOn(open, new ThermalSettings());
                     simulation.StepExact(1, Worlds.Space(Face.Normals[from]));
 
-/// <summary>Centre operation.</summary>
+
                     float watts = Centre(simulation, open).LastSolarWatts;
                     string what = "open on " + Face.Name(open) + ", sun from " + Face.Name(from);
 
@@ -78,7 +78,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryFaceMeetsTheWindOnTheSameConventionAsTheFirst operation.</summary>
+
         public void EveryFaceMeetsTheWindOnTheSameConventionAsTheFirst()
         {
             if (!GameBlocks.IsInstalled) return;
@@ -93,7 +93,7 @@ namespace Thermodynamics.Tests
 
                 for (int blowing = 0; blowing < Face.Count; blowing++)
                 {
-/// <summary>OpenOn operation.</summary>
+
                     ThermalSimulation simulation = OpenOn(open, new ThermalSettings());
                     simulation.StepExact(1, Worlds.WindAndMotion(
                         1f, Speed, Face.Normals[blowing], Vector3.Zero));

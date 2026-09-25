@@ -8,7 +8,7 @@ namespace Thermodynamics.Tests
     [Collection("the stage lab's dials")]
     public class StepPhaseLabTests
     {
-/// <summary>Hull operation.</summary>
+
         private static ThermalSimulation Hull(int blocks)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -20,30 +20,30 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>World operation.</summary>
+
         private static EnvironmentState World(ThermalSimulation simulation)
         {
             return EnvironmentSolver.Solve(simulation.Settings, simulation.Planet, Worlds.Flight(1f, 300f));
         }
 
         [Fact]
-/// <summary>TheProfileIsOffUntilItIsAskedFor operation.</summary>
+
         public void TheProfileIsOffUntilItIsAskedFor()
         {
             Assert.False(Hull(600).Solver.ProfileStepPhases);
         }
 
         [Fact]
-/// <summary>ProfilingAStepChangesNothingItMeasures operation.</summary>
+
         public void ProfilingAStepChangesNothingItMeasures()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation plain = Hull(1200);
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation profiled = Hull(1200);
             profiled.Solver.ProfileStepPhases = true;
 
-/// <summary>World operation.</summary>
+
             EnvironmentState state = World(plain);
             float step = plain.Settings.StepSeconds;
 
@@ -74,12 +74,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EachStageIsChargedTheElementsItWalks operation.</summary>
+
         public void EachStageIsChargedTheElementsItWalks()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(2000);
-/// <summary>World operation.</summary>
+
             EnvironmentState state = World(simulation);
             float step = simulation.Settings.StepSeconds;
 
@@ -102,9 +102,9 @@ namespace Thermodynamics.Tests
             Assert.Equal(nodes * substeps,
                 phases.Visits[1] + phases.Visits[ThermalSolver.StepPhaseProfile.EnvironmentFill]);
 
-            Assert.Equal(links * substeps, phases.Visits[2]);   // conduction
-            Assert.Equal(nodes * substeps, phases.Visits[4]);   // apply
-            Assert.Equal(nodes, phases.Visits[5]);              // publish, once for the step
+            Assert.Equal(links * substeps, phases.Visits[2]);
+            Assert.Equal(nodes * substeps, phases.Visits[4]);
+            Assert.Equal(nodes, phases.Visits[5]);
 
             for (int p = 0; p < ThermalSolver.StepPhaseProfile.PhaseCount; p++)
             {
@@ -117,7 +117,7 @@ namespace Thermodynamics.Tests
 
         [Fact]
         [Trait("speed", "slow")]
-/// <summary>TheLabReportsEveryStageOfAStep operation.</summary>
+
         public void TheLabReportsEveryStageOfAStep()
         {
             int repeats = StageLab.Repeats;
@@ -146,7 +146,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Bits operation.</summary>
+
         private static int Bits(float value)
         {
             return System.BitConverter.ToInt32(System.BitConverter.GetBytes(value), 0);

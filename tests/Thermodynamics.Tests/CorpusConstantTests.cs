@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
     {
         private const string Summary = "summary-survey-2026-08-28.csv";
 
-/// <summary>Figures operation.</summary>
+
         private static Dictionary<string, double> Figures(string name)
         {
             string path = Path.Combine(ShippedBlocks.RepoRoot(), "tools", "corpus", name);
@@ -40,17 +40,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheVacuumConstantsMatchTheCommittedSurvey operation.</summary>
+
         public void TheVacuumConstantsMatchTheCommittedSurvey()
         {
-/// <summary>Figures operation.</summary>
+
             Dictionary<string, double> figures = Figures(Summary);
 
             Within(0.01, Census.Corpus.VacuumP50, figures["G6 idle demand p50"], "vacuum p50");
             Within(0.01, Census.Corpus.VacuumP90, figures["G6 idle demand p90"], "vacuum p90");
         }
 
-/// <summary>Within operation.</summary>
+
         private static void Within(double share, double constant, double measured, string what)
         {
             double drift = Math.Abs(measured - constant) / Math.Max(1e-9, Math.Abs(constant));
@@ -63,10 +63,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShipCountNamesAWalkRatherThanThePopulation operation.</summary>
+
         public void TheShipCountNamesAWalkRatherThanThePopulation()
         {
-/// <summary>Figures operation.</summary>
+
             Dictionary<string, double> figures = Figures(Summary);
 
             Assert.Equal(8144d, figures["dataset population"]);
@@ -83,7 +83,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheAirConstantsAreStillAwaitingTheirWalk operation.</summary>
+
         public void TheAirConstantsAreStillAwaitingTheirWalk()
         {
             Assert.True(Census.Corpus.AirP50 > Census.Corpus.VacuumP50,

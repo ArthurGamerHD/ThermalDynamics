@@ -13,13 +13,13 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>DialReachTests operation.</summary>
+
         public DialReachTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>Rig operation.</summary>
+
         private static ThermalSimulation Rig(
             ThermalSettings settings,
             Func<string, string, BlockThermalProperties, BlockThermalProperties> material)
@@ -30,7 +30,7 @@ namespace Thermodynamics.Tests
             if (material != null) armour = material("CubeBlock", "LargeBlockArmorBlock", armour);
 
             builder.Shell(BlockModel.Solid("LargeBlockArmorBlock", Vector3I.One, 500f, armour),
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I.Zero, new Vector3I(4, 4, 4));
 
             Vanilla.Block reactor = Vanilla.Find("LargeBlockLargeGenerator");
@@ -39,7 +39,7 @@ namespace Thermodynamics.Tests
 
             builder.Place(
                 BlockModel.Solid(reactor.Subtype, Vector3I.One, reactor.Mass, reactorThermal),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(1, 1, 1));
             builder.Producing(reactor.PowerOutputMegawatts * ThermalConstants.MegawattsToWatts);
 
@@ -47,13 +47,13 @@ namespace Thermodynamics.Tests
             BlockThermalProperties thrusterThermal = thruster.Thermal;
             if (material != null)
             {
-/// <summary>material operation.</summary>
+
                 thrusterThermal = material("Thrust", thruster.Subtype, thrusterThermal);
             }
 
             builder.Place(
                 BlockModel.Solid(thruster.Subtype, Vector3I.One, thruster.Mass, thrusterThermal),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(2, 1, 1));
             builder.Thrusting(thruster.PowerDrawMegawatts * ThermalConstants.MegawattsToWatts);
 
@@ -65,7 +65,7 @@ namespace Thermodynamics.Tests
             return builder.BuildSimulation(settings ?? new ThermalSettings());
         }
 
-/// <summary>Charging operation.</summary>
+
         private static void Charging(GridBuilder builder,
             Func<string, string, BlockThermalProperties, BlockThermalProperties> material,
             string subtype, Vector3I at)
@@ -93,20 +93,20 @@ namespace Thermodynamics.Tests
             else builder.Consuming(definition.PowerDrawWatts);
         }
 
-/// <summary>Sets the tled.</summary>
+
         private static void Settled(KnobLab.Configuration configuration, string scenario,
             out float hottest, out int overCritical, out float early)
         {
-/// <summary>Rig operation.</summary>
+
             ThermalSimulation simulation = Rig(configuration.Settings(), configuration.Material());
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
-/// <summary>World operation.</summary>
+
             runner.Environment = t => World(scenario);
 
             runner.Run(300f, 60f);
-/// <summary>Hottest operation.</summary>
+
             early = Hottest(simulation);
 
             runner.Run(3300f, 300f);
@@ -122,7 +122,7 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Hottest operation.</summary>
+
         private static float Hottest(ThermalSimulation simulation)
         {
             float hottest = 0f;
@@ -134,7 +134,7 @@ namespace Thermodynamics.Tests
             return hottest;
         }
 
-/// <summary>World operation.</summary>
+
         private static EnvironmentSample World(string scenario)
         {
             switch (scenario)
@@ -148,7 +148,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryDialMovesAnOutcomeSomewhere operation.</summary>
+
         public void EveryDialMovesAnOutcomeSomewhere()
         {
             List<KnobLab.Knob> knobs = KnobLab.Knobs();
@@ -157,7 +157,7 @@ namespace Thermodynamics.Tests
                 "only " + knobs.Count + " dials were read, so this test would pass on a table"
                 + " that had lost most of them");
 
-/// <summary>List operation.</summary>
+
             List<string> inert = new List<string>();
             int judged = 0;
 

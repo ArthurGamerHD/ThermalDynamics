@@ -13,14 +13,14 @@ namespace RichHudFramework.IO
 
 		public readonly MyObjectBuilder_Checkpoint.ModItem mod;
 
-/// <summary>ReadOnlyModFileIO operation.</summary>
+
 		public ReadOnlyModFileIO(string file, MyObjectBuilder_Checkpoint.ModItem mod)
 		{
 			this.file = file;
 			this.mod = mod;
 		}
 
-/// <summary>TryRead operation.</summary>
+
 		public KnownException TryRead(out byte[] stream)
 		{
 			KnownException exception = null;
@@ -34,7 +34,7 @@ namespace RichHudFramework.IO
 			catch (Exception e)
 			{
 				stream = null;
-/// <summary>KnownException operation.</summary>
+
 				exception = new KnownException($"IO Error. Unable to read from {file}.", e);
 			}
 			finally
@@ -45,7 +45,7 @@ namespace RichHudFramework.IO
 			return exception;
 		}
 
-/// <summary>TryRead operation.</summary>
+
 		public KnownException TryRead(out string data)
 		{
 			KnownException exception = null;
@@ -60,7 +60,7 @@ namespace RichHudFramework.IO
 			catch (Exception e)
 			{
 				data = null;
-/// <summary>KnownException operation.</summary>
+
 				exception = new KnownException($"IO Error. Unable to read from {file}.", e);
 			}
 			finally

@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     public class SimulationIntegrationTests
     {
         [Fact]
-/// <summary>ABuiltSimulationHasNodesLinksAndExposure operation.</summary>
+
         public void ABuiltSimulationHasNodesLinksAndExposure()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -19,7 +19,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings());
 
             Assert.Equal(27, simulation.Solver.Nodes.Count);
-            Assert.Equal(54, simulation.Solver.Links.Count);   // 3 * 3 * 3 grid: 3*(2*3*3) internal faces
+            Assert.Equal(54, simulation.Solver.Links.Count);
 
             ThermalNode centre = simulation.Solver.GetNodeAt(new Vector3I(1, 1, 1));
             ThermalNode corner = simulation.Solver.GetNodeAt(Vector3I.Zero);
@@ -29,7 +29,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BlocksMarkedIgnoreThermalsNeverBecomeNodes operation.</summary>
+
         public void BlocksMarkedIgnoreThermalsNeverBecomeNodes()
         {
             BlockThermalProperties ignored = Catalog.DefaultThermal();
@@ -46,7 +46,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>Adds a ingablockatruntimejoinstheconductiongraph.</summary>
+
         public void AddingABlockAtRuntimeJoinsTheConductionGraph()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -63,7 +63,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RemovingABlockLeavesTheRestConsistent operation.</summary>
+
         public void RemovingABlockLeavesTheRestConsistent()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -85,7 +85,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RemovingABlockOpensUpItsNeighboursToSpace operation.</summary>
+
         public void RemovingABlockOpensUpItsNeighboursToSpace()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -103,7 +103,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>UpdateDrivesTheSchedulerAndTheRoomMapper operation.</summary>
+
         public void UpdateDrivesTheSchedulerAndTheRoomMapper()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -125,7 +125,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SaveAndLoadRestoresEveryTemperature operation.</summary>
+
         public void SaveAndLoadRestoresEveryTemperature()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -159,7 +159,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LoadingIgnoresBlocksThatAreNoLongerThere operation.</summary>
+
         public void LoadingIgnoresBlocksThatAreNoLongerThere()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -183,7 +183,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SavingDoesNotDisturbTheRunningSimulation operation.</summary>
+
         public void SavingDoesNotDisturbTheRunningSimulation()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -198,7 +198,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGridWithNoEnvironmentReachesAUniformTemperature operation.</summary>
+
         public void AGridWithNoEnvironmentReachesAUniformTemperature()
         {
             ThermalSettings settings = Fixture.ConductionOnly();
@@ -224,18 +224,18 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ReplayingTheSameScenarioGivesIdenticalResults operation.</summary>
+
         public void ReplayingTheSameScenarioGivesIdenticalResults()
         {
-/// <summary>RunSmallScenario operation.</summary>
+
             float first = RunSmallScenario();
-/// <summary>RunSmallScenario operation.</summary>
+
             float second = RunSmallScenario();
 
             Assert.Equal(first, second, 6);
         }
 
-/// <summary>RunSmallScenario operation.</summary>
+
         private static float RunSmallScenario()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -272,7 +272,7 @@ namespace Thermodynamics.Tests
         [InlineData("welding")]
         [InlineData("stiff")]
         [InlineData("units")]
-/// <summary>EveryScenarioRunsAndProducesFiniteResults operation.</summary>
+
         public void EveryScenarioRunsAndProducesFiniteResults(string name)
         {
             ScenarioResult result = Scenarios.Run(name);
@@ -290,7 +290,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCoolantScenarioActuallyFormsALoop operation.</summary>
+
         public void TheCoolantScenarioActuallyFormsALoop()
         {
             ScenarioResult result = Scenarios.Run("coolant");
@@ -299,7 +299,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSealedRoomScenarioKeepsItsInteriorSealed operation.</summary>
+
         public void TheSealedRoomScenarioKeepsItsInteriorSealed()
         {
             ScenarioResult result = Scenarios.Run("sealed-room");
@@ -307,7 +307,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ReentryHeatsTheLeadingFace operation.</summary>
+
         public void ReentryHeatsTheLeadingFace()
         {
             ScenarioResult result = Scenarios.Run("reentry");
@@ -319,7 +319,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DayNightProducesAnOscillation operation.</summary>
+
         public void DayNightProducesAnOscillation()
         {
             ScenarioResult result = Scenarios.Run("daynight");
@@ -337,7 +337,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CsvOutputHasOneRowPerSamplePlusAHeader operation.</summary>
+
         public void CsvOutputHasOneRowPerSamplePlusAHeader()
         {
             ScenarioResult result = Scenarios.Run("vacuum-soak");

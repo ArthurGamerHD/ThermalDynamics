@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
         private const int Size = 2000;
 
         [Fact]
-/// <summary>APressurisedHullActuallyHoldsAir operation.</summary>
+
         public void APressurisedHullActuallyHoldsAir()
         {
             WorstCases.Built built = WorstCases.Pressurised("ship", Size);
@@ -32,7 +32,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AirIsCoupledTightlyEnoughToAppearInTheEstimate operation.</summary>
+
         public void AirIsCoupledTightlyEnoughToAppearInTheEstimate()
         {
             ThermalSolver.SubstepProfile dry =
@@ -49,7 +49,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APlumbedHullActuallyHasPlumbing operation.</summary>
+
         public void APlumbedHullActuallyHasPlumbing()
         {
             WorstCases.Built built = WorstCases.Plumbed("ship", Size);
@@ -61,7 +61,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRingsFixtureIsWhereThePlumbingSetsTheDemand operation.</summary>
+
         public void TheRingsFixtureIsWhereThePlumbingSetsTheDemand()
         {
             WorstCases.Built built = WorstCases.HeatedRings(2);
@@ -95,7 +95,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABurningHullActuallyBurns operation.</summary>
+
         public void ABurningHullActuallyBurns()
         {
             WorstCases.Built built = WorstCases.Burning("ship", Size);
@@ -115,7 +115,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AScorchedHullBurnsOnEveryNodeOfEverySubstep operation.</summary>
+
         public void AScorchedHullBurnsOnEveryNodeOfEverySubstep()
         {
             WorstCases.Built built = WorstCases.Scorched("ship", Size);
@@ -135,7 +135,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFleetIsManyGridsAndNotOneLargeOne operation.</summary>
+
         public void AFleetIsManyGridsAndNotOneLargeOne()
         {
             List<WorstCases.Built> fleet = WorstCases.Fleet("ship", 4000, 20);
@@ -154,7 +154,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SteppingAFleetAdvancesEveryGridInIt operation.</summary>
+
         public void SteppingAFleetAdvancesEveryGridInIt()
         {
             List<WorstCases.Built> fleet = WorstCases.Fleet("ship", 2000, 8);
@@ -174,10 +174,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnAtmosphereActuallyEngagesConvectionAndFriction operation.</summary>
+
         public void AnAtmosphereActuallyEngagesConvectionAndFriction()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubsteps = 4096;
             settings.MaxElementVisitsPerStep = 0;
@@ -200,20 +200,20 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWorstShapeDependsOnTheWorld operation.</summary>
+
         public void TheWorstShapeDependsOnTheWorld()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubsteps = 4096;
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
-/// <summary>Demand operation.</summary>
+
             float shipVacuum = Demand("ship", settings, Worlds.Space(new Vector3(0f, 1f, 0f)));
-/// <summary>Demand operation.</summary>
+
             float trussVacuum = Demand("truss", settings, Worlds.Space(new Vector3(0f, 1f, 0f)));
-/// <summary>Demand operation.</summary>
+
             float trussFlight = Demand("truss", settings, Worlds.Flight(1f, 300f));
 
             Assert.True(trussVacuum < shipVacuum,
@@ -223,7 +223,7 @@ namespace Thermodynamics.Tests
                 + trussVacuum + " to " + trussFlight);
         }
 
-/// <summary>Demand operation.</summary>
+
         private static float Demand(string shape, ThermalSettings settings, EnvironmentSample sample)
         {
             WorstCases.Built built = WorstCases.Hull(shape, Size, settings);

@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
     [Collection("alone")]
     public class CorpusSurvey
     {
-/// <summary>Scenarios operation.</summary>
+
         private static List<Battery.Scenario> Scenarios()
         {
             Dictionary<string, Battery.Scenario> byName = new Dictionary<string, Battery.Scenario>();
@@ -17,11 +17,11 @@ namespace Thermodynamics.Tests
 
             return new List<Battery.Scenario>
             {
-                byName["idle"],             // G1, and the shadow reference for the sunlight claim
-                byName["vacuum-sunlit"],    // the sunlight claim's other half
-                byName["full-electrical"],  // G2, the load a ship can actually be in
-                byName["burn-forward"],     // the directional burn, and the balance claim's second look
-                byName["recovery"],         // G5: from a full burn throttled to idle, does it come back
+                byName["idle"],
+                byName["vacuum-sunlit"],
+                byName["full-electrical"],
+                byName["burn-forward"],
+                byName["recovery"],
             };
         }
 
@@ -34,19 +34,19 @@ namespace Thermodynamics.Tests
             public bool Rooms;
             public bool SmallGrid;
             public bool Stepped;
-/// <summary>List operation.</summary>
+
             public readonly List<ScenarioOutcome> Outcomes = new List<ScenarioOutcome>();
-/// <summary>List operation.</summary>
+
             public readonly List<string> Violations = new List<string>();
         }
 
         [Fact]
-/// <summary>EveryShipInTheCorpusHoldsEveryInvariant operation.</summary>
+
         public void EveryShipInTheCorpusHoldsEveryInvariant()
         {
             if (CorpusFixture.Files().Count == 0) return;
 
-/// <summary>Scenarios operation.</summary>
+
             List<Battery.Scenario> scenarios = Scenarios();
 
             List<Surveyed> results = CorpusFixture.Sweep("survey",
@@ -55,7 +55,7 @@ namespace Thermodynamics.Tests
             Assert.True(results.Count > 0, "the corpus yielded no surveyable ships");
 
 
-/// <summary>List operation.</summary>
+
             List<string> violations = new List<string>();
             long blocks = 0;
             long sealedBlocks = 0;
@@ -121,7 +121,7 @@ namespace Thermodynamics.Tests
 
         private const float BulkFlat = 0.01f;
 
-/// <summary>Survey operation.</summary>
+
         private static Surveyed Survey(Blueprints.Ship ship, List<Battery.Scenario> scenarios)
         {
             Surveyed surveyed = new Surveyed { Ship = ship.Name, SmallGrid = !ship.Large };
@@ -153,7 +153,7 @@ namespace Thermodynamics.Tests
                 }
             }
 
-/// <summary>AssemblyRunner operation.</summary>
+
             AssemblyRunner probe = new AssemblyRunner(assembly);
             probe.Environment = t => Worlds.Shadow();
             float before = assembly.Hottest() == null ? 0f : assembly.Hottest().Temperature;
@@ -173,7 +173,7 @@ namespace Thermodynamics.Tests
 
             if (CorpusRecord.On)
             {
-/// <summary>List operation.</summary>
+
                 List<string> row = new List<string>();
                 row.Add(CorpusRecord.ShipRow(ship, assembly.NodeCount, assembly.Bridges.Count,
                     assembly.RoomCount, surveyed.SealedBlocks, surveyed.Stepped, true));

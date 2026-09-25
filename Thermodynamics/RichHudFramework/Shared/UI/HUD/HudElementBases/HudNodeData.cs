@@ -4,24 +4,24 @@ using VRage;
 using VRageMath;
 using ApiMemberAccessor = System.Func<object, int, object>;
 using HudNodeHookData = VRage.MyTuple<
-	System.Func<object, int, object>, // 1 -  GetOrSetApiMemberFunc
-	System.Action, // 2 - InputDepthAction
-	System.Action, // 3 - InputAction
-	System.Action, // 4 - SizingAction
-	System.Action<bool>, // 5 - LayoutAction
-	System.Action // 6 - DrawAction
+	System.Func<object, int, object>,
+	System.Action,
+	System.Action,
+	System.Action,
+	System.Action<bool>,
+	System.Action
 >;
 using HudSpaceOriginFunc = System.Func<VRageMath.Vector3D>;
 
 namespace RichHudFramework
 {
 	using HudNodeData = MyTuple<
-		uint[], // 1 - Config { 1.0 - State, 1.1 - NodeVisibleMask, 1.2 - NodeInputMask, 1.3 - zOffset, 1.4 - zOffsetInner, 1.5 - fullZOffset }
-		HudSpaceOriginFunc[],  // 2 - GetNodeOriginFunc
-		HudNodeHookData, // 3 - Main hooks
-		object, // 4 - Parent as HudNodeDataHandle
-		List<object>, // 5 - Children as IReadOnlyList<HudNodeDataHandle>
-		object // 6 - Unused
+		uint[],
+		HudSpaceOriginFunc[],
+		HudNodeHookData,
+		object,
+		List<object>,
+		object
 	>;
 
 	namespace UI

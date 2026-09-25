@@ -6,32 +6,32 @@ namespace Thermodynamics
     {
         public long Frames;
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat Considered = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat Drawn = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat OffScreen = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat OverBudget = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat Radius = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat Billboards = new RunningStat();
 
-/// <summary>TimingStat operation.</summary>
+
         public readonly TimingStat Draw = new TimingStat("overlay draw");
 
         public long LimitedFrames;
 
         public string Mode = "";
 
-/// <summary>Frame operation.</summary>
+
         public void Frame(
             string mode, int considered, int drawn, int offScreen, int overBudget,
             long billboards, double radius, double milliseconds)
@@ -54,7 +54,7 @@ namespace Thermodynamics
         }
 
 
-/// <summary>Write operation.</summary>
+
         public void Write(StringBuilder sb)
         {
             sb.Append("  frames drawn                  ").Append(Frames.ToString("n0")).Append('\n');

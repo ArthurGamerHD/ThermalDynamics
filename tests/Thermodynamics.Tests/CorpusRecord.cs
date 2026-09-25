@@ -9,12 +9,12 @@ namespace Thermodynamics.Tests
 {
     internal static class CorpusRecord
     {
-/// <summary>object operation.</summary>
+
         private static readonly object Gate = new object();
-/// <summary>HashSet operation.</summary>
+
         internal static readonly HashSet<string> Started = new HashSet<string>(StringComparer.Ordinal);
 
-/// <summary>Directory operation.</summary>
+
         public static string Directory()
         {
             string path = Environment.GetEnvironmentVariable("THERMAL_CORPUS_DATA");
@@ -25,16 +25,16 @@ namespace Thermodynamics.Tests
 
         public static bool On
         {
-/// <summary>Directory operation.</summary>
+
             get { return Directory() != null; }
         }
 
         private static readonly string[] Definitions = { "Cubes.xml", "Loops.xml", "Planets.xml" };
 
-/// <summary>Provenance operation.</summary>
+
         public static void Provenance(string walk)
         {
-/// <summary>Directory operation.</summary>
+
             string directory = Directory();
             if (directory == null) return;
 
@@ -43,7 +43,7 @@ namespace Thermodynamics.Tests
                 if (!Started.Add("provenance:" + walk)) return;
             }
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.Append("walk ").Append(walk)
                 .Append(" started ").Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))
@@ -65,22 +65,22 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Root operation.</summary>
+
         private static string Root()
         {
             return ShippedBlocks.RepoRoot();
         }
 
-/// <summary>Commit operation.</summary>
+
         private static string Commit()
         {
             try
             {
-/// <summary>GitDirectory operation.</summary>
+
                 string git = GitDirectory();
                 if (git == null) return "unknown";
 
-/// <summary>CommonDirectory operation.</summary>
+
                 string common = CommonDirectory(git);
                 string head = File.ReadAllText(Path.Combine(git, "HEAD")).Trim();
 
@@ -95,7 +95,7 @@ namespace Thermodynamics.Tests
 
                     hash = File.Exists(path)
                         ? File.ReadAllText(path).Trim()
-/// <summary>Packed operation.</summary>
+
                         : Packed(common, reference);
                 }
                 else
@@ -111,10 +111,10 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>GitDirectory operation.</summary>
+
         private static string GitDirectory()
         {
-/// <summary>Root operation.</summary>
+
             string root = Root();
             string git = Path.Combine(root, ".git");
 
@@ -131,7 +131,7 @@ namespace Thermodynamics.Tests
             return System.IO.Directory.Exists(resolved) ? resolved : null;
         }
 
-/// <summary>CommonDirectory operation.</summary>
+
         private static string CommonDirectory(string git)
         {
             string marker = Path.Combine(git, "commondir");
@@ -144,7 +144,7 @@ namespace Thermodynamics.Tests
             return System.IO.Directory.Exists(resolved) ? resolved : git;
         }
 
-/// <summary>Packed operation.</summary>
+
         private static string Packed(string git, string reference)
         {
             string path = Path.Combine(git, "packed-refs");
@@ -160,7 +160,7 @@ namespace Thermodynamics.Tests
             return null;
         }
 
-/// <summary>HashOf operation.</summary>
+
         private static string HashOf(string path)
         {
             try
@@ -181,10 +181,10 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Write operation.</summary>
+
         public static void Write(string name, string header, List<string> rows)
         {
-/// <summary>Directory operation.</summary>
+
             string directory = Directory();
             if (directory == null || rows.Count == 0) return;
 
@@ -195,7 +195,7 @@ namespace Thermodynamics.Tests
                     System.IO.Directory.CreateDirectory(directory);
                     string path = Path.Combine(directory, name + ".csv");
 
-/// <summary>StringBuilder operation.</summary>
+
                     StringBuilder text = new StringBuilder();
                     if (Started.Add(name) && !File.Exists(path)) text.AppendLine(header);
                     foreach (string row in rows) text.AppendLine(row);
@@ -208,13 +208,13 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>Text operation.</summary>
+
         public static string Text(string value)
         {
             return Thermodynamics.Harness.CsvLine.Text(value);
         }
 
-/// <summary>Num operation.</summary>
+
         public static string Num(float value)
         {
             if (float.IsNaN(value) || float.IsInfinity(value)) return "";
@@ -230,10 +230,10 @@ namespace Thermodynamics.Tests
             + "generation_w,substeps_demanded,substeps_granted,hottest_block,seconds_to_first_loss,"
             + "links,substep_cost,run_seconds,cap,floored";
 
-/// <summary>Row operation.</summary>
+
         public static string Row(string walk, ScenarioOutcome o)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder row = new StringBuilder();
             row.Append(Text(walk)).Append(',');
             row.Append(Text(o.Ship)).Append(',');
@@ -277,12 +277,12 @@ namespace Thermodynamics.Tests
             return row.ToString();
         }
 
-/// <summary>Outcomes operation.</summary>
+
         public static void Outcomes(string walk, List<ScenarioOutcome> outcomes)
         {
             if (!On) return;
 
-/// <summary>List operation.</summary>
+
             List<string> rows = new List<string>(outcomes.Count);
             foreach (ScenarioOutcome outcome in outcomes) rows.Add(Row(walk, outcome));
 
@@ -294,11 +294,11 @@ namespace Thermodynamics.Tests
             "ship,workshop_id,path,large,blocks,nodes,grids,joints,rooms,sealed_blocks,"
             + "stepped,accounted";
 
-/// <summary>ShipRow operation.</summary>
+
         public static string ShipRow(Blueprints.Ship ship, int nodes, int joints, int rooms,
             long sealedBlocks, bool stepped, bool accounted)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder row = new StringBuilder();
             row.Append(Text(ship.Name)).Append(',');
             row.Append(ship.WorkshopId.ToString(CultureInfo.InvariantCulture)).Append(',');

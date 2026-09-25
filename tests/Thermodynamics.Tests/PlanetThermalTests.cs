@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
 {
     public class PlanetThermalTests
     {
-/// <summary>Find operation.</summary>
+
         private static PlanetLab.World Find(string subtype)
         {
             List<PlanetLab.World> worlds = PlanetLab.Vanilla();
@@ -22,7 +22,7 @@ namespace Thermodynamics.Tests
             throw new ArgumentException("no world " + subtype);
         }
 
-/// <summary>RepoRoot operation.</summary>
+
         private static string RepoRoot()
         {
             return Thermodynamics.Harness.ShippedBlocks.RepoRoot();
@@ -30,7 +30,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheFiveEngineLevelsMapToTheirAnchoredTemperatures operation.</summary>
+
         public void TheFiveEngineLevelsMapToTheirAnchoredTemperatures()
         {
             Assert.Equal(100f, PlanetThermalDerivation.MeanTemperature(0f), 2);
@@ -41,7 +41,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheAnchorsAreNotEvenlySpacedAndInterpolatingThemLinearlyWouldFreezeEarth operation.</summary>
+
         public void TheAnchorsAreNotEvenlySpacedAndInterpolatingThemLinearlyWouldFreezeEarth()
         {
             float evenlySpaced = 100f + ((450f - 100f) * 0.5f);
@@ -51,7 +51,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ALevelBetweenTwoAnchorsLandsBetweenThem operation.</summary>
+
         public void ALevelBetweenTwoAnchorsLandsBetweenThem()
         {
             float between = PlanetThermalDerivation.MeanTemperature(0.375f);
@@ -60,7 +60,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheLapseRateIsGravityOverSpecificHeatAndComesOutAtEarthsMeasuredValue operation.</summary>
+
         public void TheLapseRateIsGravityOverSpecificHeatAndComesOutAtEarthsMeasuredValue()
         {
             float earthlike = PlanetThermalDerivation.LapseRate(1f, true, 1f);
@@ -68,7 +68,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>LowGravityAndHeavierAirBothFlattenTheLapseRate operation.</summary>
+
         public void LowGravityAndHeavierAirBothFlattenTheLapseRate()
         {
             float titan = PlanetThermalDerivation.LapseRate(0.25f, true, 1f);
@@ -82,7 +82,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWorldWithNoAirHasNoLapseRateAndNoConvectionAndAlmostNoLag operation.</summary>
+
         public void AWorldWithNoAirHasNoLapseRateAndNoConvectionAndAlmostNoLag()
         {
             Assert.Equal(0f, PlanetThermalDerivation.LapseRate(1f, true, 0f), 4);
@@ -92,7 +92,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TakingTheAirAwayOpensTheDayNightSwingEnormously operation.</summary>
+
         public void TakingTheAirAwayOpensTheDayNightSwingEnormously()
         {
             Assert.Equal(PlanetThermalDerivation.ThickAirSwing, PlanetThermalDerivation.Swing(1f), 2);
@@ -102,7 +102,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFirstBreathOfAirDoesMostOfTheDamping operation.</summary>
+
         public void TheFirstBreathOfAirDoesMostOfTheDamping()
         {
             float half = PlanetThermalDerivation.Swing(0.5f);
@@ -112,7 +112,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheEnginesSolarProtectionBecomesAPlausibleShareOfSunlight operation.</summary>
+
         public void TheEnginesSolarProtectionBecomesAPlausibleShareOfSunlight()
         {
             Assert.InRange(PlanetThermalDerivation.SolarDecay(1.8f, 1f), 0.25f, 0.35f);
@@ -121,7 +121,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NothingDerivedIsEverNonsense operation.</summary>
+
         public void NothingDerivedIsEverNonsense()
         {
             float[] levels = { 0f, 0.25f, 0.5f, 0.75f, 1f, 0.37f };
@@ -156,13 +156,13 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>EveryShippedWorldGetsItsOwnClimateRatherThanOneSharedOne operation.</summary>
+
         public void EveryShippedWorldGetsItsOwnClimateRatherThanOneSharedOne()
         {
             List<PlanetLab.World> worlds = PlanetLab.Vanilla();
             Assert.Equal(8, worlds.Count);
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> distinct = new HashSet<string>();
             for (int i = 0; i < worlds.Count; i++)
             {
@@ -175,10 +175,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheMoonIsAirlessAndBehavesLikeIt operation.</summary>
+
         public void TheMoonIsAirlessAndBehavesLikeIt()
         {
-/// <summary>Find operation.</summary>
+
             PlanetThermalProperties moon = Find("Moon").Shipped;
 
             Assert.Equal(0f, moon.ConvectionCoefficient, 3);
@@ -193,10 +193,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnAuthoredTemperatureLevelIsFollowedEvenWhereTheRealBodyDisagrees operation.</summary>
+
         public void AnAuthoredTemperatureLevelIsFollowedEvenWhereTheRealBodyDisagrees()
         {
-/// <summary>Find operation.</summary>
+
             PlanetLab.World triton = Find("Triton");
 
             Assert.Equal("ExtremeFreeze", triton.AuthoredTemperatureLevel);
@@ -205,12 +205,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUnauthoredLevelOnAWorldNamedForARealPlaceIsNotTreatedAsIntent operation.</summary>
+
         public void AnUnauthoredLevelOnAWorldNamedForARealPlaceIsNotTreatedAsIntent()
         {
             foreach (string name in new[] { "Titan", "Mars", "Moon" })
             {
-/// <summary>Find operation.</summary>
+
                 PlanetLab.World world = Find(name);
 
                 Assert.Null(world.AuthoredTemperatureLevel);
@@ -228,7 +228,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWorldTheGameIsSilentAboutAndThatIsNotARealPlaceKeepsTheDerivation operation.</summary>
+
         public void AWorldTheGameIsSilentAboutAndThatIsNotARealPlaceKeepsTheDerivation()
         {
             foreach (string name in new[] { "EarthLike", "Alien", "Pertam" })
@@ -238,7 +238,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThePlanetsWithLowGravityHaveTheFlattestLapseRates operation.</summary>
+
         public void ThePlanetsWithLowGravityHaveTheFlattestLapseRates()
         {
             Assert.True(Find("Titan").Shipped.AmbientLapseRate < 2.5f);
@@ -248,7 +248,7 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>TheShippedPlanetsFileIsWhatThisCodeGenerates operation.</summary>
+
         public void TheShippedPlanetsFileIsWhatThisCodeGenerates()
         {
             string path = Path.Combine(ShippedBlocks.DataRoot(), "Planets.xml");
@@ -276,7 +276,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShippedPlanetsFileIsCompleteAndReadable operation.</summary>
+
         public void TheShippedPlanetsFileIsCompleteAndReadable()
         {
             string path = Path.Combine(ShippedBlocks.DataRoot(), "Planets.xml");
@@ -293,7 +293,7 @@ namespace Thermodynamics.Tests
             foreach (XElement definition in XDocument.Parse(onDisk).Descendants("Definition"))
             {
                 string subtype = (string)definition.Element("Id").Element("SubtypeId");
-/// <summary>HashSet operation.</summary>
+
                 HashSet<string> declared = new HashSet<string>();
                 foreach (XElement value in definition.Descendants("Decimal"))
                 {
@@ -324,7 +324,7 @@ namespace Thermodynamics.Tests
         };
 
         [Fact]
-/// <summary>TheFileCarriesAnEntryForEveryShippedWorldPlusTheFallback operation.</summary>
+
         public void TheFileCarriesAnEntryForEveryShippedWorldPlusTheFallback()
         {
             string xml = PlanetLab.Xml();
@@ -341,10 +341,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFallbackEntryIsUnchangedFromWhatTheModAlwaysShipped operation.</summary>
+
         public void TheFallbackEntryIsUnchangedFromWhatTheModAlwaysShipped()
         {
-/// <summary>PlanetThermalProperties operation.</summary>
+
             PlanetThermalProperties defaults = new PlanetThermalProperties();
             string xml = PlanetLab.Xml();
 
@@ -358,7 +358,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryEntryCarriesEveryPropertyTheModReads operation.</summary>
+
         public void EveryEntryCarriesEveryPropertyTheModReads()
         {
             string[] required =
@@ -378,7 +378,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryDepartureFromTheDerivationSaysWhyInTheFileItself operation.</summary>
+
         public void EveryDepartureFromTheDerivationSaysWhyInTheFileItself()
         {
             string xml = PlanetLab.Xml();

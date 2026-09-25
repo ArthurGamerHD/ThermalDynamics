@@ -9,13 +9,13 @@ namespace Thermodynamics.Tests
     public class DefinitionFileTests
     {
 
-/// <summary>ExtensionFiles operation.</summary>
+
         private static List<string> ExtensionFiles()
         {
             string manifest = Path.Combine(ShippedBlocks.DataRoot(), "definitionextensions.txt");
             Assert.True(File.Exists(manifest), "definitionextensions.txt missing");
 
-/// <summary>List operation.</summary>
+
             List<string> files = new List<string>();
             foreach (string line in File.ReadAllLines(manifest))
             {
@@ -28,7 +28,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryListedFileExists operation.</summary>
+
         public void EveryListedFileExists()
         {
             foreach (string file in ExtensionFiles())
@@ -38,12 +38,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryListedFileIsStrictlyValidXml operation.</summary>
+
         public void EveryListedFileIsStrictlyValidXml()
         {
             foreach (string file in ExtensionFiles())
             {
-/// <summary>XmlDocument operation.</summary>
+
                 XmlDocument document = new XmlDocument();
 
                 try
@@ -59,12 +59,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryEntryCarriesAnIdAndAGroup operation.</summary>
+
         public void EveryEntryCarriesAnIdAndAGroup()
         {
             foreach (string file in ExtensionFiles())
             {
-/// <summary>XmlDocument operation.</summary>
+
                 XmlDocument document = new XmlDocument();
                 document.Load(file);
 
@@ -83,14 +83,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PlanetsCarryTheGeneratorSubtypesTheLookupAsksFor operation.</summary>
+
         public void PlanetsCarryTheGeneratorSubtypesTheLookupAsksFor()
         {
-/// <summary>XmlDocument operation.</summary>
+
             XmlDocument document = new XmlDocument();
             document.Load(Path.Combine(ShippedBlocks.DataRoot(), "Planets.xml"));
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> subtypes = new HashSet<string>();
             foreach (XmlNode id in document.SelectNodes(
                 "/Definitions/CubeBlocks/Definition/Id[TypeId='PlanetGeneratorDefinition']/SubtypeId"))
@@ -106,10 +106,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheGeneratorEmitsStrictXml operation.</summary>
+
         public void TheGeneratorEmitsStrictXml()
         {
-/// <summary>XmlDocument operation.</summary>
+
             XmlDocument document = new XmlDocument();
             document.LoadXml(PlanetLab.Xml());
         }

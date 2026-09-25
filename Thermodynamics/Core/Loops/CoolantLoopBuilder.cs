@@ -6,26 +6,26 @@ namespace Thermodynamics.Core
 {
     public static class CoolantLoopBuilder
     {
-/// <summary>FindLoops operation.</summary>
+
         public static List<CoolantLoop> FindLoops(GridModel grid, LoopThermalProperties properties, float initialTemperature)
         {
-/// <summary>FindLoops operation.</summary>
+
             return FindLoops(grid, properties, initialTemperature, null);
         }
 
-/// <summary>FindLoops operation.</summary>
+
         public static List<CoolantLoop> FindLoops(GridModel grid, LoopThermalProperties properties,
             float initialTemperature, SimulationWork work)
         {
-/// <summary>FindLoops operation.</summary>
+
             return FindLoops(grid, properties, initialTemperature, work, null);
         }
 
-/// <summary>FindLoops operation.</summary>
+
         public static List<CoolantLoop> FindLoops(GridModel grid, LoopThermalProperties properties,
             float initialTemperature, SimulationWork work, CoolantLoopDiagnostics diagnostics)
         {
-/// <summary>List operation.</summary>
+
             List<CoolantLoop> loops = new List<CoolantLoop>();
             if (grid == null) return loops;
 
@@ -35,7 +35,7 @@ namespace Thermodynamics.Core
 
             if (work != null) work.LoopSearchCells += grid.Blocks.Count;
 
-/// <summary>HashSet operation.</summary>
+
             HashSet<long> claimed = new HashSet<long>();
 
             IList<BlockInstance> blocks = grid.Blocks;
@@ -46,11 +46,11 @@ namespace Thermodynamics.Core
                 if (start.Model.Coolant.LinkPorts.Length < 2) continue;
                 if (claimed.Contains(start.Key)) continue;
 
-/// <summary>TraceRing operation.</summary>
+
                 List<BlockInstance> ring = TraceRing(grid, start);
                 if (ring == null) continue;
 
-/// <summary>CoolantLoop operation.</summary>
+
                 CoolantLoop loop = new CoolantLoop(properties, initialTemperature);
                 for (int r = 0; r < ring.Count; r++)
                 {
@@ -59,10 +59,10 @@ namespace Thermodynamics.Core
 
                     if (ring[r].Model.Coolant == null || !ring[r].Model.Coolant.IsPump) continue;
 
-/// <summary>CoolantPump operation.</summary>
+
                     CoolantPump pump = new CoolantPump();
                     pump.Block = ring[r];
-/// <summary>PumpDirection operation.</summary>
+
                     pump.Direction = PumpDirection(grid, ring, r);
                     pump.MaxPowerWatts = ring[r].Model.Coolant.MaxPowerWatts;
                     loop.Pumps.Add(pump);
@@ -81,7 +81,7 @@ namespace Thermodynamics.Core
             return loops;
         }
 
-/// <summary>Diagnose operation.</summary>
+
         private static void Diagnose(GridModel grid, HashSet<long> claimed,
             List<CoolantLoop> loops, CoolantLoopDiagnostics diagnostics)
         {
@@ -101,7 +101,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>PumpDirection operation.</summary>
+
         private static int PumpDirection(GridModel grid, List<BlockInstance> ring, int index)
         {
             BlockInstance pump = ring[index];
@@ -116,15 +116,15 @@ namespace Thermodynamics.Core
             return grid.GetAtCell(outlet.Target) == next ? 1 : -1;
         }
 
-/// <summary>TraceRing operation.</summary>
+
         public static List<BlockInstance> TraceRing(GridModel grid, BlockInstance start)
         {
             CoolantFault fault;
-/// <summary>TraceRing operation.</summary>
+
             return TraceRing(grid, start, out fault);
         }
 
-/// <summary>TraceRing operation.</summary>
+
         public static List<BlockInstance> TraceRing(GridModel grid, BlockInstance start, out CoolantFault fault)
         {
             fault = CoolantFault.None;
@@ -137,9 +137,9 @@ namespace Thermodynamics.Core
                 return null;
             }
 
-/// <summary>List operation.</summary>
+
             List<BlockInstance> ring = new List<BlockInstance>();
-/// <summary>HashSet operation.</summary>
+
             HashSet<long> visited = new HashSet<long>();
 
             ring.Add(start);
@@ -203,7 +203,7 @@ namespace Thermodynamics.Core
             return null;
         }
 
-/// <summary>TryFindPortFacing operation.</summary>
+
         private static bool TryFindPortFacing(BlockInstance block, Vector3I cell, Vector3I direction, out GridPort port)
         {
             List<GridPort> ports = block.CoolantLinkPorts();
@@ -215,12 +215,12 @@ namespace Thermodynamics.Core
                     return true;
                 }
             }
-/// <summary>default operation.</summary>
+
             port = default(GridPort);
             return false;
         }
 
-/// <summary>TryFindOtherPort operation.</summary>
+
         private static bool TryFindOtherPort(BlockInstance block, GridPort entry, out GridPort other)
         {
             List<GridPort> ports = block.CoolantLinkPorts();
@@ -230,25 +230,25 @@ namespace Thermodynamics.Core
                 other = ports[i];
                 return true;
             }
-/// <summary>default operation.</summary>
+
             other = default(GridPort);
             return false;
         }
 
-/// <summary>SamePort operation.</summary>
+
         private static bool SamePort(GridPort a, GridPort b)
         {
             return a.Cell == b.Cell && a.Direction == b.Direction;
         }
 
-/// <summary>PipeConductance operation.</summary>
+
         public static float PipeConductance(GridModel grid, BlockInstance pipe, LoopThermalProperties properties)
         {
             float area = grid.CellFaceArea * properties.PipeContactMultiplier;
             return properties.HeatTransferCoefficient * area;
         }
 
-/// <summary>PlateConductance operation.</summary>
+
         public static float PlateConductance(GridModel grid, LoopThermalProperties properties)
         {
             float area = grid.CellFaceArea * properties.SinkContactMultiplier;

@@ -32,36 +32,36 @@ namespace Thermodynamics.Harness
             public float SinkWattsPerKelvin;
         }
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxElementVisitsPerStep = 0;
             return settings.Derive();
         }
 
-/// <summary>Vector3I operation.</summary>
+
         private static readonly Vector3I Centre = new Vector3I(Side / 2, Side / 2, Side / 2);
 
-/// <summary>PanelSize operation.</summary>
+
         private static Vector3I PanelSize(bool large)
         {
             return Panel(large).Size;
         }
 
-/// <summary>Panel operation.</summary>
+
         private static BlockModel Panel(bool large)
         {
             return ShippedBlocks.Model(large ? "Gauge_LG_Radiator" : "Gauge_SG_Radiator");
         }
 
-/// <summary>Footprint operation.</summary>
+
         private static List<Vector3I> Footprint(bool large, Vector3I origin)
         {
-/// <summary>PanelSize operation.</summary>
+
             Vector3I size = PanelSize(large);
-/// <summary>List operation.</summary>
+
             List<Vector3I> cells = new List<Vector3I>();
 
             for (int x = 0; x < size.X; x++)
@@ -78,16 +78,16 @@ namespace Thermodynamics.Harness
             return cells;
         }
 
-/// <summary>Channel operation.</summary>
+
         private static List<Vector3I> Channel(int panels)
         {
             int beyond = 4 + panels;
             return PipeFitter.RectangleXZ(
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(Centre.X - 1, Centre.Y, Centre.Z - 1), Side / 2 + beyond, 3);
         }
 
-/// <summary>InHull operation.</summary>
+
         private static bool InHull(Vector3I cell)
         {
             return cell.X >= 0 && cell.X < Side
@@ -95,7 +95,7 @@ namespace Thermodynamics.Harness
                 && cell.Z >= 0 && cell.Z < Side;
         }
 
-/// <summary>SeesSky operation.</summary>
+
         private static bool SeesSky(GridModel grid, Vector3I cell)
         {
             for (int f = 0; f < Face.Count; f++)
@@ -105,7 +105,7 @@ namespace Thermodynamics.Harness
             return false;
         }
 
-/// <summary>Hull operation.</summary>
+
         private static GridBuilder Hull(bool large, ICollection<Vector3I> reserved)
         {
             GridBuilder builder = large ? GridBuilder.Large() : GridBuilder.Small();
@@ -117,7 +117,7 @@ namespace Thermodynamics.Harness
                 {
                     for (int z = 0; z < Side; z++)
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I cell = new Vector3I(x, y, z);
                         if (cell == Centre) continue;
                         if (reserved != null && reserved.Contains(cell)) continue;
@@ -130,7 +130,7 @@ namespace Thermodynamics.Harness
             return builder;
         }
 
-/// <summary>Measure operation.</summary>
+
         private static Row Measure(string fit, GridBuilder builder, BlockInstance source,
             List<BlockInstance> radiators, float bare, LoopThermalProperties properties = null)
         {
@@ -142,7 +142,7 @@ namespace Thermodynamics.Harness
                 simulation.RebuildAll();
             }
 
-/// <summary>ScenarioRunner operation.</summary>
+
             ScenarioRunner runner = new ScenarioRunner(simulation);
             runner.Environment = t => Worlds.Shadow();
             runner.Track("source", source);
@@ -193,41 +193,41 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>Bare operation.</summary>
+
         private static Row Bare(bool large, float watts, out float settled)
         {
-/// <summary>Hull operation.</summary>
+
             GridBuilder builder = Hull(large, null);
             builder.Place(BalanceLab.Heater(), Centre);
             BlockInstance source = builder.Last;
             builder.Last.PowerConsumedWatts = watts;
 
-/// <summary>Measure operation.</summary>
+
             Row row = Measure("buried, bare", builder, source, new List<BlockInstance>(), 0f);
             settled = row.SourceKelvin;
             return row;
         }
 
-/// <summary>Bolted operation.</summary>
+
         private static Row Bolted(bool large, float watts, int panels, float bare)
         {
-/// <summary>PanelSize operation.</summary>
+
             Vector3I size = PanelSize(large);
 
-/// <summary>List operation.</summary>
+
             List<Vector3I> origins = new List<Vector3I>();
-/// <summary>List operation.</summary>
+
             List<Vector3I> reserved = new List<Vector3I>();
 
             for (int i = 0; i < panels; i++)
             {
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I origin = new Vector3I(
                     Centre.X + 1,
                     Centre.Y - (size.Y / 2),
                     Centre.Z - (size.Z / 2) + (i * size.Z));
 
-/// <summary>Footprint operation.</summary>
+
                 List<Vector3I> cells = Footprint(large, origin);
 
                 bool fits = true;
@@ -238,15 +238,15 @@ namespace Thermodynamics.Harness
                 reserved.AddRange(cells);
             }
 
-/// <summary>Hull operation.</summary>
+
             GridBuilder builder = Hull(large, reserved);
             builder.Place(BalanceLab.Heater(), Centre);
             BlockInstance source = builder.Last;
             builder.Last.PowerConsumedWatts = watts;
 
-/// <summary>Panel operation.</summary>
+
             BlockModel radiator = Panel(large);
-/// <summary>List operation.</summary>
+
             List<BlockInstance> radiators = new List<BlockInstance>();
             string note = "";
 
@@ -268,20 +268,20 @@ namespace Thermodynamics.Harness
                 note = "only " + radiators.Count + " of " + panels + " pockets fit inside the hull";
             }
 
-/// <summary>Measure operation.</summary>
+
             Row row = Measure("bolted, buried", builder, source, radiators, bare);
             row.Note = note;
             return row;
         }
 
-/// <summary>Plumbed operation.</summary>
+
         private static Row Plumbed(bool large, float watts, int panels, float bare,
             LoopThermalProperties properties = null, bool everyFace = false)
         {
-/// <summary>Channel operation.</summary>
+
             List<Vector3I> ring = Channel(panels);
 
-/// <summary>Hull operation.</summary>
+
             GridBuilder builder = Hull(large, ring);
             builder.Place(BalanceLab.Heater(), Centre);
             BlockInstance source = builder.Last;
@@ -299,11 +299,11 @@ namespace Thermodynamics.Harness
 
             string note = sinks.Count == 0 ? "no ring cell touches the source" : "";
 
-/// <summary>Panel operation.</summary>
+
             BlockModel radiator = Panel(large);
-/// <summary>PanelSize operation.</summary>
+
             Vector3I size = PanelSize(large);
-/// <summary>List operation.</summary>
+
             List<BlockInstance> radiators = new List<BlockInstance>();
 
             for (int i = 0; i < ring.Count && radiators.Count < panels; i++)
@@ -317,7 +317,7 @@ namespace Thermodynamics.Harness
                     Vector3I direction = Face.Offsets[f];
                     Vector3I origin = ring[i] + direction;
 
-/// <summary>Footprint operation.</summary>
+
                     List<Vector3I> footprint = Footprint(large, origin);
 
                     bool clear = true;
@@ -364,13 +364,13 @@ namespace Thermodynamics.Harness
                 };
             }
 
-/// <summary>Measure operation.</summary>
+
             Row row = Measure("plumbed, to the skin", builder, source, radiators, bare, properties);
             row.Note = note;
             return row;
         }
 
-/// <summary>IsStraightRun operation.</summary>
+
         private static bool IsStraightRun(List<Vector3I> ring, int index)
         {
             Vector3I cell = ring[index];
@@ -380,23 +380,23 @@ namespace Thermodynamics.Harness
             return (previous - cell) == -(next - cell);
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(float watts, int panels)
         {
-/// <summary>Run operation.</summary>
+
             return Run(watts, panels, true);
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(float watts, int panels, bool large)
         {
             float bare;
-/// <summary>Bare operation.</summary>
+
             Row bareRow = Bare(large, watts, out bare);
 
-/// <summary>Bolted operation.</summary>
+
             Row bolted = Bolted(large, watts, panels, bare);
-/// <summary>Plumbed operation.</summary>
+
             Row plumbed = Plumbed(large, watts, panels, bare);
 
             int fair = Math.Min(bolted.Radiators, plumbed.Radiators);
@@ -411,7 +411,7 @@ namespace Thermodynamics.Harness
                 plumbed.Note = string.IsNullOrEmpty(plumbed.Note) ? levelled : plumbed.Note;
             }
 
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
             rows.Add(bareRow);
             rows.Add(bolted);
@@ -419,17 +419,17 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Sweep operation.</summary>
+
         public static string Sweep(float watts, float criticalKelvin, int maxPanels)
         {
-/// <summary>Sweep operation.</summary>
+
             return Sweep(watts, criticalKelvin, maxPanels, true);
         }
 
-/// <summary>Sweep operation.</summary>
+
         public static string Sweep(float watts, float criticalKelvin, int maxPanels, bool large)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("SKIN LADDER  (how much radiator a buried load needs, plumbed to the hull)");
@@ -458,7 +458,7 @@ namespace Thermodynamics.Harness
 
                 for (int panels = 1; panels <= maxPanels; panels++)
                 {
-/// <summary>Plumbed operation.</summary>
+
                     Row row = Plumbed(large, watts, panels, bare, properties, everyFace);
 
                     string needs = row.SinkWattsPerKelvin > 0f
@@ -486,10 +486,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(float watts = 200000f, int panels = 4, bool large = true)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("DESIGNED HULL  (a source buried in a " + Side + "-cube of "
@@ -500,7 +500,7 @@ namespace Thermodynamics.Harness
             sb.AppendLine("  the arms differ in WHERE the heat is put, not in how fast it moves");
             sb.AppendLine();
 
-/// <summary>Run operation.</summary>
+
             List<Row> rows = Run(watts, panels, large);
             LastRows = rows;
 

@@ -13,10 +13,8 @@ namespace Thermodynamics
             public MatrixD Inverse;
             public BoundingBoxD Bounds;
         }
-/// <summary>List operation.</summary>
         private static readonly List<SolidOccluder> visionOccluders=new List<SolidOccluder>();
 
-/// <summary>CullHiddenFleet operation.</summary>
         private static int CullHiddenFleet(Vector3D eye)
         {
             visionOccluders.Clear();
@@ -32,7 +30,6 @@ namespace Thermodynamics
                 {
                     if(queries>=500 || visionOccluders.Count>=32) break;
                     queries++;
-/// <summary>Vector3I operation.</summary>
                     var position=centre+new Vector3I(x,y,z);
                     var block=grid.GetCubeBlock(position);
                     if(block==null || !block.IsFullIntegrity || block.BuildLevelRatio<1 || block.HasDeformation) continue;
@@ -41,10 +38,8 @@ namespace Thermodynamics
                     if(subtype!="LargeBlockArmorBlock" && subtype!="LargeHeavyBlockArmorBlock"
                         && subtype!="SmallBlockArmorBlock" && subtype!="SmallHeavyBlockArmorBlock") continue;
                     Vector3D mid=(Vector3D)position*size;
-/// <summary>Vector3D operation.</summary>
                     Vector3D half=new Vector3D(size*.4);
                     visionOccluders.Add(new SolidOccluder { Owner=view.Grid,Inverse=inverse,
-/// <summary>BoundingBoxD operation.</summary>
                         Bounds=new BoundingBoxD(mid-half,mid+half) });
                 }
                 if(queries>=500 || visionOccluders.Count>=32) break;

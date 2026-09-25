@@ -4,18 +4,18 @@ namespace RichHudFramework.UI
 {
     public class ListBox<TValue> : ListBox<ListBoxEntry<TValue>, Label, TValue>
     {
-/// <summary>ListBox operation.</summary>
+
         public ListBox(HudParentBase parent) : base(parent)
         { }
 
-/// <summary>ListBox operation.</summary>
+
         public ListBox() : base(null)
         { }
     }
 
     public class ListBox<TContainer, TElement, TValue>
         : ScrollSelectionBox<TContainer, TElement, TValue>, IClickableElement
-/// <summary>new operation.</summary>
+
         where TContainer : class, IListBoxEntry<TElement, TValue>, new()
         where TElement : HudElementBase, IMinLabelElement
     {
@@ -50,14 +50,14 @@ namespace RichHudFramework.UI
             }
         }
 
-/// <summary>ListBox operation.</summary>
+
         public ListBox(HudParentBase parent) : base(parent)
         {
-/// <summary>Vector2 operation.</summary>
+
             EntryChain.Padding = new Vector2(0f, 8f);
         }
 
-/// <summary>ListBox operation.</summary>
+
         public ListBox() : this(null)
         { }
     }

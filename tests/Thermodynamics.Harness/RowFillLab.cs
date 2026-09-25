@@ -52,11 +52,11 @@ namespace Thermodynamics.Harness
 
         public static readonly int[] DefaultCaps = { 0, 4 };
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(IList<string> worlds, IList<int> caps, int blocks, int ticks,
             Action<string> log = null)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             for (int w = 0; w < worlds.Count; w++)
@@ -75,7 +75,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>World operation.</summary>
+
         private static EnvironmentSample World(string name)
         {
             if (name == "vacuum") return Worlds.Space(new VRageMath.Vector3(0.3f, 0.9f, 0.2f));
@@ -83,28 +83,28 @@ namespace Thermodynamics.Harness
             return Worlds.Flight(1f, 300f);
         }
 
-/// <summary>Measure operation.</summary>
+
         private static Row Measure(string world, int cap, int blocks, int ticks)
         {
             ThermalSimulation simulation = Hulls.Driven(
                 Hulls.Uncapped(cap > 0 ? cap : Hulls.Unbounded), blocks);
 
             EnvironmentState state = EnvironmentSolver.Solve(
-/// <summary>World operation.</summary>
+
                 simulation.Settings, simulation.Planet, World(world));
 
             float step = simulation.Settings.StepSeconds;
 
             for (int i = 0; i < 4; i++) simulation.Solver.Step(step, state);
 
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.World = world;
             row.Cap = cap;
             row.Nodes = simulation.Solver.Nodes.Count;
             row.Substeps = simulation.Solver.LastSubsteps;
             row.ClampLive = simulation.Solver.ConductionClampLive;
-/// <summary>BoundShare operation.</summary>
+
             row.BoundPercent = BoundShare(simulation, state, row.Substeps);
 
             double cached = double.MaxValue;
@@ -139,7 +139,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>BoundShare operation.</summary>
+
         private static double BoundShare(ThermalSimulation simulation, EnvironmentState state,
             int granted)
         {
@@ -156,7 +156,7 @@ namespace Thermodynamics.Harness
             return 100d * bound / nodes;
         }
 
-/// <summary>Time operation.</summary>
+
         private static double Time(ThermalSimulation simulation, EnvironmentState state, int ticks,
             bool precompute)
         {
@@ -170,10 +170,10 @@ namespace Thermodynamics.Harness
             return watch.Elapsed.TotalMilliseconds / ticks;
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("  world         cap  substeps  clamp    bound      cached"
                 + "   every fill     one fill   ns/node   of a step");
@@ -192,10 +192,10 @@ namespace Thermodynamics.Harness
             return text.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("world,cap,nodes,substeps,clamp_live,bound_percent,cached_ms,"
                 + "every_fill_ms,fill_ms,fill_ns_per_node,share_of_step_percent");

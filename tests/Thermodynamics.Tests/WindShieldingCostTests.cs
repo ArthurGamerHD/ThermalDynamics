@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>WindShieldingCostTests operation.</summary>
+
         public WindShieldingCostTests(ITestOutputHelper output)
         {
             this.output = output;
@@ -19,10 +19,10 @@ namespace Thermodynamics.Tests
 
         private const double RebuildDegrees = 2.0;
 
-/// <summary>Hull operation.</summary>
+
         private static ThermalSimulation Hull(int side)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.SolarSelfShadowing = true;
             settings.Derive();
@@ -40,16 +40,16 @@ namespace Thermodynamics.Tests
         [InlineData(16)]
         [InlineData(32)]
         [InlineData(48)]
-/// <summary>ADirectionPassIsOutrunByAnOrdinaryTurnRate operation.</summary>
+
         public void ADirectionPassIsOutrunByAnOrdinaryTurnRate(int side)
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation simulation = Hull(side);
             ThermalSolver solver = simulation.Solver;
 
             simulation.StepExact(1, Worlds.Space(Vector3.Forward));
 
-/// <summary>SunShadowMap operation.</summary>
+
             SunShadowMap map = new SunShadowMap();
             map.Restart(solver.Grid, Vector3.Forward, null);
 
@@ -75,7 +75,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheWindDirectionMovesOrdersOfMagnitudeFasterThanTheSun operation.</summary>
+
         public void TheWindDirectionMovesOrdersOfMagnitudeFasterThanTheSun()
         {
             const double dayLengthSeconds = 2 * 60 * 60;
@@ -98,10 +98,10 @@ namespace Thermodynamics.Tests
         [InlineData(10.0)]
         [InlineData(20.0)]
         [InlineData(45.0)]
-/// <summary>AStaleWindwardMapDisagreesWithTheTruthByThisMuch operation.</summary>
+
         public void AStaleWindwardMapDisagreesWithTheTruthByThisMuch(double degrees)
         {
-/// <summary>Structured operation.</summary>
+
             ThermalSimulation simulation = Structured();
             ThermalSolver solver = simulation.Solver;
             simulation.StepExact(1, Worlds.Space(Vector3.Forward));
@@ -112,9 +112,9 @@ namespace Thermodynamics.Tests
             Matrix turn = Matrix.CreateFromAxisAngle(Vector3.Up, (float)radians);
             Vector3 stale = Vector3.Normalize(Vector3.TransformNormal(truth, turn));
 
-/// <summary>Built operation.</summary>
+
             SunShadowMap exact = Built(solver, truth);
-/// <summary>Built operation.</summary>
+
             SunShadowMap lagged = Built(solver, stale);
 
             int faces = 0;
@@ -142,10 +142,10 @@ namespace Thermodynamics.Tests
             Assert.True(faces > 0);
         }
 
-/// <summary>Structured operation.</summary>
+
         private static ThermalSimulation Structured()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.SolarSelfShadowing = true;
             settings.Derive();
@@ -162,10 +162,10 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Built operation.</summary>
+
         private static SunShadowMap Built(ThermalSolver solver, Vector3 direction)
         {
-/// <summary>SunShadowMap operation.</summary>
+
             SunShadowMap map = new SunShadowMap();
             map.Restart(solver.Grid, direction, null);
 

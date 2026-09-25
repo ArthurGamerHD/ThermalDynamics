@@ -5,9 +5,9 @@ namespace ThermalPerformance;
 public sealed class BaselineCapSampling
 {
     private readonly ThermalVisionSurfaceField field;
-/// <summary>BaselineCapSampling operation.</summary>
+
     public BaselineCapSampling(ThermalVisionSurfaceField field) { this.field=field; }
-/// <summary>BlendSample operation.</summary>
+
     private float BlendSample(ThermalVisionSurfaceField previous,Vector3D point,float blend)
     {
         float current=field.Sample(point);
@@ -15,14 +15,14 @@ public sealed class BaselineCapSampling
         blend=Math.Max(0f,Math.Min(1f,blend));
         return MathHelper.Lerp(previous.Sample(point),current,blend*blend*(3-2*blend));
     }
-/// <summary>AppendCapTriangles operation.</summary>
+
         public void AppendCapTriangles(Vector3D a,Vector3D b,Vector3D c,
             ThermalVisionSurfaceField previous,float blend,float error,List<TemperatureTriangle> output)
         {
             AppendCap(a,b,c,BlendSample(previous,a,blend),BlendSample(previous,b,blend),
                 BlendSample(previous,c,blend),previous,blend,error,0,output);
         }
-/// <summary>AppendCap operation.</summary>
+
         private void AppendCap(Vector3D a,Vector3D b,Vector3D c,float ta,float tb,float tc,
             ThermalVisionSurfaceField previous,float blend,float error,int depth,List<TemperatureTriangle> output)
         {

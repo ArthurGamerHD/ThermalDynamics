@@ -11,7 +11,7 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>ConductionPaceTests operation.</summary>
+
         public ConductionPaceTests(ITestOutputHelper output)
         {
             this.output = output;
@@ -22,7 +22,7 @@ namespace Thermodynamics.Tests
         private const float StoppedCoefficient = 160f;
 
         [Fact]
-/// <summary>AStoppedRingStillCarriesTheOldCoefficient operation.</summary>
+
         public void AStoppedRingStillCarriesTheOldCoefficient()
         {
             LoopThermalProperties properties = LoopThermalProperties.Default();
@@ -32,7 +32,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFluidCouplingIsStillWhatTheCoolingFiguresWereMeasuredAt operation.</summary>
+
         public void TheFluidCouplingIsStillWhatTheCoolingFiguresWereMeasuredAt()
         {
             LoopThermalProperties properties = LoopThermalProperties.Default();
@@ -46,14 +46,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSameFluidCouplesTheSameWhateverSizeTheGridIs operation.</summary>
+
         public void TheSameFluidCouplesTheSameWhateverSizeTheGridIs()
         {
             LoopThermalProperties properties = LoopThermalProperties.Default();
 
-/// <summary>GridModel operation.</summary>
+
             GridModel large = new GridModel(2.5f);
-/// <summary>GridModel operation.</summary>
+
             GridModel small = new GridModel(0.5f);
 
             float perAreaLarge = CoolantLoopBuilder.PlateConductance(large, properties) / large.CellFaceArea;
@@ -64,7 +64,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheShippedSolidPaceIsFourTimesWhatTheConversionCalibratedTo operation.</summary>
+
         public void TheShippedSolidPaceIsFourTimesWhatTheConversionCalibratedTo()
         {
             const float Calibrated = 2.4f;
@@ -74,12 +74,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASmallGridLoopCouplesLessHardThanItUsedTo operation.</summary>
+
         public void ASmallGridLoopCouplesLessHardThanItUsedTo()
         {
-/// <summary>Sets the tle.</summary>
+
             float now = Settle(160f);
-/// <summary>Sets the tle.</summary>
+
             float before = Settle(800f);
 
             output.WriteLine("small-grid ring source: {0:n1} K at 160 W/(m2 K), {1:n1} K at the 800"
@@ -93,10 +93,10 @@ namespace Thermodynamics.Tests
                 "the two couplings are " + (now - before) + " K apart, which is not a measurement");
         }
 
-/// <summary>Sets the tle.</summary>
+
         private static float Settle(float coefficient)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubsteps = 4096;
             settings.MaxElementVisitsPerStep = 0;
@@ -112,7 +112,7 @@ namespace Thermodynamics.Tests
             builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Wasting(20000f);
             BlockInstance source = builder.Last;
 
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(settings, builder.Grid);
 
             LoopThermalProperties properties = LoopThermalProperties.Default();

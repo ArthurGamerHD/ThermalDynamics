@@ -9,11 +9,11 @@ namespace Thermodynamics.Core
 
         public const float StormFraction = 0.55f;
 
-/// <summary>Velocity operation.</summary>
+
         public static Vector3 Velocity(
             Vector3 up, Vector3 axis, float maxSpeed, float weather, float variation)
         {
-/// <summary>Direction operation.</summary>
+
             Vector3 direction = Direction(up, axis);
             if (direction.LengthSquared() < 1e-6f) return Vector3.Zero;
 
@@ -22,23 +22,23 @@ namespace Thermodynamics.Core
 
         public const float BandTilt = 0.5774f;
 
-/// <summary>Band operation.</summary>
+
         private static float Band(float distance)
         {
             return (float)Math.Sin(distance * 6d);
         }
 
-/// <summary>BandStrength operation.</summary>
+
         public static float BandStrength(Vector3 up, Vector3 axis)
         {
             if (up.LengthSquared() < 1e-6f || axis.LengthSquared() < 1e-6f) return 0f;
 
-/// <summary>Clamp operation.</summary>
+
             float sine = Clamp(Vector3.Dot(Vector3.Normalize(up), Vector3.Normalize(axis)), -1f, 1f);
             return Math.Abs(Band(Math.Abs((float)Math.Asin(sine))));
         }
 
-/// <summary>Direction operation.</summary>
+
         public static Vector3 Direction(Vector3 up, Vector3 axis)
         {
             if (up.LengthSquared() < 1e-6f || axis.LengthSquared() < 1e-6f) return Vector3.Zero;
@@ -53,12 +53,12 @@ namespace Thermodynamics.Core
             east = Vector3.Normalize(east);
             Vector3 north = Vector3.Normalize(Vector3.Cross(up, east));
 
-/// <summary>Clamp operation.</summary>
+
             float sine = Clamp(Vector3.Dot(up, axis), -1f, 1f);
             float latitude = (float)Math.Asin(sine);
             float distance = Math.Abs(latitude);
 
-/// <summary>Band operation.</summary>
+
             float band = Band(distance);
             if (Math.Abs(band) < 1e-6f) return Vector3.Zero;
 
@@ -71,21 +71,21 @@ namespace Thermodynamics.Core
             return direction.LengthSquared() < 1e-6f ? Vector3.Zero : Vector3.Normalize(direction);
         }
 
-/// <summary>Speed operation.</summary>
+
         public static float Speed(float maxSpeed, float weather, float variation)
         {
-/// <summary>Speed operation.</summary>
+
             return Speed(maxSpeed, weather, variation, 1f);
         }
 
-/// <summary>Speed operation.</summary>
+
         public static float Speed(float maxSpeed, float weather, float variation, float weatherWind)
         {
             if (maxSpeed <= 0f) return 0f;
 
-/// <summary>Clamp operation.</summary>
+
             weather = Clamp(weather, 0f, 1f);
-/// <summary>Clamp operation.</summary>
+
             variation = Clamp(variation, 0f, 1f);
 
             float range = StormFraction - CalmFraction;
@@ -98,7 +98,7 @@ namespace Thermodynamics.Core
             return maxSpeed * Clamp(share, 0f, 1f);
         }
 
-/// <summary>Clamp operation.</summary>
+
         private static float Clamp(float value, float low, float high)
         {
             if (value < low) return low;
@@ -106,7 +106,7 @@ namespace Thermodynamics.Core
             return value;
         }
 
-/// <summary>Variation operation.</summary>
+
         public static float Variation(Vector3D position, double scale = 900d)
         {
             if (scale <= 0d) scale = 1d;

@@ -8,7 +8,7 @@ namespace RichHudFramework
 		{
 			public abstract ITextBoard TextBoard { get; }
 
-/// <summary>LabelElementBase operation.</summary>
+
 			public LabelElementBase(HudParentBase parent = null) : base(parent)
 			{ }
 		}

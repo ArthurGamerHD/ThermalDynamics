@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class SubstepDemandTests
     {
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings()
         {
             ThermalSettings settings = new ThermalSettings
@@ -21,13 +21,13 @@ namespace Thermodynamics.Tests
             return settings;
         }
 
-/// <summary>Fitting operation.</summary>
+
         private static ThermalSimulation Fitting(ThermalSettings settings)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.Fill(Catalog.LightArmor(), Vector3I.Zero, new Vector3I(4, 1, 1));
             builder.Place(BlockModel.Solid("Fitting", Vector3I.One, 16f, Catalog.DefaultThermal()),
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(4, 0, 0));
 
             ThermalSimulation simulation = builder.BuildSimulation(settings);
@@ -35,14 +35,14 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Air operation.</summary>
+
         private static EnvironmentState Air(ThermalSettings settings)
         {
             return EnvironmentSolver.Solve(
                 settings, PlanetThermalProperties.Default(), Worlds.PlanetSurface(1f, 0.5f));
         }
 
-/// <summary>Peak operation.</summary>
+
         private static float Peak(ThermalSolver solver)
         {
             float peak = 0f;
@@ -54,7 +54,7 @@ namespace Thermodynamics.Tests
             return peak;
         }
 
-/// <summary>Peak operation.</summary>
+
         private static float Peak(ThermalSolver solver, ref EnvironmentState environment)
         {
             float peak = 0f;
@@ -67,15 +67,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AGridThatHasNotSteppedDemandsWhatItWillDemand operation.</summary>
+
         public void AGridThatHasNotSteppedDemandsWhatItWillDemand()
         {
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
-/// <summary>Fitting operation.</summary>
+
             ThermalSimulation simulation = Fitting(settings);
 
-/// <summary>Peak operation.</summary>
+
             float before = Peak(simulation.Solver);
 
             simulation.StepExact(1, Worlds.Shadow());
@@ -84,17 +84,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheAnswerAboutAnotherWorldAlsoNeedsNoStep operation.</summary>
+
         public void TheAnswerAboutAnotherWorldAlsoNeedsNoStep()
         {
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
-/// <summary>Fitting operation.</summary>
+
             ThermalSimulation simulation = Fitting(settings);
-/// <summary>Air operation.</summary>
+
             EnvironmentState air = Air(settings);
 
-/// <summary>Peak operation.</summary>
+
             float before = Peak(simulation.Solver, ref air);
 
             simulation.StepExact(1, Worlds.Shadow());
@@ -103,19 +103,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSameFittingIsStifferInAirThanInVacuum operation.</summary>
+
         public void TheSameFittingIsStifferInAirThanInVacuum()
         {
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
-/// <summary>Fitting operation.</summary>
+
             ThermalSimulation simulation = Fitting(settings);
-/// <summary>Air operation.</summary>
+
             EnvironmentState air = Air(settings);
 
-/// <summary>Peak operation.</summary>
+
             float vacuum = Peak(simulation.Solver);
-/// <summary>Peak operation.</summary>
+
             float inAir = Peak(simulation.Solver, ref air);
 
             Assert.True(inAir > vacuum * 2f,
@@ -123,10 +123,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABuriedBlockDemandsTheSameInEveryWorld operation.</summary>
+
         public void ABuriedBlockDemandsTheSameInEveryWorld()
         {
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
 
             GridBuilder builder = GridBuilder.Large();
@@ -135,7 +135,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(settings);
             while (simulation.HasPendingWork) simulation.Update(1f / 60f, Worlds.Shadow());
 
-/// <summary>Air operation.</summary>
+
             EnvironmentState air = Air(settings);
 
             int buried = -1;
@@ -153,14 +153,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AShipProfileReportsBothWorlds operation.</summary>
+
         public void AShipProfileReportsBothWorlds()
         {
-/// <summary>Sets the tings.</summary>
+
             ThermalSettings settings = Settings();
-/// <summary>Fitting operation.</summary>
+
             ThermalSimulation simulation = Fitting(settings);
-/// <summary>Air operation.</summary>
+
             EnvironmentState air = Air(settings);
 
             Assert.True(Peak(simulation.Solver, ref air) > Peak(simulation.Solver));

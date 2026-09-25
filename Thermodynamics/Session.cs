@@ -32,21 +32,17 @@ namespace Thermodynamics
         private bool _commandRegistered;
         private long _frame;
 
-/// <summary>Session operation.</summary>
         public Session()
         {
             MyLog.Default.Info($"[{Settings.Name}] Setup Definition Extention API");
-/// <summary>DefinitionExtensionsAPI operation.</summary>
             Definitions = new DefinitionExtensionsAPI(Done);
         }
 
-/// <summary>Done operation.</summary>
         private void Done()
         {
             MyLog.Default.Info($"[{Settings.Name}] Definition Extention API - Done");
         }
 
-/// <summary>Init operation.</summary>
         public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
         {
             Instance = this;
@@ -76,7 +72,6 @@ namespace Thermodynamics
             ThermalSettingsMenu.Initialize();
         }
 
-/// <summary>UnloadData operation.</summary>
         protected override void UnloadData()
         {
             SessionCleanup.Run(new Action[]
@@ -103,13 +98,11 @@ namespace Thermodynamics
             }, ReportUnloadFailure);
         }
 
-/// <summary>ReportUnloadFailure operation.</summary>
         private static void ReportUnloadFailure(int stage, Exception error)
         {
             MyLog.Default.Error("[Thermodynamics] unload stage " + stage + " failed: " + error);
         }
 
-/// <summary>Unregisters the API and cleans resources.</summary>
         private void UnregisterCommands()
         {
             if (_commandRegistered && MyAPIGateway.Utilities != null)
@@ -123,7 +116,6 @@ namespace Thermodynamics
 
         private int framesSinceSaveCheck;
 
-/// <summary>Simulate operation.</summary>
         public override void Simulate()
         {
             if (++framesSinceSaveCheck >= SaveFlushFrames)
@@ -148,7 +140,6 @@ namespace Thermodynamics
             Telemetry.SessionFrameTime.End();
         }
 
-/// <summary>Tick operation.</summary>
         private void Tick()
         {
             RegisterCommand();
@@ -180,7 +171,6 @@ namespace Thermodynamics
             Debug.ShowDebugInfo();
         }
 
-/// <summary>Draw operation.</summary>
         public override void Draw()
         {
             ThermalHud.Draw();
@@ -192,7 +182,6 @@ namespace Thermodynamics
             ThermalDebugPanel.Update();
         }
 
-/// <summary>PollKeys operation.</summary>
         private void PollKeys()
         {
             ThermalVisionProbe.PollVisionKey();
@@ -228,7 +217,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Registers the API and message handler.</summary>
         private void RegisterCommand()
         {
             if (_commandRegistered || MyAPIGateway.Utilities == null) return;
@@ -237,7 +225,6 @@ namespace Thermodynamics
             _commandRegistered = true;
         }
 
-/// <summary>OnMessageEntered operation.</summary>
         private void OnMessageEntered(string messageText, ref bool sendToOthers)
         {
             if (messageText == null) return;
@@ -258,7 +245,6 @@ namespace Thermodynamics
             RunCommand(argument);
         }
 
-/// <summary>RunCommand operation.</summary>
         private void RunCommand(string argument)
         {
             string lowered = argument.ToLower();
@@ -412,7 +398,6 @@ namespace Thermodynamics
         }
 
 
-/// <summary>RunHeat operation.</summary>
         private static void RunHeat(string argument)
         {
             if (MyAPIGateway.Session == null || !MyAPIGateway.Session.IsServer)
@@ -449,7 +434,6 @@ namespace Thermodynamics
                 + kelvin.ToString("n0") + " K, rated " + critical.ToString("n0") + " K");
         }
 
-/// <summary>Aimed operation.</summary>
         private static bool Aimed(out ThermalGrid thermals, out ThermalBlock block)
         {
             thermals = null;
@@ -459,7 +443,6 @@ namespace Thermodynamics
             if (player == null || player.Character == null) return false;
 
             MatrixD head = player.Character.GetHeadMatrix(true);
-/// <summary>LineD operation.</summary>
             LineD ray = new LineD(head.Translation, head.Translation + (head.Forward * 150));
 
             List<MyLineSegmentOverlapResult<MyEntity>> hits =
@@ -490,13 +473,11 @@ namespace Thermodynamics
             return false;
         }
 
-/// <summary>WriteValidationProblem operation.</summary>
         private static void WriteValidationProblem(string line)
         {
             MyLog.Default.Warning("[" + Settings.Name + "] " + line);
         }
 
-/// <summary>RunSet operation.</summary>
         private void RunSet(string argument)
         {
             int space = argument.IndexOf(' ');
@@ -506,7 +487,6 @@ namespace Thermodynamics
                 return;
             }
 
-/// <summary>Resolve operation.</summary>
             string name = Resolve(argument.Substring(0, space).Trim());
             string text = argument.Substring(space + 1).Trim().ToLower();
 
@@ -538,7 +518,6 @@ namespace Thermodynamics
             Reply(name + " = " + Format(name, Settings.Instance.GetValue(name)) + " (unsaved)");
         }
 
-/// <summary>Resolve operation.</summary>
         private static string Resolve(string name)
         {
             List<string> names = Settings.Names();
@@ -549,11 +528,9 @@ namespace Thermodynamics
             return null;
         }
 
-/// <summary>ListSettings operation.</summary>
         private void ListSettings()
         {
             List<string> names = Settings.Names();
-/// <summary>StringBuilder operation.</summary>
             StringBuilder text = new StringBuilder();
 
             for (int i = 0; i < names.Count; i++)
@@ -567,14 +544,12 @@ namespace Thermodynamics
                 Settings.Name, "Settings", "", text.ToString(), null, "Close");
         }
 
-/// <summary>Format operation.</summary>
         private static string Format(string name, float value)
         {
             if (Settings.IsFlag(name)) return value != 0f ? "on" : "off";
             return value.ToString("0.####");
         }
 
-/// <summary>Dump operation.</summary>
         private void Dump()
         {
             if (!Telemetry.Enabled)
@@ -587,7 +562,6 @@ namespace Thermodynamics
             Reply("telemetry report written to world storage");
         }
 
-/// <summary>ReportSync operation.</summary>
         private static void ReportSync()
         {
             bool server = MyAPIGateway.Session != null && MyAPIGateway.Session.IsServer;
@@ -608,7 +582,6 @@ namespace Thermodynamics
             if (!server) Reply("  digests differ? run /thermal sync fetch, then this again");
         }
 
-/// <summary>Reply operation.</summary>
         private static void Reply(string message)
         {
             MyAPIGateway.Utilities.ShowMessage(Settings.Name, message);

@@ -7,10 +7,10 @@ namespace Thermodynamics.Tests
 {
     public class ShapeNormalOneCellTests
     {
-/// <summary>Hull operation.</summary>
+
         private static ThermalSimulation Hull()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableShapeDrag = true;
             settings.Derive();
@@ -36,10 +36,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheOneCellPathAgreesWithTheWalkExactly operation.</summary>
+
         public void TheOneCellPathAgreesWithTheWalkExactly()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation hull = Hull();
             CellBitset occupancy = hull.Grid.Occupancy();
 
@@ -68,10 +68,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockWithNoNeighboursReadsZeroBothWays operation.</summary>
+
         public void ABlockWithNoNeighboursReadsZeroBothWays()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation hull = Hull();
             CellBitset occupancy = hull.Grid.Occupancy();
 
@@ -82,10 +82,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AMultiCellBlockStillTakesTheWalk operation.</summary>
+
         public void AMultiCellBlockStillTakesTheWalk()
         {
-/// <summary>Hull operation.</summary>
+
             ThermalSimulation hull = Hull();
             CellBitset occupancy = hull.Grid.Occupancy();
 

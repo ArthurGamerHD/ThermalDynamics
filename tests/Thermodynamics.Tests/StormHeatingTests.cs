@@ -8,10 +8,10 @@ namespace Thermodynamics.Tests
 {
     public class StormHeatingTests
     {
-/// <summary>Sets the tled.</summary>
+
         private static float Settled(float windSpeed, float seconds)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableDamage = false;
             settings.EnableSolarHeat = false;
@@ -38,12 +38,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AParkedHullInAHurricaneWarmsByDegreesRatherThanHundreds operation.</summary>
+
         public void AParkedHullInAHurricaneWarmsByDegreesRatherThanHundreds()
         {
-/// <summary>Sets the tled.</summary>
+
             float still = Settled(0f, 600f);
-/// <summary>Sets the tled.</summary>
+
             float storm = Settled(70f, 600f);
 
             Assert.True(storm > still,
@@ -56,7 +56,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWorldThatSetsTheFloorGetsNoFrictionBelowIt operation.</summary>
+
         public void AWorldThatSetsTheFloorGetsNoFrictionBelowIt()
         {
             Assert.Equal(0f, FrictionWatts(40f, 50f), 4);
@@ -66,12 +66,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AtTheShippedDefaultFrictionIsLiveAtEverySpeedAndVanishesByTheCube operation.</summary>
+
         public void AtTheShippedDefaultFrictionIsLiveAtEverySpeedAndVanishesByTheCube()
         {
-/// <summary>FrictionWatts operation.</summary>
+
             float slow = FrictionWatts(10f, 0f);
-/// <summary>FrictionWatts operation.</summary>
+
             float fast = FrictionWatts(100f, 0f);
 
             Assert.True(slow > 0f, "friction at 10 m/s is zero, so the floor is still gating");
@@ -84,10 +84,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AirspeedCoolsAHotHullSlowAndHeatsItFast operation.</summary>
+
         public void AirspeedCoolsAHotHullSlowAndHeatsItFast()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings world = new ThermalSettings();
             world.EnableDamage = false;
             world.EnableSolarHeat = false;
@@ -98,11 +98,11 @@ namespace Thermodynamics.Tests
             builder.Remove(new Vector3I(1, 1, 1));
             builder.Place(Catalog.Reactor(), new Vector3I(1, 1, 1)).Producing(2e6f);
 
-/// <summary>Mean operation.</summary>
+
             float still = Mean(builder, world, Worlds.PlanetSurface(1f, 0.5f), 600f);
-/// <summary>Mean operation.</summary>
+
             float breezy = Mean(builder, world, Worlds.Storm(1f, 45f), 600f);
-/// <summary>Mean operation.</summary>
+
             float screaming = Mean(builder, world, Worlds.Storm(1f, 300f), 600f);
 
             Assert.True(breezy < still,
@@ -114,10 +114,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWindyDayCoolsAHullThatIsMakingHeat operation.</summary>
+
         public void AWindyDayCoolsAHullThatIsMakingHeat()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings world = new ThermalSettings();
             world.EnableDamage = false;
             world.EnableSolarHeat = false;
@@ -128,12 +128,12 @@ namespace Thermodynamics.Tests
             builder.Remove(new Vector3I(1, 1, 1));
             builder.Place(Catalog.Reactor(), new Vector3I(1, 1, 1)).Producing(2e6f);
 
-/// <summary>Mean operation.</summary>
+
             float still = Mean(builder, world, Worlds.PlanetSurface(1f, 0.5f), 600f);
 
             for (float speed = 5f; speed < 50f; speed += 5f)
             {
-/// <summary>Mean operation.</summary>
+
                 float windy = Mean(builder, world, Worlds.Storm(1f, speed), 600f);
 
                 Assert.True(windy < still,
@@ -143,10 +143,10 @@ namespace Thermodynamics.Tests
             }
         }
 
-/// <summary>FrictionWatts operation.</summary>
+
         private static float FrictionWatts(float windSpeed, float floor)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableDamage = false;
             settings.EnableSolarHeat = false;
@@ -170,7 +170,7 @@ namespace Thermodynamics.Tests
             return total;
         }
 
-/// <summary>Mean operation.</summary>
+
         private static float Mean(GridBuilder builder, ThermalSettings settings,
             EnvironmentSample world, float seconds)
         {

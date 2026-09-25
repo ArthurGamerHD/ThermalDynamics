@@ -19,16 +19,16 @@ namespace RichHudFramework
 
 		public struct GlyphFormat : IEquatable<GlyphFormat>
         {
-/// <summary>GlyphFormat operation.</summary>
+
             public static readonly GlyphFormat Black = new GlyphFormat();
 
-/// <summary>GlyphFormat operation.</summary>
+
             public static readonly GlyphFormat White = new GlyphFormat(color: Color.White);
 
-/// <summary>GlyphFormat operation.</summary>
+
             public static readonly GlyphFormat Blueish = new GlyphFormat(color: new Color(220, 235, 242));
 
-/// <summary>GlyphFormat operation.</summary>
+
 			public static readonly GlyphFormat Empty = new GlyphFormat(default(GlyphFormatMembers));
 
 			public TextAlignment Alignment => (TextAlignment)Data.Item1;
@@ -46,23 +46,23 @@ namespace RichHudFramework
 			public GlyphFormatMembers Data { get; set; }
 
 
-/// <summary>GlyphFormat operation.</summary>
+
 			public GlyphFormat(Color color, TextAlignment alignment, float textSize,
 				string fontName, FontStyles style = FontStyles.Regular) :
 				this(color, alignment, textSize, style, FontManager.GetFont(fontName))
 			{ }
 
-/// <summary>GlyphFormat operation.</summary>
+
 			public GlyphFormat(Color color, TextAlignment alignment, float textSize, Vector2I fontStyle)
 			{
 				if (color == default(Color))
 					color = Color.Black;
 
-/// <summary>GlyphFormatMembers operation.</summary>
+
 				Data = new GlyphFormatMembers((byte)alignment, textSize, fontStyle, color);
 			}
 
-/// <summary>GlyphFormat operation.</summary>
+
 			public GlyphFormat(Color color = default(Color), TextAlignment alignment = TextAlignment.Left,
 				float textSize = 1f, FontStyles style = FontStyles.Regular, IFontMin font = null)
 			{
@@ -71,48 +71,48 @@ namespace RichHudFramework
 				if (font == null)
 					font = FontManager.GetFont(FontManager.Default.X);
 
-/// <summary>GlyphFormatMembers operation.</summary>
+
 				Data = new GlyphFormatMembers((byte)alignment, textSize, font.GetStyleIndex(style), color);
 			}
 
-/// <summary>GlyphFormat operation.</summary>
+
 			public GlyphFormat(GlyphFormatMembers data) { this.Data = data; }
 
-/// <summary>GlyphFormat operation.</summary>
+
 			public GlyphFormat(GlyphFormat original) { Data = original.Data; }
 
 
-/// <summary>WithColor operation.</summary>
+
 			public GlyphFormat WithColor(Color color) =>
-/// <summary>GlyphFormat operation.</summary>
+
 				new GlyphFormat(color, Alignment, TextSize, StyleIndex);
 
-/// <summary>WithAlignment operation.</summary>
+
 			public GlyphFormat WithAlignment(TextAlignment textAlignment) =>
-/// <summary>GlyphFormat operation.</summary>
+
 				new GlyphFormat(Color, textAlignment, TextSize, StyleIndex);
 
-/// <summary>WithFont operation.</summary>
+
 			public GlyphFormat WithFont(int font) =>
-/// <summary>GlyphFormat operation.</summary>
+
 				new GlyphFormat(Color, Alignment, TextSize, new Vector2I(font, StyleIndex.Y));
 
-/// <summary>WithFont operation.</summary>
+
 			public GlyphFormat WithFont(IFontMin font, FontStyles style = FontStyles.Regular) =>
-/// <summary>GlyphFormat operation.</summary>
+
 				new GlyphFormat(Color, Alignment, TextSize, style, font);
 
-/// <summary>WithFont operation.</summary>
+
 			public GlyphFormat WithFont(string fontName, FontStyles style = FontStyles.Regular) =>
-/// <summary>GlyphFormat operation.</summary>
+
 				new GlyphFormat(Color, Alignment, TextSize, style, FontManager.GetFont(fontName));
 
-/// <summary>WithFont operation.</summary>
+
 			public GlyphFormat WithFont(Vector2I fontStyle) =>
-/// <summary>GlyphFormat operation.</summary>
+
 				new GlyphFormat(Color, Alignment, TextSize, fontStyle);
 
-/// <summary>WithStyle operation.</summary>
+
 			public GlyphFormat WithStyle(FontStyles style)
 			{
 				if (FontManager.GetFont(StyleIndex.X).IsStyleDefined(style))
@@ -121,7 +121,7 @@ namespace RichHudFramework
 					return this;
 			}
 
-/// <summary>WithStyle operation.</summary>
+
 			public GlyphFormat WithStyle(int style)
 			{
 				if (FontManager.GetFont(StyleIndex.X).IsStyleDefined(style))
@@ -130,13 +130,13 @@ namespace RichHudFramework
 					return this;
 			}
 
-/// <summary>WithSize operation.</summary>
+
 			public GlyphFormat WithSize(float size) =>
-/// <summary>GlyphFormat operation.</summary>
+
 				new GlyphFormat(Color, Alignment, size, StyleIndex);
 
 
-/// <summary>Equals operation.</summary>
+
 			public override bool Equals(object obj)
             {
                 if (obj == null || !(obj is GlyphFormat))
@@ -145,7 +145,7 @@ namespace RichHudFramework
                 return Equals((GlyphFormat)obj);
             }
 
-/// <summary>Equals operation.</summary>
+
 			public bool Equals(GlyphFormat format)
             {
                 return Data.Item1 == format.Data.Item1
@@ -154,7 +154,7 @@ namespace RichHudFramework
                     && Data.Item4 == format.Data.Item4;
             }
 
-/// <summary>DataEqual operation.</summary>
+
             public bool DataEqual(GlyphFormatMembers data)
             {
                 return Data.Item1 == data.Item1
@@ -163,7 +163,7 @@ namespace RichHudFramework
                     && Data.Item4 == data.Item4;
             }
 
-/// <summary>Returns the hashcode.</summary>
+
 			public override int GetHashCode() =>
                 Data.GetHashCode();
         }

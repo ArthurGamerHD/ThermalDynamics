@@ -44,7 +44,7 @@ namespace Thermodynamics.Core
         private readonly Dictionary<BlockInstance, Previous> watched =
             new Dictionary<BlockInstance, Previous>();
 
-/// <summary>List operation.</summary>
+
         private readonly List<BlockInstance> cold = new List<BlockInstance>();
 
         public int Count
@@ -52,19 +52,19 @@ namespace Thermodynamics.Core
             get { return watched.Count; }
         }
 
-/// <summary>TryGet operation.</summary>
+
         public bool TryGet(BlockInstance block, out Previous previous)
         {
             return watched.TryGetValue(block, out previous);
         }
 
-/// <summary>Sets the .</summary>
+
         public void Set(BlockInstance block, Previous previous)
         {
             watched[block] = previous;
         }
 
-/// <summary>Forget operation.</summary>
+
         public void Forget(HashSet<BlockInstance> seen)
         {
             if (watched.Count == 0) return;
@@ -79,7 +79,7 @@ namespace Thermodynamics.Core
             cold.Clear();
         }
 
-/// <summary>Clear operation.</summary>
+
         public void Clear()
         {
             watched.Clear();
@@ -96,10 +96,10 @@ namespace Thermodynamics.Core
 
         private float lowestCritical = float.PositiveInfinity;
 
-/// <summary>HashSet operation.</summary>
+
         private readonly HashSet<BlockInstance> cueSeen = new HashSet<BlockInstance>();
 
-/// <summary>CueFloorTemperature operation.</summary>
+
         public float CueFloorTemperature()
         {
             if (float.IsInfinity(lowestCritical)) return float.PositiveInfinity;
@@ -109,7 +109,7 @@ namespace Thermodynamics.Core
             return watch < glow ? watch : glow;
         }
 
-/// <summary>CollectHeatCues operation.</summary>
+
         public void CollectHeatCues(HeatCueState state, float interval, List<HeatCue> results)
         {
             if (state == null || results == null) return;
@@ -159,13 +159,13 @@ namespace Thermodynamics.Core
                 {
                     stage = HeatCueStage.Critical;
                 }
-/// <summary>if operation.</summary>
+
                 else if (forecast.WillCross && forecast.Seconds <= HeatWarning.LeadSeconds)
                 {
                     stage = HeatCueStage.Approaching;
                 }
 
-/// <summary>HeatCue operation.</summary>
+
                 HeatCue cue = new HeatCue();
                 cue.Block = block;
                 cue.Kelvin = kelvin;

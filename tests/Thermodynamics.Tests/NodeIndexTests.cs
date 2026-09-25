@@ -11,13 +11,13 @@ namespace Thermodynamics.Tests
     {
         private readonly ITestOutputHelper output;
 
-/// <summary>NodeIndexTests operation.</summary>
+
         public NodeIndexTests(ITestOutputHelper output)
         {
             this.output = output;
         }
 
-/// <summary>Hull operation.</summary>
+
         private static GridBuilder Hull(int side)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
             return builder;
         }
 
-/// <summary>ByKey operation.</summary>
+
         private static Dictionary<long, ThermalNode> ByKey(ThermalSimulation simulation)
         {
             Dictionary<long, ThermalNode> byKey = new Dictionary<long, ThermalNode>();
@@ -39,10 +39,10 @@ namespace Thermodynamics.Tests
             return byKey;
         }
 
-/// <summary>RequireAgreement operation.</summary>
+
         private void RequireAgreement(GridBuilder builder, ThermalSimulation simulation, string when)
         {
-/// <summary>ByKey operation.</summary>
+
             Dictionary<long, ThermalNode> byKey = ByKey(simulation);
             int judged = 0;
 
@@ -70,10 +70,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryBlockResolvesToTheNodeTheDictionaryWouldHaveGiven operation.</summary>
+
         public void EveryBlockResolvesToTheNodeTheDictionaryWouldHaveGiven()
         {
-/// <summary>Hull operation.</summary>
+
             GridBuilder builder = Hull(4);
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
             simulation.RebuildAll();
@@ -85,10 +85,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheIndexFollowsANodeMovedByAnIncrementalRemoval operation.</summary>
+
         public void TheIndexFollowsANodeMovedByAnIncrementalRemoval()
         {
-/// <summary>Hull operation.</summary>
+
             GridBuilder builder = Hull(4);
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
             simulation.RebuildAll();
@@ -113,10 +113,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheIndexFollowsTheShiftWhenARebuildIsAlreadyDue operation.</summary>
+
         public void TheIndexFollowsTheShiftWhenARebuildIsAlreadyDue()
         {
-/// <summary>Hull operation.</summary>
+
             GridBuilder builder = Hull(4);
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings(), 293.15f);
 
@@ -132,10 +132,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnInstanceSharedWithASecondSolverResolvesToNothingRatherThanToTheWrongNode operation.</summary>
+
         public void AnInstanceSharedWithASecondSolverResolvesToNothingRatherThanToTheWrongNode()
         {
-/// <summary>Hull operation.</summary>
+
             GridBuilder builder = Hull(3);
             ThermalSimulation first = builder.BuildSimulation(new ThermalSettings(), 293.15f);
             first.RebuildAll();

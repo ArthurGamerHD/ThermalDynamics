@@ -22,47 +22,47 @@ namespace Thermodynamics
 
         public long TotalUpdates;
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat Temperature = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat DeltaTemperature = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat ConductionWatts = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat RadiationWatts = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat ConvectionWatts = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat SolarWatts = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat FrictionWatts = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat HeatGeneration = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat EnergyProduction = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat EnergyConsumption = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat ThrustConsumption = new RunningStat();
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat Mass = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat ThermalMass = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat ExposedSurfaces = new RunningStat();
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat ExposedSurfaceArea = new RunningStat();
 
-/// <summary>Histogram operation.</summary>
+
         public readonly Histogram FinalTemperatures = new Histogram(Histogram.TemperatureEdges());
-/// <summary>Histogram operation.</summary>
+
         public readonly Histogram SampledTemperatures = new Histogram(Histogram.TemperatureEdges());
 
         public float PeakTemperature = float.MinValue;
         public long PeakTemperatureGrid;
 
-/// <summary>RunningStat operation.</summary>
+
         public readonly RunningStat SubstepDemand = new RunningStat();
 
         public float PeakSubstepDemand;
@@ -111,7 +111,7 @@ namespace Thermodynamics
         public long CriticalUpdates;
         public double TotalDamage;
 
-/// <summary>BlockTypeTelemetry operation.</summary>
+
         public BlockTypeTelemetry(MyDefinitionId id)
         {
             DefinitionId = id;
@@ -119,7 +119,7 @@ namespace Thermodynamics
             if (string.IsNullOrEmpty(Name)) Name = id.TypeId.ToString();
         }
 
-/// <summary>OnPlaced operation.</summary>
+
         public void OnPlaced(ThermalBlock block)
         {
             System.Threading.Interlocked.Increment(ref Placed);
@@ -137,7 +137,7 @@ namespace Thermodynamics
             {
                 Definition = block.Instance.Thermal;
                 Vector3I size = block.Instance.Model.Size;
-/// <summary>Vector3ITriple operation.</summary>
+
                 Size = new Vector3ITriple(size.X, size.Y, size.Z);
                 CaptureSurfaceProfile(block.Instance.Model);
             }
@@ -145,7 +145,7 @@ namespace Thermodynamics
             Mass.Add(block.Instance.Mass);
         }
 
-/// <summary>OnRemoved operation.</summary>
+
         public void OnRemoved()
         {
             System.Threading.Interlocked.Increment(ref Removed);
@@ -156,14 +156,14 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>OnUpdate operation.</summary>
+
         public void OnUpdate(ThermalNode node, long gridId)
         {
             TotalUpdates++;
             NotePeak(node.Temperature, gridId);
         }
 
-/// <summary>NotePeak operation.</summary>
+
         public void NotePeak(float temperature, long gridId)
         {
             if (temperature <= PeakTemperature) return;
@@ -172,7 +172,7 @@ namespace Thermodynamics
             PeakTemperatureGrid = gridId;
         }
 
-/// <summary>SampleSubstepDemand operation.</summary>
+
         public void SampleSubstepDemand(float demand, ThermalNode node, long gridId)
         {
             if (demand <= 0f) return;
@@ -188,7 +188,7 @@ namespace Thermodynamics
                 : node.Block.Position.ToString();
         }
 
-/// <summary>Sample operation.</summary>
+
         public void Sample(ThermalNode node)
         {
             SampledUpdates++;
@@ -216,7 +216,7 @@ namespace Thermodynamics
             if (!block.IsSealedByDoorState) UnsealedByDoorState++;
         }
 
-/// <summary>CaptureSurfaceProfile operation.</summary>
+
         private void CaptureSurfaceProfile(BlockModel model)
         {
             if (model == null) return;
@@ -233,14 +233,14 @@ namespace Thermodynamics
             SealFractionByFace = seal;
         }
 
-/// <summary>OnCriticalDamage operation.</summary>
+
         public void OnCriticalDamage(float damage)
         {
             CriticalUpdates++;
             TotalDamage += damage;
         }
 
-/// <summary>OnFinalTemperature operation.</summary>
+
         public void OnFinalTemperature(float temperature)
         {
             FinalTemperatures.Add(temperature);
@@ -253,7 +253,7 @@ namespace Thermodynamics
         public int Y;
         public int Z;
 
-/// <summary>Vector3ITriple operation.</summary>
+
         public Vector3ITriple(int x, int y, int z)
         {
             X = x;
@@ -261,7 +261,7 @@ namespace Thermodynamics
             Z = z;
         }
 
-/// <summary>ToString operation.</summary>
+
         public override string ToString()
         {
             return X + "x" + Y + "x" + Z;

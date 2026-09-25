@@ -38,7 +38,7 @@ namespace Thermodynamics.Harness
 
             public float WasteAsArmourWatts;
 
-/// <summary>List operation.</summary>
+
             public readonly List<Row> Types = new List<Row>();
         }
 
@@ -46,7 +46,7 @@ namespace Thermodynamics.Harness
 
         private const string SmallArmour = "SmallBlockArmorBlock";
 
-/// <summary>Sample operation.</summary>
+
         public static List<string> Sample(string root, int ships)
         {
             List<string> all = Blueprints.Files(root ?? Blueprints.CorpusPath());
@@ -54,16 +54,16 @@ namespace Thermodynamics.Harness
 
             if (ships <= 0 || ships >= all.Count) return all;
 
-/// <summary>List operation.</summary>
+
             List<string> taken = new List<string>(ships);
             for (int i = 0; i < ships; i++) taken.Add(all[(int)((long)i * all.Count / ships)]);
             return taken;
         }
 
-/// <summary>Walk operation.</summary>
+
         public static Reading Walk(IList<string> files)
         {
-/// <summary>Reading operation.</summary>
+
             Reading reading = new Reading();
             Dictionary<string, Row> byType = new Dictionary<string, Row>(StringComparer.Ordinal);
 
@@ -92,7 +92,7 @@ namespace Thermodynamics.Harness
                                 continue;
                             }
 
-/// <summary>FullLoadWatts operation.</summary>
+
                             float waste = FullLoadWatts(definition);
                             reading.WasteWatts += waste;
 
@@ -105,10 +105,10 @@ namespace Thermodynamics.Harness
                             affected = true;
                             reading.BlocksCorrected++;
 
-/// <summary>RowFor operation.</summary>
+
                             Row row = RowFor(byType, definition);
                             row.Blocks++;
-/// <summary>ArmourMass operation.</summary>
+
                             row.MassGainedKilograms += definition.Mass - ArmourMass(definition.Large);
                             row.WasteGainedWatts += waste;
                         }
@@ -125,10 +125,10 @@ namespace Thermodynamics.Harness
             return reading;
         }
 
-/// <summary>ShareOf operation.</summary>
+
         public static List<float> ShareOf(IList<string> files, string typeId, out int shipsRead)
         {
-/// <summary>List operation.</summary>
+
             List<float> shares = new List<float>();
             shipsRead = 0;
 
@@ -154,7 +154,7 @@ namespace Thermodynamics.Harness
                                 continue;
                             }
 
-/// <summary>FullLoadWatts operation.</summary>
+
                             float waste = FullLoadWatts(definition);
                             total += waste;
                             if (definition.TypeId == typeId) mine += waste;
@@ -169,7 +169,7 @@ namespace Thermodynamics.Harness
             return shares;
         }
 
-/// <summary>RowFor operation.</summary>
+
         private static Row RowFor(Dictionary<string, Row> byType, GameBlocks.Definition definition)
         {
             string key = GameBlocks.BaseVariantKey(definition.TypeId, definition.Large);
@@ -184,7 +184,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>FullLoadWatts operation.</summary>
+
         private static float FullLoadWatts(GameBlocks.Definition definition)
         {
             if (definition.ThrustNewtons > 0f) return 0f;
@@ -197,21 +197,21 @@ namespace Thermodynamics.Harness
                 : definition.PowerDrawWatts * function.ConsumerWasteEnergy;
         }
 
-/// <summary>ArmourMass operation.</summary>
+
         private static float ArmourMass(bool large)
         {
             Vanilla.Block plate = Vanilla.Find(large ? LargeArmour : SmallArmour);
             return plate == null ? 0f : plate.Mass;
         }
 
-/// <summary>ShareReport operation.</summary>
+
         public static string ShareReport(IList<string> files, string typeId)
         {
             int ships;
-/// <summary>ShareOf operation.</summary>
+
             List<float> shares = ShareOf(files, typeId, out ships);
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine(typeId + "  share of the full-load waste of the ships that carry one");
             sb.AppendLine("  basis: full electrical load, no thrust, stores held in reserve");
@@ -224,7 +224,7 @@ namespace Thermodynamics.Harness
             }
 
             sb.AppendLine("  " + shares.Count.ToString("n0") + " of " + ships.ToString("n0")
-/// <summary>one operation.</summary>
+
                 + " ships carry one ("
                 + ((float)shares.Count / ships * 100f).ToString("n1") + " %)");
 
@@ -243,13 +243,13 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(IList<string> files)
         {
-/// <summary>Walk operation.</summary>
+
             Reading reading = Walk(files);
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("BASE VARIANTS  (blocks a blueprint spells with an empty SubtypeName)");
             sb.AppendLine("  the resolver built every one of these as a plain armour cube until 2026-08-25:");

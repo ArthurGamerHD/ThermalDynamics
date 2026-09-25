@@ -19,7 +19,7 @@ namespace Thermodynamics.Harness
             public int HeatPumps;
             public int Producers;
 
-/// <summary>ToString operation.</summary>
+
             public override string ToString()
             {
                 return Nodes.ToString("n0") + " nodes, " + Links.ToString("n0") + " links, "
@@ -29,12 +29,12 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Defaults operation.</summary>
+
         private static ThermalSettings Defaults(ThermalSettings settings)
         {
             if (settings != null) return settings;
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings created = new ThermalSettings();
             created.MaxSubsteps = 4096;
             created.MaxElementVisitsPerStep = 0;
@@ -42,7 +42,7 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Hull operation.</summary>
+
         public static Built Hull(string shape, int size, ThermalSettings settings = null)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -51,10 +51,10 @@ namespace Thermodynamics.Harness
             return Finish(builder.BuildSimulation(Defaults(settings), 293.15f));
         }
 
-/// <summary>Pressurised operation.</summary>
+
         public static Built Pressurised(string shape, int size, ThermalSettings settings = null)
         {
-/// <summary>Hull operation.</summary>
+
             Built built = Hull(shape, size, settings);
 
             RoomMap rooms = built.Simulation.Rooms.Map;
@@ -67,11 +67,11 @@ namespace Thermodynamics.Harness
                 }
             }
 
-/// <summary>Measure operation.</summary>
+
             return Measure(built);
         }
 
-/// <summary>Plumbed operation.</summary>
+
         public static Built Plumbed(string shape, int size, int rings = 8, ThermalSettings settings = null)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -89,7 +89,7 @@ namespace Thermodynamics.Harness
             int placed = 0;
             for (int r = 0; r < rings; r++)
             {
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I origin = new Vector3I(max.X + 2, max.Y - (r * 2), max.Z + 2);
                 List<Vector3I> ring = PipeFitter.RectangleXZ(origin, 6, 5);
 
@@ -106,7 +106,7 @@ namespace Thermodynamics.Harness
             BlockModel pump = Catalog.HeatPump();
             for (int p = 0; p < rings; p++)
             {
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I at = new Vector3I(max.X + 2, max.Y - (p * 2), max.Z + 8);
                 builder.Place(pump, at);
                 builder.Place(Catalog.HeavyArmor(), at + Vector3I.Forward);
@@ -116,7 +116,7 @@ namespace Thermodynamics.Harness
             return Finish(builder.BuildSimulation(Defaults(settings), 293.15f));
         }
 
-/// <summary>HeatedRings operation.</summary>
+
         public static Built HeatedRings(int rings = 1, float wasteWatts = 75000f,
             ThermalSettings settings = null, float parcelsPerSecond = 0f)
         {
@@ -135,7 +135,7 @@ namespace Thermodynamics.Harness
                 builder.Place(Catalog.Reactor(), cells[2] + Vector3I.Down).Wasting(wasteWatts);
             }
 
-/// <summary>Finish operation.</summary>
+
             Built built = Finish(builder.BuildSimulation(Defaults(settings), 300f));
             built.Producers = rings;
 
@@ -154,19 +154,19 @@ namespace Thermodynamics.Harness
             return built;
         }
 
-/// <summary>Burning operation.</summary>
+
         public static Built Burning(string shape, int size, ThermalSettings settings = null)
         {
-/// <summary>Hull operation.</summary>
+
             Built built = Hull(shape, size, settings);
             built.Producers = Census.DriveCensus(built.Simulation, Census.ProducerWatts * 20f);
             return built;
         }
 
-/// <summary>Scorched operation.</summary>
+
         public static Built Scorched(string shape, int size, ThermalSettings settings = null)
         {
-/// <summary>Defaults operation.</summary>
+
             ThermalSettings held = settings ?? Defaults(null);
             held.EnableEnvironment = false;
             held.EnableSolarHeat = false;
@@ -174,7 +174,7 @@ namespace Thermodynamics.Harness
             held.EnableWasteHeat = false;
             held.Derive();
 
-/// <summary>Hull operation.</summary>
+
             Built built = Hull(shape, size, held);
 
             built.Simulation.Solver.SetAllTemperatures(4000f);
@@ -183,11 +183,11 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Fleet operation.</summary>
+
         public static List<Built> Fleet(string shape, int totalBlocks, int grids,
             ThermalSettings settings = null)
         {
-/// <summary>List operation.</summary>
+
             List<Built> fleet = new List<Built>();
             if (grids < 1) grids = 1;
 
@@ -197,7 +197,7 @@ namespace Thermodynamics.Harness
             return fleet;
         }
 
-/// <summary>StepFleet operation.</summary>
+
         public static void StepFleet(IList<Built> fleet, EnvironmentSample sample, int steps)
         {
             for (int s = 0; s < steps; s++)
@@ -210,15 +210,15 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Finish operation.</summary>
+
         private static Built Finish(ThermalSimulation simulation)
         {
             simulation.RebuildAll();
-/// <summary>Measure operation.</summary>
+
             return Measure(new Built { Simulation = simulation });
         }
 
-/// <summary>Measure operation.</summary>
+
         private static Built Measure(Built built)
         {
             ThermalSimulation simulation = built.Simulation;

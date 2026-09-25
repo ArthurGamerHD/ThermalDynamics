@@ -8,29 +8,29 @@ namespace Thermodynamics.Tests
         private const float Roughness = 0.03f;
         private const float Gradient = 600f;
 
-/// <summary>At operation.</summary>
+
         private static float At(float height)
         {
             return WindProfile.Multiplier(height, Roughness, Gradient);
         }
 
         [Fact]
-/// <summary>TheReferenceHeightIsTheUnit operation.</summary>
+
         public void TheReferenceHeightIsTheUnit()
         {
             Assert.Equal(1f, At(WindProfile.ReferenceHeight), 4);
         }
 
         [Fact]
-/// <summary>WindStrengthensWithHeightThroughTheSurfaceLayer operation.</summary>
+
         public void WindStrengthensWithHeightThroughTheSurfaceLayer()
         {
-/// <summary>At operation.</summary>
+
             float previous = At(1f);
 
             for (float height = 2f; height <= 500f; height *= 1.5f)
             {
-/// <summary>At operation.</summary>
+
                 float current = At(height);
                 Assert.True(current > previous,
                     "wind at " + height + " m should exceed the height below it");
@@ -39,7 +39,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AndThenStopsStrengthening operation.</summary>
+
         public void AndThenStopsStrengthening()
         {
             Assert.Equal(At(Gradient), At(Gradient * 2f), 5);
@@ -47,7 +47,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>GroundLevelIsCalmerThanHeadHeightIsCalmerThanAMast operation.</summary>
+
         public void GroundLevelIsCalmerThanHeadHeightIsCalmerThanAMast()
         {
             Assert.InRange(At(0.5f), 0.4f, 0.6f);
@@ -56,7 +56,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RoughGroundSlowsTheSurfaceAndSteepensTheClimb operation.</summary>
+
         public void RoughGroundSlowsTheSurfaceAndSteepensTheClimb()
         {
             float meadow = WindProfile.Multiplier(2f, 0.03f, Gradient);
@@ -71,7 +71,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockOnTheGroundStillFeelsSomeWind operation.</summary>
+
         public void ABlockOnTheGroundStillFeelsSomeWind()
         {
             Assert.True(At(0f) > 0.3f);
@@ -79,7 +79,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NonsenseInputsDoNotProduceNonsenseWind operation.</summary>
+
         public void NonsenseInputsDoNotProduceNonsenseWind()
         {
             Assert.True(WindProfile.Multiplier(10f, 0f, Gradient) > 0f);
@@ -91,19 +91,19 @@ namespace Thermodynamics.Tests
         private const float Amplitude = 0.35f;
         private const float Crossover = 80f;
 
-/// <summary>Diurnal operation.</summary>
+
         private static float Diurnal(float heating, float height)
         {
             return WindProfile.Diurnal(heating, height, Amplitude, Crossover, Gradient);
         }
 
         [Fact]
-/// <summary>SurfaceWindPeaksInTheAfternoonAndDropsBeforeDawn operation.</summary>
+
         public void SurfaceWindPeaksInTheAfternoonAndDropsBeforeDawn()
         {
-/// <summary>Diurnal operation.</summary>
+
             float afternoon = Diurnal(1f, 2f);
-/// <summary>Diurnal operation.</summary>
+
             float predawn = Diurnal(0f, 2f);
 
             Assert.True(afternoon > 1f, "the ground is windiest when it is warmest");
@@ -112,12 +112,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AloftItIsTheOtherWayRound operation.</summary>
+
         public void AloftItIsTheOtherWayRound()
         {
-/// <summary>Diurnal operation.</summary>
+
             float afternoon = Diurnal(1f, 400f);
-/// <summary>Diurnal operation.</summary>
+
             float predawn = Diurnal(0f, 400f);
 
             Assert.True(predawn > 1f, "wind aloft should strengthen overnight");
@@ -125,7 +125,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ThereIsAHeightAtWhichTheDayDoesNotMatter operation.</summary>
+
         public void ThereIsAHeightAtWhichTheDayDoesNotMatter()
         {
             Assert.Equal(1f, Diurnal(0f, Crossover), 5);
@@ -134,26 +134,26 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>MiddayAndMidnightStraddleTheMean operation.</summary>
+
         public void MiddayAndMidnightStraddleTheMean()
         {
             for (float height = 0f; height < 500f; height += 60f)
             {
-/// <summary>Diurnal operation.</summary>
+
                 float sum = Diurnal(0f, height) + Diurnal(1f, height);
                 Assert.Equal(2f, sum, 4);
             }
         }
 
         [Fact]
-/// <summary>TheReversalDoesNotDeepenPastFull operation.</summary>
+
         public void TheReversalDoesNotDeepenPastFull()
         {
             Assert.Equal(Diurnal(0f, Crossover * 2f), Diurnal(0f, Gradient), 5);
         }
 
         [Fact]
-/// <summary>TheCycleIsGoneAboveTheBoundaryLayer operation.</summary>
+
         public void TheCycleIsGoneAboveTheBoundaryLayer()
         {
             Assert.True(Diurnal(0f, Gradient) > 1.3f, "still a jet at the top of the boundary layer");
@@ -164,7 +164,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ADisabledCycleChangesNothing operation.</summary>
+
         public void ADisabledCycleChangesNothing()
         {
             Assert.Equal(1f, WindProfile.Diurnal(0f, 2f, 0f, Crossover, Gradient), 5);
@@ -173,7 +173,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCycleNeverTurnsTheWindNegative operation.</summary>
+
         public void TheCycleNeverTurnsTheWindNegative()
         {
             for (float heating = 0f; heating <= 1f; heating += 0.1f)
@@ -187,14 +187,14 @@ namespace Thermodynamics.Tests
 
 
         [Fact]
-/// <summary>HeatingWithNoHistoryTakesTheSunItFinds operation.</summary>
+
         public void HeatingWithNoHistoryTakesTheSunItFinds()
         {
             Assert.Equal(0.8f, WindProfile.Heating(-1f, 0.8f, 0.1f, 45f), 4);
         }
 
         [Fact]
-/// <summary>HeatingLagsTheSunRatherThanFollowingIt operation.</summary>
+
         public void HeatingLagsTheSunRatherThanFollowingIt()
         {
             float heating = WindProfile.Heating(0.2f, 1f, 1f, 45f);
@@ -204,7 +204,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSunBelowTheHorizonIsNoHeatingAtAll operation.</summary>
+
         public void TheSunBelowTheHorizonIsNoHeatingAtAll()
         {
             Assert.Equal(WindProfile.Heating(-1f, -0.1f, 1f, 45f), WindProfile.Heating(-1f, -1f, 1f, 45f), 5);
@@ -212,7 +212,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>HeatingStaysInsideItsRange operation.</summary>
+
         public void HeatingStaysInsideItsRange()
         {
             float heating = 0.5f;

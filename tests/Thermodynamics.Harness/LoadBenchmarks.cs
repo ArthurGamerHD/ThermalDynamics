@@ -73,14 +73,14 @@ namespace Thermodynamics.Harness
         public int Gen2;
         public double AllocatedMb;
 
-/// <summary>DescribeGc operation.</summary>
+
         public string DescribeGc()
         {
             return "GC during the run: " + Gen0 + "/" + Gen1 + "/" + Gen2
                 + " collections, " + AllocatedMb.ToString("n0") + " MB allocated.";
         }
 
-/// <summary>DescribeStages operation.</summary>
+
         public string DescribeStages()
         {
             return "worst call per stage: topology " + TopologyMs.ToString("n1")
@@ -103,10 +103,10 @@ namespace Thermodynamics.Harness
             { "scale", "hitch", "weld", "load", "spike", "firststep", "pace", "reach", "memory", "floor" };
 
 
-/// <summary>Scale operation.</summary>
+
         public static List<ScaleRow> Scale(string shape, IList<int> sizes, Action<string> log = null)
         {
-/// <summary>List operation.</summary>
+
             List<ScaleRow> rows = new List<ScaleRow>();
 
             for (int i = 0; i < sizes.Count; i++)
@@ -118,7 +118,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>MeasureScale operation.</summary>
+
         private static ScaleRow MeasureScale(string shape, int targetCells)
         {
             HashSet<Vector3I> cells = LoadShapes.Build(shape, targetCells);
@@ -126,15 +126,15 @@ namespace Thermodynamics.Harness
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(cells);
 
-/// <summary>MeasureBuilt operation.</summary>
+
             return MeasureBuilt(builder, shape, targetCells);
         }
 
-/// <summary>MeasureBuilt operation.</summary>
+
         public static ScaleRow MeasureBuilt(GridBuilder builder, string shape = "franken",
             int targetCells = 0)
         {
-/// <summary>ScaleRow operation.</summary>
+
             ScaleRow row = new ScaleRow();
             row.Shape = shape;
             row.TargetBlocks = targetCells > 0 ? targetCells : builder.Placed.Count;
@@ -143,7 +143,7 @@ namespace Thermodynamics.Harness
 
             Stopwatch build = Stopwatch.StartNew();
 
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -220,10 +220,10 @@ namespace Thermodynamics.Harness
             row.BoundedStepMs = watch.Elapsed.TotalMilliseconds / measured;
 
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I spare = simulation.Grid.Max + new Vector3I(0, 0, 1);
             simulation.AddBlock(
-/// <summary>BlockInstance operation.</summary>
+
                 new BlockInstance(Catalog.HeavyArmor(), spare, BlockOrientation.Identity), 293.15f);
 
             double worst = 0d;
@@ -253,15 +253,15 @@ namespace Thermodynamics.Harness
 
         public static bool CollectDiagnostics;
 
-/// <summary>Hitch operation.</summary>
+
         public static HitchResult Hitch(string shape, int targetCells, int ticks = 400)
         {
-/// <summary>HitchResult operation.</summary>
+
             HitchResult result = new HitchResult();
             result.Name = "hitch " + shape + " " + targetCells.ToString("n0");
 
             Stopwatch build = Stopwatch.StartNew();
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = BuildSettled(shape, targetCells);
             build.Stop();
 
@@ -278,21 +278,21 @@ namespace Thermodynamics.Harness
             int gen2 = GC.CollectionCount(2);
             long allocated = GC.GetTotalAllocatedBytes(false);
 
-/// <summary>FrameTrace operation.</summary>
+
             FrameTrace trace = new FrameTrace(result.Name);
             EnvironmentSample sample = Worlds.Space(new Vector3(0f, 1f, 0f));
 
             BlockModel armour = Catalog.HeavyArmor();
-/// <summary>Vector3I operation.</summary>
+
             Vector3I weldAt = simulation.Grid.Max + new Vector3I(0, 0, 2);
             const float frame = FrameSeconds;
 
-/// <summary>Stopwatch operation.</summary>
+
             Stopwatch watch = new Stopwatch();
 
             for (int tick = 0; tick < ticks; tick++)
             {
-/// <summary>StageTimings operation.</summary>
+
                 StageTimings timings = new StageTimings();
                 simulation.Profiler = timings;
 
@@ -303,7 +303,7 @@ namespace Thermodynamics.Harness
                     simulation.AddBlock(new BlockInstance(armour, weldAt, BlockOrientation.Identity), 293.15f);
                     what = "one block placed";
                 }
-/// <summary>if operation.</summary>
+
                 else if (tick == ticks / 2)
                 {
                     BlockInstance placed = simulation.Grid.GetAtCell(weldAt);
@@ -330,15 +330,15 @@ namespace Thermodynamics.Harness
             return result;
         }
 
-/// <summary>Weld operation.</summary>
+
         public static HitchResult Weld(string shape, int targetCells, int ticks = 120)
         {
-/// <summary>HitchResult operation.</summary>
+
             HitchResult result = new HitchResult();
             result.Name = "weld " + shape + " " + targetCells.ToString("n0");
 
             Stopwatch build = Stopwatch.StartNew();
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = BuildSettled(shape, targetCells);
             build.Stop();
 
@@ -353,23 +353,23 @@ namespace Thermodynamics.Harness
             int gen2 = GC.CollectionCount(2);
             long allocated = GC.GetTotalAllocatedBytes(false);
 
-/// <summary>FrameTrace operation.</summary>
+
             FrameTrace trace = new FrameTrace(result.Name);
             EnvironmentSample sample = Worlds.Shadow();
             BlockModel armour = Catalog.HeavyArmor();
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I start = simulation.Grid.Min - new Vector3I(2, 0, 0);
-/// <summary>Stopwatch operation.</summary>
+
             Stopwatch watch = new Stopwatch();
 
             for (int tick = 0; tick < ticks; tick++)
             {
-/// <summary>StageTimings operation.</summary>
+
                 StageTimings timings = new StageTimings();
                 simulation.Profiler = timings;
 
-/// <summary>Vector3I operation.</summary>
+
                 Vector3I at = start + new Vector3I(0, 0, tick);
                 simulation.AddBlock(new BlockInstance(armour, at, BlockOrientation.Identity), 293.15f);
 
@@ -388,14 +388,14 @@ namespace Thermodynamics.Harness
             return result;
         }
 
-/// <summary>Load operation.</summary>
+
         public static HitchResult Load(string shape, int targetCells)
         {
-/// <summary>HitchResult operation.</summary>
+
             HitchResult result = new HitchResult();
             result.Name = "load " + shape + " " + targetCells.ToString("n0");
 
-/// <summary>FrameTrace operation.</summary>
+
             FrameTrace trace = new FrameTrace(result.Name);
             HashSet<Vector3I> cells = LoadShapes.Build(shape, targetCells);
 
@@ -405,7 +405,7 @@ namespace Thermodynamics.Harness
             BlockModel armour = Catalog.HeavyArmor();
             foreach (Vector3I cell in cells) builder.Place(armour, cell);
 
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -442,22 +442,22 @@ namespace Thermodynamics.Harness
             public bool WentBad;
         }
 
-/// <summary>Stability operation.</summary>
+
         public static StabilityRow Stability(string label, int frequency, float heatTimeScale,
             int maxSubsteps, float realSeconds)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.Frequency = frequency;
             settings.HeatTimeScale = heatTimeScale;
             settings.MaxSubsteps = maxSubsteps;
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
-/// <summary>Stability operation.</summary>
+
             return Stability(label, settings, realSeconds);
         }
 
-/// <summary>Stability operation.</summary>
+
         public static StabilityRow Stability(string label, ThermalSettings settings, float realSeconds)
         {
             float heatTimeScale = settings.HeatTimeScale;
@@ -473,7 +473,7 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < nodes.Count; i++) nodes[i].Temperature = 293.15f;
             nodes[nodes.Count / 2].Temperature = 1200f;
 
-/// <summary>StabilityRow operation.</summary>
+
             StabilityRow row = new StabilityRow();
             row.Label = label;
             row.HeatTimeScale = heatTimeScale;
@@ -516,10 +516,10 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>StabilityTable operation.</summary>
+
         public static string StabilityTable(IList<StabilityRow> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append("case".PadRight(18)).Append("heatScale".PadLeft(11))
               .Append("maxSub".PadLeft(8)).Append("min K".PadLeft(10))
@@ -570,21 +570,21 @@ namespace Thermodynamics.Harness
             public long Steps;
         }
 
-/// <summary>Reach operation.</summary>
+
         public static ReachRow Reach(string label, int frequency, float speed, float heatTimeScale,
             int maxSubsteps, float realSeconds, int length)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.Frequency = frequency;
             settings.SimulationSpeed = speed;
             settings.HeatTimeScale = heatTimeScale;
             settings.MaxSubsteps = maxSubsteps;
-/// <summary>Reach operation.</summary>
+
             return Reach(label, settings, realSeconds, length);
         }
 
-/// <summary>Reach operation.</summary>
+
         public static ReachRow Reach(string label, ThermalSettings settings, float realSeconds, int length)
         {
             int frequency = settings.Frequency;
@@ -618,7 +618,7 @@ namespace Thermodynamics.Harness
                 run[i].Temperature = 300f;
             }
 
-/// <summary>ReachRow operation.</summary>
+
             ReachRow row = new ReachRow();
             row.Label = label;
             row.Frequency = frequency;
@@ -663,10 +663,10 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>ReachTable operation.</summary>
+
         public static string ReachTable(IList<ReachRow> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("profile".PadRight(14)).Append("freq".PadLeft(6))
@@ -711,10 +711,10 @@ namespace Thermodynamics.Harness
             public float TemperatureChange;
         }
 
-/// <summary>Pace operation.</summary>
+
         public static List<PaceRow> Pace(string shape, int targetCells, float realSeconds)
         {
-/// <summary>List operation.</summary>
+
             List<PaceRow> rows = new List<PaceRow>();
 
             float[] speeds = { 1f, 0.5f, 0.25f };
@@ -731,17 +731,17 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>MeasurePace operation.</summary>
+
         private static PaceRow MeasurePace(string shape, int targetCells, float realSeconds,
             float speed, float heatTimeScale, int frequency)
         {
-/// <summary>PaceRow operation.</summary>
+
             PaceRow row = new PaceRow();
             row.Speed = speed;
             row.HeatTimeScale = heatTimeScale;
             row.Frequency = frequency;
 
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = BuildSettled(shape, targetCells);
             while (simulation.HasPendingWork) simulation.Update(TickSeconds, Worlds.Shadow());
 
@@ -782,10 +782,10 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>PaceTable operation.</summary>
+
         public static string PaceTable(IList<PaceRow> rows, float realSeconds)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("speed".PadLeft(7)).Append("heatScale".PadLeft(11))
@@ -822,31 +822,31 @@ namespace Thermodynamics.Harness
             public double BytesPerBlock;
         }
 
-/// <summary>Memory operation.</summary>
+
         public static List<MemoryRow> Memory(string shape, int targetCells)
         {
-/// <summary>List operation.</summary>
+
             List<MemoryRow> rows = new List<MemoryRow>();
 
             HashSet<Vector3I> cells = LoadShapes.Build(shape, targetCells);
             BlockModel[] tiers = Census.Models();
 
-/// <summary>Sets the tled.</summary>
+
             long baseline = Settled();
 
             GridBuilder builder = GridBuilder.Large();
-/// <summary>List operation.</summary>
+
             List<BlockInstance> instances = new List<BlockInstance>();
             int index = 0;
             foreach (Vector3I cell in cells)
             {
-/// <summary>BlockInstance operation.</summary>
+
                 BlockInstance block = new BlockInstance(
                     tiers[Census.TierAt(index++)], cell, BlockOrientation.Identity);
                 instances.Add(block);
             }
 
-/// <summary>Sets the tled.</summary>
+
             long afterInstances = Settled();
             int blocks = instances.Count;
             rows.Add(Row("BlockInstance", afterInstances - baseline, blocks, blocks,
@@ -855,16 +855,16 @@ namespace Thermodynamics.Harness
             GridModel grid = builder.Grid;
             for (int i = 0; i < instances.Count; i++) grid.Add(instances[i]);
 
-/// <summary>Sets the tled.</summary>
+
             long afterGrid = Settled();
             rows.Add(Row("GridModel indexes", afterGrid - afterInstances, blocks, blocks,
                 "by cell, by slot, and the flat list"));
 
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), grid);
             simulation.Surfaces.Rebuild(grid);
 
-/// <summary>Sets the tled.</summary>
+
             long afterSurfaces = Settled();
             rows.Add(Row("SurfaceMap", afterSurfaces - afterGrid, simulation.Surfaces.CellCount, blocks,
                 "one packed entry per occupied cell, holding both surface layers"));
@@ -875,7 +875,7 @@ namespace Thermodynamics.Harness
             }
             simulation.Solver.RebuildLinks();
 
-/// <summary>Sets the tled.</summary>
+
             long afterSolver = Settled();
             rows.Add(Row("Solver", afterSolver - afterSurfaces, simulation.Solver.LinkCount, blocks,
                 "nodes, mirrored arrays, links and their chains"));
@@ -893,14 +893,14 @@ namespace Thermodynamics.Harness
                 if (now > peak) peak = now;
             }
 
-/// <summary>Sets the tled.</summary>
+
             long afterRooms = Settled();
 
             RoomMap map = simulation.Rooms.Map;
             rows.Add(Row("RoomMap retained", afterRooms - afterSolver, volume, blocks,
                 "stored: " + map.SolidCellCount.ToString("n0") + " solid + "
                 + map.RoomCellCount.ToString("n0") + " cells in " + map.RoomCount.ToString("n0")
-/// <summary>rooms operation.</summary>
+
                 + " rooms (" + (map.RoomCellCapacity - map.RoomCellCount).ToString("n0")
                 + " cells of slack); counted, not stored: "
                 + map.ExternalCellCount.ToString("n0") + " external"));
@@ -919,10 +919,10 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Row operation.</summary>
+
         private static MemoryRow Row(string stage, long bytes, long entries, int blocks, string note)
         {
-/// <summary>MemoryRow operation.</summary>
+
             MemoryRow row = new MemoryRow();
             row.Stage = stage;
             row.Megabytes = bytes / (1024d * 1024d);
@@ -932,7 +932,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>Sets the tled.</summary>
+
         private static long Settled()
         {
             GC.Collect();
@@ -941,10 +941,10 @@ namespace Thermodynamics.Harness
             return GC.GetTotalMemory(true);
         }
 
-/// <summary>MemoryTable operation.</summary>
+
         public static string MemoryTable(IList<MemoryRow> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append("stage".PadRight(24)).Append("MB".PadLeft(10))
               .Append("B/block".PadLeft(10)).Append("entries".PadLeft(14))
@@ -981,7 +981,7 @@ namespace Thermodynamics.Harness
             public int SolverTick = -1;
 
             public int Ticks;
-/// <summary>SimulationWork operation.</summary>
+
             public SimulationWork Work = new SimulationWork();
 
             public int Gen0;
@@ -989,7 +989,7 @@ namespace Thermodynamics.Harness
             public int Gen2;
             public double AllocatedMb;
 
-/// <summary>Describe operation.</summary>
+
             public string Describe()
             {
                 return "worst tick " + WorstTickMs.ToString("n1") + " ms over " + Ticks
@@ -1012,10 +1012,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Spike operation.</summary>
+
         public static SpikeReport Spike(string shape, int targetCells)
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation simulation = BuildSettled(shape, targetCells);
             while (simulation.HasPendingWork)
             {
@@ -1027,14 +1027,14 @@ namespace Thermodynamics.Harness
             StageTimings timings = null;
             simulation.Work.Reset();
 
-/// <summary>SpikeReport operation.</summary>
+
             SpikeReport report = new SpikeReport();
 
             report.Blocks = simulation.Solver.Nodes.Count;
             report.Links = simulation.Solver.LinkCount;
 
             BlockModel armour = Catalog.HeavyArmor();
-/// <summary>Vector3I operation.</summary>
+
             Vector3I at = simulation.Grid.Max + new Vector3I(0, 0, 2);
             simulation.AddBlock(new BlockInstance(armour, at, BlockOrientation.Identity), 293.15f);
 
@@ -1043,12 +1043,12 @@ namespace Thermodynamics.Harness
             int gen2 = GC.CollectionCount(2);
             long allocated = GC.GetTotalAllocatedBytes(false);
 
-/// <summary>Stopwatch operation.</summary>
+
             Stopwatch watch = new Stopwatch();
 
             do
             {
-/// <summary>StageTimings operation.</summary>
+
                 timings = new StageTimings();
                 simulation.Profiler = timings;
 
@@ -1078,7 +1078,7 @@ namespace Thermodynamics.Harness
             return report;
         }
 
-/// <summary>RecordGc operation.</summary>
+
         private static void RecordGc(HitchResult result, int gen0, int gen1, int gen2, long allocated)
         {
             result.Gen0 = GC.CollectionCount(0) - gen0;
@@ -1087,7 +1087,7 @@ namespace Thermodynamics.Harness
             result.AllocatedMb = (GC.GetTotalAllocatedBytes(false) - allocated) / (1024d * 1024d);
         }
 
-/// <summary>RecordStages operation.</summary>
+
         private static void RecordStages(HitchResult result, StageTimings timings, int tick)
         {
             double topology = timings.WorstMs(SimulationPhase.Topology);
@@ -1103,7 +1103,7 @@ namespace Thermodynamics.Harness
             if (solver > result.SolverMs) { result.SolverMs = solver; result.SolverTick = tick; }
         }
 
-/// <summary>Record operation.</summary>
+
         private static void Record(SpikeReport report, StageTimings timings, SimulationPhase phase, int tick)
         {
             double ms = timings.WorstMs(phase);
@@ -1126,7 +1126,7 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Sets the tlememory.</summary>
+
         private static void SettleMemory()
         {
             GC.Collect();
@@ -1136,7 +1136,7 @@ namespace Thermodynamics.Harness
 
         public static bool UseCensus = true;
 
-/// <summary>Builds the API method table.</summary>
+
         public static ThermalSimulation BuildSettled(string shape, int targetCells)
         {
             HashSet<Vector3I> cells = LoadShapes.Build(shape, targetCells);
@@ -1157,7 +1157,7 @@ namespace Thermodynamics.Harness
                 }
             }
 
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(new ThermalSettings(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -1169,7 +1169,7 @@ namespace Thermodynamics.Harness
             return simulation;
         }
 
-/// <summary>SeedSpread operation.</summary>
+
         public static void SeedSpread(ThermalSimulation simulation)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -1203,12 +1203,12 @@ namespace Thermodynamics.Harness
             public float AirSpeed;
         }
 
-/// <summary>SubstepFloor operation.</summary>
+
         public static List<FloorRow> SubstepFloor(string shape, int size, int steps,
             IList<int> caps, Action<string> log = null, bool driven = false, int frequency = 0,
             float airSpeed = 0f)
         {
-/// <summary>List operation.</summary>
+
             List<FloorRow> rows = new List<FloorRow>();
             float[] reference = null;
             float referencePeak = 0f;
@@ -1219,7 +1219,7 @@ namespace Thermodynamics.Harness
             {
                 if (log != null) log("cap " + caps[i]);
 
-/// <summary>RunFloor operation.</summary>
+
                 FloorRow row = RunFloor(shape, size, steps, caps[i], reference, driven, frequency,
                     airSpeed);
                 if (reference == null)
@@ -1237,7 +1237,7 @@ namespace Thermodynamics.Harness
 
         private static float[] lastTemperatures;
 
-/// <summary>RunFloor operation.</summary>
+
         private static FloorRow RunFloor(string shape, int size, int steps, int cap,
             float[] reference, bool driven, int frequency, float airSpeed)
         {
@@ -1246,7 +1246,7 @@ namespace Thermodynamics.Harness
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(cells);
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxSubstepsPerBlock = cap;
 
@@ -1256,7 +1256,7 @@ namespace Thermodynamics.Harness
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(settings, builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -1281,7 +1281,7 @@ namespace Thermodynamics.Harness
                 ? Worlds.Flight(1f, airSpeed)
                 : Worlds.Space(new Vector3(0f, 1f, 0f));
 
-/// <summary>FloorRow operation.</summary>
+
             FloorRow row = new FloorRow();
             row.Cap = cap;
             row.AirSpeed = airSpeed;
@@ -1322,10 +1322,10 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>FloorTable operation.</summary>
+
         public static string FloorTable(IList<FloorRow> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("cap".PadLeft(6))
@@ -1419,24 +1419,24 @@ namespace Thermodynamics.Harness
             public const string Rings = "rings";
         }
 
-/// <summary>SubstepCeiling operation.</summary>
+
         public static List<CeilingRow> SubstepCeiling(string shape, int size, int steps,
             IList<int> ceilings, Action<string> log = null, bool driven = false, int frequency = 0,
             float speed = 200f, float airDensity = 1f, string fixture = CeilingFixtures.Census,
             float flow = 0f)
         {
-/// <summary>List operation.</summary>
+
             List<CeilingRow> rows = new List<CeilingRow>();
             float[] reference = null;
             float referencePeak = 0f;
 
-/// <summary>RunCeiling operation.</summary>
+
             CeilingRow probe = RunCeiling(shape, Math.Min(size, 2000), 2, Hulls.Unbounded, null,
                 driven, frequency, speed, airDensity, fixture, flow);
 
             if (ceilings == null || ceilings.Count == 0)
             {
-/// <summary>CeilingLadder operation.</summary>
+
                 ceilings = CeilingLadder(probe.RequiredSubsteps);
             }
 
@@ -1444,7 +1444,7 @@ namespace Thermodynamics.Harness
             {
                 if (log != null) log("ceiling " + ceilings[i]);
 
-/// <summary>RunCeiling operation.</summary>
+
                 CeilingRow row = RunCeiling(shape, size, steps, ceilings[i], reference, driven,
                     frequency, speed, airDensity, fixture, flow);
                 if (reference == null)
@@ -1462,10 +1462,10 @@ namespace Thermodynamics.Harness
 
         public static readonly float[] Oversubscriptions = { 1.15f, 1.5f, 2f, 3f, 4.5f, 9f };
 
-/// <summary>CeilingLadder operation.</summary>
+
         public static List<int> CeilingLadder(float demand)
         {
-/// <summary>List operation.</summary>
+
             List<int> ceilings = new List<int>();
             ceilings.Add(Hulls.Unbounded);
 
@@ -1479,12 +1479,12 @@ namespace Thermodynamics.Harness
             return ceilings;
         }
 
-/// <summary>RunCeiling operation.</summary>
+
         private static CeilingRow RunCeiling(string shape, int size, int steps, int ceiling,
             float[] reference, bool driven, int frequency, float speed, float airDensity,
             string fixture, float flow)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             if (frequency > 0) settings.Frequency = frequency;
 
@@ -1500,14 +1500,14 @@ namespace Thermodynamics.Harness
                 built = WorstCases.Plumbed(shape, size, 8, settings);
                 simulation = built.Simulation;
             }
-/// <summary>if operation.</summary>
+
             else if (fixture == CeilingFixtures.Rings)
             {
                 built = WorstCases.HeatedRings(Math.Max(1, size / 10), Census.ProducerWatts, settings,
                     flow);
                 simulation = built.Simulation;
             }
-/// <summary>if operation.</summary>
+
             else if (fixture == CeilingFixtures.Pressurised)
             {
                 built = WorstCases.Pressurised(shape, size, settings);
@@ -1518,7 +1518,7 @@ namespace Thermodynamics.Harness
                 GridBuilder builder = GridBuilder.Large();
                 builder.PlaceCensus(LoadShapes.Build(shape, size));
 
-/// <summary>ThermalSimulation operation.</summary>
+
                 simulation = new ThermalSimulation(settings, builder.Grid);
                 for (int i = 0; i < builder.Placed.Count; i++)
                 {
@@ -1541,7 +1541,7 @@ namespace Thermodynamics.Harness
 
             EnvironmentSample sample = Worlds.Flight(airDensity, speed);
 
-/// <summary>CeilingRow operation.</summary>
+
             CeilingRow row = new CeilingRow();
             row.Ceiling = ceiling;
             row.StepSeconds = settings.StepSeconds;
@@ -1610,10 +1610,10 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>CeilingTable operation.</summary>
+
         public static string CeilingTable(IList<CeilingRow> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("ceiling".PadLeft(9))
@@ -1673,10 +1673,10 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Table operation.</summary>
+
         public static string Table(IList<ScaleRow> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("shape".PadRight(8))
@@ -1726,17 +1726,17 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Percent operation.</summary>
+
         private static string Percent(int part, int whole)
         {
             if (whole == 0) return "-";
             return (100d * part / whole).ToString("n0") + "%";
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(IList<ScaleRow> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append("shape,blocks,links,boundingVolume,exposed,buildMs,topologyMs,roomMapMs,")
               .Append("exposureMs,solverStepMs,substeps,boundedStepMs,substepBudget,")

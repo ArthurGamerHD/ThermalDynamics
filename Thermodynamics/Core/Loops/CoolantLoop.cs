@@ -10,7 +10,7 @@ namespace Thermodynamics.Core
 
         public int SegmentIndex;
 
-/// <summary>LoopLink operation.</summary>
+
         public LoopLink(int nodeIndex, float conductance, int segmentIndex)
         {
             NodeIndex = nodeIndex;
@@ -21,10 +21,10 @@ namespace Thermodynamics.Core
 
     public class CoolantLoop
     {
-/// <summary>List operation.</summary>
+
         public readonly List<BlockInstance> Pipes = new List<BlockInstance>();
 
-/// <summary>List operation.</summary>
+
         public readonly List<LoopLink> Links = new List<LoopLink>();
 
         public LoopThermalProperties Properties;
@@ -46,7 +46,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>SegmentTemperature operation.</summary>
+
         public float SegmentTemperature(int index)
         {
             if (segments == null || segmentCount == 0) return seeded;
@@ -54,7 +54,7 @@ namespace Thermodynamics.Core
             return segments[ParcelOf(index)];
         }
 
-/// <summary>ParcelOf operation.</summary>
+
         public int ParcelOf(int pipeIndex)
         {
             if (segmentCount <= 0) return 0;
@@ -72,7 +72,7 @@ namespace Thermodynamics.Core
 
         private float travelled;
 
-/// <summary>Sets the segmenttemperature.</summary>
+
         public void SetSegmentTemperature(int pipeIndex, float temperature)
         {
             if (segments == null || segmentCount == 0) return;
@@ -184,14 +184,14 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Refill operation.</summary>
+
         public float Refill(float deltaSeconds)
         {
-/// <summary>Refill operation.</summary>
+
             return Refill(deltaSeconds, 1f);
         }
 
-/// <summary>Refill operation.</summary>
+
         public float Refill(float deltaSeconds, float availableFraction)
         {
             if (deltaSeconds <= 0f || fill >= 1f || !HasDrivingPump) return 0f;
@@ -213,7 +213,7 @@ namespace Thermodynamics.Core
             return (added * RefillJoulesPerKilogram) / deltaSeconds;
         }
 
-/// <summary>Vent operation.</summary>
+
         public float Vent(float ambientKelvin)
         {
             if (fill <= 0f) return 0f;
@@ -225,7 +225,7 @@ namespace Thermodynamics.Core
             return heat;
         }
 
-/// <summary>LinkConductance operation.</summary>
+
         public float LinkConductance(int index)
         {
             if (index < 0 || index >= Links.Count) return 0f;
@@ -254,10 +254,10 @@ namespace Thermodynamics.Core
 
         public bool HasPump;
 
-/// <summary>List operation.</summary>
+
         public readonly List<CoolantPump> Pumps = new List<CoolantPump>();
 
-/// <summary>RefreshFlow operation.</summary>
+
         public void RefreshFlow()
         {
             float demand = 0f;
@@ -304,13 +304,13 @@ namespace Thermodynamics.Core
 
         private float heatTimeScale = 1f;
 
-/// <summary>CoolantLoop operation.</summary>
+
         public CoolantLoop(LoopThermalProperties properties, float initialTemperature)
             : this(properties, initialTemperature, 1f)
         {
         }
 
-/// <summary>CoolantLoop operation.</summary>
+
         public CoolantLoop(LoopThermalProperties properties, float initialTemperature, float heatTimeScale)
         {
             Properties = (properties ?? LoopThermalProperties.Default()).Clone().Clamp();
@@ -324,7 +324,7 @@ namespace Thermodynamics.Core
             get { return Pipes.Count; }
         }
 
-/// <summary>RefreshThermalMass operation.</summary>
+
         public void RefreshThermalMass()
         {
             float perSegment =
@@ -351,7 +351,7 @@ namespace Thermodynamics.Core
             ThermalMass = SegmentThermalMass * Math.Max(1, count);
         }
 
-/// <summary>RefreshSignature operation.</summary>
+
         public void RefreshSignature()
         {
             if (Pipes.Count == 0)
@@ -367,7 +367,7 @@ namespace Thermodynamics.Core
 
                 for (int i = 0; i < Pipes.Count; i++)
                 {
-/// <summary>Mix operation.</summary>
+
                     long mixed = Mix(Pipes[i].Key);
                     combinedXor ^= mixed;
                     combinedSum += mixed;
@@ -378,7 +378,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Mix operation.</summary>
+
         private static long Mix(long value)
         {
             unchecked
@@ -391,7 +391,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>Contains operation.</summary>
+
         public bool Contains(BlockInstance block)
         {
             for (int i = 0; i < Pipes.Count; i++)
@@ -420,14 +420,14 @@ namespace Thermodynamics.Core
 
         private float[] segmentWatts = new float[0];
 
-/// <summary>ClearSegmentWatts operation.</summary>
+
         internal void ClearSegmentWatts()
         {
             if (segmentWatts.Length != segmentCount) segmentWatts = new float[segmentCount];
             else Array.Clear(segmentWatts, 0, segmentWatts.Length);
         }
 
-/// <summary>Applies the parcelwatts.</summary>
+
         internal void ApplyParcelWatts(int parcel, float watts, float h, float effectiveMass)
         {
             if (segments == null || parcel < 0 || parcel >= segmentCount) return;
@@ -452,7 +452,7 @@ namespace Thermodynamics.Core
 
         private bool wellMixed;
 
-/// <summary>Advect operation.</summary>
+
         public void Advect(float h)
         {
             if (segmentCount < 2 || FlowSegmentsPerSecond == 0f) return;
@@ -474,7 +474,7 @@ namespace Thermodynamics.Core
             if (magnitude > 1f) MixToward(1f - (1f / magnitude));
         }
 
-/// <summary>MixToward operation.</summary>
+
         private void MixToward(float fraction)
         {
             if (segmentCount < 2) return;
@@ -491,7 +491,7 @@ namespace Thermodynamics.Core
             }
         }
 
-/// <summary>MixingFraction operation.</summary>
+
         public float MixingFraction(float substepSeconds)
         {
             float parcels = FlowSegmentsPerSecond * substepSeconds;
@@ -513,14 +513,14 @@ namespace Thermodynamics.Core
         internal float AbsorbedEnergy;
         internal float RejectedEnergy;
 
-/// <summary>BeginStep operation.</summary>
+
         internal void BeginStep()
         {
             AbsorbedEnergy = 0f;
             RejectedEnergy = 0f;
         }
 
-/// <summary>EndStep operation.</summary>
+
         internal void EndStep(float deltaSeconds)
         {
             if (deltaSeconds <= 0f) return;

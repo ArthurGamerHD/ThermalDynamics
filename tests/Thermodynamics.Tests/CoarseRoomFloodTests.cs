@@ -7,10 +7,10 @@ namespace Thermodynamics.Tests
 {
     public class CoarseRoomFloodTests
     {
-/// <summary>Prepared operation.</summary>
+
         private static ThermalSimulation Prepared(GridBuilder builder)
         {
-/// <summary>ThermalSimulation operation.</summary>
+
             ThermalSimulation simulation = new ThermalSimulation(Hulls.Uncapped(), builder.Grid);
             for (int i = 0; i < builder.Placed.Count; i++)
             {
@@ -22,16 +22,16 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>AssertMatches operation.</summary>
+
         private static void AssertMatches(GridBuilder builder, int edge, string what)
         {
-/// <summary>Prepared operation.</summary>
+
             ThermalSimulation simulation = Prepared(builder);
             RoomMap oracle = simulation.Rooms.Map;
             Assert.True(oracle.RoomCount > 0,
                 what + ": the mapper found no rooms, so agreement proves nothing");
 
-/// <summary>CoarseRoomFlood operation.</summary>
+
             CoarseRoomFlood flood = new CoarseRoomFlood(edge);
             flood.Run(simulation.Grid, simulation.Surfaces);
 
@@ -40,7 +40,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OneRoomShellMatchesAtEveryEdge operation.</summary>
+
         public void OneRoomShellMatchesAtEveryEdge()
         {
             foreach (int edge in new[] { 2, 3, 4, 7 })
@@ -52,7 +52,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AWallInsideOneSupercellStillSplitsTheRooms operation.</summary>
+
         public void AWallInsideOneSupercellStillSplitsTheRooms()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -67,7 +67,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnOpenFrameCellJoinsItsRoom operation.</summary>
+
         public void AnOpenFrameCellJoinsItsRoom()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -77,7 +77,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AClosedDoorCellIsARoomNotStructure operation.</summary>
+
         public void AClosedDoorCellIsARoomNotStructure()
         {
             GridBuilder builder = RoomFixtures.DooredShell();
@@ -86,7 +86,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACensusHullMatchesTheMapper operation.</summary>
+
         public void ACensusHullMatchesTheMapper()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -95,7 +95,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARefinedHullMatchesTheMapperAtTheLatticeFactor operation.</summary>
+
         public void ARefinedHullMatchesTheMapperAtTheLatticeFactor()
         {
             GridBuilder builder = GridBuilder.Large();

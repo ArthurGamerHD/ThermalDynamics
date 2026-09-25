@@ -7,7 +7,7 @@ namespace Thermodynamics.Tests
 {
     public class OverheatSpillTests
     {
-/// <summary>Cube operation.</summary>
+
         private static ThermalSimulation Cube()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -15,13 +15,13 @@ namespace Thermodynamics.Tests
             return builder.BuildSimulation(Fixture.ConductionOnly());
         }
 
-/// <summary>Critical operation.</summary>
+
         private static float Critical(ThermalNode node)
         {
             return node.Thermal.CriticalTemperature;
         }
 
-/// <summary>AssertJoules operation.</summary>
+
         private static void AssertJoules(float expected, float actual)
         {
             float scale = System.Math.Max(System.Math.Abs(expected), 1f);
@@ -30,15 +30,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ACoolBlockStillTakesItsHeatWithIt operation.</summary>
+
         public void ACoolBlockStillTakesItsHeatWithIt()
         {
-/// <summary>Cube operation.</summary>
+
             ThermalSimulation simulation = Cube();
             ThermalNode leaving = simulation.Solver.GetNodeAt(Vector3I.Zero);
             ThermalNode neighbour = simulation.Solver.GetNodeAt(new Vector3I(1, 0, 0));
 
-/// <summary>Critical operation.</summary>
+
             leaving.Temperature = Critical(leaving) * 0.5f;
             simulation.Solver.BuildLinksIfNeeded();
 
@@ -55,14 +55,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ABlockThatLeavesAboveCriticalHandsItsHeatToItsNeighbours operation.</summary>
+
         public void ABlockThatLeavesAboveCriticalHandsItsHeatToItsNeighbours()
         {
-/// <summary>Cube operation.</summary>
+
             ThermalSimulation simulation = Cube();
             ThermalNode leaving = simulation.Solver.GetNodeAt(Vector3I.Zero);
 
-/// <summary>Critical operation.</summary>
+
             leaving.Temperature = Critical(leaving) + 100f;
             simulation.Solver.BuildLinksIfNeeded();
 
@@ -78,17 +78,17 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheHeatIsSpreadByCapacitySoEveryNeighbourRisesTheSame operation.</summary>
+
         public void TheHeatIsSpreadByCapacitySoEveryNeighbourRisesTheSame()
         {
-/// <summary>Cube operation.</summary>
+
             ThermalSimulation simulation = Cube();
             ThermalNode leaving = simulation.Solver.GetNodeAt(Vector3I.Zero);
             simulation.Solver.BuildLinksIfNeeded();
 
             Vector3I[] touching =
             {
-/// <summary>Vector3I operation.</summary>
+
                 new Vector3I(1, 0, 0), new Vector3I(0, 1, 0), new Vector3I(0, 0, 1),
             };
 
@@ -98,7 +98,7 @@ namespace Thermodynamics.Tests
                 before[i] = simulation.Solver.GetNodeAt(touching[i]).Temperature;
             }
 
-/// <summary>Critical operation.</summary>
+
             leaving.Temperature = Critical(leaving) + 100f;
             float energy = leaving.Energy;
 
@@ -123,7 +123,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ALoneBlockWithNoNeighboursTakesItsHeatWithIt operation.</summary>
+
         public void ALoneBlockWithNoNeighboursTakesItsHeatWithIt()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -131,7 +131,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(Fixture.ConductionOnly());
 
             ThermalNode leaving = simulation.Solver.GetNodeAt(Vector3I.Zero);
-/// <summary>Critical operation.</summary>
+
             leaving.Temperature = Critical(leaving) + 100f;
             simulation.Solver.BuildLinksIfNeeded();
 
@@ -145,10 +145,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>CookAndRewealdIsNoLongerAHeatSink operation.</summary>
+
         public void CookAndRewealdIsNoLongerAHeatSink()
         {
-/// <summary>Cube operation.</summary>
+
             ThermalSimulation simulation = Cube();
             simulation.Solver.BuildLinksIfNeeded();
 
@@ -160,7 +160,7 @@ namespace Thermodynamics.Tests
             {
                 ThermalNode victim = simulation.Solver.GetNodeAt(Vector3I.Zero);
 
-/// <summary>Critical operation.</summary>
+
                 victim.Temperature = Critical(victim) + 200f;
                 float pumped = victim.Energy;
 
@@ -177,10 +177,10 @@ namespace Thermodynamics.Tests
                 "the cycle removed energy from the hull, so it is still a heat sink");
         }
         [Fact]
-/// <summary>ABlockThatDiesWithADirtyGraphStillSpills operation.</summary>
+
         public void ABlockThatDiesWithADirtyGraphStillSpills()
         {
-/// <summary>Cube operation.</summary>
+
             ThermalSimulation simulation = Cube();
             simulation.Solver.BuildLinksIfNeeded();
 
@@ -188,7 +188,7 @@ namespace Thermodynamics.Tests
                 Catalog.LightArmor(), new Vector3I(3, 0, 0), BlockOrientation.Identity));
 
             ThermalNode leaving = simulation.Solver.GetNodeAt(Vector3I.Zero);
-/// <summary>Critical operation.</summary>
+
             leaving.Temperature = Critical(leaving) + 100f;
 
             float before = simulation.Solver.TotalEnergy;

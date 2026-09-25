@@ -9,10 +9,10 @@ namespace Thermodynamics.Tests
 {
     public class PipeFitterTests
     {
-/// <summary>Isolated operation.</summary>
+
         private static ThermalSettings Isolated()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.EnableEnvironment = false;
             settings.EnableDamage = false;
@@ -25,7 +25,7 @@ namespace Thermodynamics.Tests
         [InlineData(5, 5)]
         [InlineData(9, 9)]
         [InlineData(20, 20)]
-/// <summary>TheFirstStraightRunOfEveryRectangleIsIndexOne operation.</summary>
+
         public void TheFirstStraightRunOfEveryRectangleIsIndexOne(int width, int depth)
         {
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, width, depth);
@@ -33,7 +33,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASinkAskedForOnThePumpsCellIsHonouredByMovingThePump operation.</summary>
+
         public void ASinkAskedForOnThePumpsCellIsHonouredByMovingThePump()
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -53,7 +53,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>EveryRequestedSinkBecomesALoopLink operation.</summary>
+
         public void EveryRequestedSinkBecomesALoopLink()
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -74,7 +74,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnExplicitPumpIndexThatCollidesWithASinkIsAnError operation.</summary>
+
         public void AnExplicitPumpIndexThatCollidesWithASinkIsAnError()
         {
             Dictionary<int, Vector3I> sinks = new Dictionary<int, Vector3I>();
@@ -90,7 +90,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ARingWithNoRoomLeftForAPumpSaysSo operation.</summary>
+
         public void ARingWithNoRoomLeftForAPumpSaysSo()
         {
             List<Vector3I> cells = PipeFitter.RectangleXZ(Vector3I.Zero, 3, 3);

@@ -12,7 +12,7 @@ namespace Thermodynamics.Tests
 
         private static readonly Vector3 Sun = Vector3.Normalize(new Vector3(0.71f, 0.42f, -0.56f));
 
-/// <summary>Builds the API method table.</summary>
+
         private static ThermalSimulation Build(bool selfShadow, int shadowBudget, int litBudget)
         {
             ThermalSettings settings = Hulls.Uncapped();
@@ -25,14 +25,14 @@ namespace Thermodynamics.Tests
             return simulation;
         }
 
-/// <summary>Sets the tle.</summary>
+
         private static void Settle(ThermalSimulation simulation, EnvironmentSample sample, int frames)
         {
             for (int i = 0; i < frames; i++) simulation.StepExact(1, sample);
             simulation.Solver.FinishSunLit();
         }
 
-/// <summary>LitFractions operation.</summary>
+
         private static float[] LitFractions(ThermalSimulation simulation)
         {
             int nodes = simulation.Solver.Nodes.Count;
@@ -49,7 +49,7 @@ namespace Thermodynamics.Tests
             return lit;
         }
 
-/// <summary>RequireAShadow operation.</summary>
+
         private static void RequireAShadow(float[] lit, string what)
         {
             int shaded = 0;
@@ -67,12 +67,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASlicedSweepLandsWhereAWholeOneDoes operation.</summary>
+
         public void ASlicedSweepLandsWhereAWholeOneDoes()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation whole = Build(true, int.MaxValue, int.MaxValue);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation sliced = Build(true, 97, 13);
 
             EnvironmentSample sample = Worlds.Space(Sun);
@@ -84,9 +84,9 @@ namespace Thermodynamics.Tests
             Assert.True(sliced.Solver.SunShadow.IsBuilt, "the sliced pass should have completed");
             Assert.False(sliced.Solver.SunLitRefreshPending, "the drain should have finished the sweep");
 
-/// <summary>LitFractions operation.</summary>
+
             float[] expected = LitFractions(whole);
-/// <summary>LitFractions operation.</summary>
+
             float[] actual = LitFractions(sliced);
 
             RequireAShadow(expected, "the whole pass");
@@ -103,10 +103,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>WithSelfShadowingOffEveryFaceEndsFullyLitHoweverThinTheBudget operation.</summary>
+
         public void WithSelfShadowingOffEveryFaceEndsFullyLitHoweverThinTheBudget()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation sliced = Build(false, 11, 7);
 
             EnvironmentSample sample = Worlds.Space(Sun);
@@ -114,7 +114,7 @@ namespace Thermodynamics.Tests
 
             Assert.False(sliced.Solver.SunLitRefreshPending);
 
-/// <summary>LitFractions operation.</summary>
+
             float[] lit = LitFractions(sliced);
             Assert.True(lit.Length > 0);
 
@@ -129,19 +129,19 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASunThatMovesMidSweepLeavesNoTraceOfTheOldOne operation.</summary>
+
         public void ASunThatMovesMidSweepLeavesNoTraceOfTheOldOne()
         {
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation disturbed = Build(true, 97, 13);
-/// <summary>Builds the method table.</summary>
+
             ThermalSimulation clean = Build(true, int.MaxValue, int.MaxValue);
 
             for (int i = 0; i < 40; i++)
             {
                 float angle = i * 0.4f;
                 Vector3 moving = Vector3.Normalize(
-/// <summary>Vector3 operation.</summary>
+
                     new Vector3((float)Math.Cos(angle), (float)Math.Sin(angle), 0.3f));
                 disturbed.StepExact(1, Worlds.Space(moving));
             }
@@ -150,9 +150,9 @@ namespace Thermodynamics.Tests
             Settle(disturbed, settled, 600);
             Settle(clean, settled, 4);
 
-/// <summary>LitFractions operation.</summary>
+
             float[] expected = LitFractions(clean);
-/// <summary>LitFractions operation.</summary>
+
             float[] actual = LitFractions(disturbed);
 
             RequireAShadow(expected, "the undisturbed run");

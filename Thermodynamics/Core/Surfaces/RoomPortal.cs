@@ -10,7 +10,7 @@ namespace Thermodynamics.Core
 
         public int RegionB;
 
-/// <summary>RoomPortal operation.</summary>
+
         public RoomPortal(BlockInstance block, int face, int regionA, int regionB)
         {
             Block = block;

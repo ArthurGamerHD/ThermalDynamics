@@ -10,7 +10,7 @@ namespace Thermodynamics.Tests
     {
         private static readonly Vector3I Interior = Vector3I.Zero;
 
-/// <summary>Shell operation.</summary>
+
         private static ThermalSimulation Shell(float blockTemperature)
         {
             GridBuilder builder = GridBuilder.Large();
@@ -18,7 +18,7 @@ namespace Thermodynamics.Tests
             return builder.BuildSimulation(new ThermalSettings(), blockTemperature);
         }
 
-/// <summary>AirOf operation.</summary>
+
         private static RoomAirNode AirOf(ThermalSimulation simulation)
         {
             IList<RoomAirNode> air = simulation.Solver.RoomAir;
@@ -26,13 +26,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AirGivenToARoomIsCoupledToTheWalls operation.</summary>
+
         public void AirGivenToARoomIsCoupledToTheWalls()
         {
-/// <summary>Shell operation.</summary>
+
             ThermalSimulation simulation = Shell(300f);
 
-/// <summary>AirOf operation.</summary>
+
             RoomAirNode air = AirOf(simulation);
             Assert.NotNull(air);
 
@@ -48,16 +48,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AirAppearingForTheFirstTimeTakesTheTemperatureOfTheWalls operation.</summary>
+
         public void AirAppearingForTheFirstTimeTakesTheTemperatureOfTheWalls()
         {
-/// <summary>Shell operation.</summary>
+
             ThermalSimulation simulation = Shell(300f);
             simulation.Update(1f, Worlds.Shadow());
 
             simulation.SetRoomPressure(Interior, 1f);
 
-/// <summary>AirOf operation.</summary>
+
             RoomAirNode air = AirOf(simulation);
             Assert.NotNull(air);
 
@@ -67,14 +67,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>APressurisedRoomActuallyMovesHeat operation.</summary>
+
         public void APressurisedRoomActuallyMovesHeat()
         {
-/// <summary>Shell operation.</summary>
+
             ThermalSimulation simulation = Shell(300f);
             simulation.SetRoomPressure(Interior, 1f);
 
-/// <summary>AirOf operation.</summary>
+
             RoomAirNode air = AirOf(simulation);
             Assert.NotNull(air);
 
@@ -88,14 +88,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ConductanceToARoomsAirDoesNotDependOnHowFullTheRoomIs operation.</summary>
+
         public void ConductanceToARoomsAirDoesNotDependOnHowFullTheRoomIs()
         {
-/// <summary>Shell operation.</summary>
+
             ThermalSimulation simulation = Shell(300f);
 
             simulation.SetRoomPressure(Interior, 1f);
-/// <summary>AirOf operation.</summary>
+
             RoomAirNode air = AirOf(simulation);
 
             float full = 0f;
@@ -119,12 +119,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>RefusingTheAirsDemandApproximatesRatherThanDiverging operation.</summary>
+
         public void RefusingTheAirsDemandApproximatesRatherThanDiverging()
         {
-/// <summary>AirSpreadAtCeiling operation.</summary>
+
             float refused = AirSpreadAtCeiling(1, true);
-/// <summary>AirSpreadAtCeiling operation.</summary>
+
             float unclamped = AirSpreadAtCeiling(1, false);
 
             Assert.True(refused <= 300f,
@@ -136,12 +136,12 @@ namespace Thermodynamics.Tests
                 + " over-subscribes the air and the clamped figure above is proving nothing");
         }
 
-/// <summary>AirSpreadAtCeiling operation.</summary>
+
         private static float AirSpreadAtCeiling(int ceiling, bool clamp)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
-            settings.Frequency = 1;                  // a one second step, so one substep is one h
+            settings.Frequency = 1;
             settings.EnableEnvironment = false;
             settings.EnableDamage = false;
             settings.MaxSubsteps = ceiling;
@@ -156,7 +156,7 @@ namespace Thermodynamics.Tests
             ThermalSimulation simulation = builder.BuildSimulation(settings, 600f);
             simulation.SetRoomPressure(Interior, 0.02f);
 
-/// <summary>AirOf operation.</summary>
+
             RoomAirNode air = AirOf(simulation);
             air.Temperature = 300f;
 
@@ -183,10 +183,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>DroppingPressureTakesTheLinksAwayAgain operation.</summary>
+
         public void DroppingPressureTakesTheLinksAwayAgain()
         {
-/// <summary>Shell operation.</summary>
+
             ThermalSimulation simulation = Shell(300f);
             simulation.SetRoomPressure(Interior, 1f);
 
@@ -194,7 +194,7 @@ namespace Thermodynamics.Tests
 
             simulation.SetRoomPressure(Interior, 0f);
 
-/// <summary>AirOf operation.</summary>
+
             RoomAirNode air = AirOf(simulation);
             Assert.False(air.HasAir);
             Assert.Empty(air.Links);

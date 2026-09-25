@@ -44,10 +44,10 @@ namespace Thermodynamics.Harness
 
         public const int StepsPerRepeat = 20;
 
-/// <summary>Fleet operation.</summary>
+
         public static List<ThermalSimulation> Fleet(int grids, int nodesEach, ThermalSettings settings)
         {
-/// <summary>List operation.</summary>
+
             List<ThermalSimulation> fleet = new List<ThermalSimulation>();
 
             for (int i = 0; i < grids; i++)
@@ -66,19 +66,19 @@ namespace Thermodynamics.Harness
             return fleet;
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(IList<int> fleetSizes, int nodesEach, int threads,
             Action<string> log = null)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
-/// <summary>EnvironmentState operation.</summary>
+
             EnvironmentState state = new EnvironmentState();
             bool haveState = false;
 
@@ -87,7 +87,7 @@ namespace Thermodynamics.Harness
                 int grids = fleetSizes[f];
                 if (log != null) log(grids + " grids of " + nodesEach);
 
-/// <summary>Fleet operation.</summary>
+
                 List<ThermalSimulation> fleet = Fleet(grids, nodesEach, settings);
                 if (!haveState)
                 {
@@ -95,7 +95,7 @@ namespace Thermodynamics.Harness
                     haveState = true;
                 }
 
-/// <summary>Row operation.</summary>
+
                 Row row = new Row();
                 row.Grids = grids;
                 row.NodesEach = fleet[0].Solver.Nodes.Count;
@@ -124,15 +124,15 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>RunUneven operation.</summary>
+
         public static Row RunUneven(IList<int> gridSizes, int threads, Action<string> log = null)
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.MaxElementVisitsPerStep = 0;
             settings.Derive();
 
-/// <summary>List operation.</summary>
+
             List<ThermalSimulation> fleet = new List<ThermalSimulation>();
             for (int i = 0; i < gridSizes.Count; i++)
             {
@@ -143,7 +143,7 @@ namespace Thermodynamics.Harness
             EnvironmentState state =
                 EnvironmentSolver.Solve(settings, fleet[0].Planet, Worlds.Shadow());
 
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Grids = fleet.Count;
             row.Threads = threads;
@@ -177,7 +177,7 @@ namespace Thermodynamics.Harness
             return row;
         }
 
-/// <summary>StepSequential operation.</summary>
+
         public static void StepSequential(IList<ThermalSimulation> fleet, ThermalSettings settings,
             EnvironmentState state, int steps)
         {
@@ -190,11 +190,11 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>StepParallel operation.</summary>
+
         public static void StepParallel(IList<ThermalSimulation> fleet, ThermalSettings settings,
             EnvironmentState state, int steps, int threads)
         {
-/// <summary>ParallelOptions operation.</summary>
+
             ParallelOptions options = new ParallelOptions();
             options.MaxDegreeOfParallelism = threads;
 
@@ -207,10 +207,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>FanOutOnly operation.</summary>
+
         private static void FanOutOnly(int grids, int steps, int threads)
         {
-/// <summary>ParallelOptions operation.</summary>
+
             ParallelOptions options = new ParallelOptions();
             options.MaxDegreeOfParallelism = threads;
 
@@ -222,16 +222,16 @@ namespace Thermodynamics.Harness
 
         public static long Sink;
 
-/// <summary>Time operation.</summary>
+
         private static void Time(Action action, out double fastest, out double slowest)
         {
             LabTiming.FastestOf(Repeats, action, out fastest, out slowest);
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
 
             sb.Append("grids".PadLeft(7))

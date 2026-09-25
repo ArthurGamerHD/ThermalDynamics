@@ -4,7 +4,7 @@ namespace Thermodynamics.Presentation
 {
     public static class ThermalVisionHudProjection
     {
-/// <summary>Create operation.</summary>
+
         public static MatrixD Create(MatrixD cameraWorld, MatrixD projection, Vector2 viewport,
             double depth, double dpi)
         {

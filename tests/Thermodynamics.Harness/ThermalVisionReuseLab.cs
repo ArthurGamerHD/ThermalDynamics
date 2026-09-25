@@ -25,7 +25,7 @@ namespace Thermodynamics.Harness
             public string Csv;
         }
 
-/// <summary>Trace operation.</summary>
+
         private static ThermalVisionRayLab.Sample Trace(Vector3D ray, bool occluder)
         {
             var sample = ThermalVisionRayLab.Trace(ray);
@@ -41,7 +41,7 @@ namespace Thermodynamics.Harness
             return sample;
         }
 
-/// <summary>Run operation.</summary>
+
         public static Result Run(int width, int height, bool pan, bool occluder, int queryBudget = 128, int footprintRadius = 0)
         {
             if (width < 1 || height < 1 || width > 160 || height > 90 || queryBudget < 1
@@ -52,13 +52,13 @@ namespace Thermodynamics.Harness
             var next = new Cached[count];
             var depth = new double[count];
             var result = new Result { PixelCount = count, WarmupQueries = count };
-/// <summary>StringBuilder operation.</summary>
+
             var csv = new StringBuilder("frame,queries,holes,wrong_surface,false_hot\n");
             for (int y = 0; y < height; y++)
                 for (int x = 0; x < width; x++)
                 {
                     Vector3D ray = ThermalVisionRayLab.Direction(x, y, width, height);
-/// <summary>Trace operation.</summary>
+
                     var sample = Trace(ray, false);
                     current[y * width + x] = new Cached { Valid = true, Sample = sample,
                         Point = ray * (sample.Surface == 0 ? 150 : sample.Distance) };
@@ -106,7 +106,7 @@ namespace Thermodynamics.Harness
                         int i = y * width + x;
                         if (!next[i].Valid) { holes++; continue; }
                         Vector3D ray = Vector3D.TransformNormal(ThermalVisionRayLab.Direction(x, y, width, height), world);
-/// <summary>Trace operation.</summary>
+
                         var expected = Trace(ray, occluder && frame >= 20);
                         if (expected.Surface != next[i].Sample.Surface) wrong++;
                         if (expected.Surface == 7 && next[i].Sample.Kelvin > 350) falseHot++;
@@ -124,23 +124,23 @@ namespace Thermodynamics.Harness
             return result;
         }
 
-/// <summary>SamplePixel operation.</summary>
+
         private static void SamplePixel(Cached[] pixels, int i, int width, int height, MatrixD world,
             int frame, bool occluder, ref int queries)
         {
             Vector3D ray = Vector3D.TransformNormal(ThermalVisionRayLab.Direction(i % width, i / width, width, height), world);
-/// <summary>Trace operation.</summary>
+
             var sample = Trace(ray, occluder && frame >= 20);
             pixels[i] = new Cached { Valid = true, Sample = sample, Updated = frame,
                 Point = ray * (sample.Surface == 0 ? 150 : sample.Distance) };
             queries++;
         }
 
-/// <summary>WriteReport operation.</summary>
+
         public static string WriteReport(string directory)
         {
             Directory.CreateDirectory(directory);
-/// <summary>StringBuilder operation.</summary>
+
             var report = new StringBuilder("# Ray sample reuse: feasibility and counterexamples\n\n"
                 + "60 analytic updates at 60 Hz; at most 128 fresh scene queries/update. "
                 + "Initial full-frame sampling is counted separately. No game timing, GPU or HUD is simulated. "
@@ -154,7 +154,7 @@ namespace Thermodynamics.Harness
                     int height = width * 9 / 16;
                     string name = scenario == 0 ? "stationary" : scenario == 1 ? "90deg-pan"
                         : scenario == 2 ? "new-occluder" : scenario == 3 ? "pan-3x3-footprint" : "occluder-3x3-footprint";
-/// <summary>Run operation.</summary>
+
                     Result result = Run(width, height, scenario == 1 || scenario == 3,
                         scenario == 2 || scenario == 4, 128, scenario >= 3 ? 1 : 0);
                     File.WriteAllText(Path.Combine(directory, width + "-" + name + ".csv"), result.Csv);

@@ -8,10 +8,8 @@ namespace Thermodynamics
 {
     public partial class ThermalGrid
     {
-/// <summary>Guid operation.</summary>
         private static readonly Guid StorageGuid = new Guid("f7cd64ae-9cd8-41f3-8e5d-3db992619343");
 
-/// <summary>Save operation.</summary>
         private void Save()
         {
             if (disabled || Simulation == null || Entity.Storage == null) return;
@@ -46,7 +44,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Load operation.</summary>
         private void Load()
         {
             if (disabled || Simulation == null || Entity.Storage == null) return;

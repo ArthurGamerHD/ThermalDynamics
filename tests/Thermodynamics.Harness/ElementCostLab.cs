@@ -63,11 +63,11 @@ namespace Thermodynamics.Harness
             public double ConductionRSquared;
             public double EnvironmentRSquared;
 
-/// <summary>List operation.</summary>
+
             public List<Row> Rows = new List<Row>();
         }
 
-/// <summary>Shapes operation.</summary>
+
         private static IEnumerable<KeyValuePair<string, HashSet<Vector3I>>> Shapes(int target)
         {
             int side = Math.Max(2, (int)Math.Round(Math.Pow(target, 1d / 3d)));
@@ -87,10 +87,10 @@ namespace Thermodynamics.Harness
             yield return new KeyValuePair<string, HashSet<Vector3I>>("ship", GridShapes.Ship());
         }
 
-/// <summary>Dust operation.</summary>
+
         private static HashSet<Vector3I> Dust(int count)
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> cells = new HashSet<Vector3I>(Vector3I.Comparer);
             int side = Math.Max(1, (int)Math.Ceiling(Math.Pow(count, 1d / 3d)));
 
@@ -102,10 +102,10 @@ namespace Thermodynamics.Harness
             return cells;
         }
 
-/// <summary>Comb operation.</summary>
+
         private static HashSet<Vector3I> Comb(int count)
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> cells = new HashSet<Vector3I>(Vector3I.Comparer);
             int z = 0;
 
@@ -118,7 +118,7 @@ namespace Thermodynamics.Harness
             return cells;
         }
 
-/// <summary>Sets the tings.</summary>
+
         private static ThermalSettings Settings(bool environment)
         {
             ThermalSettings settings = new ThermalSettings
@@ -143,7 +143,7 @@ namespace Thermodynamics.Harness
             return settings;
         }
 
-/// <summary>Measure operation.</summary>
+
         private static double Measure(
             HashSet<Vector3I> cells, bool environment, float seconds,
             out int nodeCount, out int links, out int faces, out long substepCount, out double perStep)
@@ -189,7 +189,7 @@ namespace Thermodynamics.Harness
             return (clock.Elapsed.TotalMilliseconds * 1e6) / substeps;
         }
 
-/// <summary>Best operation.</summary>
+
         private static Row Best(string shape, HashSet<Vector3I> cells, float seconds)
         {
             int nodes = 0, links = 0, faces = 0;
@@ -205,11 +205,11 @@ namespace Thermodynamics.Harness
                 long sc;
                 double ps;
 
-/// <summary>Measure operation.</summary>
+
                 double cold = Measure(cells, false, seconds, out n, out l, out f, out sc, out ps);
                 if (cold < conduction) conduction = cold;
 
-/// <summary>Measure operation.</summary>
+
                 double hot = Measure(cells, true, seconds, out n, out l, out f, out sc, out ps);
                 if (hot < environment) environment = hot;
 
@@ -235,7 +235,7 @@ namespace Thermodynamics.Harness
             };
         }
 
-/// <summary>Solve2 operation.</summary>
+
         public static void Solve2(
             IList<Row> rows, Func<Row, double> x1, Func<Row, double> x2, Func<Row, double> y,
             out double a, out double b, out double r2)
@@ -244,7 +244,7 @@ namespace Thermodynamics.Harness
 
             for (int i = 0; i < rows.Count; i++)
             {
-/// <summary>x1 operation.</summary>
+
                 double p = x1(rows[i]), q = x2(rows[i]), v = y(rows[i]);
                 s11 += p * p;
                 s22 += q * q;
@@ -271,7 +271,7 @@ namespace Thermodynamics.Harness
             for (int i = 0; i < rows.Count; i++)
             {
                 double predicted = (a * x1(rows[i])) + (b * x2(rows[i]));
-/// <summary>y operation.</summary>
+
                 double actual = y(rows[i]);
                 residual += (actual - predicted) * (actual - predicted);
                 total += (actual - mean) * (actual - mean);
@@ -279,17 +279,17 @@ namespace Thermodynamics.Harness
             r2 = total <= 0d ? 1d : 1d - (residual / total);
         }
 
-/// <summary>Solve1 operation.</summary>
+
         public static void Solve1(
             IList<Row> rows, Func<Row, double> x, Func<Row, double> y, out double a, out double r2)
         {
             double sxx = 0, sxy = 0;
             for (int i = 0; i < rows.Count; i++)
             {
-/// <summary>x operation.</summary>
+
                 double p = x(rows[i]);
                 sxx += p * p;
-/// <summary>y operation.</summary>
+
                 sxy += p * y(rows[i]);
             }
 
@@ -302,9 +302,9 @@ namespace Thermodynamics.Harness
             double residual = 0, total = 0;
             for (int i = 0; i < rows.Count; i++)
             {
-/// <summary>x operation.</summary>
+
                 double predicted = a * x(rows[i]);
-/// <summary>y operation.</summary>
+
                 double actual = y(rows[i]);
                 residual += (actual - predicted) * (actual - predicted);
                 total += (actual - mean) * (actual - mean);
@@ -314,10 +314,10 @@ namespace Thermodynamics.Harness
 
         public static string[] OnlyShapes;
 
-/// <summary>Run operation.</summary>
+
         public static Fit Run(int target = 8000, float seconds = 20f)
         {
-/// <summary>Fit operation.</summary>
+
             Fit fit = new Fit();
 
             foreach (KeyValuePair<string, HashSet<Vector3I>> shape in Shapes(target))
@@ -326,7 +326,7 @@ namespace Thermodynamics.Harness
                 fit.Rows.Add(Best(shape.Key, shape.Value, seconds));
             }
 
-/// <summary>List operation.</summary>
+
             List<Row> fitted = new List<Row>();
             for (int i = 0; i < fit.Rows.Count; i++)
             {
@@ -351,26 +351,26 @@ namespace Thermodynamics.Harness
             return fit;
         }
 
-/// <summary>Predict operation.</summary>
+
         public static double Predict(Fit fit, Row row)
         {
             return (fit.PerNode * row.Nodes) + (fit.PerLink * row.Links)
                 + (fit.PerEnvironmentNode * row.Nodes) + (fit.PerFace * row.Faces);
         }
 
-/// <summary>N operation.</summary>
+
         private static string N(double value, int decimals = 2)
         {
             return value.ToString("n" + decimals, CultureInfo.InvariantCulture);
         }
 
-/// <summary>Report operation.</summary>
+
         public static string Report(int target = 8000, float seconds = 20f)
         {
-/// <summary>Run operation.</summary>
+
             Fit fit = Run(target, seconds);
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append("Element cost: what a substep spends per node, link and exposed face\n");
             sb.Append("==================================================================\n\n");
@@ -386,7 +386,7 @@ namespace Thermodynamics.Harness
 
             foreach (Row row in fit.Rows)
             {
-/// <summary>Predict operation.</summary>
+
                 double predicted = Predict(fit, row);
                 double error = row.EnvironmentNanoseconds <= 0d
                     ? 0d
@@ -424,13 +424,13 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(int target = 8000, float seconds = 20f)
         {
-/// <summary>Run operation.</summary>
+
             Fit fit = Run(target, seconds);
 
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.Append("shape,nodes,links,faces,links_per_node,faces_per_node,conduction_ns,"
                 + "environment_ns,predicted_ns,ns_per_node,ns_per_link,ns_per_environment_node,"
@@ -460,7 +460,7 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>R operation.</summary>
+
         private static string R(double value)
         {
             return value.ToString("r", CultureInfo.InvariantCulture);

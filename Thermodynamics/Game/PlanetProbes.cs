@@ -43,7 +43,6 @@ namespace Thermodynamics
             public float AirDensity;
         }
 
-/// <summary>List operation.</summary>
         public static readonly List<Row> Rows = new List<Row>();
 
         private class Probe
@@ -59,13 +58,11 @@ namespace Thermodynamics
             public float[] Ambient = new float[Heights.Length];
         }
 
-/// <summary>List operation.</summary>
         private static readonly List<Probe> Sites = new List<Probe>();
 
         private static long planetId = -1;
         private static int stepsSince;
 
-/// <summary>Reset operation.</summary>
         public static void Reset()
         {
             Rows.Clear();
@@ -74,7 +71,6 @@ namespace Thermodynamics
             stepsSince = 0;
         }
 
-/// <summary>Step operation.</summary>
         public static void Step(float seconds)
         {
             int interval = Settings.Instance.TelemetryPlanetProbes;
@@ -90,7 +86,6 @@ namespace Thermodynamics
             float elapsed = stepsSince * seconds;
             stepsSince = 0;
 
-/// <summary>Anchor operation.</summary>
             PlanetManager.Planet planet = Anchor();
             if (planet == null || planet.Entity == null)
             {
@@ -108,7 +103,6 @@ namespace Thermodynamics
             Sample(planet, elapsed);
         }
 
-/// <summary>Anchor operation.</summary>
         private static PlanetManager.Planet Anchor()
         {
             IList<ThermalGrid> grids = ThermalGrid.LiveGrids;
@@ -127,7 +121,6 @@ namespace Thermodynamics
             return null;
         }
 
-/// <summary>Builds the API method table.</summary>
         private static void Build(PlanetManager.Planet planet)
         {
             Sites.Clear();
@@ -158,13 +151,11 @@ namespace Thermodynamics
                     Vector3D at = centre + (up * entity.MaximumRadius);
                     Vector3D surface = entity.GetClosestSurfacePointGlobal(ref at);
 
-/// <summary>Probe operation.</summary>
                     Probe probe = new Probe();
                     probe.Latitude = latitude;
                     probe.Longitude = longitude;
                     probe.Up = up;
                     probe.GroundRadius = (surface - centre).Length();
-/// <summary>ReadTerrain operation.</summary>
                     probe.Terrain = ReadTerrain(entity, ref centre, ref axis, probe, radius);
 
                     Sites.Add(probe);
@@ -172,7 +163,6 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>ReadTerrain operation.</summary>
         private static float[] ReadTerrain(
             MyPlanet entity, ref Vector3D centre, ref Vector3D axis, Probe probe, float radius)
         {
@@ -212,7 +202,6 @@ namespace Thermodynamics
             return ring;
         }
 
-/// <summary>Sample operation.</summary>
         private static void Sample(PlanetManager.Planet planet, float elapsed)
         {
             MyPlanet entity = planet.Entity;
@@ -236,7 +225,6 @@ namespace Thermodynamics
                 float sunSine = Vector3.Dot(up, sun);
 
                 probe.Heating = WindProfile.Heating(
-/// <summary>Simulation operation.</summary>
                     probe.Heating, sunSine, elapsed, Simulation(planet));
 
                 Vector3 east = Vector3.Cross(axis, up);
@@ -292,7 +280,6 @@ namespace Thermodynamics
 
                     WindSolver.Result wind = WindSolver.Solve(ref inputs);
 
-/// <summary>Row operation.</summary>
                     Row row = new Row();
                     row.Seconds = seconds;
                     row.Planet = entity.StorageName;
@@ -341,17 +328,14 @@ namespace Thermodynamics
             }
         }
 
-/// <summary>Simulation operation.</summary>
         private static float Simulation(PlanetManager.Planet planet)
         {
             return Settings.Instance.PlanetAmbientLagSeconds > 0f
                 ? Settings.Instance.PlanetAmbientLagSeconds : 45f;
         }
 
-/// <summary>Csv operation.</summary>
         public static string Csv()
         {
-/// <summary>StringBuilder operation.</summary>
             StringBuilder sb = new StringBuilder();
             sb.Append("time_s,planet,latitude_deg,longitude_deg,ground_elev_m,sun_elevation_deg,")
               .Append("wind_agl_m,wind_ceiling,wind_band_share,wind_profile,wind_heating,")
@@ -377,7 +361,6 @@ namespace Thermodynamics
             return sb.ToString();
         }
 
-/// <summary>N operation.</summary>
         private static string N(float value)
         {
             return value.ToString("0.####", CultureInfo.InvariantCulture);

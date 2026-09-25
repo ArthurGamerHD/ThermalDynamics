@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
     public class GridOccupancyTests
     {
         [Fact]
-/// <summary>TheOccupancyBitAgreesWithTheBlockTableOverTheWholeBox operation.</summary>
+
         public void TheOccupancyBitAgreesWithTheBlockTableOverTheWholeBox()
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(), 4000);
@@ -17,7 +17,7 @@ namespace Thermodynamics.Tests
             CellBitset occupied = grid.Occupancy();
 
             Vector3I min = grid.Min - Vector3I.One;
-/// <summary>Vector3I operation.</summary>
+
             Vector3I maxExclusive = grid.Max + new Vector3I(2, 2, 2);
 
             int set = 0;
@@ -29,7 +29,7 @@ namespace Thermodynamics.Tests
                 {
                     for (int x = min.X; x < maxExclusive.X; x++)
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I cell = new Vector3I(x, y, z);
                         bool bit = occupied.Contains(cell);
                         bool block = grid.GetAtCell(cell) != null;
@@ -50,7 +50,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SteppingAnIndexByAFaceLandsOnThatFacesNeighbour operation.</summary>
+
         public void SteppingAnIndexByAFaceLandsOnThatFacesNeighbour()
         {
             ThermalSimulation simulation = Hulls.Driven(Hulls.Uncapped(), 4000);
@@ -85,7 +85,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>PlacingOrRemovingABlockRebuildsTheSet operation.</summary>
+
         public void PlacingOrRemovingABlockRebuildsTheSet()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -94,7 +94,7 @@ namespace Thermodynamics.Tests
             GridModel grid = builder.Grid;
             Assert.True(grid.Occupancy().Contains(new Vector3I(0, 0, 0)));
 
-/// <summary>Vector3I operation.</summary>
+
             Vector3I inside = new Vector3I(1, 1, 1);
             Assert.False(grid.Occupancy().Contains(inside));
 

@@ -13,7 +13,7 @@ namespace Thermodynamics.Tests
 {
     public class BlockInstanceOneCellTests
     {
-/// <summary>Models operation.</summary>
+
         private static IEnumerable<BlockModel> Models()
         {
             yield return Catalog.LightArmor();
@@ -27,14 +27,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheTwoSurfaceLayersShareOneArrayExactlyWhenTheyCannotDiffer operation.</summary>
+
         public void TheTwoSurfaceLayersShareOneArrayExactlyWhenTheyCannotDiffer()
         {
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance armour = new BlockInstance(Catalog.LightArmor(), Vector3I.Zero, BlockOrientation.Identity);
             Assert.Same(armour.StructuralSurfaces, armour.SelfSurfaces);
 
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance door = new BlockInstance(Catalog.SlideDoor(), Vector3I.Zero, BlockOrientation.Identity);
             Assert.True(door.HasStateDependentSealing);
             Assert.True(door.IsSealedByDoorState);
@@ -61,7 +61,7 @@ namespace Thermodynamics.Tests
             Assert.Equal(armourBefore, armour.SelfSurfaces);
             Assert.Same(armour.StructuralSurfaces, armour.SelfSurfaces);
 
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance multi = new BlockInstance(Catalog.LightArmorCube(2), Vector3I.Zero, BlockOrientation.Identity);
             Assert.True(multi.Model.CellCount > 1,
                 "the multi-cell case needs a block with more than one cell to say anything");
@@ -72,12 +72,12 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>NothingWritesThroughABlocksSurfaceArrays operation.</summary>
+
         public void NothingWritesThroughABlocksSurfaceArrays()
         {
             string root = ShippedBlocks.RepoRoot();
             string[] properties = { "SelfSurfaces", "StructuralSurfaces", "Cells" };
-/// <summary>List operation.</summary>
+
             List<string> writes = new List<string>();
 
             foreach (string folder in new[] { "Thermodynamics/Content/Data/", "tests" })
@@ -116,14 +116,14 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>OneCellBlocksOfAModelAndOrientationShareOneSurfaceArray operation.</summary>
+
         public void OneCellBlocksOfAModelAndOrientationShareOneSurfaceArray()
         {
             BlockModel model = Catalog.LightArmor();
 
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance here = new BlockInstance(model, Vector3I.Zero, BlockOrientation.Identity);
-/// <summary>BlockInstance operation.</summary>
+
             BlockInstance there = new BlockInstance(model, new Vector3I(9, 4, 7), BlockOrientation.Identity);
 
             Assert.Same(here.StructuralSurfaces, there.StructuralSurfaces);
@@ -131,14 +131,14 @@ namespace Thermodynamics.Tests
             Assert.Equal(new Vector3I(9, 4, 7), there.Cells[0]);
             Assert.NotSame(here.Cells, there.Cells);
 
-/// <summary>List operation.</summary>
+
             List<int[]> seen = new List<int[]>();
             int distinct = 0;
             foreach (BlockOrientation orientation in PipeFitter.AllOrientations())
             {
-/// <summary>BlockInstance operation.</summary>
+
                 BlockInstance block = new BlockInstance(model, Vector3I.Zero, orientation);
-/// <summary>BlockInstance operation.</summary>
+
                 BlockInstance twin = new BlockInstance(model, new Vector3I(3, 3, 3), orientation);
 
                 Assert.Same(block.StructuralSurfaces, twin.StructuralSurfaces);
@@ -160,7 +160,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AOneCellBlockIsBuiltAsTheCellWalkWouldBuildIt operation.</summary>
+
         public void AOneCellBlockIsBuiltAsTheCellWalkWouldBuildIt()
         {
             int compared = 0;
@@ -171,14 +171,14 @@ namespace Thermodynamics.Tests
                 {
                     foreach (bool shut in new[] { true, false })
                     {
-/// <summary>Vector3I operation.</summary>
+
                         Vector3I at = new Vector3I(-4, 7, 2);
-/// <summary>BlockInstance operation.</summary>
+
                         BlockInstance fast = new BlockInstance(model, at, orientation);
                         fast.IsSealedByDoorState = shut;
                         fast.RefreshSurfaces();
 
-/// <summary>BlockInstance operation.</summary>
+
                         BlockInstance walked = new BlockInstance(model, at, orientation);
                         walked.IsSealedByDoorState = shut;
                         walked.RefreshSurfaces();

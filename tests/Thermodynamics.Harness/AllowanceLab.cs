@@ -15,7 +15,7 @@ namespace Thermodynamics.Harness
 
         public static readonly string[] DefaultWorlds = { "vacuum", "atmosphere", "flight" };
 
-/// <summary>World operation.</summary>
+
         private static EnvironmentSample World(string name)
         {
             if (name == "vacuum") return Worlds.Space(new Vector3(0.3f, 0.9f, 0.2f));
@@ -72,19 +72,19 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(string shape, IList<int> sizes, IList<int> allowances,
             IList<string> worlds, int frames, Action<string> log)
         {
-/// <summary>Run operation.</summary>
+
             return Run(shape, sizes, allowances, worlds, new[] { 0 }, frames, log);
         }
 
-/// <summary>RunFloored operation.</summary>
+
         public static List<Row> RunFloored(string shape, IList<int> sizes, IList<int> allowances,
             IList<string> worlds, bool floorWhenOverBudget, int frames, Action<string> log)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             for (int w = 0; w < worlds.Count; w++)
@@ -112,11 +112,11 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Run operation.</summary>
+
         public static List<Row> Run(string shape, IList<int> sizes, IList<int> allowances,
             IList<string> worlds, IList<int> caps, int frames, Action<string> log)
         {
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             for (int w = 0; w < worlds.Count; w++)
@@ -147,11 +147,11 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Measure operation.</summary>
+
         private static Row Measure(ThermalSimulation simulation, string world, int target,
             int allowance, int cap, int frames)
         {
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Cap = cap;
             row.World = world;
@@ -160,7 +160,7 @@ namespace Thermodynamics.Harness
             row.Links = simulation.Solver.Links.Count;
             row.Allowance = allowance;
 
-/// <summary>World operation.</summary>
+
             EnvironmentSample sample = World(world);
 
             simulation.Settings.MaxElementVisitsPerStep = allowance;
@@ -181,9 +181,9 @@ namespace Thermodynamics.Harness
             float demand = 0f;
 
             int repeats = Repeats < 1 ? 1 : Repeats;
-/// <summary>Stopwatch operation.</summary>
+
             Stopwatch watch = new Stopwatch();
-/// <summary>Stopwatch operation.</summary>
+
             Stopwatch frame = new Stopwatch();
 
             for (int r = 0; r < repeats; r++)
@@ -261,10 +261,10 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>PriceRates operation.</summary>
+
         public static List<PriceRow> PriceRates(IList<double> deficits, Action<string> log)
         {
-/// <summary>List operation.</summary>
+
             List<PriceRow> rows = new List<PriceRow>();
 
             for (int i = 0; i < deficits.Count; i++)
@@ -292,7 +292,7 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>RateCost operation.</summary>
+
         public static double RateCost(Row row, IList<PriceRow> ladder)
         {
             double deficit = Math.Abs(row.ClockError);
@@ -316,17 +316,17 @@ namespace Thermodynamics.Harness
             return ladder[ladder.Count - 1].StandingKelvin;
         }
 
-/// <summary>PastTheLadder operation.</summary>
+
         public static bool PastTheLadder(Row row, IList<PriceRow> ladder)
         {
             if (ladder == null || ladder.Count == 0) return Math.Abs(row.ClockError) > 0d;
             return Math.Abs(row.ClockError) > ladder[ladder.Count - 1].Deficit;
         }
 
-/// <summary>PriceTable operation.</summary>
+
         public static string PriceTable(IList<PriceRow> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("   deficit     peak K   standing K   K per unit");
 
@@ -343,10 +343,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>PriceCsv operation.</summary>
+
         public static string PriceCsv(IList<PriceRow> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("deficit,peak_kelvin,standing_kelvin,kelvin_per_unit");
 
@@ -363,10 +363,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(IList<Row> rows, IList<PriceRow> ladder)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("world         blocks     links   substep cost   allowance"
                 + "   granted   demand      rate   frame ms   worst ms"
@@ -387,7 +387,7 @@ namespace Thermodynamics.Harness
                 sb.Append(r.WorstFrameMs.ToString("n3").PadLeft(11));
                 sb.Append(r.VisitsPerFrame.ToString("n0").PadLeft(15));
                 sb.Append(r.NsPerVisit.ToString("n2").PadLeft(11));
-/// <summary>RateCost operation.</summary>
+
                 string kelvin = RateCost(r, ladder).ToString("n2");
                 if (PastTheLadder(r, ladder)) kelvin = ">" + kelvin;
                 sb.Append(kelvin.PadLeft(12));
@@ -397,10 +397,10 @@ namespace Thermodynamics.Harness
             return sb.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(IList<Row> rows, IList<PriceRow> ladder)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("world,target_blocks,blocks,links,substep_cost,allowance,granted,"
                 + "demand,rate,frame_ms,worst_frame_ms,visits_per_frame,ns_per_visit,"

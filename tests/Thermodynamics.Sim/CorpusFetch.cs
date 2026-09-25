@@ -29,30 +29,30 @@ namespace Thermodynamics.Sim
             public long Id;
             public string Title;
             public long Subscriptions;
-/// <summary>List operation.</summary>
+
             public List<string> Tags = new List<string>();
         }
 
-/// <summary>Run operation.</summary>
+
         public static int Run(string[] args)
         {
-/// <summary>Value operation.</summary>
+
             string key = Value(args, "--key") ?? Environment.GetEnvironmentVariable("STEAM_WEB_API_KEY");
-/// <summary>Value operation.</summary>
+
             string user = Value(args, "--user") ?? "anonymous";
-/// <summary>Value operation.</summary>
+
             string output = Value(args, "--out") ?? Thermodynamics.Harness.Blueprints.CorpusPath();
-/// <summary>Value operation.</summary>
+
             string steamcmd = Value(args, "--steamcmd") ?? "steamcmd";
-/// <summary>Int operation.</summary>
+
             int target = Int(Value(args, "--top"), 10000);
-/// <summary>Has operation.</summary>
+
             bool listOnly = Has(args, "--list-only");
 
             Directory.CreateDirectory(output);
             string manifest = Path.Combine(output, "manifest.csv");
 
-/// <summary>Load operation.</summary>
+
             List<Item> items = Load(manifest);
             if (items.Count >= target)
             {
@@ -70,7 +70,7 @@ namespace Thermodynamics.Sim
             }
             else
             {
-/// <summary>List operation.</summary>
+
                 items = List(key, target).GetAwaiter().GetResult();
                 Save(manifest, items);
                 Console.WriteLine("Listed " + items.Count.ToString("n0") + " blueprints to " + manifest);
@@ -79,17 +79,17 @@ namespace Thermodynamics.Sim
             if (listOnly) return 0;
 
             if (items.Count > target) items = items.GetRange(0, target);
-/// <summary>Fetch operation.</summary>
+
             return Fetch(items, user, steamcmd, output);
         }
 
 
-/// <summary>List operation.</summary>
+
         private static async Task<List<Item>> List(string key, int target)
         {
-/// <summary>List operation.</summary>
+
             List<Item> items = new List<Item>();
-/// <summary>HashSet operation.</summary>
+
             HashSet<long> seen = new HashSet<long>();
             string cursor = "*";
 
@@ -103,8 +103,8 @@ namespace Thermodynamics.Sim
                         "https://api.steampowered.com/IPublishedFileService/QueryFiles/v1/" +
                         "?key=" + Uri.EscapeDataString(key) +
                         "&appid=" + AppId +
-                        "&query_type=9" +                     // RankedByTotalUniqueSubscriptions
-                        "&filetype=0" +                       // Items
+                        "&query_type=9" +
+                        "&filetype=0" +
                         "&requiredtags%5B0%5D=Blueprint" +
                         "&match_all_tags=false" +
                         "&numperpage=" + PageSize +
@@ -123,7 +123,7 @@ namespace Thermodynamics.Sim
                     }
 
                     int before = items.Count;
-/// <summary>ReadPage operation.</summary>
+
                     string next = ReadPage(body, items, seen, target);
 
                     Console.WriteLine("  listed " + items.Count.ToString("n0") + " of " + target.ToString("n0"));
@@ -138,14 +138,14 @@ namespace Thermodynamics.Sim
             return items;
         }
 
-/// <summary>Redact operation.</summary>
+
         private static string Redact(string text, string secret)
         {
             if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(secret)) return text;
             return text.Replace(secret, "<key>");
         }
 
-/// <summary>ReadPage operation.</summary>
+
         private static string ReadPage(string body, List<Item> items, HashSet<long> seen, int target)
         {
             using (JsonDocument document = JsonDocument.Parse(body))
@@ -164,7 +164,7 @@ namespace Thermodynamics.Sim
                 {
                     if (items.Count >= target) break;
 
-/// <summary>ReadItem operation.</summary>
+
                     Item item = ReadItem(element);
                     if (item == null || !seen.Add(item.Id)) continue;
 
@@ -177,7 +177,7 @@ namespace Thermodynamics.Sim
             }
         }
 
-/// <summary>ReadItem operation.</summary>
+
         private static Item ReadItem(JsonElement element)
         {
             JsonElement id;
@@ -215,10 +215,10 @@ namespace Thermodynamics.Sim
         }
 
 
-/// <summary>Fetch operation.</summary>
+
         private static int Fetch(List<Item> items, string user, string steamcmd, string output)
         {
-/// <summary>List operation.</summary>
+
             List<long> wanted = new List<long>();
             foreach (Item item in items)
             {
@@ -234,7 +234,7 @@ namespace Thermodynamics.Sim
             int done = 0;
             for (int i = 0; i < wanted.Count; i += BatchSize)
             {
-/// <summary>StringBuilder operation.</summary>
+
                 StringBuilder arguments = new StringBuilder();
                 arguments.Append("+force_install_dir ").Append(Quote(Path.GetFullPath(output)));
                 arguments.Append(" +login ").Append(user);
@@ -254,7 +254,7 @@ namespace Thermodynamics.Sim
                 if (end < wanted.Count) Thread.Sleep(BatchPause);
             }
 
-/// <summary>Unpack operation.</summary>
+
             int unpacked = Unpack(output);
 
             Console.WriteLine();
@@ -264,7 +264,7 @@ namespace Thermodynamics.Sim
             return 0;
         }
 
-/// <summary>ItemPath operation.</summary>
+
         private static string ItemPath(string output, long id)
         {
             return Path.Combine(output, "steamapps", "workshop", "content", "244850",
@@ -273,7 +273,7 @@ namespace Thermodynamics.Sim
 
 
 
-/// <summary>Unpack operation.</summary>
+
         private static int Unpack(string output)
         {
             string root = Path.Combine(output, "steamapps", "workshop", "content", "244850");
@@ -308,12 +308,12 @@ namespace Thermodynamics.Sim
             return unpacked;
         }
 
-/// <summary>RunSteamCmd operation.</summary>
+
         private static bool RunSteamCmd(string steamcmd, string arguments)
         {
             try
             {
-/// <summary>ProcessStartInfo operation.</summary>
+
                 ProcessStartInfo start = new ProcessStartInfo(steamcmd, arguments)
                 {
                     UseShellExecute = false,
@@ -335,7 +335,7 @@ namespace Thermodynamics.Sim
         }
 
 
-/// <summary>Save operation.</summary>
+
         private static void Save(string path, List<Item> items)
         {
             using (StreamWriter writer = new StreamWriter(path))
@@ -352,10 +352,10 @@ namespace Thermodynamics.Sim
             }
         }
 
-/// <summary>Load operation.</summary>
+
         private static List<Item> Load(string path)
         {
-/// <summary>List operation.</summary>
+
             List<Item> items = new List<Item>();
             if (!File.Exists(path)) return items;
 
@@ -383,7 +383,7 @@ namespace Thermodynamics.Sim
             return items;
         }
 
-/// <summary>Csv operation.</summary>
+
         private static string Csv(string text)
         {
             if (string.IsNullOrEmpty(text)) return "";
@@ -393,25 +393,25 @@ namespace Thermodynamics.Sim
                 : "\"" + text.Replace("\"", "\"\"") + "\"";
         }
 
-/// <summary>Quote operation.</summary>
+
         private static string Quote(string path)
         {
             return path.IndexOf(' ') < 0 ? path : "\"" + path + "\"";
         }
 
-/// <summary>Value operation.</summary>
+
         private static string Value(string[] args, string name)
         {
             return Cli.Value(args, name);
         }
 
-/// <summary>Has operation.</summary>
+
         private static bool Has(string[] args, string name)
         {
             return Cli.Has(args, name);
         }
 
-/// <summary>Int operation.</summary>
+
         private static int Int(string text, int fallback)
         {
             int value;

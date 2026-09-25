@@ -9,7 +9,7 @@ namespace Thermodynamics.Tests
 {
     public class UnmappedRoomTests
     {
-/// <summary>LeakyShell operation.</summary>
+
         private static ThermalSimulation LeakyShell()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -22,7 +22,7 @@ namespace Thermodynamics.Tests
             return builder.BuildSimulation(new ThermalSettings());
         }
 
-/// <summary>SealedShell operation.</summary>
+
         private static ThermalSimulation SealedShell()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -30,24 +30,24 @@ namespace Thermodynamics.Tests
             return builder.BuildSimulation(new ThermalSettings());
         }
 
-/// <summary>GameSeals operation.</summary>
+
         private static Func<Vector3I, bool> GameSeals(params Vector3I[] cells)
         {
-/// <summary>HashSet operation.</summary>
+
             HashSet<Vector3I> sealedCells = new HashSet<Vector3I>(cells, Vector3I.Comparer);
-/// <summary>delegate operation.</summary>
+
             return delegate (Vector3I cell) { return sealedCells.Contains(cell); };
         }
 
         [Fact]
-/// <summary>TheCompartmentTheModelLostIsFound operation.</summary>
+
         public void TheCompartmentTheModelLostIsFound()
         {
-/// <summary>LeakyShell operation.</summary>
+
             ThermalSimulation simulation = LeakyShell();
             Assert.Equal(0, simulation.Rooms.Map.RoomCount);
 
-/// <summary>List operation.</summary>
+
             List<UnmappedRooms.Region> found = new List<UnmappedRooms.Region>();
             bool complete = UnmappedRooms.Find(
                 simulation.Rooms.Map,
@@ -62,31 +62,31 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AModelThatAgreesWithTheGameReportsNothing operation.</summary>
+
         public void AModelThatAgreesWithTheGameReportsNothing()
         {
-/// <summary>SealedShell operation.</summary>
+
             ThermalSimulation simulation = SealedShell();
             Assert.Equal(1, simulation.Rooms.Map.RoomCount);
 
-/// <summary>List operation.</summary>
+
             List<UnmappedRooms.Region> found = new List<UnmappedRooms.Region>();
 
             UnmappedRooms.Find(
-/// <summary>GameSeals operation.</summary>
+
                 simulation.Rooms.Map, simulation.Surfaces, GameSeals(Vector3I.Zero), found);
 
             Assert.Empty(found);
         }
 
         [Fact]
-/// <summary>AGameThatSealsNothingReportsNothing operation.</summary>
+
         public void AGameThatSealsNothingReportsNothing()
         {
-/// <summary>LeakyShell operation.</summary>
+
             ThermalSimulation simulation = LeakyShell();
 
-/// <summary>List operation.</summary>
+
             List<UnmappedRooms.Region> found = new List<UnmappedRooms.Region>();
             UnmappedRooms.Find(
                 simulation.Rooms.Map,
@@ -98,16 +98,16 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheLeakNamesTheFaceTheModelLeavesOpen operation.</summary>
+
         public void TheLeakNamesTheFaceTheModelLeavesOpen()
         {
-/// <summary>LeakyShell operation.</summary>
+
             ThermalSimulation simulation = LeakyShell();
 
-/// <summary>List operation.</summary>
+
             List<UnmappedRooms.Region> found = new List<UnmappedRooms.Region>();
             UnmappedRooms.Find(
-/// <summary>GameSeals operation.</summary>
+
                 simulation.Rooms.Map, simulation.Surfaces, GameSeals(Vector3I.Zero), found);
 
             Assert.Single(found);
@@ -120,7 +120,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>SeparateCompartmentsStaySeparateAndKeepTheirOrder operation.</summary>
+
         public void SeparateCompartmentsStaySeparateAndKeepTheirOrder()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -137,7 +137,7 @@ namespace Thermodynamics.Tests
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings());
 
-/// <summary>List operation.</summary>
+
             List<UnmappedRooms.Region> found = new List<UnmappedRooms.Region>();
             UnmappedRooms.Find(
                 simulation.Rooms.Map,
@@ -154,7 +154,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AdjacentCellsAreOneCompartment operation.</summary>
+
         public void AdjacentCellsAreOneCompartment()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -166,7 +166,7 @@ namespace Thermodynamics.Tests
 
             ThermalSimulation simulation = builder.BuildSimulation(new ThermalSettings());
 
-/// <summary>List operation.</summary>
+
             List<UnmappedRooms.Region> found = new List<UnmappedRooms.Region>();
             UnmappedRooms.Find(
                 simulation.Rooms.Map,
@@ -180,13 +180,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheCellLimitTruncatesRatherThanStalls operation.</summary>
+
         public void TheCellLimitTruncatesRatherThanStalls()
         {
-/// <summary>LeakyShell operation.</summary>
+
             ThermalSimulation simulation = LeakyShell();
 
-/// <summary>List operation.</summary>
+
             List<UnmappedRooms.Region> found = new List<UnmappedRooms.Region>();
             bool complete = UnmappedRooms.Find(
                 simulation.Rooms.Map,
@@ -199,15 +199,15 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnUnmappedGridIsNotADisagreement operation.</summary>
+
         public void AnUnmappedGridIsNotADisagreement()
         {
-/// <summary>List operation.</summary>
+
             List<UnmappedRooms.Region> found = new List<UnmappedRooms.Region>();
 
             bool complete = UnmappedRooms.Find(
                 RoomMap.AllExternal,
-/// <summary>SurfaceMap operation.</summary>
+
                 new SurfaceMap(),
                 delegate (Vector3I cell) { return true; },
                 found);

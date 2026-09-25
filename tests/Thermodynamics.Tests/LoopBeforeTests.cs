@@ -7,14 +7,14 @@ namespace Thermodynamics.Tests
 {
     public class LoopBeforeTests
     {
-/// <summary>Isolated operation.</summary>
+
         private static ThermalSettings Isolated()
         {
             return Isolation.DeadWorld();
         }
 
         [Fact]
-/// <summary>TheBeforeArmIsNotWhatShips operation.</summary>
+
         public void TheBeforeArmIsNotWhatShips()
         {
             LoopThermalProperties shipped = LoopThermalProperties.Default();
@@ -33,7 +33,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AStoppedRingCarriesWhatEveryRingCarriedBeforeTheRetune operation.</summary>
+
         public void AStoppedRingCarriesWhatEveryRingCarriedBeforeTheRetune()
         {
             LoopThermalProperties shipped = LoopThermalProperties.Default();
@@ -44,7 +44,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheFlatChargeIsTwoDensitiesTwoOrdersOfMagnitudeApart operation.</summary>
+
         public void TheFlatChargeIsTwoDensitiesTwoOrdersOfMagnitudeApart()
         {
             LoopThermalProperties before = LoopBefore.For(Catalog.LargeGridSize);
@@ -59,7 +59,7 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheRingHoldsMoreCoolantThanItUsedTo operation.</summary>
+
         public void TheRingHoldsMoreCoolantThanItUsedTo()
         {
             GridBuilder builder = GridBuilder.Large();
@@ -87,7 +87,7 @@ namespace Thermodynamics.Tests
             Assert.NotEqual(sinkNow, before.LinkConductance(0), 1);
         }
 
-/// <summary>Volume operation.</summary>
+
         private static float Volume(float cell)
         {
             return cell * cell * cell;

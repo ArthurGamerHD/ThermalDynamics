@@ -10,7 +10,7 @@ namespace Thermodynamics.Harness
     {
         public static readonly double[] Quantiles = { 0d, 0.01d, 0.05d, 0.10d, 0.25d, 0.50d };
 
-/// <summary>NameOf operation.</summary>
+
         public static string NameOf(double quantile)
         {
             if (quantile <= 0d) return "min";
@@ -25,7 +25,7 @@ namespace Thermodynamics.Harness
 
             public string TakenUtc = string.Empty;
 
-/// <summary>List operation.</summary>
+
             public readonly List<double> Samples = new List<double>();
         }
 
@@ -46,16 +46,16 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Window operation.</summary>
+
         public static WindowSpan Window(IList<Series> series)
         {
-/// <summary>WindowSpan operation.</summary>
+
             WindowSpan span = new WindowSpan();
-/// <summary>List operation.</summary>
+
             List<DateTime> stamps = new List<DateTime>();
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> seenRuns = new HashSet<string>(StringComparer.Ordinal);
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> unstampedRuns = new HashSet<string>(StringComparer.Ordinal);
 
             for (int i = 0; i < series.Count; i++)
@@ -91,7 +91,7 @@ namespace Thermodynamics.Harness
             public double Quantile;
             public int Runs;
 
-/// <summary>List operation.</summary>
+
             public readonly List<double> Values = new List<double>();
 
             public double Lowest;
@@ -103,7 +103,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>Quantile operation.</summary>
+
         public static double Quantile(IList<double> sorted, double quantile)
         {
             if (sorted == null || sorted.Count == 0) return 0d;
@@ -115,10 +115,10 @@ namespace Thermodynamics.Harness
             return sorted[index];
         }
 
-/// <summary>Read operation.</summary>
+
         public static List<Series> Read(string path, string run)
         {
-/// <summary>List operation.</summary>
+
             List<Series> series = new List<Series>();
             Dictionary<string, Series> byStage = new Dictionary<string, Series>(StringComparer.Ordinal);
 
@@ -134,7 +134,7 @@ namespace Thermodynamics.Harness
                 Series stage;
                 if (!byStage.TryGetValue(parts[0], out stage))
                 {
-/// <summary>Series operation.</summary>
+
                     stage = new Series();
                     stage.Run = run;
                     stage.Stage = parts[0];
@@ -155,13 +155,13 @@ namespace Thermodynamics.Harness
             return series;
         }
 
-/// <summary>Compare operation.</summary>
+
         public static List<Row> Compare(IList<Series> series, out List<string> dropped)
         {
             Dictionary<string, List<Series>> byStage = new Dictionary<string, List<Series>>(StringComparer.Ordinal);
-/// <summary>HashSet operation.</summary>
+
             HashSet<string> runs = new HashSet<string>(StringComparer.Ordinal);
-/// <summary>List operation.</summary>
+
             List<string> order = new List<string>();
 
             for (int i = 0; i < series.Count; i++)
@@ -171,7 +171,7 @@ namespace Thermodynamics.Harness
                 List<Series> list;
                 if (!byStage.TryGetValue(series[i].Stage, out list))
                 {
-/// <summary>List operation.</summary>
+
                     list = new List<Series>();
                     byStage[series[i].Stage] = list;
                     order.Add(series[i].Stage);
@@ -179,9 +179,9 @@ namespace Thermodynamics.Harness
                 list.Add(series[i]);
             }
 
-/// <summary>List operation.</summary>
+
             dropped = new List<string>();
-/// <summary>List operation.</summary>
+
             List<Row> rows = new List<Row>();
 
             for (int s = 0; s < order.Count; s++)
@@ -193,7 +193,7 @@ namespace Thermodynamics.Harness
                     continue;
                 }
 
-/// <summary>List operation.</summary>
+
                 List<double[]> sorted = new List<double[]>();
                 for (int i = 0; i < list.Count; i++)
                 {
@@ -204,7 +204,7 @@ namespace Thermodynamics.Harness
 
                 for (int q = 0; q < Quantiles.Length; q++)
                 {
-/// <summary>Row operation.</summary>
+
                     Row row = new Row();
                     row.Stage = order[s];
                     row.Quantile = Quantiles[q];
@@ -213,7 +213,7 @@ namespace Thermodynamics.Harness
 
                     for (int i = 0; i < sorted.Count; i++)
                     {
-/// <summary>Quantile operation.</summary>
+
                         double value = Quantile(sorted[i], Quantiles[q]);
                         row.Values.Add(value);
                         if (value < row.Lowest) row.Lowest = value;
@@ -227,10 +227,10 @@ namespace Thermodynamics.Harness
             return rows;
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("  stage        statistic   runs      lowest     highest   spread");
             for (int i = 0; i < rows.Count; i++)
@@ -238,23 +238,23 @@ namespace Thermodynamics.Harness
                 Row row = rows[i];
                 text.AppendLine(string.Format(CultureInfo.InvariantCulture,
                     "  {0,-10}  {1,-9}  {2,5}  {3,10:n3}  {4,10:n3}  {5,6:n1}%",
-/// <summary>NameOf operation.</summary>
+
                     row.Stage, NameOf(row.Quantile), row.Runs, row.Lowest, row.Highest,
                     row.SpreadPercent));
             }
             return text.ToString();
         }
 
-/// <summary>Csv operation.</summary>
+
         public static string Csv(IList<Row> rows)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.AppendLine("stage,statistic,quantile,runs,lowest,highest,spread_percent,values");
             for (int i = 0; i < rows.Count; i++)
             {
                 Row row = rows[i];
-/// <summary>StringBuilder operation.</summary>
+
                 StringBuilder values = new StringBuilder();
                 for (int v = 0; v < row.Values.Count; v++)
                 {

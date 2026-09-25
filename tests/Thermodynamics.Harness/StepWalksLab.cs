@@ -19,7 +19,7 @@ namespace Thermodynamics.Harness
 
         public class Result
         {
-/// <summary>List operation.</summary>
+
             public List<Row> Fusion = new List<Row>();
             public double MirrorMs;
             public double SettledStepMs;
@@ -28,14 +28,14 @@ namespace Thermodynamics.Harness
 
         private const int Substeps = 16;
 
-/// <summary>Run operation.</summary>
+
         public static Result Run(string shape, int blocks, int repeats = 20, Action<string> log = null)
         {
             GridBuilder builder = GridBuilder.Large();
             builder.PlaceCensus(LoadShapes.Build(shape, blocks));
             ThermalSimulation simulation = builder.BuildSimulation(Hulls.Uncapped(), 293.15f);
 
-/// <summary>Result operation.</summary>
+
             Result result = new Result();
             result.Nodes = simulation.Solver.Nodes.Count;
 
@@ -49,7 +49,7 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Fusion operation.</summary>
+
         private static void Fusion(ThermalSimulation simulation, int repeats, Result result)
         {
             IList<ThermalNode> nodes = simulation.Solver.Nodes;
@@ -77,16 +77,16 @@ namespace Thermodynamics.Harness
             const float AmbientPow4 = Ambient * Ambient * Ambient * Ambient;
             const float H = 0.25f / 24f;
 
-/// <summary>Spread operation.</summary>
+
             float[] tA = Spread(count);
             float[] wA = new float[count];
-/// <summary>Separate operation.</summary>
+
             float sumA = Separate(exposedFaces, tA, wA, sourceRow, radiationRow, convectionRow, mass, Ambient, AmbientPow4, H);
 
-/// <summary>Spread operation.</summary>
+
             float[] tB = Spread(count);
             float[] wB = new float[count];
-/// <summary>Fused operation.</summary>
+
             float sumB = Fused(exposedFaces, tB, wB, sourceRow, radiationRow, convectionRow, mass, Ambient, AmbientPow4, H);
 
             double worst = 0d;
@@ -104,24 +104,24 @@ namespace Thermodynamics.Harness
 
             result.Fusion.Add(Time("separate: env walk + apply walk", count, repeats, () =>
             {
-/// <summary>Spread operation.</summary>
+
                 float[] t = Spread(count);
                 float[] w = new float[count];
-/// <summary>Separate operation.</summary>
+
                 return Separate(exposedFaces, t, w, sourceRow, radiationRow, convectionRow, mass, Ambient, AmbientPow4, H);
             }));
 
             result.Fusion.Add(Time("fused: apply(n) + env(n+1)", count, repeats, () =>
             {
-/// <summary>Spread operation.</summary>
+
                 float[] t = Spread(count);
                 float[] w = new float[count];
-/// <summary>Fused operation.</summary>
+
                 return Fused(exposedFaces, t, w, sourceRow, radiationRow, convectionRow, mass, Ambient, AmbientPow4, H);
             }));
         }
 
-/// <summary>Spread operation.</summary>
+
         private static float[] Spread(int count)
         {
             float[] t = new float[count];
@@ -129,25 +129,25 @@ namespace Thermodynamics.Harness
             return t;
         }
 
-/// <summary>Separate operation.</summary>
+
         private static float Separate(int[] exposedFaces, float[] t, float[] w, float[] sourceRow,
             float[] radiationRow, float[] convectionRow, float[] mass, float ambient, float ambientPow4, float h)
         {
             float accumulator = 0f;
             for (int substep = 0; substep < Substeps; substep++)
             {
-/// <summary>EnvWalk operation.</summary>
+
                 accumulator += EnvWalk(exposedFaces, t, w, sourceRow, radiationRow, convectionRow, ambient, ambientPow4);
                 ApplyWalk(t, w, mass, h);
             }
             return accumulator;
         }
 
-/// <summary>Fused operation.</summary>
+
         private static float Fused(int[] exposedFaces, float[] t, float[] w, float[] sourceRow,
             float[] radiationRow, float[] convectionRow, float[] mass, float ambient, float ambientPow4, float h)
         {
-/// <summary>EnvWalk operation.</summary>
+
             float accumulator = EnvWalk(exposedFaces, t, w, sourceRow, radiationRow, convectionRow, ambient, ambientPow4);
 
             for (int substep = 1; substep < Substeps; substep++)
@@ -181,7 +181,7 @@ namespace Thermodynamics.Harness
             return accumulator;
         }
 
-/// <summary>EnvWalk operation.</summary>
+
         private static float EnvWalk(int[] exposedFaces, float[] t, float[] w, float[] sourceRow,
             float[] radiationRow, float[] convectionRow, float ambient, float ambientPow4)
         {
@@ -207,7 +207,7 @@ namespace Thermodynamics.Harness
             return subtotal;
         }
 
-/// <summary>Applies the walk.</summary>
+
         private static void ApplyWalk(float[] t, float[] w, float[] mass, float h)
         {
             for (int i = 0; i < t.Length; i++)
@@ -218,7 +218,7 @@ namespace Thermodynamics.Harness
             }
         }
 
-/// <summary>RelDiff operation.</summary>
+
         private static double RelDiff(float a, float b)
         {
             if (a == b) return 0d;
@@ -226,25 +226,25 @@ namespace Thermodynamics.Harness
             return scale <= 0d ? 0d : Math.Abs((double)a - b) / scale;
         }
 
-/// <summary>Time operation.</summary>
+
         private static Row Time(string walk, int count, int repeats, Func<float> scheme)
         {
-            scheme();   // the JIT, outside the clock
+            scheme();
 
             double best = double.MaxValue;
-/// <summary>Stopwatch operation.</summary>
+
             Stopwatch watch = new Stopwatch();
             for (int r = 0; r < repeats; r++)
             {
                 watch.Restart();
-/// <summary>scheme operation.</summary>
+
                 float sink = scheme();
                 watch.Stop();
                 if (float.IsNaN(sink)) throw new InvalidOperationException("the scheme produced NaN");
                 if (watch.Elapsed.TotalMilliseconds < best) best = watch.Elapsed.TotalMilliseconds;
             }
 
-/// <summary>Row operation.</summary>
+
             Row row = new Row();
             row.Walk = walk;
             row.Nodes = count;
@@ -254,12 +254,12 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Mirror operation.</summary>
+
         private static void Mirror(ThermalSimulation simulation, int repeats, Result result)
         {
             simulation.StepExact(1, Worlds.Shadow());
 
-/// <summary>Stopwatch operation.</summary>
+
             Stopwatch watch = new Stopwatch();
             double best = double.MaxValue;
             for (int r = 0; r < repeats; r++)
@@ -283,16 +283,16 @@ namespace Thermodynamics.Harness
         }
 
 
-/// <summary>Report operation.</summary>
+
         public static string Report(string shape, int blocks, Action<string> log = null)
         {
             return Table(Run(shape, blocks, 20, log));
         }
 
-/// <summary>Table operation.</summary>
+
         public static string Table(Result result)
         {
-/// <summary>StringBuilder operation.</summary>
+
             StringBuilder text = new StringBuilder();
             text.Append("walk".PadRight(34))
                 .Append("nodes".PadLeft(10))

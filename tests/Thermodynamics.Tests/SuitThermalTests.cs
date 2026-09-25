@@ -6,13 +6,13 @@ namespace Thermodynamics.Tests
 {
     public class SuitThermalTests
     {
-/// <summary>Shipped operation.</summary>
+
         private static ThermalSettings Shipped()
         {
             return new ThermalSettings().Derive();
         }
 
-/// <summary>DamageOverSeconds operation.</summary>
+
         private static float DamageOverSeconds(ThermalSettings settings, float roomKelvin,
             bool helmetOpen, int seconds, out float interior, out int firstHurtAt)
         {
@@ -34,10 +34,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSuitHoldsUpToTheTemperatureItsRatingImplies operation.</summary>
+
         public void TheSuitHoldsUpToTheTemperatureItsRatingImplies()
         {
-/// <summary>Shipped operation.</summary>
+
             ThermalSettings settings = Shipped();
             float survivable = SuitThermal.SurvivableKelvin(settings);
 
@@ -55,10 +55,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>BeingOverwhelmedComesBeforeBeingHurt operation.</summary>
+
         public void BeingOverwhelmedComesBeforeBeingHurt()
         {
-/// <summary>Shipped operation.</summary>
+
             ThermalSettings settings = Shipped();
             float room = SuitThermal.SurvivableKelvin(settings) + 100f;
 
@@ -77,10 +77,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AHotterRoomLeavesLessTime operation.</summary>
+
         public void AHotterRoomLeavesLessTime()
         {
-/// <summary>Shipped operation.</summary>
+
             ThermalSettings settings = Shipped();
             float survivable = SuitThermal.SurvivableKelvin(settings);
 
@@ -99,10 +99,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AnOpenHelmetIsUnsafeWhereAClosedOneIsNot operation.</summary>
+
         public void AnOpenHelmetIsUnsafeWhereAClosedOneIsNot()
         {
-/// <summary>Shipped operation.</summary>
+
             ThermalSettings settings = Shipped();
 
             float closed = SuitThermal.SurvivableKelvin(settings, false);
@@ -122,10 +122,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>AFlatSuitDoesNotRegulate operation.</summary>
+
         public void AFlatSuitDoesNotRegulate()
         {
-/// <summary>Shipped operation.</summary>
+
             ThermalSettings settings = Shipped();
             float room = SuitThermal.SurvivableKelvin(settings) - 100f;
 
@@ -141,10 +141,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSuitHeatsAsWellAsCools operation.</summary>
+
         public void TheSuitHeatsAsWellAsCools()
         {
-/// <summary>Shipped operation.</summary>
+
             ThermalSettings settings = Shipped();
 
             SuitStepResult result = SuitThermal.Step(settings, SuitThermal.ComfortKelvin,
@@ -157,10 +157,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheColdEndOfTheSuitsWindowIsAnOrdinaryRoomAndTheHotEndIsNot operation.</summary>
+
         public void TheColdEndOfTheSuitsWindowIsAnOrdinaryRoomAndTheHotEndIsNot()
         {
-/// <summary>Shipped operation.</summary>
+
             ThermalSettings settings = Shipped();
 
             float sealed_ = settings.SuitCoolingWatts / settings.SuitConductance;
@@ -184,13 +184,13 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheModelSurvivesBeingHandedNothing operation.</summary>
+
         public void TheModelSurvivesBeingHandedNothing()
         {
             Assert.Equal(0f, SuitThermal.Step(null, 300f, 900f, false, true, 1f).Damage, 5);
             Assert.Equal(300f, SuitThermal.Step(Shipped(), 300f, 900f, false, true, 0f).InteriorKelvin, 5);
 
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings zeroed = new ThermalSettings();
             zeroed.SuitHeatCapacity = 0f;
             zeroed.SuitConductance = 0f;
@@ -202,10 +202,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>TheSwitchIsHonouredByTheModelItself operation.</summary>
+
         public void TheSwitchIsHonouredByTheModelItself()
         {
-/// <summary>Shipped operation.</summary>
+
             ThermalSettings settings = Shipped();
             settings.EnableSuitDamage = false;
 
@@ -218,10 +218,10 @@ namespace Thermodynamics.Tests
         }
 
         [Fact]
-/// <summary>ASuitLimitBelowComfortIsReportedAsAProblem operation.</summary>
+
         public void ASuitLimitBelowComfortIsReportedAsAProblem()
         {
-/// <summary>ThermalSettings operation.</summary>
+
             ThermalSettings settings = new ThermalSettings();
             settings.SuitCriticalTemperature = SuitThermal.ComfortKelvin - 5f;
             settings.Derive();
